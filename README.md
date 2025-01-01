@@ -1,84 +1,111 @@
-# Turborepo starter
+# academic360
 
-This is an official starter Turborepo.
+Welcome to **academic360** – a Student Management App built as a **monorepo** using **Turborepo**. This project includes both the **backend** and **frontend** apps for managing student data, academic records, attendance, and more.
 
-## Using this example
+## Table of Contents
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+  - [Installation](#installation)
+  - [Running the Development Server](#running-the-development-server)
+  - [Building the Apps](#building-the-apps)
+  - [Adding Libraries](#adding-libraries)
+- [Technologies](#technologies)
+- [Contributing](#contributing)
 
-Run the following command:
+## Overview
 
-```sh
-npx create-turbo@latest
+**academic360** is designed to simplify the management of student data. It includes a backend for API interactions and a frontend for a smooth user interface. The project leverages **Turborepo** to manage both backend and frontend in a monorepo setup.
+
+### What's Inside?
+
+This Turborepo includes the following apps and packages:
+
+#### Apps and Packages
+- **`backend`**: The backend API, responsible for handling student data, authentication, and business logic.
+- **`frontend`**: The frontend application, built with React or Next.js, providing the user interface for interacting with the backend.
+- **`@repo/ui`**: A shared React component library used across both the frontend and backend apps.
+- **`@repo/eslint-config`**: ESLint configurations to enforce code style, including `eslint-config-next` and `eslint-config-prettier`.
+- **`@repo/typescript-config`**: TypeScript configurations (`tsconfig.json`) used throughout the monorepo.
+
+Each app/package is written in **TypeScript**.
+
+#### Utilities
+- **TypeScript**: Static type checking for better developer experience and fewer bugs.
+- **ESLint**: For code linting and ensuring code quality.
+- **Prettier**: To keep the code formatted consistently.
+
+## Getting Started
+
+### Installation
+
+To get started with **academic360**, clone the repository and install the dependencies:
+
+```bash
+git clone https://github.com/your-username/academic360.git
+cd academic360
+npm install
+```
+This will install all the necessary dependencies for both the backend and frontend applications.
+
+### Running the Development Server
+
+To run all apps in **development mode**, execute the following command:
+
+```bash
+npm run dev
 ```
 
-## What's inside?
+This will start both the frontend and backend applications simultaneously, allowing you to work with them in real time.
 
-This Turborepo includes the following packages/apps:
+#### Running a Specific App
+If you want to run only the frontend or backend separately, you can use the --scope flag like this:
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-```
-cd my-turborepo
-pnpm build
+```bash
+npm run dev --scope=frontend  # Runs the frontend app only
+npm run dev --scope=backend   # Runs the backend app only
 ```
 
-### Develop
+### Building the Apps
 
-To develop all apps and packages, run the following command:
+To build both the frontend and backend apps for production, run the following:
 
-```
-cd my-turborepo
-pnpm dev
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-```
-cd my-turborepo
-npx turbo login
+```bash
+npm run build
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+This will compile all apps into optimized production code.
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+#### Building a Specific App
+If you only want to build the frontend or backend, use the --scope flag as shown below:
 
+```bash
+npm run build --scope=frontend  # Builds only the frontend app
+npm run build --scope=backend   # Builds only the backend app
 ```
-npx turbo link
+
+### Adding Libraries
+To add a new library to either the frontend or backend, you can install it using the following command:
+```bash
+npm install <library-name> --scope=frontend  # Installs the library for the frontend
+npm install <library-name> --scope=backend   # Installs the library for the backend
 ```
 
-## Useful Links
+## Remote Caching
+Turborepo supports remote caching, which helps in speeding up builds by sharing cache artifacts across different machines. You can set up remote caching with Vercel.
 
-Learn more about the power of Turborepo:
+## Technologies
+- Backend: Node.js, Express, or similar backend framework.
+- Frontend: React.js (or Next.js for SSR support).
+- TypeScript: For static typing and better developer experience.
+- ESLint: For linting to ensure clean and consistent code.
+- Prettier: For automatic code formatting to maintain a consistent code style.
+- Turborepo: A tool for managing monorepos, helping streamline development, and managing the frontend and backend in a single repository.
 
-- [Tasks](https://turbo.build/repo/docs/core-concepts/monorepos/running-tasks)
-- [Caching](https://turbo.build/repo/docs/core-concepts/caching)
-- [Remote Caching](https://turbo.build/repo/docs/core-concepts/remote-caching)
-- [Filtering](https://turbo.build/repo/docs/core-concepts/monorepos/filtering)
-- [Configuration Options](https://turbo.build/repo/docs/reference/configuration)
-- [CLI Usage](https://turbo.build/repo/docs/reference/command-line-reference)
+## Contributing
+We welcome contributions to academic360! If you'd like to contribute, follow these steps:
+- Fork the repository.
+- Create a new branch for your changes: git checkout -b feature/your-feature.
+- Make your changes and commit them: git commit -am 'Add new feature'.
+- Push to your fork: git push origin feature/your-feature.
+- Open a Pull Request with a detailed description of the changes.
+- Please ensure that your code follows the project's coding standards and passes all tests before submitting a pull request.
