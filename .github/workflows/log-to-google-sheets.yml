@@ -63,6 +63,7 @@ jobs:
 
           echo "Resource: $RESOURCE"
           echo "Description: $DESCRIPTION"
+          
           # Send the data to Google Sheets
           curl -X POST -H "Content-Type: application/json" \
             -d "{
