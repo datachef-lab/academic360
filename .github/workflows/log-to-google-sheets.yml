@@ -69,5 +69,4 @@ jobs:
           echo "Webhook URL: $WEB_APP_URL"
 
           # Send the data to Google Sheets
-          curl -X POST -H "Content-Type: application/json" \ -d "{ \"action\": \"$ACTION\", \"user\": \"${{ github.actor }}\", \"description\": \"$DESCRIPTION\", \"branch\": \"$BRANCH\", \"resource\": \"$RESOURCE\" }" \
-            $WEB_APP_URL
+          curl -X POST -H "Content-Type: application/json" \ -d "{ \"action\": \"$ACTION\", \"user\": \"${{ github.actor }}\", \"description\": \"$DESCRIPTION\", \"branch\": \"$BRANCH\", \"resource\": \"$RESOURCE\" }" \ "$WEB_APP_URL"
