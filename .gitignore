@@ -15,6 +15,7 @@
 
 # Testing
 coverage
+tmp.txt
 
 # Turbo
 .turbo

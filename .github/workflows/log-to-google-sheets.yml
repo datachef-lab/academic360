@@ -1,0 +1,29 @@
+name: Log GitHub Activity to Google Sheets
+
+on:
+  push: # Logs commits
+    branches:
+      - main
+  issues: # Logs all issue events
+    types: [opened, edited, closed, labeled]
+  pull_request: # Logs all PR events
+    types: [opened, edited, closed]
+  create: # Logs branch creation
+  delete: # Logs branch deletion
+
+jobs:
+  log_activity:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Log Activity to Google Sheets
+        env:
+          WEB_APP_URL: ${{ secrets.GOOGLE_SHEETS_WEBHOOK }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+            -d '{
+              "action": "${{ github.event.action || 'push' }}",
+              "user": "${{ github.actor }}",
+              "description": "${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
+            }' \
+            $WEB_APP_URL
