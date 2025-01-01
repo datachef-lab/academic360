@@ -27,6 +27,22 @@ jobs:
           # Debug: Print the action type
           echo "Action: $ACTION"
 
+          # Debug: Print the action type
+          echo "Action: $ACTION"
+
+          # Determine the branch name
+          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+            BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
+            BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
+          elif [[ "${ACTION}" == "pull_request" ]]; then
+            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
+          else
+            BRANCH="N/A"  # No branch for issue events
+          fi
+
+          # Debug: Print the branch name
+          echo "Branch: $BRANCH"
+
           # Initialize resource type and description
           RESOURCE="Unknown"
           DESCRIPTION="No message"
@@ -65,5 +81,6 @@ jobs:
               \"user\": \"${{ github.actor }}\",
               \"description\": \"$DESCRIPTION\",
               \"resource\": \"$RESOURCE\"
+              \"branch\": \"$BRANCH\"
             }" \
             $WEB_APP_URL
