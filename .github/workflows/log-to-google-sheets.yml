@@ -27,21 +27,36 @@ jobs:
           # Debug: Print the action type
           echo "Action: $ACTION"
 
+          # Initialize resource type and description
+          RESOURCE="Unknown"
+          DESCRIPTION="No message"
+
           # Determine the branch name
           if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+            RESOURCE="Branch"
             BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
             BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
+            DESCRIPTION="Branch: $BRANCH"
           elif [[ "${ACTION}" == "pull_request" ]]; then
-            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
-          else
-            BRANCH="N/A"  # No branch for issue events
+            RESOURCE="Pull Request"
+            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for PR source branch
+            DESCRIPTION="PR Title: ${{ github.event.pull_request.title }} - Status: $ACTION"
+          elif [[ "${ACTION}" == "issues" ]]; then
+            if [[ "${{ github.event.issue.state }}" == "open" ]]; then
+              RESOURCE="Issue"
+              DESCRIPTION="Issue Opened: ${{ github.event.issue.title }}"
+            elif [[ "${{ github.event.issue.state }}" == "closed" ]]; then
+              RESOURCE="Issue"
+              DESCRIPTION="Issue Closed: ${{ github.event.issue.title }}"
+            elif [[ "${{ github.event.action }}" == "edited" ]]; then
+              RESOURCE="Issue"
+              DESCRIPTION="Issue Edited: ${{ github.event.issue.title }}"
+            fi
           fi
 
-          # Debug: Print the branch name
-          echo "Branch: $BRANCH"
-
-          # Determine the description for commits, PRs, or issues
-          DESCRIPTION="${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
+          # Debug: Print the resource and description
+          echo "Resource: $RESOURCE"
+          echo "Description: $DESCRIPTION"
 
           # Send the data to Google Sheets
           curl -X POST -H "Content-Type: application/json" \
@@ -49,6 +64,6 @@ jobs:
               \"action\": \"$ACTION\",
               \"user\": \"${{ github.actor }}\",
               \"description\": \"$DESCRIPTION\",
-              \"branch\": \"$BRANCH\"
+              \"resource\": \"$RESOURCE\"
             }" \
             $WEB_APP_URL
