@@ -64,14 +64,10 @@ jobs:
           echo "Action: $ACTION"
           echo "Resource: $RESOURCE"
           echo "Description: $DESCRIPTION"
+          echo "Branch: $BRANCH"
+          echo "User: ${{ github.actor }}"
+          echo "Webhook URL: $WEB_APP_URL"
 
           # Send the data to Google Sheets
-          curl -L -X POST -H "Content-Type: application/json" \
-            -d "{
-              \"action\": \"$ACTION\",
-              \"user\": \"${{ github.actor }}\",
-              \"description\": \"$DESCRIPTION\",
-              \"branch\": \"$BRANCH\",
-              \"resource\": \"$RESOURCE\",
-            }" \
+          curl -L -X POST -H "Content-Type: application/json" \ -d "{ \"action\": \"$ACTION\", \"user\": \"${{ github.actor }}\", \"description\": \"$DESCRIPTION\", \"branch\": \"$BRANCH\", \"resource\": \"$RESOURCE\" }" \
             $WEB_APP_URL
