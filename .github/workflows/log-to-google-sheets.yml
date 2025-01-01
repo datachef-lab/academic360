@@ -66,7 +66,7 @@ jobs:
           echo "Description: $DESCRIPTION"
 
           # Send the data to Google Sheets
-          curl -L -X POST -H "Content-Type: application/json" \
+          curl -X POST -H "Content-Type: application/json" \
             -d "{
               \"action\": \"$ACTION\",
               \"user\": \"${{ github.actor }}\",
