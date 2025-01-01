@@ -20,10 +20,28 @@ jobs:
         env:
           WEB_APP_URL: ${{ secrets.GOOGLE_SHEETS_WEBHOOK }}
         run: |
+          # Determine the action type
+          ACTION="${{ github.event.action || 'push' }}"
+
+          # Determine the branch name
+          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+            BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
+            BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
+          elif [[ "${ACTION}" == "pull_request" ]]; then
+            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
+          else
+            BRANCH="N/A"  # No branch for issue events
+          fi
+
+          # Determine the description for commits, PRs, or issues
+          DESCRIPTION="${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
+
+          # Send the data to Google Sheets
           curl -X POST -H "Content-Type: application/json" \
             -d '{
-              "action": "${{ github.event.action || 'push' }}",
-              "user": "${{ github.actor }}",
-              "description": "${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
+              "action": "'$ACTION'",
+              "user": "'${{ github.actor }}'",
+              "description": "'$DESCRIPTION'",
+              "branch": "'$BRANCH'"
             }' \
             $WEB_APP_URL
