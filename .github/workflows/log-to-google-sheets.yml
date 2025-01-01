@@ -40,19 +40,14 @@ jobs:
           # Debug: Print the branch name
           echo "Branch: $BRANCH"
 
-          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+          # Determine the resource type
+            if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
             RESOURCE="Branch"
-          elif [[ "${ACTION}" == "pull_request" ]]; then
+            elif [[ "${ACTION}" == "pull_request" ]]; then
             RESOURCE="Pull Request"
-          elif [[ "${ACTION}" == "issues" ]]; then
-            if [[ "${{ github.event.issue.state }}" == "open" ]]; then
-              RESOURCE="Issue"
-            elif [[ "${{ github.event.issue.state }}" == "closed" ]]; then
-              RESOURCE="Issue"
-            elif [[ "${{ github.event.action }}" == "edited" ]]; then
-              RESOURCE="Issue"
+            elif [[ "${ACTION}" == "issues" ]]; then
+            RESOURCE="Issue"  # Explicitly set resource to "Issue" for any issue event
             fi
-          fi
 
           # Debug: Print the resource and description
 
