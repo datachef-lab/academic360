@@ -67,6 +67,7 @@ jobs:
               \"action\": \"$ACTION\",
               \"user\": \"${{ github.actor }}\",
               \"description\": \"$DESCRIPTION\",
-              \"branch\": \"$BRANCH\"
+              \"branch\": \"$BRANCH\",
+              \"resource\": \"$RESOURCE\",
             }" \
             $WEB_APP_URL
