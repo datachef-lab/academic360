@@ -3,7 +3,7 @@ name: Log GitHub Activities to Google Sheets
 on:
   push: # Logs commits
     branches:
-      - main
+      - "*"
   issues: # Logs all issue events
     types: [opened, edited, closed, labeled]
   pull_request: # Logs all PR events
