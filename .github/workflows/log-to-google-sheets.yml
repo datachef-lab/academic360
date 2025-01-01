@@ -39,10 +39,10 @@ jobs:
 
           # Send the data to Google Sheets
           curl -X POST -H "Content-Type: application/json" \
-            -d '{
-              "action": "'$ACTION'",
-              "user": "'${{ github.actor }}'",
-              "description": "'$DESCRIPTION'",
-              "branch": "'$BRANCH'"
-            }' \
+            -d "{
+              \"action\": \"$ACTION\",
+              \"user\": \"${{ github.actor }}\",
+              \"description\": \"$DESCRIPTION\",
+              \"branch\": \"$BRANCH\"
+            }" \
             $WEB_APP_URL
