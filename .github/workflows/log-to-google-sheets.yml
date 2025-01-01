@@ -1,4 +1,4 @@
-name: Log GitHub Activity to Google Sheets
+name: Log GitHub Activities to Google Sheets
 
 on:
   push: # Logs commits
