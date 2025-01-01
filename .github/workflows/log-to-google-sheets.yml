@@ -24,6 +24,9 @@ jobs:
           # Determine the action type
           ACTION="${{ github.event.action || 'push' }}"
 
+          # Debug: Print the action type
+          echo "Action: $ACTION"
+
           # Determine the branch name
           if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
             BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
@@ -33,6 +36,9 @@ jobs:
           else
             BRANCH="N/A"  # No branch for issue events
           fi
+
+          # Debug: Print the branch name
+          echo "Branch: $BRANCH"
 
           # Determine the description for commits, PRs, or issues
           DESCRIPTION="${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
