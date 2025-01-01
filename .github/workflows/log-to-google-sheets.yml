@@ -55,12 +55,14 @@ jobs:
           fi
 
           # Debug: Print the resource and description
-          echo "Resource: $RESOURCE"
+
           echo "Description: $DESCRIPTION"
 
           # Determine the description for commits, PRs, or issues
           DESCRIPTION="${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
 
+          echo "Resource: $RESOURCE"
+          echo "Description: $DESCRIPTION"
           # Send the data to Google Sheets
           curl -X POST -H "Content-Type: application/json" \
             -d "{
