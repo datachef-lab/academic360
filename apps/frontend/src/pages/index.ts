@@ -1,20 +1,21 @@
-import AddStudent from "./AddStudent";
-import GetReports from "./GetReports";
-import Home from "./Home";
-import Login from "./Login";
-import Root from "./Root";
-import SearchStudent from "./SearchStudent";
-import Settings from "./Settings";
-import UserProfile from "./UserProfile";
-
+import AddStudentPage from "@/pages/AddStudentPage";
+import GetReportsPage from "@/pages/GetReportsPage";
+import HomePage from "@/pages/HomePage";
+import LoginPage from "@/pages/LoginPage";
+import RootPage from "@/pages/RootPage";
+import SearchStudentPage from "@/pages/SearchStudentPage";
+import SettingsPage from "@/pages/SettingsPage";
+import UserProfilePage from "@/pages/UserProfilePage";
+import NotFoundPage from "@/pages/NotFoundPage";
 
 export {
-    Root,
-    Login,
-    Home,
-    AddStudent,
-    GetReports,
-    SearchStudent,
-    Settings,
-    UserProfile
+    RootPage,
+    LoginPage,
+    HomePage,
+    AddStudentPage,
+    GetReportsPage,
+    SearchStudentPage,
+    SettingsPage,
+    UserProfilePage,
+    NotFoundPage
 }
