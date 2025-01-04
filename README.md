@@ -58,11 +58,11 @@ npm run dev
 This will start both the frontend and backend applications simultaneously, allowing you to work with them in real time.
 
 #### Running a Specific App
-If you want to run only the frontend or backend separately, you can use the --scope flag like this:
+If you want to run only the frontend or backend separately, you can use the --workspace flag like this:
 
 ```bash
-npm run dev --scope=frontend  # Runs the frontend app only
-npm run dev --scope=backend   # Runs the backend app only
+npm run dev --workspace=frontend  # Runs the frontend app only
+npm run dev --workspace=backend   # Runs the backend app only
 ```
 
 ### Building the Apps
@@ -76,18 +76,18 @@ npm run build
 This will compile all apps into optimized production code.
 
 #### Building a Specific App
-If you only want to build the frontend or backend, use the --scope flag as shown below:
+If you only want to build the frontend or backend, use the --workspace flag as shown below:
 
 ```bash
-npm run build --scope=frontend  # Builds only the frontend app
-npm run build --scope=backend   # Builds only the backend app
+npm run build --workspace=frontend  # Builds only the frontend app
+npm run build --workspace=backend   # Builds only the backend app
 ```
 
 ### Adding Libraries
 To add a new library to either the frontend or backend, you can install it using the following command:
 ```bash
-npm install <library-name> --scope=frontend  # Installs the library for the frontend
-npm install <library-name> --scope=backend   # Installs the library for the backend
+npm install <library-name> --workspace=frontend  # Installs the library for the frontend
+npm install <library-name> --workspace=backend   # Installs the library for the backend
 ```
 
 ## Remote Caching
