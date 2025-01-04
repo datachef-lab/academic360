@@ -16,6 +16,7 @@ export function ModeToggle() {
       size="icon"
       onClick={toggleTheme}
       aria-label="Toggle theme"
+      className="m-5"
     >
       {theme === "dark" ? (
         <Moon className="h-[1.2rem] w-[1.2rem] transition-transform rotate-0 scale-100" />
