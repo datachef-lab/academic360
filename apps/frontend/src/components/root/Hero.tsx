@@ -9,7 +9,7 @@ export const Hero = () => {
       <div className="text-center lg:text-start space-y-6 max-w-xl">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
           <span className="inline bg-gradient-to-r from-[#F596D3] to-[#D247BF] text-transparent bg-clip-text">
-            Academic360
+            academic360*
           </span>{" "}
           Student Management System
         </h1>
