@@ -18,7 +18,6 @@ const refreshToken = async () => {
 
     if (res.data) {
       console.log(res.data);
-      // Save the new tokens
       localStorage.setItem("token", response.data.accessToken);
       localStorage.setItem("refreshToken", response.data.refreshToken);
     }
