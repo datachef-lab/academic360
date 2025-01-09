@@ -11,7 +11,7 @@ import {
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
-
+// testing
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
