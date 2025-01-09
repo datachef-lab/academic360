@@ -12,7 +12,7 @@ import { Sponsors } from "@/components/root/Sponsors";
 import { Testimonials } from "@/components/root/Testimonials";
 export default function Root() {
   return (
-    <div>
+    <div className="flex flex-col items-center">
       <Navbar />
       <Hero />
       <Sponsors />
