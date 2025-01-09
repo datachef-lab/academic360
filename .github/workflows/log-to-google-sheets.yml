@@ -25,26 +25,24 @@ jobs:
           ACTION="${{ github.event.action || 'push' }}"
           GITHUB_EVENT_PATH=${GITHUB_EVENT_PATH:-/github/workflow/event.json}
 
-          # Determine branch name
-          if [[ "$ACTION" == "push" || "$ACTION" == "create" || "$ACTION" == "delete" ]]; then
-            BRANCH="${{ github.ref }}"  # Extract branch from ref
+          # Determine the branch name
+          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+            BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
             BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
-          elif [[ "$ACTION" == "pull_request" ]]; then
+          elif [[ "${ACTION}" == "pull_request" ]]; then
             BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
           else
             BRANCH="N/A"  # No branch for issue events
           fi
 
-          # Determine resource type
-          if [[ "$ACTION" == "push" || "$ACTION" == "create" || "$ACTION" == "delete" ]]; then
-              RESOURCE="Branch"
-          elif [[ "$ACTION" == "pull_request" ]]; then
-              RESOURCE="Pull Request"
-          elif [[ "$ACTION" == "issues" ]]; then
-              RESOURCE="Issue"
-          else
-              RESOURCE="Unknown"
-          fi
+          # Determine the resource type
+            if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+            RESOURCE="Branch"
+            elif [[ "${ACTION}" == "pull_request" ]]; then
+            RESOURCE="Pull Request"
+            elif [[ "${ACTION}" == "issues" ]]; then
+            RESOURCE="Issue"  # Explicitly set resource to "Issue" for any issue event
+            fi
 
           # Extract description
           DESCRIPTION=""

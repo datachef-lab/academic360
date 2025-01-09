@@ -3,6 +3,7 @@
 # Dependencies
 /node_modules
 /.turbo
+/.idea
 .pnp
 .pnp.js
 

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { CgLogIn } from "react-icons/cg"; // Import React Icon
+import { Link } from "react-router-dom";
 
 export const Navbar: React.FC = () => {
   const scrollToSection = (sectionId: string) => {
@@ -16,16 +17,19 @@ export const Navbar: React.FC = () => {
     <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
         {/* Logo */}
-        <a href="#" className="flex items-center space-x-3 rtl:space-x-reverse">
+        <Link
+          to={"/"}
+          className="flex items-center space-x-3 rtl:space-x-reverse"
+        >
           <img
             src="https://static.vecteezy.com/system/resources/previews/000/502/191/non_2x/vector-graduation-cap-icon-design.jpg"
             className="h-8"
             alt="Logo"
           />
           <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
-            academic360*
+            academic360
           </span>
-        </a>
+        </Link>
 
         {/* Desktop Menu */}
         <div className="hidden md:flex md:space-x-8 md:order-1">
