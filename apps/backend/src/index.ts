@@ -5,12 +5,12 @@ import { connectToDatabase } from "@/db/index.js";
 const PORT = process.env.PORT || 8080;
 
 (async () => {
-  console.log("\nInitializing Taskify...\n");
+  console.log("\nInitializing academic360...\n");
   try {
     await connectToDatabase();
     app.listen(PORT, () => {
       console.log(
-        `[backend] - Taskify is running on http://localhost:${PORT} 🚀\n`,
+        `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,
       );
     });
   } catch (error) {
