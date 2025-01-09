@@ -1,16 +1,16 @@
 name: Log GitHub Activities to Google Sheets
 
 on:
-  push: # Logs commits
+  push:
     branches:
       - "*"
-  issues: # Logs all issue events
+  issues:
     types: [opened, edited, closed, labeled]
-  pull_request: # Logs all PR events
+  pull_request:
     types: [opened, edited, closed]
-  create: # Logs branch creation
-  delete: # Logs branch deletion
-  workflow_dispatch: # Allow manual triggering of the workflow via a button
+  create:
+  delete:
+  workflow_dispatch:
 
 jobs:
   log_activity:
@@ -21,64 +21,54 @@ jobs:
         env:
           WEB_APP_URL: ${{ secrets.GOOGLE_SHEETS_WEBHOOK }}
         run: |
-          # Determine the action type
+          # Load the GitHub event payload
           ACTION="${{ github.event.action || 'push' }}"
+          GITHUB_EVENT_PATH=${GITHUB_EVENT_PATH:-/github/workflow/event.json}
 
-          # Debug: Print the action type
-          echo "Action: $ACTION"
-
-          # Determine the branch name
-          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
-            BRANCH="${{ github.ref }}"  # Extract branch from ref for push/create/delete events
-            BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
-          elif [[ "${ACTION}" == "pull_request" ]]; then
-            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
+          # Determine branch name
+          if [[ "$ACTION" == "push" || "$ACTION" == "create" || "$ACTION" == "delete" ]]; then
+              if [[ "${{ github.ref }}" == refs/heads/* ]]; then
+                  BRANCH="${{ github.ref#refs/heads/ }}"
+              else
+                  BRANCH="N/A"
+              fi
+          elif [[ "$ACTION" == "pull_request" ]]; then
+              BRANCH="$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")"
           else
-            BRANCH="N/A"  # No branch for issue events
+              BRANCH="N/A"
           fi
 
-          # Debug: Print the branch name
+          # Determine resource type
+          if [[ "$ACTION" == "push" || "$ACTION" == "create" || "$ACTION" == "delete" ]]; then
+              RESOURCE="Branch"
+          elif [[ "$ACTION" == "pull_request" ]]; then
+              RESOURCE="Pull Request"
+          elif [[ "$ACTION" == "issues" ]]; then
+              RESOURCE="Issue"
+          else
+              RESOURCE="Unknown"
+          fi
+
+          # Extract description
+          DESCRIPTION=""
+          if [[ "$ACTION" == "push" ]]; then
+              for commit in $(jq -r '.commits[].message' "$GITHUB_EVENT_PATH"); do
+                  DESCRIPTION="${DESCRIPTION}${commit}\n"
+              done
+              [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
+          else
+              DESCRIPTION=$(jq -r '.pull_request.title // .issue.title // "No details available for this event"' "$GITHUB_EVENT_PATH")
+          fi
+
+          # Debug logs
+          echo "Action: $ACTION"
           echo "Branch: $BRANCH"
-
-          # Determine the resource type
-            if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
-            RESOURCE="Branch"
-            elif [[ "${ACTION}" == "pull_request" ]]; then
-            RESOURCE="Pull Request"
-            elif [[ "${ACTION}" == "issues" ]]; then
-            RESOURCE="Issue"  # Explicitly set resource to "Issue" for any issue event
-            fi
-
-          # Handle push event to extract all commit messages
-          if [[ "${ACTION}" == "push" ]]; then
-            # Initialize description as empty
-            DESCRIPTION=""
-
-            # Iterate through commits array in the GitHub event payload
-            for commit in $(jq -r '.commits[] | .message' <<< "${{ toJson(github.event.commits) }}"); do
-              DESCRIPTION="${DESCRIPTION}${commit}\n"  # Append each commit message
-            done
-
-            # Fallback if no commits are found
-            if [[ -z "$DESCRIPTION" ]]; then
-              DESCRIPTION="No commit messages available"
-            fi
-          else
-            # Handle other events (PRs, issues)
-            DESCRIPTION="${{ github.event.pull_request.title || github.event.issue.title || 'No message available' }}"
-          fi
-
-          # Debug: Print the description
-          echo "Description: $DESCRIPTION"
-
-          echo "Action: $ACTION"
           echo "Resource: $RESOURCE"
           echo "Description: $DESCRIPTION"
-          echo "Branch: $BRANCH"
           echo "User: ${{ github.actor }}"
           echo "Webhook URL: $WEB_APP_URL"
 
-          # Send the data to Google Sheets
-           curl -X POST -H "Content-Type: application/json" \
-            -d "{\"action\": \"$ACTION\", \"user\": \"${{ github.actor }}\", \"description\": \"$DESCRIPTION\", \"branch\": \"$BRANCH\", \"resource\": \"$RESOURCE\"}" \
-            "$WEB_APP_URL"
+          # Send data to Google Sheets
+          curl -X POST -H "Content-Type: application/json" \
+              -d "{\"action\": \"$ACTION\", \"user\": \"${{ github.actor }}\", \"description\": \"$DESCRIPTION\", \"branch\": \"$BRANCH\", \"resource\": \"$RESOURCE\"}" \
+              "$WEB_APP_URL"
