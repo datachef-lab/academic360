@@ -27,15 +27,12 @@ jobs:
 
           # Determine branch name
           if [[ "$ACTION" == "push" || "$ACTION" == "create" || "$ACTION" == "delete" ]]; then
-              if [[ "${{ github.ref }}" == refs/heads/* ]]; then
-                  BRANCH="${{ github.ref#refs/heads/ }}"
-              else
-                  BRANCH="N/A"
-              fi
+            BRANCH="${{ github.ref }}"  # Extract branch from ref
+            BRANCH="${BRANCH#refs/heads/}"  # Remove "refs/heads/" prefix
           elif [[ "$ACTION" == "pull_request" ]]; then
-              BRANCH="$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")"
+            BRANCH="${{ github.event.pull_request.head.ref }}"  # Extract branch for pull request source branch
           else
-              BRANCH="N/A"
+            BRANCH="N/A"  # No branch for issue events
           fi
 
           # Determine resource type
