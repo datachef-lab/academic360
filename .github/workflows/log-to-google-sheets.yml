@@ -48,7 +48,7 @@ jobs:
           DESCRIPTION=""
           if [[ "$ACTION" == "push" ]]; then
               for commit in $(jq -r '.commits[].message' "$GITHUB_EVENT_PATH"); do
-                  DESCRIPTION="${DESCRIPTION}${commit}\n"
+                  DESCRIPTION="${DESCRIPTION}${commit}"
               done
               [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
           else
