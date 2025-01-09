@@ -12,7 +12,6 @@ import {
   UserProfilePage,
 } from "@/pages";
 
-
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
