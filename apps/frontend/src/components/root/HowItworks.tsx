@@ -1,75 +1,99 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { MedalIcon, MapIcon, PlaneIcon, GiftIcon } from "../../components/Icons";
-
-interface FeatureProps {
-  icon: JSX.Element;
-  title: string;
-  description: string;
-}
-
-const features: FeatureProps[] = [
-  {
-    icon: <MedalIcon />,
-    title: "Student Management",
-    description:
-      "Easily manage student profiles, including personal information, academic records, and contact details.",
-  },
-  {
-    icon: <MapIcon />,
-    title: "Attendance Tracking",
-    description:
-      "Track student attendance in real-time, generate reports, and ensure no student misses out on important lessons.",
-  },
-  {
-    icon: <PlaneIcon />,
-    title: "Data Security",
-    description:
-      "Our system ensures the highest level of security for student data, protecting sensitive information with encryption.",
-  },
-  {
-    icon: <GiftIcon />,
-    title: "Grade Management",
-    description:
-      "Efficiently record, track, and manage student grades across various subjects and provide insightful reports.",
-  },
-];
-
 export const HowItWorks = () => {
   return (
-    <section
-      id="howItWorks"
-      className="container text-center py-12 sm:py-16 md:py-24 lg:py-32"
-    >
-      <h2 className="text-3xl md:text-4xl font-bold mb-6">
-        How It{" "}
-        <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-          Works
-        </span>
-        Step-by-Step Guide
+    <div className="text-center p-8">
+      <h2 className="font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl">
+        Why to choose US?
       </h2>
-      <p className="md:w-3/4 mx-auto mt-4 mb-8 text-xl text-muted-foreground">
-        Learn how our Student Management System streamlines your administrative
-        tasks and enhances productivity.
-      </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 m-5">
-        {features.map(({ icon, title, description }: FeatureProps) => (
-          <Card
-            key={title}
-            className="bg-muted/50 p-4 rounded-md shadow-md hover:shadow-lg transition-all duration-300"
-          >
-            <CardHeader className="mb-4">
-              <CardTitle className="grid gap-4 place-items-center">
-                {icon}
-                <h3 className="text-lg font-semibold">{title}</h3>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm sm:text-base">{description}</p>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="flex flex-wrap items-center mt-20 ">
+        <div className="w-full md:w-3/5 lg:w-1/2 px-4">
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/009/000/753/non_2x/circle-of-flat-education-icons-set-with-long-shadow-effect-vector.jpg"
+            alt="gem"
+            className="inline-block rounded shadow-lg border border-merino-400"
+          />
+        </div>
+        <div className="w-full md:w-2/5 lg:w-1/2 px-4 text-center md:text-left lg:pl-12">
+          <h3 className="font-bold mt-8 text-xl md:mt-0 sm:text-2xl">
+            Why Choose Our Student Management App?
+          </h3>
+          <p className="sm:text-lg mt-6">
+            Our Student Management App is designed to simplify and streamline
+            the management of student data, attendance, grades, and
+            communication. With its user-friendly interface and powerful
+            features, it empowers educators and administrators to enhance their
+            school's efficiency and provide better support to students.
+            Experience effortless integration, real-time updates, and powerful
+            insights that make student management a breeze.
+          </p>
+        </div>
       </div>
-    </section>
+
+      <div className="flex flex-wrap items-center mt-20 ">
+        <div className="w-full md:w-3/5 lg:w-1/2 px-4">
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/052/386/430/non_2x/business-growth-through-outsourcing-and-delegation-concept-in-flat-design-vector.jpg"
+            alt="project members"
+            className="inline-block rounded shadow-lg border border-merino-400"
+          />
+        </div>
+        <div className="w-full md:w-2/5 lg:w-1/2 px-4 md:order-first text-center md:text-left lg:pr-12">
+          <h3 className="font-bold mt-8 text-xl md:mt-0 sm:text-2xl">
+            Real-time Data Tracking
+          </h3>
+          <p className="sm:text-lg mt-6">
+            Our app offers real-time data tracking for students, allowing you to
+            monitor attendance, grades, and performance instantly. Whether
+            you're tracking progress in classes or managing extracurricular
+            activities, you'll have all the critical data at your fingertips.
+            This feature ensures that educators and administrators can make
+            informed decisions quickly and efficiently.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center mt-20">
+        <div className="w-full md:w-3/5 lg:w-1/2 px-4">
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/011/946/476/non_2x/email-problem-notification-on-laptop-computer-display-screen-concept-flat-illustration-vector.jpg"
+            alt="editor"
+            className="inline-block rounded shadow-lg border border-merino-400"
+          />
+        </div>
+        <div className="w-full md:w-2/5 lg:w-1/2 px-4 text-center md:text-left lg:pl-12">
+          <h3 className="font-bold mt-8 text-xl md:mt-0 sm:text-2xl">
+            Automated Notifications
+          </h3>
+          <p className="sm:text-lg mt-6">
+            Stay on top of important updates with automated notifications.
+            Whether it's exam schedules, fee reminders, or parent-teacher
+            meetings, the app sends timely alerts to students, parents, and
+            faculty members. This ensures that everyone is informed and nothing
+            is missed.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center mt-20">
+        <div className="w-full md:w-3/5 lg:w-1/2 px-4">
+          <img
+            src="https://static.vecteezy.com/system/resources/previews/051/189/578/non_2x/business-data-analysis-report-concept-business-people-analyzing-business-report-business-financial-growth-analysis-analysis-software-flat-illustration-on-background-vector.jpg"
+            alt="bulk editing"
+            className="inline-block rounded shadow-lg border border-merino-400"
+          />
+        </div>
+        <div className="w-full md:w-2/5 lg:w-1/2 px-4 md:order-first text-center md:text-left lg:pr-12">
+          <h3 className="font-bold mt-8 text-xl md:mt-0 sm:text-2xl">
+            Data-Driven Insights
+          </h3>
+          <p className="sm:text-lg mt-6">
+            Our app offers detailed data analytics to track student progress and
+            performance. With visual charts and reports, administrators and
+            teachers can make data-driven decisions to improve learning outcomes
+            and tailor their approach to individual student needs.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };

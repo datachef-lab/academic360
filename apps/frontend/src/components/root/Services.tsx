@@ -1,80 +1,104 @@
-import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { MagnifierIcon, WalletIcon, ChartIcon } from "../../components/Icons";
+import React from "react";
+import {
+  FaRegAddressCard,
+  FaChalkboardTeacher,
+  FaCalendarAlt,
+} from "react-icons/fa";
 
-interface ServiceProps {
+interface Service {
   title: string;
   description: string;
   icon: JSX.Element;
+  features: string[];
 }
 
-const serviceList: ServiceProps[] = [
+const services: Service[] = [
   {
-    title: "Student Profile Management",
+    title: "Student Enrollment and Registration",
     description:
-      "Manage student profiles including personal details, academic records, and contact information to ensure all records are up-to-date and easily accessible.",
-    icon: <ChartIcon />,
+      "Our platform simplifies the student enrollment process, offering a seamless and automated registration system, helping administrators manage student data with ease.",
+    icon: <FaRegAddressCard />,
+    features: [
+      "Automated Enrollment",
+      "Real-Time Registration Tracking",
+      "Centralized Student Data",
+    ],
   },
   {
-    title: "Attendance Tracking",
+    title: "Gradebook and Academic Performance Tracking",
     description:
-      "Track student attendance in real-time, monitor attendance patterns, and generate attendance reports for administrators and teachers.",
-    icon: <WalletIcon />,
+      "Track academic performance with real-time gradebooks, providing students, teachers, and parents with up-to-date information on progress and performance.",
+    icon: <FaChalkboardTeacher />,
+    features: [
+      "Automated Grade Calculations",
+      "Student Progress Dashboards",
+      "Parent-Teacher Communication",
+    ],
   },
   {
-    title: "Grade and Performance Analysis",
+    title: "Class Scheduling and Management",
     description:
-      "Analyze student grades and performance across subjects to gain insights, track progress, and ensure academic success.",
-    icon: <MagnifierIcon />,
+      "Our platform offers an efficient way to create, manage, and share class schedules, ensuring smooth coordination between teachers and students.",
+    icon: <FaCalendarAlt />,
+    features: [
+      "Automatic Schedule Generation",
+      "Room and Teacher Availability Tracking",
+      "Student Class Enrollments",
+    ],
   },
 ];
 
-export const Services = () => {
+export const Services: React.FC = () => {
   return (
-    <section className="container py-16 sm:py-24 lg:py-32">
-      <div className="grid sm:grid-cols-1 lg:grid-cols-2 gap-8 place-items-center m-5">
+    <div
+      className="px-4 py-16 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8 lg:py-20"
+      id="services"
+    >
+      <div className="max-w-xl mb-10 md:mx-auto sm:text-center lg:max-w-2xl md:mb-12">
         <div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold">
-            <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-              Student-Centric{" "}
-            </span>
-            Services
-          </h2>
-
-          <p className="text-muted-foreground text-lg sm:text-xl mt-4 mb-8">
-            Our student management system offers the following services to
-            enhance educational experiences and improve administrative
-            efficiency.
+          <p className="inline-block px-3 py-px mb-4 text-xs font-semibold tracking-wider text-teal-900 uppercase rounded-full bg-sky-500">
+            Our Services
           </p>
-
-          <div className="flex flex-col gap-6 sm:gap-8">
-            {serviceList.map(({ icon, title, description }: ServiceProps) => (
-              <Card key={title}>
-                <CardHeader className="space-y-1 flex flex-col sm:flex-row justify-start items-start gap-4">
-                  <div className="mt-1 bg-primary/20 p-2 rounded-2xl w-fit">
-                    {icon}
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl sm:text-2xl">
-                      {title}
-                    </CardTitle>
-                    <CardDescription className="text-sm sm:text-md mt-2">
-                      {description}
-                    </CardDescription>
-                  </div>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
         </div>
-
-        <div className="w-full flex justify-center mt-8 sm:mt-0">
-          <img
-            src="https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg"
-            className="w-full sm:w-[300px] md:w-[400px] lg:w-[600px] object-contain"
-            alt="Student Management System Services"
-          />
-        </div>
+        <h2 className="max-w-lg mb-6 font-sans text-3xl font-bold leading-none tracking-tight text-gray-900 sm:text-4xl md:mx-auto">
+          <span className="relative inline-block">
+            <span className="relative">The</span>
+          </span>
+          Comprehensive Solution for Student Management
+        </h2>
+        <p className="text-base text-gray-700 md:text-lg">
+          Our Academic 360° services offer powerful tools to simplify student
+          management, improve engagement, and streamline academic processes.
+          From enrollment to graduation, we cover all aspects of academic
+          management.
+        </p>
       </div>
-    </section>
+
+      <div className="grid max-w-md gap-8 row-gap-10 sm:mx-auto lg:max-w-full lg:grid-cols-3">
+        {services.map((service, index) => (
+          <div key={index} className="flex flex-col sm:flex-row">
+            <div className="sm:mr-4">
+              <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-green-50">
+                {service.icon}
+              </div>
+            </div>
+            <div>
+              <h6 className="mb-2 font-semibold leading-5">{service.title}:</h6>
+              <p className="mb-3 text-sm text-gray-900">
+                {service.description}
+              </p>
+              <ul className="mb-4 -ml-1 space-y-2">
+                {service.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start">
+                    🎯
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 };

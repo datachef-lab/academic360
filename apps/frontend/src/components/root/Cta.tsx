@@ -1,40 +1,53 @@
 export const Cta = () => {
   return (
-    <section id="cta" className="bg-muted/50 py-8 sm:py-16 my-16 sm:my-24">
-      <div className="container px-4 sm:px-8 lg:grid lg:grid-cols-2 place-items-center">
-        {/* Text Section */}
-        <div className="lg:col-start-1 text-center lg:text-left m-5">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold leading-tight">
-            Simplify
-            <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-              {" "}
-              Student Management{" "}
-            </span>
-            With a Unified Platform
-          </h2>
-          <p className="text-muted-foreground text-base sm:text-lg md:text-xl mt-4 mb-6 sm:mb-8 lg:mb-4">
-            Streamline student records, attendance tracking, performance
-            monitoring, and administrative tasks all in one place.
-          </p>
-          <p className="text-muted-foreground text-sm sm:text-base lg:text-lg mb-6 sm:mb-8 lg:mb-0">
-            Empower teachers and administrators to focus more on education and
-            less on paperwork. Track academic progress, attendance patterns, and
-            student behavior effortlessly.
+    <>
+      <div className="max-w-xl mb-10 md:mx-auto sm:text-center lg:max-w-2xl md:mb-12">
+        <div>
+          <p className="inline-block px-3 py-px mb-4 text-xs font-semibold tracking-wider text-teal-900 uppercase rounded-full bg-sky-500">
+            Call To Action
           </p>
         </div>
-
-        {/* Call-to-Actions */}
-        <div className="space-y-4 lg:col-start-2 w-full lg:w-auto text-center lg:text-left m-5">
-          <img
-            src="https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg"
-            alt=""
-            style={{ borderRadius: "20px" }}
-          />
-          <p className="text-xs sm:text-sm text-muted-foreground mt-4 lg:mt-0 text-center">
-            Experience the future of education management today.
-          </p>
+        <h2 className="max-w-lg mb-6 font-sans text-3xl font-bold leading-none tracking-tight text-gray-900 sm:text-4xl md:mx-auto">
+          <span className="relative inline-block">
+            <span className="relative">
+              "Streamline Your Institution's Workflow Today!
+            </span>
+          </span>
+        </h2>
+        <p className="text-base text-gray-700 md:text-lg">
+          Empower educators, engage students, and simplify administration with
+          our all-in-one student management solution. Transform the way you
+          handle attendance, grades, schedules, and communication – all in one
+          place.
+        </p>
+      </div>
+      <div className="px-2 py-20 w-full flex justify-center">
+        <div className="bg-white lg:mx-8 lg:flex lg:max-w-5xl lg:shadow-lg rounded-lg">
+          <div className="lg:w-1/2">
+            <div
+              className="lg:scale-110 h-80 bg-cover lg:h-full rounded-b-none border lg:rounded-lg"
+              style={{
+                backgroundImage: `url('https://images.unsplash.com/photo-1517694712202-14dd9538aa97')`,
+              }}
+            ></div>
+          </div>
+          <div className="py-12 px-6 lg:px-12 max-w-xl lg:max-w-5xl lg:w-1/2 rounded-t-none border lg:rounded-lg">
+            <h2 className="text-3xl text-gray-800 font-bold">
+              Promoting Sustainable Lifestyle Choices
+              <span className="text-indigo-600">Choices</span>
+            </h2>
+            <p className="mt-4 text-gray-600">
+              "Simplify Education Management – Empower Learning!" Transform the
+              way you manage students, courses, and academic activities with our
+              powerful student management platform. Streamline. Connect.
+              Succeed. Access real-time insights, enhance communication, and
+              create an engaging academic environment that drives success for
+              students, teachers, and administrators. Take the next step in
+              education management – Get started today!
+            </p>
+          </div>
         </div>
       </div>
-    </section>
+    </>
   );
 };

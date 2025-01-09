@@ -1,4 +1,5 @@
 import { About } from "@/components/root/About";
+import Contact from "@/components/root/Contact";
 import { Cta } from "@/components/root/Cta";
 import { FAQ } from "@/components/root/FAQ";
 import { Features } from "@/components/root/Features";
@@ -8,14 +9,12 @@ import { HowItWorks } from "@/components/root/HowItworks";
 import { Navbar } from "@/components/root/Navbar";
 import { ScrollToTop } from "@/components/root/ScrollToTop";
 import { Services } from "@/components/root/Services";
-import { Sponsors } from "@/components/root/Sponsors";
 import { Testimonials } from "@/components/root/Testimonials";
 export default function Root() {
   return (
     <div className="flex flex-col items-center">
       <Navbar />
       <Hero />
-      <Sponsors />
       <About />
       <HowItWorks />
       <Features />
@@ -23,6 +22,7 @@ export default function Root() {
       <Cta />
       <Testimonials />
       <FAQ />
+      <Contact/>
       <Footer />
       <ScrollToTop />
     </div>

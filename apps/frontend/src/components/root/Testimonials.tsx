@@ -1,116 +1,104 @@
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-interface TestimonialProps {
-  image: string;
-  name: string;
-  userName: string;
-  comment: string;
-}
-
-const testimonials: TestimonialProps[] = [
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "Emma Wilson",
-    userName: "@emma_wilson",
-    comment:
-      "This system has revolutionized how we manage student data. Attendance tracking and performance monitoring are seamless and efficient!",
-  },
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "Michael Johnson",
-    userName: "@michael_johnson",
-    comment:
-      "I love the centralized platform for assignments and performance reports. It saves time and keeps everything organized.",
-  },
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "Sophia Lee",
-    userName: "@sophia_lee",
-    comment:
-      "Our teachers are more focused now on teaching rather than paperwork. The reporting and analytics tools are a game-changer!",
-  },
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "Daniel Smith",
-    userName: "@daniel_smith",
-    comment:
-      "The system has simplified fee payments and attendance tracking. Parents love the transparency it provides!",
-  },
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "Olivia Brown",
-    userName: "@olivia_brown",
-    comment:
-      "Having all student records in one place has made administration tasks so much easier. Highly recommended for schools!",
-  },
-  {
-    image:
-      "https://static.vecteezy.com/system/resources/previews/047/784/018/non_2x/an-illustration-depicting-a-diverse-group-of-students-utilizing-a-modern-online-learning-platform-showcasing-the-various-features-and-benefits-it-offers-free-vector.jpg",
-    name: "James Williams",
-    userName: "@james_williams",
-    comment:
-      "This system has transformed communication between parents and teachers. Instant updates on attendance and grades make a huge difference!",
-  },
-];
-
 export const Testimonials = () => {
   return (
-    <section id="testimonials" className="container py-16 sm:py-24 ">
-      <h2 className="text-3xl md:text-4xl font-bold text-center">
-        Why Educators and Administrators
-        <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-          {" "}
-          Trust Our Platform
-        </span>
-      </h2>
-
-      <p className="text-xl text-muted-foreground pt-4 pb-8 text-center">
-        Hear from schools and institutions about how our Student Management
-        System has improved their processes and outcomes.
-      </p>
-
-      <div className="grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 m-5">
-        {testimonials.map(
-          ({ image, name, userName, comment }: TestimonialProps) => (
-            <Card
-              key={userName}
-              className="max-w-md md:break-inside-avoid overflow-hidden shadow-lg"
-            >
-              <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                <Avatar>
-                  <AvatarImage alt={name} src={image} />
-                  <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-                </Avatar>
-
-                <div className="flex flex-col">
-                  <CardTitle className="text-lg font-semibold">
-                    {name}
-                  </CardTitle>
-                  <CardDescription className="text-sm text-muted-foreground">
-                    {userName}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-
-              <CardContent className="text-muted-foreground text-sm">
-                {comment}
-              </CardContent>
-            </Card>
-          ),
-        )}
+    <div className="py-5 dark:bg-gray-900">
+      <div className="flex flex-col items-center justify-center w-full p-6 mx-auto text-center xl:px-0">
+        <div className="text-sm font-bold tracking-wider text-indigo-600 uppercase">
+          Testimonials
+        </div>
+        <h2 className="max-w-2xl mt-3 text-3xl font-bold leading-snug tracking-tight text-gray-800 lg:leading-tight lg:text-4xl dark:text-white">
+          What Educators and Students Are Saying About Us
+        </h2>
+        <p className="max-w-2xl py-4 text-lg leading-normal text-gray-500 lg:text-xl xl:text-xl dark:text-gray-300">
+          Testimonials showcase how our student management app has transformed
+          education. Use this section to highlight the experiences of educators,
+          administrators, and students.
+        </p>
       </div>
-    </section>
+      <div className=" p-6 mx-auto mb-10 xl:px-0">
+        <div className="grid gap-10 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="lg:col-span-2 xl:col-auto">
+            <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
+              <p className="text-2xl leading-normal dark:text-gray-300">
+                "The student management app has been a game-changer for our
+                institution. It has simplified attendance tracking, improved
+                communication between teachers and parents, and provided
+                real-time insights into student performance."
+              </p>
+              <div className="flex items-center mt-8 space-x-3">
+                <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
+                  <img
+                    alt="Avatar"
+                    src="https://images.unsplash.com/photo-1511485977113-f34c92461ad9?crop=faces&amp;cs=tinysrgb&amp;fit=crop&amp;fm=jpg&amp;ixid=MnwxfDB8MXxhbGx8fHx8fHx8fHwxNjIwMTQ5ODEx&amp;ixlib=rb-1.2.1&amp;q=80&amp;w=100&amp;h=100"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    Sarah Steiner
+                  </div>
+                  <div className="text-gray-600 dark:text-gray-800">
+                    VP Sales at Google
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="">
+            <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
+              <p className="text-2xl leading-normal dark:text-gray-300">
+                "Managing student records and academic progress has never been
+                easier. The app's user-friendly interface and robust features
+                have streamlined our administrative tasks, allowing us to focus
+                more on improving the learning experience."
+              </p>
+              <div className="flex items-center mt-8 space-x-3">
+                <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
+                  <img
+                    alt="Avatar"
+                    src="https://images.unsplash.com/photo-1463453091185-61582044d556?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;crop=faces&amp;fit=crop&amp;w=100&amp;h=100&amp;q=80"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    Dylan Ambrose
+                  </div>
+                  <div className="text-gray-600 dark:text-gray-800">
+                    Lead marketer at Netflix{" "}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="">
+            <div className="flex flex-col justify-between w-full h-full px-6 py-6 bg-gray-100 dark:bg-gray-800 md:px-14 rounded-2xl md:py-14 dark:bg-trueGray-800">
+              <p className="text-2xl leading-normal dark:text-gray-300">
+                "As a teacher, the student management app has made my life so
+                much easier. I can track attendance, update grades, and
+                communicate with parents seamlessly. It’s an indispensable tool
+                for modern education."
+              </p>
+              <div className="flex items-center mt-8 space-x-3">
+                <div className="flex-shrink-0 overflow-hidden rounded-full w-14 h-14">
+                  <img
+                    alt="Avatar"
+                    src="https://images.unsplash.com/photo-1624224971170-2f84fed5eb5e?ixlib=rb-1.2.1&amp;ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&amp;auto=format&amp;fit=crop&amp;w=100&amp;h=100&amp;crop=faces&amp;q=80"
+                    loading="lazy"
+                  />
+                </div>
+                <div>
+                  <div className="text-lg font-medium text-gray-800">
+                    Gabrielle Winn
+                  </div>
+                  <div className="text-gray-600 dark:text-gray-800">
+                    Co-founder of Acme Inc
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };

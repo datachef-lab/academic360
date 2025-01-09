@@ -1,91 +1,224 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-
-interface FAQProps {
-  question: string;
-  answer: string;
-  value: string;
-}
-
-// FAQ list specific to Student Management System
-const FAQList: FAQProps[] = [
-  {
-    question: "What is a Student Management System?",
-    answer:
-      "A Student Management System is a software platform designed to manage student data, including enrollment, attendance, grades, and reports, making it easier to track student performance and activities.",
-    value: "item-1",
-  },
-  {
-    question: "How secure is the Student Management System?",
-    answer:
-      "Our Student Management System uses advanced encryption and secure access protocols to ensure all student data is protected and complies with data privacy laws.",
-    value: "item-2",
-  },
-  {
-    question: "Can teachers and parents access the system?",
-    answer:
-      "Yes, the system allows different access roles for administrators, teachers, students, and parents, ensuring personalized access based on user needs.",
-    value: "item-3",
-  },
-  {
-    question: "Does it support online fee payments?",
-    answer:
-      "Absolutely! The system integrates with multiple payment gateways to facilitate secure and easy online fee payments for parents and students.",
-    value: "item-4",
-  },
-  {
-    question: "Can I track attendance and performance reports?",
-    answer:
-      "Yes, you can track real-time attendance and generate performance reports for individual students, classes, or the entire institution.",
-    value: "item-5",
-  },
-];
-
 export const FAQ = () => {
   return (
-    <section
-      id="faq"
-      className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20"
-    >
-      <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
-        Frequently Asked{" "}
-        <span className="bg-gradient-to-b from-primary/60 to-primary text-transparent bg-clip-text">
-          Questions
-        </span>
-      </h2>
-
-      <p className="text-lg text-muted-foreground text-center mb-8">
-        Here are some common questions about our Student Management System.
-      </p>
-
-      {/* Accordion */}
-      <Accordion type="single" collapsible className="w-full">
-        {FAQList.map(({ question, answer, value }: FAQProps) => (
-          <AccordionItem key={value} value={value}>
-            <AccordionTrigger className="text-left text-lg">
-              {question}
-            </AccordionTrigger>
-            <AccordionContent className="text-base text-muted-foreground">
-              {answer}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-
-      <h3 className="font-medium mt-8 text-center">
-        Still have questions?{" "}
-        <a
-          rel="noreferrer noopener"
-          href="#"
-          className="text-primary transition-all border-primary hover:border-b-2"
-        >
-          Contact us
-        </a>
-      </h3>
-    </section>
+    <div className="relative isolate overflow-hidden bg-custom">
+      <div className="py-24 px-8 max-w-5xl mx-auto flex flex-col md:flex-row gap-12">
+        <div className="flex flex-col text-left basis-1/2">
+          <p className="sm:text-4xl text-3xl font-extrabold text-base-content">
+            Frequently Asked Questions
+          </p>
+        </div>
+        <ul className="basis-1/2">
+          <li className="group">
+            <button
+              className="relative flex gap-2 items-center w-full py-5 text-base font-semibold text-left border-t md:text-lg border-base-content/10"
+              aria-expanded="false"
+            >
+              <span className="flex-1 text-base-content">
+                How do I register a new student?
+              </span>
+              <svg
+                className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="transform origin-center transition duration-200 ease-out false"
+                ></rect>
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="group-hover:opacity-0 origin-center rotate-90 transition duration-200 ease-out false"
+                ></rect>
+              </svg>
+            </button>
+            <div
+              className="transition-all duration-300 ease-in-out group-hover:max-h-60 max-h-0 overflow-hidden"
+              style={{ transition: "max-height 0.3s ease-in-out 0s" }}
+            >
+              <div className="pb-5 leading-relaxed">
+                <div className="space-y-2 leading-relaxed">
+                  You can register a new student by navigating to the "Student
+                  Registration" section, filling out the required details, and
+                  clicking the "Submit" button.
+                </div>
+              </div>
+            </div>
+          </li>
+          <li className="group">
+            <button
+              className="relative flex gap-2 items-center w-full py-5 text-base font-semibold text-left border-t md:text-lg border-base-content/10"
+              aria-expanded="false"
+            >
+              <span className="flex-1 text-base-content">
+                How do I update student information?
+              </span>
+              <svg
+                className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="transform origin-center transition duration-200 ease-out false"
+                ></rect>
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="group-hover:opacity-0 origin-center rotate-90 transition duration-200 ease-out false"
+                ></rect>
+              </svg>
+            </button>
+            <div
+              className="transition-all duration-300 ease-in-out group-hover:max-h-60 max-h-0 overflow-hidden"
+              style={{ transition: "max-height 0.3s ease-in-out 0s" }}
+            >
+              <div className="pb-5 leading-relaxed">
+                <div className="space-y-2 leading-relaxed">
+                  Go to the "Student List" section, search for the student, and
+                  click "Edit" next to their profile. Update the necessary
+                  details and save the changes.
+                </div>
+              </div>
+            </div>
+          </li>
+          <li className="group">
+            <button
+              className="relative flex gap-2 items-center w-full py-5 text-base font-semibold text-left border-t md:text-lg border-base-content/10"
+              aria-expanded="false"
+            >
+              <span className="flex-1 text-base-content">
+                How can I generate student reports?
+              </span>
+              <svg
+                className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="transform origin-center transition duration-200 ease-out false"
+                ></rect>
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="group-hover:opacity-0 origin-center rotate-90 transition duration-200 ease-out false"
+                ></rect>
+              </svg>
+            </button>
+            <div
+              className="transition-all duration-300 ease-in-out group-hover:max-h-60 max-h-0 overflow-hidden"
+              style={{ transition: "max-height 0.3s ease-in-out 0s" }}
+            >
+              <div className="pb-5 leading-relaxed">
+                <div className="space-y-2 leading-relaxed">
+                  Navigate to the "Reports" section, select the desired student,
+                  and choose the type of report you want to generate, such as
+                  academic performance or attendance.
+                </div>
+              </div>
+            </div>
+          </li>
+          <li className="group">
+            <button
+              className="relative flex gap-2 items-center w-full py-5 text-base font-semibold text-left border-t md:text-lg border-base-content/10"
+              aria-expanded="false"
+            >
+              <span className="flex-1 text-base-content">
+                How do I manage class schedules?
+              </span>
+              <svg
+                className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="transform origin-center transition duration-200 ease-out false"
+                ></rect>
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="group-hover:opacity-0 origin-center rotate-90 transition duration-200 ease-out false"
+                ></rect>
+              </svg>
+            </button>
+            <div
+              className="transition-all duration-300 ease-in-out group-hover:max-h-60 max-h-0 overflow-hidden"
+              style={{ transition: "max-height 0.3s ease-in-out 0s" }}
+            >
+              <div className="pb-5 leading-relaxed">
+                <div className="space-y-2 leading-relaxed">
+                  Use the "Schedule Management" feature to create, update, or
+                  delete class schedules. Assign teachers and classrooms as
+                  needed.
+                </div>
+              </div>
+            </div>
+          </li>
+          <li className="group">
+            <button
+              className="relative flex gap-2 items-center w-full py-5 text-base font-semibold text-left border-t md:text-lg border-base-content/10"
+              aria-expanded="false"
+            >
+              <span className="flex-1 text-base-content">
+                Can I track student attendance?
+              </span>
+              <svg
+                className="flex-shrink-0 w-4 h-4 ml-auto fill-current"
+                viewBox="0 0 16 16"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="transform origin-center transition duration-200 ease-out false"
+                ></rect>
+                <rect
+                  y="7"
+                  width="16"
+                  height="2"
+                  rx="1"
+                  className="group-hover:opacity-0 origin-center rotate-90 transition duration-200 ease-out false"
+                ></rect>
+              </svg>
+            </button>
+            <div
+              className="transition-all duration-300 ease-in-out group-hover:max-h-60 max-h-0 overflow-hidden"
+              style={{ transition: "max-height 0.3s ease-in-out 0s" }}
+            >
+              <div className="pb-5 leading-relaxed">
+                <div className="space-y-2 leading-relaxed">
+                  Yes, the "Attendance Tracker" allows you to mark, edit, and
+                  review attendance records for each student or class.
+                </div>
+              </div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
   );
 };
