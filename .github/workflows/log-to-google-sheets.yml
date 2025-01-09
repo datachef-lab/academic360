@@ -45,15 +45,14 @@ jobs:
             fi
 
           # Extract description
-          DESCRIPTION=""
-          if [[ "$ACTION" == "push" ]]; then
-              for commit in $(jq -r '.commits[].message' "$GITHUB_EVENT_PATH"); do
-                  DESCRIPTION="${DESCRIPTION}${commit} "
-              done
-              [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
-          else
-              DESCRIPTION=$(jq -r '.pull_request.title // .issue.title // "No details available for this event"' "$GITHUB_EVENT_PATH")
-          fi
+            DESCRIPTION=""
+            if [[ "$ACTION" == "push" ]]; then
+                DESCRIPTION=$(jq -r '.commits[].message' "$GITHUB_EVENT_PATH" | tr '\n' ' ' | sed 's/ $//')
+                [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
+            else
+                DESCRIPTION=$(jq -r '.pull_request.title // .issue.title // "No details available for this event"' "$GITHUB_EVENT_PATH")
+            fi
+
 
           # Debug logs
           echo "Action: $ACTION"
