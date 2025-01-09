@@ -49,12 +49,27 @@ jobs:
             RESOURCE="Issue"  # Explicitly set resource to "Issue" for any issue event
             fi
 
-          # Debug: Print the resource and description
+          # Handle push event to extract all commit messages
+          if [[ "${ACTION}" == "push" ]]; then
+            # Initialize description as empty
+            DESCRIPTION=""
 
+            # Iterate through commits array in the GitHub event payload
+            for commit in $(jq -r '.commits[] | .message' <<< "${{ toJson(github.event.commits) }}"); do
+              DESCRIPTION="${DESCRIPTION}${commit}\n"  # Append each commit message
+            done
+
+            # Fallback if no commits are found
+            if [[ -z "$DESCRIPTION" ]]; then
+              DESCRIPTION="No commit messages available"
+            fi
+          else
+            # Handle other events (PRs, issues)
+            DESCRIPTION="${{ github.event.pull_request.title || github.event.issue.title || 'No message available' }}"
+          fi
+
+          # Debug: Print the description
           echo "Description: $DESCRIPTION"
-
-          # Determine the description for commits, PRs, or issues
-          DESCRIPTION="${{ github.event.head_commit.message || github.event.pull_request.title || github.event.issue.title || 'No message' }}"
 
           echo "Action: $ACTION"
           echo "Resource: $RESOURCE"
