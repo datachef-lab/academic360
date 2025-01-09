@@ -63,7 +63,7 @@ export const Navbar: React.FC = () => {
             className="bg-blue-700 hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700 flex items-center gap-2"
           >
             <Link to="/login">
-              <CgLogIn className="w-5 h-5" /> Login
+              <CgLogIn /> Login
             </Link>
           </Button>
 

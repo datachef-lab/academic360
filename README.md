@@ -41,7 +41,7 @@ Each app/package is written in **TypeScript**.
 To get started with **academic360**, clone the repository and install the dependencies:
 
 ```bash
-git clone https://github.com/your-username/academic360.git
+git clone https://github.com/datachef-lab/academic360.git
 cd academic360
 npm install
 ```

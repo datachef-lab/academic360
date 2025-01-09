@@ -1,0 +1,9 @@
+/.vscode
+/node_modules
+/drizzle
+/logs
+/dist
+
+*.env
+.env
+.env.*
