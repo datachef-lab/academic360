@@ -7,6 +7,7 @@ import express, { Request, Response, } from "express";
 import { logger } from "@/middlewares/logger.middleware.js";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.js";
 import { corsOptions } from "@/config/corsOptions.js";
+import userRouter from "@/features/user/routes/user.route.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,20 +28,22 @@ app.use(cookieParser());
 app.use("/", express.static(path.join(__dirname, "..", "public")));
 
 app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, "..", "views", "index.html"));
+    res.sendFile(path.join(__dirname, "..", "views", "index.html"));
 });
 
-app.all("*", (req: Request, res: Response) => {
-  res.status(404);
-  if (req.accepts("html")) {
-    res.sendFile(path.join(__dirname, "..", "views", "404.html"));
-  } else if (req.accepts("json")) {
-    res.json({ message: "404 Not Found" });
-  } else {
-    res.type("txt").send("404 Not Found");
-  }
-});
+app.use("/api/users", userRouter);
 
 app.use(errorHandler);
+
+app.all("*", (req: Request, res: Response) => {
+    res.status(404);
+    if (req.accepts("html")) {
+        res.sendFile(path.join(__dirname, "..", "views", "404.html"));
+    } else if (req.accepts("json")) {
+        res.json({ message: "404 Not Found" });
+    } else {
+        res.type("txt").send("404 Not Found");
+    }
+});
 
 export default app;
