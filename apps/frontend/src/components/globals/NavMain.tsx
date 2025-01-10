@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/collapsible";
 import {
   SidebarGroup,
- 
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -31,8 +31,8 @@ export function NavMain({
   }[];
 }) {
   return (
-    <SidebarGroup>
-    
+    <SidebarGroup className="px-0 pl-[0.5px]">
+      <SidebarGroupLabel>Platform</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible
@@ -46,11 +46,7 @@ export function NavMain({
                 <SidebarMenuButton tooltip={item.title}>
                   {item.icon && <item.icon />}
                   <span>{item.title}</span>
-                  {item.title!="Setting" &&(
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-
-                  )}
-                  
+                  <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                 </SidebarMenuButton>
               </CollapsibleTrigger>
               <CollapsibleContent>

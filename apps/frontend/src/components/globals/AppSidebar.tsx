@@ -1,20 +1,17 @@
 import * as React from "react";
-import { FaUserGraduate } from "react-icons/fa";
 import {
-
-  BookOpen,
   BookCheck,
-  
+  BookOpen,
   CalendarCheck2,
   GalleryVerticalEnd,
   GraduationCap,
   Settings,
- 
+  User,
   UserPlus,
 } from "lucide-react";
 
 import { NavMain } from "@/components/globals/NavMain";
-import { NavProjects } from "@/components/globals/NavProjects";
+
 import { NavUser } from "@/components/globals/NavUser";
 import { TeamSwitcher } from "@/components/globals/TeamSwitcher";
 import {
@@ -34,79 +31,66 @@ const data = {
   },
   teams: [
     {
-      name: "acadmic360",
+      name: "academic360",
       logo: GalleryVerticalEnd,
-      plan:"",
-     
+      plan: "#development-mode",
     },
-   
   ],
   navMain: [
     {
       title: "Academics",
-      url: "#",
+      url: "/home",
       icon: GraduationCap,
       isActive: true,
       items: [
         {
           title: "Home",
-          url: "#",
+          url: "/home",
         },
         {
           title: "Get Reports",
-          url: "#",
+          url: "/home/reports",
         },
         {
-          title:"Search Student",
-          url:"#"
+          title: "Search Student",
+          url: "/home/search",
         },
         {
           title: "Manage Marksheet",
-          url: "#",
+          url: "/home/manage-marksheet",
         },
       ],
     },
     {
       title: "Library",
-      url: "#",
+      url: "/home/library",
       icon: BookOpen,
-     
     },
     {
       title: "Attendance",
       url: "#",
       icon: CalendarCheck2,
-      
     },
     {
       title: "Admission Dept.",
       url: "#",
       icon: UserPlus,
-      
     },
     {
       title: "Exam Management",
       url: "#",
       icon: BookCheck,
-     
     },
     {
       title: "Faculty",
       url: "#",
-      icon:  FaUserGraduate,
-    
+      icon: User,
     },
     {
       title: "Setting",
       url: "#",
-      icon:  Settings,
-    
+      icon: Settings,
     },
-   
-  ],
-  navButton: [
-    
-    
   ],
 };
 
@@ -118,9 +102,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.navButton} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="px-0 flex justify-center">
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
