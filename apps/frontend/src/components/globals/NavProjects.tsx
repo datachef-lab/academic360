@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
@@ -36,7 +35,7 @@ export function NavProjects({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel>Projects</SidebarGroupLabel>
+      {/* <SidebarGroupLabel>Projects</SidebarGroupLabel> */}
       <SidebarMenu>
         {projects.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -75,13 +74,13 @@ export function NavProjects({
             </DropdownMenu>
           </SidebarMenuItem>
         ))}
-        <SidebarMenuItem>
+        {/* <SidebarMenuItem>
           <SidebarMenuButton className="text-sidebar-foreground/70">
             <MoreHorizontal className="text-sidebar-foreground/70" />
-            <span>More</span>
+            <span>More</span> 
           </SidebarMenuButton>
-        </SidebarMenuItem>
-      </SidebarMenu>
+        </SidebarMenuItem>*/}
+      </SidebarMenu> 
     </SidebarGroup>
   );
 }
