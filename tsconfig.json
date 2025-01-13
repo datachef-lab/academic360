@@ -5,8 +5,7 @@
     "lib": ["ES2023", "dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./apps/frontend/src/*"],
-      "@backend/*": ["./apps/backend/src/*"]
+      "@/*": ["./apps/backend/src/*", "./apps/frontend/src/*"]
     },
     "strict": true,
     "skipLibCheck": true,

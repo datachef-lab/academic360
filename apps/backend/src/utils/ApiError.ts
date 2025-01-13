@@ -3,7 +3,6 @@ export class ApiError extends Error {
     errors: string[] | undefined;
     payload: null;
     success: boolean;
-    message: string;
 
     constructor(
         statusCode: number,
@@ -11,17 +10,28 @@ export class ApiError extends Error {
         errors?: string[],
         stack?: string,
     ) {
-        super(message);
+        super(message); // Call the parent constructor with the message
+        this.name = this.constructor.name; // Set the name of the error class
         this.statusCode = statusCode;
         this.errors = errors;
         this.payload = null;
-        this.message = message;
         this.success = false;
 
+        // Preserve the stack trace if provided; otherwise, capture it
         if (stack) {
             this.stack = stack;
         } else {
             Error.captureStackTrace(this, this.constructor);
         }
+    }
+
+    toJSON() {
+        return {
+            success: this.success,
+            statusCode: this.statusCode,
+            message: this.message, // Ensure the `message` property is included
+            errors: this.errors || null,
+            payload: this.payload,
+        };
     }
 }

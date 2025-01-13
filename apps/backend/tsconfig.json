@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "module": "NodeNext", // ES module support
+    "module": "NodeNext",
     "target": "ES2020",
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
@@ -13,10 +13,12 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": false,
     "isolatedModules": true,
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "paths": {
-      "@/*": ["src/*"]
+      "@/db/*": ["db/*"], // Explicit path for @/db
+      "@/*": ["*"] // General path for other imports
     }
   },
-  "include": ["src/**/*.ts", ".env"]
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
 }

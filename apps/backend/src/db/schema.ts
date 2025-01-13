@@ -16,11 +16,12 @@ const getSchemaFiles = (dir: string, baseDir: string): string[] => {
         const stat = fs.statSync(fullPath);
         if (stat.isDirectory()) {
             schemaFiles.push(...getSchemaFiles(fullPath, baseDir)); // Recursively search in subdirectories
-        } else if (file.endsWith(".ts")) {
+        } else if (file.endsWith(".model.ts")) {
             const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
             schemaFiles.push(`./${relativePath}`);
         }
     });
+
     return schemaFiles;
 };
 
