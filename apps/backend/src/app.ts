@@ -8,6 +8,7 @@ import { logger } from "@/middlewares/logger.middleware.js";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.js";
 import { corsOptions } from "@/config/corsOptions.js";
 import userRouter from "@/features/user/routes/user.route.js";
+import streamRouter from "@/features/academics/routes/stream.route.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +33,8 @@ app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
 });
 
 app.use("/api/users", userRouter);
+
+app.use("/api/streams", streamRouter);
 
 app.use(errorHandler);
 
