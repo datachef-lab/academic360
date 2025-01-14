@@ -14,7 +14,7 @@
     "main": "index.js",
     "scripts": {
         "start": "node -r tsconfig-paths/register dist/index.js",
-        "dev": "nodemon --import=tsx --exec node src/index.ts",
+        "dev": "nodemon --watch src --exec tsx src/index.ts",
         "build": "tsc && tsc-alias",
         "db:generate": "npx drizzle-kit generate",
         "db:migrate": "npx drizzle-kit migrate",
