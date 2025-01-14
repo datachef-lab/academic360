@@ -9,12 +9,12 @@ export const getStreams = async (req: Request, res: Response, next: NextFunction
     try{
         const streams= await db.select().from(streamModel);
         if(streams){
-            // res.status(200).json(new ApiResponse(200, "SUCCESS", streams, "streams fetched successfully!"));
-            res.status(200).json({
-                status: 200,
-                message: "streams fetched successfully!",
-                data: streams,
-              });
+            res.status(200).json(new ApiResponse(200, "SUCCESS", streams, "streams fetched successfully!"));
+            // res.status(200).json({
+            //     status: 200,
+            //     message: "streams fetched successfully!",
+            //     data: streams,
+            //   });
         } else {
             res.status(404).json(new ApiResponse(404, "FAILURE", null, "No streams found."));
         }
@@ -46,10 +46,7 @@ export const createStream=async (req:Request,res:Response, next:NextFunction)=>{
             });
             console.log("new stream added",newStream);
             res.status(201).json(new ApiResponse(201, "SUCCESS", null, "new steam is added to db"));
-            // res.status(201).json( {
-            //     status: 201,
-            //     message:"new steam is added to db",
-            // });
+        
 
         } catch(error){
             handleError(error,res,next);
