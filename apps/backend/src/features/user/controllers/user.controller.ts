@@ -1,11 +1,11 @@
 
-import { db } from "@/db/index.js";
+import { db } from "@/db/index.ts";
 import { NextFunction, Request, Response } from "express";
-import { userModel } from "../models/user.model.js";
-import { ApiResponse } from "@/utils/ApiResonse.js";
-import { ApiError } from "@/utils/ApiError.js";
+import { userModel } from "../models/user.model.ts";
+import { ApiResponse } from "@/utils/ApiResonse.ts";
+import { ApiError } from "@/utils/ApiError.ts";
 import { eq } from "drizzle-orm";
-import { handleError } from "@/utils/handleError.js";
+import { handleError } from "@/utils/handleError.ts";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     console.log(req.body);

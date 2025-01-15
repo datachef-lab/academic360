@@ -1,4 +1,6 @@
+import { relations } from "drizzle-orm";
 import { pgEnum, pgTable, serial, varchar, boolean } from "drizzle-orm/pg-core";
+import { studentModel } from "@/features/academics/models/student.model.ts";
 
 export const userTypeEnum = pgEnum('user_type', ["ADMIN", "STUDENT", "TEACHER"]);
 

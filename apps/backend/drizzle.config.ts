@@ -1,6 +1,6 @@
 import "dotenv/config";
+import { schemaPaths } from "@/db/schema.ts";
 import { defineConfig } from "drizzle-kit";
-import { schemaPaths } from "./src/db/schema.ts";
 
 console.log(schemaPaths);
 
@@ -13,4 +13,5 @@ export default defineConfig({
     },
     verbose: true,
     strict: true,
+    casing: "snake_case"
 });

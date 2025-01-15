@@ -1,9 +1,481 @@
 {
-  "id": "32e41760-0169-41f9-b799-73be4a1c6888",
+  "id": "f65204e2-a032-4602-84d7-eac1c6340efd",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
+    "public.documents": {
+      "name": "documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.marksheets": {
+      "name": "marksheets",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "student_id_fk": {
+          "name": "student_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester": {
+          "name": "semester",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year1": {
+          "name": "year1",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year2": {
+          "name": "year2",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sgpa": {
+          "name": "sgpa",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cgpa": {
+          "name": "cgpa",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "marksheets_student_id_fk_students_id_fk": {
+          "name": "marksheets_student_id_fk_students_id_fk",
+          "tableFrom": "marksheets",
+          "tableTo": "students",
+          "columnsFrom": [
+            "student_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.streams": {
+      "name": "streams",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "stream_level",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UNDER_GRADUATE'"
+        },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "number_of_semesters": {
+          "name": "number_of_semesters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.students": {
+      "name": "students",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id_fk": {
+          "name": "user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year_of_admission": {
+          "name": "year_of_admission",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "application_number": {
+          "name": "application_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "apaar_id": {
+          "name": "apaar_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nationality": {
+          "name": "nationality",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aadhaar_number": {
+          "name": "aadhaar_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uid": {
+          "name": "uid",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stream_id_fk": {
+          "name": "stream_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course": {
+          "name": "course",
+          "type": "course_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'HONOURS'"
+        },
+        "section": {
+          "name": "section",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "class_roll_number": {
+          "name": "class_roll_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "roll_number": {
+          "name": "roll_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "students_user_id_fk_users_id_fk": {
+          "name": "students_user_id_fk_users_id_fk",
+          "tableFrom": "students",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "students_stream_id_fk_streams_id_fk": {
+          "name": "students_stream_id_fk_streams_id_fk",
+          "tableFrom": "students",
+          "tableTo": "streams",
+          "columnsFrom": [
+            "stream_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subjects": {
+      "name": "subjects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "marksheet_id_fk": {
+          "name": "marksheet_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subject_metadata_id_fk": {
+          "name": "subject_metadata_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "internal_marks": {
+          "name": "internal_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "theory_marks": {
+          "name": "theory_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "practical_marks": {
+          "name": "practical_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_marks": {
+          "name": "total_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "letter_grade": {
+          "name": "letter_grade",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ngp": {
+          "name": "ngp",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tgp": {
+          "name": "tgp",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subjects_marksheet_id_fk_marksheets_id_fk": {
+          "name": "subjects_marksheet_id_fk_marksheets_id_fk",
+          "tableFrom": "subjects",
+          "tableTo": "marksheets",
+          "columnsFrom": [
+            "marksheet_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "subjects_subject_metadata_id_fk_subject_metadatas_id_fk": {
+          "name": "subjects_subject_metadata_id_fk_subject_metadatas_id_fk",
+          "tableFrom": "subjects",
+          "tableTo": "subject_metadatas",
+          "columnsFrom": [
+            "subject_metadata_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_metadatas": {
+      "name": "subject_metadatas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "stream_id_fk": {
+          "name": "stream_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "semester": {
+          "name": "semester",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_type": {
+          "name": "subject_type",
+          "type": "subject_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'COMMON'"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credit": {
+          "name": "credit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_marks": {
+          "name": "full_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_marks_internal": {
+          "name": "full_marks_internal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_marks_practical": {
+          "name": "full_marks_practical",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_marks_theory": {
+          "name": "full_marks_theory",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "subject_metadatas_stream_id_fk_streams_id_fk": {
+          "name": "subject_metadatas_stream_id_fk_streams_id_fk",
+          "tableFrom": "subject_metadatas",
+          "tableTo": "streams",
+          "columnsFrom": [
+            "stream_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.users": {
       "name": "users",
       "schema": "",
@@ -51,6 +523,13 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'STUDENT'"
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {},
@@ -71,12 +550,40 @@
     }
   },
   "enums": {
+    "public.stream_level": {
+      "name": "stream_level",
+      "schema": "public",
+      "values": [
+        "UNDER_GRADUATE",
+        "POST_GRADUATE"
+      ]
+    },
+    "public.course_type": {
+      "name": "course_type",
+      "schema": "public",
+      "values": [
+        "HONOURS",
+        "GENERAL"
+      ]
+    },
+    "public.subject_type": {
+      "name": "subject_type",
+      "schema": "public",
+      "values": [
+        "COMMON",
+        "SPECIAL",
+        "HONOURS",
+        "GENERAL",
+        "ELECTIVE"
+      ]
+    },
     "public.user_type": {
       "name": "user_type",
       "schema": "public",
       "values": [
         "ADMIN",
-        "STUDENT"
+        "STUDENT",
+        "TEACHER"
       ]
     }
   },
