@@ -6,12 +6,13 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": true,
     "outDir": "./dist",
     "strict": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": false,
+    "noEmit": true,
     "isolatedModules": true,
     "baseUrl": "./src",
     "paths": {
@@ -19,6 +20,6 @@
       "@/*": ["*"] // General path for other imports
     }
   },
-  "include": ["src/**/*"],
+  "include": ["./drizzle.config.ts", "./src/**/*"],
   "exclude": ["dist", "node_modules"]
 }

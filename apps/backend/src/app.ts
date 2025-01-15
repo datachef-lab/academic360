@@ -4,11 +4,12 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express, { Request, Response, } from "express";
-import { logger } from "@/middlewares/logger.middleware.js";
-import { errorHandler } from "@/middlewares/errorHandler.middleware.js";
-import { corsOptions } from "@/config/corsOptions.js";
-import userRouter from "@/features/user/routes/user.route.js";
-import streamRouter from "@/features/academics/routes/stream.route.js";
+import { logger } from "@/middlewares/logger.middleware.ts";
+import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
+import { corsOptions } from "@/config/corsOptions.ts";
+import userRouter from "@/features/user/routes/user.route.ts";
+import streamRouter from "@/features/academics/routes/stream.route.ts";
+import subjectMetadataRouter from "@/features/academics/routes/subjectMetadata.route.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -35,6 +36,8 @@ app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
 app.use("/api/users", userRouter);
 
 app.use("/api/streams", streamRouter);
+
+app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use(errorHandler);
 

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { logEvents } from "@/middlewares/logger.middleware.js";
+import { logEvents } from "@/middlewares/logger.middleware.ts";
 import { format } from "date-fns";
 
 export const errorHandler = (
