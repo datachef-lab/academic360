@@ -7,11 +7,11 @@ import { ErrorProvider } from "./providers/ErrorProvider.tsx";
 import { Toaster } from "sonner";
 
 // Import your Publishable Key
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+// const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Publishable Key");
-}
+// if (!PUBLISHABLE_KEY) {
+//   throw new Error("Missing Publishable Key");
+// }
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
