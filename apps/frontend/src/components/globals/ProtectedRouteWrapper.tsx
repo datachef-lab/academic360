@@ -6,9 +6,7 @@ type ProtectedRouteWrapperProps = {
   children: React.ReactNode;
 };
 
-export default function ProtectedRouteWrapper({
-  children,
-}: ProtectedRouteWrapperProps) {
+export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrapperProps) {
   const navigate = useNavigate();
 
   const { accessToken } = useAuth();
