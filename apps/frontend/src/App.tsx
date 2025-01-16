@@ -11,6 +11,7 @@ import {
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
+import StudentViewPage from "./pages/StudentViewPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -20,6 +21,7 @@ const router = createBrowserRouter([
     element: <HomeLayout />,
     children: [
       { path: "", element: <HomePage /> },
+      {path:"student-View", element:<StudentViewPage/>},
       { path: "add", element: <AddStudentPage /> },
       { path: "reports", element: <GetReportsPage /> },
       { path: "search", element: <GetReportsPage /> },

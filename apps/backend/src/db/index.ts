@@ -8,7 +8,7 @@ const pool = new pg.Pool({
 });
 
 // Initialize Drizzle ORM with the pool
-export const db = drizzle(pool);
+export const db = drizzle(pool, { casing: "snake_case" });
 
 // Test the connection 🔌
 export const connectToDatabase = async () => {
