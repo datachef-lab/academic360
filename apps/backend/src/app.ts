@@ -4,12 +4,14 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express, { Request, Response, } from "express";
+
 import { logger } from "@/middlewares/logger.middleware.ts";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
+
 import userRouter from "@/features/user/routes/user.route.ts";
-import streamRouter from "@/features/academics/routes/stream.route.ts";
-import subjectMetadataRouter from "@/features/academics/routes/subjectMetadata.route.ts";
+
+import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,6 +40,13 @@ app.use("/api/users", userRouter);
 app.use("/api/streams", streamRouter);
 
 app.use("/api/subject-metadatas", subjectMetadataRouter);
+
+app.use("/api/marksheets", marksheetRouter);
+
+app.use("/api/subjects", subjectRouter);
+
+app.use("/api/documents", documentRouter);
+
 
 app.use(errorHandler);
 
