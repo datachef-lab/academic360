@@ -15,6 +15,13 @@
       "when": 1736928062031,
       "tag": "0001_ambitious_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1737099688473,
+      "tag": "0002_red_the_liberteens",
+      "breakpoints": true
     }
   ]
 }
