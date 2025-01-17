@@ -22,3 +22,43 @@ export const getAllSubjectMetadatas = async (req: Request, res: Response, next: 
         handleError(error, res, next);
     }
 }
+
+export const getSubjectMetadataById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getSubjectMetadataByStreamId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getSubjectMetadataBySemester = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const updateSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const deleteSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
