@@ -1,42 +1,64 @@
-import { Router } from "express";
-import {
-  createSubjectMetadata,
-  getAllSubjectMetadatas,
-  getSubjectMetadataById,
-  getSubjectMetadataByStreamId,
-  getSubjectMetadataBySemester,
-  getSubjectMetadataByStreamIdAndSemester,
-  updateRecordById,
-  deleteSubjectMetadata
-} from "../controllers/subjectMetadata.controller";
-import { subjectMetadataModel } from "../models/subjectMetadata.model";
+import "dotenv/config";
+import path from "path";
+import { fileURLToPath } from "url";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import express, { Request, Response, } from "express";
 
-const router: Router = Router();
+import { logger } from "@/middlewares/logger.middleware.ts";
+import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
+import { corsOptions } from "@/config/corsOptions.ts";
 
-// Create a new subject metadata record
-router.post("/", createSubjectMetadata);
+import userRouter from "@/features/user/routes/user.route.ts";
 
-// Get all subject metadata records
-router.get("/", getAllSubjectMetadatas);
+import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
 
-// Get subject metadata by ID
-router.get("/:id", getSubjectMetadataById);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Get subject metadata by Stream ID
-router.get("/stream/:streamId", getSubjectMetadataByStreamId);
 
-// Get subject metadata by Semester
-router.get("/semester/:semester", getSubjectMetadataBySemester);
+const app = express();
 
-// Get subject metadata by Stream ID and Semester
-router.get("/stream/:streamId/semester/:semester", getSubjectMetadataByStreamIdAndSemester);
+app.use(logger);
 
-// Update a subject metadata record by ID
-router.put("/:id", (req, res, next) =>
-  updateRecordById(subjectMetadataModel, req, res, next)
-);
+app.use(cors(corsOptions));
 
-// Delete a subject metadata record by ID
-router.delete("/:id", deleteSubjectMetadata);
+app.use(express.json({ limit: "180kb" }));
 
-export default router;
+app.use(express.urlencoded({ extended: true, limit: "180kb" }));
+
+app.use(cookieParser());
+
+app.use("/", express.static(path.join(__dirname, "..", "public")));
+
+app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
+    res.sendFile(path.join(__dirname, "..", "views", "index.html"));
+});
+
+app.use("/api/users", userRouter);
+
+app.use("/api/streams", streamRouter);
+
+app.use("/api/subject-metadatas", subjectMetadataRouter);
+
+app.use("/api/marksheets", marksheetRouter);
+
+app.use("/api/subjects", subjectRouter);
+
+app.use("/api/documents", documentRouter);
+
+
+app.use(errorHandler);
+
+app.all("*", (req: Request, res: Response) => {
+    res.status(404);
+    if (req.accepts("html")) {
+        res.sendFile(path.join(__dirname, "..", "views", "404.html"));
+    } else if (req.accepts("json")) {
+        res.json({ message: "404 Not Found" });
+    } else {
+        res.type("txt").send("404 Not Found");
+    }
+});
+
+export default app;
