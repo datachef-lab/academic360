@@ -9,7 +9,18 @@ router.get("/", getAllSubjectMetadatas);
 
 router.get("/:id", getSubjectMetadataById);
 
-router.get("/semester/:semester", getSubjectMetadataBySemester);
+router.get("/query", (req, res, next) => {
+    const { id, semester } = req.query;
+
+    if (id) {
+        return getSubjectMetadataById(req, res, next);
+    } else if (semester) {
+        return getSubjectMetadataBySemester(req, res, next);
+    }
+    else {
+        return getAllSubjectMetadatas(req, res, next);
+    }
+});
 
 router.put("/:id", updateSubjectMetadata);
 
