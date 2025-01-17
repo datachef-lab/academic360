@@ -28,8 +28,8 @@ export const getSubjectMetadataById = async (req: Request, res: Response, next: 
     try {
         const { id } = req.params;
         const record = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.id, Number(id)));
-        if (!record.length) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+        if (!record) {
+             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", record, "Subject-metadata fetched successfully!"));
     } catch (error) {
@@ -81,7 +81,7 @@ export const updateSubjectMetadata = async (req: Request, res: Response, next: N
         const updatedData = req.body;
         const [updatedRecord] = await db.update(subjectMetadataModel).set(updatedData).where(eq(subjectMetadataModel.id, Number(id))).returning();
         if (!updatedRecord) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
         }
         res.status(200).json(new ApiResponse(200, "UPDATED", updatedRecord, "Subject-metadata updated successfully!"));
     } catch (error) {
@@ -94,7 +94,7 @@ export const deleteSubjectMetadata = async (req: Request, res: Response, next: N
         const { id } = req.params;
         const deletedRecord = await db.delete(subjectMetadataModel).where(eq(subjectMetadataModel.id, Number(id))).returning();
         if (!deletedRecord.length) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+          res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
         }
         res.status(200).json(new ApiResponse(200, "DELETED", deletedRecord[0], "Subject-metadata deleted successfully!"));
     } catch (error) {
