@@ -2,6 +2,8 @@ import { integer, pgEnum, pgTable, serial, varchar } from "drizzle-orm/pg-core";
 import { userModel } from "@/features/user/models/user.model.ts";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
 import { relations } from "drizzle-orm";
+import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const courseTypeEnum = pgEnum("course_type", [
     "HONOURS",
@@ -21,8 +23,8 @@ export const studentModel = pgTable("students", {
     course: courseTypeEnum().notNull().default("HONOURS"),
     section: varchar({ length: 255 }),
     classRollNumber: integer(),
-    registrationNumber: varchar({ length: 255 }),
-    rollNumber: varchar({ length: 255 }),
+    registrationNumber: varchar({ length: 255 }).notNull(),
+    rollNumber: varchar({ length: 255 }).notNull(),
 });
 
 export const studentRelations = relations(studentModel, ({ one }) => ({
@@ -34,4 +36,13 @@ export const studentRelations = relations(studentModel, ({ one }) => ({
         fields: [studentModel.streamId],
         references: [streamModel.id],
     })
-}))
+}));
+
+export const Student = createInsertSchema(studentModel).omit({ id: true })._type;
+
+export const createStudentSchema = createInsertSchema(studentModel).omit({ id: true });
+
+export type StudentType = z.infer<typeof createStudentSchema>;
+
+
+

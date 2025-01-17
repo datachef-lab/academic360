@@ -11,7 +11,7 @@ import { corsOptions } from "@/config/corsOptions.ts";
 
 import userRouter from "@/features/user/routes/user.route.ts";
 
-import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
+import { documentRouter, marksheetRouter, streamRouter, studentRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,6 +40,8 @@ app.use("/api/users", userRouter);
 app.use("/api/streams", streamRouter);
 
 app.use("/api/subject-metadatas", subjectMetadataRouter);
+
+app.use("/api/students", studentRouter);
 
 app.use("/api/marksheets", marksheetRouter);
 

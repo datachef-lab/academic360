@@ -1,11 +1,13 @@
 export class ApiError extends Error {
     statusCode: number;
+    httpStatus: string;
     errors: string[] | undefined;
     payload: null;
     success: boolean;
 
     constructor(
         statusCode: number,
+        httpStatus: string,
         message: string = "Something went wrong!",
         errors?: string[],
         stack?: string,
@@ -16,6 +18,7 @@ export class ApiError extends Error {
         this.errors = errors;
         this.payload = null;
         this.success = false;
+        this.httpStatus = httpStatus;
 
         // Preserve the stack trace if provided; otherwise, capture it
         if (stack) {

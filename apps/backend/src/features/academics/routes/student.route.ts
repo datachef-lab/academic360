@@ -1,9 +1,14 @@
 import express from "express";
-import { createStudent } from "../controllers/student.controller.ts";
+import { validateData } from "@/middlewares/validation.middleware.ts";
+import { z } from "zod";
+import { createStudentSchema, StudentType } from "@/features/academics/models/student.model.ts";
+
 
 const router = express.Router();
 
-router.post("/", createStudent);
+router.post("/", validateData(createStudentSchema), (req, res) => {
+    res.send("Okay.");
+});
 
 
 export default router;

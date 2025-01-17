@@ -10,25 +10,39 @@ import { studentModel } from "../models/student.model.ts";
 import { eq } from "drizzle-orm";
 import { userModel } from "@/features/user/models/user.model.ts";
 import { handleError } from "@/utils/handleError.ts";
+import { marksheetModel } from "../models/marksheet.model.ts";
 
 const processStudent = async (rows: ExcelRow[], stream: Stream) => {
     // Check for the student exist
-    const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.rollNumber, rows[0].roll_no));
+    let [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.rollNumber, rows[0].roll_no));
+
     if (!existingStudent) {
         // Create the user
-        const newUser = await db.insert(userModel).values({
+        const [newUser] = await db.insert(userModel).values({
             name: rows[0].name,
             email: rows[0].email,
             password: rows[0].roll_no,
             type: "STUDENT"
-        })
+        }).returning();
         // Create the student
-        const student = await db.insert(studentModel).values({
-            
-        })
+        const [newStudent] = await db.insert(studentModel).values({
+            userId: newUser.id,
+            uid: rows[0].uid,
+            streamId: stream.id,
+            course: rows[0].course.toUpperCase() as "HONOURS" | "GENERAL",
+            registrationNumber: rows[0].registration_no,
+            rollNumber: rows[0].roll_no
+        }).returning();
+        existingStudent = newStudent;
     }
 
+    // Process the marksheets
+    // await db.insert(marksheetModel).values({
+
+    // });
+
     // Process the subjects
+
 }
 
 export const createMultipleMarksheets = async (req: Request, res: Response, next: NextFunction) => {
