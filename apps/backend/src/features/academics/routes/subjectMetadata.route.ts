@@ -1,5 +1,5 @@
 import express from "express";
-import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.ts";
+import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.ts";
 
 const router = express.Router();
 
@@ -10,11 +10,17 @@ router.get("/", getAllSubjectMetadatas);
 router.get("/:id", getSubjectMetadataById);
 
 router.get("/query", (req, res, next) => {
-    const { id, semester } = req.query;
-
+    const { id, semester, streamId } = req.query;
     if (id) {
         return getSubjectMetadataById(req, res, next);
-    } else if (semester) {
+    }
+    else if (semester && streamId) {
+        return getSubjectMetadataByStreamIdAndSemester(req, res, next);
+    }
+    else if (streamId) {
+        return getSubjectMetadataByStreamId(req, res, next);
+    }
+    else if (semester) {
         return getSubjectMetadataBySemester(req, res, next);
     }
     else {

@@ -47,6 +47,14 @@ export const getSubjectMetadataBySemester = async (req: Request, res: Response, 
     }
 }
 
+export const getSubjectMetadataByStreamIdAndSemester = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+       
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
 export const updateSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {
     try {
        
