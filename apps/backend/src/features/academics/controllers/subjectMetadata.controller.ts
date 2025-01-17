@@ -26,12 +26,22 @@ export const getAllSubjectMetadatas = async (req: Request, res: Response, next: 
 
 export const getSubjectMetadataById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { id } = req.params;
-        const record = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.id, Number(id)));
-        if (!record) {
-             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+        const { id } = req.query;
+
+        if (!id) {
+            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "ID is required"));
         }
-        res.status(200).json(new ApiResponse(200, "SUCCESS", record, "Subject-metadata fetched successfully!"));
+
+        const [existingSubject] = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.id, Number(id)));
+
+        console.log(existingSubject);
+
+        if (!existingSubject) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+        }
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", existingSubject, "Subject-metadata fetched successfully!"));
+
     } catch (error) {
         handleError(error, res, next);
     }
@@ -39,7 +49,7 @@ export const getSubjectMetadataById = async (req: Request, res: Response, next: 
 
 export const getSubjectMetadataByStreamId = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { streamId } = req.params;
+        const { streamId } = req.query;
         const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.streamId, Number(streamId)));
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Subject-metadata fetched successfully!"));
     } catch (error) {
@@ -49,7 +59,7 @@ export const getSubjectMetadataByStreamId = async (req: Request, res: Response, 
 
 export const getSubjectMetadataBySemester = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { semester } = req.params;
+        const { semester } = req.query;
         const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.semester, Number(semester)));
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Subject-metadata fetched successfully!"));
     } catch (error) {
@@ -59,7 +69,7 @@ export const getSubjectMetadataBySemester = async (req: Request, res: Response, 
 
 export const getSubjectMetadataByStreamIdAndSemester = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { streamId, semester } = req.params;
+        const { streamId, semester } = req.query;
         const records = await db
             .select()
             .from(subjectMetadataModel)
@@ -81,9 +91,10 @@ export const updateSubjectMetadata = async (req: Request, res: Response, next: N
         const updatedData = req.body;
         const [updatedRecord] = await db.update(subjectMetadataModel).set(updatedData).where(eq(subjectMetadataModel.id, Number(id))).returning();
         if (!updatedRecord) {
-             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
         }
         res.status(200).json(new ApiResponse(200, "UPDATED", updatedRecord, "Subject-metadata updated successfully!"));
+
     } catch (error) {
         handleError(error, res, next);
     }
@@ -94,9 +105,10 @@ export const deleteSubjectMetadata = async (req: Request, res: Response, next: N
         const { id } = req.params;
         const deletedRecord = await db.delete(subjectMetadataModel).where(eq(subjectMetadataModel.id, Number(id))).returning();
         if (!deletedRecord.length) {
-          res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject-metadata not found!"));
         }
         res.status(200).json(new ApiResponse(200, "DELETED", deletedRecord[0], "Subject-metadata deleted successfully!"));
+
     } catch (error) {
         handleError(error, res, next);
     }

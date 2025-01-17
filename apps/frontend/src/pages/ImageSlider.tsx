@@ -1,20 +1,14 @@
-// Import necessary libraries
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 
-
-// Import images 
 import img1 from '@/assets/img1.png';
 import img6 from '@/assets/img6.jpg';
 import img5 from '@/assets/img5.png';
 
-// ImageSlider component
 const ImageSlider: React.FC = () => {
   const images = [img1, img5, img6];
-
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Automatically change the image every 0.3 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length);
@@ -24,7 +18,7 @@ const ImageSlider: React.FC = () => {
   }, [images.length]);
 
   return (
-    <div className="relative w-full max-w-xl h-screen max-h-[50vh] border border-red-700 mx-auto overflow-hidden rounded-lg shadow-lg">
+    <div className="relative w-full max-w-5xl   mx-auto overflow-hidden rounded-lg shadow-lg">
       <motion.div
         className="flex"
         animate={{ x: `-${currentIndex * 100}%` }}
@@ -40,8 +34,6 @@ const ImageSlider: React.FC = () => {
           </div>
         ))}
       </motion.div>
-
-      {/* Dots Indicator */}
       <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-2">
         {images.map((_, index) => (
           <div

@@ -7,7 +7,7 @@ const ChipTabs = () => {
   const [selected, setSelected] = useState(tabs[0]);
 
   return (
-    <div className="px-4 py-1 bg-gray-50 flex items-center flex-wrap gap-2">
+    <div className="px-4 py-1 bg-gray-50 flex items-center flex-wrap gap-2 sm:gap-3 ">
       {tabs.map((tab) => (
         <Chip
           text={tab}
