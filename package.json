@@ -39,6 +39,7 @@
         "packages/*"
     ],
     "dependencies": {
+        "@clerk/clerk-react": "^5.21.2",
         "@fortawesome/free-solid-svg-icons": "^6.7.2",
         "@fortawesome/react-fontawesome": "^0.2.2",
         "axios": "^1.7.9",

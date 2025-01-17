@@ -1,55 +1,42 @@
-import "dotenv/config";
-import path from "path";
-import { fileURLToPath } from "url";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import express, { Request, Response, } from "express";
-import { logger } from "@/middlewares/logger.middleware.ts";
-import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
-import { corsOptions } from "@/config/corsOptions.ts";
-import userRouter from "@/features/user/routes/user.route.ts";
-import streamRouter from "@/features/academics/routes/stream.route.ts";
-import subjectMetadataRouter from "@/features/academics/routes/subjectMetadata.route.ts";
+import { Router } from "express";
+import {
+  createSubjectMetadata,
+  getAllSubjectMetadatas,
+  getSubjectMetadataById,
+  getSubjectMetadataByStreamId,
+  getSubjectMetadataBySemester,
+  getSubjectMetadataByStreamIdAndSemester,
+  updateRecordById,
+  deleteSubjectMetadata
+} from "../controllers/subjectMetadata.controller";
+import { subjectMetadataModel } from "../models/subjectMetadata.model";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const router: Router = Router();
 
+// Create a new subject metadata record
+router.post("/", createSubjectMetadata);
 
-const app = express();
+// Get all subject metadata records
+router.get("/", getAllSubjectMetadatas);
 
-app.use(logger);
+// Get subject metadata by ID
+router.get("/:id", getSubjectMetadataById);
 
-app.use(cors(corsOptions));
+// Get subject metadata by Stream ID
+router.get("/stream/:streamId", getSubjectMetadataByStreamId);
 
-app.use(express.json({ limit: "180kb" }));
+// Get subject metadata by Semester
+router.get("/semester/:semester", getSubjectMetadataBySemester);
 
-app.use(express.urlencoded({ extended: true, limit: "180kb" }));
+// Get subject metadata by Stream ID and Semester
+router.get("/stream/:streamId/semester/:semester", getSubjectMetadataByStreamIdAndSemester);
 
-app.use(cookieParser());
+// Update a subject metadata record by ID
+router.put("/:id", (req, res, next) =>
+  updateRecordById(subjectMetadataModel, req, res, next)
+);
 
-app.use("/", express.static(path.join(__dirname, "..", "public")));
+// Delete a subject metadata record by ID
+router.delete("/:id", deleteSubjectMetadata);
 
-app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "..", "views", "index.html"));
-});
-
-app.use("/api/users", userRouter);
-
-app.use("/api/streams", streamRouter);
-
-app.use("/api/subject-metadatas", subjectMetadataRouter);
-
-app.use(errorHandler);
-
-app.all("*", (req: Request, res: Response) => {
-    res.status(404);
-    if (req.accepts("html")) {
-        res.sendFile(path.join(__dirname, "..", "views", "404.html"));
-    } else if (req.accepts("json")) {
-        res.json({ message: "404 Not Found" });
-    } else {
-        res.type("txt").send("404 Not Found");
-    }
-});
-
-export default app;
+export default router;
