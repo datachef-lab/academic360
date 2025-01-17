@@ -1,0 +1,24 @@
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  
+  border-radius: 30px; /* Makes the scrollbar rounded */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 10px; /* Makes the track rounded */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 30px; /* Makes the thumb rounded */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #7b7b7b;
+}
+
+/* Hide scrollbar buttons (arrows) */
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none;
+}
