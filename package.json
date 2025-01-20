@@ -44,6 +44,9 @@
         "@fortawesome/react-fontawesome": "^0.2.2",
         "axios": "^1.7.9",
         "drizzle-orm": "^0.38.3",
-        "react-icons": "^5.4.0"
+        "framer-motion": "^11.18.0",
+        "react-icons": "^5.4.0",
+        "swiper": "^11.2.1",
+        "tailwind-scrollbar": "^3.1.0"
     }
 }
