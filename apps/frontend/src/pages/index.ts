@@ -7,6 +7,7 @@ import SearchStudentPage from "@/pages/SearchStudentPage";
 import SettingsPage from "@/pages/SettingsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";
+import MyWorkspacePage from "@/pages/MyWorkspace";
 
 export {
     RootPage,
@@ -17,5 +18,6 @@ export {
     SearchStudentPage,
     SettingsPage,
     UserProfilePage,
-    NotFoundPage
+    NotFoundPage,
+    MyWorkspacePage,
 }
