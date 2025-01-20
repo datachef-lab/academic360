@@ -1,4 +1,4 @@
-// types.ts
+
 
 import { Payment } from "@/components/ReportPage/types";
 

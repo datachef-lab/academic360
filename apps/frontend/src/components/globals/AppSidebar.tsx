@@ -14,13 +14,7 @@ import { NavMain } from "@/components/globals/NavMain";
 
 import { NavUser } from "@/components/globals/NavUser";
 import { TeamSwitcher } from "@/components/globals/TeamSwitcher";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
 
 // This is sample data.
 const data = {
@@ -32,6 +26,21 @@ const data = {
   teams: [
     {
       name: "academic360",
+      logo: GalleryVerticalEnd,
+      plan: "#development-mode",
+    },
+    {
+      name: "Issues",
+      logo: GalleryVerticalEnd,
+      plan: "#development-mode",
+    },
+    {
+      name: "Leaves",
+      logo: GalleryVerticalEnd,
+      plan: "#development-mode",
+    },
+    {
+      name: "Notices",
       logo: GalleryVerticalEnd,
       plan: "#development-mode",
     },
@@ -57,7 +66,7 @@ const data = {
         },
         {
           title: "Manage Marksheet",
-          url: "/home/manage-marksheet",
+          url: "/home",
         },
       ],
     },
@@ -65,6 +74,13 @@ const data = {
       title: "Library",
       url: "/home/library",
       icon: BookOpen,
+      items: [
+        { title: "Dashboard", url: "/home" },
+        { title: "Book Catalog", url: "/home" },
+        { title: "Issue/Return", url: "/home" },
+        { title: "Fines", url: "/home" },
+        { title: "Reports", url: "/home" },
+      ],
     },
     {
       title: "Attendance",
@@ -75,20 +91,33 @@ const data = {
       title: "Admission Dept.",
       url: "#",
       icon: UserPlus,
+      items: [
+        { title: "Dashboard", url: "/home" },
+        { title: "Applications", url: "/home" },
+        { title: "New Admission", url: "/home" },
+        { title: "Fee Management", url: "/home" },
+        { title: "Reports", url: "/home" },
+      ],
     },
     {
       title: "Exam Management",
       url: "#",
       icon: BookCheck,
+      items: [
+        {
+          title: "Examboard",
+          url: "/home",
+        },
+      ],
     },
     {
       title: "Faculty",
-      url: "#",
+      url: "/home",
       icon: User,
     },
     {
       title: "Setting",
-      url: "#",
+      url: "settings",
       icon: Settings,
     },
   ],
