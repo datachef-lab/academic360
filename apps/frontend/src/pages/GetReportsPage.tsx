@@ -1,3 +1,6 @@
+// import Page from "./ReportPage/Page";
+
+
 export default function GetReports() {
-  return <div>GetReports</div>;
+  return <div>getReport</div>;
 }

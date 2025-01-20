@@ -42,6 +42,8 @@
         "@clerk/clerk-react": "^5.21.2",
         "@fortawesome/free-solid-svg-icons": "^6.7.2",
         "@fortawesome/react-fontawesome": "^0.2.2",
+        "@radix-ui/react-select": "^2.1.4",
+        "@tanstack/react-table": "^8.20.6",
         "axios": "^1.7.9",
         "drizzle-orm": "^0.38.3",
         "framer-motion": "^11.18.0",

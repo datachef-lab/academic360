@@ -1,14 +1,15 @@
 import React from "react";
 import { motion, Variants } from "framer-motion";
 import { Bookmark } from "lucide-react";
-import { Component } from "./AttendaceChart";
-import Fees from "./Fees";
-import NoticeBoard from "./NoticeBoard";
-import ChipTabs from "./ChipTabs";
-import ImageSlider from "./ImageSlider";
-import Courses from "./Courses";
+import { Component } from "../components/StudentView/AttendaceChart";
+import Fees from "../components/StudentView/Fees";
+import NoticeBoard from "../components/StudentView/NoticeBoard";
+import ChipTabs from "../components/StudentView/ChipTabs";
+import ImageSlider from "../components/StudentView/ImageSlider";
+import Courses from "../components/StudentView/Courses";
 import "@/styles/Scrollbar.css";
-import SemesterAccordion from "./StudentMarks";
+import SemesterAccordion from "../components/StudentView/StudentMarks";
+import { CalendarCheck, Wallet,Percent,Timer,ClipboardPenLine } from 'lucide-react';
 
 const StudentViewPage: React.FC = () => {
   const fieldsetVariants: Variants = {
@@ -50,7 +51,7 @@ const StudentViewPage: React.FC = () => {
         >
           <legend>
             <div className="flex items-center justify-center gap-2  text-white border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-              <Bookmark size={21} /> Attendance
+            <CalendarCheck size={21}/> Attendance
             </div>
           </legend>
           <Component />
@@ -65,7 +66,7 @@ const StudentViewPage: React.FC = () => {
         >
           <legend>
             <div className="flex items-center justify-center gap-2 text-white border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-              <Bookmark size={21} /> Fees
+              <Wallet size={21} /> Fees
             </div>
           </legend>
           <Fees />
@@ -81,7 +82,7 @@ const StudentViewPage: React.FC = () => {
         >
           <legend>
             <div className="flex items-center justify-center gap-2 text-white border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-              <Bookmark size={21} /> Marks
+              <Percent size={21} /> Marks
             </div>
           </legend>
           <div className="overflow-y-auto custom-scrollbar max-h-[300px]">
@@ -89,25 +90,25 @@ const StudentViewPage: React.FC = () => {
           </div>
         </motion.fieldset>
 
-        <motion.div
+        <motion.fieldset
           custom={1}
           initial="hidden"
           animate="visible"
           variants={fieldsetVariants}
           whileHover={{ scale: 1.05 }}
-          className="border relative border-gray-900 rounded-lg py-2 px-1 bg-gray-50 shadow-lg hover:shadow-2xl transition duration-300 ease-in-out hover:border-blue-500 hover:bg-white "
+          className="border  border-gray-900 rounded-lg py-2 px-1 bg-gray-50 shadow-lg hover:shadow-2xl transition duration-300 ease-in-out hover:border-blue-500 hover:bg-white "
         >
-          <div>
-            <div className=" absolute top-[-20px] left-5 flex items-center justify-center gap-2  text-white  border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-              <Bookmark size={21} /> Time Table
+          <legend>
+            <div className=" flex items-center justify-center gap-2  text-white  border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
+              <Timer size={21} /> Time Table
             </div>
-          </div>
+          </legend>
           <div className=" overflow-y-auto  custom-scrollbar max-h-[330px]  ">
             <div className="  ">
               <Courses></Courses>
             </div>
           </div>
-        </motion.div>
+        </motion.fieldset>
       </div>
       <div className="grid grid-cols-1 p-6 ">
         <motion.fieldset
@@ -119,7 +120,7 @@ const StudentViewPage: React.FC = () => {
         >
           <legend>
             <div className="flex items-center  justify-center gap-2 text-white border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-              <Bookmark size={21} /> Notice Board
+              <ClipboardPenLine size={21} /> Notice Board
             </div>
           </legend>
           <div>
