@@ -11,7 +11,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export function NavMain({
   items,
@@ -27,8 +27,6 @@ export function NavMain({
     }[];
   }[];
 }) {
-  const { pathname } = useLocation();
-
   return (
     <SidebarGroup className="px-0 pl-[0.5px]">
       <SidebarGroupLabel>Platform</SidebarGroupLabel>

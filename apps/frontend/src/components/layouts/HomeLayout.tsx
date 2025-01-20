@@ -12,6 +12,7 @@ import { AppSidebar } from "@/components/globals/AppSidebar";
 import { ModeToggle } from "@/components/globals/ModeToggle";
 import styles from "@/styles/HomeLayout.module.css";
 import NotifcationPanel from "../globals/NotifcationPanel";
+import GlobalSearch from "../globals/GlobalSearch";
 
 export default function HomeLayout() {
   const location = useLocation(); // Get current route location
@@ -48,6 +49,7 @@ export default function HomeLayout() {
             </Breadcrumb>
           </div>
           <div className="flex items-center gap-2">
+            <GlobalSearch />
             <NotifcationPanel />
             <ModeToggle />
           </div>
