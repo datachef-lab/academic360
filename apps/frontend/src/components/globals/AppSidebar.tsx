@@ -25,7 +25,7 @@ const data = {
   },
   teams: [
     {
-      name: "Inbox",
+      name: "academic360",
       logo: GalleryVerticalEnd,
       plan: "#development-mode",
     },
