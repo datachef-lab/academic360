@@ -1,6 +1,5 @@
-// import Page from "./ReportPage/Page";
-
+import Page from "@/components/Admin/ReportPage/Page";
 
 export default function GetReports() {
-  return <div>getReport</div>;
+  return <div><Page></Page></div>;
 }
