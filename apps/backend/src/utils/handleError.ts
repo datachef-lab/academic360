@@ -6,7 +6,7 @@ export const handleError = (error: unknown, res: Response, next?: NextFunction) 
         const dbError = error as { code: string; message: string };
 
         if (dbError.code === "23505") {
-            res.status(409).json(new ApiError(409, `Duplicate entry: A user with the same email already exists!`));
+            res.status(409).json(new ApiError(409, `Duplicate entry: Please enter a valid record`));
         } else {
             res.status(500).json(new ApiError(500, `Database Error: ${dbError.message}`));
         }

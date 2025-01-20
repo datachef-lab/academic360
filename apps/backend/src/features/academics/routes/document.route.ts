@@ -16,7 +16,6 @@ router.post("/", createDocumentMetadata);
 
 router.get("/", (req, res, next) => {
     const { id, name } = req.query;
-
     if (id) {
         return getDocumentMetadataById(req, res, next);
     } else if (name) {
