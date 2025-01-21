@@ -1,8 +1,10 @@
 import express from "express";
 import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.ts";
-
+import { verifyJWT } from "@/middlewares/verifyJWT.ts";
 
 const router = express.Router();
+
+router.use(verifyJWT);
 
 router.post("/", createSubjectMetadata);
 

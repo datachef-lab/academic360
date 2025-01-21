@@ -7,18 +7,6 @@ import { ApiError } from "@/utils/ApiError.ts";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.ts";
 
-export const createUser = async (req: Request, res: Response, next: NextFunction) => {
-    console.log(req.body);
-    try {
-        const [newUser] = await db.insert(userModel).values(req.body).returning();
-
-        res.status(201).json(new ApiResponse(201, "CREATED", newUser, "New user created successfully!"));
-    } catch (error: unknown) {
-        handleError(error, res, next);
-    }
-};
-
-
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await db.select().from(userModel);

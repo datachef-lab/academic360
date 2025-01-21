@@ -10,6 +10,7 @@ import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
 
 import userRouter from "@/features/user/routes/user.route.ts";
+import authRouter from "@/features/auth/routes/auth.route.ts";
 
 import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
 
@@ -34,6 +35,8 @@ app.use("/", express.static(path.join(__dirname, "..", "public")));
 app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, "..", "views", "index.html"));
 });
+
+app.use("/auth", authRouter);
 
 app.use("/api/users", userRouter);
 
