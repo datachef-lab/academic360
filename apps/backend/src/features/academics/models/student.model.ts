@@ -25,13 +25,13 @@ export const studentModel = pgTable("students", {
     rollNumber: varchar({ length: 255 }),
 });
 
-export const studentRelations = relations(studentModel, ({ one }) => ({
-    user: one(userModel, {
-        fields: [studentModel.userId],
-        references: [userModel.id],
-    }),
-    stream: one(streamModel, {
-        fields: [studentModel.streamId],
-        references: [streamModel.id],
-    })
-}))
+// export const studentRelations = relations(studentModel, ({ one }) => ({
+//     user: one(userModel, {
+//         fields: [studentModel.userId],
+//         references: [userModel.id],
+//     }),
+//     stream: one(streamModel, {
+//         fields: [studentModel.streamId],
+//         references: [streamModel.id],
+//     })
+// }))
