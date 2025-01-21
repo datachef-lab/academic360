@@ -9,8 +9,11 @@ import {
     updateDocumentMetadata,
     uploadDocument,
 } from "@/features/academics/controllers/document.controller.ts";
+import { verifyJWT } from "@/middlewares/verifyJWT.ts";
 
 const router = express.Router();
+
+router.use(verifyJWT);
 
 router.post("/", createDocumentMetadata);
 

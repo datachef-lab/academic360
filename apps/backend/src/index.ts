@@ -12,6 +12,8 @@ const PORT = process.env.PORT || 8080;
             console.log(
                 `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,
             );
+            console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
+            console.log("Press Ctrl+C to stop the application.\n");
         });
     } catch (error) {
         console.error("[backend] - Failed to start the application: ⚠️\n", error);

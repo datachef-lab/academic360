@@ -13,6 +13,12 @@ export const handleError = (error: unknown, res: Response, next?: NextFunction) 
     } else if (error instanceof Error) {
         if (error.message.includes("validation")) {
             res.status(400).json(new ApiError(400, `Validation Error: ${error.message}`));
+        } else if (error.message.includes("Unauthorized") || error instanceof Error && error.name === "TokenExpiredError") {
+            res.status(401).json(new ApiError(401, error.message));
+        } else if (error.message.includes("Forbidden")) {
+            res.status(403).json(new ApiError(403, `Forbidden: ${error.message}`));
+        } else if (error.message.includes("Too Many Requests")) {
+            res.status(429).json(new ApiError(429, `Too Many Requests: ${error.message}`));
         } else {
             res.status(500).json(new ApiError(500, `Unexpected Error: ${error.message}`));
         }

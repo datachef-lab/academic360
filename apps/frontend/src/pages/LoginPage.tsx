@@ -6,6 +6,7 @@ import img1 from "@/assets/img1.png";
 import img6 from "@/assets/img6.jpg";
 import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
+import { Button } from "@/components/ui/button";
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<{ username: string; password: string }>({
@@ -40,8 +41,6 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Log form data for now
     console.log("Form submitted", formData);
 
     if (formData.username && formData.password) {
@@ -111,6 +110,7 @@ const LoginPage: React.FC = () => {
             <a href="#">Forgot Password?</a>
             <button type="submit" className="btn">Login</button>
             </div>
+            <Button variant="outline"> google auth</Button>
           </form>
         </div>
       </div>

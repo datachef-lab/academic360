@@ -1,0 +1,17 @@
+import rateLimiter from "express-rate-limit";
+import { logEvents } from "./logger.middleware.ts";
+import { format } from "date-fns";
+import { ApiError } from "@/utils/ApiError.ts";
+
+export const loginLimiter = rateLimiter({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5, // limit each IP to 5 requests per window per minute
+    message: "Too many login attempts, please try again later after 1 minute pause.",
+    handler: (req, res, next, options) => {
+        const logFileName = `errLog_${format(new Date(), "dd-MM-yyyy")}.log`;
+        logEvents(`Too Many Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin} `, logFileName);
+        res.status(429).json(new ApiError(429, options.message.message));
+    },
+    standardHeaders: true,
+    legacyHeaders: true,
+});

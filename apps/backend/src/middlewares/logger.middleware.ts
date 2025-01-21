@@ -13,6 +13,8 @@ export const logEvents = async (message: string, logFileName: string) => {
     const dateTime = `${format(new Date(), "dd-MM-yyyy\tHH:mm:ss")}`;
     const logItem = `${dateTime}\t${uuid()}\t${message}\n`;
 
+    console.log(`${dateTime}\t${uuid()}\t${message}`);
+
     const logsDir = logFileName.includes("errLog") ? "errLogs" : "reqLogs";
     //   const baseLogDir = path.join(__dirname, "../..", "logs");
     const baseLogDir = process.env.LOG_DIRECTORY!;
@@ -51,8 +53,6 @@ export const logger = (req: Request, res: Response, next: NextFunction) => {
     const logFileName = `reqLog_${format(new Date(), "dd-MM-yyyy")}.log`;
 
     logEvents(`${req.method}\t${req.url}\t${req.headers.origin}`, logFileName);
-
-    console.log(`${req.method} ${req.path}`);
 
     next();
 };

@@ -48,6 +48,7 @@
         "@tanstack/react-table": "^8.20.6",
         "axios": "^1.7.9",
         "drizzle-orm": "^0.38.3",
+        "express-rate-limit": "^7.5.0",
         "file-saver": "^2.0.5",
         "framer-motion": "^11.18.0",
         "jspdf": "^2.5.2",
