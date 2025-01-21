@@ -10,6 +10,7 @@ import { handleError } from "@/utils/handleError.ts";
 export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization || req.headers.Authorization as string;
+        console.log(authHeader);
         if (!authHeader?.startsWith("Bearer ")) {
             throw new ApiError(401, "Unauthorized");
         }

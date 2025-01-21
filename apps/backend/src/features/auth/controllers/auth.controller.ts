@@ -49,7 +49,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
         const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
@@ -64,6 +64,44 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Login successful"));
 
     } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+
+    }
+    catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const postGoogleLogin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        // Retrieve user from Passport
+        const foundUser = req.user as { id: number; type: string };
+
+        if (!foundUser) {
+            res.status(401).json({ message: "Unauthorized" });
+            return;
+        }
+
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+
+        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+
+        // Create secure cookie with refresh token
+        res.cookie("jwt", refreshToken, {
+            httpOnly: true, // Accessible only by the web server
+            secure: false, // Only sent over HTTPS
+            sameSite: "none", // Cross-site request forgery protection
+            maxAge: 1000 * 60 * 60 * 24, // 1 day
+        });
+
+        next();
+    }
+    catch (error) {
         handleError(error, res, next);
     }
 }
