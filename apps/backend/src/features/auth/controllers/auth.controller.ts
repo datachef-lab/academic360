@@ -148,10 +148,22 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
             res.status(204).json(new ApiError(204, "No content"));
             return;
         }
+        console.log("Logging out...");
         res.clearCookie("jwt", {
             httpOnly: true,
             secure: true,
             sameSite: "none",
+        });
+
+        // Log out from Google (passport.js logout)
+        req.logout((err) => {
+            if (err) {
+                return next(err); // Pass the error to the next middleware (error handler)
+            }
+
+            // Optionally, you can redirect the user to a logout confirmation page
+            // or directly to the login page
+            res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));
         });
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));

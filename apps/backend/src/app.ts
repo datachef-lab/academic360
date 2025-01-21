@@ -65,6 +65,7 @@ passport.use(
             callbackURL: "http://localhost:8080/auth/google/callback",
         },
         async (accessToken, refreshToken, profile, done) => {
+            console.log("in passport.use, req.url", profile);
             try {
                 // Here, check if the user exists in the database using the email from the profile
                 if (!profile.emails || profile.emails.length === 0) {
