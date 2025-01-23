@@ -1,4 +1,6 @@
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const documentModel = pgTable("documents", {
     id: serial().primaryKey(),
@@ -7,3 +9,7 @@ export const documentModel = pgTable("documents", {
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
+
+export const createDocumentModel = createInsertSchema(documentModel);
+
+export type Document = z.infer<typeof createDocumentModel>;

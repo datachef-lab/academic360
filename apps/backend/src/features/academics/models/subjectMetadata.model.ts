@@ -1,6 +1,9 @@
 import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
+import { frameworkTypeEnum } from "@/features/user/models/student.model.ts";
+import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
 
 export const subjectTypeEnum = pgEnum("subject_type", [
     "COMMON",
@@ -14,6 +17,7 @@ export const subjectMetadataModel = pgTable("subject_metadatas", {
     id: serial().primaryKey(),
     streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
     semester: integer().notNull(),
+    frameworkType: frameworkTypeEnum().notNull().default("CBCS"),
     subjectType: subjectTypeEnum().notNull().default("COMMON"),
     name: varchar({length: 255}).notNull(),
     credit: integer(),
@@ -32,3 +36,6 @@ export const subjectMetadataRelations = relations(subjectMetadataModel, ({ one }
     })
 }));
 
+export const createSubjectMetadataSchema = createInsertSchema(subjectMetadataModel);
+
+export type SubjectMetadata = z.infer<typeof createSubjectMetadataSchema>;

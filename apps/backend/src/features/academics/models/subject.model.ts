@@ -2,6 +2,8 @@ import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-o
 import { marksheetModel } from "./marksheet.model.ts";
 import { subjectMetadataModel } from "./subjectMetadata.model.ts";
 import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const subjectModel = pgTable("subjects", {
     id: serial().primaryKey(),
@@ -29,3 +31,7 @@ export const subjectRelations = relations(subjectModel, ({ one }) => ({
         references: [subjectMetadataModel.id]
     })
 }))
+
+export const createSubjectSchema = createInsertSchema(subjectModel);
+
+export type Subject = z.infer<typeof createSubjectSchema>;

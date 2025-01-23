@@ -70,7 +70,7 @@ passport.use(
                 if (!profile.emails || profile.emails.length === 0) {
                     return done(null, false, { message: "No email found in profile!" });
                 }
-                // console.log(profile);
+                console.log(profile);
                 const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, profile.emails[0].value as string));
                 const savedUser = await db.update(userModel).set({
                     image: profile.photos ? profile.photos[0].value : "",

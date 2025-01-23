@@ -4,6 +4,7 @@ import { relations } from "drizzle-orm";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { addressModel } from "./address.model.ts";
 
 export const personModel = pgTable("person", {
     id: serial().primaryKey(),
@@ -14,7 +15,7 @@ export const personModel = pgTable("person", {
     image: varchar({ length: 255 }),
     qualificationId: integer().references(() => qualificationModel.id),
     occupationId: integer().references(() => occupationModel.id),
-    officeAddress: varchar({ length: 1000 }),
+    officeAddressId: integer().references(() => addressModel.id),
     officePhone: varchar({ length: 15 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
@@ -28,6 +29,10 @@ export const personRelations = relations(personModel, ({ one }) => ({
     occupation: one(occupationModel, {
         fields: [personModel.occupationId],
         references: [occupationModel.id]
+    }),
+    address: one(addressModel, {
+        fields: [personModel.officeAddressId],
+        references: [addressModel.id]
     })
 }));
 

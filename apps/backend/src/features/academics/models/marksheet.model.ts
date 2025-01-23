@@ -1,6 +1,8 @@
 import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { studentModel } from "../../user/models/student.model.ts";
 import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
@@ -20,4 +22,8 @@ export const marksheetRelations = relations(marksheetModel, ({ one }) => ({
         fields: [marksheetModel.studentId],
         references: [studentModel.id]
     })
-}));    
+}));
+
+export const createMarksheetModel = createInsertSchema(marksheetModel);
+
+export type Marksheet = z.infer<typeof createMarksheetModel>;
