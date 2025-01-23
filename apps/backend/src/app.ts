@@ -1,26 +1,25 @@
 import "dotenv/config";
 import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
+import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import expressSession from "express-session";
 import express, { Request, Response, } from "express";
 import { Strategy } from "passport-google-oauth20";
+import passport from "passport";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db/index.ts";
 
 import { logger } from "@/middlewares/logger.middleware.ts";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
 
-import userRouter from "@/features/user/routes/user.route.ts";
 import authRouter from "@/features/auth/routes/auth.route.ts";
-
 import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
-import passport from "passport";
-import { userModel, UserType } from "./features/user/models/user.model.ts";
-import { db } from "./db/index.ts";
-import { eq } from "drizzle-orm";
-import { generateToken } from "./utils/generateToken.ts";
-import { ApiResponse } from "./utils/ApiResonse.ts";
+import { userModel, UserType } from "@/features/user/models/user.model.ts";
+import { generateToken } from "@/utils/generateToken.ts";
+import { userRouter } from "@/features/user/routes/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

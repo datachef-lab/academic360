@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { integer, pgEnum, pgTable, serial, varchar } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
 
 export const subjectTypeEnum = pgEnum("subject_type", [
@@ -21,6 +21,8 @@ export const subjectMetadataModel = pgTable("subject_metadatas", {
     fullMarksInternal: integer().notNull(),
     fullMarksPractical: integer(),
     fullMarksTheory: integer().notNull(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const subjectMetadataRelations = relations(subjectMetadataModel, ({ one }) => ({

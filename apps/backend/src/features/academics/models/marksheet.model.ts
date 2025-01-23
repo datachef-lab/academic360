@@ -1,5 +1,5 @@
-import { integer, numeric, pgTable, serial, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.ts";
+import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { studentModel } from "../../user/models/student.model.ts";
 import { relations } from "drizzle-orm";
 
 export const marksheetModel = pgTable("marksheets", {
@@ -11,6 +11,8 @@ export const marksheetModel = pgTable("marksheets", {
     sgpa: numeric(),
     cgpa: numeric(),
     remarks: varchar({ length: 255 }),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const marksheetRelations = relations(marksheetModel, ({ one }) => ({

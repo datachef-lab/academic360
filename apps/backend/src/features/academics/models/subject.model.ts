@@ -1,4 +1,4 @@
-import { integer, numeric, pgTable, serial, varchar } from "drizzle-orm/pg-core";
+import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { marksheetModel } from "./marksheet.model.ts";
 import { subjectMetadataModel } from "./subjectMetadata.model.ts";
 import { relations } from "drizzle-orm";
@@ -15,6 +15,8 @@ export const subjectModel = pgTable("subjects", {
     letterGrade: varchar({ length: 255 }),
     ngp: numeric(),
     tgp: numeric(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const subjectRelations = relations(subjectModel, ({ one }) => ({

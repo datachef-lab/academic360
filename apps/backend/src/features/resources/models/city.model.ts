@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { stateModel } from "./state.model.ts";
 import { relations } from "drizzle-orm";
 
@@ -10,6 +10,8 @@ export const cityModel = pgTable("cities", {
     name: varchar({ length: 255 }).notNull(),
     documentRequired: boolean().notNull().default(false),
     code: varchar({ length: 10 }).notNull().unique(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 export const cityRelations = relations(cityModel, ({ one }) => ({

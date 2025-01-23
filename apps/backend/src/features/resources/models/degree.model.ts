@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
-export const religionModel = pgTable("religion", {
+export const degreeModel = pgTable("degree", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
@@ -10,6 +10,6 @@ export const religionModel = pgTable("religion", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createReligionSchema = createInsertSchema(religionModel);
+export const createDegreeSchema = createInsertSchema(degreeModel);
 
-export type Religion = z.infer<typeof createReligionSchema>;
+export type Degree = z.infer<typeof createDegreeSchema>;
