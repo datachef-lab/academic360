@@ -10,7 +10,7 @@ import { Strategy } from "passport-google-oauth20";
 import { logger } from "@/middlewares/logger.middleware.ts";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
-
+import countryRouter from "@/features/resources/routes/contory.routes.ts";
 import userRouter from "@/features/user/routes/user.route.ts";
 import authRouter from "@/features/auth/routes/auth.route.ts";
 import nationalityRouter from "@/features/resources/routes/nationality.route.ts";
@@ -141,6 +141,7 @@ app.use("/api/nationality", nationalityRouter);
 app.use("/api/religion", religionRouter);
 
 app.use("/api/state", stateRouter);
+app.use("/api/country", countryRouter);
 
 app.use("/api/documents", documentRouter);
 
