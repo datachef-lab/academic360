@@ -1,1 +1,0 @@
-ALTER TABLE "subject_metadatas" ALTER COLUMN "full_marks_practical" DROP NOT NULL;

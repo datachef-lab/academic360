@@ -2,14 +2,13 @@ import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const documentModel = pgTable("documents", {
+export const pickupPointModel = pgTable("pickup_point", {
     id: serial().primaryKey(),
-    name: varchar({ length: 255 }).notNull().unique(),
-    description: varchar({ length: 255 }),
+    name: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDocumentModel = createInsertSchema(documentModel);
+export const createPickupPointSchema = createInsertSchema(pickupPointModel);
 
-export type Document = z.infer<typeof createDocumentModel>;
+export type PickupPoint = z.infer<typeof createPickupPointSchema>;

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
+import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import expressSession from "express-session";
 import express, { Request, Response } from "express";
@@ -29,6 +29,8 @@ import { db } from "./db/index.ts";
 import { eq } from "drizzle-orm";
 import { generateToken } from "./utils/generateToken.ts";
 import { ApiResponse } from "./utils/ApiResonse.ts";
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,58 +67,43 @@ app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
 });
 
 passport.use(
-  new Strategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      callbackURL: "http://localhost:8080/auth/google/callback",
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      console.log("in passport.use, req.url", profile);
-      try {
-        // Here, check if the user exists in the database using the email from the profile
-        if (!profile.emails || profile.emails.length === 0) {
-          return done(null, false, { message: "No email found in profile!" });
+    new Strategy(
+        {
+            clientID: process.env.GOOGLE_CLIENT_ID!,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+            callbackURL: "http://localhost:8080/auth/google/callback",
+        },
+        async (accessToken, refreshToken, profile, done) => {
+            console.log("in passport.use, req.url", profile);
+            try {
+                // Here, check if the user exists in the database using the email from the profile
+                if (!profile.emails || profile.emails.length === 0) {
+                    return done(null, false, { message: "No email found in profile!" });
+                }
+                console.log(profile);
+                const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, profile.emails[0].value as string));
+                const savedUser = await db.update(userModel).set({
+                    image: profile.photos ? profile.photos[0].value : "",
+                }).where(eq(userModel.id, foundUser.id)).returning();
+
+                // console.log("Saved user: ", savedUser);
+
+                if (!foundUser) {
+                    // If user doesn't exist, return failure
+                    return done(null, false, { message: "User not found!" });
+                }
+
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+
+                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+
+                // Redirect to the success URL with tokens
+                return done(null, foundUser, { accessToken, refreshToken });
+            } catch (error) {
+                return done(error);
+            }
         }
-        // console.log(profile);
-        const [foundUser] = await db
-          .select()
-          .from(userModel)
-          .where(eq(userModel.email, profile.emails[0].value as string));
-        const savedUser = await db
-          .update(userModel)
-          .set({
-            image: profile.photos ? profile.photos[0].value : "",
-          })
-          .where(eq(userModel.id, foundUser.id))
-          .returning();
-
-        // console.log("Saved user: ", savedUser);
-
-        if (!foundUser) {
-          // If user doesn't exist, return failure
-          return done(null, false, { message: "User not found!" });
-        }
-
-        const accessToken = generateToken(
-          { id: foundUser.id, type: foundUser.type as UserType["type"] },
-          process.env.ACCESS_TOKEN_SECRET!,
-          process.env.ACCESS_TOKEN_EXPIRY!,
-        );
-
-        const refreshToken = generateToken(
-          { id: foundUser.id, type: foundUser.type as UserType["type"] },
-          process.env.REFRESH_TOKEN_SECRET!,
-          process.env.REFRESH_TOKEN_EXPIRY!,
-        );
-
-        // Redirect to the success URL with tokens
-        return done(null, foundUser, { accessToken, refreshToken });
-      } catch (error) {
-        return done(error);
-      }
-    },
-  ),
+    )
 );
 
 // Serialize and deserialize user for session handling

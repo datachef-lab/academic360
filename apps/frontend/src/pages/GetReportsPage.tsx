@@ -1,5 +1,7 @@
-import Page from "@/components/ReportPage/Page";
+import { mockData } from "@/lib/Data";
+import { columns } from "@/components/ReportPage/columns";
+import { DataTable } from "@/components/ReportPage/DataTable";
 
 export default function GetReports() {
-  return <div><Page></Page></div>;
+  return <DataTable columns={columns} data={mockData} />;
 }

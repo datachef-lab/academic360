@@ -49,6 +49,7 @@
         "@react-oauth/google": "^0.12.1",
         "@tanstack/react-table": "^8.20.6",
         "axios": "^1.7.9",
+        "cmdk": "^1.0.4",
         "drizzle-orm": "^0.38.3",
         "express-rate-limit": "^7.5.0",
         "file-saver": "^2.0.5",

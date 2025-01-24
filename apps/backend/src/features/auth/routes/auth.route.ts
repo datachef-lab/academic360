@@ -1,6 +1,4 @@
 import express from "express";
-
-
 import { createUser, login, logout, postGoogleLogin, refresh } from "../controllers/auth.controller.ts";
 
 import { loginLimiter } from "@/middlewares/loginLimiter.middleware.ts";
