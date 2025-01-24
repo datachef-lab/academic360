@@ -21,6 +21,7 @@ import { db } from "./db/index.ts";
 import { eq } from "drizzle-orm";
 import { generateToken } from "./utils/generateToken.ts";
 import { ApiResponse } from "./utils/ApiResonse.ts";
+import { bloodGroupRouter, categoryRouter, cityRouter } from "./features/resources/routes/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -116,6 +117,11 @@ app.use("/api/subjects", subjectRouter);
 
 app.use("/api/documents", documentRouter);
 
+app.use("/api/blood-groups", bloodGroupRouter )
+
+app.use("/api/category", categoryRouter )
+
+app.use("/api/city", cityRouter )
 
 app.use(errorHandler);
 
