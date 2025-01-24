@@ -8,6 +8,7 @@ import {
   Settings,
   User,
   UserPlus,
+  Workflow,
 } from "lucide-react";
 
 import { NavMain } from "@/components/globals/NavMain";
@@ -47,22 +48,27 @@ const data = {
   ],
   navMain: [
     {
-      title: "Academics",
+      title: "My Workspace",
       url: "/home",
+      icon: Workflow,
+    },
+    {
+      title: "Academics",
+      url: "/home/academics",
       icon: GraduationCap,
       isActive: true,
       items: [
         {
           title: "Home",
-          url: "/home",
+          url: "/home/academics",
         },
         {
           title: "Get Reports",
-          url: "/home/reports",
+          url: "/home/academics-reports",
         },
         {
           title: "Search Student",
-          url: "/home/search",
+          url: "/home/academics-search",
         },
         {
           title: "Manage Marksheet",

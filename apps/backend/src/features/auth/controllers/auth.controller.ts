@@ -12,6 +12,7 @@ import { generateToken } from "@/utils/generateToken.ts";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const givenUser = req.body as UserType;
+    
     try {
         // Hash the password before storing it in the database
         const hashedPassword = await bcrypt.hash(givenUser.password, 10);

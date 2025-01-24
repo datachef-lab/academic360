@@ -1,24 +1,23 @@
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   
-  border-radius: 30px; /* Makes the scrollbar rounded */
+  border-radius: 30px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
   background: #f0f0f0;
-  border-radius: 10px; /* Makes the track rounded */
+  border-radius: 10px; 
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background: #bdbdbd;
-  border-radius: 30px; /* Makes the thumb rounded */
+  border-radius: 30px; 
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #7b7b7b;
 }
 
-/* Hide scrollbar buttons (arrows) */
 .custom-scrollbar::-webkit-scrollbar-button {
   display: none;
 }

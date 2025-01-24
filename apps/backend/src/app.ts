@@ -1,19 +1,21 @@
 import "dotenv/config";
 import path from "path";
-import { fileURLToPath } from "url";
 import cors from "cors";
+import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import expressSession from "express-session";
 import express, { Request, Response, } from "express";
 import { Strategy } from "passport-google-oauth20";
+import passport from "passport";
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db/index.ts";
 
 import { logger } from "@/middlewares/logger.middleware.ts";
 import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
 
-import userRouter from "@/features/user/routes/user.route.ts";
 import authRouter from "@/features/auth/routes/auth.route.ts";
-
 import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
 import passport from "passport";
 import { userModel, UserType } from "./features/user/models/user.model.ts";
@@ -72,7 +74,7 @@ passport.use(
                 if (!profile.emails || profile.emails.length === 0) {
                     return done(null, false, { message: "No email found in profile!" });
                 }
-                // console.log(profile);
+                console.log(profile);
                 const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, profile.emails[0].value as string));
                 const savedUser = await db.update(userModel).set({
                     image: profile.photos ? profile.photos[0].value : "",
