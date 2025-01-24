@@ -6,7 +6,7 @@ import img1 from "@/assets/img1.png";
 import img6 from "@/assets/img6.jpg";
 import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
-import { Button } from "@/components/ui/button";
+
 import GoogleLogin from "@/components/Auth/GoogleLogin";
 
 const LoginPage: React.FC = () => {

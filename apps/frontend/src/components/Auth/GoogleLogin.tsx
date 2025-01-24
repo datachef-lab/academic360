@@ -1,5 +1,5 @@
 import React from "react";
-import { GoogleOAuthProvider, GoogleLogin as GoogleLoginButton } from "@react-oauth/google";
+import { GoogleOAuthProvider, GoogleLogin as GoogleLoginButton, CredentialResponse } from "@react-oauth/google";
 import { jwtDecode, JwtPayload } from "jwt-decode";
 import axios, { AxiosError } from "axios";
 import Cookies from 'js-cookie';
@@ -10,13 +10,19 @@ type UserData = {
   pitcher: string;
 };
 
+
+
 const GoogleLogin: React.FC = () => {
     const googleClientId: string = import.meta.env.VITE_GOOGLE_CLIENT_ID as string;
 
   console.log("cliend id ***",googleClientId)
-  const handleSuccess = async (response: any) => {
+  const handleSuccess = async (credentialResponse: CredentialResponse) => {
     try {
-      const decodeToken = jwtDecode<JwtPayload & { name: string; email: string; pitcher: string }>(response.credential);
+      if (!credentialResponse.credential) {
+        throw new Error("Credential is undefined");
+      }
+      const decodeToken = jwtDecode<JwtPayload & { name: string; email: string; pitcher: string }>
+      (credentialResponse.credential);
       console.log("google user info", decodeToken);
 
       const userData: UserData = {
@@ -25,8 +31,8 @@ const GoogleLogin: React.FC = () => {
         pitcher: decodeToken.pitcher,
       };
 
-      const res = await axios.post("http://localhost:8080/auth/google/callback", userData);
-      if (res.data&&res.data.token) {
+      const res = await axios.post("/auth/google/", userData);
+      if (res.data && res.data.token) {
         const { token } = res.data;
 
        
@@ -47,11 +53,11 @@ const GoogleLogin: React.FC = () => {
     console.error('Google Login Failed');
     alert('Unable to login with Google. Please try again.');
   };
-  const config = {
-    text: "signin_with" as "signin_with",
-    shape: "circle" as "circle",
-    theme: "filled_black" as "filled_black",
-  };
+const config = {
+  text: "signin_with",
+  shape: "circle",
+  theme: "filled_black",
+} as const;
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
