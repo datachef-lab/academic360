@@ -96,7 +96,7 @@ export const postGoogleLogin = async (req: Request, res: Response, next: NextFun
         res.cookie("jwt", refreshToken, {
             httpOnly: true, // Accessible only by the web server
             secure: false, // Only sent over HTTPS
-            sameSite: "none", // Cross-site request forgery protection
+            // sameSite: "none", // Cross-site request forgery protection
             maxAge: 1000 * 60 * 60 * 24, // 1 day
         });
 
@@ -134,7 +134,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
                 const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-                res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken }, "Token refreshed"));
+                res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Token refreshed"));
             });
 
     } catch (error) {

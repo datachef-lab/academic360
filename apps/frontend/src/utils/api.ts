@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from "axios";
 
 // Define an Axios instance with a base URL
 const axiosInstance = axios.create({
-    baseURL: "https://jsonplaceholder.typicode.com",  // Your API base URL
+    baseURL: import.meta.env.VITE_APP_BACKEND_URL,
 });
 
 // Axios interceptor setup

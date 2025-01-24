@@ -1,13 +1,8 @@
-import React, {
-  useState,
-  useCallback,
-  useEffect,
-  ReactNode,
-  createContext,
-} from "react";
+import React, { useState, useCallback, useEffect, ReactNode, createContext } from "react";
 import axiosInstance from "@/utils/api";
 import { useNavigate } from "react-router-dom";
-import { User } from "@/types";
+import { User } from "@/types/user";
+import { ApiResonse } from "@/types/api-response";
 
 export interface AuthContextType {
   user: User | null;
@@ -17,9 +12,7 @@ export interface AuthContextType {
   displayFlag: boolean;
 }
 
-export const AuthContext = createContext<AuthContextType | undefined>(
-  undefined,
-);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;
@@ -51,18 +44,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const generateNewToken = useCallback(async (): Promise<string | null> => {
     try {
-      const response = await axiosInstance.post<{
-        accessToken: string;
-        user: User;
-      }>(
-        "/auth/refresh-token",
-        {},
+      const response = await axiosInstance.get<ApiResonse<{ accessToken: string; user: User }>>(
+        "/auth/refresh",
         { withCredentials: true }, // Include cookies in the request
       );
-      setAccessToken(response.data.accessToken);
-      setUser(response.data.user);
+      console.log("response:", response);
+      setAccessToken(response.data.payload.accessToken);
+      setUser(response.data.payload.user);
 
-      return response.data.accessToken;
+      return response.data.payload.accessToken;
     } catch (error) {
       console.error("Failed to generate new token:", error);
       alert("Session expired or failed to authenticate. Please log in again.");
@@ -95,8 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           originalRequest._retry = true;
           const newAccessToken = await generateNewToken();
           if (newAccessToken) {
-            originalRequest.headers["Authorization"] =
-              `Bearer ${newAccessToken}`;
+            originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
             return axiosInstance(originalRequest);
           }
         }
@@ -121,7 +110,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   return (
     <AuthContext.Provider value={contextValue}>
       {user != null && accessToken != null && displayFlag && children}
-      {/* {children} */}
     </AuthContext.Provider>
   );
 };

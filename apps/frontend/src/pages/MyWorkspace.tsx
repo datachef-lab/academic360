@@ -1,3 +1,12 @@
+import { useAuth } from "@/hooks/useAuth";
+
 export default function MyWorkspacePage() {
-  return <div>MyWorkspacePage</div>;
+  const { user } = useAuth();
+
+  return (
+    <div>
+      <p>MyWorkspacePage</p>
+      <p>Welcome {user?.name}</p>
+    </div>
+  );
 }
