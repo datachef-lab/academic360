@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+
 import { createCountry, deleteCountryRecord, getAllCountry, updateCountryRecord } from "../controllers/country.controller.ts";
 
 
