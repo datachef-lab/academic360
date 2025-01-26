@@ -17,9 +17,10 @@ import { corsOptions } from "@/config/corsOptions.ts";
 
 import authRouter from "@/features/auth/routes/auth.route.ts";
 import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
-import { userModel, UserType } from "@/features/user/models/user.model.ts";
+import { userModel, User } from "@/features/user/models/user.model.ts";
 import { generateToken } from "@/utils/generateToken.ts";
-import { userRouter } from "@/features/user/routes/index.ts";
+import { studentRouter, userRouter } from "@/features/user/routes/index.ts";
+import { studentModel } from "./features/user/models/student.model.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,9 +84,9 @@ passport.use(
                     return done(null, false, { message: "User not found!" });
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
                 // Redirect to the success URL with tokens
                 return done(null, foundUser, { accessToken, refreshToken });
@@ -104,6 +105,8 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 app.use("/auth", authRouter);
 
 app.use("/api/users", userRouter);
+
+app.use("/api/students", studentRouter);
 
 app.use("/api/streams", streamRouter);
 

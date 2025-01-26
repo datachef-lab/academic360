@@ -2,11 +2,13 @@ import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.ts
 import { relations } from "drizzle-orm";
 import { integer, numeric, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { studentModel } from "./student.model.ts";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
 
 export const healthModel = pgTable("health", {
     id: serial().primaryKey(),
     // TODO: Add faculty and teacher ids
-    studentId: integer().references(() => studentModel.id),
+    studentId: integer().unique().references(() => studentModel.id),
     bloodGroupId: integer().references(() => bloodGroupModel.id),
     eyePowerLeft: numeric(),
     eyePowerRight: numeric(),
@@ -29,3 +31,7 @@ export const healthRelations = relations(healthModel, ({ one }) => ({
         references: [bloodGroupModel.id]
     }),
 }));
+
+export const createHealthSchema = createInsertSchema(healthModel);
+
+export type Health = z.infer<typeof createHealthSchema>;

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import app from "@/app.ts";
-import { connectToDatabase } from "@/db/index.ts";
+import { connectToDatabase, connectToMySQL } from "@/db/index.ts";
 
 const PORT = process.env.PORT || 8080;
 
@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 8080;
     console.log("\nInitializing academic360...\n");
     try {
         await connectToDatabase();
+        await connectToMySQL();
         app.listen(PORT, () => {
             console.log(
                 `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,

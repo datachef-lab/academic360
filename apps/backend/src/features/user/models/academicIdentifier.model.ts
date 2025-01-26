@@ -8,10 +8,10 @@ import { z } from "zod";
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
     studentId: integer().notNull().unique().references(() => studentModel.id),
-    frameworkType: frameworkTypeEnum().notNull().default("CBCS"),
+    frameworkType: frameworkTypeEnum().default("CBCS"),
     rfid: varchar({ length: 255 }),
-    streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
-    course: courseTypeEnum().notNull().default("HONOURS"),
+    streamId: integer("stream_id_fk").references(() => streamModel.id),
+    course: courseTypeEnum().default("HONOURS"),
     cuFormNumber: varchar({ length: 255 }),
     uid: varchar({ length: 255 }),
     oldUid: varchar({ length: 255 }),
