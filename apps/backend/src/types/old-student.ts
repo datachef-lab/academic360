@@ -7,8 +7,8 @@ export type OldStudent = {
     oldcodeNumber: string | undefined;
     name: string;
     email: string | undefined;
-    active: boolean;
-    alumni: boolean;
+    active: boolean | undefined;
+    alumni: boolean | undefined;
     contactNo: string | undefined;
     imgFile: string | undefined;
     applicantSignature: string | undefined;
@@ -23,12 +23,12 @@ export type OldStudent = {
     dateOfBirth: Date | undefined;
     nationalityId: number | undefined; // 0 means not entered
 
-    rollNumber: number | undefined; // class roll, 0 means entered
+    rollNumber: string | undefined; // class roll, 0 means entered
 
     
     bloodGroup: number | undefined; // 0 means entered
-    eyePowerLeft: number | undefined; // 0 means entered
-    eyePowerRight: number | undefined; // 0 means entered
+    eyePowerLeft: string | undefined; // 0 means entered
+    eyePowerRight: string | undefined; // 0 means entered
     emrgnResidentPhNo: string | undefined;
     emrgnOfficePhNo: string | undefined;
     emrgnMotherMobNo: string | undefined;

@@ -19,24 +19,107 @@ import { transportDetailsModel } from "../models/transportDetails.model.ts";
 import { academicIdentifierModel } from "../models/academicIdentifier.model.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { number } from "zod";
+import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.ts";
+import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.ts";
+import { Nationality, nationalityModel } from "@/features/resources/models/nationality.model.ts";
+import { Category, categoryModel } from "@/features/resources/models/category.model.ts";
+import { Religion, religionModel } from "@/features/resources/models/religion.model.ts";
+import { LanguageMedium, languageMediumModel } from "@/features/resources/models/languageMedium.model.ts";
+import { formatAadhaarCardNumber } from "@/utils/formatAadhaarCardNumber.ts";
+import { OldBoard } from "@/types/old-board.ts";
+import { OldDegree } from "@/types/old-degree.ts";
+import { OldBoardStatus } from "@/types/old-board-status.ts";
+import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.ts";
+import { Degree, degreeModel } from "@/features/resources/models/degree.model.ts";
+import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
+export async function addOccupation(name: string) {
+    const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim().toUpperCase()));
+    if (existingOccupation) {
+        return existingOccupation;
+    }
+    const [newOccupation] = await db.insert(occupationModel).values({ name: name.trim().toUpperCase() }).returning();
+
+    return newOccupation;
+}
+
+export async function addBloodGroup(type: string) {
+    const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim().toUpperCase()));
+    if (existingBloodGroup) {
+        return existingBloodGroup;
+    }
+    const [newBloodGroup] = await db.insert(bloodGroupModel).values({ type: type.trim().toUpperCase() }).returning();
+
+    return newBloodGroup;
+}
+
+export async function addNationality(name: string, code: number | undefined | null) {
+    const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim().toUpperCase()));
+    if (existingNationality) {
+        return existingNationality;
+    }
+    const [newNationality] = await db.insert(nationalityModel).values({ name: name.trim().toUpperCase(), code }).returning();
+
+    return newNationality;
+}
+
+export async function addCategory(name: string, code: string, documentRequired: boolean | undefined) {
+    const [existingCategory] = await db.select().from(categoryModel).where(eq(categoryModel.name, name.trim().toUpperCase()));
+    if (existingCategory) {
+        return existingCategory;
+    }
+    const [newCategory] = await db.insert(categoryModel).values({ name: name.trim().toUpperCase(), code, documentRequired }).returning();
+
+    return newCategory;
+}
+
+export async function addReligion(name: string) {
+    const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim().toUpperCase()));
+    if (existingReligion) {
+        return existingReligion;
+    }
+    const [newReligion] = await db.insert(religionModel).values({ name: name.trim().toUpperCase() }).returning();
+
+    return newReligion;
+}
+
+export async function addLanguageMedium(name: string) {
+    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim().toUpperCase()));
+    if (existingLanguage) {
+        return existingLanguage;
+    }
+    const [newLanguage] = await db.insert(languageMediumModel).values({ name: name.trim().toUpperCase() }).returning();
+
+    return newLanguage;
+}
+
+
+
+
 export async function addUser(oldStudent: OldStudent) {
-    const email = `${oldStudent.codeNumber.trim()}@thebges.edu.in`;
+    const cleanString = (value: unknown): string | undefined => {
+        if (typeof value === 'string') {
+            return value.replace(/[\s\-\/]/g, '').trim();
+        }
+        return undefined; // Return undefined for non-string values
+    };
+
+    const email = `${cleanString(oldStudent.codeNumber)?.toUpperCase()}@thebges.edu.in`;
     // Return, if the email already exist
-    const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email));
+    const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
     if (existingUser) {
         return existingUser;
     }
     // Create the new user
     const [newUser] = await db.insert(userModel).values({
-        name: oldStudent.name,
-        email,
-        password: oldStudent.codeNumber,
-        phone: oldStudent.phoneMobileNo,
+        name: oldStudent.name?.trim()?.toUpperCase(),
+        email: email.trim().toLowerCase(),
+        password: oldStudent.codeNumber.trim()?.toUpperCase(),
+        phone: oldStudent.contactNo?.trim()?.toUpperCase(),
         type: "STUDENT",
-        whatsappNumber: oldStudent.whatsappno,
+        whatsappNumber: oldStudent.whatsappno?.trim()?.toUpperCase(),
     }).returning();
 
     return newUser;
@@ -49,10 +132,10 @@ export async function addStudent(oldStudent: OldStudent, user: User) {
     }
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
-        community: oldStudent.communityid === 0 ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
+        community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         lastPassedYear: oldStudent.lspassedyr,
         notes: oldStudent.notes,
-        active: oldStudent.active,
+        active: oldStudent.alumni !== undefined ? !oldStudent.alumni : oldStudent.active,
         alumni: oldStudent.alumni,
         leavingDate: oldStudent.leavingdate,
         leavingReason: oldStudent.leavingreason,
@@ -88,9 +171,9 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student)
     }
 
     const [address] = await db.insert(addressModel).values({
-        addressLine: oldStudent.placeofstayaddr,
+        addressLine: oldStudent.placeofstayaddr?.toUpperCase()?.trim(),
         localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
-        phone: oldStudent.placeofstaycontactno
+        phone: oldStudent.placeofstaycontactno?.trim()?.toUpperCase()
     }).returning();
 
     const [newAccommodation] = await db.insert(accommodationModel).values({
@@ -110,8 +193,8 @@ export async function addAdmission(oldStudent: OldStudent, student: Student) {
 
     const [newAdmission] = await db.insert(admissionModel).values({
         studentId: student.id as number,
-        admissionCode: oldStudent.admissioncodeno,
-        applicantSignature: oldStudent.applicantSignature,
+        admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
+        applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
         yearOfAdmission: oldStudent.admissionYear,
         admissionDate: oldStudent.admissiondate?.toISOString()
     }).returning();
@@ -138,31 +221,46 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
         }
     }
 
-    const [father] = await db.insert(personModel).values({
-        name: oldStudent.fatherName,
-        email: oldStudent.fatherEmail,
-        aadhaarCardNumber: oldStudent.fatheraadharno,
-        phone: oldStudent.fatherMobNo,
-        officePhone: oldStudent.fatherOffPhone,
-        image: oldStudent.fatherPic,
-        // occupationId: // TODO
+    let fatherOccupation: Occupation | undefined;
+    if (oldStudent.fatherOccupation) {
+        const [fatherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.fatherOccupation}`) as [{ id: number, occupationName: string }[], any];
+        if (fatherOccupationResult.length > 0) {
+            fatherOccupation = await addOccupation(fatherOccupationResult[0].occupationName);
+        }
+    }
 
+    const [father] = await db.insert(personModel).values({
+        name: oldStudent.fatherName?.toUpperCase()?.trim(),
+        email: oldStudent.fatherEmail?.trim().toLowerCase(),
+        aadhaarCardNumber: formatAadhaarCardNumber(oldStudent.fatheraadharno),
+        phone: oldStudent.fatherMobNo?.trim(),
+        officePhone: oldStudent.fatherOffPhone?.trim(),
+        image: oldStudent.fatherPic?.trim(),
+        occupationId: fatherOccupation ? fatherOccupation.id : undefined
     }).returning();
 
+    let motherOccupation: Occupation | undefined;
+    if (oldStudent.motherOccupation) {
+        const [motherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.motherOccupation}`) as [{ id: number, occupationName: string }[], any];
+        if (motherOccupationResult.length > 0) {
+            motherOccupation = await addOccupation(motherOccupationResult[0].occupationName);
+        }
+    }
+
     const [mother] = await db.insert(personModel).values({
-        name: oldStudent.motherName,
-        email: oldStudent.motherEmail,
-        aadhaarCardNumber: oldStudent.motheraadharno,
-        phone: oldStudent.motherMobNo,
-        officePhone: oldStudent.motherOffPhone,
-        image: oldStudent.motherPic,
-        // occupationId: // TODO
+        name: oldStudent.motherName?.toUpperCase()?.trim(),
+        email: oldStudent.motherEmail?.trim().toLowerCase(),
+        aadhaarCardNumber: formatAadhaarCardNumber(oldStudent.motheraadharno),
+        phone: oldStudent.motherMobNo?.trim(),
+        officePhone: oldStudent.motherOffPhone?.trim(),
+        image: oldStudent.motherPic?.trim(),
+        occupationId: motherOccupation ? motherOccupation.id : undefined
 
     }).returning();
 
     const [newParent] = await db.insert(parentModel).values({
         studentId: student.id as number,
-        annualIncome: oldStudent.annualFamilyIncome,
+        annualIncome: oldStudent.annualFamilyIncome?.toUpperCase(),
         parentType,
         fatherDetailsId: father.id,
         motherDetailsId: mother.id
@@ -180,19 +278,27 @@ export async function addGuardian(oldStudent: OldStudent, student: Student) {
     let guardianOfficeAddress: Address | undefined;
     if (oldStudent.guardianOffAddress) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.guardianOffAddress,
+            addressLine: oldStudent.guardianOffAddress?.toUpperCase().trim(),
         }).returning();
         guardianOfficeAddress = address;
     }
 
+    let guardianOccupation: Occupation | undefined;
+    if (oldStudent.guardianOccupation) {
+        const [guardianOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.guardianOccupation}`) as [{ id: number, occupationName: string }[], any];
+        if (guardianOccupationResult.length > 0) {
+            guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName);
+        }
+    }
+
     const [guardianPerson] = await db.insert(personModel).values({
-        name: oldStudent.guardianName,
-        email: oldStudent.guardianEmail,
-        aadhaarCardNumber: oldStudent.gurdianaadharno,
-        phone: oldStudent.guardianMobNo,
-        image: oldStudent.guardianPic,
-        // occupationId: // TODO
-        officePhone: oldStudent.guardianOffPhone,
+        name: oldStudent.guardianName?.trim()?.toUpperCase(),
+        email: oldStudent.guardianEmail?.trim().toLowerCase(),
+        aadhaarCardNumber: formatAadhaarCardNumber(oldStudent.gurdianaadharno),
+        phone: oldStudent.guardianMobNo?.trim(),
+        image: oldStudent.guardianPic?.trim(),
+        occupationId: guardianOccupation ? guardianOccupation.id : undefined,
+        officePhone: oldStudent.guardianOffPhone?.trim(),
         officeAddressId: guardianOfficeAddress ? guardianOfficeAddress.id as number : undefined
 
     }).returning();
@@ -211,12 +317,22 @@ export async function addHealth(oldStudent: OldStudent, student: Student) {
         return existingHealth;
     }
 
+    let bloodGroup: BloodGroup | undefined;
+    if (oldStudent.bloodGroup) {
+        const [bloodGroupResult] = await mysqlConnection.query(`SELECT * FROM bloodgroup WHERE id = ${oldStudent.bloodGroup}`) as [{ id: number, name: string }[], any];
+        if (bloodGroupResult.length > 0) {
+            bloodGroup = await addBloodGroup(bloodGroupResult[0].name);
+        }
+    }
+
     const [newHealth] = await db.insert(healthModel).values({
         studentId: student.id as number,
-        // bloodGroupId: // TODO,
-        eyePowerLeft: oldStudent.eyePowerLeft,
-        eyePowerRight: oldStudent.eyePowerRight,
+        bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
+        eyePowerLeft: oldStudent.eyePowerLeft?.trim()?.toUpperCase(),
+        eyePowerRight: oldStudent.eyePowerRight?.trim()?.toUpperCase(),
     } as Health).returning();
+
+    return newHealth;
 }
 
 export async function addEmergencyContact(oldStudent: OldStudent, student: Student) {
@@ -227,11 +343,11 @@ export async function addEmergencyContact(oldStudent: OldStudent, student: Stude
 
     const [newEmergencyContact] = await db.insert(emergencyContactModel).values({
         studentId: student.id as number,
-        personName: oldStudent.emercontactpersonnm,
-        phone: oldStudent.emercontactpersonmob,
-        residentialPhone: oldStudent.emrgnResidentPhNo,
-        relationToStudent: oldStudent.emerpersreltostud,
-        officePhone: oldStudent.emrgnOfficePhNo,
+        personName: oldStudent.emercontactpersonnm?.trim()?.toUpperCase(),
+        phone: oldStudent.emercontactpersonmob?.trim(),
+        residentialPhone: oldStudent.emrgnResidentPhNo?.trim(),
+        relationToStudent: oldStudent.emerpersreltostud?.trim()?.toUpperCase(),
+        officePhone: oldStudent.emrgnOfficePhNo?.trim(),
     }).returning();
 
     return newEmergencyContact;
@@ -246,9 +362,9 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     let mailingAddress: Address | undefined;
     if (oldStudent.mailingAddress || oldStudent.mailingPinNo) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.mailingAddress,
+            addressLine: oldStudent.mailingAddress?.trim()?.toUpperCase(),
             localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
-            pincode: oldStudent.mailingPinNo
+            pincode: oldStudent.mailingPinNo?.trim()?.toUpperCase()
         }).returning();
         mailingAddress = address;
     }
@@ -256,33 +372,140 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     let residentialAddress: Address | undefined;
     if (oldStudent.mailingAddress || oldStudent.mailingPinNo) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.residentialAddress,
-            phone: oldStudent.resiPhoneMobileNo,
+            addressLine: oldStudent.residentialAddress?.trim()?.toUpperCase(),
+            phone: oldStudent.resiPhoneMobileNo?.trim()?.toUpperCase(),
             localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
-            pincode: oldStudent.resiPinNo
+            pincode: oldStudent.resiPinNo?.trim()?.toUpperCase()
         }).returning();
         residentialAddress = address;
     }
 
+    let nationality: Nationality | undefined;
+    if (oldStudent.nationalityId) {
+        const [nationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.nationalityId}`) as [{ id: number, nationalityName: string, code: number }[], any];
+        if (nationalityResult.length > 0) {
+            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code);
+        }
+    }
+    let otherNationality: Nationality | undefined;
+    if (oldStudent.othernationality) {
+        const [otherNationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.othernationality}`) as [{ id: number, nationalityName: string, code: number }[], any];
+        if (otherNationalityResult.length > 0) {
+            otherNationality = await addNationality(otherNationalityResult[0].nationalityName, otherNationalityResult[0].code);
+        }
+    }
+    let category: Category | undefined;
+    if (oldStudent.studentCategoryId) {
+        const [categoryResult] = await mysqlConnection.query(`SELECT * FROM category WHERE id = ${oldStudent.studentCategoryId}`) as [{ id: number, category: string, code: string, docneeded: boolean | undefined }[], any];
+        if (categoryResult.length > 0) {
+            category = await addCategory(categoryResult[0].category, categoryResult[0].code, categoryResult[0].docneeded);
+        }
+    }
+    let religion: Religion | undefined;
+    if (oldStudent.religionId) {
+        const [religionResult] = await mysqlConnection.query(`SELECT * FROM religion WHERE id = ${oldStudent.religionId}`) as [{ id: number, religionName: string }[], any];
+        if (religionResult.length > 0) {
+            religion = await addReligion(religionResult[0].religionName);
+        }
+    }
+    let motherTongue: LanguageMedium | undefined;
+    if (oldStudent.motherTongueId) {
+        const [motherTongueResult] = await mysqlConnection.query(`SELECT * FROM mothertongue WHERE id = ${oldStudent.motherTongueId}`) as [{ id: number, mothertongueName: string }[], any];
+        if (motherTongueResult.length > 0) {
+            motherTongue = await addLanguageMedium(motherTongueResult[0].mothertongueName);
+        }
+    }
+
     const [newPersonalDetails] = await db.insert(personalDetailsModel).values({
         studentId: student.id as number,
-        dateOfBirth: oldStudent.dateOfBirth?.toISOString() || "",
+        dateOfBirth: oldStudent.dateOfBirth ? oldStudent.dateOfBirth.toISOString() : undefined,
         gender: oldStudent.sexId === 0 ? undefined : (oldStudent.sexId === 1 ? "MALE" : "FEMALE"),
-        // nationalityId
-        // otherNationalityId
-        // categoryId: // TODO,
-        // religionId: 
-        aadhaarCardNumber: oldStudent.aadharcardno,
-        alternativeEmail: oldStudent.alternativeemail,
-        email: oldStudent.email,
+        nationalityId: nationality ? nationality.id : undefined,
+        otherNationalityId: otherNationality ? otherNationality.id : undefined,
+        categoryId: category ? category.id : undefined,
+        religionId: religion ? religion.id : undefined,
+        aadhaarCardNumber: formatAadhaarCardNumber(oldStudent.aadharcardno),
+        alternativeEmail: oldStudent.alternativeemail?.trim().toLowerCase(),
+        email: oldStudent.email?.trim().toLowerCase(),
         mailingAddressId: mailingAddress ? mailingAddress.id as number : undefined,
         residentialAddressId: residentialAddress ? residentialAddress.id as number : undefined,
-        // motherTongueId
+        motherTongueId: motherTongue ? motherTongue.id : undefined,
         // disability: oldStudent.disabilitycode
 
     }).returning();
 
     return newPersonalDetails;
+}
+
+export async function addBoardUnversity(oldStudent: OldStudent): Promise<BoardUniversity | undefined> {
+    const [rows] = await mysqlConnection.query(`SELECT * FROM board WHERE id = ${oldStudent.lastBoardUniversity}`) as [OldBoard[], any];
+
+    const [oldBoardUniversity] = rows;
+
+    if (!oldBoardUniversity) {
+        return undefined;
+    }
+
+    const [existingBoardUniversity] = await db.select().from(boardUniversityModel).where(eq(boardUniversityModel.name, oldBoardUniversity.boardName.trim().toUpperCase()));
+
+    if (existingBoardUniversity) {
+        return existingBoardUniversity;
+    }
+
+    let degree: Degree | undefined;
+    const [degreeRows] = await mysqlConnection.query(`SELECT * FROM degree WHERE id = ${oldBoardUniversity.degreeid}`) as [OldDegree[], any];
+    const [oldDegree] = degreeRows;
+    if (oldDegree) {
+        const [existingDegree] = await db.select().from(degreeModel).where(eq(degreeModel.name, oldDegree.degreeName.trim().toUpperCase()));
+        if (existingDegree) {
+            degree = existingDegree;
+        }
+        else {
+            const [newDegree] = await db.insert(degreeModel).values({ name: oldDegree.degreeName.trim().toUpperCase() }).returning();
+            degree = newDegree;
+        }
+    }
+
+    const [newBoardUniversity] = await db.insert(boardUniversityModel).values({
+        name: oldBoardUniversity.boardName.trim().toUpperCase(),
+        degreeId: degree ? degree.id : undefined,
+        passingMarks: oldBoardUniversity.passmrks,
+        code: oldBoardUniversity.code,
+    }).returning();
+
+    return newBoardUniversity;
+}
+
+export async function addBoardResultStatus(oldStudent: OldStudent): Promise<BoardResultStatus | null> {
+    const [boardResultRows] = await mysqlConnection.query(`SELECT * FROM boardresultstatus WHERE id = ${oldStudent.boardresultid}`) as [OldBoardStatus[], any];
+
+    const [oldBoardResultStatus] = boardResultRows as OldBoardStatus[];
+
+    if (!oldBoardResultStatus) {
+        return null;
+    }
+
+    const [existingBoardResultStatus] = await db.select().from(boardResultStatusModel).where(eq(boardResultStatusModel.name, oldBoardResultStatus.name.trim().toUpperCase()));
+
+    if (existingBoardResultStatus) {
+        return existingBoardResultStatus;
+    }
+
+    let result;
+    if (oldBoardResultStatus.flag?.trim().toUpperCase() === "FAIL") {
+        result = "FAIL";
+    }
+    else if (oldBoardResultStatus.flag?.trim().toUpperCase() === "PASS") {
+        result = "PASS";
+    }
+
+    const [newBoardResultStatus] = await db.insert(boardResultStatusModel).values({
+        name: oldBoardResultStatus.name.trim().toUpperCase(),
+        spclType: oldBoardResultStatus.spcltype?.trim().toUpperCase(),
+        result: result as "FAIL" | "PASS" | undefined,
+    }).returning();
+
+    return newBoardResultStatus;
 }
 
 export async function addAcademicHistory(oldStudent: OldStudent, student: Student) {
@@ -291,12 +514,23 @@ export async function addAcademicHistory(oldStudent: OldStudent, student: Studen
         return existingAcademicHistory;
     }
 
+    let lastBoardUniversity: BoardUniversity | undefined;
+    if (oldStudent.lastBoardUniversity) {
+        lastBoardUniversity = await addBoardUnversity(oldStudent);
+    }
+
+    let boardResultStatus: BoardResultStatus | null | undefined;
+    if (oldStudent.boardresultid) {
+        boardResultStatus = await addBoardResultStatus(oldStudent);
+    }
+
     const [newAcdemicHistory] = await db.insert(academicHistoryModel).values({
         studentId: student.id as number,
-        // lastBoardUniversityId
-        // lastInstitutionId
-        // lastResult
-        // specialization
+        lastBoardUniversityId: lastBoardUniversity ? lastBoardUniversity.id : undefined,
+        // lastInstitutionId: // TODO
+        lastResultId: boardResultStatus ? boardResultStatus.id : undefined,
+        // specialization: // TODO
+        // remarks: 
         // studiedUpToClass
     }).returning();
 
@@ -309,22 +543,29 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
         return existingAcademicIdentifier;
     }
 
+    const cleanString = (value: unknown): string | undefined => {
+        if (typeof value === 'string') {
+            return value.replace(/[\s\-\/]/g, '').trim();
+        }
+        return undefined; // Return undefined for non-string values
+    };
+
     const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({
         studentId: student.id as number,
         // streamId
         // course
-        abcId: oldStudent.abcid,
-        apprid: oldStudent.apprid,
-        checkRepeat: typeof oldStudent.chkrepeat === undefined ? undefined : oldStudent.chkrepeat,
+        abcId: cleanString(oldStudent.abcid)?.toUpperCase(),
+        apprid: cleanString(oldStudent.apprid)?.toUpperCase(),
+        checkRepeat: typeof oldStudent.chkrepeat === 'undefined' ? undefined : oldStudent.chkrepeat,
         // apaarId
-        classRollNumber: oldStudent.rollNumber,
-        cuFormNumber: oldStudent.cuformno,
+        classRollNumber: cleanString(oldStudent.rollNumber)?.toUpperCase(),
+        cuFormNumber: cleanString(oldStudent.cuformno)?.toUpperCase(),
         // frameworkType
-        oldUid: oldStudent.oldcodeNumber,
-        uid: oldStudent.codeNumber,
-        registrationNumber: oldStudent.univregno ? oldStudent.univregno : (oldStudent.universityRegNo ? oldStudent.universityRegNo : undefined),
-        rollNumber: oldStudent.univlstexmrollno,
-        rfid: oldStudent.rfidno,
+        oldUid: cleanString(oldStudent.oldcodeNumber)?.toUpperCase(),
+        uid: cleanString(oldStudent.codeNumber)?.toUpperCase(),
+        registrationNumber: oldStudent.univregno ? cleanString(oldStudent.univregno)?.toUpperCase() : (oldStudent.universityRegNo ? cleanString(oldStudent.universityRegNo)?.toUpperCase() : null),
+        rollNumber: cleanString(oldStudent.univlstexmrollno)?.toUpperCase(),
+        rfid: cleanString(oldStudent.rfidno)?.toUpperCase(),
     }).returning();
 
     return newAcademicIdentifier;
@@ -351,21 +592,21 @@ export async function processStudent(oldStudent: OldStudent) {
     // Step 2: Check for the student
     const student = await addStudent(oldStudent, user);
     // Step 3: Check for the accomodation
-    const accommodation = await addAccommodation(oldStudent, student);
+    await addAccommodation(oldStudent, student);
     // Step 4: Check for the admission
-    const admission = await addAdmission(oldStudent, student);
+    await addAdmission(oldStudent, student);
     // Step 5: Check for the parents
-    const parent = await addParent(oldStudent, student);
+    await addParent(oldStudent, student);
     // Step 6: Check for the guardian
-    const guardian = await addGuardian(oldStudent, student);
+    await addGuardian(oldStudent, student);
     // Step 7: Check for the health
-    const health = await addHealth(oldStudent, student);
+    await addHealth(oldStudent, student);
     // Step 8: Check for the emergency-contact
-    const emergencyContact = await addEmergencyContact(oldStudent, student);
+    await addEmergencyContact(oldStudent, student);
     // Step 9: Check for the personal-details
-    const personalDetails = await addPersonalDetails(oldStudent, student);
+    await addPersonalDetails(oldStudent, student);
     // Step 10: Check for the academic-history
-    const academicHistory = await addAcademicHistory(oldStudent, student);
+    await addAcademicHistory(oldStudent, student);
     // Step 11: Check for the academic-identifier
     await addAcademicIdentifier(oldStudent, student);
     // Step 12: Check for the transport-details
@@ -373,22 +614,25 @@ export async function processStudent(oldStudent: OldStudent) {
 }
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
-    const oldStudent = req.body as OldStudent;
     try {
         console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
         const [rows] = await mysqlConnection.query('SELECT COUNT(*) AS totalRows FROM studentpersonaldetails');
         const { totalRows } = (rows as { totalRows: number }[])[0];
-        console.log(`Total rows to migrate: ${totalRows}`);
+
+        const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+
+        console.log(`\nTotal rows to migrate: ${totalRows}`);
 
         for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
-            console.log(`Migrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
+            const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+            console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
             const [rows] = await mysqlConnection.query(`SELECT * FROM studentpersonaldetails LIMIT ${BATCH_SIZE} OFFSET ${offset}`) as [OldStudent[], any];
             const oldDataArr = rows as OldStudent[];
             // const filterData = oldDataArr.filter(ele => ele.communityid != null);
             for (let i = 0; i < oldDataArr.length; i++) {
-                console.log(`Length: ${oldDataArr.length}, Name: ${oldDataArr[i]?.name} Community: ${oldDataArr[i]?.communityid}`);
+                await processStudent(oldDataArr[i]);
+                console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${oldDataArr[i]?.name}`);
 
-                
             }
         }
 
@@ -400,3 +644,4 @@ export const createOldStudent = async (req: Request, res: Response, next: NextFu
         handleError(error, res, next);
     }
 }
+

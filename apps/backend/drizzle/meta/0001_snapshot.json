@@ -1,6 +1,6 @@
 {
-  "id": "7751131d-015b-4313-a945-3924432e8403",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "ff5c1389-43f6-438e-83ee-3dda69572dc1",
+  "prevId": "7751131d-015b-4313-a945-3924432e8403",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2845,14 +2845,14 @@
           "name": "active",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": true
         },
         "alumni": {
           "name": "alumni",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": false
         },
         "leaving_date": {

@@ -1,20 +1,22 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { studentModel } from "./student.model.ts";
-import { lastInstitutionModel } from "@/features/resources/models/lastInstitution.model.ts";
-import { lastBoardUniversityModel } from "@/features/resources/models/lastBoardUniversity.model.ts";
+
+import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.ts";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
+import { institutionModel } from "@/features/resources/models/institution.model.ts";
 
 export const academicHistoryModel = pgTable("academic_history", {
     id: serial().primaryKey(),
     studentId: integer().notNull().references(() => studentModel.id),
-    lastInstitutionId: integer().references(() => lastInstitutionModel.id),
-    lastBoardUniversityId: integer().references(() => lastBoardUniversityModel.id),
+    lastInstitutionId: integer().references(() => institutionModel.id),
+    lastBoardUniversityId: integer().references(() => boardUniversityModel.id),
     studiedUpToClass: integer(),
     passedYear: integer(),
     specialization: varchar({ length: 255 }),
-    lastResult: varchar({ length: 255 }),
+    lastResultId: integer().references(() => boardResultStatusModel.id),
     remarks: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
@@ -25,13 +27,17 @@ export const academicHistoryRelations = relations(academicHistoryModel, ({ one }
         fields: [academicHistoryModel.studentId],
         references: [studentModel.id]
     }),
-    lastInstitution: one(lastInstitutionModel, {
+    lastInstitution: one(institutionModel, {
         fields: [academicHistoryModel.lastInstitutionId],
-        references: [lastInstitutionModel.id]
+        references: [institutionModel.id]
     }),
-    lastBoardUniversity: one(lastBoardUniversityModel, {
+    lastBoardUniversity: one(boardUniversityModel, {
         fields: [academicHistoryModel.lastBoardUniversityId],
-        references: [lastBoardUniversityModel.id]
+        references: [boardUniversityModel.id]
+    }),
+    lastBoardResultStatus: one(boardResultStatusModel, {
+        fields: [academicHistoryModel.lastResultId],
+        references: [boardResultStatusModel.id]
     }),
 }));
 
