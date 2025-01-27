@@ -1,5 +1,5 @@
 import express from "express";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+
 import {
   createNationality,
   deleteNationality,
@@ -8,7 +8,7 @@ import {
 } from "../controllers/nationality.controller.ts";
 
 const router = express.Router();
-router.use(verifyJWT);
+
 
 router.post("/", createNationality);
 router.get("/", getAllNationality);

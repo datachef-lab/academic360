@@ -1,4 +1,4 @@
-import {verifyJWT} from "@/middlewares/verifyJWT.js";
+
 import express from "express";
 import {
     createOccupation, deleteOccupation,
@@ -7,7 +7,7 @@ import {
 } from "@/features/resources/controllers/occupation.controller.js";
 
 const router = express.Router();
-router.use(verifyJWT);
+
 
 router.post("/", createOccupation);
 router.get("/", getAllOccupation);
