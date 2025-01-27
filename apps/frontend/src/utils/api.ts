@@ -46,3 +46,13 @@ export const setupAxiosInterceptors = (showError: (arg0: { statusCode?: number; 
 };
 
 export default axiosInstance;
+
+export const postRequest = async <T>(url: string, payload: object): Promise<T> => {
+    try {
+        const response = await axiosInstance.post<T>(url, payload);
+        return response.data;
+    } catch (error) {
+        // This error will be handled by the axios interceptor
+        throw error;
+    }
+};

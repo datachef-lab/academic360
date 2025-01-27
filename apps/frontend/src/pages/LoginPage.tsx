@@ -8,23 +8,26 @@ import img1 from "@/assets/img1.png";
 import img6 from "@/assets/img6.jpg";
 import "@/styles/LoginPage.css";
 import { Button } from "@/components/ui/button";
+import { postRequest } from "@/utils/api";
 
 const LoginPage: React.FC = () => {
-  const [formData, setFormData] = useState<{ username: string; password: string }>({
-    username: "",
+  const [formData, setFormData] = useState<{ email: string; password: string }>({
+    email: "",
     password: "",
   });
+  const [loading,setLoading] = useState<boolean>(false);
 
-  const [focusState, setFocusState] = useState<{ username: boolean; password: boolean }>({
-    username: false,
+
+  const [focusState, setFocusState] = useState<{ email: boolean; password: boolean }>({
+    email: false,
     password: false,
   });
 
-  const handleFocus = (field: "username" | "password") => {
+  const handleFocus = (field: "email" | "password") => {
     setFocusState({ ...focusState, [field]: true });
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement, Element>, field: "username" | "password") => {
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement, Element>, field: "email" | "password") => {
     if (e.target.value === "") {
       setFocusState({ ...focusState, [field]: false });
     }
@@ -36,17 +39,23 @@ const LoginPage: React.FC = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
+    try{
+      console.log("****",formData);
+      const res = await postRequest("/auth/login", formData);
+      console.log("Response", res);
+    }catch(e){
+      console.log(e);
+      console.log("Login failed");
+    }
+    setLoading(false);
 
     // Log form data for now
     console.log("Form submitted", formData);
 
-    if (formData.username && formData.password) {
-      alert(`Welcome, ${formData.username}!`);
-    } else {
-      alert("Please fill in all fields.");
-    }
+  
   };
 
   return (
@@ -70,19 +79,19 @@ const LoginPage: React.FC = () => {
               <img src={avatar} alt="Avatar" />
             </div>
             <div className="">
-              <div className={`input-div one ${focusState.username ? "focus" : ""}`}>
+              <div className={`input-div one ${focusState.email ? "focus" : ""}`}>
                 <div className="i">
                   <FaUser />
                 </div>
                 <div className="div">
-                  <h5>Username</h5>
+                  <h5>email</h5>
                   <input
                     type="text"
-                    name="username"
-                    value={formData.username}
+                    name="email"
+                    value={formData.email}
                     className="input"
-                    onFocus={() => handleFocus("username")}
-                    onBlur={(event) => handleBlur(event, "username")}
+                    onFocus={() => handleFocus("email")}
+                    onBlur={(event) => handleBlur(event, "email")}
                     onChange={handleChange}
                   />
                 </div>
@@ -108,7 +117,7 @@ const LoginPage: React.FC = () => {
 
               <div className="flex flex-col gap-4">
                 <Link to="/forgot-password">Forgot Password?</Link>
-                <Button type="submit">Login</Button>
+                <Button type="submit">{loading ? "Logging in..." : "Login"}Login</Button>
                 <Button type="button" className="" variant="secondary">
                   <Link to={`${import.meta.env.VITE_APP_BACKEND_URL}/auth/google`} className="text-black">
                     Continue with Google...

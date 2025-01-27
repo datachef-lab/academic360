@@ -36,6 +36,8 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
+        console.log(email);
+        console.log(password);
 
         const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, email));
         if (!foundUser || foundUser.disabled) {
