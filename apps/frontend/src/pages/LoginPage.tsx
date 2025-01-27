@@ -10,6 +10,17 @@ import "@/styles/LoginPage.css";
 import { Button } from "@/components/ui/button";
 import { postRequest } from "@/utils/api";
 
+type LoginResponse = {
+  payload: {
+    accessToken:string,
+    user:{
+      name:string,
+      email:string,
+    },
+  };
+}
+
+
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<{ email: string; password: string }>({
     email: "",
@@ -42,20 +53,11 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    try{
-      console.log("****",formData);
-      const res = await postRequest("/auth/login", formData);
-      console.log("Response", res);
-    }catch(e){
-      console.log(e);
-      console.log("Login failed");
-    }
+    const response = await postRequest<LoginResponse>("/auth/login", formData);
+    console.log("Response3", response.payload.accessToken);
+    localStorage.setItem("accessToken", response.payload.accessToken);
     setLoading(false);
 
-    // Log form data for now
-    console.log("Form submitted", formData);
-
-  
   };
 
   return (
@@ -117,7 +119,7 @@ const LoginPage: React.FC = () => {
 
               <div className="flex flex-col gap-4">
                 <Link to="/forgot-password">Forgot Password?</Link>
-                <Button type="submit">{loading ? "Logging in..." : "Login"}Login</Button>
+                <Button type="submit">{loading ? "Logging in..." : "Login"}</Button>
                 <Button type="button" className="" variant="secondary">
                   <Link to={`${import.meta.env.VITE_APP_BACKEND_URL}/auth/google`} className="text-black">
                     Continue with Google...
