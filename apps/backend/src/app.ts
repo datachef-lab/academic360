@@ -7,36 +7,40 @@ import expressSession from "express-session";
 import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
+import { db } from "./db/index.ts";
 import { eq } from "drizzle-orm";
 
-import { db } from "@/db/index.ts";
-
-import { logger } from "@/middlewares/logger.middleware.ts";
-import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
 
-import authRouter from "@/features/auth/routes/auth.route.ts";
+import { logger, errorHandler } from "@/middlewares/index.ts";
+
+import { generateToken } from "./utils/index.ts";
+
+import { userModel, User } from "./features/user/models/user.model.ts";
+
 import {
     documentRouter,
     marksheetRouter,
     streamRouter,
     subjectMetadataRouter,
     subjectRouter,
-} from "@/features/academics/routes/index.ts";
-import { userModel, User } from "./features/user/models/user.model.ts";
-
-import { generateToken } from "./utils/generateToken.ts";
-import {
+    countryRouter,
+    userRouter,
+    authRouter,
     bloodGroupRouter,
     categoryRouter,
     cityRouter,
     languageMediumRouter,
-    lastBoardUniversityRouter,
-    lastInstitutionRouter,
+    boardUniversityRouter,
+    institutionRouter,
     qualificationRouter,
     transportRouter,
-} from "./features/resources/routes/index.ts";
-import { studentRouter, userRouter } from "./features/user/routes/index.ts";
+    studentRouter,
+    nationalityRouter,
+    religionRouter,
+    stateRouter,
+} from "@/features/index.ts";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,6 +142,13 @@ app.use("/api/marksheets", marksheetRouter);
 
 app.use("/api/subjects", subjectRouter);
 
+app.use("/api/nationality", nationalityRouter);
+
+app.use("/api/religion", religionRouter);
+
+app.use("/api/state", stateRouter);
+app.use("/api/country", countryRouter);
+
 app.use("/api/documents", documentRouter);
 
 app.use("/api/blood-groups", bloodGroupRouter);
@@ -148,9 +159,9 @@ app.use("/api/city", cityRouter);
 
 app.use("/api/language-mediums", languageMediumRouter);
 
-app.use("/api/last-board-university", lastBoardUniversityRouter);
+app.use("/api/board-universities", boardUniversityRouter);
 
-app.use("/api/last-institution", lastInstitutionRouter);
+app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 

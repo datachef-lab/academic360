@@ -13,51 +13,54 @@ import { ModeToggle } from "@/components/globals/ModeToggle";
 import styles from "@/styles/HomeLayout.module.css";
 import NotifcationPanel from "../globals/NotifcationPanel";
 import GlobalSearch from "../globals/GlobalSearch";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 export default function HomeLayout() {
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex justify-between pr-4 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-                  <BreadcrumbSeparator />
-                </BreadcrumbItem>
+    <ThemeProvider>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex justify-between pr-4 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>Academics</BreadcrumbLink>
+                    <BreadcrumbSeparator />
+                  </BreadcrumbItem>
 
-                {pathSegments.map((segment, index) => {
-                  const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+                  {pathSegments.map((segment, index) => {
+                    const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
 
-                  return (
-                    <BreadcrumbItem key={index}>
-                      <BreadcrumbLink asChild className="text-blue-500">
-                        <Link to={path}>{segment.charAt(0).toUpperCase() + segment.slice(1)}</Link>
-                      </BreadcrumbLink>
-                      <BreadcrumbSeparator />
-                    </BreadcrumbItem>
-                  );
-                })}
-              </BreadcrumbList>
-            </Breadcrumb>
+                    return (
+                      <BreadcrumbItem key={index}>
+                        <BreadcrumbLink asChild className="text-blue-500">
+                          <Link to={path}>{segment.charAt(0).toUpperCase() + segment.slice(1)}</Link>
+                        </BreadcrumbLink>
+                        <BreadcrumbSeparator />
+                      </BreadcrumbItem>
+                    );
+                  })}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="flex items-center gap-2">
+              <GlobalSearch />
+              <NotifcationPanel />
+              <ModeToggle />
+            </div>
+          </header>
+          <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            <Outlet />
           </div>
-          <div className="flex items-center gap-2">
-            <GlobalSearch />
-            <NotifcationPanel />
-            <ModeToggle />
-          </div>
-        </header>
-        <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <Outlet />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </ThemeProvider>
   );
 }

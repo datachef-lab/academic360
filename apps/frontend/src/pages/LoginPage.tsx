@@ -7,6 +7,8 @@ import img6 from "@/assets/img6.jpg";
 import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
 
+import GoogleLogin from "@/components/auth/GoogleLogin";
+
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<{ username: string; password: string }>({
     username: "",
@@ -40,8 +42,6 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // Log form data for now
     console.log("Form submitted", formData);
 
     if (formData.username && formData.password) {
@@ -109,9 +109,15 @@ const LoginPage: React.FC = () => {
             </div>
 
             <a href="#">Forgot Password?</a>
-            <button type="submit" className="btn">Login</button>
+            <button type="submit" className="btn ">Login</button>
             </div>
+            {/* <p className="text-md text-white mb-8">Please log in using your Google account to continue.</p> */}
+            <div className="w-full mt-5 mb-3 flex flex-row items-center justify-center">
+            <span className="w-full border border-gray-500"></span><p className="text-lg text-white mx-4">Or</p><span className="w-full border border-gray-500"></span>
+            </div>
+          <GoogleLogin/>
           </form>
+          
         </div>
       </div>
     </div>

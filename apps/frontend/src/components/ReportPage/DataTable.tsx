@@ -48,7 +48,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
 
   return (
     <div className=" p-4 space-y-4">
-      <div className="flex-wrap w-full py-6 space-y-5 rounded-md border border-gray-400">
+      <div className="flex-wrap w-full py-6 space-y-5 rounded-md border shadow-md border-gray-400">
         <div className="ml-7">
           <Input
             placeholder="Filter by name..."
@@ -60,7 +60,7 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
         <FilterAndExportComponent />
       </div>
 
-      <div className="rounded-md border  border-gray-400 ">
+      <div className="rounded-md border shadow-md  border-gray-400 ">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

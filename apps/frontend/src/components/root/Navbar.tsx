@@ -22,7 +22,7 @@ export const Navbar: React.FC = () => {
   return (
     <header>
       <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
-      {/* <SignedOut>
+        {/* <SignedOut>
         <SignInButton />
       </SignedOut>
       <SignedIn>
@@ -30,18 +30,13 @@ export const Navbar: React.FC = () => {
       </SignedIn> */}
         <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
           {/* Logo */}
-          <Link
-            to={"/"}
-            className="flex items-center space-x-3 rtl:space-x-reverse"
-          >
+          <Link to={"/"} className="flex items-center space-x-3 rtl:space-x-reverse">
             <img
               src="https://static.vecteezy.com/system/resources/previews/000/502/191/non_2x/vector-graduation-cap-icon-design.jpg"
               className="h-8"
               alt="Logo"
             />
-            <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">
-              academic360
-            </span>
+            <span className="self-center text-2xl font-semibold whitespace-nowrap dark:text-white">academic360</span>
           </Link>
 
           {/* Desktop Menu */}
@@ -79,9 +74,9 @@ export const Navbar: React.FC = () => {
               asChild
               className="bg-blue-700 hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700 flex items-center gap-2"
             >
-              <a href="/login">
+              <Link to="/login">
                 <CgLogIn /> Login
-              </a>
+              </Link>
             </Button>
 
             {/* Mobile Menu */}
