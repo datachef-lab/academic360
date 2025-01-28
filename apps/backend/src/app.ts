@@ -4,7 +4,7 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import expressSession from "express-session";
-import express, { Request, Response, } from "express";
+import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { eq } from "drizzle-orm";
@@ -16,15 +16,30 @@ import { errorHandler } from "@/middlewares/errorHandler.middleware.ts";
 import { corsOptions } from "@/config/corsOptions.ts";
 
 import authRouter from "@/features/auth/routes/auth.route.ts";
-import { documentRouter, marksheetRouter, streamRouter, subjectMetadataRouter, subjectRouter } from "@/features/academics/routes/index.ts";
-import { userModel, User } from "@/features/user/models/user.model.ts";
-import { generateToken } from "@/utils/generateToken.ts";
-import { studentRouter, userRouter } from "@/features/user/routes/index.ts";
-import { studentModel } from "./features/user/models/student.model.ts";
+import {
+    documentRouter,
+    marksheetRouter,
+    streamRouter,
+    subjectMetadataRouter,
+    subjectRouter,
+} from "@/features/academics/routes/index.ts";
+import { userModel, User } from "./features/user/models/user.model.ts";
+
+import { generateToken } from "./utils/generateToken.ts";
+import {
+    bloodGroupRouter,
+    categoryRouter,
+    cityRouter,
+    languageMediumRouter,
+    lastBoardUniversityRouter,
+    lastInstitutionRouter,
+    qualificationRouter,
+    transportRouter,
+} from "./features/resources/routes/index.ts";
+import { studentRouter, userRouter } from "./features/user/routes/index.ts";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 
 const app = express();
 
@@ -44,7 +59,7 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: { secure: false }, // set to true if using HTTPS
-    })
+    }),
 );
 
 app.use(passport.initialize());
@@ -72,10 +87,17 @@ passport.use(
                     return done(null, false, { message: "No email found in profile!" });
                 }
                 console.log(profile);
-                const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, profile.emails[0].value as string));
-                const savedUser = await db.update(userModel).set({
-                    image: profile.photos ? profile.photos[0].value : "",
-                }).where(eq(userModel.id, foundUser.id)).returning();
+                const [foundUser] = await db
+                    .select()
+                    .from(userModel)
+                    .where(eq(userModel.email, profile.emails[0].value as string));
+                const savedUser = await db
+                    .update(userModel)
+                    .set({
+                        image: profile.photos ? profile.photos[0].value : "",
+                    })
+                    .where(eq(userModel.id, foundUser.id))
+                    .returning();
 
                 // console.log("Saved user: ", savedUser);
 
@@ -93,8 +115,8 @@ passport.use(
             } catch (error) {
                 return done(error);
             }
-        }
-    )
+        },
+    ),
 );
 
 // Serialize and deserialize user for session handling
@@ -118,6 +140,21 @@ app.use("/api/subjects", subjectRouter);
 
 app.use("/api/documents", documentRouter);
 
+app.use("/api/blood-groups", bloodGroupRouter);
+
+app.use("/api/category", categoryRouter);
+
+app.use("/api/city", cityRouter);
+
+app.use("/api/language-mediums", languageMediumRouter);
+
+app.use("/api/last-board-university", lastBoardUniversityRouter);
+
+app.use("/api/last-institution", lastInstitutionRouter);
+
+app.use("/api/qualifications", qualificationRouter);
+
+app.use("/api/transports", transportRouter);
 
 app.use(errorHandler);
 
