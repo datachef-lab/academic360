@@ -1,6 +1,6 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.ts";
 import express from "express";
-import { createOldStudent } from "../controllers/student.controller.ts";
+import { createOldStudent } from "../controllers/oldStudent.controller.ts";
 
 const router = express.Router();
 

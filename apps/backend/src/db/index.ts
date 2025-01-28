@@ -25,13 +25,13 @@ export const connectToDatabase = async () => {
 
 
 // MySQL (old DB)
-console.log(
-    process.env.OLD_DB_HOST!,
-    parseInt(process.env.OLD_DB_PORT!, 10),
-    process.env.OLD_DB_USER!,
-    process.env.OLD_DB_PASSWORD!,
-    process.env.OLD_DB_NAME!
-)
+// console.log(
+//     process.env.OLD_DB_HOST!,
+//     parseInt(process.env.OLD_DB_PORT!, 10),
+//     process.env.OLD_DB_USER!,
+//     process.env.OLD_DB_PASSWORD!,
+//     process.env.OLD_DB_NAME!
+// )
 export const mysqlConnection = await createConnection({
     host: process.env.OLD_DB_HOST!,
     port: parseInt(process.env.OLD_DB_PORT!, 10),
