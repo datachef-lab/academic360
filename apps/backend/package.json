@@ -16,7 +16,7 @@
         "start": "node -r tsconfig-paths/register dist/index.js",
         "dev": "npx nodemon --watch src --exec tsx src/index.ts",
         "build": "tsc && tsc-alias",
-        "db:generate": "TS_NODE_PROJECT=tsconfig.json npx drizzle-kit generate",
+        "db:generate": "npx drizzle-kit generate",
         "db:migrate": "npx drizzle-kit migrate",
         "db:studio": "npx drizzle-kit studio"
     },
