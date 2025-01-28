@@ -16,6 +16,9 @@ import authRouter from "@/features/auth/routes/auth.route.ts";
 import nationalityRouter from "@/features/resources/routes/nationality.route.ts";
 import religionRouter from "@/features/resources/routes/religion.routes.ts";
 import stateRouter from "@/features/resources/routes/state.routes.ts";
+import degreeRouter from "@/features/resources/routes/degree.routes.ts";
+import occupationRouter from "@/features/resources/routes/occupation.routes.ts";
+import pickupPointRouter from "@/features/resources/routes/pickupPoint.routes.ts";
 import {
   documentRouter,
   marksheetRouter,
@@ -127,7 +130,14 @@ app.use("/api/nationality", nationalityRouter);
 
 app.use("/api/religion", religionRouter);
 
+app.use("/api/degree", degreeRouter);
+
+app.use("/api/occupation", occupationRouter);
+
+app.use("/api/pickupPoint", pickupPointRouter);
+
 app.use("/api/state", stateRouter);
+
 app.use("/api/country", countryRouter);
 
 app.use("/api/documents", documentRouter);
