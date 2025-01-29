@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1737622020484,
-      "tag": "0000_unknown_revanche",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1737485216485,
-      "tag": "0003_perfect_lilandra",
+      "when": 1738051679353,
+      "tag": "0000_wandering_champions",
       "breakpoints": true
     }
   ]

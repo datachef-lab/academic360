@@ -5,27 +5,29 @@ import { degreeModel } from "./degree.model.ts";
 import { addressModel } from "@/features/user/models/address.model.ts";
 import { relations } from "drizzle-orm";
 
-export const lastBoardUniversityModel = pgTable("last_board_universities", {
+export const boardUniversityModel = pgTable("board_universities", {
     id: serial().primaryKey(),
     name: varchar({ length: 700 }).notNull().unique(),
-    degreeId: integer().notNull().references(() => degreeModel.id),
+    degreeId: integer().references(() => degreeModel.id),
+    passingMarks: integer(),
+    code: varchar({ length: 255 }),
     addressId: integer().references(() => addressModel.id),
     sequence: integer().unique(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createLastBoardUniversityRelations = relations(lastBoardUniversityModel, ({ one }) => ({
+export const createLastBoardUniversityRelations = relations(boardUniversityModel, ({ one }) => ({
     degree: one(degreeModel, {
-        fields: [lastBoardUniversityModel.degreeId],
+        fields: [boardUniversityModel.degreeId],
         references: [degreeModel.id]
     }),
     address: one(addressModel, {
-        fields: [lastBoardUniversityModel.addressId],
+        fields: [boardUniversityModel.addressId],
         references: [addressModel.id]
     }),
 }));
 
-export const createLastBoardUniversitySchema = createInsertSchema(lastBoardUniversityModel);
+export const createBoardUniversitySchema = createInsertSchema(boardUniversityModel);
 
-export type LastBoardUniversity = z.infer<typeof createLastBoardUniversitySchema>;
+export type BoardUniversity = z.infer<typeof createBoardUniversitySchema>;

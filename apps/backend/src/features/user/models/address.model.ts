@@ -10,7 +10,7 @@ export const localityTypeEnum = pgEnum("locality_type", ["RURAL", "URBAN"]);
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
-    countryId: integer().references(() => countryModel.id),
+    countryId: integer().references(() => countryModel.id,{onDelete:"cascade",}),
     stateId: integer().references(() => stateModel.id),
     cityId: integer().references(() => cityModel.id),
     addressLine: varchar({ length: 1000 }),

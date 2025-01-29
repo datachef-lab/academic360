@@ -2,7 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { userModel, UserType, userTypeEnum } from "@/features/user/models/user.model.ts";
+import { userModel, User, userTypeEnum } from "@/features/user/models/user.model.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { db } from "@/db/index.ts";
 import { eq } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { generateToken } from "@/utils/generateToken.ts";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
-    const givenUser = req.body as UserType;
+    const givenUser = req.body as User;
     
     try {
         // Hash the password before storing it in the database
@@ -50,7 +50,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
         const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
@@ -88,9 +88,9 @@ export const postGoogleLogin = async (req: Request, res: Response, next: NextFun
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {

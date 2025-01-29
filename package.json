@@ -22,6 +22,7 @@
     "devDependencies": {
         "@types/file-saver": "^2.0.7",
         "@types/js-cookie": "^3.0.6",
+        "@types/jwt-decode": "^2.2.1",
         "add": "^2.0.6",
         "autoprefixer": "^10.4.20",
         "husky": "^9.1.7",

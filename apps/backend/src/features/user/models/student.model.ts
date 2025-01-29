@@ -9,13 +9,16 @@ export const courseTypeEnum = pgEnum("course_type", ["HONOURS", "GENERAL"]);
 
 export const frameworkTypeEnum = pgEnum('framework_type', ["CBCS", "CCF"]);
 
+export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
+
 export const studentModel = pgTable("students", {
     id: serial().primaryKey(),
     userId: integer("user_id_fk").notNull().references(() => userModel.id),
+    community: communityTypeEnum().default("GUJARATI"),
     lastPassedYear: integer(),
     notes: text(),
-    active: boolean().notNull().default(true),
-    alumni: boolean().notNull().default(false),
+    active: boolean().default(true),
+    alumni: boolean().default(false),
     leavingDate: timestamp(),
     leavingReason: text(),
     createdAt: timestamp().notNull().defaultNow(),

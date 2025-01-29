@@ -5,7 +5,7 @@ import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-cor
 export const categoryModel = pgTable("categories", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull(),
-    documentRequired: boolean().notNull().default(false),
+    documentRequired: boolean(),
     code: varchar({ length: 10 }).notNull().unique(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

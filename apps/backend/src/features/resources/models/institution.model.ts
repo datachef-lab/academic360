@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { addressModel } from "@/features/user/models/address.model.ts";
 
-export const lastInstitutionModel = pgTable("last_institutions", {
+export const institutionModel = pgTable("institutions", {
     id: serial().primaryKey(),
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().notNull().references(() => degreeModel.id),
@@ -15,17 +15,17 @@ export const lastInstitutionModel = pgTable("last_institutions", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const degreeRelations = relations(lastInstitutionModel, ({ one }) => ({
+export const degreeRelations = relations(institutionModel, ({ one }) => ({
     degree: one(degreeModel, {
-        fields: [lastInstitutionModel.degreeId],
+        fields: [institutionModel.degreeId],
         references: [degreeModel.id]
     }),
     address: one(addressModel, {
-        fields: [lastInstitutionModel.addressId],
+        fields: [institutionModel.addressId],
         references: [addressModel.id]
     }),
 }));
 
-export const createLastInstitutionSchema = createInsertSchema(lastInstitutionModel);
+export const createInstitutionSchema = createInsertSchema(institutionModel);
 
-export type LastInstitution = z.infer<typeof createLastInstitutionSchema>;
+export type Institution = z.infer<typeof createInstitutionSchema>;

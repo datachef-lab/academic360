@@ -7,7 +7,7 @@ import img6 from "@/assets/img6.jpg";
 import { FaUser } from "react-icons/fa";
 import { FaLock } from "react-icons/fa";
 
-import GoogleLogin from "@/components/Auth/GoogleLogin";
+import GoogleLogin from "@/components/auth/GoogleLogin";
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState<{ username: string; password: string }>({
