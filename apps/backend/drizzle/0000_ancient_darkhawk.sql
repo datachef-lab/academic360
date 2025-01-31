@@ -2,14 +2,15 @@ CREATE TYPE "public"."stream_level" AS ENUM('UNDER_GRADUATE', 'POST_GRADUATE');-
 CREATE TYPE "public"."subject_type" AS ENUM('COMMON', 'SPECIAL', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
 CREATE TYPE "public"."board_result_type" AS ENUM('FAIL', 'PASS');--> statement-breakpoint
 CREATE TYPE "public"."transport_type" AS ENUM('BUS', 'TRAIN', 'METRO', 'AUTO', 'TAXI', 'CYCLE', 'WALKING', 'OTHER');--> statement-breakpoint
+CREATE TYPE "public"."course_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
 CREATE TYPE "public"."place_of_stay_type" AS ENUM('OWN', 'HOSTEL', 'FAMILY_FRIENDS', 'PAYING_GUEST', 'RELATIVES');--> statement-breakpoint
 CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
 CREATE TYPE "public"."parent_type" AS ENUM('BOTH', 'FATHER_ONLY', 'MOTHER_ONLY');--> statement-breakpoint
 CREATE TYPE "public"."disability_type" AS ENUM('VISUAL', 'HEARING_IMPAIRMENT', 'VISUAL_IMPAIRMENT', 'ORTHOPEDIC', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'TRANSGENDER');--> statement-breakpoint
 CREATE TYPE "public"."community_type" AS ENUM('GUJARATI', 'NON-GUJARATI');--> statement-breakpoint
-CREATE TYPE "public"."course_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
 CREATE TYPE "public"."framework_type" AS ENUM('CBCS', 'CCF');--> statement-breakpoint
+CREATE TYPE "public"."shift_type" AS ENUM('MORNING', 'AFTERNOON', 'EVENING');--> statement-breakpoint
 CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'TEACHER');--> statement-breakpoint
 CREATE TABLE "documents" (
 	"id" serial PRIMARY KEY NOT NULL,
@@ -115,6 +116,7 @@ CREATE TABLE "categories" (
 	"code" varchar(10) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "categories_name_unique" UNIQUE("name"),
 	CONSTRAINT "categories_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
@@ -126,6 +128,7 @@ CREATE TABLE "cities" (
 	"code" varchar(10) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "cities_name_unique" UNIQUE("name"),
 	CONSTRAINT "cities_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
@@ -134,7 +137,8 @@ CREATE TABLE "countries" (
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "countries_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE "degree" (
@@ -217,7 +221,8 @@ CREATE TABLE "states" (
 	"country_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "states_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE "transport" (
@@ -318,7 +323,8 @@ CREATE TABLE "disability_codes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"code" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "disability_codes_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
 CREATE TABLE "emergency_contacts" (
@@ -410,6 +416,7 @@ CREATE TABLE "personal_details" (
 CREATE TABLE "specializations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
+	"sequence" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -422,6 +429,7 @@ CREATE TABLE "students" (
 	"level" "stream_level" DEFAULT 'UNDER_GRADUATE' NOT NULL,
 	"framework" "framework_type",
 	"specialization_id_fk" integer,
+	"shift" "shift_type",
 	"last_passed_year" integer,
 	"notes" text,
 	"active" boolean,

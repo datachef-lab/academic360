@@ -1,5 +1,5 @@
 {
-  "id": "7cbf9989-aa49-4cf4-a4b9-3522b141cfe2",
+  "id": "ad54a8d9-9330-4165-a6d1-a58483af74b6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -707,6 +707,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "categories_name_unique": {
+          "name": "categories_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        },
         "categories_code_unique": {
           "name": "categories_code_unique",
           "nullsNotDistinct": false,
@@ -787,6 +794,13 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "cities_name_unique": {
+          "name": "cities_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        },
         "cities_code_unique": {
           "name": "cities_code_unique",
           "nullsNotDistinct": false,
@@ -839,7 +853,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "countries_name_unique": {
+          "name": "countries_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1369,7 +1391,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "states_name_unique": {
+          "name": "states_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2124,7 +2154,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "disability_codes_code_unique": {
+          "name": "disability_codes_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2931,6 +2969,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3002,6 +3046,13 @@
         "specialization_id_fk": {
           "name": "specialization_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shift": {
+          "name": "shift",
+          "type": "shift_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -3335,6 +3386,14 @@
         "OTHER"
       ]
     },
+    "public.course_type": {
+      "name": "course_type",
+      "schema": "public",
+      "values": [
+        "HONOURS",
+        "GENERAL"
+      ]
+    },
     "public.place_of_stay_type": {
       "name": "place_of_stay_type",
       "schema": "public",
@@ -3391,20 +3450,21 @@
         "NON-GUJARATI"
       ]
     },
-    "public.course_type": {
-      "name": "course_type",
-      "schema": "public",
-      "values": [
-        "HONOURS",
-        "GENERAL"
-      ]
-    },
     "public.framework_type": {
       "name": "framework_type",
       "schema": "public",
       "values": [
         "CBCS",
         "CCF"
+      ]
+    },
+    "public.shift_type": {
+      "name": "shift_type",
+      "schema": "public",
+      "values": [
+        "MORNING",
+        "AFTERNOON",
+        "EVENING"
       ]
     },
     "public.user_type": {
