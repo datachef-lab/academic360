@@ -8,8 +8,8 @@ import { z } from "zod";
 export const healthModel = pgTable("health", {
     id: serial().primaryKey(),
     // TODO: Add faculty and teacher ids
-    studentId: integer().unique().references(() => studentModel.id),
-    bloodGroupId: integer().references(() => bloodGroupModel.id),
+    studentId: integer("student_id_fk").unique().references(() => studentModel.id),
+    bloodGroupId: integer("blood_group_id_fk").references(() => bloodGroupModel.id),
     eyePowerLeft: numeric(),
     eyePowerRight: numeric(),
     height: numeric(),

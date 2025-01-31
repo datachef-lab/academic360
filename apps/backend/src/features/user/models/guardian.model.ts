@@ -7,8 +7,8 @@ import { studentModel } from "./student.model.ts";
 
 export const gaurdianModel = pgTable("guardians", {
     id: serial().primaryKey(),
-    studentId: integer().notNull().unique().references(() => studentModel.id),
-    gaurdianDetailsId: integer().references(() => personModel.id),
+    studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
+    gaurdianDetailsId: integer("guardian_details_person_id_fk").references(() => personModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

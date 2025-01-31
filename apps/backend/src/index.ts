@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 8080;
     console.log("\nInitializing academic360...\n");
     try {
         await connectToDatabase();
-        // await connectToMySQL();
+        await connectToMySQL();
         app.listen(PORT, () => {
             console.log(
                 `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,

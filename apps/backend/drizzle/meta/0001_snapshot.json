@@ -1,6 +1,6 @@
 {
-  "id": "7cbf9989-aa49-4cf4-a4b9-3522b141cfe2",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "c1cbf4fa-1715-486f-91ef-adde4ad75d7d",
+  "prevId": "7cbf9989-aa49-4cf4-a4b9-3522b141cfe2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3005,6 +3005,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "shift": {
+          "name": "shift",
+          "type": "shift_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "last_passed_year": {
           "name": "last_passed_year",
           "type": "integer",
@@ -3405,6 +3412,15 @@
       "values": [
         "CBCS",
         "CCF"
+      ]
+    },
+    "public.shift_type": {
+      "name": "shift_type",
+      "schema": "public",
+      "values": [
+        "MORNING",
+        "AFTERNOON",
+        "EVENING"
       ]
     },
     "public.user_type": {

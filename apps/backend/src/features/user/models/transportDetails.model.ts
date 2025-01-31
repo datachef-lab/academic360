@@ -8,9 +8,9 @@ import { relations } from "drizzle-orm";
 
 export const transportDetailsModel = pgTable("transport_details", {
     id: serial().primaryKey(),
-    studentId: integer().references(() => studentModel.id),
-    transportId: integer().references(() => transportModel.id),
-    pickupPointId: integer().references(() => pickupPointModel.id),
+    studentId: integer("student_id_fk").references(() => studentModel.id),
+    transportId: integer("transport_id_fk").references(() => transportModel.id),
+    pickupPointId: integer("pickup_point_id_fk").references(() => pickupPointModel.id),
     seatNumber: varchar({ length: 255 }),
     pickupTime: time(),
     dropOffTime: time(),

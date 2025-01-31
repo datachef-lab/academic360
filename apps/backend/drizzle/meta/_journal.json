@@ -5,8 +5,29 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1738051679353,
-      "tag": "0000_wandering_champions",
+      "when": 1738230787328,
+      "tag": "0000_nosy_jackpot",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1738304793914,
+      "tag": "0001_shocking_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1738310994332,
+      "tag": "0002_slow_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1738313828150,
+      "tag": "0003_dazzling_the_fury",
       "breakpoints": true
     }
   ]

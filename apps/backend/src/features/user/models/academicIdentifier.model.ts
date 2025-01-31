@@ -1,13 +1,15 @@
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { courseTypeEnum, frameworkTypeEnum, studentModel } from "./student.model.ts";
+import { boolean, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { frameworkTypeEnum, studentModel } from "./student.model.ts";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const courseTypeEnum = pgEnum("course_type", ["HONOURS", "GENERAL"]);
+
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
-    studentId: integer().notNull().unique().references(() => studentModel.id),
+    studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     frameworkType: frameworkTypeEnum(),
     rfid: varchar({ length: 255 }),
     streamId: integer("stream_id_fk").references(() => streamModel.id),

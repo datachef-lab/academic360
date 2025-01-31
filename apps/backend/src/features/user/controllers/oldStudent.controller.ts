@@ -1,5 +1,6 @@
 import { db, mysqlConnection } from "@/db/index.ts";
-import { OldStudent } from "@/types/old-student.ts";
+import bcrypt from "bcrypt";
+import { OldStudent } from "@/types/old-data/old-student.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { NextFunction, Request, Response } from "express";
 import { User, userModel } from "../models/user.model.ts";
@@ -16,7 +17,7 @@ import { emergencyContactModel } from "../models/emergencyContact.model.ts";
 import { personalDetailsModel } from "../models/personalDetails.model.ts";
 import { academicHistoryModel } from "../models/academicHistory.model.ts";
 import { transportDetailsModel } from "../models/transportDetails.model.ts";
-import { academicIdentifierModel } from "../models/academicIdentifier.model.ts";
+import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { number } from "zod";
 import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.ts";
@@ -26,16 +27,25 @@ import { Category, categoryModel } from "@/features/resources/models/category.mo
 import { Religion, religionModel } from "@/features/resources/models/religion.model.ts";
 import { LanguageMedium, languageMediumModel } from "@/features/resources/models/languageMedium.model.ts";
 import { formatAadhaarCardNumber } from "@/utils/formatAadhaarCardNumber.ts";
-import { OldBoard } from "@/types/old-board.ts";
-import { OldDegree } from "@/types/old-degree.ts";
-import { OldBoardStatus } from "@/types/old-board-status.ts";
+import { OldBoard } from "@/types/old-data/old-board.ts";
+import { OldDegree } from "@/types/old-data/old-degree.ts";
+import { OldBoardStatus } from "@/types/old-data/old-board-status.ts";
 import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.ts";
 import { Degree, degreeModel } from "@/features/resources/models/degree.model.ts";
 import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import { annualIncomeModel } from "../models/annualIncome.model.ts";
+import { Specialization, specializationModel } from "../models/specialization.model.ts";
+import { spec } from "node:test/reporters";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
-export async function addOccupation(name: string) {
+type DbType = NodePgDatabase<Record<string, never>> & {
+    $client: Pool;
+}
+
+export async function addOccupation(name: string, db: DbType) {
     const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim().toUpperCase()));
     if (existingOccupation) {
         return existingOccupation;
@@ -45,7 +55,7 @@ export async function addOccupation(name: string) {
     return newOccupation;
 }
 
-export async function addBloodGroup(type: string) {
+export async function addBloodGroup(type: string, db: DbType) {
     const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim().toUpperCase()));
     if (existingBloodGroup) {
         return existingBloodGroup;
@@ -55,7 +65,7 @@ export async function addBloodGroup(type: string) {
     return newBloodGroup;
 }
 
-export async function addNationality(name: string, code: number | undefined | null) {
+export async function addNationality(name: string, code: number | undefined | null, db: DbType) {
     const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim().toUpperCase()));
     if (existingNationality) {
         return existingNationality;
@@ -65,7 +75,7 @@ export async function addNationality(name: string, code: number | undefined | nu
     return newNationality;
 }
 
-export async function addCategory(name: string, code: string, documentRequired: boolean | undefined) {
+export async function addCategory(name: string, code: string, documentRequired: boolean | undefined, db: DbType) {
     const [existingCategory] = await db.select().from(categoryModel).where(eq(categoryModel.name, name.trim().toUpperCase()));
     if (existingCategory) {
         return existingCategory;
@@ -75,7 +85,7 @@ export async function addCategory(name: string, code: string, documentRequired: 
     return newCategory;
 }
 
-export async function addReligion(name: string) {
+export async function addReligion(name: string, db: DbType) {
     const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim().toUpperCase()));
     if (existingReligion) {
         return existingReligion;
@@ -85,7 +95,7 @@ export async function addReligion(name: string) {
     return newReligion;
 }
 
-export async function addLanguageMedium(name: string) {
+export async function addLanguageMedium(name: string, db: DbType) {
     const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim().toUpperCase()));
     if (existingLanguage) {
         return existingLanguage;
@@ -95,10 +105,17 @@ export async function addLanguageMedium(name: string) {
     return newLanguage;
 }
 
+export async function addSpecialization(name: string) {
+    const [existingSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.name, name.trim().toUpperCase()));
+    if (existingSpecialization) {
+        return existingSpecialization;
+    }
+    const [newSpecialization] = await db.insert(specializationModel).values({ name: name.trim().toUpperCase() }).returning();
 
+    return newSpecialization;
+}
 
-
-export async function addUser(oldStudent: OldStudent) {
+export async function addUser(oldStudent: OldStudent, db: DbType) {
     const cleanString = (value: unknown): string | undefined => {
         if (typeof value === 'string') {
             return value.replace(/[\s\-\/]/g, '').trim();
@@ -107,16 +124,21 @@ export async function addUser(oldStudent: OldStudent) {
     };
 
     const email = `${cleanString(oldStudent.codeNumber)?.toUpperCase()}@thebges.edu.in`;
+    // Hash the password before storing it in the database
+    const hashedPassword = await bcrypt.hash(oldStudent.codeNumber.trim()?.toUpperCase(), 10);
+
     // Return, if the email already exist
     const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
     if (existingUser) {
-        return existingUser;
+        const [updatedUser] = await db.update(userModel).set({ password: hashedPassword }).where(eq(userModel.id, existingUser.id)).returning();
+        return updatedUser;
     }
+
     // Create the new user
     const [newUser] = await db.insert(userModel).values({
         name: oldStudent.name?.trim()?.toUpperCase(),
         email: email.trim().toLowerCase(),
-        password: oldStudent.codeNumber.trim()?.toUpperCase(),
+        password: hashedPassword,
         phone: oldStudent.contactNo?.trim()?.toUpperCase(),
         type: "STUDENT",
         whatsappNumber: oldStudent.whatsappno?.trim()?.toUpperCase(),
@@ -125,18 +147,51 @@ export async function addUser(oldStudent: OldStudent) {
     return newUser;
 }
 
-export async function addStudent(oldStudent: OldStudent, user: User) {
+export async function addStudent(oldStudent: OldStudent, user: User, db: DbType) {
     const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, user.id as number));
     if (existingStudent) {
         return existingStudent;
     }
+
+    let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined;
+    if (oldStudent.codeNumber.startsWith("11") || oldStudent.codeNumber.startsWith("14")) {
+        level = "POST_GRADUATE";
+    } else if (!oldStudent.codeNumber.startsWith("B")) {
+        level = "UNDER_GRADUATE";
+    }
+
+    // Determine the active and alumni status based on oldStudent data
+    let active: boolean | undefined = oldStudent.active;
+    let alumni: boolean | undefined = oldStudent.alumni;
+
+    if (oldStudent.leavingdate) {
+        active = false; // If leaving date is present, student has left
+        alumni = true;  // Mark as alumni
+    } else if (!oldStudent.alumni && !oldStudent.active) {
+        active = false; // Dropped off
+    } else if (oldStudent.alumni && !oldStudent.active) {
+        active = false; // Fully graduated and left
+    } else if (!oldStudent.alumni && oldStudent.active) {
+        active = true; // Regular student
+    } else if (oldStudent.alumni && oldStudent.active) {
+        active = true; // Graduated but has supplementary papers left
+    }
+
+    let specialization: Specialization | undefined;
+    if (oldStudent.specialisation && oldStudent.specialisation.trim() !== '') {
+        specialization = await addSpecialization(oldStudent.specialisation);
+    }
+
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
+        framework: oldStudent.coursetype ? (oldStudent.coursetype.trim().toUpperCase() === "CBCS" ? "CBCS" : oldStudent.coursetype.trim().toUpperCase() === "CCF" ? "CCF" : undefined) : undefined,
+        specializationId: specialization ? specialization.id : undefined,
+        level,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         lastPassedYear: oldStudent.lspassedyr,
         notes: oldStudent.notes,
-        active: oldStudent.alumni !== undefined ? !oldStudent.alumni : oldStudent.active,
-        alumni: oldStudent.alumni,
+        active,
+        alumni,
         leavingDate: oldStudent.leavingdate,
         leavingReason: oldStudent.leavingreason,
     }).returning();
@@ -144,7 +199,8 @@ export async function addStudent(oldStudent: OldStudent, user: User) {
     return newStudent;
 }
 
-export async function addAccommodation(oldStudent: OldStudent, student: Student) {
+
+export async function addAccommodation(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.studentId, student.id as number));
     if (existingAccommodation) {
         return existingAccommodation;
@@ -185,7 +241,7 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student)
     return newAccommodation;
 }
 
-export async function addAdmission(oldStudent: OldStudent, student: Student) {
+export async function addAdmission(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
     if (existingAdmission) {
         return existingAdmission;
@@ -202,7 +258,44 @@ export async function addAdmission(oldStudent: OldStudent, student: Student) {
     return newAdmission;
 }
 
-export async function addParent(oldStudent: OldStudent, student: Student) {
+async function categorizeIncome(income: string | null | undefined) {
+    if (!income || income.trim() === "" || income === "0") {
+        return undefined;
+    }
+
+    const getAnnualIncome = async (range: string) => {
+        const [existingAnnualIncome] = await db.select().from(annualIncomeModel).where(eq(annualIncomeModel.range, range));
+        if (existingAnnualIncome) {
+            return existingAnnualIncome;
+        }
+        const [newAnnualIncome] = await db.insert(annualIncomeModel).values({ range }).returning();
+
+        return newAnnualIncome;
+    }
+
+    const lowerIncome = income.toLowerCase();
+
+    if (lowerIncome.includes("upto 1.2") || lowerIncome.includes("upto rs. 1.2") || lowerIncome.includes("1,20,000") || lowerIncome.includes("1.2 to 3")) {
+        return await getAnnualIncome("Below ₹3 Lakh");
+    }
+    if (lowerIncome.includes("3 to 5") || lowerIncome.includes("1.2 lakh to 5") || lowerIncome.includes("1.2 lac to 5")) {
+        return await getAnnualIncome("₹3 - ₹5 Lakh");
+    }
+    if (lowerIncome.includes("5 lakh and above") || lowerIncome.includes("5 lacs and above") || lowerIncome.includes("5 to 8") || lowerIncome.includes("rs. 5,00,000 & above")) {
+        return await getAnnualIncome("₹5 - ₹8 Lakh");
+    }
+    if (lowerIncome.includes("8 lakhs & above") || lowerIncome.includes("3-10")) {
+        return await getAnnualIncome("₹8 - ₹10 Lakh");
+    }
+    if (lowerIncome.includes("10 lacs and above")) {
+        return await getAnnualIncome("₹10 Lakh and Above");
+    }
+
+    return undefined; // Default to lowest category
+}
+
+
+export async function addParent(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingParent] = await db.select().from(parentModel).where(eq(parentModel.studentId, student.id as number));
     if (existingParent) {
         return existingParent;
@@ -225,7 +318,7 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
     if (oldStudent.fatherOccupation) {
         const [fatherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.fatherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (fatherOccupationResult.length > 0) {
-            fatherOccupation = await addOccupation(fatherOccupationResult[0].occupationName);
+            fatherOccupation = await addOccupation(fatherOccupationResult[0].occupationName, db);
         }
     }
 
@@ -243,7 +336,7 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
     if (oldStudent.motherOccupation) {
         const [motherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.motherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (motherOccupationResult.length > 0) {
-            motherOccupation = await addOccupation(motherOccupationResult[0].occupationName);
+            motherOccupation = await addOccupation(motherOccupationResult[0].occupationName, db);
         }
     }
 
@@ -258,9 +351,11 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
 
     }).returning();
 
+    const annualIncome = await categorizeIncome(oldStudent.annualFamilyIncome);
+
     const [newParent] = await db.insert(parentModel).values({
         studentId: student.id as number,
-        annualIncome: oldStudent.annualFamilyIncome?.toUpperCase(),
+        annualIncomeId: annualIncome ? annualIncome.id : undefined,
         parentType,
         fatherDetailsId: father.id,
         motherDetailsId: mother.id
@@ -269,7 +364,7 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
     return newParent;
 }
 
-export async function addGuardian(oldStudent: OldStudent, student: Student) {
+export async function addGuardian(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.studentId, student.id as number));
     if (existingGuardian) {
         return existingGuardian;
@@ -287,7 +382,7 @@ export async function addGuardian(oldStudent: OldStudent, student: Student) {
     if (oldStudent.guardianOccupation) {
         const [guardianOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.guardianOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (guardianOccupationResult.length > 0) {
-            guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName);
+            guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName, db);
         }
     }
 
@@ -311,7 +406,7 @@ export async function addGuardian(oldStudent: OldStudent, student: Student) {
     return newGuardian;
 }
 
-export async function addHealth(oldStudent: OldStudent, student: Student) {
+export async function addHealth(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingHealth] = await db.select().from(healthModel).where(eq(healthModel.studentId, student.id as number));
     if (existingHealth) {
         return existingHealth;
@@ -321,7 +416,7 @@ export async function addHealth(oldStudent: OldStudent, student: Student) {
     if (oldStudent.bloodGroup) {
         const [bloodGroupResult] = await mysqlConnection.query(`SELECT * FROM bloodgroup WHERE id = ${oldStudent.bloodGroup}`) as [{ id: number, name: string }[], any];
         if (bloodGroupResult.length > 0) {
-            bloodGroup = await addBloodGroup(bloodGroupResult[0].name);
+            bloodGroup = await addBloodGroup(bloodGroupResult[0].name, db);
         }
     }
 
@@ -335,7 +430,7 @@ export async function addHealth(oldStudent: OldStudent, student: Student) {
     return newHealth;
 }
 
-export async function addEmergencyContact(oldStudent: OldStudent, student: Student) {
+export async function addEmergencyContact(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.studentId, student.id as number));
     if (existingEmergencyContact) {
         return existingEmergencyContact;
@@ -353,7 +448,7 @@ export async function addEmergencyContact(oldStudent: OldStudent, student: Stude
     return newEmergencyContact;
 }
 
-export async function addPersonalDetails(oldStudent: OldStudent, student: Student) {
+export async function addPersonalDetails(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingPersonalDetails] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, student.id as number));
     if (existingPersonalDetails) {
         return existingPersonalDetails;
@@ -384,35 +479,35 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     if (oldStudent.nationalityId) {
         const [nationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.nationalityId}`) as [{ id: number, nationalityName: string, code: number }[], any];
         if (nationalityResult.length > 0) {
-            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code);
+            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code, db);
         }
     }
     let otherNationality: Nationality | undefined;
     if (oldStudent.othernationality) {
         const [otherNationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.othernationality}`) as [{ id: number, nationalityName: string, code: number }[], any];
         if (otherNationalityResult.length > 0) {
-            otherNationality = await addNationality(otherNationalityResult[0].nationalityName, otherNationalityResult[0].code);
+            otherNationality = await addNationality(otherNationalityResult[0].nationalityName, otherNationalityResult[0].code, db);
         }
     }
     let category: Category | undefined;
     if (oldStudent.studentCategoryId) {
         const [categoryResult] = await mysqlConnection.query(`SELECT * FROM category WHERE id = ${oldStudent.studentCategoryId}`) as [{ id: number, category: string, code: string, docneeded: boolean | undefined }[], any];
         if (categoryResult.length > 0) {
-            category = await addCategory(categoryResult[0].category, categoryResult[0].code, categoryResult[0].docneeded);
+            category = await addCategory(categoryResult[0].category, categoryResult[0].code, categoryResult[0].docneeded, db);
         }
     }
     let religion: Religion | undefined;
     if (oldStudent.religionId) {
         const [religionResult] = await mysqlConnection.query(`SELECT * FROM religion WHERE id = ${oldStudent.religionId}`) as [{ id: number, religionName: string }[], any];
         if (religionResult.length > 0) {
-            religion = await addReligion(religionResult[0].religionName);
+            religion = await addReligion(religionResult[0].religionName, db);
         }
     }
     let motherTongue: LanguageMedium | undefined;
     if (oldStudent.motherTongueId) {
         const [motherTongueResult] = await mysqlConnection.query(`SELECT * FROM mothertongue WHERE id = ${oldStudent.motherTongueId}`) as [{ id: number, mothertongueName: string }[], any];
         if (motherTongueResult.length > 0) {
-            motherTongue = await addLanguageMedium(motherTongueResult[0].mothertongueName);
+            motherTongue = await addLanguageMedium(motherTongueResult[0].mothertongueName, db);
         }
     }
 
@@ -437,7 +532,7 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     return newPersonalDetails;
 }
 
-export async function addBoardUnversity(oldStudent: OldStudent): Promise<BoardUniversity | undefined> {
+export async function addBoardUnversity(oldStudent: OldStudent, db: DbType): Promise<BoardUniversity | undefined> {
     const [rows] = await mysqlConnection.query(`SELECT * FROM board WHERE id = ${oldStudent.lastBoardUniversity}`) as [OldBoard[], any];
 
     const [oldBoardUniversity] = rows;
@@ -476,7 +571,7 @@ export async function addBoardUnversity(oldStudent: OldStudent): Promise<BoardUn
     return newBoardUniversity;
 }
 
-export async function addBoardResultStatus(oldStudent: OldStudent): Promise<BoardResultStatus | null> {
+export async function addBoardResultStatus(oldStudent: OldStudent, db: DbType): Promise<BoardResultStatus | null> {
     const [boardResultRows] = await mysqlConnection.query(`SELECT * FROM boardresultstatus WHERE id = ${oldStudent.boardresultid}`) as [OldBoardStatus[], any];
 
     const [oldBoardResultStatus] = boardResultRows as OldBoardStatus[];
@@ -508,7 +603,7 @@ export async function addBoardResultStatus(oldStudent: OldStudent): Promise<Boar
     return newBoardResultStatus;
 }
 
-export async function addAcademicHistory(oldStudent: OldStudent, student: Student) {
+export async function addAcademicHistory(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingAcademicHistory] = await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.studentId, student.id as number));
     if (existingAcademicHistory) {
         return existingAcademicHistory;
@@ -516,12 +611,12 @@ export async function addAcademicHistory(oldStudent: OldStudent, student: Studen
 
     let lastBoardUniversity: BoardUniversity | undefined;
     if (oldStudent.lastBoardUniversity) {
-        lastBoardUniversity = await addBoardUnversity(oldStudent);
+        lastBoardUniversity = await addBoardUnversity(oldStudent, db);
     }
 
     let boardResultStatus: BoardResultStatus | null | undefined;
     if (oldStudent.boardresultid) {
-        boardResultStatus = await addBoardResultStatus(oldStudent);
+        boardResultStatus = await addBoardResultStatus(oldStudent, db);
     }
 
     const [newAcdemicHistory] = await db.insert(academicHistoryModel).values({
@@ -537,18 +632,74 @@ export async function addAcademicHistory(oldStudent: OldStudent, student: Studen
     return newAcdemicHistory;
 }
 
-export async function addAcademicIdentifier(oldStudent: OldStudent, student: Student) {
-    const [existingAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, student.id as number));
-    if (existingAcademicIdentifier) {
-        return existingAcademicIdentifier;
-    }
-
+export async function addAcademicIdentifier(oldStudent: OldStudent, student: Student, db: DbType) {
     const cleanString = (value: unknown): string | undefined => {
-        if (typeof value === 'string') {
-            return value.replace(/[\s\-\/]/g, '').trim();
+        if (typeof value === "string") {
+            return value.replace(/[\s\-\/]/g, "").trim()?.toUpperCase();
         }
         return undefined; // Return undefined for non-string values
     };
+
+    const addHyphen = (value: unknown, type: "reg_no" | "roll_no"): string | undefined => {
+        const cleanedValue = cleanString(value);
+        if (!cleanedValue || isNaN(Number(cleanedValue))) return undefined; // Ensure it's numeric
+
+        if (type === "reg_no" && cleanedValue.length === 13) {
+            return cleanedValue.replace(/^(\d{3})(\d{4})(\d{4})(\d{2})$/, "$1-$2-$3-$4");
+        }
+
+        if (type === "roll_no") {
+            if (cleanedValue.length === 10) {
+                return cleanedValue.replace(/^(\d{4})(\d{2})(\d{4})$/, "$1-$2-$3");
+            }
+            if (cleanedValue.length === 12) {
+                return cleanedValue.replace(/^(\d{6})(\d{2})(\d{4})$/, "$1-$2-$3");
+            }
+            if (cleanedValue.length === 13 && cleanedValue.includes("BBA")) {
+                return cleanedValue.replace(/^(\d{3})(\d{6})(\d{4})$/, "$1-$2-$3");
+            }
+            if (cleanedValue.startsWith("B") || cleanedValue.startsWith("N")) {
+                return cleanedValue;
+            }
+        }
+
+        return undefined; // Return undefined if length is incorrect
+    };
+
+    const [existingAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, student.id as number));
+    if (existingAcademicIdentifier) {
+        const updatedValues: Record<string, any> = {};
+
+        const registrationNumber = oldStudent.univregno
+            ? addHyphen(oldStudent.univregno, "reg_no")
+            : oldStudent.universityRegNo
+                ? addHyphen(oldStudent.universityRegNo, "reg_no")
+                : null;
+
+        const rollNumber = oldStudent.univlstexmrollno ? addHyphen(oldStudent.univlstexmrollno, "roll_no") : undefined;
+
+        if (registrationNumber !== null) updatedValues.registrationNumber = registrationNumber;
+        if (rollNumber !== undefined) updatedValues.rollNumber = rollNumber;
+
+        // Ensure there is at least one field to update
+        if (Object.keys(updatedValues).length === 0) {
+            console.warn("No values to update for academicIdentifierModel");
+            return existingAcademicIdentifier;
+        }
+
+        console.log(updatedValues);
+
+        const [updatedAcademicIdentifier] = await db
+            .update(academicIdentifierModel)
+            .set({
+                registrationNumber: updatedValues?.registrationNumber ? updatedValues?.registrationNumber : null,
+                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null
+            })
+            .where(eq(academicIdentifierModel.id, existingAcademicIdentifier.id))
+            .returning();
+
+        return updatedAcademicIdentifier;
+    }
 
     const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({
         studentId: student.id as number,
@@ -558,20 +709,20 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
         apprid: cleanString(oldStudent.apprid)?.toUpperCase(),
         checkRepeat: typeof oldStudent.chkrepeat === 'undefined' ? undefined : oldStudent.chkrepeat,
         // apaarId
-        classRollNumber: cleanString(oldStudent.rollNumber)?.toUpperCase(),
+        classRollNumber: oldStudent.rollNumber ? oldStudent.rollNumber?.toString()?.trim()?.toUpperCase() : null,
         cuFormNumber: cleanString(oldStudent.cuformno)?.toUpperCase(),
         // frameworkType
         oldUid: cleanString(oldStudent.oldcodeNumber)?.toUpperCase(),
         uid: cleanString(oldStudent.codeNumber)?.toUpperCase(),
-        registrationNumber: oldStudent.univregno ? cleanString(oldStudent.univregno)?.toUpperCase() : (oldStudent.universityRegNo ? cleanString(oldStudent.universityRegNo)?.toUpperCase() : null),
-        rollNumber: cleanString(oldStudent.univlstexmrollno)?.toUpperCase(),
+        registrationNumber: oldStudent.univregno ? addHyphen(oldStudent.univregno, "reg_no") : (oldStudent.universityRegNo ? addHyphen(oldStudent.universityRegNo, "reg_no") : null),
+        rollNumber: addHyphen(oldStudent.univlstexmrollno, "roll_no"),
         rfid: cleanString(oldStudent.rfidno)?.toUpperCase(),
     }).returning();
 
     return newAcademicIdentifier;
 }
 
-export async function addTransportDetails(oldStudent: OldStudent, student: Student) {
+export async function addTransportDetails(oldStudent: OldStudent, student: Student, db: DbType) {
     const [existingTransportDetails] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, student.id as number));
     if (existingTransportDetails) {
         return existingTransportDetails;
@@ -588,29 +739,40 @@ export async function addTransportDetails(oldStudent: OldStudent, student: Stude
 
 export async function processStudent(oldStudent: OldStudent) {
     // Step 1: Check for the user
-    const user = await addUser(oldStudent);
+    const user = await addUser(oldStudent, db);
+
     // Step 2: Check for the student
-    const student = await addStudent(oldStudent, user);
+    const student = await addStudent(oldStudent, user, db);
+
     // Step 3: Check for the accomodation
-    await addAccommodation(oldStudent, student);
+    await addAccommodation(oldStudent, student, db);
+
     // Step 4: Check for the admission
-    await addAdmission(oldStudent, student);
+    await addAdmission(oldStudent, student, db);
+
     // Step 5: Check for the parents
-    await addParent(oldStudent, student);
+    await addParent(oldStudent, student, db);
+
     // Step 6: Check for the guardian
-    await addGuardian(oldStudent, student);
+    await addGuardian(oldStudent, student, db);
+
     // Step 7: Check for the health
-    await addHealth(oldStudent, student);
+    await addHealth(oldStudent, student, db);
+
     // Step 8: Check for the emergency-contact
-    await addEmergencyContact(oldStudent, student);
+    await addEmergencyContact(oldStudent, student, db);
+
     // Step 9: Check for the personal-details
-    await addPersonalDetails(oldStudent, student);
+    await addPersonalDetails(oldStudent, student, db);
+
     // Step 10: Check for the academic-history
-    await addAcademicHistory(oldStudent, student);
+    await addAcademicHistory(oldStudent, student, db);
+
     // Step 11: Check for the academic-identifier
-    await addAcademicIdentifier(oldStudent, student);
+    await addAcademicIdentifier(oldStudent, student, db);
+
     // Step 12: Check for the transport-details
-    await addTransportDetails(oldStudent, student);
+    await addTransportDetails(oldStudent, student, db);
 }
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {

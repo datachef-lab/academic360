@@ -2,24 +2,21 @@ import "dotenv/config";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { userModel, UserType, userTypeEnum } from "@/features/user/models/user.model.ts";
+import { userModel, User, userTypeEnum } from "@/features/user/models/user.model.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { db } from "@/db/index.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { generateToken } from "@/utils/generateToken.ts";
+import { addUser, findUserByEmail } from "@/features/user/services/user.service.ts";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
-    const givenUser = req.body as UserType;
-    
-    try {
-        // Hash the password before storing it in the database
-        const hashedPassword = await bcrypt.hash(givenUser.password, 10);
-        givenUser.password = hashedPassword;
+    const givenUser = req.body as User;
 
+    try {
         // Create a new user
-        const [newUser] = await db.insert(userModel).values(givenUser).returning();
+        const newUser = await addUser(givenUser);
 
         res.status(201).json(new ApiResponse(
             201,
@@ -37,7 +34,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     try {
         const { email, password } = req.body;
 
-        const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, email));
+        const foundUser = await findUserByEmail(email);
         if (!foundUser || foundUser.disabled) {
             res.status(401).json(new ApiError(401, "Unauthorized"));
             return;
@@ -50,9 +47,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id as number, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id as number, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {
@@ -69,15 +66,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 }
 
-export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-
-    }
-    catch (error) {
-        handleError(error, res, next);
-    }
-}
-
 export const postGoogleLogin = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // Retrieve user from Passport
@@ -88,9 +76,9 @@ export const postGoogleLogin = async (req: Request, res: Response, next: NextFun
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as UserType["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {

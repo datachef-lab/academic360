@@ -168,7 +168,7 @@ export type OldStudent = {
     rfidno: string | undefined;
     // addressproof: string | undefined;
     // enrollfrmno
-    // specialisation
+    specialisation: string | undefined,
     // concessiontyp
     // lunchfees
     // hostel

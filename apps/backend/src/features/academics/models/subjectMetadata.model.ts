@@ -17,7 +17,7 @@ export const subjectMetadataModel = pgTable("subject_metadatas", {
     id: serial().primaryKey(),
     streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
     semester: integer().notNull(),
-    frameworkType: frameworkTypeEnum().notNull().default("CBCS"),
+    framework: frameworkTypeEnum().notNull().default("CBCS"),
     subjectType: subjectTypeEnum().notNull().default("COMMON"),
     name: varchar({length: 255}).notNull(),
     credit: integer(),

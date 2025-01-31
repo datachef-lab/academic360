@@ -1,6 +1,6 @@
 {
-  "id": "7cbf9989-aa49-4cf4-a4b9-3522b141cfe2",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "5429306b-a46d-4c41-83b0-c98ddf3cd566",
+  "prevId": "c1cbf4fa-1715-486f-91ef-adde4ad75d7d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -707,6 +707,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "categories_name_unique": {
+          "name": "categories_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        },
         "categories_code_unique": {
           "name": "categories_code_unique",
           "nullsNotDistinct": false,
@@ -2931,6 +2938,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3002,6 +3015,13 @@
         "specialization_id_fk": {
           "name": "specialization_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shift": {
+          "name": "shift",
+          "type": "shift_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -3405,6 +3425,15 @@
       "values": [
         "CBCS",
         "CCF"
+      ]
+    },
+    "public.shift_type": {
+      "name": "shift_type",
+      "schema": "public",
+      "values": [
+        "MORNING",
+        "AFTERNOON",
+        "EVENING"
       ]
     },
     "public.user_type": {
