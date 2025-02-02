@@ -1,11 +1,11 @@
-type SettingsContentProps = {
-  activeSetting: {
-    label: string;
-    icon: JSX.Element;
-    endpoint: string;
-  };
-};
+// type SettingsContentProps = {
+//   activeSetting: {
+//     label: string;
+//     icon: JSX.Element;
+//     endpoint: string;
+//   };
+// };
 
-export default function SettingsContent({ activeSetting }: SettingsContentProps) {
+export default function SettingsContent() {
   return <div>SettingsContent</div>;
 }
