@@ -1,14 +1,14 @@
 import React from "react";
 import { motion, Variants } from "framer-motion";
 import { Bookmark } from "lucide-react";
-import { Component } from "../components/StudentView/AttendaceChart";
-import Fees from "../components/StudentView/Fees";
-import NoticeBoard from "../components/StudentView/NoticeBoard";
-import ChipTabs from "../components/StudentView/ChipTabs";
-import ImageSlider from "../components/StudentView/ImageSlider";
-import Courses from "../components/StudentView/Courses";
+import { Component } from "../components/student-view/AttendaceChart";
+import Fees from "../components/student-view/Fees";
+import NoticeBoard from "../components/student-view/NoticeBoard";
+import ChipTabs from "../components/student-view/ChipTabs";
+import ImageSlider from "../components/student-view/ImageSlider";
+import Courses from "../components/student-view/Courses";
 import "@/styles/Scrollbar.css";
-import SemesterAccordion from "../components/StudentView/StudentMarks";
+import SemesterAccordion from "../components/student-view/StudentMarks";
 import { CalendarCheck, Wallet,Percent,Timer,ClipboardPenLine } from 'lucide-react';
 
 const StudentViewPage: React.FC = () => {

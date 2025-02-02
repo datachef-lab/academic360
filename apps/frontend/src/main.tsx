@@ -5,11 +5,18 @@ import App from "./App.tsx";
 import { ErrorProvider } from "./providers/ErrorProvider.tsx";
 import { Toaster } from "sonner";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client
+const queryClient = new QueryClient();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ErrorProvider>
-      <App />
-    </ErrorProvider>
-    <Toaster />
+    <QueryClientProvider client={queryClient}>
+      <ErrorProvider>
+        <App />
+      </ErrorProvider>
+      <Toaster />
+    </QueryClientProvider>
   </StrictMode>,
 );

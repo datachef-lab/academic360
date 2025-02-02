@@ -18,7 +18,7 @@ router.get("/google/callback", passport.authenticate("google", {
     failureRedirect: `${process.env.CORS_ORIGIN!}/login`
 }), postGoogleLogin, (req, res) => {
     console.log("Redirecting to the frontend...");
-    res.redirect("http://localhost:8080/api/users/");
+    res.redirect(`${process.env.CORS_ORIGIN}/home`);
 });
 
 router.get("/refresh", refresh);
