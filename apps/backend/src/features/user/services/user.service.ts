@@ -1,10 +1,11 @@
 import bcrypt from "bcrypt";
-import { eq, count } from "drizzle-orm";
+import { eq, count, desc } from "drizzle-orm";
 import { db } from "@/db/index.ts";
 import { User, userModel } from "../models/user.model.ts";
 import { PayloadType, UserType } from "@/types/user/user.ts";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.ts";
 import { getStudentById } from "./student.service.ts";
+import { findAll } from "@/utils/helper.ts";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database
@@ -20,30 +21,18 @@ export async function addUser(user: User) {
 }
 
 export async function findAllUsers(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<UserType>> {
-    const offset = (page - 1) * pageSize;
-
-    const users = await db.select().from(userModel).limit(pageSize).offset(offset);
-
-    if (users.length === 0) {
-        return {
-            content: [],
-            pageNumber: page,
-            pageSize,
-            totalElemets: 0,
-            totalPages: 0
-        };
-    }
+    const usersResponse = await findAll<UserType>(userModel, page, pageSize);
 
     // Await Promise.all to resolve async operations
-    const tmpUsers = await Promise.all(users.map(async (user) => {
+    const content = await Promise.all(usersResponse.content.map(async (user) => {
         return await userResponseFormat(user);
     })) as UserType[];
 
     const [{ count: countRows }] = await db.select({ count: count() }).from(userModel);
 
     return {
-        content: tmpUsers,
-        pageNumber: page,
+        content,
+        page,
         pageSize,
         totalElemets: Number(countRows),
         totalPages: Math.ceil(Number(countRows) / pageSize)
@@ -100,7 +89,7 @@ export async function toggleUser(id: number) {
     return formattedUser;
 }
 
-async function userResponseFormat(givenUser: User): Promise<UserType | null> {
+export async function userResponseFormat(givenUser: User): Promise<UserType | null> {
     if (!givenUser) {
         return null;
     }

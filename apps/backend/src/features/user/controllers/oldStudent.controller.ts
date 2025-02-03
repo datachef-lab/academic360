@@ -35,7 +35,7 @@ import { Degree, degreeModel } from "@/features/resources/models/degree.model.ts
 import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { annualIncomeModel } from "../models/annualIncome.model.ts";
+import { annualIncomeModel } from "../../resources/models/annualIncome.model.ts";
 import { Specialization, specializationModel } from "../models/specialization.model.ts";
 import { spec } from "node:test/reporters";
 

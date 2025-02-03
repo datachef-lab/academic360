@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { qualificationModel } from "../models/qualification.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 
 // Create a new Qualification
@@ -41,7 +42,7 @@ export const getAllQualification = async (
     next: NextFunction,
 ) => {
     try {
-        const qualification = await db.select().from(qualificationModel);
+        const qualification = await findAll(qualificationModel);
         res
             .status(200)
             .json(

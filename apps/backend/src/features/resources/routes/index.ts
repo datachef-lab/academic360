@@ -13,6 +13,7 @@ import occupationRouter from "@/features/resources/routes/occupation.routes.ts";
 import pickupPointRouter from "@/features/resources/routes/pickupPoint.routes.ts";
 import religionRouter from "@/features/resources/routes/religion.routes.ts";
 import stateRouter from "@/features/resources/routes/state.routes.ts";
+import annualIncomeRouter from "@/features/resources/routes/annualIncome.routes.ts";
 
 export {
     bloodGroupRouter,
@@ -30,4 +31,5 @@ export {
     pickupPointRouter,
     religionRouter,
     stateRouter,
+    annualIncomeRouter,
 };

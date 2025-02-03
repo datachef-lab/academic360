@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { languageMediumModel } from "../models/languageMedium.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new language Medium
 export const createNewLanguageMedium = async (
@@ -40,7 +41,7 @@ export const getAllLanguageMedium = async (
     next: NextFunction,
 ) => {
     try {
-        const languageMedium = await db.select().from(languageMediumModel);
+        const languageMedium = await findAll(languageMediumModel);
         res
             .status(200)
             .json(

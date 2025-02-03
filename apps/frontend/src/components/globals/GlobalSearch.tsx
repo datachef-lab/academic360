@@ -16,7 +16,7 @@ export default function GlobalSearch() {
   return (
     <Dialog>
       <DialogTrigger>
-        <Button variant="secondary" className="border">
+        <Button variant="secondary" className="border font-normal">
           Search{" "}
           {window.innerWidth > 500 && (
             <p className="flex gap-5 items-center">

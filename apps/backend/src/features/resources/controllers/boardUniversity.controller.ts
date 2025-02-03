@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { boardUniversityModel } from "../models/boardUniversity.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new Board University
 export const createBoardUniversity = async (
@@ -40,14 +41,14 @@ export const getAllBoardUniversity = async (
     next: NextFunction,
 ) => {
     try {
-        const BoardUniversity = await db.select().from(boardUniversityModel);
+        const boardUniversity = await findAll(boardUniversityModel);
         res
             .status(200)
             .json(
                 new ApiResponse(
                     200,
                     "SUCCESS",
-                    BoardUniversity,
+                    boardUniversity,
                     "Fetched all Board University!",
                 ),
             );

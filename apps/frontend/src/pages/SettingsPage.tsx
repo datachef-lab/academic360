@@ -13,8 +13,8 @@ import {
   Globe,
   Flag,
   MapPin,
-  Bus,
-  DollarSign,
+  //   Bus,
+  IndianRupee,
 } from "lucide-react";
 import SettingsPanel from "@/components/settings/SettingsPanel";
 import SettingsContent from "@/components/settings/SettingsContent";
@@ -32,12 +32,12 @@ const settingsCategories = [
     category: "Resources",
     icon: <Frame size={16} />,
     tabs: [
-      { label: "Board Universities", icon: <School size={14} />, endpoint: "/board-universites" },
+      { label: "Board Universities", icon: <School size={14} />, endpoint: "/board-universities" },
       { label: "Institutions", icon: <Building size={14} />, endpoint: "/institutions" },
-      { label: "Categories", icon: <Layers size={14} />, endpoint: "categories" },
-      { label: "Degree", icon: <GraduationCap size={14} />, endpoint: "degree" },
+      { label: "Categories", icon: <Layers size={14} />, endpoint: "/categories" },
+      { label: "Degree", icon: <GraduationCap size={14} />, endpoint: "/degree" },
       { label: "Religion", icon: <BookOpen size={14} />, endpoint: "/religions" },
-      { label: "Language Medium", icon: <BookOpen size={14} />, endpoint: "/language-medium" },
+      { label: "Language Medium", icon: <BookOpen size={14} />, endpoint: "/languages" },
       { label: "Documents", icon: <FileText size={14} />, endpoint: "/documents" },
       { label: "Blood Groups", icon: <FileText size={14} />, endpoint: "/blood-groups" },
       { label: "Occupation", icon: <BookOpen size={14} />, endpoint: "/occupations" },
@@ -46,9 +46,9 @@ const settingsCategories = [
       { label: "Country", icon: <Flag size={14} />, endpoint: "/countries" },
       { label: "State", icon: <MapPin size={14} />, endpoint: "/states" },
       { label: "City", icon: <MapPin size={14} />, endpoint: "/cities" },
-      { label: "Transport", icon: <Bus size={14} />, endpoint: "/transports" },
-      { label: "Pickup-Point", icon: <MapPin size={14} />, endpoint: "/pickup-points" },
-      { label: "Annual Income", icon: <DollarSign size={14} />, endpoint: "/annual-incomes" },
+      //   { label: "Transport", icon: <Bus size={14} />, endpoint: "/transports" },
+      //   { label: "Pickup-Point", icon: <MapPin size={14} />, endpoint: "/pickup-points" },
+      { label: "Annual Income", icon: <IndianRupee size={14} />, endpoint: "/annual-incomes" },
     ],
   },
 ];

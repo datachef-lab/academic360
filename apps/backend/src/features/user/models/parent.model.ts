@@ -4,7 +4,7 @@ import { relations } from "drizzle-orm";
 import { personModel } from "./person.model.ts";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { annualIncomeModel } from "./annualIncome.model.ts";
+import { annualIncomeModel } from "../../resources/models/annualIncome.model.ts";
 
 export const parentTypeEnum = pgEnum("parent_type", ["BOTH", "FATHER_ONLY", "MOTHER_ONLY"]);
 

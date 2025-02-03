@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { categoryModel } from "../models/category.model.ts";
 import { ApiError } from "@/utils/ApiError.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new category
 export const createNewCategory = async (
@@ -33,7 +34,7 @@ export const getAllCategory = async (
     next: NextFunction,
 ) => {
     try {
-        const categories = await db.select().from(categoryModel);
+        const categories = await findAll(categoryModel);
         res
             .status(200)
             .json(
