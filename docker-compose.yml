@@ -16,9 +16,10 @@ services:
     build: ./apps/backend
     container_name: backend-app
     restart: always
-    env_file: /home/ubuntu/backend.env
+    env_file: 
+      - /home/ubuntu/workspace/new-academic360/code/backend.env
     volumes:
-      - /home/ubuntu/backend-logs:/logs
+      - /home/ubuntu/workspace/new-academic360/logs:/logs
     ports:
       - "5000:5000"
     depends_on:
@@ -27,6 +28,8 @@ services:
   frontend:
     build: ./apps/frontend
     container_name: frontend-app
+    env_file:
+      - /home/ubuntu/workspace/new-academic360/code/frontend.env
     restart: always
     ports:
       - "3003:3003"

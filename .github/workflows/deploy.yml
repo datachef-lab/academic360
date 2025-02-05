@@ -34,10 +34,11 @@ jobs:
             # Check if the repository exists; if not, clone it
             if [ ! -d "/home/ubuntu/workspace/new-academic360/.git" ]; then
             echo "🔹 Cloning the Git repository..."
-            sudo git clone https://github.com/datachef-lab/academic360.git .
-            cd /academic360
-            echo "Inside repo"
+            sudo git clone https://github.com/datachef-lab/academic360.git code
             fi
+
+            echo "Inside repo"
+            cd code
 
             echo "🔹 Removing old containers..."
             sudo docker-compose down || true
@@ -54,7 +55,7 @@ jobs:
             chmod +x *.sh || true
 
             echo "🔹 Creating backend environment file..."
-            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/backend.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/code/backend.env
             NODE_ENV=production
             PORT=5000
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -74,14 +75,14 @@ jobs:
             EOF
 
             echo "🔹 Creating database environment file..."
-            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/db.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/code/db.env
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             EOF
 
             echo "🔹 Creating frontend environment file..."
-            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/frontend.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/code/frontend.env
             VITE_APP_BACKEND_URL=${{ secrets.VITE_APP_BACKEND_URL }}
             EOF
 
