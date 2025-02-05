@@ -43,7 +43,7 @@ jobs:
             echo "🔹 Creating backend environment file..."
             cat <<EOF > /home/ubuntu/backend.env
             NODE_ENV=production
-            PORT=3003
+            PORT=5000
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             OLD_DB_HOST=${{ secrets.OLD_DB_HOST }}
             OLD_DB_PORT=${{ secrets.OLD_DB_PORT }}
