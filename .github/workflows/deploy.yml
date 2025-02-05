@@ -31,6 +31,12 @@ jobs:
             echo "🔹 Navigating to project directory..."
             cd /home/ubuntu/workspace/new-academic360 || exit 1
 
+            # Check if the repository exists; if not, clone it
+            if [ ! -d "/home/ubuntu/workspace/new-academic360/.git" ]; then
+            echo "🔹 Cloning the Git repository..."
+            sudo git clone https://github.com/your-repository-url.git new-academic360
+            fi
+
             echo "🔹 Removing old containers..."
             sudo docker-compose down || true
 
