@@ -36,6 +36,7 @@ jobs:
             echo "🔹 Cloning the Git repository..."
             sudo git clone https://github.com/datachef-lab/academic360.git .
             cd /academic360
+            echo "Inside repo"
             fi
 
             echo "🔹 Removing old containers..."
