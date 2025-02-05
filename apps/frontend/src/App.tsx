@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
@@ -9,11 +9,13 @@ import {
   MyWorkspacePage,
   NotFoundPage,
   RootPage,
+  SearchStudentPage,
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
+import StudentPage from "./pages/StudentPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -31,7 +33,14 @@ const router = createBrowserRouter([
       { path: "student-View", element: <StudentViewPage /> },
       { path: "academics-add", element: <AddStudentPage /> },
       { path: "academics-reports", element: <GetReportsPage /> },
-      { path: "academics-search", element: <GetReportsPage /> },
+      {
+        path: "academics-search",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <SearchStudentPage /> },
+          { path: ":studentId", element: <StudentPage /> },
+        ],
+      },
       { path: "profile", element: <UserProfilePage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
