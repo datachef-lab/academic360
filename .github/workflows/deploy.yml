@@ -21,14 +21,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            echo "🔹 Updating system..."
-            sudo apt update -y && sudo apt install -y docker.io docker-compose
-
-            echo "🔹 Ensuring Docker is running..."
-            sudo systemctl start docker && sudo systemctl enable docker
-
             echo "🔹 Navigating to project directory..."
-            cd /home/ubuntu/my-monorepo || exit 1
+            cd /home/ubuntu/workspace/new-academic360 || exit 1
 
             echo "🔹 Removing old containers..."
             docker-compose down || true
@@ -37,11 +31,12 @@ jobs:
             docker system prune -af || true
 
             echo "🔹 Resetting Git repository..."
-            git reset --hard
+            git fetch --all
+            git reset --hard origin/main
             git pull origin main
 
             echo "🔹 Creating backend environment file..."
-            cat <<EOF > /home/ubuntu/backend.env
+            cat <<EOF > /home/ubuntu/workspace/new-academic360/backend.env
             NODE_ENV=production
             PORT=5000
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -61,14 +56,14 @@ jobs:
             EOF
 
             echo "🔹 Creating database environment file..."
-            cat <<EOF > /home/ubuntu/db.env
+            cat <<EOF > /home/ubuntu/workspace/new-academic360/db.env
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             EOF
 
             echo "🔹 Creating frontend environment file..."
-            cat <<EOF > /home/ubuntu/frontend.env
+            cat <<EOF > /home/ubuntu/workspace/new-academic360/frontend.env
             VITE_APP_BACKEND_URL=${{ secrets.VITE_APP_BACKEND_URL }}
             EOF
 
