@@ -24,21 +24,18 @@ jobs:
             echo "🔹 Ensuring Docker is running..."
             sudo systemctl start docker && sudo systemctl enable docker
 
-            echo "🔹 Setting permissions for the project directory..."
-            sudo chown -R ubuntu:ubuntu /home/ubuntu/workspace/new-academic360
-            sudo chmod -R 755 /home/ubuntu/workspace/new-academic360
-
             echo "🔹 Navigating to project directory..."
             cd /home/ubuntu/workspace/new-academic360 || exit 1
 
-            # Check if the repository exists; if not, clone it
-            if [ ! -d "/home/ubuntu/workspace/new-academic360/.git" ]; then
-            echo "🔹 Cloning the Git repository..."
-            sudo git clone https://github.com/datachef-lab/academic360.git code
+            if [ ! -d "/home/ubuntu/workspace/new-academic360/code" ]; then
+                echo "🔹 Cloning the Git repository..."
+                sudo git clone https://github.com/datachef-lab/academic360.git code
+                echo "Inside repo"
+                cd code
+            else
+                echo "🔹 Repository already exists. Pulling latest changes..."
+                cd /home/ubuntu/workspace/new-academic360/code && sudo git pull origin main
             fi
-
-            echo "Inside repo"
-            cd code
 
             echo "🔹 Removing old containers..."
             sudo docker-compose down || true
