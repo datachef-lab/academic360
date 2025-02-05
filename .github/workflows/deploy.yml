@@ -34,7 +34,8 @@ jobs:
             # Check if the repository exists; if not, clone it
             if [ ! -d "/home/ubuntu/workspace/new-academic360/.git" ]; then
             echo "🔹 Cloning the Git repository..."
-            sudo git clone https://github.com/datachef-lab/academic360.git new-academic360
+            sudo git clone https://github.com/datachef-lab/academic360.git .
+            cd /academic360
             fi
 
             echo "🔹 Removing old containers..."
