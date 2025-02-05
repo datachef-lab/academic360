@@ -1,30 +1,45 @@
 import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
-import { frameworkTypeEnum } from "@/features/user/models/student.model.ts";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
-export const subjectTypeEnum = pgEnum("subject_type", [
-    "COMMON",
+import { specializationModel } from "@/features/user/models/specialization.model.ts";
+import { courseTypeEnum } from "@/features/user/models/academicIdentifier.model.ts";
+
+export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
     "SPECIAL",
+    "COMMON",
     "HONOURS",
     "GENERAL",
-    "ELECTIVE"
+    "ELECTIVE",
 ]);
+
+export const subjectTypeEnum = pgEnum("subject_type", [
+    "ABILITY ENHANCEMENT COMPULSORY COURSE",
+    "CORE COURSE",
+    "GENERIC ELECTIVE",
+    "DISCIPLINE SPECIFIC ELECTIVE",
+    "SKILL ENHANCEMENT COURSE",
+]);
+
+export const frameworkTypeEnum = pgEnum("framework_type", ["CCF", "CBCS"]);
 
 export const subjectMetadataModel = pgTable("subject_metadatas", {
     id: serial().primaryKey(),
     streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
     semester: integer().notNull(),
-    framework: frameworkTypeEnum().notNull().default("CBCS"),
-    subjectType: subjectTypeEnum().notNull().default("COMMON"),
-    name: varchar({length: 255}).notNull(),
+    framework: frameworkTypeEnum().notNull(),
+    specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
+    category: subjectCategoryTypeEnum(),
+    subjectType: subjectTypeEnum().notNull().default("CORE COURSE"),
+    name: varchar({ length: 255 }).notNull(),
     credit: integer(),
-    fullMarks: integer().notNull(),
-    fullMarksInternal: integer().notNull(),
+    fullMarksTheory: integer(),
+    fullMarksTutorial: integer(),
+    fullMarksInternal: integer(),
     fullMarksPractical: integer(),
-    fullMarksTheory: integer().notNull(),
+    fullMarks: integer().notNull(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -33,7 +48,11 @@ export const subjectMetadataRelations = relations(subjectMetadataModel, ({ one }
     stream: one(streamModel, {
         fields: [subjectMetadataModel.id],
         references: [streamModel.id]
-    })
+    }),
+    specialization: one(specializationModel, {
+        fields: [subjectMetadataModel.specializationId],
+        references: [specializationModel.id]
+    }),
 }));
 
 export const createSubjectMetadataSchema = createInsertSchema(subjectMetadataModel);

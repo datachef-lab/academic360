@@ -5,8 +5,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { specializationModel } from "./specialization.model.ts";
-
-export const frameworkTypeEnum = pgEnum('framework_type', ["CBCS", "CCF"]);
+import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.ts";
 
 export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
 
