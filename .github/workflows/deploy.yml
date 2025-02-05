@@ -24,25 +24,29 @@ jobs:
             echo "🔹 Ensuring Docker is running..."
             sudo systemctl start docker && sudo systemctl enable docker
 
+            echo "🔹 Setting permissions for the project directory..."
+            sudo chown -R ubuntu:ubuntu /home/ubuntu/workspace/new-academic360
+            sudo chmod -R 755 /home/ubuntu/workspace/new-academic360
+
             echo "🔹 Navigating to project directory..."
             cd /home/ubuntu/workspace/new-academic360 || exit 1
 
             echo "🔹 Removing old containers..."
-            docker-compose down || true
+            sudo docker-compose down || true
 
             echo "🔹 Cleaning up Docker resources..."
-            docker system prune -af || true
+            sudo docker system prune -af || true
 
             echo "🔹 Resetting Git repository..."
-            git fetch --all
-            git reset --hard origin/main
-            git pull origin main
+            sudo git fetch --all
+            sudo git reset --hard origin/main
+            sudo git pull origin main
 
             echo "🔹 Setting execution permissions for scripts..."
             chmod +x *.sh || true
 
             echo "🔹 Creating backend environment file..."
-            cat <<EOF > /home/ubuntu/workspace/new-academic360/backend.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/backend.env
             NODE_ENV=production
             PORT=5000
             DATABASE_URL=${{ secrets.DATABASE_URL }}
@@ -62,21 +66,21 @@ jobs:
             EOF
 
             echo "🔹 Creating database environment file..."
-            cat <<EOF > /home/ubuntu/workspace/new-academic360/db.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/db.env
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
             EOF
 
             echo "🔹 Creating frontend environment file..."
-            cat <<EOF > /home/ubuntu/workspace/new-academic360/frontend.env
+            sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/frontend.env
             VITE_APP_BACKEND_URL=${{ secrets.VITE_APP_BACKEND_URL }}
             EOF
 
             echo "🔹 Building and starting services..."
-            docker-compose up --build -d
+            sudo docker-compose up --build -d
 
             echo "🔹 Restarting backend and frontend..."
-            docker-compose restart backend frontend
+            sudo docker-compose restart backend frontend
 
             echo "✅ Deployment completed!"
