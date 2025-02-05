@@ -4,6 +4,7 @@ import {
   getAllBloodGroups,
   updateBloodGroup,
   deleteBloodGroup,
+  getBloodGroupById,
 } from "../controllers/bloodGroup.controller.ts";
 
 const router = express.Router();
@@ -15,7 +16,7 @@ router.post("/", createBloodGroup);
 router.get("/", getAllBloodGroups);
 
 // Get a specific blood group Route
-router.get("/:id", getAllBloodGroups);
+router.get("/:id", getBloodGroupById);
 
 // Update a blood group Route
 router.put("/:id", updateBloodGroup);
