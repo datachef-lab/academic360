@@ -1,0 +1,80 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🚀 Deploy to AWS EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🔹 Updating system..."
+            sudo apt update -y && sudo apt install -y docker.io docker-compose
+
+            echo "🔹 Ensuring Docker is running..."
+            sudo systemctl start docker && sudo systemctl enable docker
+
+            echo "🔹 Navigating to project directory..."
+            cd /home/ubuntu/my-monorepo || exit 1
+
+            echo "🔹 Removing old containers..."
+            docker-compose down || true
+
+            echo "🔹 Cleaning up Docker resources..."
+            docker system prune -af || true
+
+            echo "🔹 Resetting Git repository..."
+            git reset --hard
+            git pull origin main
+
+            echo "🔹 Creating backend environment file..."
+            cat <<EOF > /home/ubuntu/backend.env
+            NODE_ENV=production
+            PORT=3003
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            OLD_DB_HOST=${{ secrets.OLD_DB_HOST }}
+            OLD_DB_PORT=${{ secrets.OLD_DB_PORT }}
+            OLD_DB_USER=${{ secrets.OLD_DB_USER }}
+            OLD_DB_NAME=${{ secrets.OLD_DB_NAME }}
+            OLD_DB_PASSWORD=${{ secrets.OLD_DB_PASSWORD }}
+            CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+            LOG_DIRECTORY=${{ secrets.LOG_DIRECTORY }}
+            ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+            ACCESS_TOKEN_EXPIRY=${{ secrets.ACCESS_TOKEN_EXPIRY }}
+            REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+            REFRESH_TOKEN_EXPIRY=${{ secrets.REFRESH_TOKEN_EXPIRY }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            EOF
+
+            echo "🔹 Creating database environment file..."
+            cat <<EOF > /home/ubuntu/db.env
+            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
+            EOF
+
+            echo "🔹 Creating frontend environment file..."
+            cat <<EOF > /home/ubuntu/frontend.env
+            VITE_APP_BACKEND_URL=${{ secrets.VITE_APP_BACKEND_URL }}
+            EOF
+
+            echo "🔹 Building and starting services..."
+            docker-compose up --build -d
+
+            echo "🔹 Restarting backend and frontend..."
+            docker-compose restart backend frontend
+
+            echo "✅ Deployment completed!"
