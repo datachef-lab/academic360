@@ -4,6 +4,7 @@ import {ApiResponse} from "@/utils/ApiResonse.js";
 import {handleError} from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 import { pickupPointModel } from "../models/pickupPoint.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 
 export const createPickupPoint= async (req: Request, res: Response, next: NextFunction) => {
@@ -18,7 +19,7 @@ export const createPickupPoint= async (req: Request, res: Response, next: NextFu
 
 export const getAllPickupPoint = async (req:Request, res:Response, next:NextFunction)=>{
     try{
-        const records=await db.select().from(pickupPointModel);
+        const records=await findAll(pickupPointModel);
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "All PickupPoint fetched successfully!"));
     }catch (e) {
         handleError(e,res,next);

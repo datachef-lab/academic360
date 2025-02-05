@@ -1,10 +1,10 @@
 import express from "express";
 import {
-  createNewTransport,
-  deleteTransport,
-  getAllTransport,
-  getTransportById,
-  updateTransport,
+    createNewTransport,
+    deleteTransport,
+    getAllTransport,
+    getTransportById,
+    updateTransport,
 } from "../controllers/transport.controller.ts";
 
 const router = express.Router();

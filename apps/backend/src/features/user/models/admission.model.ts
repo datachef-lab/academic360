@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export const admissionModel = pgTable("admissions", {
     id: serial().primaryKey(),
-    studentId: integer().notNull().unique().references(() => studentModel.id),
+    studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     applicationNumber: varchar({ length: 255 }),
     applicantSignature: varchar({ length: 255 }),
     yearOfAdmission: integer(),

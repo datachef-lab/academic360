@@ -1,8 +1,9 @@
-
+import { verifyJWT } from "@/middlewares/verifyJWT.ts";
 import express from "express";
 import { createAcademicIdentifier, deleteAcademicIdentifier, getAcademicIdentifier, getAllAcademicIdentifier, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.ts";
 
 const router = express.Router();
+router.use(verifyJWT);
 router.post("/",createAcademicIdentifier);
 router.get("/",getAllAcademicIdentifier);
 router.get("/query",(req,res,next)=>{

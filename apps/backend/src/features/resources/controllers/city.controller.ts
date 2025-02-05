@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { cityModel } from "../models/city.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new city
 export const createNewCity = async (
@@ -31,7 +32,7 @@ export const getAllCity = async (
     next: NextFunction,
 ) => {
     try {
-        const cities = await db.select().from(cityModel);
+        const cities = await findAll(cityModel);
         res
             .status(200)
             .json(new ApiResponse(200, "SUCCESS", cities, "Fetched all cities!"));

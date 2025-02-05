@@ -9,6 +9,7 @@ import { religionModel } from "@/features/resources/models/religion.model.ts";
 import { addressModel } from "./address.model.ts";
 import { categoryModel } from "@/features/resources/models/category.model.ts";
 import { languageMediumModel } from "@/features/resources/models/languageMedium.model.ts";
+import { disabilityCodeModel } from "./disabilityCode.model.ts";
 
 export const genderTypeEnum = pgEnum('gender_type', ["MALE", "FEMALE", "TRANSGENDER"]);
 
@@ -16,20 +17,21 @@ export const disabilityTypeEnum = pgEnum('disability_type', ["VISUAL", "HEARING_
 
 export const personalDetailsModel = pgTable("personal_details", {
     id: serial().primaryKey(),
-    studentId: integer().notNull().references(() => studentModel.id),
-    nationalityId: integer().references(() => nationalityModel.id),
-    otherNationalityId: integer().references(() => nationalityModel.id),
+    studentId: integer("student_id_fk").notNull().references(() => studentModel.id),
+    nationalityId: integer("nationality_id_fk").references(() => nationalityModel.id),
+    otherNationalityId: integer("other_nationality_id_fk").references(() => nationalityModel.id),
     aadhaarCardNumber: varchar({ length: 16 }),
-    religionId: integer().references(() => religionModel.id),
-    categoryId: integer().references(() => categoryModel.id),
-    motherTongueId: integer().references(() => languageMediumModel.id),
+    religionId: integer("religion_id_fk").references(() => religionModel.id),
+    categoryId: integer("category_id_fk").references(() => categoryModel.id),
+    motherTongueId: integer("mother_tongue_language_medium_id_fk").references(() => languageMediumModel.id),
     dateOfBirth: date(),
     gender: genderTypeEnum(),
     email: varchar({ length: 255 }),
     alternativeEmail: varchar({ length: 255 }),
-    mailingAddressId: integer().references(() => addressModel.id),
-    residentialAddressId: integer().references(() => addressModel.id),
+    mailingAddressId: integer("mailing_address_id_fk").references(() => addressModel.id),
+    residentialAddressId: integer("residential_address_id_fk").references(() => addressModel.id),
     disability: disabilityTypeEnum(),
+    disabilityCodeId: integer("disablity_code_id_fk").references(() => disabilityCodeModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -66,6 +68,10 @@ export const personalDetailsRelations = relations(personalDetailsModel, ({ one }
     residentialAddress: one(addressModel, {
         fields: [personalDetailsModel.residentialAddressId],
         references: [addressModel.id]
+    }),
+    disabilityCode: one(disabilityCodeModel, {
+        fields: [personalDetailsModel.disabilityCodeId],
+        references: [disabilityCodeModel.id]
     }),
 }));
 

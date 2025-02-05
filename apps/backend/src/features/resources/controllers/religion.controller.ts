@@ -4,6 +4,7 @@ import { religionModel } from "../models/religion.model.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
+import { findAll } from "@/utils/helper.ts";
 
 export const createReligion = async (
   req: Request,
@@ -33,7 +34,7 @@ export const getAllReligion = async (
   next: NextFunction,
 ) => {
   try {
-    const records = await db.select().from(religionModel);
+    const records = await findAll(religionModel);
     res
       .status(200)
       .json(

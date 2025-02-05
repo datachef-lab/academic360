@@ -1,5 +1,5 @@
 {
-  "id": "8032fb7a-3d58-4271-8203-87272b340b6d",
+  "id": "ad54a8d9-9330-4165-a6d1-a58483af74b6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -347,8 +347,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "framework_type": {
-          "name": "framework_type",
+        "framework": {
+          "name": "framework",
           "type": "framework_type",
           "typeSchema": "public",
           "primaryKey": false,
@@ -707,6 +707,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "categories_name_unique": {
+          "name": "categories_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        },
         "categories_code_unique": {
           "name": "categories_code_unique",
           "nullsNotDistinct": false,
@@ -787,6 +794,13 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
+        "cities_name_unique": {
+          "name": "cities_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        },
         "cities_code_unique": {
           "name": "cities_code_unique",
           "nullsNotDistinct": false,
@@ -839,7 +853,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "countries_name_unique": {
+          "name": "countries_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1369,7 +1391,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "states_name_unique": {
+          "name": "states_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1449,20 +1479,20 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "last_institution_id": {
-          "name": "last_institution_id",
+        "last_institution_id_fk": {
+          "name": "last_institution_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "last_board_university_id": {
-          "name": "last_board_university_id",
+        "last_board_university_id_fk": {
+          "name": "last_board_university_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1485,8 +1515,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "last_result_id": {
-          "name": "last_result_id",
+        "last_result_id_fk": {
+          "name": "last_result_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1514,12 +1544,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "academic_history_student_id_students_id_fk": {
-          "name": "academic_history_student_id_students_id_fk",
+        "academic_history_student_id_fk_students_id_fk": {
+          "name": "academic_history_student_id_fk_students_id_fk",
           "tableFrom": "academic_history",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1527,12 +1557,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "academic_history_last_institution_id_institutions_id_fk": {
-          "name": "academic_history_last_institution_id_institutions_id_fk",
+        "academic_history_last_institution_id_fk_institutions_id_fk": {
+          "name": "academic_history_last_institution_id_fk_institutions_id_fk",
           "tableFrom": "academic_history",
           "tableTo": "institutions",
           "columnsFrom": [
-            "last_institution_id"
+            "last_institution_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1540,12 +1570,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "academic_history_last_board_university_id_board_universities_id_fk": {
-          "name": "academic_history_last_board_university_id_board_universities_id_fk",
+        "academic_history_last_board_university_id_fk_board_universities_id_fk": {
+          "name": "academic_history_last_board_university_id_fk_board_universities_id_fk",
           "tableFrom": "academic_history",
           "tableTo": "board_universities",
           "columnsFrom": [
-            "last_board_university_id"
+            "last_board_university_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1553,12 +1583,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "academic_history_last_result_id_board_result_status_id_fk": {
-          "name": "academic_history_last_result_id_board_result_status_id_fk",
+        "academic_history_last_result_id_fk_board_result_status_id_fk": {
+          "name": "academic_history_last_result_id_fk_board_result_status_id_fk",
           "tableFrom": "academic_history",
           "tableTo": "board_result_status",
           "columnsFrom": [
-            "last_result_id"
+            "last_result_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1583,8 +1613,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -1698,12 +1728,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "academic_identifiers_student_id_students_id_fk": {
-          "name": "academic_identifiers_student_id_students_id_fk",
+        "academic_identifiers_student_id_fk_students_id_fk": {
+          "name": "academic_identifiers_student_id_fk_students_id_fk",
           "tableFrom": "academic_identifiers",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1727,11 +1757,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "academic_identifiers_studentId_unique": {
-          "name": "academic_identifiers_studentId_unique",
+        "academic_identifiers_student_id_fk_unique": {
+          "name": "academic_identifiers_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
           ]
         }
       },
@@ -1749,8 +1779,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1762,8 +1792,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "address_id": {
-          "name": "address_id",
+        "address_id_fk": {
+          "name": "address_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1797,12 +1827,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "accommodation_student_id_students_id_fk": {
-          "name": "accommodation_student_id_students_id_fk",
+        "accommodation_student_id_fk_students_id_fk": {
+          "name": "accommodation_student_id_fk_students_id_fk",
           "tableFrom": "accommodation",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1810,12 +1840,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "accommodation_address_id_address_id_fk": {
-          "name": "accommodation_address_id_address_id_fk",
+        "accommodation_address_id_fk_address_id_fk": {
+          "name": "accommodation_address_id_fk_address_id_fk",
           "tableFrom": "accommodation",
           "tableTo": "address",
           "columnsFrom": [
-            "address_id"
+            "address_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1826,11 +1856,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "accommodation_studentId_unique": {
-          "name": "accommodation_studentId_unique",
+        "accommodation_student_id_fk_unique": {
+          "name": "accommodation_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
           ]
         }
       },
@@ -1848,20 +1878,20 @@
           "primaryKey": true,
           "notNull": true
         },
-        "country_id": {
-          "name": "country_id",
+        "country_id_fk": {
+          "name": "country_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "state_id": {
-          "name": "state_id",
+        "state_id_fk": {
+          "name": "state_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "city_id": {
-          "name": "city_id",
+        "city_id_fk": {
+          "name": "city_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -1914,12 +1944,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "address_country_id_countries_id_fk": {
-          "name": "address_country_id_countries_id_fk",
+        "address_country_id_fk_countries_id_fk": {
+          "name": "address_country_id_fk_countries_id_fk",
           "tableFrom": "address",
           "tableTo": "countries",
           "columnsFrom": [
-            "country_id"
+            "country_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1927,12 +1957,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "address_state_id_states_id_fk": {
-          "name": "address_state_id_states_id_fk",
+        "address_state_id_fk_states_id_fk": {
+          "name": "address_state_id_fk_states_id_fk",
           "tableFrom": "address",
           "tableTo": "states",
           "columnsFrom": [
-            "state_id"
+            "state_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1940,12 +1970,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "address_city_id_cities_id_fk": {
-          "name": "address_city_id_cities_id_fk",
+        "address_city_id_fk_cities_id_fk": {
+          "name": "address_city_id_fk_cities_id_fk",
           "tableFrom": "address",
           "tableTo": "cities",
           "columnsFrom": [
-            "city_id"
+            "city_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1970,8 +2000,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -2023,12 +2053,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "admissions_student_id_students_id_fk": {
-          "name": "admissions_student_id_students_id_fk",
+        "admissions_student_id_fk_students_id_fk": {
+          "name": "admissions_student_id_fk_students_id_fk",
           "tableFrom": "admissions",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2039,11 +2069,97 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "admissions_studentId_unique": {
-          "name": "admissions_studentId_unique",
+        "admissions_student_id_fk_unique": {
+          "name": "admissions_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.annual_incomes": {
+      "name": "annual_incomes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "range": {
+          "name": "range",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.disability_codes": {
+      "name": "disability_codes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code": {
+          "name": "code",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "disability_codes_code_unique": {
+          "name": "disability_codes_code_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "code"
           ]
         }
       },
@@ -2061,8 +2177,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2120,12 +2236,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "emergency_contacts_student_id_students_id_fk": {
-          "name": "emergency_contacts_student_id_students_id_fk",
+        "emergency_contacts_student_id_fk_students_id_fk": {
+          "name": "emergency_contacts_student_id_fk_students_id_fk",
           "tableFrom": "emergency_contacts",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2150,14 +2266,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "gaurdian_details_id": {
-          "name": "gaurdian_details_id",
+        "guardian_details_person_id_fk": {
+          "name": "guardian_details_person_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2179,12 +2295,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "guardians_student_id_students_id_fk": {
-          "name": "guardians_student_id_students_id_fk",
+        "guardians_student_id_fk_students_id_fk": {
+          "name": "guardians_student_id_fk_students_id_fk",
           "tableFrom": "guardians",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2192,12 +2308,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "guardians_gaurdian_details_id_person_id_fk": {
-          "name": "guardians_gaurdian_details_id_person_id_fk",
+        "guardians_guardian_details_person_id_fk_person_id_fk": {
+          "name": "guardians_guardian_details_person_id_fk_person_id_fk",
           "tableFrom": "guardians",
           "tableTo": "person",
           "columnsFrom": [
-            "gaurdian_details_id"
+            "guardian_details_person_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2208,11 +2324,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "guardians_studentId_unique": {
-          "name": "guardians_studentId_unique",
+        "guardians_student_id_fk_unique": {
+          "name": "guardians_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
           ]
         }
       },
@@ -2230,14 +2346,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "blood_group_id": {
-          "name": "blood_group_id",
+        "blood_group_id_fk": {
+          "name": "blood_group_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2301,12 +2417,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "health_student_id_students_id_fk": {
-          "name": "health_student_id_students_id_fk",
+        "health_student_id_fk_students_id_fk": {
+          "name": "health_student_id_fk_students_id_fk",
           "tableFrom": "health",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2314,12 +2430,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "health_blood_group_id_blood_group_id_fk": {
-          "name": "health_blood_group_id_blood_group_id_fk",
+        "health_blood_group_id_fk_blood_group_id_fk": {
+          "name": "health_blood_group_id_fk_blood_group_id_fk",
           "tableFrom": "health",
           "tableTo": "blood_group",
           "columnsFrom": [
-            "blood_group_id"
+            "blood_group_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2330,11 +2446,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "health_studentId_unique": {
-          "name": "health_studentId_unique",
+        "health_student_id_fk_unique": {
+          "name": "health_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
           ]
         }
       },
@@ -2352,8 +2468,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -2365,21 +2481,21 @@
           "primaryKey": false,
           "notNull": false
         },
-        "father_details_id": {
-          "name": "father_details_id",
+        "father_details_person_id_fk": {
+          "name": "father_details_person_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "mother_details_id": {
-          "name": "mother_details_id",
+        "mother_details_person_id_fk": {
+          "name": "mother_details_person_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "annual_income": {
-          "name": "annual_income",
-          "type": "varchar(255)",
+        "annual_income_id_fk": {
+          "name": "annual_income_id_fk",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -2400,12 +2516,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "parent_details_student_id_students_id_fk": {
-          "name": "parent_details_student_id_students_id_fk",
+        "parent_details_student_id_fk_students_id_fk": {
+          "name": "parent_details_student_id_fk_students_id_fk",
           "tableFrom": "parent_details",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2413,12 +2529,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "parent_details_father_details_id_person_id_fk": {
-          "name": "parent_details_father_details_id_person_id_fk",
+        "parent_details_father_details_person_id_fk_person_id_fk": {
+          "name": "parent_details_father_details_person_id_fk_person_id_fk",
           "tableFrom": "parent_details",
           "tableTo": "person",
           "columnsFrom": [
-            "father_details_id"
+            "father_details_person_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2426,12 +2542,25 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "parent_details_mother_details_id_person_id_fk": {
-          "name": "parent_details_mother_details_id_person_id_fk",
+        "parent_details_mother_details_person_id_fk_person_id_fk": {
+          "name": "parent_details_mother_details_person_id_fk_person_id_fk",
           "tableFrom": "parent_details",
           "tableTo": "person",
           "columnsFrom": [
-            "mother_details_id"
+            "mother_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "parent_details_annual_income_id_fk_annual_incomes_id_fk": {
+          "name": "parent_details_annual_income_id_fk_annual_incomes_id_fk",
+          "tableFrom": "parent_details",
+          "tableTo": "annual_incomes",
+          "columnsFrom": [
+            "annual_income_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2442,11 +2571,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "parent_details_studentId_unique": {
-          "name": "parent_details_studentId_unique",
+        "parent_details_student_id_fk_unique": {
+          "name": "parent_details_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "student_id"
+            "student_id_fk"
           ]
         }
       },
@@ -2494,20 +2623,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "qualification_id": {
-          "name": "qualification_id",
+        "qualification_id_fk": {
+          "name": "qualification_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "occupation_id": {
-          "name": "occupation_id",
+        "occupation_id_fk": {
+          "name": "occupation_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "office_address_id": {
-          "name": "office_address_id",
+        "office_addres_id_fk": {
+          "name": "office_addres_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2535,12 +2664,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "person_qualification_id_qualifications_id_fk": {
-          "name": "person_qualification_id_qualifications_id_fk",
+        "person_qualification_id_fk_qualifications_id_fk": {
+          "name": "person_qualification_id_fk_qualifications_id_fk",
           "tableFrom": "person",
           "tableTo": "qualifications",
           "columnsFrom": [
-            "qualification_id"
+            "qualification_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2548,12 +2677,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "person_occupation_id_occupations_id_fk": {
-          "name": "person_occupation_id_occupations_id_fk",
+        "person_occupation_id_fk_occupations_id_fk": {
+          "name": "person_occupation_id_fk_occupations_id_fk",
           "tableFrom": "person",
           "tableTo": "occupations",
           "columnsFrom": [
-            "occupation_id"
+            "occupation_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2561,12 +2690,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "person_office_address_id_address_id_fk": {
-          "name": "person_office_address_id_address_id_fk",
+        "person_office_addres_id_fk_address_id_fk": {
+          "name": "person_office_addres_id_fk_address_id_fk",
           "tableFrom": "person",
           "tableTo": "address",
           "columnsFrom": [
-            "office_address_id"
+            "office_addres_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2591,20 +2720,20 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "nationality_id": {
-          "name": "nationality_id",
+        "nationality_id_fk": {
+          "name": "nationality_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "other_nationality_id": {
-          "name": "other_nationality_id",
+        "other_nationality_id_fk": {
+          "name": "other_nationality_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2615,20 +2744,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "religion_id": {
-          "name": "religion_id",
+        "religion_id_fk": {
+          "name": "religion_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "category_id": {
-          "name": "category_id",
+        "category_id_fk": {
+          "name": "category_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "mother_tongue_id": {
-          "name": "mother_tongue_id",
+        "mother_tongue_language_medium_id_fk": {
+          "name": "mother_tongue_language_medium_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2658,14 +2787,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "mailing_address_id": {
-          "name": "mailing_address_id",
+        "mailing_address_id_fk": {
+          "name": "mailing_address_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "residential_address_id": {
-          "name": "residential_address_id",
+        "residential_address_id_fk": {
+          "name": "residential_address_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2674,6 +2803,12 @@
           "name": "disability",
           "type": "disability_type",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disablity_code_id_fk": {
+          "name": "disablity_code_id_fk",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -2694,12 +2829,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "personal_details_student_id_students_id_fk": {
-          "name": "personal_details_student_id_students_id_fk",
+        "personal_details_student_id_fk_students_id_fk": {
+          "name": "personal_details_student_id_fk_students_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2707,12 +2842,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_nationality_id_nationality_id_fk": {
-          "name": "personal_details_nationality_id_nationality_id_fk",
+        "personal_details_nationality_id_fk_nationality_id_fk": {
+          "name": "personal_details_nationality_id_fk_nationality_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "nationality",
           "columnsFrom": [
-            "nationality_id"
+            "nationality_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2720,12 +2855,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_other_nationality_id_nationality_id_fk": {
-          "name": "personal_details_other_nationality_id_nationality_id_fk",
+        "personal_details_other_nationality_id_fk_nationality_id_fk": {
+          "name": "personal_details_other_nationality_id_fk_nationality_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "nationality",
           "columnsFrom": [
-            "other_nationality_id"
+            "other_nationality_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2733,12 +2868,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_religion_id_religion_id_fk": {
-          "name": "personal_details_religion_id_religion_id_fk",
+        "personal_details_religion_id_fk_religion_id_fk": {
+          "name": "personal_details_religion_id_fk_religion_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "religion",
           "columnsFrom": [
-            "religion_id"
+            "religion_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2746,12 +2881,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_category_id_categories_id_fk": {
-          "name": "personal_details_category_id_categories_id_fk",
+        "personal_details_category_id_fk_categories_id_fk": {
+          "name": "personal_details_category_id_fk_categories_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "categories",
           "columnsFrom": [
-            "category_id"
+            "category_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2759,12 +2894,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_mother_tongue_id_language_medium_id_fk": {
-          "name": "personal_details_mother_tongue_id_language_medium_id_fk",
+        "personal_details_mother_tongue_language_medium_id_fk_language_medium_id_fk": {
+          "name": "personal_details_mother_tongue_language_medium_id_fk_language_medium_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "language_medium",
           "columnsFrom": [
-            "mother_tongue_id"
+            "mother_tongue_language_medium_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2772,12 +2907,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_mailing_address_id_address_id_fk": {
-          "name": "personal_details_mailing_address_id_address_id_fk",
+        "personal_details_mailing_address_id_fk_address_id_fk": {
+          "name": "personal_details_mailing_address_id_fk_address_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "address",
           "columnsFrom": [
-            "mailing_address_id"
+            "mailing_address_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2785,12 +2920,25 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "personal_details_residential_address_id_address_id_fk": {
-          "name": "personal_details_residential_address_id_address_id_fk",
+        "personal_details_residential_address_id_fk_address_id_fk": {
+          "name": "personal_details_residential_address_id_fk_address_id_fk",
           "tableFrom": "personal_details",
           "tableTo": "address",
           "columnsFrom": [
-            "residential_address_id"
+            "residential_address_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "personal_details_disablity_code_id_fk_disability_codes_id_fk": {
+          "name": "personal_details_disablity_code_id_fk_disability_codes_id_fk",
+          "tableFrom": "personal_details",
+          "tableTo": "disability_codes",
+          "columnsFrom": [
+            "disablity_code_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2799,6 +2947,51 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.specializations": {
+      "name": "specializations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2826,8 +3019,42 @@
           "type": "community_type",
           "typeSchema": "public",
           "primaryKey": false,
+          "notNull": false
+        },
+        "handicapped": {
+          "name": "handicapped",
+          "type": "boolean",
+          "primaryKey": false,
           "notNull": false,
-          "default": "'GUJARATI'"
+          "default": false
+        },
+        "level": {
+          "name": "level",
+          "type": "stream_level",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UNDER_GRADUATE'"
+        },
+        "framework": {
+          "name": "framework",
+          "type": "framework_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialization_id_fk": {
+          "name": "specialization_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shift": {
+          "name": "shift",
+          "type": "shift_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
         },
         "last_passed_year": {
           "name": "last_passed_year",
@@ -2845,15 +3072,13 @@
           "name": "active",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false,
-          "default": true
+          "notNull": false
         },
         "alumni": {
           "name": "alumni",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": false,
-          "default": false
+          "notNull": false
         },
         "leaving_date": {
           "name": "leaving_date",
@@ -2896,6 +3121,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "students_specialization_id_fk_specializations_id_fk": {
+          "name": "students_specialization_id_fk_specializations_id_fk",
+          "tableFrom": "students",
+          "tableTo": "specializations",
+          "columnsFrom": [
+            "specialization_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -2914,20 +3152,20 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id": {
-          "name": "student_id",
+        "student_id_fk": {
+          "name": "student_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "transport_id": {
-          "name": "transport_id",
+        "transport_id_fk": {
+          "name": "transport_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "pickup_point_id": {
-          "name": "pickup_point_id",
+        "pickup_point_id_fk": {
+          "name": "pickup_point_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2967,12 +3205,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "transport_details_student_id_students_id_fk": {
-          "name": "transport_details_student_id_students_id_fk",
+        "transport_details_student_id_fk_students_id_fk": {
+          "name": "transport_details_student_id_fk_students_id_fk",
           "tableFrom": "transport_details",
           "tableTo": "students",
           "columnsFrom": [
-            "student_id"
+            "student_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2980,12 +3218,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "transport_details_transport_id_transport_id_fk": {
-          "name": "transport_details_transport_id_transport_id_fk",
+        "transport_details_transport_id_fk_transport_id_fk": {
+          "name": "transport_details_transport_id_fk_transport_id_fk",
           "tableFrom": "transport_details",
           "tableTo": "transport",
           "columnsFrom": [
-            "transport_id"
+            "transport_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2993,12 +3231,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "transport_details_pickup_point_id_pickup_point_id_fk": {
-          "name": "transport_details_pickup_point_id_pickup_point_id_fk",
+        "transport_details_pickup_point_id_fk_pickup_point_id_fk": {
+          "name": "transport_details_pickup_point_id_fk_pickup_point_id_fk",
           "tableFrom": "transport_details",
           "tableTo": "pickup_point",
           "columnsFrom": [
-            "pickup_point_id"
+            "pickup_point_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3043,13 +3281,13 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(11)",
+          "type": "varchar(15)",
           "primaryKey": false,
           "notNull": false
         },
         "whatsapp_number": {
           "name": "whatsapp_number",
-          "type": "varchar(11)",
+          "type": "varchar(15)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3148,6 +3386,14 @@
         "OTHER"
       ]
     },
+    "public.course_type": {
+      "name": "course_type",
+      "schema": "public",
+      "values": [
+        "HONOURS",
+        "GENERAL"
+      ]
+    },
     "public.place_of_stay_type": {
       "name": "place_of_stay_type",
       "schema": "public",
@@ -3204,20 +3450,21 @@
         "NON-GUJARATI"
       ]
     },
-    "public.course_type": {
-      "name": "course_type",
-      "schema": "public",
-      "values": [
-        "HONOURS",
-        "GENERAL"
-      ]
-    },
     "public.framework_type": {
       "name": "framework_type",
       "schema": "public",
       "values": [
         "CBCS",
         "CCF"
+      ]
+    },
+    "public.shift_type": {
+      "name": "shift_type",
+      "schema": "public",
+      "values": [
+        "MORNING",
+        "AFTERNOON",
+        "EVENING"
       ]
     },
     "public.user_type": {

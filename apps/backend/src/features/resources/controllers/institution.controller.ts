@@ -5,6 +5,7 @@ import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { institutionModel } from "../models/institution.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new Institution
 export const createNewInstitution = async (req: Request, res: Response, next: NextFunction) => {
@@ -36,7 +37,7 @@ export const getAllInstitution = async (
     next: NextFunction,
 ) => {
     try {
-        const institution = await db.select().from(institutionModel);
+        const institution = await findAll(institutionModel);
         res
             .status(200)
             .json(

@@ -4,6 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { nationalityModel } from "../models/nationality.model.ts";
+import { findAll } from "@/utils/helper.ts";
 
 export const createNationality = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -17,7 +18,7 @@ export const createNationality = async (req: Request, res: Response, next: NextF
 
 export const getAllNationality= async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const records = await db.select().from(nationalityModel);
+        const records = await findAll(nationalityModel);
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "All nationality fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);

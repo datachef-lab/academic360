@@ -1,9 +1,9 @@
 
 
-import { Payment } from "@/components/ReportPage/types";
+import { Payment } from "@/components/reports/types";
 
 
-  export const mockData: Payment[] = [
+export const mockData: Payment[] = [
     {
         "roll": 1,
         "semester": 8,
@@ -17,8 +17,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.85,
         "letterGrade": "B+",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 2,
         "semester": 4,
         "name": "Ananya Gupta",
@@ -31,8 +31,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.27,
         "letterGrade": "C",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 3,
         "semester": 8,
         "name": "Ishaan Verma",
@@ -45,8 +45,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.15,
         "letterGrade": "C",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 4,
         "semester": 8,
         "name": "Meera Desai",
@@ -59,8 +59,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.37,
         "letterGrade": "A+",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 5,
         "semester": 3,
         "name": "Aryan Joshi",
@@ -73,8 +73,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.06,
         "letterGrade": "B+",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 6,
         "semester": 3,
         "name": "Diya Iyer",
@@ -87,8 +87,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.29,
         "letterGrade": "A",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 7,
         "semester": 8,
         "name": "Kavya Reddy",
@@ -101,8 +101,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.14,
         "letterGrade": "A",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 8,
         "semester": 5,
         "name": "Rohan Singh",
@@ -115,8 +115,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.06,
         "letterGrade": "A+",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 9,
         "semester": 7,
         "name": "Priya Nair",
@@ -129,8 +129,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.51,
         "letterGrade": "B+",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 10,
         "semester": 8,
         "name": "Aditya Mehta",
@@ -143,8 +143,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.93,
         "letterGrade": "A",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 11,
         "semester": 8,
         "name": "Niharika Rao",
@@ -157,8 +157,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.39,
         "letterGrade": "A+",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 12,
         "semester": 3,
         "name": "Siddharth Patel",
@@ -171,8 +171,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.31,
         "letterGrade": "B+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 13,
         "semester": 4,
         "name": "Tanvi Kapoor",
@@ -185,8 +185,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.78,
         "letterGrade": "A+",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 14,
         "semester": 2,
         "name": "Vivaan Kumar",
@@ -199,8 +199,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.25,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 15,
         "semester": 3,
         "name": "Sanya Arora",
@@ -213,8 +213,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.48,
         "letterGrade": "A",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 16,
         "semester": 2,
         "name": "Riya Menon",
@@ -227,8 +227,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.0,
         "letterGrade": "C",
         "remarks": "Very Good"
-      },
-      {
+    },
+    {
         "roll": 17,
         "semester": 7,
         "name": "Arjun Roy",
@@ -241,8 +241,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.99,
         "letterGrade": "C",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 18,
         "semester": 6,
         "name": "Pooja Chaudhary",
@@ -255,8 +255,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.08,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 19,
         "semester": 8,
         "name": "Karan Malhotra",
@@ -269,8 +269,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.42,
         "letterGrade": "C",
         "remarks": "Very Good"
-      },
-      {
+    },
+    {
         "roll": 20,
         "semester": 1,
         "name": "Shruti Pandey",
@@ -283,8 +283,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.73,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 21,
         "semester": 1,
         "name": "Neha Bansal",
@@ -297,8 +297,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.07,
         "letterGrade": "B+",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 22,
         "semester": 2,
         "name": "Vikas Aggarwal",
@@ -311,8 +311,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.33,
         "letterGrade": "C",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 23,
         "semester": 3,
         "name": "Sakshi Jain",
@@ -325,8 +325,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.0,
         "letterGrade": "B+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 24,
         "semester": 3,
         "name": "Gaurav Mishra",
@@ -339,8 +339,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.45,
         "letterGrade": "C",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 25,
         "semester": 2,
         "name": "Akash Yadav",
@@ -353,8 +353,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.86,
         "letterGrade": "B",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 26,
         "semester": 7,
         "name": "Nisha Tiwari",
@@ -367,8 +367,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.99,
         "letterGrade": "A+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 27,
         "semester": 5,
         "name": "Aditi Saxena",
@@ -381,8 +381,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.98,
         "letterGrade": "A",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 28,
         "semester": 3,
         "name": "Rahul Kulkarni",
@@ -395,8 +395,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.32,
         "letterGrade": "B+",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 29,
         "semester": 2,
         "name": "Sneha Bhatt",
@@ -409,8 +409,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.41,
         "letterGrade": "C",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 30,
         "semester": 1,
         "name": "Harsh Tandon",
@@ -423,8 +423,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.44,
         "letterGrade": "B",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 31,
         "semester": 3,
         "name": "Lavanya Tripathi",
@@ -437,8 +437,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.23,
         "letterGrade": "B+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 32,
         "semester": 3,
         "name": "Parth Chawla",
@@ -451,8 +451,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.73,
         "letterGrade": "C",
         "remarks": "Very Good"
-      },
-      {
+    },
+    {
         "roll": 33,
         "semester": 3,
         "name": "Ritika Dutta",
@@ -465,8 +465,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.55,
         "letterGrade": "B+",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 34,
         "semester": 5,
         "name": "Kunal Goswami",
@@ -479,8 +479,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.03,
         "letterGrade": "B+",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 35,
         "semester": 3,
         "name": "Shreya Basu",
@@ -493,8 +493,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 7.67,
         "letterGrade": "C",
         "remarks": "Very Good"
-      },
-      {
+    },
+    {
         "roll": 36,
         "semester": 1,
         "name": "Manav Kapoor",
@@ -507,8 +507,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.95,
         "letterGrade": "B",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 37,
         "semester": 4,
         "name": "Simran Gill",
@@ -521,8 +521,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.49,
         "letterGrade": "B+",
         "remarks": "Satisfactory"
-      },
-      {
+    },
+    {
         "roll": 38,
         "semester": 3,
         "name": "Pranav Joshi",
@@ -535,8 +535,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.86,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 39,
         "semester": 8,
         "name": "Tanya Chopra",
@@ -549,8 +549,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.52,
         "letterGrade": "A+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 40,
         "semester": 7,
         "name": "Raghav Jain",
@@ -563,8 +563,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.6,
         "letterGrade": "B",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 41,
         "semester": 3,
         "name": "Maya Pillai",
@@ -577,8 +577,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.22,
         "letterGrade": "A",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 42,
         "semester": 5,
         "name": "Krishna Nair",
@@ -591,8 +591,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.79,
         "letterGrade": "B",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 43,
         "semester": 8,
         "name": "Aniket Sengupta",
@@ -605,8 +605,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.35,
         "letterGrade": "A+",
         "remarks": "Very Good"
-      },
-      {
+    },
+    {
         "roll": 44,
         "semester": 2,
         "name": "Anushka Patil",
@@ -619,8 +619,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.85,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 45,
         "semester": 2,
         "name": "Devika Rao",
@@ -633,8 +633,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.93,
         "letterGrade": "C",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 46,
         "semester": 8,
         "name": "Kabir Ahuja",
@@ -647,8 +647,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.02,
         "letterGrade": "A+",
         "remarks": "Good"
-      },
-      {
+    },
+    {
         "roll": 47,
         "semester": 6,
         "name": "Mahima Gupta",
@@ -661,8 +661,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 6.49,
         "letterGrade": "A",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 48,
         "semester": 2,
         "name": "Nakul Shah",
@@ -675,8 +675,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 8.01,
         "letterGrade": "C",
         "remarks": "Outstanding"
-      },
-      {
+    },
+    {
         "roll": 49,
         "semester": 8,
         "name": "Samaira Khanna",
@@ -689,8 +689,8 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.96,
         "letterGrade": "C",
         "remarks": "Excellent"
-      },
-      {
+    },
+    {
         "roll": 50,
         "semester": 1,
         "name": "Omkar Kulkarni",
@@ -703,6 +703,5 @@ import { Payment } from "@/components/ReportPage/types";
         "cgpa": 9.25,
         "letterGrade": "C",
         "remarks": "Satisfactory"
-      },
-  ];
-  
+    },
+];

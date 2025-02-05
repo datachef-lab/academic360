@@ -10,9 +10,9 @@ export const placeOfStayTypeEnum = pgEnum('place_of_stay_type', ["OWN", "HOSTEL"
 
 export const accommodationModel = pgTable("accommodation", {
     id: serial().primaryKey(),
-    studentId: integer().unique().references(() => studentModel.id),
+    studentId: integer("student_id_fk").unique().references(() => studentModel.id),
     placeOfStay: placeOfStayTypeEnum(),
-    addressId: integer().references(() => addressModel.id),
+    addressId: integer("address_id_fk").references(() => addressModel.id),
     startDate: date(),
     endDate: date(),
     createdAt: timestamp().notNull().defaultNow(),

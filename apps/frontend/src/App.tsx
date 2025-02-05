@@ -13,13 +13,18 @@ import {
   UserProfilePage,
 } from "@/pages";
 import StudentViewPage from "./pages/StudentViewPage";
+import { AuthProvider } from "./providers/AuthProvider";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
   {
     path: "/home",
-    element: <HomeLayout />,
+    element: (
+      <AuthProvider>
+        <HomeLayout />
+      </AuthProvider>
+    ),
     children: [
       { path: "", element: <MyWorkspacePage /> },
       { path: "academics", element: <HomePage /> },

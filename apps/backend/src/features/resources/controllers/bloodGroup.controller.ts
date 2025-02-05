@@ -1,17 +1,14 @@
 import { db } from "@/db/index.ts";
 import { NextFunction, Request, Response } from "express";
-import { bloodGroupModel } from "../models/bloodGroup.model.ts";
+import { BloodGroup, bloodGroupModel } from "../models/bloodGroup.model.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { handleError } from "@/utils/handleError.ts";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
+import { findAll } from "@/utils/helper.ts";
 
 // Create a new blood group
-export const createBloodGroup = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-) => {
+export const createBloodGroup = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log(req.body);
         const newBloodGroupModel = await db
@@ -41,14 +38,14 @@ export const getAllBloodGroups = async (
 ) => {
     try {
         console.log(req.body);
-        const getAllBloodGroups = await db.select().from(bloodGroupModel);
+        const bloodGroups = await findAll(bloodGroupModel);
         res
             .status(200)
             .json(
                 new ApiResponse(
                     200,
                     "SUCCESS",
-                    getAllBloodGroups,
+                    bloodGroups,
                     "All Blood Groups fetched successfully.",
                 ),
             );

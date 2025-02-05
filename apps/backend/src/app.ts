@@ -18,9 +18,6 @@ import { generateToken } from "./utils/index.ts";
 
 import { userModel, User } from "./features/user/models/user.model.ts";
 
-import degreeRouter from "@/features/resources/routes/degree.routes.ts";
-import occupationRouter from "@/features/resources/routes/occupation.routes.ts";
-import pickupPointRouter from "@/features/resources/routes/pickupPoint.routes.ts";
 import {
     documentRouter,
     marksheetRouter,
@@ -42,7 +39,10 @@ import {
     nationalityRouter,
     religionRouter,
     stateRouter,
+    degreeRouter,
+    occupationRouter,
 } from "@/features/index.ts";
+import { annualIncomeRouter } from "./features/resources/routes/index.ts";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -147,27 +147,25 @@ app.use("/api/subjects", subjectRouter);
 
 app.use("/api/nationality", nationalityRouter);
 
-app.use("/api/religion", religionRouter);
-
-app.use("/api/degree", degreeRouter);
-
-app.use("/api/occupation", occupationRouter);
-
-app.use("/api/pickupPoint", pickupPointRouter);
+app.use("/api/religions", religionRouter);
 
 app.use("/api/state", stateRouter);
 
-app.use("/api/country", countryRouter);
+app.use("/api/nationalities", nationalityRouter);
+
+app.use("/api/countries", countryRouter);
+
+app.use("/api/states", stateRouter);
+
+app.use("/api/cities", cityRouter);
 
 app.use("/api/documents", documentRouter);
 
 app.use("/api/blood-groups", bloodGroupRouter);
 
-app.use("/api/category", categoryRouter);
+app.use("/api/categories", categoryRouter);
 
-app.use("/api/city", cityRouter);
-
-app.use("/api/language-mediums", languageMediumRouter);
+app.use("/api/languages", languageMediumRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
 
@@ -176,6 +174,12 @@ app.use("/api/institutions", institutionRouter);
 app.use("/api/qualifications", qualificationRouter);
 
 app.use("/api/transports", transportRouter);
+
+app.use("/api/degree", degreeRouter);
+
+app.use("/api/occupations", occupationRouter);
+
+app.use("/api/annual-incomes", annualIncomeRouter);
 
 app.use(errorHandler);
 

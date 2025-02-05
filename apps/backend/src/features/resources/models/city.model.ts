@@ -7,7 +7,7 @@ import { relations } from "drizzle-orm";
 export const cityModel = pgTable("cities", {
     id: serial().primaryKey(),
     stateId: integer().notNull().references(() => stateModel.id),
-    name: varchar({ length: 255 }).notNull(),
+    name: varchar({ length: 255 }).notNull().unique(),
     documentRequired: boolean().notNull().default(false),
     code: varchar({ length: 10 }).notNull().unique(),
     createdAt: timestamp().notNull().defaultNow(),
@@ -23,4 +23,4 @@ export const cityRelations = relations(cityModel, ({ one }) => ({
 
 export const createCitySchema = createInsertSchema(cityModel);
 
-export type city = z.infer<typeof createCitySchema>;
+export type City = z.infer<typeof createCitySchema>;

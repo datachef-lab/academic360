@@ -6,7 +6,7 @@ import { z } from "zod";
 
 export const emergencyContactModel = pgTable("emergency_contacts", {
     id: serial().primaryKey(),
-    studentId: integer().references(() => studentModel.id),
+    studentId: integer("student_id_fk").references(() => studentModel.id),
     personName: varchar({ length: 255 }),
     relationToStudent: varchar({ length: 255 }),
     email: varchar({ length: 255 }),

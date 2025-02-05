@@ -9,17 +9,14 @@ import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.ts";
 import { ApiResponse } from "@/utils/ApiResonse.ts";
 import { generateToken } from "@/utils/generateToken.ts";
+import { addUser, findUserByEmail } from "@/features/user/services/user.service.ts";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const givenUser = req.body as User;
-    
-    try {
-        // Hash the password before storing it in the database
-        const hashedPassword = await bcrypt.hash(givenUser.password, 10);
-        givenUser.password = hashedPassword;
 
+    try {
         // Create a new user
-        const [newUser] = await db.insert(userModel).values(givenUser).returning();
+        const newUser = await addUser(givenUser);
 
         res.status(201).json(new ApiResponse(
             201,
@@ -36,44 +33,38 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
-
-        const [foundUser] = await db.select().from(userModel).where(eq(userModel.email, email));
+        console.log(email, password);
+        const foundUser = await findUserByEmail(email);
         if (!foundUser || foundUser.disabled) {
-            res.status(401).json(new ApiError(401, "Unauthorized"));
+            res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
             return;
         }
 
         const isPasswordMatch = await bcrypt.compare(password, foundUser.password);
 
         if (!isPasswordMatch) {
-            res.status(401).json(new ApiError(401, "Unauthorized"));
+            res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id as number, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id as number, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {
             httpOnly: true, // Accessible only by the web server
             secure: false, // Only sent over HTTPS
-            sameSite: "none", // Cross-site request forgery protection
+            // sameSite: "none", // Cross-site request forgery protection
             maxAge: 1000 * 60 * 60 * 24, // 1 day
         });
+
+        // Log cookies before sending response
+        console.log("Cookies set in response:", res.getHeaders()["set-cookie"]);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Login successful"));
 
     } catch (error) {
-        handleError(error, res, next);
-    }
-}
-
-export const googleLogin = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-
-    }
-    catch (error) {
         handleError(error, res, next);
     }
 }
@@ -96,7 +87,7 @@ export const postGoogleLogin = async (req: Request, res: Response, next: NextFun
         res.cookie("jwt", refreshToken, {
             httpOnly: true, // Accessible only by the web server
             secure: false, // Only sent over HTTPS
-            sameSite: "none", // Cross-site request forgery protection
+            // sameSite: "none", // Cross-site request forgery protection
             maxAge: 1000 * 60 * 60 * 24, // 1 day
         });
 
@@ -134,7 +125,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
                 const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
 
-                res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken }, "Token refreshed"));
+                res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Token refreshed"));
             });
 
     } catch (error) {
@@ -144,7 +135,9 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
 
 export const logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log("Fired")
         const cookies = req.cookies;
+        console.log(cookies.jwt);
         if (!cookies.jwt) {
             res.status(204).json(new ApiError(204, "No content"));
             return;
@@ -153,7 +146,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
         res.clearCookie("jwt", {
             httpOnly: true,
             secure: true,
-            sameSite: "none",
+            // sameSite: "none",
         });
 
         // Log out from Google (passport.js logout)
@@ -167,7 +160,7 @@ export const logout = async (req: Request, res: Response, next: NextFunction) =>
             res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));
         });
 
-        res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));
+        // res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Logout successful"));
 
     } catch (error) {
         handleError(error, res, next);
