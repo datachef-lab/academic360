@@ -22,6 +22,7 @@ services:
     env_file:
       - /home/ubuntu/workspace/new-academic360/code/frontend.env
     environment:
+      - VITE_APP_BACKEND_URL=http://13.235.168.107:5000
       - TZ=Asia/Kolkata
     restart: always
     ports:
