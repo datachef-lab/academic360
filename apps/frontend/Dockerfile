@@ -17,7 +17,7 @@ FROM nginx:latest
 
 # Copy build files to Nginx
 COPY --from=builder /app/apps/frontend/dist /usr/share/nginx/html
-COPY ./apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf  
+COPY --from=builder /app/apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf  
 
 # Expose frontend port
 EXPOSE 3003
