@@ -17,13 +17,13 @@ RUN npm install
 # Copy the rest of the code
 COPY . .
 
-RUN npm run db:generate && npm run db:migrate
-
 # Set correct permissions (optional but recommended)
 RUN chmod -R 755 /app
 
 # Build the TypeScript code
 RUN npm run build
+
+RUN npm run db:generate && npm run db:migrate
 
 # Expose backend port
 EXPOSE 5000
