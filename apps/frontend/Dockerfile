@@ -10,7 +10,7 @@ WORKDIR /app
 # Copy all the code
 COPY ./ ./
 
-RUN npm install
+RUN npm install && npm run build
 
 # Use Nginx as base image
 FROM nginx:latest
