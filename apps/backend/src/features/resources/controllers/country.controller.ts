@@ -1,10 +1,10 @@
 import { NextFunction, Response, Request } from "express";
-import { countryModel } from "../models/country.model.ts";
-import { db } from "@/db/index.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { countryModel } from "../models/country.model.js";
+import { db } from "@/db/index.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { findAll } from "@/utils/helper.ts";
+import { findAll } from "@/utils/helper.js";
 
 export const createCountry = async (req: Request, res: Response, next: NextFunction,) => {
     try {

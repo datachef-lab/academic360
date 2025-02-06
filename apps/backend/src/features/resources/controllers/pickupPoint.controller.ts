@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import {ApiResponse} from "@/utils/ApiResonse.js";
 import {handleError} from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { pickupPointModel } from "../models/pickupPoint.model.ts";
-import { findAll } from "@/utils/helper.ts";
+import { pickupPointModel } from "../models/pickupPoint.model.js";
+import { findAll } from "@/utils/helper.js";
 
 
 export const createPickupPoint= async (req: Request, res: Response, next: NextFunction) => {

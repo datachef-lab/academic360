@@ -1,17 +1,17 @@
-import academicHistoryRouter from '@/features/user/routes/academicHistory.route.ts';
-import academicIdentifierRouter from '@/features/user/routes/academicIdentifier.route.ts';
-import accommodationRouter from '@/features/user/routes/accomodation.route.ts';
-import addressRouter from '@/features/user/routes/address.route.ts';
-import admissionRouter from '@/features/user/routes/admission.route.ts';
-import emergencyContactRouter from '@/features/user/routes/emergencyContact.route.ts';
-import guardianRouter from '@/features/user/routes/guardian.route.ts';
-import healthRouter from '@/features/user/routes/health.route.ts';
-import parentRouter from '@/features/user/routes/parent.route.ts';
-import personRouter from '@/features/user/routes/person.route.ts';
-import personalDetailsRouter from '@/features/user/routes/personalDetails.route.ts';
-import transportDetailsRouter from '@/features/user/routes/transportDetails.route.ts';
-import userRouter from '@/features/user/routes/user.route.ts';
-import studentRouter from '@/features/user/routes/student.route.ts';
+import academicHistoryRouter from '@/features/user/routes/academicHistory.route.js';
+import academicIdentifierRouter from '@/features/user/routes/academicIdentifier.route.js';
+import accommodationRouter from '@/features/user/routes/accomodation.route.js';
+import addressRouter from '@/features/user/routes/address.route.js';
+import admissionRouter from '@/features/user/routes/admission.route.js';
+import emergencyContactRouter from '@/features/user/routes/emergencyContact.route.js';
+import guardianRouter from '@/features/user/routes/guardian.route.js';
+import healthRouter from '@/features/user/routes/health.route.js';
+import parentRouter from '@/features/user/routes/parent.route.js';
+import personRouter from '@/features/user/routes/person.route.js';
+import personalDetailsRouter from '@/features/user/routes/personalDetails.route.js';
+import transportDetailsRouter from '@/features/user/routes/transportDetails.route.js';
+import userRouter from '@/features/user/routes/user.route.js';
+import studentRouter from '@/features/user/routes/student.route.js';
 
 export {
     academicHistoryRouter,

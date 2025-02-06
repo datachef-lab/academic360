@@ -1,8 +1,8 @@
 import { date, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.ts";
+import { studentModel } from "./student.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { addressModel } from "./address.model.ts";
+import { addressModel } from "./address.model.js";
 import { relations } from "drizzle-orm";
 
 export const placeOfStayTypeEnum = pgEnum('place_of_stay_type', ["OWN", "HOSTEL", "FAMILY_FRIENDS", "PAYING_GUEST", "RELATIVES"]);

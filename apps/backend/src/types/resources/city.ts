@@ -1,5 +1,5 @@
-import { City } from "@/features/resources/models/city.model.ts";
-import { StateType } from "./state.ts";
+import { City } from "@/features/resources/models/city.model.js";
+import { StateType } from "./state.js";
 
 export interface CityType extends Omit<City, "stateId"> {
     state: StateType | null;

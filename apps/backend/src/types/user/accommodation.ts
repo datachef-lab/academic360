@@ -1,5 +1,5 @@
-import { Accommodation } from "@/features/user/models/accommodation.model.ts";
-import { AddressType } from "./address.ts";
+import { Accommodation } from "@/features/user/models/accommodation.model.js";
+import { AddressType } from "./address.js";
 
 export interface AccommodationType extends Omit<Accommodation, "addressId"> {
     address: AddressType;

@@ -1,40 +1,30 @@
 version: "3.8"
 
 services:
-  postgres:
-    image: postgres:16
-    container_name: postgres-db
-    restart: always
-    env_file: 
-      - ./db.env
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
   backend:
     build: ./apps/backend
     container_name: backend-app
     restart: always
-    env_file: 
+    env_file:
       - /home/ubuntu/workspace/new-academic360/code/backend.env
+    environment:
+      - TZ=Asia/Kolkata
     volumes:
-      - /home/ubuntu/workspace/new-academic360/logs:/logs
+      - /Users/harsh/Developer/datachef/new projects/academic360/apps/backend/logs:/app/logs
     ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
+      - "5000:8080"
 
   frontend:
-    build: ./apps/frontend
+    build: 
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
     container_name: frontend-app
     env_file:
       - /home/ubuntu/workspace/new-academic360/code/frontend.env
+    environment:
+      - TZ=Asia/Kolkata
     restart: always
     ports:
       - "3003:3003"
     depends_on:
       - backend
-
-volumes:
-  postgres_data:

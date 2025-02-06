@@ -1,12 +1,12 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.ts";
+import { studentModel } from "./student.model.js";
 
-import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.ts";
+import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
-import { institutionModel } from "@/features/resources/models/institution.model.ts";
+import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
+import { institutionModel } from "@/features/resources/models/institution.model.js";
 
 export const academicHistoryModel = pgTable("academic_history", {
     id: serial().primaryKey(),

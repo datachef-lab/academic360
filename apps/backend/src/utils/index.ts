@@ -1,9 +1,9 @@
-import { ApiError } from "./ApiError.ts";
-import { ApiResponse } from "./ApiResonse.ts";
-import { formatAadhaarCardNumber } from "./formatAadhaarCardNumber.ts";
-import { generateToken } from "./generateToken.ts";
-import { handleError } from "./handleError.ts";
-import { verifyToken } from "./verifyToken.ts";
+import { ApiError } from "./ApiError.js";
+import { ApiResponse } from "./ApiResonse.js";
+import { formatAadhaarCardNumber } from "./formatAadhaarCardNumber.js";
+import { generateToken } from "./generateToken.js";
+import { handleError } from "./handleError.js";
+import { verifyToken } from "./verifyToken.js";
 
 export {
     ApiResponse,

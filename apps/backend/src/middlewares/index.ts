@@ -1,8 +1,8 @@
-import { errorHandler } from "./errorHandler.middleware.ts";
-import { logger } from "./logger.middleware.ts";
-import { loginLimiter } from "./loginLimiter.middleware.ts";
-import { validateData } from "./validation.middleware.ts";
-import { verifyJWT } from "./verifyJWT.ts";
+import { errorHandler } from "./errorHandler.middleware.js";
+import { logger } from "./logger.middleware.js";
+import { loginLimiter } from "./loginLimiter.middleware.js";
+import { validateData } from "./validation.middleware.js";
+import { verifyJWT } from "./verifyJWT.js";
 
 export {
     errorHandler,

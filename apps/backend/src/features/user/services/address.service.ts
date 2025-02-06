@@ -1,10 +1,10 @@
-import { db } from "@/db/index.ts";
-import { Address, addressModel } from "../models/address.model.ts";
-import { AddressType } from "@/types/user/address.ts";
-import { countryModel } from "@/features/resources/models/country.model.ts";
+import { db } from "@/db/index.js";
+import { Address, addressModel } from "../models/address.model.js";
+import { AddressType } from "@/types/user/address.js";
+import { countryModel } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
-import { stateModel } from "@/features/resources/models/state.model.ts";
-import { cityModel } from "@/features/resources/models/city.model.ts";
+import { stateModel } from "@/features/resources/models/state.model.js";
+import { cityModel } from "@/features/resources/models/city.model.js";
 
 export async function addAddress(address: Address): Promise<AddressType | null> {
     const [newAddress] = await db.insert(addressModel).values(address).returning();

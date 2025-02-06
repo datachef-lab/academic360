@@ -6,7 +6,7 @@ import {
   getAllCity,
   getCitiesById,
   updateCity,
-} from "../controllers/city.controller.ts";
+} from "../controllers/city.controller.js";
 
 const router = express.Router();
 

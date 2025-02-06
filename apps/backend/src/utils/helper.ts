@@ -1,7 +1,7 @@
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { AnyColumn, count, desc, SQLWrapper } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
-import { PaginatedResponse } from "./PaginatedResponse.ts";
+import { PaginatedResponse } from "./PaginatedResponse.js";
 
 export async function findAll<T>(model: PgTable, page: number = 1, pageSize: number = 10, orderByColumn: string = "id"): Promise<PaginatedResponse<T>> {
     const offset = (page - 1) * pageSize;
