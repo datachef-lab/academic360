@@ -38,7 +38,7 @@ jobs:
             fi
 
             echo "🔹 Removing old containers..."
-            sudo docker compose down || true
+            sudo docker-compose down || true
 
             echo "🔹 Resetting Git repository..."
             sudo git fetch --all
@@ -86,6 +86,6 @@ jobs:
             sudo docker compose up --build -d
 
             echo "🔹 Restarting backend and frontend..."
-            sudo docker compose restart backend frontend
+            sudo docker-compose restart backend frontend
 
             echo "✅ Deployment completed!"
