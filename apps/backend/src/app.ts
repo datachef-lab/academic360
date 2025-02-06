@@ -1,5 +1,6 @@
 import "dotenv/config";
 import path from "path";
+import type { StringValue } from "ms";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
@@ -113,9 +114,9 @@ passport.use(
                     return done(null, false, { message: "User not found!" });
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
-                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
 
                 // Redirect to the success URL with tokens
                 return done(null, foundUser, { accessToken, refreshToken });

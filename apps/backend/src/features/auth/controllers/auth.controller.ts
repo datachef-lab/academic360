@@ -1,4 +1,5 @@
 import "dotenv/config";
+import type { StringValue } from "ms";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
@@ -47,9 +48,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id as number, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id as number, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
-        const refreshToken = generateToken({ id: foundUser.id as number, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id as number, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {
@@ -79,9 +80,9 @@ export const postGoogleLogin = async (req: Request, res: Response, next: NextFun
             return;
         }
 
-        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+        const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
-        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+        const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
 
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {
@@ -123,7 +124,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
                     return;
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
                 res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Token refreshed"));
             });
