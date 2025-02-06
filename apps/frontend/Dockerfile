@@ -10,6 +10,9 @@ WORKDIR /app
 # Copy all the code
 COPY ./ ./
 
+# Check all the items copied
+RUN ls
+
 RUN npm install && npm run build
 
 # Use Nginx as base image
