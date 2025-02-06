@@ -44,7 +44,7 @@ jobs:
             sudo git fetch --all
             sudo git reset --hard origin/main
             sudo git pull origin main
-
+ 
             echo "🔹 Creating backend environment file..."
             sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/code/backend.env
             NODE_ENV=production
