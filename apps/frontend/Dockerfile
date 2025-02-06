@@ -15,6 +15,10 @@ RUN ls
 
 RUN npm install && npm run build
 
+RUN ls
+
+RUN cd apps/frontend && ls
+
 # Use Nginx as base image
 FROM nginx:latest
 
