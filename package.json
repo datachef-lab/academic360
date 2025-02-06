@@ -38,8 +38,7 @@
     },
     "packageManager": "npm@10.9.2",
     "workspaces": [
-        "apps/*",
-        "packages/*"
+        "apps/*"
     ],
     "dependencies": {
         "@clerk/clerk-react": "^5.21.2",
