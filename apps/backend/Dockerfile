@@ -25,8 +25,5 @@ RUN npm run build
 
 RUN npm run db:generate && npm run db:migrate
 
-# Expose backend port
-EXPOSE 5000
-
 # Start the application
 CMD ["npm", "run", "start"]

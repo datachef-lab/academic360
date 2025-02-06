@@ -68,7 +68,7 @@ jobs:
             echo "🔹 Creating backend .env file..."
             sudo cat <<EOF > /home/ubuntu/workspace/new-academic360/code/apps/backend/.env
             NODE_ENV=production
-            PORT=5000
+            PORT=8080
             DATABASE_URL=${{ secrets.DATABASE_URL }}
             OLD_DB_HOST=${{ secrets.OLD_DB_HOST }}
             OLD_DB_PORT=${{ secrets.OLD_DB_PORT }}
