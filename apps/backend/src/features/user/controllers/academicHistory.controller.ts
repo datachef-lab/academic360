@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import { 
-    createAcademicHistoryService, 
-    getAcademicHistoryByIdService, 
-    getAllAcademicHistoryService, 
-    updateAcademicHistoryService, 
-    deleteAcademicHistoryService 
-} from "../services/academicHistory.service.ts";
-import { createAcademicHistorySchema } from "../models/academicHistory.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import {
+    createAcademicHistoryService,
+    getAcademicHistoryByIdService,
+    getAllAcademicHistoryService,
+    updateAcademicHistoryService,
+    deleteAcademicHistoryService
+} from "../services/academicHistory.service.js";
+import { createAcademicHistorySchema } from "../models/academicHistory.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 
 export const createAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -48,7 +48,8 @@ export const updateAcademicHistory = async (req: Request, res: Response, next: N
         const validatedData = createAcademicHistorySchema.parse(req.body);
         const records = await updateAcademicHistoryService(Number(id), validatedData);
         if (!records.length) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicHistory not found"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicHistory not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "UPDATED", records, `academicHistory of ID ${id} updated successfully`));
     } catch (error) {
@@ -61,7 +62,8 @@ export const deleteAcademicHistory = async (req: Request, res: Response, next: N
         const { id } = req.params;
         const deletedRecord = await deleteAcademicHistoryService(Number(id));
         if (!deletedRecord.length) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicHistory not found"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicHistory not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "DELETED", deletedRecord, `academicHistory of ID ${id} deleted successfully`));
     } catch (error) {

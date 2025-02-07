@@ -1,23 +1,66 @@
-import { db } from "@/db/index.ts";
-import { academicHistoryModel } from "../models/academicHistory.model.ts";
+import { db } from "@/db/index.js";
+import { AcademicHistory, academicHistoryModel } from "../models/academicHistory.model.js";
 import { eq } from "drizzle-orm";
+import { AcademicHistoryType } from "@/types/user/academic-history.js";
+import { findAllByFormatted } from "@/utils/helper.js";
+import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 
-export const createAcademicHistoryService = async (data: any) => {
-    return await db.insert(academicHistoryModel).values(data).returning();
+export async function addAcademicHistory(academicHistory: AcademicHistory): Promise<AcademicHistoryType | null> {
+    const [newAcadeicHistory] = await db.insert(academicHistoryModel).values(academicHistory).returning();
+
+    const formattedAcademicHistory = await academicHistoryResponseFormat(newAcadeicHistory);
+
+    return formattedAcademicHistory;
 };
 
-export const getAcademicHistoryByIdService = async (id: number) => {
+export const findAcademicHistoryById = async (id: number) => {
     return await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.id, id));
 };
 
-export const getAllAcademicHistoryService = async () => {
-    return await db.select().from(academicHistoryModel);
+export async function findAllAcademicHistory(page: number = 1, pageSize: 10): Promise<PaginatedResponse<AcademicHistoryType>> {
+    const paginatedResponse = await findAllByFormatted<AcademicHistory, AcademicHistoryType>({
+        fn: academicHistoryResponseFormat,
+        model: academicHistoryModel,
+        page,
+        pageSize
+    });
+
+    return paginatedResponse;
 };
 
-export const updateAcademicHistoryService = async (id: number, data: any) => {
-    return await db.update(academicHistoryModel).set(data).where(eq(academicHistoryModel.id, id)).returning();
+export async function saveAcademicHistory(id: number, data: any) {
+    // Return if the academic-history does not exist
+    const foundAcademicHistory = await findAcademicHistoryById(id);
+    if (!foundAcademicHistory) {
+        return null;
+    }
+    // Update the academic-history
+    const [updatedAcademicHistory] = await db.update(academicHistoryModel).set(data).where(eq(academicHistoryModel.id, id)).returning();
+    // TODO: Save the board university
+    
+    // TODO: Save the instituion
+
+    return updatedAcademicHistory;
 };
 
-export const deleteAcademicHistoryService = async (id: number) => {
-    return await db.delete(academicHistoryModel).where(eq(academicHistoryModel.id, id)).returning();
+export async function removeAcademicHistory(id: number) {
+    // Return if the academic-history does not exist
+    const foundAcademicHistory = await findAcademicHistoryById(id);
+    if (!foundAcademicHistory) {
+        return null;
+    }
+    // Delete the academic-history: -
+    const [deletedAcademicIdentifer] = await db.delete(academicHistoryModel).where(eq(academicHistoryModel.id, id)).returning()
+
+    if (!deletedAcademicIdentifer) {
+        return false;
+    }
+
+    return true;
 };
+
+
+export async function academicHistoryResponseFormat(academicHistory: AcademicHistory): Promise<AcademicHistoryType | null> {
+
+    return null;
+}

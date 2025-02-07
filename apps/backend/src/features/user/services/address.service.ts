@@ -5,6 +5,8 @@ import { countryModel } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
 import { stateModel } from "@/features/resources/models/state.model.js";
 import { cityModel } from "@/features/resources/models/city.model.js";
+import { removePersonByAddressId } from "./person.service.js";
+import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 
 export async function addAddress(address: Address): Promise<AddressType | null> {
     const [newAddress] = await db.insert(addressModel).values(address).returning();
@@ -26,8 +28,30 @@ export async function findAddressById(id: number): Promise<AddressType | null> {
     return null;
 }
 
+export async function removeAddress(id: number): Promise<boolean | null> {
+    // Return if the address does not exist
+    const foundAddress = await findAddressById(id);
+    if (!foundAddress) {
+        return null;
+    }
+    // Delete the address: -
+    let isDeleted: boolean | null = false;
+    // Step 1: Delete the person
+    isDeleted = await removePersonByAddressId(id);
+    if (isDeleted !== null && !isDeleted) return false;
 
+    // Step 2: Delete the personal-details
+    isDeleted = await removePersonalDetailsByAddressId(id);
+    if (isDeleted !== null && !isDeleted) return false;
 
+    // Step 3: Delete the address
+    const [deletedAddress] = await db.delete(addressModel).where(eq(addressModel.id, id)).returning();
+    if (!deletedAddress) {
+        return false;
+    }
+
+    return true; // Success!
+}
 
 export async function addressResponseFormat(address: Address) {
     if (!address) {

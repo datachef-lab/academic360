@@ -1,10 +1,10 @@
 import { NextFunction, Response, Request } from "express";
-import { handleError } from "@/utils/handleError.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { db } from "@/db/index.ts";
+import { handleError } from "@/utils/handleError.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
-import { createGuardianSchema, gaurdianModel } from "../models/guardian.model.ts";
+import { createGuardianSchema, gaurdianModel } from "../models/guardian.model.js";
 
 
 

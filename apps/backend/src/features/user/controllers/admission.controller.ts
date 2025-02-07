@@ -1,9 +1,9 @@
 import { NextFunction, Response, Request } from "express";
-import { handleError } from "@/utils/handleError.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { db } from "@/db/index.ts";
+import { handleError } from "@/utils/handleError.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { admissionModel, createAdmissionSchema } from "../models/admission.model.ts";
+import { admissionModel, createAdmissionSchema } from "../models/admission.model.js";
 
 
 

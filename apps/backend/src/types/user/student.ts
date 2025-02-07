@@ -6,4 +6,11 @@ export interface StudentType extends Omit<Student, "specializationId"> {
     specialization: string | null;
     academicIdentifier: AcademicIdentifierType;
     personalDetails: PersonalDetailsType;
+    academicHistoryId: number | null;
+    accomodationId: number | null;
+    admissionId: number | null;
+    parentDetailsId: number | null;
+    guardianDetailsId: number | null;
+    heathId: number | null;
+    emergencyContactId: number | null;
 }

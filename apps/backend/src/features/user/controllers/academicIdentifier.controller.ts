@@ -1,8 +1,8 @@
-import { ApiResponse } from "@/utils/ApiResonse.ts";
+import { ApiResponse } from "@/utils/ApiResonse.js";
 import { NextFunction, Response, Request } from "express";
-import { academicIdentifierModel, createAcademicIdentifierSchema } from "../models/academicIdentifier.model.ts";
-import { db } from "@/db/index.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { academicIdentifierModel, createAcademicIdentifierSchema } from "../models/academicIdentifier.model.js";
+import { db } from "@/db/index.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 
 export const createAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
