@@ -58,36 +58,26 @@ export async function addressResponseFormat(address: Address) {
         return null;
     }
 
-    const tmpAddress: AddressType = {
-        addressLine: address.addressLine,
-        landmark: address.landmark,
-        localityType: address.localityType,
-        phone: address.phone,
-        id: address.id,
-        pincode: address.pincode,
-        createdAt: address.createdAt,
-        updatedAt: address.updatedAt,
-        country: '',
-        state: '',
-        city: ''
-    }
+    const { countryId, stateId, cityId, ...props } = address;
 
-    if (address.countryId) {
-        const [country] = await db.select().from(countryModel).where(eq(countryModel.id, address.countryId));
+    const tmpAddress: AddressType = { ...props }
+
+    if (countryId) {
+        const [country] = await db.select().from(countryModel).where(eq(countryModel.id, countryId));
         if (country) {
-            tmpAddress.country = country.name;
+            tmpAddress.country = country;
         }
     }
-    if (address.stateId) {
-        const [state] = await db.select().from(stateModel).where(eq(stateModel.id, address.stateId));
+    if (stateId) {
+        const [state] = await db.select().from(stateModel).where(eq(stateModel.id, stateId));
         if (state) {
-            tmpAddress.state = state.name;
+            tmpAddress.state = state;
         }
     }
-    if (address.cityId) {
-        const [city] = await db.select().from(cityModel).where(eq(cityModel.id, address.cityId));
+    if (cityId) {
+        const [city] = await db.select().from(cityModel).where(eq(cityModel.id, cityId));
         if (city) {
-            tmpAddress.city = city.name;
+            tmpAddress.city = city;
         }
     }
 
