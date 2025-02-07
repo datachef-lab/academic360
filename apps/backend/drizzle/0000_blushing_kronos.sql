@@ -1,22 +1,16 @@
 CREATE TYPE "public"."stream_level" AS ENUM('UNDER_GRADUATE', 'POST_GRADUATE');--> statement-breakpoint
-CREATE TYPE "public"."subject_type" AS ENUM('COMMON', 'SPECIAL', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
+CREATE TYPE "public"."framework_type" AS ENUM('CCF', 'CBCS');--> statement-breakpoint
+CREATE TYPE "public"."subject_category_type" AS ENUM('SPECIAL', 'COMMON', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
+CREATE TYPE "public"."subject_type" AS ENUM('ABILITY ENHANCEMENT COMPULSORY COURSE', 'CORE COURSE', 'GENERIC ELECTIVE', 'DISCIPLINE SPECIFIC ELECTIVE', 'SKILL ENHANCEMENT COURSE');--> statement-breakpoint
 CREATE TYPE "public"."board_result_type" AS ENUM('FAIL', 'PASS');--> statement-breakpoint
 CREATE TYPE "public"."transport_type" AS ENUM('BUS', 'TRAIN', 'METRO', 'AUTO', 'TAXI', 'CYCLE', 'WALKING', 'OTHER');--> statement-breakpoint
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-========
 CREATE TYPE "public"."course_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 CREATE TYPE "public"."place_of_stay_type" AS ENUM('OWN', 'HOSTEL', 'FAMILY_FRIENDS', 'PAYING_GUEST', 'RELATIVES');--> statement-breakpoint
 CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
 CREATE TYPE "public"."parent_type" AS ENUM('BOTH', 'FATHER_ONLY', 'MOTHER_ONLY');--> statement-breakpoint
 CREATE TYPE "public"."disability_type" AS ENUM('VISUAL', 'HEARING_IMPAIRMENT', 'VISUAL_IMPAIRMENT', 'ORTHOPEDIC', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'TRANSGENDER');--> statement-breakpoint
 CREATE TYPE "public"."community_type" AS ENUM('GUJARATI', 'NON-GUJARATI');--> statement-breakpoint
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-CREATE TYPE "public"."course_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
-========
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
-CREATE TYPE "public"."framework_type" AS ENUM('CBCS', 'CCF');--> statement-breakpoint
 CREATE TYPE "public"."shift_type" AS ENUM('MORNING', 'AFTERNOON', 'EVENING');--> statement-breakpoint
 CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'TEACHER');--> statement-breakpoint
 CREATE TABLE "documents" (
@@ -71,18 +65,24 @@ CREATE TABLE "subject_metadatas" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"stream_id_fk" integer NOT NULL,
 	"semester" integer NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"framework_type" "framework_type" DEFAULT 'CBCS' NOT NULL,
-========
-	"framework" "framework_type" DEFAULT 'CBCS' NOT NULL,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
-	"subject_type" "subject_type" DEFAULT 'COMMON' NOT NULL,
+	"framework" "framework_type" NOT NULL,
+	"specialization_id_fk" integer,
+	"category" "subject_category_type",
+	"subject_type" "subject_type" DEFAULT 'CORE COURSE' NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"credit" integer,
-	"full_marks" integer NOT NULL,
-	"full_marks_internal" integer NOT NULL,
+	"full_marks_theory" integer,
+	"full_marks_tutorial" integer,
+	"full_marks_internal" integer,
 	"full_marks_practical" integer,
-	"full_marks_theory" integer NOT NULL,
+	"full_marks" integer NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "annual_incomes" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"range" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -255,46 +255,13 @@ CREATE TABLE "academic_history" (
 	"studied_up_to_class" integer,
 	"passed_year" integer,
 	"specialization" varchar(255),
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"last_result_id" integer,
-========
 	"last_result_id_fk" integer,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"remarks" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "academic_identifiers" (
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"id" serial PRIMARY KEY NOT NULL,
-	"student_id" integer NOT NULL,
-	"framework_type" "framework_type",
-	"rfid" varchar(255),
-	"stream_id_fk" integer,
-	"course" "course_type",
-	"cu_form_number" varchar(255),
-	"uid" varchar(255),
-	"old_uid" varchar(255),
-	"registration_number" varchar(255),
-	"roll_number" varchar(255),
-	"section" varchar(255),
-	"class_roll_number" varchar(255),
-	"apaar_id" varchar(255),
-	"abc_id" varchar(255),
-	"apprid" varchar(255),
-	"check_repeat" boolean,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "academic_identifiers_studentId_unique" UNIQUE("student_id")
-);
---> statement-breakpoint
-CREATE TABLE "accommodation" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"student_id" integer,
-	"place_of_stay" "place_of_stay_type",
-	"address_id" integer,
-========
 	"id" serial PRIMARY KEY NOT NULL,
 	"student_id_fk" integer NOT NULL,
 	"framework_type" "framework_type",
@@ -322,16 +289,11 @@ CREATE TABLE "accommodation" (
 	"student_id_fk" integer,
 	"place_of_stay" "place_of_stay_type",
 	"address_id_fk" integer,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"start_date" date,
 	"end_date" date,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	CONSTRAINT "accommodation_studentId_unique" UNIQUE("student_id")
-========
 	CONSTRAINT "accommodation_student_id_fk_unique" UNIQUE("student_id_fk")
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 );
 --> statement-breakpoint
 CREATE TABLE "address" (
@@ -350,11 +312,7 @@ CREATE TABLE "address" (
 --> statement-breakpoint
 CREATE TABLE "admissions" (
 	"id" serial PRIMARY KEY NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"student_id" integer NOT NULL,
-========
 	"student_id_fk" integer NOT NULL,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"application_number" varchar(255),
 	"applicant_signature" varchar(255),
 	"year_of_admission" integer,
@@ -362,17 +320,7 @@ CREATE TABLE "admissions" (
 	"admission_code" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	CONSTRAINT "admissions_studentId_unique" UNIQUE("student_id")
-========
 	CONSTRAINT "admissions_student_id_fk_unique" UNIQUE("student_id_fk")
-);
---> statement-breakpoint
-CREATE TABLE "annual_incomes" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"range" varchar(255) NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "disability_codes" (
@@ -381,7 +329,6 @@ CREATE TABLE "disability_codes" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "disability_codes_code_unique" UNIQUE("code")
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 );
 --> statement-breakpoint
 CREATE TABLE "emergency_contacts" (
@@ -419,11 +366,7 @@ CREATE TABLE "health" (
 	"drug_allergy" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	CONSTRAINT "health_studentId_unique" UNIQUE("student_id")
-========
 	CONSTRAINT "health_student_id_fk_unique" UNIQUE("student_id_fk")
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 );
 --> statement-breakpoint
 CREATE TABLE "parent_details" (
@@ -445,15 +388,9 @@ CREATE TABLE "person" (
 	"phone" varchar(255),
 	"aadhaar_card_number" varchar(16),
 	"image" varchar(255),
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"qualification_id" integer,
-	"occupation_id" integer,
-	"office_address_id" integer,
-========
 	"qualification_id_fk" integer,
 	"occupation_id_fk" integer,
 	"office_addres_id_fk" integer,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"office_phone" varchar(15),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -465,15 +402,9 @@ CREATE TABLE "personal_details" (
 	"nationality_id_fk" integer,
 	"other_nationality_id_fk" integer,
 	"aadhaar_card_number" varchar(16),
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"religion_id" integer,
-	"category_id" integer,
-	"mother_tongue_id" integer,
-========
 	"religion_id_fk" integer,
 	"category_id_fk" integer,
 	"mother_tongue_language_medium_id_fk" integer,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"date_of_birth" date,
 	"gender" "gender_type",
 	"email" varchar(255),
@@ -484,8 +415,6 @@ CREATE TABLE "personal_details" (
 	"disablity_code_id_fk" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-========
 );
 --> statement-breakpoint
 CREATE TABLE "specializations" (
@@ -494,19 +423,11 @@ CREATE TABLE "specializations" (
 	"sequence" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 );
 --> statement-breakpoint
 CREATE TABLE "students" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"user_id_fk" integer NOT NULL,
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-	"community" "community_type" DEFAULT 'GUJARATI',
-	"last_passed_year" integer,
-	"notes" text,
-	"active" boolean DEFAULT true,
-	"alumni" boolean DEFAULT false,
-========
 	"community" "community_type",
 	"handicapped" boolean DEFAULT false,
 	"level" "stream_level" DEFAULT 'UNDER_GRADUATE' NOT NULL,
@@ -517,7 +438,6 @@ CREATE TABLE "students" (
 	"notes" text,
 	"active" boolean,
 	"alumni" boolean,
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql
 	"leaving_date" timestamp,
 	"leaving_reason" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -555,49 +475,13 @@ ALTER TABLE "marksheets" ADD CONSTRAINT "marksheets_student_id_fk_students_id_fk
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_marksheet_id_fk_marksheets_id_fk" FOREIGN KEY ("marksheet_id_fk") REFERENCES "public"."marksheets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_subject_metadata_id_fk_subject_metadatas_id_fk" FOREIGN KEY ("subject_metadata_id_fk") REFERENCES "public"."subject_metadatas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_specialization_id_fk_specializations_id_fk" FOREIGN KEY ("specialization_id_fk") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "institutions" ADD CONSTRAINT "institutions_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "institutions" ADD CONSTRAINT "institutions_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "states" ADD CONSTRAINT "states_country_id_countries_id_fk" FOREIGN KEY ("country_id") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-<<<<<<<< HEAD:apps/backend/drizzle/0000_wandering_champions.sql
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_institution_id_institutions_id_fk" FOREIGN KEY ("last_institution_id") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_board_university_id_board_universities_id_fk" FOREIGN KEY ("last_board_university_id") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_result_id_board_result_status_id_fk" FOREIGN KEY ("last_result_id") REFERENCES "public"."board_result_status"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "accommodation" ADD CONSTRAINT "accommodation_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "accommodation" ADD CONSTRAINT "accommodation_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "address" ADD CONSTRAINT "address_country_id_countries_id_fk" FOREIGN KEY ("country_id") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "address" ADD CONSTRAINT "address_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "address" ADD CONSTRAINT "address_city_id_cities_id_fk" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admissions" ADD CONSTRAINT "admissions_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "emergency_contacts" ADD CONSTRAINT "emergency_contacts_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "guardians" ADD CONSTRAINT "guardians_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "guardians" ADD CONSTRAINT "guardians_gaurdian_details_id_person_id_fk" FOREIGN KEY ("gaurdian_details_id") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "health" ADD CONSTRAINT "health_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "health" ADD CONSTRAINT "health_blood_group_id_blood_group_id_fk" FOREIGN KEY ("blood_group_id") REFERENCES "public"."blood_group"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "parent_details" ADD CONSTRAINT "parent_details_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "parent_details" ADD CONSTRAINT "parent_details_father_details_id_person_id_fk" FOREIGN KEY ("father_details_id") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "parent_details" ADD CONSTRAINT "parent_details_mother_details_id_person_id_fk" FOREIGN KEY ("mother_details_id") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "person" ADD CONSTRAINT "person_qualification_id_qualifications_id_fk" FOREIGN KEY ("qualification_id") REFERENCES "public"."qualifications"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "person" ADD CONSTRAINT "person_occupation_id_occupations_id_fk" FOREIGN KEY ("occupation_id") REFERENCES "public"."occupations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "person" ADD CONSTRAINT "person_office_address_id_address_id_fk" FOREIGN KEY ("office_address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_nationality_id_nationality_id_fk" FOREIGN KEY ("nationality_id") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_other_nationality_id_nationality_id_fk" FOREIGN KEY ("other_nationality_id") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_religion_id_religion_id_fk" FOREIGN KEY ("religion_id") REFERENCES "public"."religion"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_category_id_categories_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_mother_tongue_id_language_medium_id_fk" FOREIGN KEY ("mother_tongue_id") REFERENCES "public"."language_medium"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_mailing_address_id_address_id_fk" FOREIGN KEY ("mailing_address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_residential_address_id_address_id_fk" FOREIGN KEY ("residential_address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "students" ADD CONSTRAINT "students_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_student_id_students_id_fk" FOREIGN KEY ("student_id") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_transport_id_transport_id_fk" FOREIGN KEY ("transport_id") REFERENCES "public"."transport"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_pickup_point_id_pickup_point_id_fk" FOREIGN KEY ("pickup_point_id") REFERENCES "public"."pickup_point"("id") ON DELETE no action ON UPDATE no action;
-========
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_institution_id_fk_institutions_id_fk" FOREIGN KEY ("last_institution_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_board_university_id_fk_board_universities_id_fk" FOREIGN KEY ("last_board_university_id_fk") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -636,4 +520,3 @@ ALTER TABLE "students" ADD CONSTRAINT "students_specialization_id_fk_specializat
 ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_transport_id_fk_transport_id_fk" FOREIGN KEY ("transport_id_fk") REFERENCES "public"."transport"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_pickup_point_id_fk_pickup_point_id_fk" FOREIGN KEY ("pickup_point_id_fk") REFERENCES "public"."pickup_point"("id") ON DELETE no action ON UPDATE no action;
->>>>>>>> 45e53fd966377befe2a0130c28d3b87692915e6e:apps/backend/drizzle/0000_ancient_darkhawk.sql

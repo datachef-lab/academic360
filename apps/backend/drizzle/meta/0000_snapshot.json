@@ -1,5 +1,5 @@
 {
-  "id": "ad54a8d9-9330-4165-a6d1-a58483af74b6",
+  "id": "6e1b192c-0e37-420d-8ea7-092934717453",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -352,8 +352,20 @@
           "type": "framework_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'CBCS'"
+          "notNull": true
+        },
+        "specialization_id_fk": {
+          "name": "specialization_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "subject_category_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
         },
         "subject_type": {
           "name": "subject_type",
@@ -361,7 +373,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'COMMON'"
+          "default": "'CORE COURSE'"
         },
         "name": {
           "name": "name",
@@ -375,17 +387,23 @@
           "primaryKey": false,
           "notNull": false
         },
-        "full_marks": {
-          "name": "full_marks",
+        "full_marks_theory": {
+          "name": "full_marks_theory",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "full_marks_tutorial": {
+          "name": "full_marks_tutorial",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "full_marks_internal": {
           "name": "full_marks_internal",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "full_marks_practical": {
           "name": "full_marks_practical",
@@ -393,8 +411,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "full_marks_theory": {
-          "name": "full_marks_theory",
+        "full_marks": {
+          "name": "full_marks",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -428,8 +446,60 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "subject_metadatas_specialization_id_fk_specializations_id_fk": {
+          "name": "subject_metadatas_specialization_id_fk_specializations_id_fk",
+          "tableFrom": "subject_metadatas",
+          "tableTo": "specializations",
+          "columnsFrom": [
+            "specialization_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.annual_incomes": {
+      "name": "annual_incomes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "range": {
+          "name": "range",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2081,45 +2151,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.annual_incomes": {
-      "name": "annual_incomes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "range": {
-          "name": "range",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.disability_codes": {
       "name": "disability_codes",
       "schema": "",
@@ -3353,15 +3384,34 @@
         "POST_GRADUATE"
       ]
     },
+    "public.framework_type": {
+      "name": "framework_type",
+      "schema": "public",
+      "values": [
+        "CCF",
+        "CBCS"
+      ]
+    },
+    "public.subject_category_type": {
+      "name": "subject_category_type",
+      "schema": "public",
+      "values": [
+        "SPECIAL",
+        "COMMON",
+        "HONOURS",
+        "GENERAL",
+        "ELECTIVE"
+      ]
+    },
     "public.subject_type": {
       "name": "subject_type",
       "schema": "public",
       "values": [
-        "COMMON",
-        "SPECIAL",
-        "HONOURS",
-        "GENERAL",
-        "ELECTIVE"
+        "ABILITY ENHANCEMENT COMPULSORY COURSE",
+        "CORE COURSE",
+        "GENERIC ELECTIVE",
+        "DISCIPLINE SPECIFIC ELECTIVE",
+        "SKILL ENHANCEMENT COURSE"
       ]
     },
     "public.board_result_type": {
@@ -3448,14 +3498,6 @@
       "values": [
         "GUJARATI",
         "NON-GUJARATI"
-      ]
-    },
-    "public.framework_type": {
-      "name": "framework_type",
-      "schema": "public",
-      "values": [
-        "CBCS",
-        "CCF"
       ]
     },
     "public.shift_type": {
