@@ -1,9 +1,9 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { degreeModel } from "./degree.model.ts";
+import { degreeModel } from "./degree.model.js";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { addressModel } from "@/features/user/models/address.model.ts";
+import { addressModel } from "@/features/user/models/address.model.js";
 
 export const institutionModel = pgTable("institutions", {
     id: serial().primaryKey(),

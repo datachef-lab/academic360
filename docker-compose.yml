@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./apps/backend
+    container_name: backend-app
+    restart: always
+    env_file:
+      - /home/ubuntu/workspace/new-academic360/code/backend.env
+    environment:
+      - TZ=Asia/Kolkata
+    volumes:
+      - /Users/harsh/Developer/datachef/new projects/academic360/apps/backend/logs:/app/logs
+    ports:
+      - "5000:8080"
+
+  frontend:
+    build: 
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    container_name: frontend-app
+    env_file:
+      - /home/ubuntu/workspace/new-academic360/code/frontend.env
+    environment:
+      - VITE_APP_BACKEND_URL=http://backend-app:8080
+      - TZ=Asia/Kolkata
+    restart: always
+    ports:
+      - "3003:3003"
+    depends_on:
+      - backend

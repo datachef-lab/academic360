@@ -1,4 +1,4 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
 import { createAcademicIdentifier, deleteAcademicIdentifier, getAcademicIdentifier, getAllAcademicIdentifier, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.ts";
 

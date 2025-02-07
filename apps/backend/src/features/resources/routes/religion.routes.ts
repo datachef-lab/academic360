@@ -1,11 +1,11 @@
 import express from "express";
 
 import {
-  createReligion,
-  deleteReligionRecord,
-  getAllReligion,
-  updateReligionRecord,
-} from "../controllers/religion.controller.ts";
+    createReligion,
+    deleteReligionRecord,
+    getAllReligion,
+    updateReligionRecord,
+} from "../controllers/religion.controller.js";
 
 const router = express.Router();
 

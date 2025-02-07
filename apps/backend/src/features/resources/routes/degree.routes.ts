@@ -1,6 +1,6 @@
 
     import express from "express";
-import { createDegree, deleteDegree, getAllDegree, updateDegree } from "../controllers/degree.controller.ts";
+import { createDegree, deleteDegree, getAllDegree, updateDegree } from "../controllers/degree.controller.js";
   
     
     const router = express.Router();

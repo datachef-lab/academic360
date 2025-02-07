@@ -4,8 +4,8 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 
-import { degreeModel } from "../models/degree.model.ts";
-import { findAll } from "@/utils/helper.ts";
+import { degreeModel } from "../models/degree.model.js";
+import { findAll } from "@/utils/helper.js";
 
 
 export const createDegree = async (req: Request, res: Response, next: NextFunction) => {

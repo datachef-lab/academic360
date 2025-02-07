@@ -1,43 +1,48 @@
-import { db, mysqlConnection } from "@/db/index.ts";
+import { db, mysqlConnection } from "@/db/index.js";
+import * as path from "path";
 import bcrypt from "bcrypt";
-import { OldStudent } from "@/types/old-data/old-student.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { OldStudent } from "@/types/old-data/old-student.js";
+import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { User, userModel } from "../models/user.model.ts";
-import { eq, ne } from "drizzle-orm";
-import { Student, studentModel } from "../models/student.model.ts";
-import { accommodationModel } from "../models/accommodation.model.ts";
-import { Address, addressModel } from "../models/address.model.ts";
-import { admissionModel } from "../models/admission.model.ts";
-import { parentModel } from "../models/parent.model.ts";
-import { personModel } from "../models/person.model.ts";
-import { gaurdianModel, Guardian } from "../models/guardian.model.ts";
-import { Health, healthModel } from "../models/health.model.ts";
-import { emergencyContactModel } from "../models/emergencyContact.model.ts";
-import { personalDetailsModel } from "../models/personalDetails.model.ts";
-import { academicHistoryModel } from "../models/academicHistory.model.ts";
-import { transportDetailsModel } from "../models/transportDetails.model.ts";
-import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
+import { User, userModel } from "../models/user.model.js";
+import { and, eq, ne } from "drizzle-orm";
+import { Student, studentModel } from "../models/student.model.js";
+import { accommodationModel } from "../models/accommodation.model.js";
+import { Address, addressModel } from "../models/address.model.js";
+import { admissionModel } from "../models/admission.model.js";
+import { parentModel } from "../models/parent.model.js";
+import { personModel } from "../models/person.model.js";
+import { gaurdianModel, Guardian } from "../models/guardian.model.js";
+import { Health, healthModel } from "../models/health.model.js";
+import { emergencyContactModel } from "../models/emergencyContact.model.js";
+import { personalDetailsModel } from "../models/personalDetails.model.js";
+import { academicHistoryModel } from "../models/academicHistory.model.js";
+import { transportDetailsModel } from "../models/transportDetails.model.js";
+import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
 import { number } from "zod";
-import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.ts";
-import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.ts";
-import { Nationality, nationalityModel } from "@/features/resources/models/nationality.model.ts";
-import { Category, categoryModel } from "@/features/resources/models/category.model.ts";
-import { Religion, religionModel } from "@/features/resources/models/religion.model.ts";
-import { LanguageMedium, languageMediumModel } from "@/features/resources/models/languageMedium.model.ts";
-import { formatAadhaarCardNumber } from "@/utils/formatAadhaarCardNumber.ts";
-import { OldBoard } from "@/types/old-data/old-board.ts";
-import { OldDegree } from "@/types/old-data/old-degree.ts";
-import { OldBoardStatus } from "@/types/old-data/old-board-status.ts";
-import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.ts";
-import { Degree, degreeModel } from "@/features/resources/models/degree.model.ts";
-import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.ts";
+import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.js";
+import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { Nationality, nationalityModel } from "@/features/resources/models/nationality.model.js";
+import { Category, categoryModel } from "@/features/resources/models/category.model.js";
+import { Religion, religionModel } from "@/features/resources/models/religion.model.js";
+import { LanguageMedium, languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
+import { formatAadhaarCardNumber } from "@/utils/formatAadhaarCardNumber.js";
+import { OldBoard } from "@/types/old-data/old-board.js";
+import { OldDegree } from "@/types/old-data/old-degree.js";
+import { OldBoardStatus } from "@/types/old-data/old-board-status.js";
+import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
+import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
+import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { annualIncomeModel } from "../../resources/models/annualIncome.model.ts";
-import { Specialization, specializationModel } from "../models/specialization.model.ts";
+import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
+import { Specialization, specializationModel } from "../models/specialization.model.js";
 import { spec } from "node:test/reporters";
+import { fileURLToPath } from "node:url";
+import { readExcelFile } from "@/utils/readExcel.js";
+import { streamModel } from "@/features/academics/models/stream.model.js";
+import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -184,23 +189,15 @@ export async function addStudent(oldStudent: OldStudent, user: User, db: DbType)
 
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
-        framework: oldStudent.coursetype ? (oldStudent.coursetype.trim().toUpperCase() === "CBCS" ? "CBCS" : oldStudent.coursetype.trim().toUpperCase() === "CCF" ? "CCF" : undefined) : undefined,
-        specializationId: specialization ? specialization.id : undefined,
-        level,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
-        lastPassedYear: oldStudent.lspassedyr,
-        notes: oldStudent.notes,
-        active,
-        alumni,
-        leavingDate: oldStudent.leavingdate,
-        leavingReason: oldStudent.leavingreason,
+        handicapped: !!oldStudent.handicapped,
     }).returning();
 
     return newStudent;
 }
 
 
-export async function addAccommodation(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addAccommodation(oldStudent: OldStudent, student: Student) {
     const [existingAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.studentId, student.id as number));
     if (existingAccommodation) {
         return existingAccommodation;
@@ -241,7 +238,7 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student,
     return newAccommodation;
 }
 
-export async function addAdmission(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addAdmission(oldStudent: OldStudent, student: Student) {
     const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
     if (existingAdmission) {
         return existingAdmission;
@@ -295,7 +292,7 @@ async function categorizeIncome(income: string | null | undefined) {
 }
 
 
-export async function addParent(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addParent(oldStudent: OldStudent, student: Student) {
     const [existingParent] = await db.select().from(parentModel).where(eq(parentModel.studentId, student.id as number));
     if (existingParent) {
         return existingParent;
@@ -364,7 +361,7 @@ export async function addParent(oldStudent: OldStudent, student: Student, db: Db
     return newParent;
 }
 
-export async function addGuardian(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addGuardian(oldStudent: OldStudent, student: Student) {
     const [existingGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.studentId, student.id as number));
     if (existingGuardian) {
         return existingGuardian;
@@ -406,7 +403,7 @@ export async function addGuardian(oldStudent: OldStudent, student: Student, db: 
     return newGuardian;
 }
 
-export async function addHealth(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addHealth(oldStudent: OldStudent, student: Student) {
     const [existingHealth] = await db.select().from(healthModel).where(eq(healthModel.studentId, student.id as number));
     if (existingHealth) {
         return existingHealth;
@@ -430,7 +427,7 @@ export async function addHealth(oldStudent: OldStudent, student: Student, db: Db
     return newHealth;
 }
 
-export async function addEmergencyContact(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addEmergencyContact(oldStudent: OldStudent, student: Student) {
     const [existingEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.studentId, student.id as number));
     if (existingEmergencyContact) {
         return existingEmergencyContact;
@@ -448,7 +445,7 @@ export async function addEmergencyContact(oldStudent: OldStudent, student: Stude
     return newEmergencyContact;
 }
 
-export async function addPersonalDetails(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addPersonalDetails(oldStudent: OldStudent, student: Student) {
     const [existingPersonalDetails] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, student.id as number));
     if (existingPersonalDetails) {
         return existingPersonalDetails;
@@ -603,7 +600,7 @@ export async function addBoardResultStatus(oldStudent: OldStudent, db: DbType): 
     return newBoardResultStatus;
 }
 
-export async function addAcademicHistory(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addAcademicHistory(oldStudent: OldStudent, student: Student) {
     const [existingAcademicHistory] = await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.studentId, student.id as number));
     if (existingAcademicHistory) {
         return existingAcademicHistory;
@@ -632,7 +629,7 @@ export async function addAcademicHistory(oldStudent: OldStudent, student: Studen
     return newAcdemicHistory;
 }
 
-export async function addAcademicIdentifier(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addAcademicIdentifier(oldStudent: OldStudent, student: Student) {
     const cleanString = (value: unknown): string | undefined => {
         if (typeof value === "string") {
             return value.replace(/[\s\-\/]/g, "").trim()?.toUpperCase();
@@ -722,7 +719,7 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
     return newAcademicIdentifier;
 }
 
-export async function addTransportDetails(oldStudent: OldStudent, student: Student, db: DbType) {
+export async function addTransportDetails(oldStudent: OldStudent, student: Student) {
     const [existingTransportDetails] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, student.id as number));
     if (existingTransportDetails) {
         return existingTransportDetails;
@@ -737,6 +734,7 @@ export async function addTransportDetails(oldStudent: OldStudent, student: Stude
     return newTransportDetail;
 }
 
+
 export async function processStudent(oldStudent: OldStudent) {
     // Step 1: Check for the user
     const user = await addUser(oldStudent, db);
@@ -745,37 +743,117 @@ export async function processStudent(oldStudent: OldStudent) {
     const student = await addStudent(oldStudent, user, db);
 
     // Step 3: Check for the accomodation
-    await addAccommodation(oldStudent, student, db);
+    await addAccommodation(oldStudent, student);
 
     // Step 4: Check for the admission
-    await addAdmission(oldStudent, student, db);
+    await addAdmission(oldStudent, student);
 
     // Step 5: Check for the parents
-    await addParent(oldStudent, student, db);
+    await addParent(oldStudent, student);
 
     // Step 6: Check for the guardian
-    await addGuardian(oldStudent, student, db);
+    await addGuardian(oldStudent, student);
 
     // Step 7: Check for the health
-    await addHealth(oldStudent, student, db);
+    await addHealth(oldStudent, student);
 
     // Step 8: Check for the emergency-contact
-    await addEmergencyContact(oldStudent, student, db);
+    await addEmergencyContact(oldStudent, student);
 
     // Step 9: Check for the personal-details
-    await addPersonalDetails(oldStudent, student, db);
+    await addPersonalDetails(oldStudent, student);
 
     // Step 10: Check for the academic-history
-    await addAcademicHistory(oldStudent, student, db);
+    await addAcademicHistory(oldStudent, student);
 
     // Step 11: Check for the academic-identifier
-    await addAcademicIdentifier(oldStudent, student, db);
+    await addAcademicIdentifier(oldStudent, student);
 
     // Step 12: Check for the transport-details
-    await addTransportDetails(oldStudent, student, db);
+    await addTransportDetails(oldStudent, student);
+}
+
+export async function addStream(name: string) {
+    name = name.trim();
+    if (name.endsWith(" (H)") || name.endsWith(" (G)")) {
+        name = name.split(' ')[0];
+    }
+
+    const [existingStream] = await db.select().from(streamModel).where(eq(streamModel.name, name));
+    if (existingStream) {
+        return existingStream;
+    }
+    const [newStream] = await db.insert(streamModel).values({
+        name,
+        duration: 3,
+        numberOfSemesters: 6,
+        level: "UNDER_GRADUATE",
+    }).returning();
+
+    return newStream;
+}
+
+export async function addStreamsAndSubjects() {
+    const directoryName = path.dirname(fileURLToPath(import.meta.url));
+
+    const subjectArr = readExcelFile(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
+    console.log(subjectArr.length)
+    for (let i = 0; i < subjectArr.length; i++) {
+        const stream = await addStream(subjectArr[i].Stream);
+        let specialization: Specialization | undefined;
+        if (subjectArr[i].Specialization) {
+            specialization = await addSpecialization(subjectArr[i].Specialization as string);
+        }
+        let a = subjectCategoryTypeEnum.enumValues;
+        let subjectType = (subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE" || subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE COURSE") ? "DISCIPLINE SPECIFIC ELECTIVE" : subjectArr[i]["Subject Type"];
+        let whereConditions = [
+            eq(subjectMetadataModel.streamId, stream.id),
+            eq(subjectMetadataModel.semester, subjectArr[i].Semester),
+            eq(subjectMetadataModel.name, subjectArr[i]["Subject Name"]),
+            eq(subjectMetadataModel.credit, subjectArr[i].Credit),
+            eq(subjectMetadataModel.subjectType, subjectType as "DISCIPLINE SPECIFIC ELECTIVE" | "ABILITY ENHANCEMENT COMPULSORY COURSE" | "CORE COURSE" | "GENERIC ELECTIVE" | "SKILL ENHANCEMENT COURSE"),
+        ]
+
+        if (subjectArr[i].TH) {
+            whereConditions.push(eq(subjectMetadataModel.fullMarksTheory, subjectArr[i].TH as number));
+        }
+        if (subjectArr[i].TU) {
+            whereConditions.push(eq(subjectMetadataModel.fullMarksTutorial, subjectArr[i].TU as number));
+        }
+        if (subjectArr[i].IN) {
+            whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].IN as number));
+        }
+        if (subjectArr[i].PR) {
+            whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].PR as number));
+        }
+
+        const [foundSubjectMetadata] = await db.select().from(subjectMetadataModel).where(and(...whereConditions));
+
+        if (foundSubjectMetadata) {
+            continue;
+        }
+
+        await db.insert(subjectMetadataModel).values({
+            streamId: stream.id as number,
+            fullMarks: 100,
+            fullMarksInternal: subjectArr[i].IN,
+            fullMarksTheory: subjectArr[i].TH,
+            fullMarksTutorial: subjectArr[i].TU,
+            fullMarksPractical: subjectArr[i].PR,
+            subjectType: (subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE" || subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE COURSE") ? "DISCIPLINE SPECIFIC ELECTIVE" : subjectArr[i]["Subject Type"],
+            framework: "CBCS",
+            category: subjectArr[i].Category,
+            specializationId: specialization ? specialization.id as number : undefined,
+            name: subjectArr[i]["Subject Name"],
+            semester: subjectArr[i].Semester,
+            credit: subjectArr[i].Credit,
+            course: subjectArr[i].Course,
+        } as SubjectMetadata).returning();
+    }
 }
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
+    await addStreamsAndSubjects();
     try {
         console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
         const [rows] = await mysqlConnection.query('SELECT COUNT(*) AS totalRows FROM studentpersonaldetails');
@@ -797,9 +875,6 @@ export const createOldStudent = async (req: Request, res: Response, next: NextFu
 
             }
         }
-
-
-        // await processStudent(oldStudent)
 
         res.status(201).json(new ApiResponse(201, "SUCCESS", true, "Student added successfully!"));
     } catch (error) {

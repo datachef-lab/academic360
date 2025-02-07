@@ -16,8 +16,8 @@ export const logEvents = async (message: string, logFileName: string) => {
     console.log(`${dateTime}\t${uuid()}\t${message}`);
 
     const logsDir = logFileName.includes("errLog") ? "errLogs" : "reqLogs";
-    //   const baseLogDir = path.join(__dirname, "../..", "logs");
-    const baseLogDir = process.env.LOG_DIRECTORY!;
+    const baseLogDir = path.join(__dirname, "../..", "logs");
+    // const baseLogDir = process.env.LOG_DIRECTORY!;
     const targetLogDir = path.join(baseLogDir, logsDir);
     const logFilePath = path.join(targetLogDir, logFileName);
 

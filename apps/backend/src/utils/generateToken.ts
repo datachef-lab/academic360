@@ -1,12 +1,12 @@
 import "dotenv/config";
-import { UserType } from "@/features/user/models/user.model.ts";
+import type { StringValue } from "ms";
 import jwt from "jsonwebtoken";
 
 type PayloadType = {
     id: number,
-    type: UserType["type"]
+    type: "ADMIN" | "STUDENT" | "TEACHER" | null | undefined;
 }
 
-export const generateToken = (payload: PayloadType, secret: string, expiresIn: string | number | undefined) => {
+export const generateToken = (payload: PayloadType, secret: string, expiresIn: StringValue | number = "1h") => {
     return jwt.sign(payload, secret, { expiresIn });
 };

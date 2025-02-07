@@ -1,8 +1,8 @@
-import streamRouter from "@/features/academics/routes/stream.route.ts"
-import subjectMetadataRouter from "@/features/academics/routes/subjectMetadata.route.ts"
-import subjectRouter from "@/features/academics/routes/subject.route.ts"
-import documentRouter from "@/features/academics/routes/document.route.ts"
-import marksheetRouter from "@/features/academics/routes/marksheet.route.ts"
+import streamRouter from "@/features/academics/routes/stream.route.js"
+import subjectMetadataRouter from "@/features/academics/routes/subjectMetadata.route.js"
+import subjectRouter from "@/features/academics/routes/subject.route.js"
+import documentRouter from "@/features/academics/routes/document.route.js"
+import marksheetRouter from "@/features/academics/routes/marksheet.route.js"
 
 export {
     streamRouter,

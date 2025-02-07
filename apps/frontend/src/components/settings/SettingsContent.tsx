@@ -91,6 +91,7 @@ async function fetchData({ activeSetting }: SettingsContentProps) {
 export default function SettingsContent({ activeSetting }: SettingsContentProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [columns, setColumns] = useState<ColumnDef<any, any>[]>([]);
+//   const [page, setPage] = useState(1);
 
   const { data, isLoading } = useQuery({
     queryKey: [activeSetting.label],
@@ -98,6 +99,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
       const { data, columns: tableCol } = await fetchData({ activeSetting });
       console.log("In queryFn, ", data);
       setColumns(tableCol);
+    //   setPage(data.payload.pageNumber);
       return data;
     },
   });
@@ -108,7 +110,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
 
   return (
     <div className="px-7 py-3">
-      <DataTable columns={columns} data={data?.payload.content || []} />
+      {data && <DataTable columns={columns} paginatedData={data.payload} />}
     </div>
   );
 }

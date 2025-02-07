@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 import { occupationModel } from "@/features/resources/models/occupation.model.js";
-import { findAll } from "@/utils/helper.ts";
+import { findAll } from "@/utils/helper.js";
 
 
 export const createOccupation = async (req: Request, res: Response, next: NextFunction) => {

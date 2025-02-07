@@ -1,9 +1,9 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { personModel } from "./person.model.ts";
+import { personModel } from "./person.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { studentModel } from "./student.model.ts";
+import { studentModel } from "./student.model.js";
 
 export const gaurdianModel = pgTable("guardians", {
     id: serial().primaryKey(),

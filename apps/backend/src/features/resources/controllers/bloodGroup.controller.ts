@@ -1,11 +1,11 @@
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { BloodGroup, bloodGroupModel } from "../models/bloodGroup.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { BloodGroup, bloodGroupModel } from "../models/bloodGroup.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { ApiError } from "@/utils/ApiError.ts";
-import { findAll } from "@/utils/helper.ts";
+import { ApiError } from "@/utils/ApiError.js";
+import { findAll } from "@/utils/helper.js";
 
 // Create a new blood group
 export const createBloodGroup = async (req: Request, res: Response, next: NextFunction) => {

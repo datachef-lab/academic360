@@ -1,6 +1,8 @@
 import "dotenv/config";
-import { schemaPaths } from "@/db/schema.ts";
+import { schemaPaths } from "./dist/db/schema";
 import { defineConfig } from "drizzle-kit";
+
+console.log(schemaPaths);
 
 export default defineConfig({
     out: "./drizzle",

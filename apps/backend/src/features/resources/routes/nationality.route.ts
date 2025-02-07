@@ -5,7 +5,7 @@ import {
   deleteNationality,
   getAllNationality,
   updateNationality,
-} from "../controllers/nationality.controller.ts";
+} from "../controllers/nationality.controller.js";
 
 const router = express.Router();
 

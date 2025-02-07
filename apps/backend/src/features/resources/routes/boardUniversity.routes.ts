@@ -5,7 +5,7 @@ import {
     getBoardUniversityById,
     deleteBoardUniversity,
     updateBoardUniversity,
-} from "../controllers/boardUniversity.controller.ts";
+} from "../controllers/boardUniversity.controller.js";
 
 const router = express.Router();
 

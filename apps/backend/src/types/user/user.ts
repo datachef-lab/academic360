@@ -1,5 +1,5 @@
-import { Student } from "@/features/user/models/student.model.ts"
-import { User } from "@/features/user/models/user.model.ts"
+import { Student } from "@/features/user/models/student.model.js"
+import { User } from "@/features/user/models/user.model.js"
 
 export type PayloadType = Student | undefined;
 
