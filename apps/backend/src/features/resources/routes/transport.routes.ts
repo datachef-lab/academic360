@@ -5,7 +5,7 @@ import {
     getAllTransport,
     getTransportById,
     updateTransport,
-} from "../controllers/transport.controller.ts";
+} from "../controllers/transport.controller.js";
 
 const router = express.Router();
 

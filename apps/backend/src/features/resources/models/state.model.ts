@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { countryModel } from "./country.model.ts";
+import { countryModel } from "./country.model.js";
 import { relations } from "drizzle-orm";
 
 export const stateModel = pgTable("states", {

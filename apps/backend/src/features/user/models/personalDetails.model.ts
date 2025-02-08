@@ -2,14 +2,14 @@
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { nationalityModel } from "@/features/resources/models/nationality.model.ts";
-import { studentModel } from "./student.model.ts";
+import { nationalityModel } from "@/features/resources/models/nationality.model.js";
+import { studentModel } from "./student.model.js";
 import { date, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { religionModel } from "@/features/resources/models/religion.model.ts";
-import { addressModel } from "./address.model.ts";
-import { categoryModel } from "@/features/resources/models/category.model.ts";
-import { languageMediumModel } from "@/features/resources/models/languageMedium.model.ts";
-import { disabilityCodeModel } from "./disabilityCode.model.ts";
+import { religionModel } from "@/features/resources/models/religion.model.js";
+import { addressModel } from "./address.model.js";
+import { categoryModel } from "@/features/resources/models/category.model.js";
+import { languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
+import { disabilityCodeModel } from "./disabilityCode.model.js";
 
 export const genderTypeEnum = pgEnum('gender_type', ["MALE", "FEMALE", "TRANSGENDER"]);
 

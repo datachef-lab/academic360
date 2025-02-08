@@ -1,12 +1,12 @@
 
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { userModel } from "../models/user.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { ApiError } from "@/utils/ApiError.ts";
+import { userModel } from "../models/user.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
-import { handleError } from "@/utils/handleError.ts";
-import { findAllUsers, findUserByEmail, findUserById, saveUser, toggleUser } from "../services/user.service.ts";
+import { handleError } from "@/utils/handleError.js";
+import { findAllUsers, findUserByEmail, findUserById, saveUser, toggleUser } from "../services/user.service.js";
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {

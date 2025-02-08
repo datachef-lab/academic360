@@ -1,9 +1,9 @@
 
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { subjectMetadataModel } from "../models/subjectMetadata.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { subjectMetadataModel } from "../models/subjectMetadata.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq, and } from "drizzle-orm";
 
 export const createSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {

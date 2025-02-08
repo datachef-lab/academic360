@@ -1,10 +1,10 @@
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.ts";
+import { studentModel } from "./student.model.js";
 import { relations } from "drizzle-orm";
-import { personModel } from "./person.model.ts";
+import { personModel } from "./person.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { annualIncomeModel } from "../../resources/models/annualIncome.model.ts";
+import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
 
 export const parentTypeEnum = pgEnum("parent_type", ["BOTH", "FATHER_ONLY", "MOTHER_ONLY"]);
 

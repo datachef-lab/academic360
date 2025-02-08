@@ -1,7 +1,7 @@
 import rateLimiter from "express-rate-limit";
-import { logEvents } from "./logger.middleware.ts";
+import { logEvents } from "./logger.middleware.js";
 import { format } from "date-fns";
-import { ApiError } from "@/utils/ApiError.ts";
+import { ApiError } from "@/utils/ApiError.js";
 
 export const loginLimiter = rateLimiter({
     windowMs: 60 * 1000, // 1 minute

@@ -1,11 +1,11 @@
 import { boolean, date, integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
-import { userModel } from "@/features/user/models/user.model.ts";
-import { streamLevelEnum, streamModel } from "@/features/academics/models/stream.model.ts";
+import { userModel } from "@/features/user/models/user.model.js";
+import { streamLevelEnum, streamModel } from "@/features/academics/models/stream.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { specializationModel } from "./specialization.model.ts";
-import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.ts";
+import { specializationModel } from "./specialization.model.js";
+import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
 
 export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
 

@@ -1,6 +1,6 @@
-import { cityModel } from "@/features/resources/models/city.model.ts";
-import { countryModel } from "@/features/resources/models/country.model.ts";
-import { stateModel } from "@/features/resources/models/state.model.ts";
+import { cityModel } from "@/features/resources/models/city.model.js";
+import { countryModel } from "@/features/resources/models/country.model.js";
+import { stateModel } from "@/features/resources/models/state.model.js";
 import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";

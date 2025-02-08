@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { degreeModel } from "./degree.model.ts";
-import { addressModel } from "@/features/user/models/address.model.ts";
+import { degreeModel } from "./degree.model.js";
+import { addressModel } from "@/features/user/models/address.model.js";
 import { relations } from "drizzle-orm";
 
 export const boardUniversityModel = pgTable("board_universities", {

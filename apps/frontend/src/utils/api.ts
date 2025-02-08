@@ -1,4 +1,4 @@
-// axiosSetup.ts
+// axiosSetup.js
 import axios, { AxiosResponse } from "axios";
 
 // Define an Axios instance with a base URL

@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
-import { getAllUsers, getUserByEmail, getUserById, toggleDisableUser, updateUser } from "../controllers/user.controller.ts";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+import { getAllUsers, getUserByEmail, getUserById, toggleDisableUser, updateUser } from "../controllers/user.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 

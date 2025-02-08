@@ -1,10 +1,10 @@
-import { handleError } from "@/utils/handleError.ts";
+import { handleError } from "@/utils/handleError.js";
 import { NextFunction, query, Request, Response } from "express";
-import { documentModel } from "../models/document.model.ts";
-import { db } from "@/db/index.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
+import { documentModel } from "../models/document.model.js";
+import { db } from "@/db/index.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
 import { eq } from "drizzle-orm";
-import { ApiError } from "@/utils/ApiError.ts";
+import { ApiError } from "@/utils/ApiError.js";
 
 //createDocumentMetadata
 export const createDocumentMetadata = async (

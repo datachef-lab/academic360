@@ -1,6 +1,6 @@
 import express from "express";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
-import { createState, deleteStateRecord, getAllState, updateStateRecord } from "../controllers/state.controller.ts";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import { createState, deleteStateRecord, getAllState, updateStateRecord } from "../controllers/state.controller.js";
 
 
 const router = express.Router();

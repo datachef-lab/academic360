@@ -1,11 +1,11 @@
 import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { streamModel } from "@/features/academics/models/stream.model.ts";
+import { streamModel } from "@/features/academics/models/stream.model.js";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
-import { specializationModel } from "@/features/user/models/specialization.model.ts";
-import { courseTypeEnum } from "@/features/user/models/academicIdentifier.model.ts";
+import { specializationModel } from "@/features/user/models/specialization.model.js";
+import { courseTypeEnum } from "@/features/user/models/academicIdentifier.model.js";
 
 export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
     "SPECIAL",

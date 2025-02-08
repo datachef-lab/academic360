@@ -8,8 +8,8 @@ import {
     getDocumentMetadataByName,
     updateDocumentMetadata,
     uploadDocument,
-} from "@/features/academics/controllers/document.controller.ts";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+} from "@/features/academics/controllers/document.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 

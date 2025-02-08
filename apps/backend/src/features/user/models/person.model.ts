@@ -1,10 +1,10 @@
-import { occupationModel } from "@/features/resources/models/occupation.model.ts";
-import { qualificationModel } from "@/features/resources/models/qualification.model.ts";
+import { occupationModel } from "@/features/resources/models/occupation.model.js";
+import { qualificationModel } from "@/features/resources/models/qualification.model.js";
 import { relations } from "drizzle-orm";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { addressModel } from "./address.model.ts";
+import { addressModel } from "./address.model.js";
 
 export const personModel = pgTable("person", {
     id: serial().primaryKey(),

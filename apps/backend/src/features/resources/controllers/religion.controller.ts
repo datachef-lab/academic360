@@ -1,10 +1,10 @@
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { religionModel } from "../models/religion.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { religionModel } from "../models/religion.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { findAll } from "@/utils/helper.ts";
+import { findAll } from "@/utils/helper.js";
 
 export const createReligion = async (
   req: Request,
