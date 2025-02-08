@@ -1,6 +1,6 @@
 import express from "express";
 
-import { createCountry, deleteCountryRecord, getAllCountry, updateCountryRecord } from "../controllers/country.controller.ts";
+import { createCountry, deleteCountryRecord, getAllCountry, updateCountryRecord } from "../controllers/country.controller.js";
 
 
 const router = express.Router();

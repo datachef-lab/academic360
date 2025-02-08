@@ -1,5 +1,5 @@
-import { Parent } from "@/features/user/models/parent.model.ts";
-import { PersonType } from "./person.ts";
+import { Parent } from "@/features/user/models/parent.model.js";
+import { PersonType } from "./person.js";
 
 export interface ParentType extends Omit<Parent, "fatherDetailsId" | "motherDetailsId" | "annualIncomeId"> {
     fatherDetails: PersonType | null;

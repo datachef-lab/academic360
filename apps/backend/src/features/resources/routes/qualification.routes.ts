@@ -1,11 +1,11 @@
 import express from "express";
 import {
-  createNewQualification,
-  deleteQualifications,
-  getAllQualification,
-  getQualificationById,
-  updateQualification,
-} from "../controllers/qualification.controller.ts";
+    createNewQualification,
+    deleteQualifications,
+    getAllQualification,
+    getQualificationById,
+    updateQualification,
+} from "../controllers/qualification.controller.js";
 
 const router = express.Router();
 

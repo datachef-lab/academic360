@@ -1,11 +1,11 @@
 import bcrypt from "bcrypt";
 import { eq, count, desc } from "drizzle-orm";
-import { db } from "@/db/index.ts";
-import { User, userModel } from "../models/user.model.ts";
-import { PayloadType, UserType } from "@/types/user/user.ts";
-import { PaginatedResponse } from "@/utils/PaginatedResponse.ts";
-import { getStudentById } from "./student.service.ts";
-import { findAll } from "@/utils/helper.ts";
+import { db } from "@/db/index.js";
+import { User, userModel } from "../models/user.model.js";
+import { PayloadType, UserType } from "@/types/user/user.js";
+import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+import { getStudentById } from "./student.service.js";
+import { findAll } from "@/utils/helper.js";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database

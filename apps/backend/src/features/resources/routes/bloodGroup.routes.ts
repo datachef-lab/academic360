@@ -4,7 +4,7 @@ import {
   getAllBloodGroups,
   updateBloodGroup,
   deleteBloodGroup,
-} from "../controllers/bloodGroup.controller.ts";
+} from "../controllers/bloodGroup.controller.js";
 
 const router = express.Router();
 

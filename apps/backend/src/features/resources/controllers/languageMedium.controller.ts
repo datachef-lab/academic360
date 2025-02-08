@@ -1,11 +1,11 @@
-import { db } from "@/db/index.ts";
+import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { handleError } from "@/utils/handleError.ts";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { ApiError } from "@/utils/ApiError.ts";
-import { languageMediumModel } from "../models/languageMedium.model.ts";
-import { findAll } from "@/utils/helper.ts";
+import { ApiError } from "@/utils/ApiError.js";
+import { languageMediumModel } from "../models/languageMedium.model.js";
+import { findAll } from "@/utils/helper.js";
 
 // Create a new language Medium
 export const createNewLanguageMedium = async (

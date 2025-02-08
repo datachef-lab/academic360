@@ -1,5 +1,5 @@
 import express from "express";
-import { getAllAnnualIncomes } from "../controllers/annualIncome.controller.ts";
+import { getAllAnnualIncomes } from "../controllers/annualIncome.controller.js";
 
 const router = express.Router();
 

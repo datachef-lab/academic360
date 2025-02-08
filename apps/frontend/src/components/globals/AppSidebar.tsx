@@ -28,7 +28,7 @@ const data = {
     {
       name: "academic360",
       logo: GalleryVerticalEnd,
-      plan: "#development-mode",
+      plan: "v1.0.0-alpha",
     },
     {
       name: "Issues",

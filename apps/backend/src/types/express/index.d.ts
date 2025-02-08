@@ -1,4 +1,4 @@
-import { UserType } from "@/features/user/models/user.model.ts";
+import { UserType } from "@/features/user/models/user.model.js";
 
 export { };
 

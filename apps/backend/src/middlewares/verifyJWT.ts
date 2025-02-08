@@ -1,11 +1,11 @@
 import "dotenv/config";
-import { ApiError } from "@/utils/ApiError.ts";
+import { ApiError } from "@/utils/ApiError.js";
 import { NextFunction, Request, Response } from "express";
-import { verifyToken } from "@/utils/verifyToken.ts";
-import { db } from "@/db/index.ts";
-import { userModel } from "@/features/user/models/user.model.ts";
+import { verifyToken } from "@/utils/verifyToken.js";
+import { db } from "@/db/index.js";
+import { userModel } from "@/features/user/models/user.model.js";
 import { eq } from "drizzle-orm";
-import { handleError } from "@/utils/handleError.ts";
+import { handleError } from "@/utils/handleError.js";
 
 export const verifyJWT = async (req: Request, res: Response, next: NextFunction) => {
     try {

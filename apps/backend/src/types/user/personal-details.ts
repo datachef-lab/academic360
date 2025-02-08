@@ -1,5 +1,5 @@
-import { PersonalDetails } from "@/features/user/models/personalDetails.model.ts";
-import { AddressType } from "./address.ts";
+import { PersonalDetails } from "@/features/user/models/personalDetails.model.js";
+import { AddressType } from "./address.js";
 
 
 export interface PersonalDetailsType extends Omit<PersonalDetails, "nationalityId" | "otherNationalityId" | "religionId" | "categoryId" | "motherTongueId" | "mailingAddressId" | "residentialAddressId" | "disabilityCodeId"> {

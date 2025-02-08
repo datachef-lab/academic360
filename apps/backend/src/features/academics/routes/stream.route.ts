@@ -1,6 +1,6 @@
 import express from "express";
 import { getStreams, createStream, deleteStream, updateStream } from "@/features/academics/controllers/stream.controller.js";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 

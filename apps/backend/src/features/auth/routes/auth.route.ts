@@ -1,9 +1,9 @@
 import express from "express";
-import { createUser, login, logout, postGoogleLogin, refresh } from "../controllers/auth.controller.ts";
+import { createUser, login, logout, postGoogleLogin, refresh } from "../controllers/auth.controller.js";
 
-import { loginLimiter } from "@/middlewares/loginLimiter.middleware.ts";
-import { validateData } from "@/middlewares/validation.middleware.ts";
-import { createUserSchema } from "@/features/user/models/user.model.ts";
+import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
+import { validateData } from "@/middlewares/validation.middleware.js";
+import { createUserSchema } from "@/features/user/models/user.model.js";
 import passport from "passport";
 
 const router = express.Router();

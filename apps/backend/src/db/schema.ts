@@ -16,7 +16,7 @@ const getSchemaFiles = (dir: string, baseDir: string): string[] => {
         const stat = fs.statSync(fullPath);
         if (stat.isDirectory()) {
             schemaFiles.push(...getSchemaFiles(fullPath, baseDir)); // Recursively search in subdirectories
-        } else if (file.endsWith(".model.ts")) {
+        } else if (file.endsWith(".model.ts") || file.endsWith(".model.js")) {
             const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
             schemaFiles.push(`./${relativePath}`);
         }

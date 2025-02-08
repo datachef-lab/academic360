@@ -1,10 +1,19 @@
 import { boolean, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+<<<<<<< HEAD
 import { studentModel } from "./student.model.ts";
 import { streamModel } from "@/features/academics/models/stream.model.ts";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.ts";
+=======
+import { studentModel } from "./student.model.js";
+import { streamModel } from "@/features/academics/models/stream.model.js";
+import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
+>>>>>>> 90004db6fb605e03f0ecb8df3be32b6658a1417b
 
 export const courseTypeEnum = pgEnum("course_type", ["HONOURS", "GENERAL"]);
 

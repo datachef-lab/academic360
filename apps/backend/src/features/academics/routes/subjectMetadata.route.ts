@@ -1,6 +1,6 @@
 import express from "express";
-import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.ts";
-import { verifyJWT } from "@/middlewares/verifyJWT.ts";
+import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 

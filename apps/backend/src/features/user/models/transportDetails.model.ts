@@ -1,7 +1,7 @@
-import { pickupPointModel } from "@/features/resources/models/pickupPoint.model.ts";
-import { transportModel } from "@/features/resources/models/transport.model.ts";
+import { pickupPointModel } from "@/features/resources/models/pickupPoint.model.js";
+import { transportModel } from "@/features/resources/models/transport.model.js";
 import { integer, pgTable, serial, time, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.ts";
+import { studentModel } from "./student.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";

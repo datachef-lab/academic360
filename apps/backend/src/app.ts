@@ -1,5 +1,6 @@
 import "dotenv/config";
 import path from "path";
+import type { StringValue } from "ms";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
@@ -7,16 +8,16 @@ import expressSession from "express-session";
 import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
-import { db } from "./db/index.ts";
+import { db } from "./db/index.js";
 import { eq } from "drizzle-orm";
 
-import { corsOptions } from "@/config/corsOptions.ts";
+import { corsOptions } from "@/config/corsOptions.js";
 
-import { logger, errorHandler } from "@/middlewares/index.ts";
+import { logger, errorHandler } from "@/middlewares/index.js";
 
-import { generateToken } from "./utils/index.ts";
+import { generateToken } from "./utils/index.js";
 
-import { userModel, User } from "./features/user/models/user.model.ts";
+import { userModel, User } from "./features/user/models/user.model.js";
 
 import {
     documentRouter,
@@ -41,8 +42,8 @@ import {
     stateRouter,
     degreeRouter,
     occupationRouter,
-} from "@/features/index.ts";
-import { annualIncomeRouter } from "./features/resources/routes/index.ts";
+} from "@/features/index.js";
+import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -113,9 +114,9 @@ passport.use(
                     return done(null, false, { message: "User not found!" });
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY!);
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
-                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY!);
+                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
 
                 // Redirect to the success URL with tokens
                 return done(null, foundUser, { accessToken, refreshToken });
