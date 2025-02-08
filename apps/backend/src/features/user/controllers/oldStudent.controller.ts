@@ -1,31 +1,9 @@
-<<<<<<< HEAD
-import { db, mysqlConnection } from "@/db/index.ts";
-=======
 import { db, mysqlConnection } from "@/db/index.js";
->>>>>>> 90004db6fb605e03f0ecb8df3be32b6658a1417b
 import * as path from "path";
 import bcrypt from "bcrypt";
 import { OldStudent } from "@/types/old-data/old-student.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-<<<<<<< HEAD
-import { User, userModel } from "../models/user.model.ts";
-import { and, eq, ne } from "drizzle-orm";
-import { Student, studentModel } from "../models/student.model.ts";
-import { accommodationModel } from "../models/accommodation.model.ts";
-import { Address, addressModel } from "../models/address.model.ts";
-import { admissionModel } from "../models/admission.model.ts";
-import { parentModel } from "../models/parent.model.ts";
-import { personModel } from "../models/person.model.ts";
-import { gaurdianModel, Guardian } from "../models/guardian.model.ts";
-import { Health, healthModel } from "../models/health.model.ts";
-import { emergencyContactModel } from "../models/emergencyContact.model.ts";
-import { personalDetailsModel } from "../models/personalDetails.model.ts";
-import { academicHistoryModel } from "../models/academicHistory.model.ts";
-import { transportDetailsModel } from "../models/transportDetails.model.ts";
-import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-=======
 import { User, userModel } from "../models/user.model.js";
 import { and, eq, ne } from "drizzle-orm";
 import { Student, studentModel } from "../models/student.model.js";
@@ -42,7 +20,6 @@ import { academicHistoryModel } from "../models/academicHistory.model.js";
 import { transportDetailsModel } from "../models/transportDetails.model.js";
 import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
->>>>>>> 90004db6fb605e03f0ecb8df3be32b6658a1417b
 import { number } from "zod";
 import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.js";
 import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
@@ -63,15 +40,9 @@ import { annualIncomeModel } from "../../resources/models/annualIncome.model.js"
 import { Specialization, specializationModel } from "../models/specialization.model.js";
 import { spec } from "node:test/reporters";
 import { fileURLToPath } from "node:url";
-<<<<<<< HEAD
-import { readExcelFile } from "@/utils/readExcel.ts";
-import { streamModel } from "@/features/academics/models/stream.model.ts";
-import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.ts";
-=======
 import { readExcelFile } from "@/utils/readExcel.js";
 import { streamModel } from "@/features/academics/models/stream.model.js";
 import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
->>>>>>> 90004db6fb605e03f0ecb8df3be32b6658a1417b
 
 const BATCH_SIZE = 500; // Number of rows per batch
 

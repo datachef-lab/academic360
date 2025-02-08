@@ -1,9 +1,5 @@
 import { date, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-<<<<<<< HEAD
-import { studentModel } from "./student.model.ts";
-=======
 import { studentModel } from "./student.model.js";
->>>>>>> 90004db6fb605e03f0ecb8df3be32b6658a1417b
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { addressModel } from "./address.model.js";

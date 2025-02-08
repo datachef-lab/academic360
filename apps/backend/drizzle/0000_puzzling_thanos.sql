@@ -254,7 +254,7 @@ CREATE TABLE "academic_history" (
 	"last_board_university_id_fk" integer,
 	"studied_up_to_class" integer,
 	"passed_year" integer,
-	"specialization" varchar(255),
+	"specialization_id" integer,
 	"last_result_id_fk" integer,
 	"remarks" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -422,7 +422,8 @@ CREATE TABLE "specializations" (
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "specializations_name_unique" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE "students" (
@@ -485,6 +486,7 @@ ALTER TABLE "states" ADD CONSTRAINT "states_country_id_countries_id_fk" FOREIGN 
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_institution_id_fk_institutions_id_fk" FOREIGN KEY ("last_institution_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_board_university_id_fk_board_universities_id_fk" FOREIGN KEY ("last_board_university_id_fk") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_specialization_id_specializations_id_fk" FOREIGN KEY ("specialization_id") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_result_id_fk_board_result_status_id_fk" FOREIGN KEY ("last_result_id_fk") REFERENCES "public"."board_result_status"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
