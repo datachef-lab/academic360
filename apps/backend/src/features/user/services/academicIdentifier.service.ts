@@ -4,6 +4,16 @@ import { findStreamById } from "@/features/academics/services/stream.service";
 import { db } from "@/db/index";
 import { eq } from "drizzle-orm";
 
+export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
+    const { stream, ...props } = academicIdentifier;
+
+    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({...props}).returning();
+
+    const formattedAcademiIdentifier = await academicIdentifierResponseFormat(newAcademicIdentifier);
+
+    return formattedAcademiIdentifier;
+}
+
 export async function findAcademicIdentifierById(id: number): Promise<AcademicIdentifierType | null> {
     // Return if the academic-identifier doesn't exist
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
@@ -11,6 +21,30 @@ export async function findAcademicIdentifierById(id: number): Promise<AcademicId
     const formattedAcademiIdentifier = await academicIdentifierResponseFormat(foundAcademicIdentifier);
 
     return formattedAcademiIdentifier;
+}
+
+export async function findAcademicIdentifierByStudentId(studentId: number): Promise<AcademicIdentifierType | null> {
+    // Return if the academic-identifier doesn't exist
+    const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, studentId));
+
+    const formattedAcademiIdentifier = await academicIdentifierResponseFormat(foundAcademicIdentifier);
+
+    return formattedAcademiIdentifier;
+}
+
+export async function saveAcademicIdentifier(id: number, academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
+    const { studentId, stream, id: academicIdentifierId, ...props } = academicIdentifier;
+
+    const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
+    if (!foundAcademicIdentifier) {
+        return null;
+    }
+
+    const [updatedAcademicIdentifier] = await db.update(academicIdentifierModel).set({ ...props }).where(eq(academicIdentifierModel.id, id)).returning();
+
+    const formatedAcademicIdentifier = await academicIdentifierResponseFormat(updatedAcademicIdentifier);
+
+    return formatedAcademicIdentifier;
 }
 
 export async function removeAcademicIdentifier(id: number): Promise<boolean | null> {

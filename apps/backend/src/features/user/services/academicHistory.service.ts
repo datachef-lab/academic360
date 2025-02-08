@@ -9,8 +9,16 @@ import { findInstitutionById } from "@/features/resources/services/institution.s
 import { findBoardResultStatusById } from "@/features/resources/services/boardResultStatus.service.js";
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
 
-export async function addAcademicHistory(academicHistory: AcademicHistory): Promise<AcademicHistoryType | null> {
-    const [newAcadeicHistory] = await db.insert(academicHistoryModel).values(academicHistory).returning();
+export async function addAcademicHistory(academicHistory: AcademicHistoryType): Promise<AcademicHistoryType | null> {
+    const { lastBoardUniversity, lastInstitution, lastResult, specialization, ...props } = academicHistory;
+
+    const [newAcadeicHistory] = await db.insert(academicHistoryModel).values({
+        ...props,
+        lastBoardUniversityId: lastBoardUniversity?.id,
+        lastInstitutionId: lastInstitution?.id,
+        lastResultId: lastResult?.id,
+        specializationId: specialization?.id
+    }).returning();
 
     const formattedAcademicHistory = await academicHistoryResponseFormat(newAcadeicHistory);
 
@@ -19,6 +27,14 @@ export async function addAcademicHistory(academicHistory: AcademicHistory): Prom
 
 export async function findAcademicHistoryById(id: number) {
     const [foundAcademicHistory] = await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.id, id));
+
+    const formattedAcademicHistory = await academicHistoryResponseFormat(foundAcademicHistory);
+
+    return formattedAcademicHistory;
+};
+
+export async function findAcademicHistoryByStudentId(studentId: number) {
+    const [foundAcademicHistory] = await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.studentId, studentId));
 
     const formattedAcademicHistory = await academicHistoryResponseFormat(foundAcademicHistory);
 
@@ -36,16 +52,34 @@ export async function findAllAcademicHistory(page: number = 1, pageSize: 10): Pr
     return paginatedResponse;
 };
 
-export async function saveAcademicHistory(id: number, data: any) {
+export async function saveAcademicHistory(id: number, academicHistory: AcademicHistoryType): Promise<AcademicHistoryType | null> {
+    const {
+        lastBoardUniversity,
+        lastInstitution,
+        lastResult,
+        specialization,
+        id: academicHistoryId,
+        studentId,
+        ...props
+    } = academicHistory;
+
     // Return if the academic-history does not exist
     const foundAcademicHistory = await findAcademicHistoryById(id);
     if (!foundAcademicHistory) {
         return null;
     }
     // Update the academic-history
-    const [updatedAcademicHistory] = await db.update(academicHistoryModel).set(data).where(eq(academicHistoryModel.id, id)).returning();
+    const [updatedAcademicHistory] = await db.update(academicHistoryModel).set({
+        ...props,
+        lastBoardUniversityId: lastBoardUniversity?.id,
+        lastInstitutionId: lastInstitution?.id,
+        lastResultId: lastResult?.id,
+        specializationId: specialization?.id
+    }).where(eq(academicHistoryModel.id, id)).returning();
 
-    return updatedAcademicHistory;
+    const formattedAcademicHistory = await academicHistoryResponseFormat(updatedAcademicHistory);
+
+    return formattedAcademicHistory;
 };
 
 export async function removeAcademicHistory(id: number) {
@@ -63,7 +97,6 @@ export async function removeAcademicHistory(id: number) {
 
     return true;
 };
-
 
 export async function academicHistoryResponseFormat(academicHistory: AcademicHistory): Promise<AcademicHistoryType | null> {
     if (!academicHistory) {

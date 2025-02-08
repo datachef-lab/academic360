@@ -8,8 +8,15 @@ import { cityModel } from "@/features/resources/models/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 
-export async function addAddress(address: Address): Promise<AddressType | null> {
-    const [newAddress] = await db.insert(addressModel).values(address).returning();
+export async function addAddress(address: AddressType): Promise<AddressType | null> {
+    const { country, state, city, ...props } = address;
+
+    const [newAddress] = await db.insert(addressModel).values({
+        ...props,
+        countryId: country?.id,
+        stateId: state?.id,
+        cityId: city?.id
+    }).returning();
 
     const formattedAddress = await addressResponseFormat(newAddress);
 
@@ -26,6 +33,27 @@ export async function findAddressById(id: number): Promise<AddressType | null> {
     }
 
     return null;
+}
+
+export async function saveAddress(id: number, address: AddressType): Promise<AddressType | null> {
+    const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
+
+    if (!foundAddress) {
+        return null;
+    }
+
+    const { country, state, city, ...props } = address;
+
+    const [updatedAddress] = await db.update(addressModel).set({
+        countryId: country?.id,
+        stateId: state?.id,
+        cityId: city?.id,
+        ...props
+    }).where(eq(addressModel.id, id)).returning();
+
+    const formattedAddress = await addressResponseFormat(updatedAddress);
+
+    return formattedAddress;
 }
 
 export async function removeAddress(id: number): Promise<boolean | null> {
@@ -60,27 +88,27 @@ export async function addressResponseFormat(address: Address) {
 
     const { countryId, stateId, cityId, ...props } = address;
 
-    const tmpAddress: AddressType = { ...props }
+    const formattedAddress: AddressType = { ...props }
 
     if (countryId) {
         const [country] = await db.select().from(countryModel).where(eq(countryModel.id, countryId));
         if (country) {
-            tmpAddress.country = country;
+            formattedAddress.country = country;
         }
     }
     if (stateId) {
         const [state] = await db.select().from(stateModel).where(eq(stateModel.id, stateId));
         if (state) {
-            tmpAddress.state = state;
+            formattedAddress.state = state;
         }
     }
     if (cityId) {
         const [city] = await db.select().from(cityModel).where(eq(cityModel.id, cityId));
         if (city) {
-            tmpAddress.city = city;
+            formattedAddress.city = city;
         }
     }
 
 
-    return tmpAddress;
+    return formattedAddress;
 }

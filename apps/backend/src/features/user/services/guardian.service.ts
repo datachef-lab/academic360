@@ -1,8 +1,16 @@
 import { GuardianType } from "@/types/user/guardian";
-import { removePerson } from "./person.service";
+import { findPersonById, removePerson, savePerson } from "./person.service";
 import { db } from "@/db/index";
 import { gaurdianModel, Guardian } from "../models/guardian.model";
 import { eq } from "drizzle-orm";
+
+export async function addGuardian(guardian: Guardian): Promise<GuardianType | null> {
+    const [newGuardian] = await db.insert(gaurdianModel).values(guardian).returning();
+
+    const formatedGuardian = await guardianResponseFormat(newGuardian);
+
+    return formatedGuardian;
+}
 
 export async function findGuardianById(id: number): Promise<GuardianType | null> {
     const [foundGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.id, id));
@@ -14,6 +22,25 @@ export async function findGuardianById(id: number): Promise<GuardianType | null>
 
 export async function findGuardianByStudentId(studentId: number): Promise<GuardianType | null> {
     const [foundGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.studentId, studentId));
+
+    const formatedGuardian = await guardianResponseFormat(foundGuardian);
+
+    return formatedGuardian;
+}
+
+export async function saveGuardian(id: number, guardian: GuardianType): Promise<GuardianType | null> {
+    const [foundGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.id, id));
+
+    if (!foundGuardian) {
+        return null;
+    }
+
+    if (guardian.gaurdianDetails) {
+        const updatedGuardianPerson = await savePerson(guardian.gaurdianDetails?.id as number, guardian.gaurdianDetails);
+        if (!updatedGuardianPerson) {
+            return null;
+        }
+    }
 
     const formatedGuardian = await guardianResponseFormat(foundGuardian);
 
@@ -56,5 +83,13 @@ export async function guardianResponseFormat(guardian: Guardian): Promise<Guardi
         return null;
     }
 
-    return null;
+    const { gaurdianDetailsId, ...props } = guardian;
+
+    const formatedGuardian: GuardianType = { gaurdianDetails: null, ...props };
+
+    if (gaurdianDetailsId) {
+        formatedGuardian.gaurdianDetails = await findPersonById(gaurdianDetailsId);
+    }
+
+    return formatedGuardian;
 }
