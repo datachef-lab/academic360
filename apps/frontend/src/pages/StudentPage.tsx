@@ -215,9 +215,8 @@
 //     </div>
 //   );
 // }
-import { Accordion, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { AccordionContent } from "@radix-ui/react-accordion";
-import { BookUser, ContactRound, GraduationCapIcon, Heart, Hospital, IndianRupee, User } from "lucide-react";
+
+import { BookUser, ContactRound, GraduationCapIcon,  Hospital, IndianRupee, User } from "lucide-react";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 

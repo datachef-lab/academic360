@@ -59,13 +59,13 @@ export function StudentSearchDataTable<TData extends SearchStudent, TValue>({ co
   });
 
   return (
-    <div className="  p-4 space-y-4">
+    <div>
         <div className=" py-6 space-y-5 ">
            <div className="ml-7">
             <Input
-                placeholder="Filter by name..."
-                value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-                onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
+                placeholder="Filter by registration ..."
+                value={(table.getColumn("reg_number")?.getFilterValue() as string) ?? ""}
+                onChange={(event) => table.getColumn("reg_number")?.setFilterValue(event.target.value)}
                 className="max-w-sm"
             />
             </div> 
@@ -73,8 +73,8 @@ export function StudentSearchDataTable<TData extends SearchStudent, TValue>({ co
           
       
 
-      <div className="rounded-md border shadow-md  border-gray-400 ">
-        <Table>
+      <div className="rounded-md  w-full overflow-x-auto border shadow-md  border-gray-400 ">
+        <Table className="min-w-[1200px]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="">

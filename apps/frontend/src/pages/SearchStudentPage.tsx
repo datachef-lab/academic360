@@ -4,7 +4,7 @@ import { StudentSearchColumn } from "@/components/tables/resources/Search-studen
 
 export default function SearchStudent() {
   return (
-    <div className="w-full h-full  border-2 p-2 ">
+    <div className="overflow-x-auto  w-full h-full  p-2 ">
       {/* <div className="max-h-[80vh] max-w-[80%] overflow-auto"> */}
         <StudentSearchDataTable 
           data={studentData} 

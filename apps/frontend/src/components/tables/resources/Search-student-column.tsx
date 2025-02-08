@@ -10,10 +10,10 @@ export const StudentSearchColumn: ColumnDef<SearchStudent>[] = [
     accessorKey: "reg_number",
     header: "Registration No.",
   },
-  {
-    accessorKey: "roll",
-    header: "Roll No.",
-  },
+  // {
+  //   accessorKey: "roll",
+  //   header: "Roll No.",
+  // },
   {
     accessorKey: "uid",
     header: "UID",
@@ -66,10 +66,10 @@ export const StudentSearchColumn: ColumnDef<SearchStudent>[] = [
     accessorKey: "specialization",
     header: "Specialization",
   },
-  {
-    accessorKey: "shift",
-    header: "Shift",
-  },
+  // {
+  //   accessorKey: "shift",
+  //   header: "Shift",
+  // },
   {
     accessorKey: "status",
     header: "Status",
