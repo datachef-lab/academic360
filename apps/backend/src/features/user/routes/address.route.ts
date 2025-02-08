@@ -1,6 +1,6 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createAcademicIdentifier, deleteAcademicIdentifier, getAcademicIdentifier, getAllAcademicIdentifier, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.ts";
+import { createAcademicIdentifier, deleteAcademicIdentifier, getAcademicIdentifier, getAllAcademicIdentifier, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.js";
 
 const router = express.Router();
 router.use(verifyJWT);

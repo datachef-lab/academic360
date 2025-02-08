@@ -4,7 +4,7 @@ import { db } from "@/db/index.js";
 import { User, userModel } from "../models/user.model.js";
 import { PayloadType, UserType } from "@/types/user/user.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
-import { getStudentById } from "./student.service.js";
+import { findStudentById } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
 
 export async function addUser(user: User) {
@@ -94,9 +94,10 @@ export async function userResponseFormat(givenUser: User): Promise<UserType | nu
         return null;
     }
 
-    let payload: PayloadType;
+    let payload: PayloadType = null;
     if (givenUser.type == "STUDENT") {
-        payload = await getStudentById(givenUser.id as number);
+        const studentPayload = await findStudentById(givenUser.id as number);
+        payload = studentPayload ? studentPayload : null;
     }
     return { ...givenUser, payload };
 }

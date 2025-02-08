@@ -1,9 +1,9 @@
 import { NextFunction, Response, Request } from "express";
-import { handleError } from "@/utils/handleError.ts";
-import { ApiResponse } from "@/utils/ApiResonse.ts";
-import { db } from "@/db/index.ts";
+import { handleError } from "@/utils/handleError.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { createPersonSchema, personModel } from "../models/person.model.ts";
+import { createPersonSchema, personModel } from "../models/person.model.js";
 
 
 export const createPerson = async (req: Request, res: Response, next: NextFunction) => {
