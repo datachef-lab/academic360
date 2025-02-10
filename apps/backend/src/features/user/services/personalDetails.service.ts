@@ -154,6 +154,10 @@ export async function removePersonalDetailsByAddressId(addresId: number): Promis
 }
 
 export async function personalDetailsResponseFormat(personalDetails: PersonalDetails): Promise<PersonalDetailsType | null> {
+    if (!personalDetails) {
+        return null;
+    }
+
     const {
         categoryId,
         disabilityCodeId,

@@ -45,7 +45,6 @@ import {
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

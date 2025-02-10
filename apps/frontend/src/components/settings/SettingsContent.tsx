@@ -20,7 +20,7 @@ import { Country } from "@/types/resources/country";
 import { State } from "@/types/resources/state";
 import { City } from "@/types/resources/city";
 import { AnnualIncome } from "@/types/resources/annual-income";
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { userColumns } from "../tables/users/user-column";
 import { boardUniversityColumns } from "../tables/resources/board-university-column";
 import { institutionColumns } from "../tables/resources/institution-column";
@@ -44,11 +44,13 @@ type SettingsContentProps = {
     icon: JSX.Element;
     endpoint: string;
   };
+  page?: number;
+  pageSize?: number;
 };
 
-async function fetchData({ activeSetting }: SettingsContentProps) {
-  const response = await axiosInstance.get(`/api${activeSetting.endpoint}`);
-  console.log("in fetchData, label:", activeSetting.label, "response.data:", response.data);
+async function fetchData({ activeSetting, page = 1, pageSize = 10 }: SettingsContentProps) {
+  const response = await axiosInstance.get(`/api${activeSetting.endpoint}?page=${page}&pageSize=${pageSize}`);
+
   switch (activeSetting.label) {
     case "All Users":
       return { data: response.data as ApiResonse<PaginatedResponse<User>>, columns: userColumns };
@@ -88,29 +90,60 @@ async function fetchData({ activeSetting }: SettingsContentProps) {
   }
 }
 
+export interface CustomPaginationState extends PaginationState {
+  totalPages: number;
+  totalElements: number;
+}
+
 export default function SettingsContent({ activeSetting }: SettingsContentProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [columns, setColumns] = useState<ColumnDef<any, any>[]>([]);
-//   const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState<CustomPaginationState>({
+    pageIndex: 0, // TanStack Table is 0-based
+    pageSize: 10,
+    totalElements: 0,
+    totalPages: 1,
+  });
 
   const { data, isLoading } = useQuery({
-    queryKey: [activeSetting.label],
+    queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
     queryFn: async () => {
-      const { data, columns: tableCol } = await fetchData({ activeSetting });
-      console.log("In queryFn, ", data);
+      const { data, columns: tableCol } = await fetchData({
+        activeSetting,
+        page: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+      });
+      console.log(data);
       setColumns(tableCol);
-    //   setPage(data.payload.pageNumber);
-      return data;
+
+      const { content, page, pageSize, totalElements, totalPages } = data.payload;
+
+      console.log({ pageIndex: page, pageSize, totalElements, totalPages });
+
+      setPagination((prev) => ({ ...prev, totalElements, totalPages }));
+
+      return content;
     },
   });
 
-  useEffect(() => {}, [activeSetting, data]);
-
-  if (isLoading) return <p>Loading...</p>;
+  useEffect(() => {
+    setPagination({
+      pageIndex: 0, // TanStack Table is 0-based
+      pageSize: 10,
+      totalElements: 0,
+      totalPages: 1,
+    });
+  }, [activeSetting.label]);
 
   return (
     <div className="px-7 py-3">
-      {data && <DataTable columns={columns} paginatedData={data.payload} />}
+      <DataTable
+        isLoading={isLoading}
+        columns={columns}
+        data={data || []}
+        {...pagination}
+        setPagination={setPagination}
+      />
     </div>
   );
 }
