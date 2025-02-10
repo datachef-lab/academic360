@@ -28,3 +28,34 @@ export async function findAll<T>(model: PgTable, page: number = 1, pageSize: num
         totalPages: Math.ceil(Number(countRows) / pageSize)
     };
 }
+
+interface FindAllByFormattedProps<T, K> {
+    model: PgTable;
+    fn: (ele: T) => Promise<K | null>;
+    page?: number;
+    pageSize?: number;
+    orderByColumn?: string;
+}
+
+export async function findAllByFormatted<T, K>({
+    model,
+    fn,
+    page = 1,
+    pageSize = 10,
+    orderByColumn = "id"
+}: FindAllByFormattedProps<T, K>): Promise<PaginatedResponse<K>> {
+    const arrResponse = await findAll<T>(model, page, pageSize, orderByColumn);
+
+    // Await Promise.all to resolve async operations
+    const content = await Promise.all(arrResponse.content.map(async (ele) => {
+        return await fn(ele);
+    })) as K[];
+
+    return {
+        content,
+        page: arrResponse.page,
+        pageSize: arrResponse.pageSize,
+        totalElemets: arrResponse.totalElemets,
+        totalPages: arrResponse.totalPages
+    };
+}

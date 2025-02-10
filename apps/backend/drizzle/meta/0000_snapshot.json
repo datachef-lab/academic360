@@ -1,5 +1,5 @@
 {
-  "id": "c4781253-3e51-47c3-9a08-88d6c2123faa",
+  "id": "9dfea273-988f-4cb9-864b-885f808b1e3e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1579,9 +1579,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "specialization": {
-          "name": "specialization",
-          "type": "varchar(255)",
+        "specialization_id": {
+          "name": "specialization_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -1646,6 +1646,19 @@
           "tableTo": "board_universities",
           "columnsFrom": [
             "last_board_university_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "academic_history_specialization_id_specializations_id_fk": {
+          "name": "academic_history_specialization_id_specializations_id_fk",
+          "tableFrom": "academic_history",
+          "tableTo": "specializations",
+          "columnsFrom": [
+            "specialization_id"
           ],
           "columnsTo": [
             "id"
@@ -3024,7 +3037,15 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "specializations_name_unique": {
+          "name": "specializations_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

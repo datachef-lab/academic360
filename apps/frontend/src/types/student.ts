@@ -1,0 +1,18 @@
+export interface Student {
+    readonly id?: number,
+    userId: number,
+    community: "GUJARATI" | "NON-GUJARATI",
+    handicapped: boolean,
+    level: "UNDER_GRADUATE" | "POST_GRADUATE",
+    framework: "CCF" | "CBCS",
+    specializationId: number,
+    shift: "MORNING" | "AFTERNOON" | "EVENING",
+    lastPassedYear: number,
+    notes: string,
+    active: boolean,
+    alumni: boolean,
+    leavingDate: Date,
+    leavingReason: string,
+    createdAt: Date,
+    updatedAt: Date,
+}

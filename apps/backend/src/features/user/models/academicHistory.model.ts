@@ -7,6 +7,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
 import { institutionModel } from "@/features/resources/models/institution.model.js";
+import { specializationModel } from "./specialization.model.js";
 
 export const academicHistoryModel = pgTable("academic_history", {
     id: serial().primaryKey(),
@@ -15,7 +16,7 @@ export const academicHistoryModel = pgTable("academic_history", {
     lastBoardUniversityId: integer("last_board_university_id_fk").references(() => boardUniversityModel.id),
     studiedUpToClass: integer(),
     passedYear: integer(),
-    specialization: varchar({ length: 255 }),
+    specializationId: integer().references(() => specializationModel.id),
     lastResultId: integer("last_result_id_fk").references(() => boardResultStatusModel.id),
     remarks: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
@@ -38,6 +39,10 @@ export const academicHistoryRelations = relations(academicHistoryModel, ({ one }
     lastBoardResultStatus: one(boardResultStatusModel, {
         fields: [academicHistoryModel.lastResultId],
         references: [boardResultStatusModel.id]
+    }),
+    specialization: one(specializationModel, {
+        fields: [academicHistoryModel.specializationId],
+        references: [specializationModel.id]
     }),
 }));
 

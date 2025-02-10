@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const specializationModel = pgTable("specializations", {
     id: serial().primaryKey(),
-    name: varchar({ length: 255 }).notNull(),
+    name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

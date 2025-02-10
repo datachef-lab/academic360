@@ -10,7 +10,10 @@ import { findAllUsers, findUserByEmail, findUserById, saveUser, toggleUser } fro
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const users = await findAllUsers();
+        const { page, pageSize } = req.query;
+
+        const users = await findAllUsers(Number(page), Number(pageSize));
+
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
