@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { DataTablePagination } from "./Pagination";
-import FilterAndExportComponent from "./FilterAndExportComponent";
+import { Search } from "lucide-react";
+
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -48,28 +49,31 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
 
   return (
     <div className=" p-4 space-y-4">
-      <div className="flex-wrap w-full py-6 space-y-5 rounded-md border shadow-md border-gray-400">
-        <div className="ml-7">
+      {/* <div className="flex-wrap w-full py-6 space-y-5 rounded-md border shadow-md border-gray-400"> */}
+        <div className="mb-10 ml-2 w-auto">
+          <div className="  p-1 max-w-sm relative">
+          <span className="absolute right-3  top-3"> <Search size={21}></Search></span>
           <Input
             placeholder="Filter by name..."
             value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
             onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-            className="max-w-sm"
+            className="max-w-sm border border-gray-400"
           />
+        {/* </div> */}
         </div>
-        <FilterAndExportComponent />
+        
       </div>
 
       <div className="rounded-md border shadow-md  border-gray-400 ">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="">
+              <TableRow key={headerGroup.id} className="rounded-t-md">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead
                       key={header.id}
-                      className={`text-center border-r border-b text-black rounded-t-lg  bg-slate-50 dark:bg-gray-700 dark:text-white`}
+                      className={`text-center border-r border-b text-black    dark:text-white`}
                     >
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>

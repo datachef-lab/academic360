@@ -63,8 +63,8 @@ export const columns: ColumnDef<Payment>[] = [
     header: "Grade",
   },
   {
-    accessorKey: "remarks",
-    header: "Remarks",
+    accessorKey: "stream",
+    header: "stream",
   },
  
 ];
