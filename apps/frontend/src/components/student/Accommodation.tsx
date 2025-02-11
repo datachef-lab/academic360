@@ -39,6 +39,11 @@ const Accommodation = () => {
       ...prev,
       [name]: name === "placeOfStay" ? value : name.includes("Date") ? value : Number(value),
     }));
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[name];
+      return newErrors;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
@@ -50,6 +55,7 @@ const Accommodation = () => {
       parsed.error.errors.forEach((err) => {
         formattedErrors[err.path[0]] = err.message;
       });
+      console.log("error msg**", formattedErrors);
       setErrors(formattedErrors);
     } else {
       console.log("Form Data Submitted:", parsed.data);
@@ -62,7 +68,10 @@ const Accommodation = () => {
       <div className="max-w-[90%] w-full grid grid-cols-2 gap-7">
         {formElements.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">
-            <label htmlFor={name} className="text-md dark:text-white mb-1 font-medium text-gray-700">{label}</label>
+            <div className="relative  p-1">
+              {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>) : null}
+              <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+            </div>
             <div className={`relative`}>
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
               <Input
@@ -72,10 +81,10 @@ const Accommodation = () => {
                 value={formData[name as keyof StudentAccommodationFormData] || ""}
                 placeholder={label}
                 onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2"
+                className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
               />
             </div>
-            {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>}
+
           </div>
         ))}
         <div className="col-span-2">

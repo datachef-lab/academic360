@@ -17,7 +17,7 @@ const studentSchema = z.object({
 
 type StudentFormData = z.infer<typeof studentSchema>;
 
-const formElement=[
+const formElement = [
   { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500  dark:text-white w-5 h-5" /> },
   { name: "lastInstitutionId", label: "Last Institution ID", type: "number", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "lastBoardUniversityId", label: "Last Board University ID", type: "number", icon: <GraduationCap className="text-gray-500  dark:text-white w-5 h-5" /> },
@@ -48,6 +48,11 @@ const AcademicHistory = () => {
       ...prev,
       [name]: name === "remarks" ? value : value ? Number(value) : undefined,
     }));
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[name];
+      return newErrors;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
@@ -59,6 +64,7 @@ const AcademicHistory = () => {
       parsed.error.errors.forEach((err) => {
         formattedErrors[err.path[0]] = err.message;
       });
+      console.log("error msg**", formattedErrors);
       setErrors(formattedErrors);
     } else {
       console.log("Form Data Submitted:", parsed.data);
@@ -68,11 +74,14 @@ const AcademicHistory = () => {
 
   return (
     <div className=" shadow-md border py-10  w-full flex items-center justify-center px-5">
-    
-      <div  className="  max-w-[90%] w-full grid grid-cols-2  gap-7">
+
+      <div className="  max-w-[90%] w-full grid grid-cols-2  gap-7">
         {formElement.map(({ name, label, type, icon }) => (
           <div key={name} className="flex  flex-col mr-8 ">
-            <label htmlFor={name} className="text-md   dark:text-white mb-1 font-medium text-gray-700">{label}</label>
+            <div className="relative  p-1">
+              {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>) : null}
+              <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+            </div>
             <div className="relative ">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
               <Input
@@ -82,11 +91,11 @@ const AcademicHistory = () => {
                 value={formData[name as keyof StudentFormData] || ""}
                 placeholder={label}
                 onChange={handleChange}
-                className="w-full pl-10  pr-3 py-2 "
+                className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
+              
               />
             </div>
-            {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>}
-          </div>
+           </div>
         ))}
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { z } from "zod";
 import { User, Bus, MapPin, Hash, Clock } from "lucide-react";
 
-// Define Zod schema for validation
+
 const transportAllocationSchema = z.object({
   studentId: z.number().min(1, "Student ID is required"),
   transportId: z.number().min(1, "Transport ID is required"),
@@ -14,10 +14,8 @@ const transportAllocationSchema = z.object({
   dropOffTime: z.string().min(1, "Drop-off Time is required"),
 });
 
-// Infer TypeScript type from schema
 type TransportAllocationFormData = z.infer<typeof transportAllocationSchema>;
 
-// Define form elements with labels, types, and icons
 const formElements = [
   { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "transportId", label: "Transport ID", type: "number", icon: <Bus className="text-gray-500 dark:text-white w-5 h-5" /> },
@@ -28,7 +26,7 @@ const formElements = [
 ];
 
 const TransportDetails = () => {
-  // State to hold form data
+
   const [formData, setFormData] = useState<TransportAllocationFormData>({
     studentId: 0,
     transportId: 0,
@@ -38,7 +36,6 @@ const TransportDetails = () => {
     dropOffTime: "",
   });
 
-  // State to hold form validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Handle input change
@@ -48,9 +45,13 @@ const TransportDetails = () => {
       ...prev,
       [name]: name === "seatNumber" ? value : name.includes("Time") ? value : Number(value),
     }));
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[name];
+      return newErrors;
+    });
   };
 
-  // Handle form submission
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     const parsed = transportAllocationSchema.safeParse(formData);
@@ -60,6 +61,7 @@ const TransportDetails = () => {
       parsed.error.errors.forEach((err) => {
         formattedErrors[err.path[0]] = err.message;
       });
+      console.log("error msg**", formattedErrors);
       setErrors(formattedErrors);
     } else {
       console.log("Form Data Submitted:", parsed.data);
@@ -72,10 +74,13 @@ const TransportDetails = () => {
       <div className="max-w-[80%] w-full grid grid-cols-2 gap-7">
         {formElements.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">
-            <label htmlFor={name} className="text-md dark:text-white mb-1 font-medium text-gray-700">{label}</label>
+            <div className="relative  p-1">
+              {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>) : null}
+              <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+            </div>
             <div className="relative">
               {type !== "time" ? <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span> : null}
-              
+
               <Input
                 id={name}
                 name={name}
@@ -83,10 +88,10 @@ const TransportDetails = () => {
                 value={formData[name as keyof TransportAllocationFormData] || ""}
                 placeholder={label}
                 onChange={handleChange}
-                className={`w-full ${type !== "time" ? "pl-10" : ""} pr-3 py-2`}
-              />
+                className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
+                />
             </div>
-            {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>}
+           
           </div>
         ))}
         <div className="col-span-2">
