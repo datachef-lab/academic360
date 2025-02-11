@@ -12,13 +12,14 @@ import * as XLSX from "xlsx";
 import autoTable, { RowInput } from "jspdf-autotable";
 import { jsPDF } from "jspdf";
 import { ChevronDown } from "lucide-react";
+import { Payment } from "./types";
 
-type Stream = "BCOM" | "BA" | "BSC" | "All";
-type Year = "2021" | "2022" | "2023" | "2024" | "2025" | "All";
+type Stream = "BCOM" | "BA" | "BSC" ;
+type Year = "2021" | "2022" | "2023" | "2024" | "2025" ;
 
 interface FilterAndExportProps {
   onFilter: (filters: { stream: Stream | null; year: Year | null }) => void;
-  filteredData: any[]; // Accept filtered data for exporting
+  filteredData: Payment[]; // Accept filtered data for exporting
 }
 
 const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, filteredData }) => {
