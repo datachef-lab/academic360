@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Globe, IdCard, Languages, Mail, User } from "lucide-react";
+import { Home } from "lucide-react";
 
 // Define the validation schema
 const personalDetailsSchema = z.object({
@@ -13,11 +15,15 @@ const personalDetailsSchema = z.object({
   email: z.string().email("Invalid email"),
   alternativeEmail: z.string().optional(),
   dateOfBirth: z.date(),
+  nationality: z.string().optional(),
+  motherTongue: z.string().optional(),
+  religion: z.string().optional(),
+  residentialAddress: z.string().optional(),
   gender: z.enum(["MALE", "FEMALE", "TRANSGENDER"]),
   disability: z.enum(["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]).optional(),
 });
 
-export default function PersonalDetails() {
+export default function PersonalDetail() {
   const {
     register,
     handleSubmit,
@@ -32,38 +38,91 @@ export default function PersonalDetails() {
   };
 
   return (
-    <div className="">
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-transparent border-none shadow-none m-0 p-">
+    <div className="w-full">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-transparent border-none shadow-none m-0 p-0 w-full">
         {/* Aadhaar Card */}
-        <div>
-          <Label>Aadhaar Card Number</Label>
+        <div className="mt-4 ">
+          <Label className="flex items-center gap-2">
+            <IdCard className="w-5 h-5 text-blue-600" />
+            Aadhaar Card Number
+          </Label>
           <Input type="text" {...register("aadhaarCardNumber")} placeholder="Enter Aadhaar Number" />
-          {errors.aadhaarCardNumber?.message && <p className="text-red-500 text-sm">{errors.aadhaarCardNumber.message.toString()}</p>}
+          {errors.aadhaarCardNumber?.message && (
+            <p className="text-red-500 text-sm">{errors.aadhaarCardNumber.message.toString()}</p>
+          )}
         </div>
 
         {/* Email */}
-        <div>
-          <Label>Email</Label>
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-gray-500" />
+            Email
+          </Label>
           <Input type="email" {...register("email")} placeholder="Enter Email" />
           {errors.email?.message && <p className="text-red-500 text-sm">{errors.email.message.toString()}</p>}
         </div>
 
         {/* Alternative Email */}
-        <div>
-          <Label>Alternative Email</Label>
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-gray-500" />
+            Alternative Email
+          </Label>
           <Input type="email" {...register("alternativeEmail")} placeholder="Enter Alternative Email" />
         </div>
 
         {/* Date of Birth */}
-        <div>
-          <Label>Date of Birth</Label>
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <CalendarIcon className="w-5 h-5 text-blue-600" />
+            Date of Birth
+          </Label>
           <Calendar mode="single" selected={new Date()} onSelect={(date) => setValue("dateOfBirth", date!)} />
           {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth.message?.toString()}</p>}
         </div>
 
+        {/* Nationality */}
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <Globe className="w-5 h-5 text-blue-600" />
+            Nationality
+          </Label>
+          <Input type="text" {...register("nationality")} placeholder="Enter Nationality" />
+        </div>
+
+        {/* Mother Tongue */}
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <Languages className="w-5 h-5 text-blue-600" />
+            Mother Tongue
+          </Label>
+          <Input type="text" {...register("motherTongue")} placeholder="Enter Mother Tongue" />
+        </div>
+
+        {/* Religion */}
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Religion
+          </Label>
+          <Input type="text" {...register("religion")} placeholder="Enter Religion" />
+        </div>
+
+        {/* Residential Address */}
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <Home className="w-5 h-5 text-blue-600" />
+            Residential Address
+          </Label>
+          <Input type="text" {...register("residentialAddress")} placeholder="Enter Residential Address" />
+        </div>
+
         {/* Gender Selection */}
-        <div>
-          <Label>Gender</Label>
+        <div className="mt-4">
+          <Label className="flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Gender
+          </Label>
           <Select onValueChange={(value) => setValue("gender", value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select Gender" />
@@ -78,8 +137,11 @@ export default function PersonalDetails() {
         </div>
 
         {/* Disability Selection */}
-        <div>
-          <Label>Disability</Label>
+        <div className="mt-4">
+          <Label className=" flex items-center gap-2">
+            <User className="w-5 h-5 text-blue-600" />
+            Disability
+          </Label>
           <Select onValueChange={(value) => setValue("disability", value)}>
             <SelectTrigger>
               <SelectValue placeholder="Select Disability (if any)" />
@@ -95,7 +157,7 @@ export default function PersonalDetails() {
         </div>
 
         {/* Submit Button */}
-        <Button type="submit" className="w-full bg-blue-600 text-white">
+        <Button type="submit" className="w-full bg-blue-600 text-white mt-4">
           Submit
         </Button>
       </form>
