@@ -1,5 +1,5 @@
 # Use Node.js for build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Set the timezone to Asia/Kolkata
 ENV TZ=Asia/Kolkata
@@ -10,14 +10,7 @@ WORKDIR /app
 # Copy all the code
 COPY ./ ./
 
-# Check all the items copied
-RUN ls
-
 RUN npm install --legacy-peer-deps && npm run build
-
-RUN ls
-
-RUN cd apps/frontend && ls
 
 # Use Nginx as base image
 FROM nginx:latest
