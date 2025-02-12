@@ -6,15 +6,15 @@ services:
     container_name: backend-app
     restart: always
     env_file:
-      # - /home/ubuntu/workspace/new-academic360/code/backend.env
-      - /Users/harsh/Developer/datachef/new projects/academic360/backend.env
+      - /home/ubuntu/workspace/new-academic360/code/backend.env
+      # - /Users/harsh/Developer/datachef/new projects/academic360/backend.env
     environment:
       - TZ=Asia/Kolkata
     volumes:
-      # - /home/ubuntu/workspace/new-academic360/logs:/app/logs
-      - /Users/harsh/Developer/datachef/new projects/academic360/apps/backend/logs:/app/logs
+      - /home/ubuntu/workspace/new-academic360/logs:/app/logs
+      # - /Users/harsh/Developer/datachef/new projects/academic360/apps/backend/logs:/app/logs
     ports:
-      - "5001:8080"
+      - "5000:8080"
 
   frontend:
     build: 
@@ -22,8 +22,8 @@ services:
       dockerfile: ./apps/frontend/Dockerfile
     container_name: frontend-app
     env_file:
-      # - /home/ubuntu/workspace/new-academic360/code/frontend.env
-      - /Users/harsh/Developer/datachef/new projects/academic360/frontend.env
+      - /home/ubuntu/workspace/new-academic360/code/frontend.env
+      # - /Users/harsh/Developer/datachef/new projects/academic360/frontend.env
     environment:
       - VITE_APP_BACKEND_URL=http://backend-app:8080
       - TZ=Asia/Kolkata
