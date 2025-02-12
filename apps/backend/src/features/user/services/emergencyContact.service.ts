@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { EmergencyContact, emergencyContactModel } from "../models/emergencyContact.model";
+import { db } from "@/db/index.js";
+import { EmergencyContact, emergencyContactModel } from "../models/emergencyContact.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addEmergencyContact(emergencyContact: EmergencyContact): Promise<EmergencyContact | null> {

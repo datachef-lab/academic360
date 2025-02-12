@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { NextFunction, Response, Request } from "express";
-import { AcademicIdentifier, academicIdentifierModel, createAcademicIdentifierSchema } from "../models/academicIdentifier.model.js";
+import { AcademicIdentifier, academicIdentifierModel, createAcademicIdentifierSchema } from "@/features/user/models/academicIdentifier.model.js";
 import { db } from "@/db/index.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";

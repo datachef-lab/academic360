@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { boardUniversityModel } from "../models/boardUniversity.model.js";
+import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
 import { findAll } from "@/utils/helper.js";
 
 // Create a new Board University

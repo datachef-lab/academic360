@@ -1,5 +1,5 @@
 import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "../../user/models/student.model.js";
+import { studentModel } from "@/features/user/models/student.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

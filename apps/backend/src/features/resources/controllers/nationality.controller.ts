@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { nationalityModel } from "../models/nationality.model.js";
+import { nationalityModel } from "@/features/resources/models/nationality.model.js";
 import { findAll } from "@/utils/helper.js";
 
 export const createNationality = async (req: Request, res: Response, next: NextFunction) => {

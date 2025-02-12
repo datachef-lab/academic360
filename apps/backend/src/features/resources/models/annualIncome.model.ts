@@ -1,6 +1,6 @@
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { specializationModel } from "../../user/models/specialization.model.js";
+import { specializationModel } from "@/features/user/models/specialization.model.js";
 import { z } from "zod";
 
 export const annualIncomeModel = pgTable("annual_incomes", {

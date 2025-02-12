@@ -5,7 +5,7 @@ import {
   getAllLanguageMedium,
   getLanguageMediumById,
   updateLanguageMedium,
-} from "../controllers/languageMedium.controller.js";
+} from "@/features/resources/controllers/languageMedium.controller.js";
 
 const router = express.Router();
 

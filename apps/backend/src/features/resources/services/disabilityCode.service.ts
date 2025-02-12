@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Disability, disabilityCodeModel } from "@/features/user/models/disabilityCode.model";
+import { db } from "@/db/index.js";
+import { Disability, disabilityCodeModel } from "@/features/user/models/disabilityCode.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addDisabilityCode(disabilityCode: Disability): Promise<Disability | null> {

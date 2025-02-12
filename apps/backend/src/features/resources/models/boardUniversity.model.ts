@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { degreeModel } from "./degree.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { addressModel } from "@/features/user/models/address.model.js";
 import { relations } from "drizzle-orm";
 

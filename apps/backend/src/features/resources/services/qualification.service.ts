@@ -1,6 +1,6 @@
-import { db } from "@/db/index";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { Qualification, qualificationModel } from "../models/qualification.model";
+import { Qualification, qualificationModel } from "@/features/resources/models/qualification.model.js";
 
 export async function addQualification(qualification: Qualification): Promise<Qualification | null> {
     const [newQualification] = await db.insert(qualificationModel).values(qualification).returning();

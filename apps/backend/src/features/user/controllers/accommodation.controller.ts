@@ -1,6 +1,6 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
-import { Accommodation, accommodationModel, createAccommodationSchema } from "../models/accommodation.model.js";
+import { Accommodation, accommodationModel, createAccommodationSchema } from "@/features/user/models/accommodation.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";

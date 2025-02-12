@@ -1,13 +1,13 @@
-import { db } from "@/db/index";
-import { addressModel } from "../models/address.model";
+import { db } from "@/db/index.js";
+import { addressModel } from "../models/address.model.js";
 import { eq } from "drizzle-orm";
-import { Person, personModel } from "../models/person.model";
-import { PersonType } from "@/types/user/person";
-import { gaurdianModel } from "../models/guardian.model";
-import { parentModel } from "../models/parent.model";
-import { addAddress, addressResponseFormat, findAddressById, saveAddress } from "./address.service";
-import { findOccupationById } from "@/features/resources/services/occupation.service";
-import { findQualificationById } from "@/features/resources/services/qualification.service";
+import { Person, personModel } from "../models/person.model.js";
+import { PersonType } from "@/types/user/person.js";
+import { gaurdianModel } from "../models/guardian.model.js";
+import { parentModel } from "../models/parent.model.js";
+import { addAddress, addressResponseFormat, findAddressById, saveAddress } from "./address.service.js";
+import { findOccupationById } from "@/features/resources/services/occupation.service.js";
+import { findQualificationById } from "@/features/resources/services/qualification.service.js";
 
 export async function addPerson(person: PersonType): Promise<PersonType | null> {
     let { occupation, qualification, officeAddress, ...props } = person;

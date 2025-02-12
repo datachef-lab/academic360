@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { languageMediumModel } from "../models/languageMedium.model.js";
+import { languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
 import { findAll } from "@/utils/helper.js";
 
 // Create a new language Medium

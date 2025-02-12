@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { BloodGroup, bloodGroupModel } from "../models/bloodGroup.model.js";
+import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";

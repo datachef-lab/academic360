@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { institutionModel } from "../models/institution.model.js";
+import { institutionModel } from "@/features/resources/models/institution.model.js";
 import { findAll } from "@/utils/helper.js";
 
 // Create a new Institution

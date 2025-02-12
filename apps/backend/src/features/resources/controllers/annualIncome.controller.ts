@@ -1,7 +1,7 @@
 import { handleError } from "@/utils/handleError.js";
 import { findAll } from "@/utils/helper.js";
 import { NextFunction, Request, Response } from "express";
-import { annualIncomeModel } from "../models/annualIncome.model.js";
+import { annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
 export const getAllAnnualIncomes = async (req: Request, res: Response, next: NextFunction) => {

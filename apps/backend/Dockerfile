@@ -23,6 +23,8 @@ RUN chmod -R 755 /app
 # Build the TypeScript code
 RUN npm run build
 
+RUN ls
+
 RUN npm run db:generate && npm run db:migrate
 
 # Expose backend port

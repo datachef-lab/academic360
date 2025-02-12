@@ -1,9 +1,9 @@
-import { db } from "@/db/index";
-import { Parent, parentModel } from "../models/parent.model";
+import { db } from "@/db/index.js";
+import { Parent, parentModel } from "../models/parent.model.js";
 import { eq } from "drizzle-orm";
-import { addPerson, findPersonById, removePerson, savePerson } from "./person.service";
-import { ParentType } from "@/types/user/parent";
-import { findAnnualIncomeById } from "@/features/resources/services/annualIncome.service";
+import { addPerson, findPersonById, removePerson, savePerson } from "./person.service.js";
+import { ParentType } from "@/types/user/parent.js";
+import { findAnnualIncomeById } from "@/features/resources/services/annualIncome.service.js";
 
 export async function addParent(parent: ParentType): Promise<ParentType | null> {
     let { annualIncome, fatherDetails, motherDetails, parentType, ...props } = parent;

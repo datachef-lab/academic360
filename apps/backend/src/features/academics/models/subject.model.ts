@@ -1,5 +1,5 @@
 import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { marksheetModel } from "./marksheet.model.js";
+import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
 import { subjectMetadataModel } from "./subjectMetadata.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";

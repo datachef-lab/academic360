@@ -1,7 +1,7 @@
-import { AccommodationType } from "@/types/user/accommodation";
-import { Accommodation, accommodationModel } from "../models/accommodation.model";
-import { addAddress, findAddressById } from "./address.service";
-import { db } from "@/db/index";
+import { AccommodationType } from "@/types/user/accommodation.js";
+import { Accommodation, accommodationModel } from "../models/accommodation.model.js";
+import { addAddress, findAddressById } from "./address.service.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
 export async function addAccommodation(accommodation: AccommodationType): Promise<AccommodationType | null> {

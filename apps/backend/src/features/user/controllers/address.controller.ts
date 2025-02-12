@@ -3,8 +3,8 @@ import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { addressModel, createAddressSchema } from "../models/address.model.js";
-import { addAddress, findAddressById, saveAddress } from "../services/address.service.js";
+import { addressModel, createAddressSchema } from "@/features/user/models/address.model.js";
+import { addAddress, findAddressById, saveAddress } from "@/features/user/services/address.service.js";
 import { AddressType } from "@/types/user/address.js";
 
 export const createAddress = async (req: Request, res: Response, next: NextFunction) => {

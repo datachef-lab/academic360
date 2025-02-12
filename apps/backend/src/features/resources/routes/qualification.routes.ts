@@ -5,7 +5,7 @@ import {
     getAllQualification,
     getQualificationById,
     updateQualification,
-} from "../controllers/qualification.controller.js";
+} from "@/features/resources/controllers/qualification.controller.js";
 
 const router = express.Router();
 

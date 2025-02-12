@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { cityModel } from "../models/city.model.js";
+import { cityModel } from "@/features/resources/models/city.model.js";
 import { findAll } from "@/utils/helper.js";
 
 // Create a new city

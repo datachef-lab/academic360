@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent } from "../services/student.service";
+import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student";
-import { ApiError, ApiResponse, handleError } from "@/utils";
+import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 
 export const createStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {

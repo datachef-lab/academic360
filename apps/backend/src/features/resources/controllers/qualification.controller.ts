@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { qualificationModel } from "../models/qualification.model.js";
+import { qualificationModel } from "@/features/resources/models/qualification.model.js";
 import { findAll } from "@/utils/helper.js";
 
 

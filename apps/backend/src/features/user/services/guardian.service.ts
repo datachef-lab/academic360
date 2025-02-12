@@ -1,7 +1,7 @@
-import { GuardianType } from "@/types/user/guardian";
-import { addPerson, findPersonById, removePerson, savePerson } from "./person.service";
-import { db } from "@/db/index";
-import { gaurdianModel, Guardian } from "../models/guardian.model";
+import { GuardianType } from "@/types/user/guardian.js";
+import { addPerson, findPersonById, removePerson, savePerson } from "./person.service.js";
+import { db } from "@/db/index.js";
+import { gaurdianModel, Guardian } from "../models/guardian.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addGuardian(guardian: GuardianType): Promise<GuardianType | null> {

@@ -1,5 +1,5 @@
 import { NextFunction, Response, Request } from "express";
-import { countryModel } from "../models/country.model.js";
+import { countryModel } from "@/features/resources/models/country.model.js";
 import { db } from "@/db/index.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";

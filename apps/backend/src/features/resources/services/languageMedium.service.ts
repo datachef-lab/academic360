@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { LanguageMedium, languageMediumModel } from "../models/languageMedium.model";
+import { db } from "@/db/index.js";
+import { LanguageMedium, languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addLanguageMedium(languageMedium: LanguageMedium): Promise<LanguageMedium | null> {
