@@ -16,7 +16,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 55,
         "cgpa": 7.85,
         "letterGrade": "B+",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 2,
@@ -30,7 +30,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 112,
         "cgpa": 6.27,
         "letterGrade": "C",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 3,
@@ -44,7 +44,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 66,
         "cgpa": 7.15,
         "letterGrade": "C",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 4,
@@ -58,7 +58,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 94,
         "cgpa": 8.37,
         "letterGrade": "A+",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 5,
@@ -72,7 +72,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 145,
         "cgpa": 9.06,
         "letterGrade": "B+",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 6,
@@ -86,7 +86,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 66,
         "cgpa": 8.29,
         "letterGrade": "A",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 7,
@@ -100,7 +100,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 74,
         "cgpa": 7.14,
         "letterGrade": "A",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 8,
@@ -114,7 +114,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 123,
         "cgpa": 7.06,
         "letterGrade": "A+",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 9,
@@ -128,7 +128,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 120,
         "cgpa": 7.51,
         "letterGrade": "B+",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 10,
@@ -142,7 +142,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 56,
         "cgpa": 6.93,
         "letterGrade": "A",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 11,
@@ -156,7 +156,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 83,
         "cgpa": 9.39,
         "letterGrade": "A+",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 12,
@@ -170,7 +170,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 139,
         "cgpa": 9.31,
         "letterGrade": "B+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 13,
@@ -184,7 +184,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 54,
         "cgpa": 9.78,
         "letterGrade": "A+",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 14,
@@ -198,7 +198,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 34,
         "cgpa": 6.25,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 15,
@@ -212,7 +212,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 105,
         "cgpa": 8.48,
         "letterGrade": "A",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 16,
@@ -226,7 +226,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 58,
         "cgpa": 9.0,
         "letterGrade": "C",
-        "remarks": "Very Good"
+        "stream": "Very BA"
     },
     {
         "roll": 17,
@@ -240,7 +240,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 139,
         "cgpa": 9.99,
         "letterGrade": "C",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 18,
@@ -254,7 +254,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 143,
         "cgpa": 6.08,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 19,
@@ -268,7 +268,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 43,
         "cgpa": 7.42,
         "letterGrade": "C",
-        "remarks": "Very Good"
+        "stream": "Very BA"
     },
     {
         "roll": 20,
@@ -282,7 +282,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 51,
         "cgpa": 9.73,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 21,
@@ -296,7 +296,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 59,
         "cgpa": 7.07,
         "letterGrade": "B+",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 22,
@@ -310,7 +310,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 140,
         "cgpa": 8.33,
         "letterGrade": "C",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 23,
@@ -324,7 +324,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 34,
         "cgpa": 6.0,
         "letterGrade": "B+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 24,
@@ -338,7 +338,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 62,
         "cgpa": 8.45,
         "letterGrade": "C",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 25,
@@ -352,7 +352,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 45,
         "cgpa": 7.86,
         "letterGrade": "B",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 26,
@@ -366,7 +366,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 128,
         "cgpa": 7.99,
         "letterGrade": "A+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 27,
@@ -380,7 +380,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 72,
         "cgpa": 8.98,
         "letterGrade": "A",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 28,
@@ -394,7 +394,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 133,
         "cgpa": 8.32,
         "letterGrade": "B+",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 29,
@@ -408,7 +408,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 127,
         "cgpa": 6.41,
         "letterGrade": "C",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 30,
@@ -422,7 +422,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 67,
         "cgpa": 7.44,
         "letterGrade": "B",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 31,
@@ -436,7 +436,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 160,
         "cgpa": 8.23,
         "letterGrade": "B+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 32,
@@ -450,7 +450,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 149,
         "cgpa": 6.73,
         "letterGrade": "C",
-        "remarks": "Very Good"
+        "stream": "Very BA"
     },
     {
         "roll": 33,
@@ -464,7 +464,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 41,
         "cgpa": 9.55,
         "letterGrade": "B+",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 34,
@@ -478,7 +478,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 108,
         "cgpa": 9.03,
         "letterGrade": "B+",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 35,
@@ -492,7 +492,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 87,
         "cgpa": 7.67,
         "letterGrade": "C",
-        "remarks": "Very Good"
+        "stream": "Very BA"
     },
     {
         "roll": 36,
@@ -506,7 +506,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 31,
         "cgpa": 9.95,
         "letterGrade": "B",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 37,
@@ -520,7 +520,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 132,
         "cgpa": 9.49,
         "letterGrade": "B+",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
     {
         "roll": 38,
@@ -534,7 +534,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 52,
         "cgpa": 6.86,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 39,
@@ -548,7 +548,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 136,
         "cgpa": 8.52,
         "letterGrade": "A+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 40,
@@ -562,7 +562,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 87,
         "cgpa": 9.6,
         "letterGrade": "B",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 41,
@@ -576,7 +576,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 74,
         "cgpa": 6.22,
         "letterGrade": "A",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 42,
@@ -590,7 +590,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 40,
         "cgpa": 9.79,
         "letterGrade": "B",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 43,
@@ -604,7 +604,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 41,
         "cgpa": 9.35,
         "letterGrade": "A+",
-        "remarks": "Very Good"
+        "stream": "Very BA"
     },
     {
         "roll": 44,
@@ -618,7 +618,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 43,
         "cgpa": 8.85,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 45,
@@ -632,7 +632,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 160,
         "cgpa": 9.93,
         "letterGrade": "C",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 46,
@@ -646,7 +646,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 122,
         "cgpa": 6.02,
         "letterGrade": "A+",
-        "remarks": "Good"
+        "stream": "BA"
     },
     {
         "roll": 47,
@@ -660,7 +660,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 34,
         "cgpa": 6.49,
         "letterGrade": "A",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 48,
@@ -674,7 +674,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 117,
         "cgpa": 8.01,
         "letterGrade": "C",
-        "remarks": "Outstanding"
+        "stream": "BSC"
     },
     {
         "roll": 49,
@@ -688,7 +688,7 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 58,
         "cgpa": 9.96,
         "letterGrade": "C",
-        "remarks": "Excellent"
+        "stream": "BSC"
     },
     {
         "roll": 50,
@@ -702,6 +702,6 @@ export const mockData: Payment[] = [
         "cumulativeCredit": 146,
         "cgpa": 9.25,
         "letterGrade": "C",
-        "remarks": "Satisfactory"
+        "stream": "BCOM"
     },
 ];

@@ -11,5 +11,5 @@
     cumulativeCredit: number;
     cgpa: number;
     letterGrade: string;
-    remarks: string;
+   stream: string;
   }

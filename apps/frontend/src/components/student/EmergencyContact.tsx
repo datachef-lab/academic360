@@ -1,68 +1,106 @@
-import { Briefcase, Home, Mail, Phone, User } from "lucide-react";
-import { Label } from "../ui/label";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { z } from "zod";
+import { User, Users, Mail, Phone, Briefcase, Home } from "lucide-react";
 
-export default function EmergencyContact() {
+const guardianSchema = z.object({
+  studentId: z.number().min(1, "Student ID is required"),
+  personName: z.string().min(1, "Name is required"),
+  relationToStudent: z.string().min(1, "Relation is required"),
+  email: z.string().email("Invalid email format"),
+  phone: z.string().min(10, "Phone number is required"),
+  officePhone: z.string().optional(),
+  residentialPhone: z.string().optional(),
+});
+
+type GuardianFormData = z.infer<typeof guardianSchema>;
+
+const formElements = [
+  { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 w-5 h-5" /> },
+  { name: "personName", label: "Guardian's Name", type: "text", icon: <Users className="text-gray-500 w-5 h-5" /> },
+  { name: "relationToStudent", label: "Relation to Student", type: "text", icon: <Users className="text-gray-500 w-5 h-5" /> },
+  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 w-5 h-5" /> },
+  { name: "phone", label: "Phone", type: "tel", icon: <Phone className="text-gray-500 w-5 h-5" /> },
+  { name: "officePhone", label: "Office Phone", type: "tel", icon: <Briefcase className="text-gray-500 w-5 h-5" /> },
+  { name: "residentialPhone", label: "Residential Phone", type: "tel", icon: <Home className="text-gray-500 w-5 h-5" /> },
+];
+
+const EmergencyContact = () => {
+  const [formData, setFormData] = useState<GuardianFormData>({
+    studentId: 0,
+    personName: "",
+    relationToStudent: "",
+    email: "",
+    phone: "",
+    officePhone: "",
+    residentialPhone: "",
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]:name==="studentId"?Number(value):value,
+    }));
+    setErrors((prevErrors) => {
+      const newErrors = { ...prevErrors };
+      delete newErrors[name];
+      return newErrors;
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const parsed = guardianSchema.safeParse(formData);
+
+    if (!parsed.success) {
+      const formattedErrors: Record<string, string> = {};
+      parsed.error.errors.forEach((err) => {
+        formattedErrors[err.path[0]] = err.message;
+      });
+      console.log("error msg**", formattedErrors);
+      setErrors(formattedErrors);
+    } else {
+      console.log("Form Data Submitted:", parsed.data);
+      setErrors({});
+    }
+  };
+
   return (
-    <div>
-      <div className="w-full">
-        <form className="bg-transparent border-none shadow-none m-0 p-0 w-full">
-          {/* personName */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Guardian Name
-            </Label>
-            <Input type="text" placeholder="Enter Guardian Name" />
+    <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
+      <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
+        {formElements.map(({ name, label, type, icon }) => (
+          <div key={name} className="flex flex-col mr-8">
+            <div className="relative  p-1">
+            {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>): null}
+            <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
+              <Input
+                id={name}
+                name={name}
+                type={type}
+                value={formData[name as keyof GuardianFormData] || ""}
+                placeholder={label}
+                onChange={handleChange}
+                className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
+              />
+            </div>
+            {/* {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>} */}
           </div>
-          {/* relationToStudent */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Relation to Student
-            </Label>
-            <Input type="text" placeholder="Enter Relation to Student" />
-          </div>
-          {/* email */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-blue-600" />
-              Email
-            </Label>
-            <Input type="text" placeholder="Enter Email" />
-          </div>
-          {/* phone */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <Phone className="w-5 h-5 text-blue-600" />
-              Phone
-            </Label>
-            <Input type="text" placeholder="Enter Phone Number" />
-          </div>
-          {/* officePhone */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-blue-600" />
-              Office Phone
-            </Label>
-            <Input type="text" placeholder="Enter Office Phone Number" />
-          </div>
-          {/* residentialPhone */}
-          <div className="mt-4">
-            <Label className="flex items-center gap-2">
-              <Home className="w-5 h-5 text-blue-600" />
-              Residential Phone
-            </Label>
-            <Input type="text" placeholder="Enter Residential Phone Number" />
-          </div>
-          <div className="flex flex-col justify-center items-center">
-            <Button className=" mt-6 bg-blue-600 text-white py-3 rounded-lg shadow-md hover:bg-blue-700 transition">
-              Submit
-            </Button>
-          </div>
-        </form>
+        ))}
+        <div className="col-span-2">
+          <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
+            Submit
+          </Button>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default EmergencyContact;
