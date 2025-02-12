@@ -6,13 +6,25 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
-import { findAllUsers, findUserByEmail, findUserById, saveUser, toggleUser } from "../services/user.service.js";
+import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { page, pageSize } = req.query;
 
         const users = await findAllUsers(Number(page), Number(pageSize));
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getSearchedUsers = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { page, pageSize, searchText } = req.query;
+
+        const users = await searchUser(searchText as string, Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {

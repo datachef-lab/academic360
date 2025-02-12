@@ -1,11 +1,17 @@
 import { GuardianType } from "@/types/user/guardian";
-import { findPersonById, removePerson, savePerson } from "./person.service";
+import { addPerson, findPersonById, removePerson, savePerson } from "./person.service";
 import { db } from "@/db/index";
 import { gaurdianModel, Guardian } from "../models/guardian.model";
 import { eq } from "drizzle-orm";
 
-export async function addGuardian(guardian: Guardian): Promise<GuardianType | null> {
-    const [newGuardian] = await db.insert(gaurdianModel).values(guardian).returning();
+export async function addGuardian(guardian: GuardianType): Promise<GuardianType | null> {
+    let { gaurdianDetails, ...props } = guardian;
+
+    if (gaurdianDetails) {
+        gaurdianDetails = await addPerson(gaurdianDetails);
+    }
+
+    const [newGuardian] = await db.insert(gaurdianModel).values({ ...props, gaurdianDetailsId: gaurdianDetails?.id }).returning();
 
     const formatedGuardian = await guardianResponseFormat(newGuardian);
 

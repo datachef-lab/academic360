@@ -10,9 +10,9 @@ export const emergencyContactModel = pgTable("emergency_contacts", {
     personName: varchar({ length: 255 }),
     relationToStudent: varchar({ length: 255 }),
     email: varchar({ length: 255 }),
-    phone: varchar({ length: 15 }),
-    officePhone: varchar({ length: 15 }),
-    residentialPhone: varchar({ length: 15 }),
+    phone: varchar({ length: 255 }),
+    officePhone: varchar({ length: 255 }),
+    residentialPhone: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

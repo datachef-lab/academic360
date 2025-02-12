@@ -1,90 +1,50 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
-// import { DataTableViewOptions } from "@/components/ui/data-table-view-options";
-// import { CalendarDatePicker } from "./CalenderDatePicker";
-import React from "react";
+import React, { useCallback } from "react";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { Plus, TrashIcon } from "lucide-react";
+import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
+import { debounce } from "lodash";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
+  searchText: string;
+  setSearchText: React.Dispatch<React.SetStateAction<string>>;
+  refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
 }
 
-// export function DataTableToolbar<TData>({ table }: DataTableToolbarProps<TData>) {
-//   const isFiltered = table.getState().columnFilters.length > 0;
+export function DataTableToolbar<TData>({
+  table,
+  searchText,
+  setSearchText,
+  refetch,
+}: DataTableToolbarProps<TData>) {
+  // Debounce function (calls refetch only after user stops typing for 500ms)
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      table.setGlobalFilter(query);
+      refetch(); // Trigger the API call manually
+    }, 500),
+    [table, refetch]
+  );
 
-//   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
-//     from: new Date(new Date().getFullYear(), 0, 1),
-//     to: new Date(),
-//   });
-
-//   const handleDateSelect = ({ from, to }: { from: Date; to: Date }) => {
-//     setDateRange({ from, to });
-//     // Filter table data based on selected date range
-//     table.getColumn("date")?.setFilterValue([from, to]);
-//   };
-
-//   return (
-//     <div className="flex flex-wrap items-center justify-between">
-//       <div className="flex flex-1 flex-wrap items-center gap-2">
-//         <Input
-//           placeholder="Filter emails..."
-//           value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
-//           onChange={(event) => table.getColumn("email")?.setFilterValue(event.target.value)}
-//           className="max-w-sm"
-//         />
-//         {/* {table.getColumn("category") && (
-//           <DataTableFacetedFilter column={table.getColumn("category")} title="Category" options={categories} />
-//         )}
-//         {table.getColumn("type") && (
-//           <DataTableFacetedFilter column={table.getColumn("type")} title="Type" options={incomeType} />
-//         )} */}
-//         {isFiltered && (
-//           <Button variant="ghost" onClick={() => table.resetColumnFilters()} className="h-8 px-2 lg:px-3">
-//             Reset
-//             <Cross2Icon className="ml-2 h-4 w-4" />
-//           </Button>
-//         )}
-//         <CalendarDatePicker
-//           date={dateRange}
-//           onDateSelect={handleDateSelect}
-//           className="h-9 w-[250px]"
-//           variant="outline"
-//         />
-//       </div>
-
-//       <div className="flex items-center gap-2">
-//         {table.getFilteredSelectedRowModel().rows.length > 0 ? (
-//           <Button variant="outline" size="sm">
-//             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
-//             Delete ({table.getFilteredSelectedRowModel().rows.length})
-//           </Button>
-//         ) : null}
-//         <DataTableViewOptions table={table} />
-//       </div>
-//     </div>
-//   );
-// }
-
-export function DataTableToolbar<TData>({ table }: DataTableToolbarProps<TData>) {
-//   const isFiltered = table.getState().columnFilters.length > 0;
-  const [globalFilter, setGlobalFilter] = React.useState("");
+  // Handle input change
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setSearchText(value);
+    debouncedSearch(value);
+  };
 
   return (
     <div className="flex flex-wrap items-center justify-between">
       <div className="flex flex-1 flex-wrap items-center gap-2">
         <Input
           placeholder="Search..."
-          value={globalFilter}
-          onChange={(event) => {
-            setGlobalFilter(event.target.value);
-            table.setGlobalFilter(event.target.value);
-          }}
+          value={searchText}
+          onChange={handleSearchChange} // Use the debounced function
           className="max-w-sm"
         />
         {table.getColumn("type") && (
@@ -97,14 +57,15 @@ export function DataTableToolbar<TData>({ table }: DataTableToolbarProps<TData>)
             ]}
           />
         )}
-        {globalFilter.length > 0 && (
+        {searchText.length > 0 && (
           <Button
             variant="ghost"
             onClick={() => {
-              setGlobalFilter("");
+              setSearchText("");
               table.setGlobalFilter(""); // Reset the global filter explicitly
               table.resetColumnFilters();
               table.resetGlobalFilter(); // Ensure the table resets its global state
+              refetch(); // Also refetch to reset results
             }}
             className="h-8 px-2 lg:px-3"
           >

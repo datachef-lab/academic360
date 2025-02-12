@@ -1,10 +1,10 @@
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { NextFunction, Response, Request } from "express";
-import { academicIdentifierModel, createAcademicIdentifierSchema } from "../models/academicIdentifier.model.js";
+import { AcademicIdentifier, academicIdentifierModel, createAcademicIdentifierSchema } from "../models/academicIdentifier.model.js";
 import { db } from "@/db/index.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { addAcademicIdentifier } from "../services/academicIdentifier.service.js";
+import { addAcademicIdentifier, findAcademicIdentifierById, findAcademicIdentifierByStudentId, saveAcademicIdentifier } from "../services/academicIdentifier.service.js";
 import { AcademicHistoryType } from "@/types/user/academic-history.js";
 
 export const createAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
@@ -18,15 +18,18 @@ export const createAcademicIdentifier = async (req: Request, res: Response, next
     }
 };
 
-export const getAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
+export const getAcademicIdentifierById = async (req: Request, res: Response, next: NextFunction) => {
 
     try {
         const { id } = req.query;
-        const records = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, Number(id)));
-        if (!records) {
+
+        const foundAcademicIdentifier = await findAcademicIdentifierById(Number(id));
+
+        if (!foundAcademicIdentifier) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `academicIdentifier of ID${id}  not found`));
+            return;
         }
-        res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Fetched academicIdentifier successfully!"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", foundAcademicIdentifier, "Fetched academicIdentifier successfully!"));
 
 
     } catch (error) {
@@ -34,14 +37,20 @@ export const getAcademicIdentifier = async (req: Request, res: Response, next: N
     }
 };
 
+export const getAcademicIdentifierByStudentId = async (req: Request, res: Response, next: NextFunction) => {
 
-export const getAllAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const records = await db.select().from(academicIdentifierModel);
-        if (!records) {
-            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No academicIdentifier found"));
+        const { studentId } = req.query;
+
+        const foundAcademicIdentifier = await findAcademicIdentifierByStudentId(Number(studentId));
+
+        if (!foundAcademicIdentifier) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `academicIdentifier of ID${studentId}  not found`));
+            return;
         }
-        res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Fetched all academicIdentifier!"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", foundAcademicIdentifier, "Fetched academicIdentifier successfully!"));
+
+
     } catch (error) {
         handleError(error, res, next);
     }
@@ -53,26 +62,14 @@ export const updateAcademicIdentifier = async (req: Request, res: Response, next
     }
     try {
         const { id } = req.params;
-        const validateData = createAcademicIdentifierSchema.parse(req.body);
-        const record = await db.update(academicIdentifierModel).set(validateData).where(eq(academicIdentifierModel.id, Number(id))).returning();
-        if (!record) {
+
+        const updatedAcademicIdentifier = await saveAcademicIdentifier(Number(id), req.body as AcademicIdentifier);
+
+        if (!updatedAcademicIdentifier) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicIdentifier not found"));
+            return;
         }
-        res.status(200).json(new ApiResponse(200, "UPDATED", record, "AcademicIdentifier updated successfully"));
-
-    } catch (error) {
-        handleError(error, res, next);
-
-    }
-};
-
-export const deleteAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { id } = req.params;
-        const deletedRecord = await db.delete(academicIdentifierModel).where(eq(academicIdentifierModel.id, Number(id))).returning();
-        if (deletedRecord) {
-            res.status(200).json(new ApiResponse(200, "Deleted", deletedRecord, "Deleted record successfully"));
-        }
+        res.status(200).json(new ApiResponse(200, "UPDATED", updatedAcademicIdentifier, "AcademicIdentifier updated successfully"));
 
     } catch (error) {
         handleError(error, res, next);

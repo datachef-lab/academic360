@@ -4,18 +4,18 @@ import { createAcademicHistory, deleteAcademicHistory, getAcademicHistory, getAl
 
 const router = express.Router();
 router.use(verifyJWT);
-router.post("/",createAcademicHistory);
-router.get("/",getAllAcademicHistory);
-router.get("/query",(req,res,next)=>{
-    const {id}=req.query;
+router.post("/", createAcademicHistory);
+router.get("/", getAllAcademicHistory);
+router.get("/query", (req, res, next) => {
+    const { id } = req.query;
     console.log(id);
-    if(id){
-        getAcademicHistory(req,res,next);
-    }else{
-        getAllAcademicHistory(req,res,next);
+    if (id) {
+        getAcademicHistory(req, res, next);
+    } else {
+        getAllAcademicHistory(req, res, next);
     }
 });
-router.put("/:id",updateAcademicHistory);
-router.delete("/:id",deleteAcademicHistory);
+router.put("/:id", updateAcademicHistory);
+router.delete("/:id", deleteAcademicHistory);
 
 export default router;

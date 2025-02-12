@@ -16,8 +16,8 @@ export const addressModel = pgTable("address", {
     addressLine: varchar({ length: 1000 }),
     landmark: varchar({ length: 255 }),
     localityType: localityTypeEnum(),
-    phone: varchar({ length: 15 }),
-    pincode: varchar({ length: 10 }),
+    phone: varchar({ length: 255 }),
+    pincode: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

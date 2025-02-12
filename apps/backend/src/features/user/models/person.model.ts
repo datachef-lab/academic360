@@ -11,7 +11,7 @@ export const personModel = pgTable("person", {
     name: varchar({ length: 255 }),
     email: varchar({ length: 255 }),
     phone: varchar({ length: 255 }),
-    aadhaarCardNumber: varchar({ length: 16 }),
+    aadhaarCardNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
     qualificationId: integer("qualification_id_fk").references(() => qualificationModel.id),
     occupationId: integer("occupation_id_fk").references(() => occupationModel.id),

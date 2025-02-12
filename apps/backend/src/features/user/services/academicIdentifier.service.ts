@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
     const { stream, ...props } = academicIdentifier;
 
-    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({...props}).returning();
+    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({ ...props }).returning();
 
     const formattedAcademiIdentifier = await academicIdentifierResponseFormat(newAcademicIdentifier);
 

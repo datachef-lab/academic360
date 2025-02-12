@@ -13,7 +13,7 @@ export async function findAll<T>(model: PgTable, page: number = 1, pageSize: num
             content: [],
             page: page,
             pageSize,
-            totalElemets: 0,
+            totalElements: 0,
             totalPages: 0
         };
     }
@@ -24,7 +24,7 @@ export async function findAll<T>(model: PgTable, page: number = 1, pageSize: num
         content: dataArr as T[],
         page: page,
         pageSize,
-        totalElemets: Number(countRows),
+        totalElements: Number(countRows),
         totalPages: Math.ceil(Number(countRows) / pageSize)
     };
 }
@@ -55,7 +55,7 @@ export async function findAllByFormatted<T, K>({
         content,
         page: arrResponse.page,
         pageSize: arrResponse.pageSize,
-        totalElemets: arrResponse.totalElemets,
+        totalElements: arrResponse.totalElements,
         totalPages: arrResponse.totalPages
     };
 }
