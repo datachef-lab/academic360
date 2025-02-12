@@ -10,7 +10,11 @@ WORKDIR /app
 # Copy all the code
 COPY ./ ./
 
+RUN ls
+
 RUN npm install --legacy-peer-deps && npm run build
+
+RUN cd apps/frontend && ls
 
 # Use Nginx as base image
 FROM nginx:latest
