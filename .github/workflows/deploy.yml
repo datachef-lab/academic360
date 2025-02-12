@@ -103,7 +103,7 @@ jobs:
             EOF
 
             echo "🔹 Building and starting services..."
-            sudo docker-compose up --build -d
+            sudo docker-compose up --build --no-cache -d
 
             echo "🔹 Restarting backend and frontend..."
             sudo docker-compose restart backend frontend
