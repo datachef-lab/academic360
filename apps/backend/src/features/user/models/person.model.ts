@@ -16,7 +16,7 @@ export const personModel = pgTable("person", {
     qualificationId: integer("qualification_id_fk").references(() => qualificationModel.id),
     occupationId: integer("occupation_id_fk").references(() => occupationModel.id),
     officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
-    officePhone: varchar({ length: 15 }),
+    officePhone: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -853,7 +853,7 @@ export async function addStreamsAndSubjects() {
 }
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
-    await addStreamsAndSubjects();
+    // await addStreamsAndSubjects();
     try {
         console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
         const [rows] = await mysqlConnection.query('SELECT COUNT(*) AS totalRows FROM studentpersonaldetails');

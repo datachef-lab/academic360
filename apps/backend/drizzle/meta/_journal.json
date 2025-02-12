@@ -15,6 +15,13 @@
       "when": 1739339664308,
       "tag": "0001_nappy_slayback",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1739390804649,
+      "tag": "0002_watery_praxagora",
+      "breakpoints": true
     }
   ]
 }
