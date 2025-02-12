@@ -13,7 +13,7 @@ COPY ./ ./
 # Check all the items copied
 RUN ls
 
-RUN npm install && npm run build
+RUN npm install --legacy-peer-deps && npm run build
 
 RUN ls
 
