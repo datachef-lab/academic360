@@ -814,24 +814,24 @@ export async function addStreamsAndSubjects() {
             eq(subjectMetadataModel.subjectType, subjectType as "DISCIPLINE SPECIFIC ELECTIVE" | "ABILITY ENHANCEMENT COMPULSORY COURSE" | "CORE COURSE" | "GENERIC ELECTIVE" | "SKILL ENHANCEMENT COURSE"),
         ]
 
-        if (subjectArr[i].TH) {
-            whereConditions.push(eq(subjectMetadataModel.fullMarksTheory, subjectArr[i].TH as number));
-        }
-        if (subjectArr[i].TU) {
-            whereConditions.push(eq(subjectMetadataModel.fullMarksTutorial, subjectArr[i].TU as number));
-        }
-        if (subjectArr[i].IN) {
-            whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].IN as number));
-        }
-        if (subjectArr[i].PR) {
-            whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].PR as number));
-        }
+        // if (subjectArr[i].TH) {
+        //     whereConditions.push(eq(subjectMetadataModel.fullMarksTheory, subjectArr[i].TH as number));
+        // }
+        // if (subjectArr[i].TU) {
+        //     whereConditions.push(eq(subjectMetadataModel.fullMarksTutorial, subjectArr[i].TU as number));
+        // }
+        // if (subjectArr[i].IN) {
+        //     whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].IN as number));
+        // }
+        // if (subjectArr[i].PR) {
+        //     whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].PR as number));
+        // }
 
-        const [foundSubjectMetadata] = await db.select().from(subjectMetadataModel).where(and(...whereConditions));
+        // const [foundSubjectMetadata] = await db.select().from(subjectMetadataModel).where(and(...whereConditions));
 
-        if (foundSubjectMetadata) {
-            continue;
-        }
+        // if (foundSubjectMetadata) {
+        //     continue;
+        // }
 
         await db.insert(subjectMetadataModel).values({
             streamId: stream.id as number,
