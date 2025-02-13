@@ -4,7 +4,7 @@ import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const bloodGroupModel = pgTable("blood_group", {
     id: serial().primaryKey(),
-    type: varchar({ length: 5 }).notNull().unique(),
+    type: varchar({ length: 255 }).notNull().unique(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
