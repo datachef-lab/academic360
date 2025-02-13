@@ -16,6 +16,9 @@ import {
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import StudentPage from "./pages/StudentPage";
+// import Dashboard from "./pages/Dashboard";
+import BookCatalog from "./pages/BookCatalog";
+import IssueReturnPage from "./pages/IssueRetun";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -32,7 +35,10 @@ const router = createBrowserRouter([
       { path: "academics", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "academics-add", element: <AddStudentPage /> },
+      { path: "lib", element: <BookCatalog/> },
+      { path: "issue", element: <IssueReturnPage/> },
       { path: "academics-reports", element: <GetReportsPage /> },
+
       {
         path: "academics-search",
         element: <Outlet />,

@@ -19,7 +19,7 @@ type Year = "2021" | "2022" | "2023" | "2024" | "2025" ;
 
 interface FilterAndExportProps {
   onFilter: (filters: { stream: Stream | null; year: Year | null }) => void;
-  filteredData: Payment[]; // Accept filtered data for exporting
+  filteredData: Payment[]; 
 }
 
 const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, filteredData }) => {
@@ -30,28 +30,19 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
     onFilter({ stream, year });
   };
 
-  // Export to PDF
   const handleExportPDF = () => {
     const doc = new jsPDF();
-  
-    // Title
     doc.text("Exported Report", 10, 10);
     // doc.text(`Stream: ${stream || "All"}`, 10, 20);
     // doc.text(`Year: ${year || "All"}`, 10, 30);
   
     if (filteredData.length > 0) {
-      // Table headers
-  
       const headers = [Object.keys(filteredData[0])];
-  
-      // Extract table data
       const rows = filteredData.map((row) => Object.values(row));
-  
-      // Generate the table
       autoTable(doc, {
         head: headers,
         body: rows as unknown as RowInput[],
-        startY: 30, // Positioning the table below the text
+        startY: 30, 
         theme: "grid",
         styles: { fontSize: 6, cellPadding: 3 },
         headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: "bold" },
@@ -59,11 +50,9 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
     } else {
       doc.text("No data available", 10, 40);
     }
-  
-    // Save the PDF
     doc.save("filtered_report.pdf");
   };
-  // Export to Excel
+  
   const handleExportExcel = () => {
     if (filteredData.length === 0) {
       alert("No data available to export!");
@@ -80,7 +69,7 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
     <div className="px-6 w-full flex items-center justify-between">
       <div className="flex flex-row items-center gap-16 p-1">
         <div className="w-full flex gap-2">
-          {/* Stream Dropdown */}
+       
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400" variant="outline">
@@ -96,7 +85,7 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Year Dropdown */}
+  
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400"  variant="outline">
