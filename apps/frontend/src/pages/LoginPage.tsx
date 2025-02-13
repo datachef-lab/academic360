@@ -13,16 +13,19 @@ import { login } from "@/services/auth";
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const [credential, setCredential] = useState({ email: "", password: "" });
+  const [focusState, setFocusState] = useState({ email: false, password: false });
+  const [isLoading, setIsLoading] = useState(false);
+
   const loginMutation = useMutation({
+    onMutate: () => setIsLoading(true),
     mutationFn: login,
     onSuccess: (data) => {
       console.log("Login successful:", data);
+      setIsLoading(false);
       navigate("/home", { replace: true });
     },
   });
-
-  const [credential, setCredential] = useState({ email: "", password: "" });
-  const [focusState, setFocusState] = useState({ email: false, password: false });
 
   const handleFocus = (field: "email" | "password") => {
     setFocusState({ ...focusState, [field]: true });
@@ -113,7 +116,7 @@ const LoginPage: React.FC = () => {
 
               <Link to="forget-password">Forgot Password?</Link>
               <button type="submit" className="btn ">
-                Login
+                {isLoading ? "Please wait..." : "Login"}
               </button>
             </div>
 

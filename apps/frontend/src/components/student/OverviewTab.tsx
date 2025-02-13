@@ -2,8 +2,12 @@ import { StudentAttendance } from "./StudentAttendance";
 import { Card, CardContent, CardFooter, CardTitle } from "../ui/card";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { useSelector } from "react-redux";
+import { selectStudent } from "@/app/slices/studentSlice";
 
 export default function OverviewTab() {
+  const student = useSelector(selectStudent);
+
   return (
     <div className="my-5">
       <div className="flex gap-4 h-[250px]">
@@ -106,7 +110,7 @@ export default function OverviewTab() {
       </li> */}
           <li className="flex items-center gap-2">
             <p className="w-1/5">Name</p>
-            <Input type="text" />
+            <Input type="text" value={student?.name} />
           </li>
           <li className="flex items-center gap-2">
             <p className="w-1/5">Email:</p>
