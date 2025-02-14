@@ -18,7 +18,10 @@ import { AuthProvider } from "./providers/AuthProvider";
 import StudentPage from "./pages/StudentPage";
 // import Dashboard from "./pages/Dashboard";
 import BookCatalog from "./pages/BookCatalog";
-import IssueReturnPage from "./pages/IssueRetun";
+import IssueRetun from "./pages/IssueRetun";
+import Dashboard from "./pages/Dashboard";
+import LibFineManagement from "./pages/LibFines";
+import LibReport from "./pages/LibReport";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -35,10 +38,14 @@ const router = createBrowserRouter([
       { path: "academics", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "academics-add", element: <AddStudentPage /> },
-      { path: "lib", element: <BookCatalog/> },
-      { path: "issue", element: <IssueReturnPage/> },
+    
       { path: "academics-reports", element: <GetReportsPage /> },
-
+      { path: "lib", element: <Dashboard/> },
+    
+      { path: "catalog", element: <BookCatalog/> },
+      { path: "issued-book", element: <IssueRetun/> },
+      { path: "fine-management", element: <LibFineManagement/> },
+      { path: "lib-report", element: <LibReport/> },
       {
         path: "academics-search",
         element: <Outlet />,

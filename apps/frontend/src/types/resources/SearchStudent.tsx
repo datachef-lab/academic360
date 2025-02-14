@@ -1,5 +1,5 @@
 export type SearchStudent={
-    serial_number:number
+    serial_number:number;
     reg_number:string;
     roll:string;
     uid:string;

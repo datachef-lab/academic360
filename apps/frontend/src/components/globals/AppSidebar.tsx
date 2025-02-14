@@ -81,11 +81,11 @@ const data = {
       url: "/home/library",
       icon: BookOpen,
       items: [
-        { title: "Dashboard", url: "/home" },
-        { title: "Book Catalog", url: "/home" },
-        { title: "Issue/Return", url: "/home" },
-        { title: "Fines", url: "/home" },
-        { title: "Reports", url: "/home" },
+        { title: "Dashboard", url: "/home/lib" },
+        { title: "Book Catalog", url: "/home/catalog" },
+        { title: "Issue/Return", url: "/home/issued-book" },
+        { title: "Fines", url: "/home/fine-management" },
+        { title: "Reports", url: "/home/lib-report" },
       ],
     },
     {

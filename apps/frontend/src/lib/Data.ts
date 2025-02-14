@@ -1,6 +1,7 @@
 
 
 import { Payment } from "@/components/reports/types";
+import { IssuedBook } from "@/types/resources/IssuedBooks";
 
 
 export const mockData: Payment[] = [
@@ -705,3 +706,92 @@ export const mockData: Payment[] = [
         "stream": "BCOM"
     },
 ];
+
+
+export const IssueBookData: IssuedBook[] = [
+    {
+      "id": 1,
+      "title": "JavaScript Essentials",
+      "author": "Mark Smith",
+      "isbn": "978-1-234567-89-0",
+      "category": "Programming",
+      "issueDate": "2024-02-01",
+      "dueDate": "2024-02-15",
+      "status": "Pending",
+      "fine": 0,
+      "canRenew": true
+    },
+    {
+      "id": 2,
+      "title": "React Mastery",
+      "author": "Jane Doe",
+      "isbn": "978-1-987654-32-1",
+      "category": "Web Development",
+      "issueDate": "2024-01-20",
+      "dueDate": "2024-02-10",
+      "status": "Returned",
+      "fine": 0,
+      "canRenew": false
+    },
+    {
+      "id": 3,
+      "title": "Node.js Guide",
+      "author": "John Williams",
+      "isbn": "978-1-765432-10-9",
+      "category": "Backend Development",
+      "issueDate": "2024-01-25",
+      "dueDate": "2024-02-08",
+      "status": "Pending",
+      "fine": 24,
+      "canRenew": false
+    },
+    {
+      "id": 4,
+      "title": "Design Patterns",
+      "author": "Robert C. Martin",
+      "isbn": "978-1-654321-09-8",
+      "category": "Software Design",
+      "issueDate": "2024-01-28",
+      "dueDate": "2024-02-12",
+      "status": "Returned",
+      "fine": 0,
+      "canRenew": false
+    },
+    {
+      "id": 5,
+      "title": "Python Crash Course",
+      "author": "Eric Matthes",
+      "isbn": "978-1-543210-98-7",
+      "category": "Programming",
+      "issueDate": "2024-01-15",
+      "dueDate": "2024-01-30",
+      "status": "Pending",
+      "fine": 42,
+      "canRenew": false
+    },
+    {
+      "id": 6,
+      "title": "Data Structures & Algorithms",
+      "author": "Thomas Cormen",
+      "isbn": "978-1-432109-87-6",
+      "category": "Computer Science",
+      "issueDate": "2024-02-05",
+      "dueDate": "2024-02-20",
+      "status": "Pending",
+      "fine": 0,
+      "canRenew": true
+    },
+    {
+      "id": 7,
+      "title": "Machine Learning with Python",
+      "author": "Sebastian Raschka",
+      "isbn": "978-1-321098-76-5",
+      "category": "AI & Machine Learning",
+      "issueDate": "2024-01-10",
+      "dueDate": "2024-01-25",
+      "status": "Pending",
+      "fine": 54,
+      "canRenew": false
+    }
+  ];
+  
