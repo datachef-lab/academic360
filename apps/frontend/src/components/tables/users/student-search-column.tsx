@@ -116,6 +116,15 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
   {
     accessorKey: "Roll No.",
     header: "Roll No.",
+    cell: ({ row }) => {
+      const student = row.original;
+
+      if (student.rollNumber) {
+        return <p>{student.rollNumber}</p>;
+      }
+
+      return <p>-</p>;
+    },
   },
   {
     accessorKey: "stream",
@@ -151,15 +160,15 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       let status: StudentStatus | null = null;
 
       if (student.leavingDate || (!student.active && student.alumni)) {
-        status = "GRADUATED";
+        status = StudentStatus["GRADUATED"];
       } else if (student.active == null || student.alumni == null) {
         status = null;
       } else if (!student.active && !student.alumni) {
-        status = "DROPPED_OUT";
+        status = StudentStatus["DROPPED_OUT"];
       } else if (student.active && !student.alumni) {
-        status = "ACTIVE";
+        status = StudentStatus["ACTIVE"];
       } else if (student.active && student.alumni) {
-        status = "PENDING_CLEARANCE";
+        status = StudentStatus["PENDING_CLEARANCE"];
       }
 
       return <p>{status ? status : "-"}</p>;

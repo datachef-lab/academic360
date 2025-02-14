@@ -45,5 +45,5 @@ export default function StudentContent({ activeTab }: StudentContentProps) {
     }
   };
 
-  return <div className="my-5">{handleContent()}</div>;
+  return <div className="my-5 w-full">{handleContent()}</div>;
 }

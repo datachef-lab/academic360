@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Globe, IdCard, Languages, Mail, User } from "lucide-react";
 import { Home } from "lucide-react";
+import { selectStudent } from "@/app/slices/studentSlice";
+import { useSelector } from "react-redux";
 
 // Define the validation schema
 const personalDetailsSchema = z.object({
@@ -24,6 +26,8 @@ const personalDetailsSchema = z.object({
 });
 
 export default function PersonalDetail() {
+  const student = useSelector(selectStudent);
+
   const {
     register,
     handleSubmit,
@@ -46,7 +50,12 @@ export default function PersonalDetail() {
             <IdCard className="w-5 h-5 text-blue-600" />
             Aadhaar Card Number
           </Label>
-          <Input type="text" {...register("aadhaarCardNumber")} placeholder="Enter Aadhaar Number" />
+          <Input
+            type="text"
+            {...register("aadhaarCardNumber")}
+            value={student?.personalDetails?.aadhaarCardNumber || ""}
+            placeholder="Enter Aadhaar Number"
+          />
           {errors.aadhaarCardNumber?.message && (
             <p className="text-red-500 text-sm">{errors.aadhaarCardNumber.message.toString()}</p>
           )}
@@ -58,7 +67,12 @@ export default function PersonalDetail() {
             <Mail className="w-5 h-5 text-gray-500" />
             Email
           </Label>
-          <Input type="email" {...register("email")} placeholder="Enter Email" />
+          <Input
+            type="email"
+            {...register("email")}
+            value={student?.personalDetails?.email || ""}
+            placeholder="Enter Email"
+          />
           {errors.email?.message && <p className="text-red-500 text-sm">{errors.email.message.toString()}</p>}
         </div>
 
@@ -68,7 +82,12 @@ export default function PersonalDetail() {
             <Mail className="w-5 h-5 text-gray-500" />
             Alternative Email
           </Label>
-          <Input type="email" {...register("alternativeEmail")} placeholder="Enter Alternative Email" />
+          <Input
+            type="email"
+            {...register("alternativeEmail")}
+            value={student?.personalDetails?.alternativeEmail || ""}
+            placeholder="Enter Alternative Email"
+          />
         </div>
 
         {/* Date of Birth */}
@@ -77,7 +96,11 @@ export default function PersonalDetail() {
             <CalendarIcon className="w-5 h-5 text-blue-600" />
             Date of Birth
           </Label>
-          <Calendar mode="single" selected={new Date()} onSelect={(date) => setValue("dateOfBirth", date!)} />
+          <Calendar
+            mode="single"
+            selected={student?.personalDetails?.dateOfBirth || new Date()}
+            onSelect={(date) => setValue("dateOfBirth", date!)}
+          />
           {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth.message?.toString()}</p>}
         </div>
 
@@ -114,7 +137,12 @@ export default function PersonalDetail() {
             <Home className="w-5 h-5 text-blue-600" />
             Residential Address
           </Label>
-          <Input type="text" {...register("residentialAddress")} placeholder="Enter Residential Address" />
+          <Input
+            type="text"
+            {...register("residentialAddress")}
+            value={student?.personalDetails?.residentialAddress?.addressLine || ""}
+            placeholder="Enter Residential Address"
+          />
         </div>
 
         {/* Gender Selection */}
@@ -123,7 +151,10 @@ export default function PersonalDetail() {
             <User className="w-5 h-5 text-blue-600" />
             Gender
           </Label>
-          <Select onValueChange={(value) => setValue("gender", value)}>
+          <Select
+            value={student?.personalDetails?.gender || undefined}
+            onValueChange={(value) => setValue("gender", value)}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Select Gender" />
             </SelectTrigger>

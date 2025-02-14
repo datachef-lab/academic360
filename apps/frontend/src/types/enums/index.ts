@@ -1,15 +1,54 @@
-export type Community = "GUJARATI" | "NON-GUJARATI";
+export enum Community {
+    GUJARATI = "GUJARATI",
+    NON_GUJARATI = "NON-GUJARATI",
+}
 
-export type Level = "UNDER_GRADUATE" | "POST_GRADUATE";
+export enum Level {
+    UNDER_GRADUATE = "UNDER_GRADUATE",
+    POST_GRADUATE = "POST_GRADUATE",
+}
 
-export type Framework = "CCF" | "CBCS";
+export enum Framework {
+    CCF = "CCF",
+    CBCS = "CBCS",
+}
 
-export type Shift = "MORNING" | "AFTERNOON" | "EVENING";
+export enum Shift {
+    MORNING = "MORNING",
+    AFTERNOON = "AFTERNOON",
+    EVENING = "EVENING",
+}
 
-export type Course = "HONOURS" | "GENERAL";
+export enum Course {
+    HONOURS = "HONOURS",
+    GENERAL = "GENERAL",
+}
 
-export type Gender = "MALE" | "FEMALE" | "TRANSGENDER";
+export enum Gender {
+    MALE = "MALE",
+    FEMALE = "FEMALE",
+    TRANSGENDER = "TRANSGENDER",
+}
 
-export type Disability = "VISUAL" | "HEARING_IMPAIRMENT" | "VISUAL_IMPAIRMENT" | "ORTHOPEDIC" | "OTHER"
+export enum Disability {
+    VISUAL = "VISUAL",
+    HEARING_IMPAIRMENT = "HEARING_IMPAIRMENT",
+    VISUAL_IMPAIRMENT = "VISUAL_IMPAIRMENT",
+    ORTHOPEDIC = "ORTHOPEDIC",
+    OTHER = "OTHER",
+}
 
-export type StudentStatus = "DROPPED_OUT" | "GRADUATED" | "ACTIVE" | "PENDING_CLEARANCE"
+export enum StudentStatus {
+    DROPPED_OUT = "DROPPED_OUT",
+    GRADUATED = "GRADUATED",
+    ACTIVE = "ACTIVE",
+    PENDING_CLEARANCE = "PENDING_CLEARANCE",
+}
+
+export enum PlaceOfStay {
+    OWN = "OWN",
+    HOSTEL = "HOSTEL",
+    FAMILY_FRIENDS = "FAMILY_FRIENDS",
+    PAYING_GUEST = "PAYING_GUEST",
+    RELATIVES = "RELATIVES",
+}

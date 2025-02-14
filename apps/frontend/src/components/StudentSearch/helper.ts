@@ -8,11 +8,11 @@ export function formattedStudent(content: Student[]) {
     const formattedArr: StudentSearchType[] = [];
     for (let i = 0; i < content.length; i++) {
         const { academicIdentifier, personalDetails, specialization, ...props } = content[i];
-
+        console.log(academicIdentifier?.rollNumber);
         let obj: StudentSearchType = {
             ...props,
             registrationNumber: null,
-            rollNumber: null,
+            rollNumber: academicIdentifier?.rollNumber ? academicIdentifier?.rollNumber : null,
             uid: null,
             nationality: null,
             gender: null,
@@ -23,8 +23,14 @@ export function formattedStudent(content: Student[]) {
         };
 
         if (academicIdentifier) {
-            const { registrationNumber, rollNumber, uid, stream } = academicIdentifier;
-            obj = { ...obj, registrationNumber, rollNumber, uid, stream };
+            const { registrationNumber, uid, stream } = academicIdentifier;
+            obj = {
+                ...obj,
+                registrationNumber,
+                rollNumber: academicIdentifier?.rollNumber ? academicIdentifier?.rollNumber : null,
+                uid,
+                stream
+            };
         }
 
         if (personalDetails) {

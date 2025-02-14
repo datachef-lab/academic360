@@ -1,100 +1,309 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { User, Home, MapPin, Calendar } from "lucide-react";
+import { PlaceOfStay } from "@/types/enums";
+import { Button } from "@/components/ui/button";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import { CalendarIcon } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Country, CountryDropdown } from "../ui/country-dropdown";
+import { StateDropdown } from "../ui/state-dropdown";
+import { CityDropdown } from "../ui/city-dropdown";
 
-const studentAccommodationSchema = z.object({
-  studentId: z.number().min(1, "Student ID is required"),
-  placeOfStay: z.string().min(1, "Place of Stay is required"),
-  addressId: z.number().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+// Define Address Schema
+const addressSchema = z.object({
+  country: z.string().min(1, "Country is required"),
+  state: z.string().min(1, "State is required"),
+  city: z.string().min(1, "City is required"),
+  addressLine: z.string().min(1, "Address is required"),
+  landmark: z.string().optional(),
+  locality: z.enum(["RURAL", "URBAN"], { required_error: "Select locality type" }),
+  phone: z.string().min(10, "Enter a valid phone number").optional(),
+  pincode: z.string().min(4, "Enter a valid pincode").optional(),
 });
 
-type StudentAccommodationFormData = z.infer<typeof studentAccommodationSchema>;
+// Define Accommodation Schema with Address
+const accommodationSchema = z.object({
+  placeOfStay: z.nativeEnum(PlaceOfStay, { required_error: "Please select a place of stay" }),
+  startDate: z.string().min(1, "Start date is required"),
+  endDate: z.string().min(1, "End date is required"),
+  address: addressSchema, // Embed Address schema
+});
 
-const formElements = [
-  { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "placeOfStay", label: "Place of Stay", type: "text", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "addressId", label: "Address ID", type: "number", icon: <MapPin className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "startDate", label: "Start Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "endDate", label: "End Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
-];
+type AccommodationFormValues = z.infer<typeof accommodationSchema>;
 
-const Accommodation = () => {
-  const [formData, setFormData] = useState<StudentAccommodationFormData>({
-    studentId: 0,
-    placeOfStay: "",
-    addressId: undefined,
-    startDate: "",
-    endDate: "",
+export default function AccommodationForm() {
+  const form = useForm<AccommodationFormValues>({
+    resolver: zodResolver(accommodationSchema),
+    defaultValues: {
+      placeOfStay: undefined,
+      startDate: "",
+      endDate: "",
+      address: {
+        country: "",
+        state: "",
+        city: "",
+        addressLine: "",
+        landmark: "",
+        locality: "RURAL",
+        phone: "",
+        pincode: "",
+      },
+    },
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedCountry, setSelectedCountry] = useState<string | undefined>(undefined);
+  const [selectedState, setSelectedState] = useState<string | undefined>(undefined);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "placeOfStay" ? value : name.includes("Date") ? value : Number(value),
-    }));
-    setErrors((prevErrors) => {
-      const newErrors = { ...prevErrors };
-      delete newErrors[name];
-      return newErrors;
-    });
+  const onSubmit = (data: AccommodationFormValues) => {
+    console.log("Form Submitted:", data);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const parsed = studentAccommodationSchema.safeParse(formData);
-
-    if (!parsed.success) {
-      const formattedErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((err) => {
-        formattedErrors[err.path[0]] = err.message;
-      });
-      console.log("error msg**", formattedErrors);
-      setErrors(formattedErrors);
-    } else {
-      console.log("Form Data Submitted:", parsed.data);
-      setErrors({});
-    }
+  const handleCountryChange = (country: Country) => {
+    console.log(country);
+    setSelectedCountry(country.name);
+    form.setValue("address.state", "");
   };
 
   return (
-    <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
-      <div className="max-w-[90%] w-full grid grid-cols-2 gap-7">
-        {formElements.map(({ name, label, type, icon }) => (
-          <div key={name} className="flex flex-col mr-8">
-            <div className="relative  p-1">
-              {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>) : null}
-              <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
-            </div>
-            <div className={`relative`}>
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
-              <Input
-                id={name}
-                name={name}
-                type={type}
-                value={formData[name as keyof StudentAccommodationFormData] || ""}
-                placeholder={label}
-                onChange={handleChange}
-                className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
-              />
-            </div>
+    <div className="flex justify-center">
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="border-none md:max-w-[75%] space-y-6 bg-transparent shadow-none "
+        >
+          {/* Place of Stay */}
+          <FormField
+            control={form.control}
+            name="placeOfStay"
+            render={({ field }) => (
+              <FormItem className="w-full">
+                <FormLabel>Place of Stay</FormLabel>
+                <FormControl className="w-full ">
+                  <select {...field} className="w-full border p-2 rounded-md">
+                    <option value="" disabled>
+                      Select an option
+                    </option>
+                    {Object.values(PlaceOfStay).map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
+          {/* Start Date Picker */}
+          <FormField
+            control={form.control}
+            name="startDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Start Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-gray-400")}>
+                        {field.value ? field.value : "Pick a date"}
+                        <CalendarIcon className="ml-auto h-4 w-4 text-gray-500" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setStartDate(date);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* End Date Picker */}
+          <FormField
+            control={form.control}
+            name="endDate"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>End Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-gray-400")}>
+                        {field.value ? field.value : "Pick a date"}
+                        <CalendarIcon className="ml-auto h-4 w-4 text-gray-500" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setEndDate(date);
+                          field.onChange(date.toISOString().split("T")[0]);
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Address Fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              name="address.country"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <CountryDropdown
+                      placeholder="Country"
+                      defaultValue={field.value}
+                      onChange={(country) => {
+                        handleCountryChange(country);
+                        field.onChange(country.name);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="address.state"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State</FormLabel>
+                  <FormControl>
+                    {selectedCountry && (
+                      <StateDropdown
+                        selectedCountry={selectedCountry}
+                        onChange={(state) => {
+                          setSelectedState(state.name);
+                          field.onChange(state.name);
+                        }}
+                        placeholder="Select a state"
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="address.city"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    {selectedCountry && selectedState && (
+                      <CityDropdown
+                        selectedCountry={selectedCountry as string}
+                        selectedState={selectedState as string}
+                        onChange={(state) => field.onChange(state)}
+                        placeholder="Select a state"
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              name="address.addressLine"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
-        ))}
-        <div className="col-span-2">
-          <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
+
+          {/* Landmark, Locality, Phone, Pincode */}
+          <FormField
+            name="address.landmark"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Landmark</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="address.locality"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Locality</FormLabel>
+                <FormControl>
+                  <select {...field} className="w-full border p-2 rounded-md">
+                    <option value="RURAL">Rural</option>
+                    <option value="URBAN">Urban</option>
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="address.phone"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {/* Submit Button */}
+          <Button type="submit" className="w-full">
             Submit
           </Button>
-        </div>
-      </div>
+        </form>
+      </Form>
     </div>
   );
-};
-
-export default Accommodation;
+}

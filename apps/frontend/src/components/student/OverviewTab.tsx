@@ -9,7 +9,7 @@ export default function OverviewTab() {
   const student = useSelector(selectStudent);
 
   return (
-    <div className="my-5">
+    <div className="my-5 w-full">
       <div className="flex gap-4 h-[250px]">
         <div className="w-1/3 h-full">
           <StudentAttendance />
@@ -127,7 +127,7 @@ export default function OverviewTab() {
         </ul>
         <Button className="my-8">Save</Button>
       </div>
-      <p>Last Passed Year: 2025</p>
+      <p>Last Passed Year: {student?.lastPassedYear}</p>
     </div>
   );
 }
