@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { eq, count, desc } from "drizzle-orm";
+import { eq, count, desc, or, ilike } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { User, userModel } from "../models/user.model.js";
 import { PayloadType, UserType } from "@/types/user/user.js";
@@ -34,7 +34,7 @@ export async function findAllUsers(page: number = 1, pageSize: number = 10): Pro
         content,
         page,
         pageSize,
-        totalElemets: Number(countRows),
+        totalElements: Number(countRows),
         totalPages: Math.ceil(Number(countRows) / pageSize)
     };
 }
@@ -88,6 +88,56 @@ export async function toggleUser(id: number) {
 
     return formattedUser;
 }
+
+
+export async function searchUser(searchText: string, page: number = 1, pageSize: number = 10) {
+    // Trim spaces and convert searchText to lowercase
+    searchText = searchText.trim().toLowerCase();
+
+    // Query students based on student name, roll number, registration number, etc.
+    const userQuery = db
+        .select()
+        .from(userModel)
+        .where(
+            or(
+                ilike(userModel.name, `%${searchText}%`),
+                ilike(userModel.email, `%${searchText}%`),
+                ilike(userModel.phone, `%${searchText}%`),
+                ilike(userModel.whatsappNumber, `%${searchText}%`),
+            )
+        );
+
+    // Get the paginated students
+    const users = await userQuery.limit(pageSize).offset((page - 1) * pageSize);
+
+    // Get the total count of students matching the filter
+    const [{ count: countRows }] = await db
+        .select({ count: count() })
+        .from(userModel)
+        .where(
+            or(
+                ilike(userModel.name, `%${searchText}%`),
+                ilike(userModel.email, `%${searchText}%`),
+                ilike(userModel.phone, `%${searchText}%`),
+                ilike(userModel.whatsappNumber, `%${searchText}%`),
+            )
+        );
+
+    // Map the result to a properly formatted response
+    const content = await Promise.all(users.map(async (userRecord) => {
+        return await userResponseFormat(userRecord);
+    }));
+
+    return {
+        content,
+        page,
+        pageSize,
+        totalElements: Number(countRows), // Now this count is correct!
+        totalPages: Math.ceil(Number(countRows) / pageSize)
+    };
+}
+
+
 
 export async function userResponseFormat(givenUser: User): Promise<UserType | null> {
     if (!givenUser) {

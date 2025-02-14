@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Category, categoryModel } from "../models/category.model";
+import { db } from "@/db/index.js";
+import { Category, categoryModel } from "@/features/resources/models/category.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addCategory(category: Category): Promise<Category | null> {

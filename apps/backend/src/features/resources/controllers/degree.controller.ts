@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 
-import { degreeModel } from "../models/degree.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { findAll } from "@/utils/helper.js";
 
 

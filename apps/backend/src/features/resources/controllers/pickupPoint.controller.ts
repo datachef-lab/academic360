@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import {ApiResponse} from "@/utils/ApiResonse.js";
 import {handleError} from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { pickupPointModel } from "../models/pickupPoint.model.js";
+import { pickupPointModel } from "@/features/resources/models/pickupPoint.model.js";
 import { findAll } from "@/utils/helper.js";
 
 

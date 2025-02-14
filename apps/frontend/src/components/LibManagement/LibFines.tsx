@@ -75,7 +75,6 @@ const LibFineManagement: React.FC = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* Fine Summary */}
         <TabsContent value="summary">
         <Card>
             <CardContent className="p-4 space-y-3">
@@ -92,7 +91,6 @@ const LibFineManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Overdue Books List */}
         <TabsContent value="overdue">
           <Card>
             <CardContent className="p-4">
@@ -106,7 +104,6 @@ const LibFineManagement: React.FC = () => {
           </Card>
         </TabsContent>
 
-        {/* Online Fine Payment */}
         <TabsContent value="payment">
           <Card>
             <CardContent className="p-4">
@@ -122,7 +119,6 @@ const LibFineManagement: React.FC = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Fine Waiver Request */}
       <Card className="p-2">
         <CardContent className="p-4 space-y-3">
           <h2 className="text-xl font-semibold">💡 Request Fine Waiver</h2>

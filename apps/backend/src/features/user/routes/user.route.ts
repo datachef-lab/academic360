@@ -1,5 +1,5 @@
 import express, { NextFunction, Request, Response } from "express";
-import { getAllUsers, getUserByEmail, getUserById, toggleDisableUser, updateUser } from "../controllers/user.controller.js";
+import { getAllUsers, getSearchedUsers, getUserByEmail, getUserById, toggleDisableUser, updateUser } from "../controllers/user.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
@@ -7,6 +7,8 @@ const router = express.Router();
 router.use(verifyJWT);
 
 router.get('/', getAllUsers);
+
+router.get('/search', getSearchedUsers);
 
 router.get('/query', (req: Request, res: Response, next: NextFunction) => {
     const { id, email } = req.query;

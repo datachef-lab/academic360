@@ -1,7 +1,7 @@
 
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { subjectMetadataModel } from "../models/subjectMetadata.model.js";
+import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq, and } from "drizzle-orm";

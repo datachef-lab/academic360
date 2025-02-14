@@ -1,0 +1,1 @@
+ALTER TABLE "blood_group" ALTER COLUMN "type" SET DATA TYPE varchar(255);

@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { transportModel } from "../models/transport.model.js";
+import { transportModel } from "@/features/resources/models/transport.model.js";
 import { findAll } from "@/utils/helper.js";
 
 

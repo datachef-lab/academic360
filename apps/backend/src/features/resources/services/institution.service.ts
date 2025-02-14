@@ -1,8 +1,8 @@
-import { InstitutionType } from "@/types/resources/institution";
-import { Institution, institutionModel } from "../models/institution.model";
-import { findDegreeById } from "./degree.service";
-import { findAddressById } from "@/features/user/services/address.service";
-import { db } from "@/db/index";
+import { InstitutionType } from "@/types/resources/institution.js";
+import { Institution, institutionModel } from "@/features/resources/models/institution.model.js";
+import { findDegreeById } from "@/features/resources/services/degree.service.js";
+import { findAddressById } from "@/features/user/services/address.service.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
 export async function findInstitutionById(id: number): Promise<InstitutionType | null> {

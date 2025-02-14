@@ -1,22 +1,24 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createAcademicIdentifier, deleteAcademicIdentifier, getAcademicIdentifier, getAllAcademicIdentifier, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
+
+import { createAddress, getAddressById, updateAddress } from "../controllers/address.controller.js";
 
 const router = express.Router();
+
 router.use(verifyJWT);
 
-router.post("/",createAcademicIdentifier);
-router.get("/",getAllAcademicIdentifier);
-router.get("/query",(req,res,next)=>{
-    const {id}=req.query;
+router.post("/", createAddress);
+
+router.get("/query", (req, res, next) => {
+    const { id } = req.query;
     console.log(id);
-    if(id){
-        getAcademicIdentifier(req,res,next);
-    }else{
-        getAllAcademicIdentifier(req,res,next);
+    if (id) {
+        getAddressById(req, res, next);
+    } else {
+        next();
     }
 });
-router.put("/:id",updateAcademicIdentifier);
-router.delete("/:id",deleteAcademicIdentifier);
+
+router.put("/:id", updateAddress);
 
 export default router;

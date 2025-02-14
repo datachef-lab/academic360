@@ -1,11 +1,33 @@
-import { AccommodationType } from "@/types/user/accommodation";
-import { Accommodation, accommodationModel } from "../models/accommodation.model";
-import { findAddressById } from "./address.service";
-import { db } from "@/db/index";
+import { AccommodationType } from "@/types/user/accommodation.js";
+import { Accommodation, accommodationModel } from "../models/accommodation.model.js";
+import { addAddress, findAddressById } from "./address.service.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
+
+export async function addAccommodation(accommodation: AccommodationType): Promise<AccommodationType | null> {
+    let { address, startDate, ...props } = accommodation;
+
+    if (address) {
+        address = await addAddress(address);
+    }
+
+    const [newAccommodation] = await db.insert(accommodationModel).values({...props, addressId: address?.id}).returning();
+
+    const formattedAccommodation = await accommodationResponseFormat(newAccommodation);
+
+    return formattedAccommodation;
+}
 
 export async function findAccommotionById(id: number): Promise<AccommodationType | null> {
     const [foundAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.id, id));
+
+    const formattedAccommodation = await accommodationResponseFormat(foundAccommodation);
+
+    return formattedAccommodation;
+}
+
+export async function findAccommotionByStudentId(studentId: number): Promise<AccommodationType | null> {
+    const [foundAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.studentId, studentId));
 
     const formattedAccommodation = await accommodationResponseFormat(foundAccommodation);
 

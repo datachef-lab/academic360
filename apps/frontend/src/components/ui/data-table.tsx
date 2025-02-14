@@ -28,25 +28,30 @@ import { DataTablePagination } from "../globals/DataTablePagination";
 import { DataTableToolbar } from "../tables/components/DataTableToolBar";
 import { CustomPaginationState } from "../settings/SettingsContent";
 import { Skeleton } from "./skeleton";
+import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 
-export interface DataTableProps<TData, TValue> extends PaginationState {
+export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pageIndex" | "pageSize"> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
-  totalPages: number;
-  totalElements: number;
+  pagination: CustomPaginationState;
   isLoading: boolean;
   setPagination: React.Dispatch<React.SetStateAction<CustomPaginationState>>;
+  searchText: string;
+  setSearchText: React.Dispatch<React.SetStateAction<string>>;
+  setDataLength: React.Dispatch<React.SetStateAction<number>>;
+  refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
-  pageIndex,
-  pageSize,
-  totalElements,
-  totalPages,
+  pagination,
   isLoading,
   setPagination,
+  searchText,
+  setSearchText,
+//   setDataLength,
+  refetch,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -58,8 +63,8 @@ export function DataTable<TData, TValue>({
     columns,
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    rowCount: totalElements, // Total records
-    pageCount: totalPages,
+    rowCount: pagination.totalElements, // Total records
+    pageCount: pagination.totalPages,
     onPaginationChange: (updaterOrValue) => {
       setPagination((prev) => {
         const newState = typeof updaterOrValue === "function" ? updaterOrValue(prev) : updaterOrValue;
@@ -83,13 +88,17 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       rowSelection,
-      pagination: { pageIndex, pageSize }, // Pagination state
+      pagination: { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }, // Pagination state
     },
   });
 
+  //   React.useEffect(() => {
+  //     setDataLength(table.getRowModel().rows.length);
+  //   }, [table.getRowModel().rows.length]);
+
   return (
     <div className="space-y-5 my-3">
-      <DataTableToolbar table={table} />
+      <DataTableToolbar table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -107,7 +116,7 @@ export function DataTable<TData, TValue>({
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              Array(pageSize)
+              Array(pagination.pageSize)
                 .fill(null)
                 .map(() =>
                   table.getHeaderGroups().map((headerGroup) => (

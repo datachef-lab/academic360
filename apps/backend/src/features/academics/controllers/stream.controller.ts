@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { streamModel } from "../models/stream.model.js";
+import { streamModel } from "@/features/academics/models/stream.model.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { ApiResponse } from "@/utils/ApiResonse.js";

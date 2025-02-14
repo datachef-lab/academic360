@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Stream, streamModel } from "../models/stream.model";
+import { db } from "@/db/index.js";
+import { Stream, streamModel } from "@/features/academics/models/stream.model.js";
 import { eq } from "drizzle-orm";
 
 export async function findStreamById(id: number): Promise<Stream | null> {

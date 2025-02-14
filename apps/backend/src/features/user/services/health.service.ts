@@ -1,8 +1,8 @@
-import { HealthType } from "@/types/user/health";
-import { Health, healthModel } from "../models/health.model";
-import { db } from "@/db/index";
+import { HealthType } from "@/types/user/health.js";
+import { Health, healthModel } from "../models/health.model.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service";
+import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
 
 export async function addHealth(health: HealthType): Promise<HealthType | null> {
     const { bloodGroup, ...props } = health;

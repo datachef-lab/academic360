@@ -15,12 +15,12 @@
     "isolatedModules": true, // Required for using ESM modules
     // "baseUrl": ".", // Allow absolute imports relative to project root
 
-    "baseUrl": "./src", // Set base URL for resolving paths
+    "baseUrl": ".", // Set base URL for resolving paths
     "paths": {
-      "@/db/*": ["db/*"], // Explicit path for @/db
-      "@/*": ["*"] // General path for other imports
+      "@/db/*": ["./src/db/*"], // Explicit path for @/db
+      "@/*": ["./src/*"] // General path for other imports
     }
   },
-  "include": ["./drizzle.config.js", "./src/**/*"],
+  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js"],
   "exclude": ["dist", "node_modules"]
 }

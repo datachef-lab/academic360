@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { AnnualIncome, annualIncomeModel } from "../models/annualIncome.model";
+import { db } from "@/db/index.js";
+import { AnnualIncome, annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
 import { eq } from "drizzle-orm";
 
 export async function findAnnualIncomeById(id: number): Promise<AnnualIncome | null> {

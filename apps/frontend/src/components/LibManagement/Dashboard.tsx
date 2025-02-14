@@ -7,11 +7,10 @@ const Dashboard: React.FC = () => {
      
 
       <div className="container mx-auto px-6 py-8">
-        {/* Welcome Message */}
+
         <h2 className="text-2xl font-semibold text-gray-700">Welcome, Student!</h2>
         <p className="text-gray-500">Here's your library overview.</p>
 
-        {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
           <div className="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-4">
             <FaBook className="text-blue-500 text-3xl" />
@@ -38,7 +37,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="mt-6 flex bg-white p-4 rounded-lg shadow-md">
           <FaSearch className="text-gray-400 text-xl mr-3" />
           <input
@@ -51,7 +49,6 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        {/* Recent Activity */}
         <div className="mt-8">
           <h3 className="text-xl font-semibold text-gray-700">Recent Activity</h3>
           <div className="bg-white p-6 rounded-lg shadow-md mt-4">
@@ -69,7 +66,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
           <button className="bg-green-500 text-white p-4 rounded-lg shadow-md hover:bg-green-600">
             📚 Renew Book

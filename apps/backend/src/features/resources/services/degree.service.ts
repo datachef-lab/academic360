@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Degree, degreeModel } from "../models/degree.model";
+import { db } from "@/db/index.js";
+import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 import { eq } from "drizzle-orm";
 
 export async function findDegreeById(id: number): Promise<Degree | null> {

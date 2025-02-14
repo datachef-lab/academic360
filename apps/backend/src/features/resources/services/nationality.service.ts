@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Nationality, nationalityModel } from "../models/nationality.model";
+import { db } from "@/db/index.js";
+import { Nationality, nationalityModel } from "@/features/resources/models/nationality.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addNationality(nationality: Nationality): Promise<Nationality | null> {

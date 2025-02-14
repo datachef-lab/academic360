@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axiosInstance from "@/utils/api";
 import { DataTable } from "@/components/ui/data-table";
 import { useQuery } from "@tanstack/react-query";
-import { User } from "@/types/user";
+import { User } from "@/types/user/user";
 import { BoardUniversity } from "@/types/resources/board-university";
 import { ApiResonse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
@@ -37,6 +37,7 @@ import { countryColumns } from "../tables/resources/country-columns";
 import { stateColumns } from "../tables/resources/state-column";
 import { cityColumns } from "../tables/resources/city-columns";
 import { annualIncomeColumns } from "../tables/resources/annual-income-columns";
+import { getSearchedUsers } from "@/services/user";
 
 type SettingsContentProps = {
   activeSetting: {
@@ -96,6 +97,24 @@ export interface CustomPaginationState extends PaginationState {
 }
 
 export default function SettingsContent({ activeSetting }: SettingsContentProps) {
+  const [searchText, setSearchText] = useState("");
+
+  const [data, setData] = useState<
+    | BloodGroup[]
+    | Nationality[]
+    | State[]
+    | City[]
+    | AnnualIncome[]
+    | User[]
+    | BoardUniversity[]
+    | Institution[]
+    | Category[]
+    | Degree[]
+    | LanguageMedium[]
+    | Document[]
+  >([]);
+  const [dataLength, setDataLength] = useState<number>(0);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [columns, setColumns] = useState<ColumnDef<any, any>[]>([]);
   const [pagination, setPagination] = useState<CustomPaginationState>({
@@ -105,7 +124,16 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
     totalPages: 1,
   });
 
-  const { data, isLoading } = useQuery({
+  useEffect(() => {
+    setPagination({
+      pageIndex: 0, // TanStack Table is 0-based
+      pageSize: 10,
+      totalElements: 0,
+      totalPages: 1,
+    });
+  }, [activeSetting.label]);
+
+  const { isLoading: isFetchingDefault } = useQuery({
     queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
     queryFn: async () => {
       const { data, columns: tableCol } = await fetchData({
@@ -118,31 +146,57 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
 
       const { content, page, pageSize, totalElements, totalPages } = data.payload;
 
+      setData(content || []);
+
+      setDataLength(content.length);
+
       console.log({ pageIndex: page, pageSize, totalElements, totalPages });
 
       setPagination((prev) => ({ ...prev, totalElements, totalPages }));
 
       return content;
     },
+    enabled: searchText.trim() == "",
   });
 
-  useEffect(() => {
-    setPagination({
-      pageIndex: 0, // TanStack Table is 0-based
-      pageSize: 10,
-      totalElements: 0,
-      totalPages: 1,
-    });
-  }, [activeSetting.label]);
+  // Fetch the filtered data using React Query
+  const { isFetching: isFetchingSearch, refetch } = useQuery({
+    queryKey: ["users", pagination.pageIndex, pagination.pageSize, searchText, dataLength], // Query key with pagination and filter
+    queryFn: async () => {
+      if (searchText.trim() !== "") {
+        const data = await getSearchedUsers(
+          pagination.pageIndex + 1,
+          pagination.pageSize,
+          searchText.trim().toLowerCase(),
+        );
+
+        console.log("while searching:", data);
+        const { content, page, totalElements, totalPages } = data.payload;
+
+        setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
+
+        setData(content);
+
+        setDataLength(content.length);
+
+        return content;
+      }
+    }, // Query function with page, pageSize, and search text
+    enabled: false,
+  });
 
   return (
     <div className="px-7 py-3">
       <DataTable
-        isLoading={isLoading}
+        isLoading={isFetchingDefault || isFetchingSearch}
+        data={data}
+        searchText={searchText}
+        setSearchText={setSearchText}
         columns={columns}
-        data={data || []}
-        {...pagination}
+        pagination={pagination}
         setPagination={setPagination}
+        setDataLength={setDataLength}
+        refetch={refetch}
       />
     </div>
   );

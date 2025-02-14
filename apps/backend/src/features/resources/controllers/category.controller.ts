@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { categoryModel } from "../models/category.model.js";
+import { categoryModel } from "@/features/resources/models/category.model.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { findAll } from "@/utils/helper.js";
 

@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Occupation, occupationModel } from "../models/occupation.model";
+import { db } from "@/db/index.js";
+import { Occupation, occupationModel } from "@/features/resources/models/occupation.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addOccupation(occupation: Occupation): Promise<Occupation | null> {

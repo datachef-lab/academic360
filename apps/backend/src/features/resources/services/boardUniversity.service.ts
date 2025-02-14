@@ -1,8 +1,8 @@
-import { BoardUniversityType } from "@/types/resources/board-university";
-import { BoardUniversity, boardUniversityModel } from "../models/boardUniversity.model";
-import { findDegreeById } from "./degree.service";
-import { findAddressById } from "@/features/user/services/address.service";
-import { db } from "@/db/index";
+import { BoardUniversityType } from "@/types/resources/board-university.js";
+import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
+import { findDegreeById } from "@/features/resources/services/degree.service.js";
+import { findAddressById } from "@/features/user/services/address.service.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
 export async function findBoardUniversityById(id: number): Promise<BoardUniversityType | null> {

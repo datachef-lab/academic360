@@ -1,5 +1,5 @@
 import express from "express";
-import { createNewInstitution, deleteInstitutions, getAllInstitution, getInstitutionById, updateInstitution } from "../controllers/institution.controller.js";
+import { createNewInstitution, deleteInstitutions, getAllInstitution, getInstitutionById, updateInstitution } from "@/features/resources/controllers/institution.controller.js";
 
 
 const router = express.Router();

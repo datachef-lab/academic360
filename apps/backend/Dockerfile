@@ -11,6 +11,8 @@ WORKDIR /app
 # Copy package.json and package-lock.json
 COPY ../../package*.json ./
 
+RUN ls
+
 # Install dependencies (faster, consistent)
 RUN npm install
 
@@ -22,6 +24,8 @@ RUN chmod -R 755 /app
 
 # Build the TypeScript code
 RUN npm run build
+
+RUN ls
 
 RUN npm run db:generate && npm run db:migrate
 

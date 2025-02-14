@@ -1,6 +1,6 @@
 
 import express from "express";
-import { createPickupPoint, deletePickupPoint, getAllPickupPoint, updatePickupPoint } from "../controllers/pickupPoint.controller.js";
+import { createPickupPoint, deletePickupPoint, getAllPickupPoint, updatePickupPoint } from "@/features/resources/controllers/pickupPoint.controller.js";
 
 
 

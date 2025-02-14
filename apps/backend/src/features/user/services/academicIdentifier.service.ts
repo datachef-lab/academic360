@@ -1,13 +1,13 @@
-import { AcademicIdentifierType } from "@/types/user/academic-identifier";
-import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model";
-import { findStreamById } from "@/features/academics/services/stream.service";
-import { db } from "@/db/index";
+import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
+import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { findStreamById } from "@/features/academics/services/stream.service.js";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
 export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
     const { stream, ...props } = academicIdentifier;
 
-    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({...props}).returning();
+    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({ ...props }).returning();
 
     const formattedAcademiIdentifier = await academicIdentifierResponseFormat(newAcademicIdentifier);
 

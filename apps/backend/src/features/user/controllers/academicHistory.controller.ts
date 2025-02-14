@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from "express";
-import { createAcademicHistorySchema } from "../models/academicHistory.model.js";
+import { createAcademicHistorySchema } from "@/features/user/models/academicHistory.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 
 import { AcademicHistoryType } from "@/types/user/academic-history.js";
-import { addAcademicHistory, findAcademicHistoryById, findAllAcademicHistory, removeAcademicHistory, saveAcademicHistory } from "../services/academicHistory.service.js";
+import { addAcademicHistory, findAcademicHistoryById, findAllAcademicHistory, removeAcademicHistory, saveAcademicHistory } from "@/features/user/services/academicHistory.service.js";
 
 export const createAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {

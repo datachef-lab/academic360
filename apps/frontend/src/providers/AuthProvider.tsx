@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, ReactNode, createContext } from "react";
 import axiosInstance from "@/utils/api";
 import { useNavigate } from "react-router-dom";
-import { User } from "@/types/user";
+import { User } from "@/types/user/user";
 import { ApiResonse } from "@/types/api-response";
 
 export interface AuthContextType {

@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { religionModel } from "../models/religion.model.js";
+import { religionModel } from "@/features/resources/models/religion.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";

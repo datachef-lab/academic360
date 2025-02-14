@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { admissionModel, Admission } from "../models/admission.model";
+import { db } from "@/db/index.js";
+import { admissionModel, Admission } from "../models/admission.model.js";
 import { eq } from "drizzle-orm";
 
 export async function addAdmission(admission: Admission): Promise<Admission | null> {

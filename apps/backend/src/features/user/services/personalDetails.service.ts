@@ -1,13 +1,13 @@
-import { db } from "@/db/index";
-import { PersonalDetails, personalDetailsModel } from "../models/personalDetails.model";
+import { db } from "@/db/index.js";
+import { PersonalDetails, personalDetailsModel } from "../models/personalDetails.model.js";
 import { eq } from "drizzle-orm";
-import { PersonalDetailsType } from "@/types/user/personal-details";
-import { addAddress, findAddressById, saveAddress } from "./address.service";
-import { findDisabilityCodeById } from "@/features/resources/services/disabilityCode.service";
-import { findNationalityById } from "@/features/resources/services/nationality.service";
-import { findReligionById } from "@/features/resources/services/religion.service";
-import { findLanguageMediumById } from "@/features/resources/services/languageMedium.service";
-import { findCategoryById } from "@/features/resources/services/category.service";
+import { PersonalDetailsType } from "@/types/user/personal-details.js";
+import { addAddress, findAddressById, saveAddress } from "./address.service.js";
+import { findDisabilityCodeById } from "@/features/resources/services/disabilityCode.service.js";
+import { findNationalityById } from "@/features/resources/services/nationality.service.js";
+import { findReligionById } from "@/features/resources/services/religion.service.js";
+import { findLanguageMediumById } from "@/features/resources/services/languageMedium.service.js";
+import { findCategoryById } from "@/features/resources/services/category.service.js";
 
 export async function addPersonalDetails(personalDetails: PersonalDetailsType): Promise<PersonalDetailsType | null> {
     let {

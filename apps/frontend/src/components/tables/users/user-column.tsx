@@ -10,9 +10,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User } from "@/types/user";
+import { User } from "@/types/user/user";
 import { DataTableColumnHeader } from "@/components/globals/DataColumnHeader";
-import { Checkbox } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const userColumns: ColumnDef<User>[] = [
   {

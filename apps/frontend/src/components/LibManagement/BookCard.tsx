@@ -21,7 +21,6 @@ interface BookCardProps {
 const BookCard: React.FC<BookCardProps> = ({ book }) => {
   return (
     <div className="w-full max-w-[300px]  rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300 ease-in-out border border-gray-300 bg-white">
-      {/* Book Cover */}
       <div className="relative w-full h-40 sm:h-48 md:h-52 bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-lg font-bold rounded-t-2xl">
         <span
           className={`absolute right-3 top-2 px-2 py-[3px] text-xs font-semibold rounded-full ${
@@ -44,7 +43,6 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
         Book Cover
       </div>
 
-      {/* Book Details */}
       <div className="relative p-4">
         <div className="absolute w-full top-[-6px] left-3 mt-3 flex flex-wrap justify-between">
           <span className="bg-purple-200 text-purple-700 px-2 py-0.5 text-xs font-semibold rounded-full">
@@ -57,7 +55,6 @@ const BookCard: React.FC<BookCardProps> = ({ book }) => {
         </h2>
         <p className="text-gray-600 text-xs mb-2">By {book.author}</p>
 
-        {/* Added Date & Issue Button */}
         <div className="flex flex-col sm:flex-row justify-between text-gray-500 text-xs mt-5 gap-2 sm:gap-0">
           <Button className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-md transition hover:bg-blue-400 hover:scale-105 active:scale-95 w-full sm:w-auto">
             <BookOpen className="w-4 h-4 text-white" />

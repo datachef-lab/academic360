@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { transportDetailsModel } from "../models/transportDetails.model";
+import { db } from "@/db/index.js";
+import { transportDetailsModel } from "../models/transportDetails.model.js";
 import { eq } from "drizzle-orm";
 
 export async function removeTransportDetails(id: number): Promise<boolean | null> {

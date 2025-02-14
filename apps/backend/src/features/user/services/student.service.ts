@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { count, eq, ilike, or } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { Student, studentModel } from "../models/student.model.js";
 import { StudentType } from "@/types/user/student.js";
@@ -16,10 +16,14 @@ import { removeTransportDetailsByStudentId } from "./transportDetail.service.js"
 import { addPersonalDetails, findPersonalDetailsByStudentId, removePersonalDetailsByStudentId, savePersonalDetails } from "./personalDetails.service.js";
 import { removeMarksheetByStudentId } from "@/features/academics/services/marksheet.service.js";
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
+import { findUserById } from "./user.service.js";
+import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { userModel } from "../models/user.model.js";
+import { nationalityModel } from "@/features/resources/models/nationality.model.js";
 
 
 export async function addStudent(student: StudentType): Promise<StudentType | null> {
-    let { academicIdentifier, specialization, personalDetails, ...props } = student;
+    let { name, academicIdentifier, specialization, personalDetails, ...props } = student;
 
     if (academicIdentifier) {
         academicIdentifier = await addAcademicIdentifier(academicIdentifier);
@@ -53,7 +57,7 @@ export async function findAllStudent(page: number = 1, pageSize: number = 10): P
         content,
         page,
         pageSize,
-        totalElemets: Number(countRows),
+        totalElements: Number(countRows),
         totalPages: Math.ceil(Number(countRows) / pageSize)
     };
 }
@@ -155,6 +159,59 @@ export async function removeStudent(id: number): Promise<boolean | null> {
     return true;
 }
 
+export async function searchStudent(searchText: string, page: number = 1, pageSize: number = 10) {
+    // Trim spaces and convert searchText to lowercase
+    searchText = searchText.trim().toLowerCase();
+
+    // Query students based on student name, roll number, registration number, etc.
+    const studentsQuery = db
+        .select()
+        .from(studentModel)
+        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+        .where(
+            or(
+                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
+                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
+                ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+            )
+        );
+
+    // Get the paginated students
+    const students = await studentsQuery
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+    console.log(students);
+
+    // Get the total count of students matching the filter
+    const [{ count: countRows }] = await db
+        .select({ count: count() })
+        .from(studentModel)
+        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+        .where(
+            or(
+                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
+                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
+                ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+            )
+        );
+
+    // Map the result to a properly formatted response
+    const content = await Promise.all(students.map(async (studentRecord) => {
+        const student = studentRecord.students; // Extract the student data
+        return await studentResponseFormat(student);
+    }));
+
+    return {
+        content,
+        page,
+        pageSize,
+        totalElements: Number(countRows), // Now this count is correct!
+        totalPages: Math.ceil(Number(countRows) / pageSize)
+    };
+}
+
+
 async function studentResponseFormat(student: Student): Promise<StudentType | null> {
     if (!student) {
         return null;
@@ -162,7 +219,9 @@ async function studentResponseFormat(student: Student): Promise<StudentType | nu
 
     const { specializationId, ...props } = student;
 
-    const formatedStudent: StudentType = { ...props }
+    const user = await findUserById(student.userId);
+
+    const formatedStudent: StudentType = { ...props, name: user?.name as string }
 
     if (specializationId) {
         formatedStudent.specialization = await findSpecializationById(specializationId);
