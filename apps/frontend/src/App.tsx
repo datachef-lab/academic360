@@ -17,11 +17,11 @@ import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import StudentPage from "./pages/StudentPage";
 // import Dashboard from "./pages/Dashboard";
-import BookCatalog from "./pages/BookCatalog";
-import IssueRetun from "./pages/IssueRetun";
-import Dashboard from "./pages/Dashboard";
-import LibFineManagement from "./pages/LibFines";
-import LibReport from "./pages/LibReport";
+import BookCatalog from "./components/LibManagement/BookCatalog";
+import IssueRetun from "./components/LibManagement/IssueRetun";
+import Dashboard from "./components/LibManagement/Dashboard";
+import LibFineManagement from "./components/LibManagement/LibFines";
+import LibReport from "./components/LibManagement/LibReport";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
