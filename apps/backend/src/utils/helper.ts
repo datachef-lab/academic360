@@ -59,3 +59,4 @@ export async function findAllByFormatted<T, K>({
         totalPages: arrResponse.totalPages
     };
 }
+

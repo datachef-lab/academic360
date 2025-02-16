@@ -43,6 +43,7 @@ import { fileURLToPath } from "node:url";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { streamModel } from "@/features/academics/models/stream.model.js";
 import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
+import { SubjectRow } from "@/types/academics/subject-row.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -796,7 +797,7 @@ export async function addStream(name: string) {
 export async function addStreamsAndSubjects() {
     const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
-    const subjectArr = readExcelFile(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
+    const subjectArr = readExcelFile<SubjectRow>(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
     console.log(subjectArr.length)
     for (let i = 0; i < subjectArr.length; i++) {
         const stream = await addStream(subjectArr[i].Stream);
