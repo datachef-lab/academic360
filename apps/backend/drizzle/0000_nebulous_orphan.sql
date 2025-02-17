@@ -1,16 +1,17 @@
+CREATE TYPE "public"."marksheet_source" AS ENUM('FILE_UPLOAD', 'ADDED');--> statement-breakpoint
 CREATE TYPE "public"."stream_level" AS ENUM('UNDER_GRADUATE', 'POST_GRADUATE');--> statement-breakpoint
+CREATE TYPE "public"."subject_status" AS ENUM('PASS', 'FAIL');--> statement-breakpoint
 CREATE TYPE "public"."framework_type" AS ENUM('CCF', 'CBCS');--> statement-breakpoint
 CREATE TYPE "public"."subject_category_type" AS ENUM('SPECIAL', 'COMMON', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
-CREATE TYPE "public"."subject_type" AS ENUM('ABILITY ENHANCEMENT COMPULSORY COURSE', 'CORE COURSE', 'GENERIC ELECTIVE', 'DISCIPLINE SPECIFIC ELECTIVE', 'SKILL ENHANCEMENT COURSE');--> statement-breakpoint
 CREATE TYPE "public"."board_result_type" AS ENUM('FAIL', 'PASS');--> statement-breakpoint
 CREATE TYPE "public"."transport_type" AS ENUM('BUS', 'TRAIN', 'METRO', 'AUTO', 'TAXI', 'CYCLE', 'WALKING', 'OTHER');--> statement-breakpoint
+CREATE TYPE "public"."community_type" AS ENUM('GUJARATI', 'NON-GUJARATI');--> statement-breakpoint
 CREATE TYPE "public"."course_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
-CREATE TYPE "public"."place_of_stay_type" AS ENUM('OWN', 'HOSTEL', 'FAMILY_FRIENDS', 'PAYING_GUEST', 'RELATIVES');--> statement-breakpoint
-CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
-CREATE TYPE "public"."parent_type" AS ENUM('BOTH', 'FATHER_ONLY', 'MOTHER_ONLY');--> statement-breakpoint
 CREATE TYPE "public"."disability_type" AS ENUM('VISUAL', 'HEARING_IMPAIRMENT', 'VISUAL_IMPAIRMENT', 'ORTHOPEDIC', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'TRANSGENDER');--> statement-breakpoint
-CREATE TYPE "public"."community_type" AS ENUM('GUJARATI', 'NON-GUJARATI');--> statement-breakpoint
+CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
+CREATE TYPE "public"."parent_type" AS ENUM('BOTH', 'FATHER_ONLY', 'MOTHER_ONLY');--> statement-breakpoint
+CREATE TYPE "public"."place_of_stay_type" AS ENUM('OWN', 'HOSTEL', 'FAMILY_FRIENDS', 'PAYING_GUEST', 'RELATIVES');--> statement-breakpoint
 CREATE TYPE "public"."shift_type" AS ENUM('MORNING', 'AFTERNOON', 'EVENING');--> statement-breakpoint
 CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'TEACHER');--> statement-breakpoint
 CREATE TABLE "documents" (
@@ -26,13 +27,15 @@ CREATE TABLE "marksheets" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"student_id_fk" integer NOT NULL,
 	"semester" integer NOT NULL,
-	"year1" integer NOT NULL,
-	"year2" integer,
+	"year" integer NOT NULL,
 	"sgpa" numeric,
 	"cgpa" numeric,
+	"classification" varchar(255),
 	"remarks" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"source" "marksheet_source" DEFAULT 'FILE_UPLOAD',
+	"file" varchar(700)
 );
 --> statement-breakpoint
 CREATE TABLE "streams" (
@@ -49,14 +52,17 @@ CREATE TABLE "subjects" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"marksheet_id_fk" integer,
 	"subject_metadata_id_fk" integer,
+	"year1" integer NOT NULL,
+	"year2" integer,
 	"internal_marks" integer,
-	"theory_marks" integer,
 	"practical_marks" integer,
+	"tutorial_marks" integer,
+	"theory_marks" integer,
 	"total_marks" integer,
-	"status" varchar(255),
-	"letter_grade" varchar(255),
+	"status" "subject_status",
 	"ngp" numeric,
 	"tgp" numeric,
+	"letter_grade" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -64,18 +70,29 @@ CREATE TABLE "subjects" (
 CREATE TABLE "subject_metadatas" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"stream_id_fk" integer NOT NULL,
+	"course" "course_type",
 	"semester" integer NOT NULL,
 	"framework" "framework_type" NOT NULL,
 	"specialization_id_fk" integer,
 	"category" "subject_category_type",
-	"subject_type" "subject_type" DEFAULT 'CORE COURSE' NOT NULL,
+	"subject_type_id" integer,
 	"name" varchar(255) NOT NULL,
+	"is_optional" boolean,
 	"credit" integer,
 	"full_marks_theory" integer,
 	"full_marks_tutorial" integer,
 	"full_marks_internal" integer,
 	"full_marks_practical" integer,
+	"full_marks_project" integer,
+	"full_marks_viva" integer,
 	"full_marks" integer NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "subject_types" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(500),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -89,7 +106,7 @@ CREATE TABLE "annual_incomes" (
 --> statement-breakpoint
 CREATE TABLE "blood_group" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"type" varchar(5) NOT NULL,
+	"type" varchar(255) NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "blood_group_type_unique" UNIQUE("type")
@@ -304,8 +321,8 @@ CREATE TABLE "address" (
 	"address_line" varchar(1000),
 	"landmark" varchar(255),
 	"locality_type" "locality_type",
-	"phone" varchar(15),
-	"pincode" varchar(10),
+	"phone" varchar(255),
+	"pincode" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -337,9 +354,9 @@ CREATE TABLE "emergency_contacts" (
 	"person_name" varchar(255),
 	"relation_to_student" varchar(255),
 	"email" varchar(255),
-	"phone" varchar(15),
-	"office_phone" varchar(15),
-	"residential_phone" varchar(15),
+	"phone" varchar(255),
+	"office_phone" varchar(255),
+	"residential_phone" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -386,12 +403,12 @@ CREATE TABLE "person" (
 	"name" varchar(255),
 	"email" varchar(255),
 	"phone" varchar(255),
-	"aadhaar_card_number" varchar(16),
+	"aadhaar_card_number" varchar(255),
 	"image" varchar(255),
 	"qualification_id_fk" integer,
 	"occupation_id_fk" integer,
 	"office_addres_id_fk" integer,
-	"office_phone" varchar(15),
+	"office_phone" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -462,8 +479,8 @@ CREATE TABLE "users" (
 	"name" varchar(255) NOT NULL,
 	"email" varchar(500) NOT NULL,
 	"password" varchar(255) NOT NULL,
-	"phone" varchar(15),
-	"whatsapp_number" varchar(15),
+	"phone" varchar(255),
+	"whatsapp_number" varchar(255),
 	"image" varchar(255),
 	"type" "user_type" DEFAULT 'STUDENT',
 	"disabled" boolean DEFAULT false,
@@ -477,6 +494,7 @@ ALTER TABLE "subjects" ADD CONSTRAINT "subjects_marksheet_id_fk_marksheets_id_fk
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_subject_metadata_id_fk_subject_metadatas_id_fk" FOREIGN KEY ("subject_metadata_id_fk") REFERENCES "public"."subject_metadatas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_specialization_id_fk_specializations_id_fk" FOREIGN KEY ("specialization_id_fk") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_subject_type_id_subject_types_id_fk" FOREIGN KEY ("subject_type_id") REFERENCES "public"."subject_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

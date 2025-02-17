@@ -1,22 +1,27 @@
-import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
 import { subjectMetadataModel } from "./subjectMetadata.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const subjectStatusType = pgEnum("subject_status", ["PASS", "FAIL"]);
+
 export const subjectModel = pgTable("subjects", {
     id: serial().primaryKey(),
     marksheetId: integer("marksheet_id_fk").references(() => marksheetModel.id),
     subjectMetadataId: integer("subject_metadata_id_fk").references(() => subjectMetadataModel.id),
+    year1: integer().notNull(),
+    year2: integer(),
     internalMarks: integer(),
-    theoryMarks: integer(),
     practicalMarks: integer(),
+    tutorialMarks: integer(),
+    theoryMarks: integer(),
     totalMarks: integer(),
-    status: varchar({ length: 255 }),
-    letterGrade: varchar({ length: 255 }),
+    status: subjectStatusType(),
     ngp: numeric(),
     tgp: numeric(),
+    letterGrade: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

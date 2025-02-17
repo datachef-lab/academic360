@@ -1,5 +1,5 @@
 {
-  "id": "9dfea273-988f-4cb9-864b-885f808b1e3e",
+  "id": "5213edbc-9bc2-4fc4-80a3-5f42723fe47f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -79,17 +79,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "year1": {
-          "name": "year1",
+        "year": {
+          "name": "year",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "year2": {
-          "name": "year2",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "sgpa": {
           "name": "sgpa",
@@ -100,6 +94,12 @@
         "cgpa": {
           "name": "cgpa",
           "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "classification": {
+          "name": "classification",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -122,6 +122,20 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "source": {
+          "name": "source",
+          "type": "marksheet_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'FILE_UPLOAD'"
+        },
+        "file": {
+          "name": "file",
+          "type": "varchar(700)",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -227,20 +241,38 @@
           "primaryKey": false,
           "notNull": false
         },
+        "year1": {
+          "name": "year1",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "year2": {
+          "name": "year2",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "internal_marks": {
           "name": "internal_marks",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "theory_marks": {
-          "name": "theory_marks",
+        "practical_marks": {
+          "name": "practical_marks",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "practical_marks": {
-          "name": "practical_marks",
+        "tutorial_marks": {
+          "name": "tutorial_marks",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "theory_marks": {
+          "name": "theory_marks",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -253,13 +285,8 @@
         },
         "status": {
           "name": "status",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "letter_grade": {
-          "name": "letter_grade",
-          "type": "varchar(255)",
+          "type": "subject_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -272,6 +299,12 @@
         "tgp": {
           "name": "tgp",
           "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "letter_grade": {
+          "name": "letter_grade",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -341,6 +374,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "course": {
+          "name": "course",
+          "type": "course_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "semester": {
           "name": "semester",
           "type": "integer",
@@ -367,19 +407,23 @@
           "primaryKey": false,
           "notNull": false
         },
-        "subject_type": {
-          "name": "subject_type",
-          "type": "subject_type",
-          "typeSchema": "public",
+        "subject_type_id": {
+          "name": "subject_type_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'CORE COURSE'"
+          "notNull": false
         },
         "name": {
           "name": "name",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_optional": {
+          "name": "is_optional",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
         },
         "credit": {
           "name": "credit",
@@ -407,6 +451,18 @@
         },
         "full_marks_practical": {
           "name": "full_marks_practical",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_marks_project": {
+          "name": "full_marks_project",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_marks_viva": {
+          "name": "full_marks_viva",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -459,8 +515,60 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "subject_metadatas_subject_type_id_subject_types_id_fk": {
+          "name": "subject_metadatas_subject_type_id_subject_types_id_fk",
+          "tableFrom": "subject_metadatas",
+          "tableTo": "subject_types",
+          "columnsFrom": [
+            "subject_type_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.subject_types": {
+      "name": "subject_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -518,7 +626,7 @@
         },
         "type": {
           "name": "type",
-          "type": "varchar(5)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
@@ -2000,13 +2108,13 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
         "pincode": {
           "name": "pincode",
-          "type": "varchar(10)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2247,19 +2355,19 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
         "office_phone": {
           "name": "office_phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
         "residential_phone": {
           "name": "residential_phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2657,7 +2765,7 @@
         },
         "aadhaar_card_number": {
           "name": "aadhaar_card_number",
-          "type": "varchar(16)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2687,7 +2795,7 @@
         },
         "office_phone": {
           "name": "office_phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3333,13 +3441,13 @@
         },
         "phone": {
           "name": "phone",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
         "whatsapp_number": {
           "name": "whatsapp_number",
-          "type": "varchar(15)",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3397,12 +3505,28 @@
     }
   },
   "enums": {
+    "public.marksheet_source": {
+      "name": "marksheet_source",
+      "schema": "public",
+      "values": [
+        "FILE_UPLOAD",
+        "ADDED"
+      ]
+    },
     "public.stream_level": {
       "name": "stream_level",
       "schema": "public",
       "values": [
         "UNDER_GRADUATE",
         "POST_GRADUATE"
+      ]
+    },
+    "public.subject_status": {
+      "name": "subject_status",
+      "schema": "public",
+      "values": [
+        "PASS",
+        "FAIL"
       ]
     },
     "public.framework_type": {
@@ -3422,17 +3546,6 @@
         "HONOURS",
         "GENERAL",
         "ELECTIVE"
-      ]
-    },
-    "public.subject_type": {
-      "name": "subject_type",
-      "schema": "public",
-      "values": [
-        "ABILITY ENHANCEMENT COMPULSORY COURSE",
-        "CORE COURSE",
-        "GENERIC ELECTIVE",
-        "DISCIPLINE SPECIFIC ELECTIVE",
-        "SKILL ENHANCEMENT COURSE"
       ]
     },
     "public.board_result_type": {
@@ -3457,40 +3570,20 @@
         "OTHER"
       ]
     },
+    "public.community_type": {
+      "name": "community_type",
+      "schema": "public",
+      "values": [
+        "GUJARATI",
+        "NON-GUJARATI"
+      ]
+    },
     "public.course_type": {
       "name": "course_type",
       "schema": "public",
       "values": [
         "HONOURS",
         "GENERAL"
-      ]
-    },
-    "public.place_of_stay_type": {
-      "name": "place_of_stay_type",
-      "schema": "public",
-      "values": [
-        "OWN",
-        "HOSTEL",
-        "FAMILY_FRIENDS",
-        "PAYING_GUEST",
-        "RELATIVES"
-      ]
-    },
-    "public.locality_type": {
-      "name": "locality_type",
-      "schema": "public",
-      "values": [
-        "RURAL",
-        "URBAN"
-      ]
-    },
-    "public.parent_type": {
-      "name": "parent_type",
-      "schema": "public",
-      "values": [
-        "BOTH",
-        "FATHER_ONLY",
-        "MOTHER_ONLY"
       ]
     },
     "public.disability_type": {
@@ -3513,12 +3606,32 @@
         "TRANSGENDER"
       ]
     },
-    "public.community_type": {
-      "name": "community_type",
+    "public.locality_type": {
+      "name": "locality_type",
       "schema": "public",
       "values": [
-        "GUJARATI",
-        "NON-GUJARATI"
+        "RURAL",
+        "URBAN"
+      ]
+    },
+    "public.parent_type": {
+      "name": "parent_type",
+      "schema": "public",
+      "values": [
+        "BOTH",
+        "FATHER_ONLY",
+        "MOTHER_ONLY"
+      ]
+    },
+    "public.place_of_stay_type": {
+      "name": "place_of_stay_type",
+      "schema": "public",
+      "values": [
+        "OWN",
+        "HOSTEL",
+        "FAMILY_FRIENDS",
+        "PAYING_GUEST",
+        "RELATIVES"
       ]
     },
     "public.shift_type": {
