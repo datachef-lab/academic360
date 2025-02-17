@@ -1,14 +1,20 @@
 import express from "express";
-import { createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
+import { createMultipleSubjects, createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getFilteredSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
+import { deleteTempFile } from "@/middlewares/deleteTempFile.middleware.js";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 router.post("/", createSubjectMetadata);
 
-router.get("/", getAllSubjectMetadatas, );
+router.get("/", getAllSubjectMetadatas);
+
+router.post("/filters", getFilteredSubjectMetadatas);
+
+router.get("/upload", uploadExcelMiddleware, createMultipleSubjects, deleteTempFile);
 
 router.get("/query", (req, res, next) => {
     const { id, streamId, semester } = req.query;

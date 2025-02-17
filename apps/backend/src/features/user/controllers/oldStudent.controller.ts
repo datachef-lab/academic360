@@ -44,6 +44,7 @@ import { readExcelFile } from "@/utils/readExcel.js";
 import { streamModel } from "@/features/academics/models/stream.model.js";
 import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
 import { SubjectRow } from "@/types/academics/subject-row.js";
+import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/subjectType.model.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -801,38 +802,20 @@ export async function addStreamsAndSubjects() {
     console.log(subjectArr.length)
     for (let i = 0; i < subjectArr.length; i++) {
         const stream = await addStream(subjectArr[i].Stream);
+
         let specialization: Specialization | undefined;
         if (subjectArr[i].Specialization) {
             specialization = await addSpecialization(subjectArr[i].Specialization as string);
         }
-        let a = subjectCategoryTypeEnum.enumValues;
-        let subjectType = (subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE" || subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE COURSE") ? "DISCIPLINE SPECIFIC ELECTIVE" : subjectArr[i]["Subject Type"];
-        let whereConditions = [
-            eq(subjectMetadataModel.streamId, stream.id),
-            eq(subjectMetadataModel.semester, subjectArr[i].Semester),
-            eq(subjectMetadataModel.name, subjectArr[i]["Subject Name"]),
-            eq(subjectMetadataModel.credit, subjectArr[i].Credit),
-            eq(subjectMetadataModel.subjectType, subjectType as "DISCIPLINE SPECIFIC ELECTIVE" | "ABILITY ENHANCEMENT COMPULSORY COURSE" | "CORE COURSE" | "GENERIC ELECTIVE" | "SKILL ENHANCEMENT COURSE"),
-        ]
 
-        // if (subjectArr[i].TH) {
-        //     whereConditions.push(eq(subjectMetadataModel.fullMarksTheory, subjectArr[i].TH as number));
-        // }
-        // if (subjectArr[i].TU) {
-        //     whereConditions.push(eq(subjectMetadataModel.fullMarksTutorial, subjectArr[i].TU as number));
-        // }
-        // if (subjectArr[i].IN) {
-        //     whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].IN as number));
-        // }
-        // if (subjectArr[i].PR) {
-        //     whereConditions.push(eq(subjectMetadataModel.fullMarksInternal, subjectArr[i].PR as number));
-        // }
-
-        // const [foundSubjectMetadata] = await db.select().from(subjectMetadataModel).where(and(...whereConditions));
-
-        // if (foundSubjectMetadata) {
-        //     continue;
-        // }
+        let subjectType: SubjectTypeModel | null = null;
+        if (subjectArr[i]["Subject Type"]) {
+            const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
+            if (!foundSubjectType) {
+                const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
+                subjectType = newSubjectType;
+            }
+        }
 
         await db.insert(subjectMetadataModel).values({
             streamId: stream.id as number,
@@ -841,7 +824,10 @@ export async function addStreamsAndSubjects() {
             fullMarksTheory: subjectArr[i].TH,
             fullMarksTutorial: subjectArr[i].TU,
             fullMarksPractical: subjectArr[i].PR,
-            subjectType: (subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE" || subjectArr[i]["Subject Type"] == "DISCIPLINE SPECIFIC ELECTIVE COURSE") ? "DISCIPLINE SPECIFIC ELECTIVE" : subjectArr[i]["Subject Type"],
+            fullMarksProject: subjectArr[i].PROJ,
+            fullMarksViva: subjectArr[i].VIVA,
+            isOptional: subjectArr[i].Optional ? true : false,
+            subjectTypeId: subjectType ? subjectType.id as number : null,
             framework: "CBCS",
             category: subjectArr[i].Category,
             specializationId: specialization ? specialization.id as number : undefined,

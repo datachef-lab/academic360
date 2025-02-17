@@ -5,11 +5,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { specializationModel } from "./specialization.model.js";
-import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
-
-export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
-
-export const shiftTypeEnum = pgEnum("shift_type", ["MORNING", "AFTERNOON", "EVENING"]);
+import { communityTypeEnum, frameworkTypeEnum, shiftTypeEnum } from "./helper.js";
 
 export const studentModel = pgTable("students", {
     id: serial().primaryKey(),

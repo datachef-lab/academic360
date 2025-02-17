@@ -5,8 +5,7 @@ import { relations } from "drizzle-orm";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-export const localityTypeEnum = pgEnum("locality_type", ["RURAL", "URBAN"]);
+import { localityTypeEnum } from "./helper.js";
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),

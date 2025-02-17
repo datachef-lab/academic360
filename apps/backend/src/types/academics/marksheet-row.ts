@@ -9,7 +9,7 @@ export interface MarksheetRow {
     remarks: string | null;
     full_marks: number | null;
     year1: number;
-    year2: number;
+    year2: string | null;
     ngp: string | null;
     credit: number | null;
     tgp: string | null;

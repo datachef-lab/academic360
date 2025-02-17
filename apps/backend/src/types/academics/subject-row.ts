@@ -1,6 +1,6 @@
 export interface SubjectRow {
     "Stream": string;
-    "Course": string;
+    "Course": "HONOURS" | "GENERAL";
     "Semester": number;
     "Specialization": string | null;
     "Subject Type": string;
@@ -13,4 +13,8 @@ export interface SubjectRow {
     "Full Marks": number | null;
     "Total Subjects": number | null;
     "Category": string | null;
+    "Framework": "CCF" | "CBCS";
+    "PROJ": number | null;
+    "VIVA": number | null;
+    "Optional": string | null;
 }

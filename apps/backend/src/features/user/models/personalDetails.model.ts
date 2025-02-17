@@ -10,10 +10,9 @@ import { addressModel } from "./address.model.js";
 import { categoryModel } from "@/features/resources/models/category.model.js";
 import { languageMediumModel } from "@/features/resources/models/languageMedium.model.js";
 import { disabilityCodeModel } from "./disabilityCode.model.js";
+import { disabilityTypeEnum, genderTypeEnum } from "./helper.js";
 
-export const genderTypeEnum = pgEnum('gender_type', ["MALE", "FEMALE", "TRANSGENDER"]);
 
-export const disabilityTypeEnum = pgEnum('disability_type', ["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]);
 
 export const personalDetailsModel = pgTable("personal_details", {
     id: serial().primaryKey(),

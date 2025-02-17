@@ -1,27 +1,71 @@
 import path from "path";
 import { fileURLToPath } from "url";
-import { MarksheetType } from "@/types/academics/marksheet";
-import { readExcelFile } from "@/utils/readExcel";
+import { MarksheetType } from "@/types/academics/marksheet.js";
+import { readExcelFile } from "@/utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
-import { findAllStreams } from "./stream.service";
-import { Stream } from "../models/stream.model";
-import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model";
+import { findAllStreams, findStreamByName } from "./stream.service.js";
+import { Stream } from "../models/stream.model.js";
+import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 import { and, eq } from "drizzle-orm";
-import { findStudentById } from "@/features/user/services/student.service";
-import { studentModel } from "@/features/user/models/student.model";
-import { Marksheet, marksheetModel } from "../models/marksheet.model";
-import { Subject, subjectModel } from "../models/subject.model";
-import { subjectMetadataModel } from "../models/subjectMetadata.model";
-import { SubjectType } from "@/types/academics/subject";
-import { subjectResponseFormat } from "./subject.service";
-import { stream } from "xlsx";
+import { findStudentById } from "@/features/user/services/student.service.js";
+import { Student, studentModel } from "@/features/user/models/student.model.js";
+import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
+import { Subject, subjectModel } from "../models/subject.model.js";
+import { subjectMetadataModel } from "../models/subjectMetadata.model.js";
+import { SubjectType } from "@/types/academics/subject.js";
+import { addSubject, findSubjectsByMarksheetId, saveSubject, subjectResponseFormat } from "./subject.service.js";
+import bcrypt from "bcrypt";
+import { User, userModel } from "@/features/user/models/user.model.js";
+import { calculateCGPA, calculateSGPA, formatMarks, getClassification, getLetterGrade, getRemarks } from "@/utils/helper.js";
+import { findAcademicIdentifierById, findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
+import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
-export async function addMarksheet(): Promise<MarksheetType | null> {
+export async function addMarksheet(marksheet: MarksheetType): Promise<MarksheetType | null> {
+    // Return if the student not found
+    let student = await findStudentById(marksheet.studentId);
+    if (!student) {
+        return null;
+    }
 
-    return null;
+    // Step 1: Create the marksheet
+    const [newMarksheet] = await db.insert(marksheetModel).values({
+        studentId: student.id as number,
+        semester: marksheet.semester,
+        year: marksheet.year,
+        source: "ADDED",
+    }).returning();
+    // Step 2: Add the subjects
+    for (let i = 0; i < marksheet.subjects.length; i++) {
+        marksheet.subjects[i].marksheetId = newMarksheet.id;
+        marksheet.subjects[i] = await addSubject(marksheet.subjects[i]) as SubjectType;
+    }
+    // Step 3: Update the marksheet fields like SGPA, CGPA, Classification
+    newMarksheet.sgpa = calculateSGPA(marksheet);
+    if (newMarksheet.semester === 6) {
+        newMarksheet.cgpa = (await calculateCGPA(newMarksheet.studentId))?.toString() ?? null;
+        if (newMarksheet.cgpa) {
+            newMarksheet.classification = await getClassification(+newMarksheet.cgpa, marksheet.studentId) ?? null;
+        }
+    }
+
+    const [updatedMarksheet] = await db.update(marksheetModel).set(newMarksheet).where(eq(marksheetModel.id, newMarksheet.id)).returning();
+
+    if (!updatedMarksheet) {
+        throw Error("Unable to save the marksheet...!");
+    }
+
+    const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
+
+    if (!formattedMarksheet) {
+        return null;
+    }
+
+    await postMarksheetOperation(formattedMarksheet as MarksheetType);
+
+    return formattedMarksheet;
 }
 
 export async function uploadFile(fileName: string): Promise<boolean> {
@@ -31,6 +75,7 @@ export async function uploadFile(fileName: string): Promise<boolean> {
     const dataArr = readExcelFile<MarksheetRow>(filePath);
 
     // TODO: Check if all the entries are valid.
+    validateData(dataArr);
 
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
@@ -63,8 +108,10 @@ export async function uploadFile(fileName: string): Promise<boolean> {
                     const subjectArr = arr.filter(row => row.uid === arr[i].uid);
 
                     // Process the student
-                    await processStudent(subjectArr, streams[s], sem);
+                    await processStudent(subjectArr, streams[s], sem, fileName);
 
+                    // Mark the uid as done
+                    doneUid.push(arr[i].uid);
                 }
 
             }
@@ -72,7 +119,47 @@ export async function uploadFile(fileName: string): Promise<boolean> {
     }
 
 
-    return false;
+    return true;
+}
+
+export async function saveMarksheet(id: number, marksheet: MarksheetType) {
+    const [foundMarksheet] = await db.select().from(marksheetModel).where(eq(marksheetModel.id, id));
+    if (!foundMarksheet) {
+        return null;
+    }
+    // Update the subjects
+    for (let i = 0; i < marksheet.subjects.length; i++) {
+        if (!marksheet.subjects[i].id) {
+            marksheet.subjects[i] = await addSubject(marksheet.subjects[i]) as SubjectType;
+        }
+        else {
+            marksheet.subjects[i] = await saveSubject(marksheet.subjects[i].id as number, marksheet.subjects[i]) as SubjectType;
+        }
+    }
+
+    foundMarksheet.sgpa = calculateSGPA(marksheet);
+    if (foundMarksheet.semester === 6) {
+        foundMarksheet.cgpa = (await calculateCGPA(foundMarksheet.studentId))?.toString() ?? null;
+        if (foundMarksheet.cgpa) {
+            foundMarksheet.classification = await getClassification(+foundMarksheet.cgpa, marksheet.studentId) ?? null;
+        }
+    }
+
+    const [updatedMarksheet] = await db.update(marksheetModel).set(foundMarksheet).where(eq(marksheetModel.id, id)).returning();
+
+    if (!updatedMarksheet) {
+        throw Error("Unable to save the marksheet...!");
+    }
+
+    const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
+
+    if (!formattedMarksheet) {
+        return null;
+    }
+
+    await postMarksheetOperation(formattedMarksheet as MarksheetType);
+
+    return formattedMarksheet;
 }
 
 export async function findMarksheetById(id: number): Promise<MarksheetType | null> {
@@ -109,9 +196,17 @@ async function marksheetResponseFormat(marksheet: Marksheet): Promise<MarksheetT
         return null;
     }
 
-    // TODO: Create the object
+    const subjects = await findSubjectsByMarksheetId(marksheet.id as number);
 
-    return null;
+    const academicIdentifier = await findAcademicIdentifierByStudentId(marksheet.studentId as number);
+
+    const formattedMarksheet: MarksheetType = {
+        ...marksheet,
+        subjects,
+        academicIdentifier: academicIdentifier as AcademicIdentifierType,
+    };
+
+    return formattedMarksheet;
 }
 
 interface FilterDataProps {
@@ -133,20 +228,105 @@ function filterData({ dataArr, stream, framework, year, semester }: FilterDataPr
     );
 }
 
-async function processStudent(arr: MarksheetRow[], stream: Stream, semester: number) {
+const cleanString = (value: unknown): string | undefined => {
+    if (typeof value === 'string') {
+        return value.replace(/[\s\-\/]/g, '').trim();
+    }
+    return undefined; // Return undefined for non-string values
+};
+
+async function addUser(marksheet: MarksheetRow) {
+    const email = `${cleanString(marksheet.uid)?.toUpperCase()}@thebges.edu.in`;
+
+    // Hash the password before storing it in the database
+    const hashedPassword = await bcrypt.hash(marksheet.uid.trim()?.toUpperCase(), 10);
+
+    // Return, if the email already exist
+    const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
+    if (existingUser) {
+        const [updatedUser] = await db.update(userModel).set({ password: hashedPassword }).where(eq(userModel.id, existingUser.id)).returning();
+        return updatedUser;
+    }
+
+    // Create the new user
+    const [newUser] = await db.insert(userModel).values({
+        name: marksheet.name?.trim()?.toUpperCase(),
+        email: email.trim().toLowerCase(),
+        password: hashedPassword,
+        phone: null,
+        type: "STUDENT",
+        whatsappNumber: null,
+    }).returning();
+
+    return newUser;
+}
+
+async function addStudent(marksheet: MarksheetRow, user: User) {
+    const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, user.id as number));
+    if (existingStudent) {
+        return existingStudent;
+    }
+
+    let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined;
+    if (marksheet.uid.startsWith("11") || marksheet.uid.startsWith("14")) {
+        level = "POST_GRADUATE";
+    } else if (!marksheet.uid.startsWith("B")) {
+        level = "UNDER_GRADUATE";
+    }
+
+    const [newStudent] = await db.insert(studentModel).values({
+        userId: user.id as number,
+        framework: marksheet.framework,
+        shift: marksheet.shift ? ((marksheet.shift === "Morning" || marksheet.shift === "Day") ? "MORNING" : (["MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "MORNING" | "AFTERNOON" | "EVENING" : null)) : null,
+    }).returning();
+
+    return newStudent;
+}
+
+async function addAcademicIdentifier(marksheet: MarksheetRow, student: Student) {
+    const stream = await findStreamByName(marksheet.stream);
+
+    if (!stream) {
+        throw Error("Invalid stream");
+    }
+
+    await db.insert(academicIdentifierModel).values({
+        studentId: student.id as number,
+        streamId: stream.id as number,
+        frameworkType: marksheet.framework.toUpperCase().trim() as "CCF" | "CBCS",
+        uid: cleanString(marksheet.uid)?.toUpperCase(),
+        registrationNumber: marksheet.registration_no.trim(),
+        rollNumber: marksheet.roll_no.trim(),
+        section: marksheet.section,
+    }).returning();
+}
+
+async function processStudent(arr: MarksheetRow[], stream: Stream, semester: number, fileName: string) {
     // Step 1: Check if the uid already exist
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.uid, arr[0].uid));
 
+    let student: Student | null = null;
     if (!foundAcademicIdentifier) { // TODO: Create new student
+        // Step 1: Add the user
+        const user = await addUser(arr[0]);
 
+        // Step 2: Add the student
+        student = await addStudent(arr[0], user);
+
+        // Step 3: Add the academic-identifier
+        await addAcademicIdentifier(arr[0], student);
     }
 
-    const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId));
+    if (!student) {
+        throw Error("Unable to create the new student");
+    }
 
     let marksheet: Marksheet = {
-        studentId: foundStudent.id,
+        studentId: student.id as number,
         semester: arr[0].semester,
         year: arr[0].year1,
+        source: "FILE_UPLOAD",
+        file: fileName,
     }
 
     marksheet = (await db.insert(marksheetModel).values(marksheet).returning())[0];
@@ -172,10 +352,10 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
             marksheetId: marksheet.id,
             subjectMetadataId: subjectMetadata.id,
             year1: arr[i].year1,
-            year2: stream.name !== "BCOM" ? arr[i].year2 : null,
+            year2: stream.name !== "BCOM" && arr[i].year2 ? Number(arr[i].year2) : null,
             internalMarks: formatMarks(arr[i].internal_marks),
             theoryMarks: formatMarks(arr[i].theory_marks),
-            practicalMarks: stream.name !== "BCOM" ? formatMarks(arr[i].year2?.toString()) : null,
+            practicalMarks: stream.name !== "BCOM" && arr[i].year2 ? formatMarks(arr[i].year2) : null,
             tutorialMarks: formatMarks(arr[i].tutorial_marks),
             totalMarks: formatMarks(arr[i].total),
             letterGrade: arr[i].grade,
@@ -185,7 +365,7 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
 
         // Calculate totalMarksObtained and fullMarksSum
         let total = formatMarks(arr[i].total);
-        totalMarksObtained +=  total ? total : 0;
+        totalMarksObtained += total ? total : 0;
         fullMarksSum += subjectMetadata.fullMarks
 
         // Calculate NGP and set the letterGrade
@@ -204,13 +384,13 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
             }
         }
 
-         // Calculate sum of product of NGP and Credit
+        // Calculate sum of product of NGP and Credit
         if (subject.ngp && subjectMetadata.credit) {
             ngp_credit += +subject.ngp * subjectMetadata.credit;
 
             // Calculate sum of all credits
             creditSum += subjectMetadata.credit;
-        } 
+        }
 
         // Insert the subject
         subject = (await db.insert(subjectModel).values(subject).returning())[0];
@@ -219,17 +399,14 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
 
     }
 
-    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
-    if (marksheetPercent < 30) {
-        marksheet.sgpa = null;
-    }
-    else {
-        marksheet.sgpa = (ngp_credit / creditSum).toFixed(3);
-    }
+    const tmpMarksheet = (await findMarksheetById(marksheet.id as number)) as MarksheetType;
+    marksheet.sgpa = calculateSGPA(tmpMarksheet);
 
     const subjectList: SubjectType[] = (await Promise.all(subjects.map(async (subject) => {
         return await subjectResponseFormat(subject);
     }))).filter((subject): subject is SubjectType => subject !== null);
+
+    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
 
     // Set the remarks for the marksheet
     marksheet.remarks = getRemarks(marksheetPercent, stream, arr[0].course.toUpperCase() as "HONOURS" | "GENERAL", semester, subjectList);
@@ -244,214 +421,148 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
 
     marksheet = (await db.update(marksheetModel).set(marksheet).where(eq(marksheetModel.id, marksheet.id as number)).returning())[0];
 
+
+    const updatedMarksheet = await marksheetResponseFormat(marksheet);
+
+    await postMarksheetOperation(updatedMarksheet as MarksheetType);
+
     return marksheet;
 }
 
-function formatMarks(marks: string | null): number | null {
-    if (!marks || marks.trim() === "") {
-        return null;
+
+async function postMarksheetOperation(marksheet: MarksheetType) {
+    const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, marksheet.studentId));
+    if (!foundStudent) {
+        return;
+    }
+    // For Passing the semester, update the student fields
+    if (marksheet.sgpa) {
+        // Updated the last passed year
+        foundStudent.lastPassedYear = marksheet.year;
+        // Update the student's status 
+        if (marksheet.semester === 6) {
+            foundStudent.active = true;
+            foundStudent.alumni = true;
+        }
+        await db.update(studentModel).set(foundStudent).where(eq(studentModel.id, foundStudent.id as number));
+    }
+    // Update the registration_number and roll_number, if found empty
+    const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, foundStudent.id));
+    if (!foundAcademicIdentifier) {
+        return;
+    }
+    if (!foundAcademicIdentifier.registrationNumber) {
+        foundAcademicIdentifier.registrationNumber = marksheet.academicIdentifier.registrationNumber as string;
+    }
+    if (!foundAcademicIdentifier.rollNumber) {
+        foundAcademicIdentifier.rollNumber = marksheet.academicIdentifier.rollNumber as string;
+    }
+    if (!foundAcademicIdentifier.course) {
+        foundAcademicIdentifier.course = marksheet.academicIdentifier.course ?? null;
+    }
+    if (!foundAcademicIdentifier.frameworkType) {
+        foundAcademicIdentifier.frameworkType = marksheet.academicIdentifier.frameworkType ?? null;
+    }
+    if (!foundAcademicIdentifier.section) {
+        foundAcademicIdentifier.section = marksheet.academicIdentifier.section ?? null;
     }
 
-    if (marks.toUpperCase() === "AB") {
-        return -1;
-    }
+    await db.update(academicIdentifierModel).set(foundAcademicIdentifier).where(eq(academicIdentifierModel.id, foundAcademicIdentifier.id as number));
 
-    const tmpMarks = Number(marks);
-    return isNaN(tmpMarks) ? null : tmpMarks;
+    return;
 }
 
-function getLetterGrade(subjectPercent: number) {
-    if (subjectPercent >= 90 && subjectPercent <= 100) {
-        return "A++";
-    }
-    if (subjectPercent >= 80 && subjectPercent < 90) {
-        return "A+";
-    }
-    if (subjectPercent >= 70 && subjectPercent < 80) {
-        return "A";
-    }
-    if (subjectPercent >= 60 && subjectPercent < 70) {
-        return "B+";
-    }
-    if (subjectPercent >= 50 && subjectPercent < 60) {
-        return "B"
-    }
-    if (subjectPercent >= 40 && subjectPercent < 50) {
-        return "C+";
-    }
-    if (subjectPercent >= 30 && subjectPercent < 40) {
-        return "C";
-    }
-    if (subjectPercent >= 0 && subjectPercent < 30) {
-        return "F";
-    }
-}
+async function validateData(dataArr: MarksheetRow[]) {
+    // Step 1: Find the smallest year from the dataArr[]
+    const startingYear = Math.min(...dataArr.map(row => row.year1));
 
-async function getClassification(cgpa: number, studentId: number) {
-    const marksheetList: Marksheet[] = await findMarksheetsByStudentId(studentId);
+    // Step 2: Fetch all the streams
+    const streams = await findAllStreams();
 
-    let isClearedSemester = false;
-    for (let i = 0; i < 6; i++) {
-        const marksheetObj = marksheetList.find(marksheet => marksheet.semester == i + 1);
-        if (!marksheetObj || !marksheetObj.sgpa) {
-            isClearedSemester = false;
-            break;
-        }
-        isClearedSemester = true;
-    }
+    // Step 3: Loop over the array.
+    for (let y = startingYear; y < dataArr.length; y++) { // Iterate over the years
 
-    if (!isClearedSemester) {
-        return "Previous Semester not cleared";
-    }
-    else {
-        if (cgpa >= 9 && cgpa <= 10) {
-            return "Outstanding";
-        }
-        else if (cgpa >= 8 && cgpa < 9) {
-            return "Excellent";
-        }
-        else if (cgpa >= 7 && cgpa < 8) {
-            return "Very Good";
-        }
-        else if (cgpa >= 6 && cgpa < 7) {
-            return "Good";
-        }
-        else if (cgpa >= 5 && cgpa < 6) {
-            return "Average";
-        }
-        else if (cgpa >= 4 && cgpa < 5) {
-            return "Fair";
-        }
-        else if (cgpa >= 3 && cgpa < 4) {
-            return "Satisfactory";
-        }
-        else if (cgpa >= 0 && cgpa < 3) {
-            return "Fail";
-        }
-    }
-}
+        for (let s = 0; s < streams.length; s++) { // Iterate over the streams
 
-function getRemarks(marksheetPercent: number, stream: Stream, course: "HONOURS" | "GENERAL", semester: number, subjects: SubjectType[]) {
-    // Firstly check if all the subjects are got cleared, if not then return "Semester not cleared."
-    for (let i = 0; i < subjects.length; i++) {
-        if (subjects[i].totalMarks === null || subjects[i].totalMarks === -1) {
-            return "Semester not cleared.";
-        }
-
-        let percentMarks = ((subjects[i].totalMarks as number) * 100) / subjects[i].subjectMetadata.fullMarks;
-
-        if (percentMarks < 30) {
-            return "Semester not cleared.";
-        }
-    }
-
-    // Get the remarks by total_marks percentage 
-    if (marksheetPercent < 30) { // For failed marksheet
-        return "Semester not cleared.";
-    }
-    else { // For passed marksheet
-        if (semester != 6) { // For semester: 1, 2, 3, 4, 5
-            return "Semester cleared.";
-        }
-        else { // For semester: 6
-            if (stream.name.toUpperCase() !== "BCOM") { // For BA & BSC
-                return "Qualified with Honours.";
-            }
-            else { // For BCOM
-                if (course.toUpperCase() === "HONOURS") { // For honours
-                    return "Semester cleared with honours."
-                }
-                else { // For general
-                    return "Semester cleared with general.";
-                }
-            }
-        }
-    }
-}
-
-async function calculateCGPA(studentId: number) {
-    const marksheetList = await findMarksheetsByStudentId(studentId);
-
-    const updatedMarksheetList: MarksheetType[] = [];
-
-    // Step 1: Select and update all the passed marksheets
-    for (let semester = 1; semester <= 6; semester++) {
-        // Filter marksheets for the current semester
-        const semesterWiseArr = marksheetList.filter(mks => mks.semester === semester);
-
-        if (semesterWiseArr.length === 0) {
-            return null;
-        }
-
-        // Sort all the filtered marksheets by createdAt (assuming createdAt is a Date object)
-        semesterWiseArr.sort((a, b) => new Date(a.createdAt as Date).getTime() - new Date(b.createdAt as Date).getTime());
-
-        let updatedSemesterMarksheet: MarksheetType = semesterWiseArr[0];
-
-        for (let i = 0; i < semesterWiseArr.length; i++) {
-            if (semesterWiseArr[i].sgpa) { // Student had cleared the semester
-                updatedSemesterMarksheet = semesterWiseArr[i];
-                continue;
-            }
-            // If student has not cleared the semester, then do go on updating the subjects upto recent status.
-            const { subjects } = semesterWiseArr[i];
-            for (let j = 0; j < subjects.length; j++) {
-                updatedSemesterMarksheet.subjects = updatedSemesterMarksheet.subjects.map(sbj => {
-                    if (subjects[j].subjectMetadata.id === sbj.subjectMetadata.id) {
-                        return subjects[j]; // Return the recent changes for the subject
-                    }
-                    return sbj; // Otherwise, return the existing state which are not changed
+            for (let sem = 1; sem <= 6; sem++) { // Iterate over the semesters
+                // Filter the data
+                const arr = filterData({
+                    dataArr,
+                    semester: sem,
+                    framework: dataArr[0].framework,
+                    stream: streams[s],
+                    year: y
                 });
+
+                // Iterate over the arr[]
+                const doneUid: string[] = [];
+                for (let i = 0; i < arr.length; i++) {
+                    // Skip the `uid` if already processed
+                    if (doneUid.includes(arr[i].uid)) continue;
+
+                    const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
+
+                    // Select all the subject rows for the uid: arr[i].uid
+                    const subjectArr = arr.filter(row => row.uid === arr[i].uid);
+
+                    // Fetch the subjects
+                    const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
+                        eq(subjectMetadataModel.streamId, streams[s].id as number),
+                        eq(subjectMetadataModel.semester, sem),
+                        eq(subjectMetadataModel.framework, arr[0].framework),
+                    ));
+
+                    // Check all the subjects (range of marks, subject name, duplicates)
+                    const seenSubjects = new Set<number>(); // Track subject IDs for duplicate check
+
+                    for (let k = 0; k < studentMksArr.length; k++) {
+                        const subjectMetadata = subjectMetadataArr.find(ele => ele.name === studentMksArr[k].subject.toUpperCase().trim());
+
+                        // ✅ Ensure subjectMetadata exists before proceeding
+                        if (!subjectMetadata) {
+                            throw Error(`Subject metadata not found for subject: ${studentMksArr[k].subject}`);
+                        }
+
+                        // ✅ Check for duplicate subjects
+                        if (seenSubjects.has(subjectMetadata?.id as number)) {
+                            throw Error("Duplicate Subjects");
+                        }
+
+                        seenSubjects.add(subjectMetadata?.id as number);
+
+                        // ✅ Check invalid marks range (Assuming 0-100 as valid)
+                        let { internal_marks, theory_marks, total, tutorial_marks, stream, year2: practical_marks } = studentMksArr[k];
+
+                        internal_marks = formatMarks(internal_marks)?.toString() || null;
+                        theory_marks = formatMarks(theory_marks)?.toString() || null;
+                        tutorial_marks = formatMarks(tutorial_marks)?.toString() || null;
+                        total = formatMarks(total)?.toString() || null;
+                        practical_marks = stream.toUpperCase() !== "BCOM" ? formatMarks(practical_marks)?.toString() || null : null;
+
+                        if (internal_marks && subjectMetadata?.fullMarksInternal && +internal_marks > (subjectMetadata?.fullMarksInternal as number)) {
+                            throw Error("Invalid marks");
+                        }
+
+                        if (theory_marks && subjectMetadata?.fullMarksTheory && +theory_marks > (subjectMetadata?.fullMarksTheory as number)) {
+                            throw Error("Invalid marks");
+                        }
+
+                        if (practical_marks && subjectMetadata?.fullMarksPractical && +practical_marks > (subjectMetadata?.fullMarksPractical as number)) {
+                            throw Error("Invalid marks");
+                        }
+
+                        if (tutorial_marks && subjectMetadata?.fullMarksTutorial && +tutorial_marks > (subjectMetadata?.fullMarksTutorial as number)) {
+                            throw Error("Invalid marks");
+                        }
+
+                        if (total && subjectMetadata?.fullMarks && +total > (subjectMetadata?.fullMarks as number)) {
+                            throw Error("Invalid marks");
+                        }
+                        doneUid.push(arr[i].uid);
+                    }
+
+                }
             }
-
         }
-
-        updatedMarksheetList.push(updatedSemesterMarksheet);
     }
-
-
-    let sgpa_totalcredit = 0, creditSumAllSem = 0;
-
-    for (let i = 1; i <= 6; i++) {
-        const marksheet = marksheetList.find(obj => obj.semester == i);
-        if (!marksheet) {
-            return -1;
-        }
-        const sgpa = formatMarks((marksheet.sgpa as string)) as number;
-        const totalCredit = calculateTotalCredit(marksheet);
-        sgpa_totalcredit += sgpa * totalCredit;
-        creditSumAllSem += totalCredit;
-    }
-
-    // Return the cgpa
-    return (sgpa_totalcredit / creditSumAllSem).toFixed(3);
 }
-
-function calculateTotalCredit(marksheet: MarksheetType) {
-    let totalCredit = 0;
-    for (let i = 0; i < marksheet.subjects.length; i++) {
-        if (!marksheet.subjects[i].subjectMetadata.credit) {
-            continue;
-        }
-
-        totalCredit += marksheet.subjects[i].subjectMetadata.credit as number;
-    }
-
-    return totalCredit;
-}
-
-// async function handleSemester6(studentId: number) {
-//     const marksheetList = await findMarksheetsByStudentId(studentId);
-    
-//     // Fetch semester 6 marksheet
-//     const marksheetSem6 = marksheetList.find(obj => obj.semester == 6);
-//     console.log("List: ", marksheetSem6);
-//     if (marksheetSem6 == undefined) { return null; }
-//     // Set cgpa and classification for the marksheet having semester as 6
-//     marksheetSem6.cgpa = calculateCGPA(marksheetList);
-//     marksheetSem6.classification = getClassification(marksheetSem6.cgpa, marksheetList);
-
-//     console.log("In handle semester6, marksheetSem6: ", marksheetSem6)
-//     return marksheetSem6;
-
-// }

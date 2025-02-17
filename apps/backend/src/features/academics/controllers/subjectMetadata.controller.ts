@@ -5,6 +5,7 @@ import { subjectMetadataModel } from "@/features/academics/models/subjectMetadat
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq, and } from "drizzle-orm";
+import { findAllSubjectMetadata, findSubjectMetdataByFilters, uploadSubjects } from "../services/subjectMetadata.service.js";
 
 export const createSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -15,10 +16,40 @@ export const createSubjectMetadata = async (req: Request, res: Response, next: N
     }
 };
 
+export const createMultipleSubjects = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return;
+        }
+
+        const fileName = req.file.filename; // Get filename from multer
+
+        const isUploaded = await uploadSubjects(fileName);
+
+        res.status(200).json({
+            message: isUploaded ? "File uploaded successfully" : "Unable to upload the file data",
+            fileName
+        });
+
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
 export const getAllSubjectMetadatas = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const records = await db.select().from(subjectMetadataModel);
+        const records = await findAllSubjectMetadata();
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "All subject-metadata fetched successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const getFilteredSubjectMetadatas = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const subjectMetadatasArr = await findSubjectMetdataByFilters({ ...req.body });
+        res.status(200).json(new ApiResponse(200, "SUCCESS", subjectMetadatasArr, "Filtered subject-metadata fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }

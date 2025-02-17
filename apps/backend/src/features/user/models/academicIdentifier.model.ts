@@ -4,9 +4,9 @@ import { streamModel } from "@/features/academics/models/stream.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { frameworkTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
+import { courseTypeEnum, frameworkTypeEnum } from "./helper.js";
 
-export const courseTypeEnum = pgEnum("course_type", ["HONOURS", "GENERAL"]);
+
 
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),

@@ -1,10 +1,7 @@
-import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
-import { pgEnum, pgTable, serial, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
-import { studentModel } from "@/features/user/models/student.model.js";
+import { pgTable, serial, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod";
-
-export const userTypeEnum = pgEnum('user_type', ["ADMIN", "STUDENT", "TEACHER"]);
+import { userTypeEnum } from "./helper.js";
 
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),

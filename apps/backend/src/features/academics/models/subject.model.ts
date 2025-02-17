@@ -11,23 +11,17 @@ export const subjectModel = pgTable("subjects", {
     id: serial().primaryKey(),
     marksheetId: integer("marksheet_id_fk").references(() => marksheetModel.id),
     subjectMetadataId: integer("subject_metadata_id_fk").references(() => subjectMetadataModel.id),
-    internalMarks: integer(),
-    theoryMarks: integer(),
-    practicalMarks: integer(),
-    tutorialMarks: integer(),
-    totalMarks: integer(),
-    status: subjectStatusType(),
-    letterGrade: varchar({ length: 255 }),
-    ngp: numeric({
-        precision: 3,
-        scale: 5
-    }),
-    tgp: numeric({
-        precision: 3,
-        scale: 5
-    }),
     year1: integer().notNull(),
     year2: integer(),
+    internalMarks: integer(),
+    practicalMarks: integer(),
+    tutorialMarks: integer(),
+    theoryMarks: integer(),
+    totalMarks: integer(),
+    status: subjectStatusType(),
+    ngp: numeric(),
+    tgp: numeric(),
+    letterGrade: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

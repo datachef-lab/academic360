@@ -1,8 +1,10 @@
-import { integer, numeric, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, numeric, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { studentModel } from "@/features/user/models/student.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+export const marksheetSourceEnum = pgEnum("marksheet_source", ["FILE_UPLOAD", "ADDED"]);
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
@@ -15,6 +17,8 @@ export const marksheetModel = pgTable("marksheets", {
     remarks: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+    source: marksheetSourceEnum().default("FILE_UPLOAD"),
+    file: varchar({ length: 700 }),
 });
 
 export const marksheetRelations = relations(marksheetModel, ({ one }) => ({
