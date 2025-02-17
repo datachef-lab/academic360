@@ -32,6 +32,7 @@ export const createMultipleSubjects = async (req: Request, res: Response, next: 
             fileName
         });
 
+        next();
     } catch (error) {
         handleError(error, res, next);
     }
