@@ -16,12 +16,16 @@ import {
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import StudentPage from "./pages/StudentPage";
-// import Dashboard from "./pages/Dashboard";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
 import Dashboard from "./components/LibManagement/Dashboard";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
+import AllActivities from "./components/manage-marksheet/AllActivities";
+import ManageMarksheetPage from "./pages/ManageMarksheetPage";
+import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
+import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
+import MarksheetPage from "./pages/MarksheetPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -38,14 +42,35 @@ const router = createBrowserRouter([
       { path: "academics", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "academics-add", element: <AddStudentPage /> },
-    
+      {
+        path: "manage-marksheet",
+        element: <ManageMarksheetPage />,
+        children: [
+          { path: "", element: <AllActivities /> },
+          {
+            path: ":framework",
+            element: <Outlet />,
+            children: [
+              { path: "", element: <FrameworkActivitiesTab /> },
+              {
+                path: ":uid",
+                element: <Outlet />,
+                children: [
+                  { path: "", element: <StudentMarksheetsPage /> },
+                  { path: ":marksheetId", element: <MarksheetPage /> },
+                ],
+              },
+            ],
+          },
+        ],
+      },
       { path: "academics-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <Dashboard/> },
-    
-      { path: "catalog", element: <BookCatalog/> },
-      { path: "issued-book", element: <IssueRetun/> },
-      { path: "fine-management", element: <LibFineManagement/> },
-      { path: "lib-report", element: <LibReport/> },
+      { path: "lib", element: <Dashboard /> },
+
+      { path: "catalog", element: <BookCatalog /> },
+      { path: "issued-book", element: <IssueRetun /> },
+      { path: "fine-management", element: <LibFineManagement /> },
+      { path: "lib-report", element: <LibReport /> },
       {
         path: "academics-search",
         element: <Outlet />,

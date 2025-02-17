@@ -72,7 +72,7 @@ const data = {
         },
         {
           title: "Manage Marksheet",
-          url: "/home",
+          url: "/home/manage-marksheet",
         },
       ],
     },
