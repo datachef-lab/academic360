@@ -6,7 +6,7 @@ import { createInsertSchema } from "drizzle-zod";
 
 import { specializationModel } from "@/features/user/models/specialization.model.js";
 import { courseTypeEnum } from "@/features/user/models/helper.js";
-import { subjectTypeModel } from "./subjectType.model";
+import { subjectTypeModel } from "./subjectType.model.js";
 
 export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
     "SPECIAL",
