@@ -18,6 +18,8 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
             fileName
         });
 
+        next();
+
     } catch (error) {
         handleError(error, res, next);
     }
