@@ -19,9 +19,9 @@ import StudentPage from "./pages/StudentPage";
 // import Dashboard from "./pages/Dashboard";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
-import Dashboard from "./components/LibManagement/Dashboard";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
+import GradeCard from "./pages/GradeCard";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -40,7 +40,7 @@ const router = createBrowserRouter([
       { path: "academics-add", element: <AddStudentPage /> },
     
       { path: "academics-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <Dashboard/> },
+      { path: "lib", element: <GradeCard/> },
     
       { path: "catalog", element: <BookCatalog/> },
       { path: "issued-book", element: <IssueRetun/> },

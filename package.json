@@ -66,6 +66,7 @@
         "jspdf": "^2.5.2",
         "jspdf-autotable": "^3.8.4",
         "jwt-decode": "^4.0.0",
+        "lodash": "^4.17.21",
         "react-day-picker": "^9.5.1",
         "react-icons": "^5.4.0",
         "swiper": "^11.2.1",
