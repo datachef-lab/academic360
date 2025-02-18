@@ -68,14 +68,18 @@ export async function addMarksheet(marksheet: MarksheetType): Promise<MarksheetT
     return formattedMarksheet;
 }
 
-export async function uploadFile(fileName: string): Promise<boolean> {
+export async function uploadFile(fileName: string, sendUpdate: (message: string) => void): Promise<boolean> {
     // Read the file from the `/public/temp/` directory
     const filePath = path.resolve(directoryName, "../../../..", "public", "temp", fileName);
 
-    const dataArr = readExcelFile<MarksheetRow>(filePath);
+    let dataArr = readExcelFile<MarksheetRow>(filePath);
 
-    // TODO: Check if all the entries are valid.
+    sendUpdate("File read successfully. Validating data...");
+    // Check if all the entries are valid.
     validateData(dataArr);
+    sendUpdate("Data validation completed.");
+
+    dataArr = await cleanData(dataArr);
 
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
@@ -98,6 +102,8 @@ export async function uploadFile(fileName: string): Promise<boolean> {
                     year: y
                 });
 
+                sendUpdate(`Processing year ${y}, stream ${streams[s]}, semester ${sem}...`);
+
                 // Iterate over the arr[]
                 const doneUid: string[] = [];
                 for (let i = 0; i < arr.length; i++) {
@@ -112,12 +118,13 @@ export async function uploadFile(fileName: string): Promise<boolean> {
 
                     // Mark the uid as done
                     doneUid.push(arr[i].uid);
+
+                    sendUpdate(`Processed student: ${arr[i].uid}`);
                 }
 
             }
         }
     }
-
 
     return true;
 }
@@ -472,7 +479,7 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     return;
 }
 
-async function validateData(dataArr: MarksheetRow[]) {
+export async function validateData(dataArr: MarksheetRow[]) {
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
 
@@ -495,10 +502,12 @@ async function validateData(dataArr: MarksheetRow[]) {
                 });
 
                 // Iterate over the arr[]
-                const doneUid: string[] = [];
+                const doneUid = new Set<string>();
                 for (let i = 0; i < arr.length; i++) {
                     // Skip the `uid` if already processed
-                    if (doneUid.includes(arr[i].uid)) continue;
+                    if (doneUid.has(arr[i].uid)) continue;
+
+                    doneUid.add(arr[i].uid);
 
                     const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
 
@@ -558,7 +567,7 @@ async function validateData(dataArr: MarksheetRow[]) {
                         if (total && subjectMetadata?.fullMarks && +total > (subjectMetadata?.fullMarks as number)) {
                             throw Error("Invalid marks");
                         }
-                        doneUid.push(arr[i].uid);
+
                     }
 
                 }
@@ -566,3 +575,73 @@ async function validateData(dataArr: MarksheetRow[]) {
         }
     }
 }
+
+
+export async function cleanData(dataArr: MarksheetRow[]) {
+    // Step 1: Find the smallest year from the dataArr[]
+    const startingYear = Math.min(...dataArr.map(row => row.year1));
+
+    // Step 2: Fetch all the streams
+    const streams = await findAllStreams();
+
+    // Step 3: Loop over the array.
+    const formattedArr = [];
+    for (let y = startingYear; y < dataArr.length; y++) { // Iterate over the years
+
+        for (let s = 0; s < streams.length; s++) { // Iterate over the streams
+
+            for (let sem = 1; sem <= 6; sem++) { // Iterate over the semesters
+                // Filter the data
+                const arr = filterData({
+                    dataArr,
+                    semester: sem,
+                    framework: dataArr[0].framework,
+                    stream: streams[s],
+                    year: y
+                });
+
+                // Iterate over the arr[]
+                const doneUid: string[] = [];
+                for (let i = 0; i < arr.length; i++) {
+                    // Skip the `uid` if already processed
+                    if (doneUid.includes(arr[i].uid)) continue;
+
+                    const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
+
+                    for (let k = 0; k < studentMksArr.length; k++) {
+                        studentMksArr[k].uid = studentMksArr[k].uid.toUpperCase().trim();
+                        studentMksArr[k].registration_no = cleanTilde(studentMksArr[k].registration_no) as string;
+                        studentMksArr[k].roll_no = cleanTilde(studentMksArr[k].roll_no) as string;
+                        studentMksArr[k].stream = studentMksArr[k].stream.toUpperCase().trim();
+                        studentMksArr[k].course = studentMksArr[k].course.toUpperCase().trim();
+                        studentMksArr[k].name = studentMksArr[k].name.toUpperCase().trim();
+                        studentMksArr[k].subject = studentMksArr[k].subject.toUpperCase().trim();
+                        studentMksArr[k].framework = studentMksArr[k].framework.toUpperCase().trim() as "CBCS" | "CCF";
+                        studentMksArr[k].specialization = studentMksArr[k].framework.toUpperCase().trim();
+                        studentMksArr[k].section = studentMksArr[k].section ? (studentMksArr[k].section as string).toUpperCase().trim() : null;
+
+                        studentMksArr[k].internal_marks = formatMarks(studentMksArr[k].internal_marks)?.toString() || null;
+                        studentMksArr[k].theory_marks = formatMarks(studentMksArr[k].theory_marks)?.toString() || null;
+                        studentMksArr[k].tutorial_marks = formatMarks(studentMksArr[k].tutorial_marks)?.toString() || null;
+                        studentMksArr[k].total = formatMarks(studentMksArr[k].total)?.toString() || null;
+                        studentMksArr[k].year2 = studentMksArr[k].stream.toUpperCase() !== "BCOM" ? formatMarks(studentMksArr[k].year2)?.toString() || null : null;
+
+                        formattedArr.push(...studentMksArr);
+                    }
+
+                    doneUid.push(arr[i].uid);
+
+                }
+            }
+        }
+    }
+
+    return formattedArr;
+}
+
+const cleanTilde = (value: unknown): string | null => {
+    if (typeof value === 'string') {
+        return value.replace(/~/g, '').trim();  // Remove all tildes and trim the string
+    }
+    return null;  // Return undefined for non-string values
+};

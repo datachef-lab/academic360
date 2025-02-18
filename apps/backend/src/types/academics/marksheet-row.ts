@@ -2,7 +2,7 @@ export interface MarksheetRow {
     readonly id?: number;
     registration_no: string;
     stream: string;
-    course: "honours" | "general";
+    course: string;
     semester: number;
     name: string;
     sgpa: number | null;
