@@ -70,7 +70,7 @@ export async function findStudentById(id: number): Promise<StudentType | null> {
     return formatedStudent;
 }
 
-export async function getStudentByUserId(userId: number): Promise<Student | null> {
+export async function findStudentByUserId(userId: number): Promise<Student | null> {
     const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, userId));
     return foundStudent;
 }
