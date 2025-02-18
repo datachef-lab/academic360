@@ -8,16 +8,18 @@ import SettingsPage from "@/pages/SettingsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";
 import MyWorkspacePage from "@/pages/MyWorkspace";
+import AddMarksheet from "@/pages/AddMarksheet";
 
 export {
-    RootPage,
-    LoginPage,
-    HomePage,
-    AddStudentPage,
-    GetReportsPage,
-    SearchStudentPage,
-    SettingsPage,
-    UserProfilePage,
-    NotFoundPage,
-    MyWorkspacePage,
-}
+  RootPage,
+  LoginPage,
+  HomePage,
+  AddStudentPage,
+  GetReportsPage,
+  SearchStudentPage,
+  SettingsPage,
+  UserProfilePage,
+  NotFoundPage,
+  MyWorkspacePage,
+  AddMarksheet,
+};

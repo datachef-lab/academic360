@@ -12,6 +12,7 @@ import {
   SearchStudentPage,
   SettingsPage,
   UserProfilePage,
+  AddMarksheet,
 } from "@/pages";
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
@@ -40,6 +41,7 @@ const router = createBrowserRouter([
       { path: "academics-add", element: <AddStudentPage /> },
     
       { path: "academics-reports", element: <GetReportsPage /> },
+      { path: "add-marksheets", element: <AddMarksheet /> },
       { path: "lib", element: <Dashboard/> },
     
       { path: "catalog", element: <BookCatalog/> },
