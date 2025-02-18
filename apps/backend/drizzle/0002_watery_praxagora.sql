@@ -1,1 +1,0 @@
-ALTER TABLE "person" ALTER COLUMN "office_phone" SET DATA TYPE varchar(255);

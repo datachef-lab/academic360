@@ -1,5 +1,6 @@
+import { userTypeEnum } from "@/features/user/models/helper.js";
 import "dotenv/config";
-import { userTypeEnum } from "@/features/user/models/user.model.js";
+
 import jwt from "jsonwebtoken";
 
 type DecodedType = {

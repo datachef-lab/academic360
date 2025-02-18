@@ -4,8 +4,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { addressModel } from "./address.model.js";
 import { relations } from "drizzle-orm";
+import { placeOfStayTypeEnum } from "./helper.js";
 
-export const placeOfStayTypeEnum = pgEnum('place_of_stay_type', ["OWN", "HOSTEL", "FAMILY_FRIENDS", "PAYING_GUEST", "RELATIVES"]);
+
 
 export const accommodationModel = pgTable("accommodation", {
     id: serial().primaryKey(),

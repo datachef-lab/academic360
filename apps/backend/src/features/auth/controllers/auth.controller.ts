@@ -3,7 +3,7 @@ import type { StringValue } from "ms";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { userModel, User, userTypeEnum } from "@/features/user/models/user.model.js";
+import { userModel, User } from "@/features/user/models/user.model.js";
 import { handleError } from "@/utils/handleError.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
@@ -11,6 +11,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { generateToken } from "@/utils/generateToken.js";
 import { addUser, findUserByEmail } from "@/features/user/services/user.service.js";
+import { userTypeEnum } from "@/features/user/models/helper.js";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const givenUser = req.body as User;

@@ -5,8 +5,9 @@ import { personModel } from "./person.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
+import { parentTypeEnum } from "./helper.js";
 
-export const parentTypeEnum = pgEnum("parent_type", ["BOTH", "FATHER_ONLY", "MOTHER_ONLY"]);
+
 
 export const parentModel = pgTable("parent_details", {
     id: serial().primaryKey(),
