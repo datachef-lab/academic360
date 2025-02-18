@@ -22,6 +22,7 @@ import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
 import GradeCard from "./pages/GradeCard";
+import Dashboard from "./components/LibManagement/Dashboard";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -40,7 +41,7 @@ const router = createBrowserRouter([
       { path: "academics-add", element: <AddStudentPage /> },
     
       { path: "academics-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <GradeCard/> },
+      { path: "lib", element: <Dashboard/> },
     
       { path: "catalog", element: <BookCatalog/> },
       { path: "issued-book", element: <IssueRetun/> },
@@ -52,6 +53,14 @@ const router = createBrowserRouter([
         children: [
           { path: "", element: <SearchStudentPage /> },
           { path: ":studentId", element: <StudentPage /> },
+        ],
+      },
+      {
+        path: "student-Marksheet",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <GradeCard /> },
+         
         ],
       },
       { path: "profile", element: <UserProfilePage /> },

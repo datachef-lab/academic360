@@ -74,6 +74,10 @@ const data = {
           title: "Manage Marksheet",
           url: "/home",
         },
+        {
+          title: "Student Marksheet",
+          url: "/home/student-Marksheet",
+        },
       ],
     },
     {
