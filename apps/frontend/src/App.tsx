@@ -18,9 +18,10 @@ import { AuthProvider } from "./providers/AuthProvider";
 import StudentPage from "./pages/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
-import Dashboard from "./components/LibManagement/Dashboard";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
+import GradeCard from "./pages/GradeCard";
+import Dashboard from "./components/LibManagement/Dashboard";
 
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
@@ -77,6 +78,14 @@ const router = createBrowserRouter([
         children: [
           { path: "", element: <SearchStudentPage /> },
           { path: ":studentId", element: <StudentPage /> },
+        ],
+      },
+      {
+        path: "student-Marksheet",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <GradeCard /> },
+         
         ],
       },
       { path: "profile", element: <UserProfilePage /> },
