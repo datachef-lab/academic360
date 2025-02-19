@@ -4,8 +4,10 @@ import { Link, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import FileUpload from "@/components/manage-marksheet/FileUpload";
 
-import { Button } from "@/components/ui/button";
+
 import { ThemeProviderContext } from "@/providers/ThemeProvider";
+
+import AddMarksheetButton from "./AddMarksheetButton";
 
 // interface ActivityLog {
 //   date: string;
@@ -35,11 +37,9 @@ export default function ManageMarksheetWrapper({ children }: { children: React.R
         <CardContent className="p-6 flex flex-col gap-6">
           <div className="flex justify-between">
             <FileUpload />
-            <Button size="icon" variant="ghost" className="border">
-              +
-            </Button>
+            <AddMarksheetButton />
           </div>
-          <ul className="flex gap-5 my-5">
+          <ul className="flex gap-5 my-5 border-b">
             {tabs.map((tab) => (
               <li
                 key={tab.label}

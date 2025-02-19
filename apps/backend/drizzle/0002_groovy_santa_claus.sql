@@ -1,0 +1,4 @@
+ALTER TABLE "marksheets" ADD COLUMN "created_by_user_id" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "marksheets" ADD COLUMN "updated_by_user_id" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "marksheets" ADD CONSTRAINT "marksheets_created_by_user_id_users_id_fk" FOREIGN KEY ("created_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "marksheets" ADD CONSTRAINT "marksheets_updated_by_user_id_users_id_fk" FOREIGN KEY ("updated_by_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;

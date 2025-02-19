@@ -16,6 +16,6 @@ export const disabilityTypeEnum = pgEnum('disability_type', ["VISUAL", "HEARING_
 
 export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
 
-export const shiftTypeEnum = pgEnum("shift_type", ["MORNING", "AFTERNOON", "EVENING"]);
+export const shiftTypeEnum = pgEnum("shift_type", ["DAY", "MORNING", "AFTERNOON", "EVENING"]);
 
 export const userTypeEnum = pgEnum('user_type', ["ADMIN", "STUDENT", "TEACHER"]);

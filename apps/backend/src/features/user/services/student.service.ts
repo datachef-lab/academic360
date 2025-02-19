@@ -1,4 +1,4 @@
-import { count, eq, ilike, or } from "drizzle-orm";
+import { count, eq, ilike, or, sql } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { Student, studentModel } from "../models/student.model.js";
 import { StudentType } from "@/types/user/student.js";
@@ -193,6 +193,109 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+            )
+        );
+
+    // Map the result to a properly formatted response
+    const content = await Promise.all(students.map(async (studentRecord) => {
+        const student = studentRecord.students; // Extract the student data
+        return await studentResponseFormat(student);
+    }));
+
+    return {
+        content,
+        page,
+        pageSize,
+        totalElements: Number(countRows), // Now this count is correct!
+        totalPages: Math.ceil(Number(countRows) / pageSize)
+    };
+}
+
+// export async function searchStudentsByRollNumber(searchText: string, page: number = 1, pageSize: number = 10) {
+//     // Trim spaces and convert searchText to lowercase
+//     searchText = searchText.trim().toLowerCase();
+
+//     // Query students based on student roll number
+//     const studentsQuery = db
+//         .select()
+//         .from(studentModel)
+//         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+//         .where(
+//             eq(
+//                 sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
+//                 searchText.replace(/[^a-zA-Z0-9]/g, '')
+//             )
+//         );
+
+//     // Get the paginated students
+//     const students = await studentsQuery
+//         .limit(pageSize)
+//         .offset((page - 1) * pageSize);
+
+//     console.log(students);
+
+//     // Get the total count of students matching the filter
+//     const [{ count: countRows }] = await db
+//         .select({ count: count() })
+//         .from(studentModel)
+//         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+//         .where(
+//             or(
+//                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
+//                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
+//                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+//             )
+//         );
+
+//     // Map the result to a properly formatted response
+//     const content = await Promise.all(students.map(async (studentRecord) => {
+//         const student = studentRecord.students; // Extract the student data
+//         return await studentResponseFormat(student);
+//     }));
+
+//     return {
+//         content,
+//         page,
+//         pageSize,
+//         totalElements: Number(countRows), // Now this count is correct!
+//         totalPages: Math.ceil(Number(countRows) / pageSize)
+//     };
+// }
+
+export async function searchStudentsByRollNumber(searchText: string, page: number = 1, pageSize: number = 10) {
+    // Trim spaces and convert searchText to lowercase
+    searchText = searchText.trim().toLowerCase();
+
+    // Query students based on student roll number (Partial match)
+    const studentsQuery = db
+        .select()
+        .from(studentModel)
+        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+        .where(
+            ilike(
+                sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
+                `%${searchText.replace(/[^a-zA-Z0-9]/g, '')}%`
+            )
+        );
+
+    // Get the paginated students
+    const students = await studentsQuery
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+    console.log(students);
+
+    // Get the total count of students matching the filter
+    const [{ count: countRows }] = await db
+        .select({ count: count() })
+        .from(studentModel)
+        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+        .where(
+            or(
+                ilike(
+                    sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
+                    `%${searchText.replace(/[^a-zA-Z0-9]/g, '')}%`
+                )
             )
         );
 

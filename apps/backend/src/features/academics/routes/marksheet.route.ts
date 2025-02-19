@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(verifyJWT);
 
-router.get("/upload", uploadExcelMiddleware, addMultipleMarksheet, deleteTempFile);
+router.post("/upload", uploadExcelMiddleware, addMultipleMarksheet, deleteTempFile);
 
 router.post("/", createMarksheet);
 

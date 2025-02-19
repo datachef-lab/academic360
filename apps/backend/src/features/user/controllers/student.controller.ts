@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent } from "@/features/user/services/student.service.js";
+import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 
@@ -48,6 +48,26 @@ export const getSearchedStudents = async (req: Request, res: Response, next: Nex
         const students = await searchStudent(searchText as string, Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(201, "SUCCESS", students, "Students fetched!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getSearchedStudentsByRollNumber = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        let { page, pageSize, searchText } = req.query;
+
+        if (!page) {
+            page = "1";
+        }
+
+        if (!pageSize) {
+            pageSize = "10";
+        }
+
+        const students = await searchStudentsByRollNumber(searchText as string, Number(page), Number(pageSize));
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", students, "Students fetched!"));
     } catch (error) {
         handleError(error, res, next);
     }

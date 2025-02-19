@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { formatMarks, getLetterGrade } from "@/utils/helper.js";
 
-export function commonSubjectOperation(subject: SubjectType, subjectMetadata: SubjectMetadataType): Subject {
+export async function commonSubjectOperation(subject: SubjectType, subjectMetadata: SubjectMetadataType): Promise<Subject> {
     let newSubject: Subject = {
         marksheetId: subject.marksheetId,
         subjectMetadataId: subjectMetadata.id,
@@ -27,7 +27,7 @@ export function commonSubjectOperation(subject: SubjectType, subjectMetadata: Su
         // Calculate NGP for each subject as % marks / 10 for each subject
         newSubject.ngp = (subjectPercent / 10).toString();
         // Mark the letterGrade for each subject
-        newSubject.letterGrade = getLetterGrade(subjectPercent);
+        newSubject.letterGrade = await getLetterGrade(subject);
 
         if (subjectPercent < 30) {
             subject.status = "FAIL";
@@ -46,7 +46,7 @@ export async function addSubject(subject: SubjectType): Promise<SubjectType | nu
         return null;
     }
 
-    let newSubject = commonSubjectOperation(subject, subjectMetadata);
+    let newSubject = await commonSubjectOperation(subject, subjectMetadata);
 
     // Insert the subject
     const [createdSubject] = await db.insert(subjectModel).values(newSubject).returning();
@@ -62,13 +62,13 @@ export async function saveSubject(id: number, subject: SubjectType): Promise<Sub
     if (!foundSubject) {
         return null;
     }
-    
+
     const foundSubjectMetadata = await findSubjectMetdataById(foundSubject.subjectMetadataId as number);
     if (!foundSubjectMetadata) {
         return null;
     }
 
-    const tmpSubject = commonSubjectOperation(subject, foundSubjectMetadata);
+    const tmpSubject = await commonSubjectOperation(subject, foundSubjectMetadata);
 
     const [updatedSubject] = await db.update(subjectModel).set(tmpSubject).where(eq(subjectModel.id, id)).returning();
 

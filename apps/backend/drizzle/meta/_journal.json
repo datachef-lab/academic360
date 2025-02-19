@@ -15,6 +15,20 @@
       "when": 1739791986339,
       "tag": "0001_careful_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1739949088883,
+      "tag": "0002_groovy_santa_claus",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1739967032551,
+      "tag": "0003_brainy_maestro",
+      "breakpoints": true
     }
   ]
 }

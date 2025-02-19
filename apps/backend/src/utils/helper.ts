@@ -7,6 +7,8 @@ import { findMarksheetsByStudentId } from "@/features/academics/services/markshe
 import { Stream } from "@/features/academics/models/stream.model.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { SubjectType } from "@/types/academics/subject.js";
+import { Subject } from "@/features/academics/models/subject.model.js";
+import { findSubjectMetdataById } from "@/features/academics/services/subjectMetadata.service.js";
 
 export async function findAll<T>(model: PgTable, page: number = 1, pageSize: number = 10, orderByColumn: string = "id"): Promise<PaginatedResponse<T>> {
     const offset = (page - 1) * pageSize;
@@ -65,7 +67,32 @@ export async function findAllByFormatted<T, K>({
     };
 }
 
-export function getLetterGrade(subjectPercent: number) {
+export async function getLetterGrade(subject: Subject) {
+    if (subject.totalMarks === null) {
+        return null;
+    }
+
+    const foundSubjectMetadata = await findSubjectMetdataById(subject.subjectMetadataId as number);
+
+    if (!foundSubjectMetadata) {
+        return null;
+    }
+
+    if (subject.internalMarks && foundSubjectMetadata.fullMarksInternal && calculatePercentage(subject.internalMarks, foundSubjectMetadata.fullMarksInternal) < 30) {
+        return "F(IN)";
+    }
+    if (subject.practicalMarks && foundSubjectMetadata.fullMarksPractical && calculatePercentage(subject.practicalMarks, foundSubjectMetadata.fullMarksPractical) < 30) {
+        return "F(PR)";
+    }
+    if (subject.theoryMarks && foundSubjectMetadata.fullMarksTheory && calculatePercentage(subject.theoryMarks, foundSubjectMetadata.fullMarksTheory) < 30) {
+        return "F(TH)";
+    }
+    if (subject.tutorialMarks && foundSubjectMetadata.fullMarksTutorial && calculatePercentage(subject.tutorialMarks, foundSubjectMetadata.fullMarksTutorial) < 30) {
+        return "F(TU)";
+    }
+
+    const subjectPercent = calculatePercentage(subject.totalMarks as number, foundSubjectMetadata?.fullMarks as number);
+
     if (subjectPercent >= 90 && subjectPercent <= 100) {
         return "A++";
     }
@@ -93,7 +120,7 @@ export function getLetterGrade(subjectPercent: number) {
 }
 
 export async function getClassification(cgpa: number, studentId: number) {
-    const marksheetList: Marksheet[] = await findMarksheetsByStudentId(studentId);
+    const marksheetList: MarksheetType[] = await findMarksheetsByStudentId(studentId);
 
     let isClearedSemester = false;
     for (let i = 0; i < 6; i++) {
@@ -139,6 +166,22 @@ export async function getClassification(cgpa: number, studentId: number) {
 export function getRemarks(marksheetPercent: number, stream: Stream, course: "HONOURS" | "GENERAL", semester: number, subjects: SubjectType[]) {
     // Firstly check if all the subjects are got cleared, if not then return "Semester not cleared."
     for (let i = 0; i < subjects.length; i++) {
+        const subject = subjects[i];
+
+        const subjectMetadata = subjects[i].subjectMetadata;
+
+        if (subject.internalMarks && subjectMetadata.fullMarksInternal && calculatePercentage(subject.internalMarks, subjectMetadata.fullMarksInternal) < 30) {
+            return "Semester not cleared.";
+        }
+        if (subject.practicalMarks && subjectMetadata.fullMarksPractical && calculatePercentage(subject.practicalMarks, subjectMetadata.fullMarksPractical) < 30) {
+            return "Semester not cleared.";
+        }
+        if (subject.theoryMarks && subjectMetadata.fullMarksTheory && calculatePercentage(subject.theoryMarks, subjectMetadata.fullMarksTheory) < 30) {
+            return "Semester not cleared.";
+        }
+        if (subject.tutorialMarks && subjectMetadata.fullMarksTutorial && calculatePercentage(subject.tutorialMarks, subjectMetadata.fullMarksTutorial) < 30) {
+            return "Semester not cleared.";
+        }
         if (subjects[i].totalMarks === null || subjects[i].totalMarks === -1) {
             return "Semester not cleared.";
         }
@@ -156,7 +199,7 @@ export function getRemarks(marksheetPercent: number, stream: Stream, course: "HO
     }
     else { // For passed marksheet
         if (semester != 6) { // For semester: 1, 2, 3, 4, 5
-            return "Semester cleared.";
+            return "Semester Cleared.";
         }
         else { // For semester: 6
             if (stream.name.toUpperCase() !== "BCOM") { // For BA & BSC
@@ -174,16 +217,39 @@ export function getRemarks(marksheetPercent: number, stream: Stream, course: "HO
     }
 }
 
+export function calculatePercentage(totalMarks: number, fullMarks: number) {
+    return (totalMarks * 100) / fullMarks;
+}
+
 export function calculateSGPA(marksheet: MarksheetType) {
     let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
     for (let i = 0; i < marksheet.subjects.length; i++) {
         if (!marksheet.subjects[i].totalMarks) {
+            continue; // If totalMarks is not present, then continue to the next subject
+        }
+
+        const subject = marksheet.subjects[i];
+
+        const subjectMetadata = marksheet.subjects[i].subjectMetadata;
+
+        if (subject.internalMarks && subjectMetadata.fullMarksInternal && calculatePercentage(subject.internalMarks, subjectMetadata.fullMarksInternal) < 30) {
+            return null;
+        }
+        if (subject.practicalMarks && subjectMetadata.fullMarksPractical && calculatePercentage(subject.practicalMarks, subjectMetadata.fullMarksPractical) < 30) {
+            return null;
+        }
+        if (subject.theoryMarks && subjectMetadata.fullMarksTheory && calculatePercentage(subject.theoryMarks, subjectMetadata.fullMarksTheory) < 30) {
+            return null;
+        }
+        if (subject.tutorialMarks && subjectMetadata.fullMarksTutorial && calculatePercentage(subject.tutorialMarks, subjectMetadata.fullMarksTutorial) < 30) {
             return null;
         }
 
-        let subjectPercent = (marksheet.subjects[i].totalMarks as number) / marksheet.subjects[i].subjectMetadata.fullMarks;
+        let subjectPercent = ((subject.totalMarks as number) * 100) / subject.subjectMetadata.fullMarks;
+
         if (subjectPercent < 30) {
-            return null;
+            console.log(`Subject Percentage: ${subjectPercent}`);
+            return null; // If any subject is failed, return null immediately
         }
 
         if (marksheet.subjects[i].totalMarks) {
@@ -197,14 +263,12 @@ export function calculateSGPA(marksheet: MarksheetType) {
         ngp_credit += Number(marksheet.subjects[i].ngp) * (marksheet.subjects[i].subjectMetadata.credit as number)
         creditSum += marksheet.subjects[i].subjectMetadata.credit as number;
     }
-
-    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
+    const marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
     if (marksheetPercent < 30) {
         return null;
     }
-    else {
-        return (ngp_credit / creditSum).toFixed(3);
-    }
+    console.log("Calculating SGPA...");
+    return (ngp_credit / creditSum).toFixed(3);
 }
 
 export async function calculateCGPA(studentId: number): Promise<number | null> {
@@ -266,11 +330,16 @@ export async function calculateCGPA(studentId: number): Promise<number | null> {
 }
 
 export function formatMarks(marks: string | null): number | null {
-    if (!marks || marks.trim() === "") {
+    console.log(marks)
+    if (!marks) {
         return null;
     }
 
-    if (marks.toUpperCase() === "AB") {
+    if (marks.toString().trim() === "") {
+        return null;
+    }
+
+    if (marks.toString().toUpperCase() === "AB") {
         return -1;
     }
 

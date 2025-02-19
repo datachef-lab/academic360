@@ -2,6 +2,7 @@ import XLSX from "xlsx";
 import fs from "fs";
 
 export function readExcelFile<T>(filePath: string): T[] {
+    console.log(filePath);
     if (!fs.existsSync(filePath)) {
         throw new Error(`File not found: ${filePath}`);
     }
