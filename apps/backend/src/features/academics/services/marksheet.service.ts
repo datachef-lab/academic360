@@ -7,7 +7,7 @@ import { MarksheetRow } from "@/types/academics/marksheet-row.js";
 import { findAllStreams, findStreamByName } from "./stream.service.js";
 import { Stream } from "../models/stream.model.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -20,10 +20,13 @@ import { User, userModel } from "@/features/user/models/user.model.js";
 import { calculateCGPA, calculateSGPA, formatMarks, getClassification, getLetterGrade, getRemarks } from "@/utils/helper.js";
 import { findAcademicIdentifierById, findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
 import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
+import { MarksheetLog } from "@/types/academics/marksheet-logs.js";
+import { UserType } from "@/types/user/user.js";
+import { findUserById } from "@/features/user/services/user.service.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
-export async function addMarksheet(marksheet: MarksheetType): Promise<MarksheetType | null> {
+export async function addMarksheet(marksheet: MarksheetType, user: User): Promise<MarksheetType | null> {
     // Return if the student not found
     let student = await findStudentById(marksheet.studentId);
     if (!student) {
@@ -36,6 +39,8 @@ export async function addMarksheet(marksheet: MarksheetType): Promise<MarksheetT
         semester: marksheet.semester,
         year: marksheet.year,
         source: "ADDED",
+        createdByUserId: user.id as number,
+        updatedByUserId: user.id as number,
     }).returning();
     // Step 2: Add the subjects
     for (let i = 0; i < marksheet.subjects.length; i++) {
@@ -68,7 +73,7 @@ export async function addMarksheet(marksheet: MarksheetType): Promise<MarksheetT
     return formattedMarksheet;
 }
 
-export async function uploadFile(fileName: string, sendUpdate: (message: string) => void): Promise<boolean> {
+export async function uploadFile(fileName: string, sendUpdate: (message: string) => void, user: User): Promise<boolean> {
     // Read the file from the `/public/temp/` directory
     const filePath = path.resolve(directoryName, "../../../..", "public", "temp", fileName);
 
@@ -114,7 +119,7 @@ export async function uploadFile(fileName: string, sendUpdate: (message: string)
                     const subjectArr = arr.filter(row => row.uid === arr[i].uid);
 
                     // Process the student
-                    await processStudent(subjectArr, streams[s], sem, fileName);
+                    await processStudent(subjectArr, streams[s], sem, fileName, user);
 
                     // Mark the uid as done
                     doneUid.push(arr[i].uid);
@@ -129,7 +134,7 @@ export async function uploadFile(fileName: string, sendUpdate: (message: string)
     return true;
 }
 
-export async function saveMarksheet(id: number, marksheet: MarksheetType) {
+export async function saveMarksheet(id: number, marksheet: MarksheetType, user: User) {
     const [foundMarksheet] = await db.select().from(marksheetModel).where(eq(marksheetModel.id, id));
     if (!foundMarksheet) {
         return null;
@@ -152,6 +157,8 @@ export async function saveMarksheet(id: number, marksheet: MarksheetType) {
         }
     }
 
+    foundMarksheet.updatedByUserId = user.id as number;
+
     const [updatedMarksheet] = await db.update(marksheetModel).set(foundMarksheet).where(eq(marksheetModel.id, id)).returning();
 
     if (!updatedMarksheet) {
@@ -168,6 +175,54 @@ export async function saveMarksheet(id: number, marksheet: MarksheetType) {
 
     return formattedMarksheet;
 }
+
+export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog[]> {
+    // Query the marksheet table with filtering and user join
+    const result = await db
+        .select({
+            item: marksheetModel.file,
+            source: marksheetModel.source,
+            file: marksheetModel.file,
+            createdByUserId: marksheetModel.createdByUserId,
+            updatedByUserId: marksheetModel.updatedByUserId,
+            createdAt: marksheetModel.createdAt,
+            updatedAt: marksheetModel.updatedAt,
+        })
+        .from(marksheetModel)
+        .leftJoin(userModel, and(eq(marksheetModel.studentId, userModel.id))) // Adjust based on your schema
+        .where(searchText ? ilike(marksheetModel.file, `%${searchText}%`) : undefined)
+        .groupBy(marksheetModel.source, marksheetModel.file, userModel.id, userModel.name, userModel.email, marksheetModel.createdAt);
+
+
+    // Map the query result to the MarksheetLog interface
+    const queryResult = Promise.all(result.map(async (row) => {
+        const createdByUser = await findUserById(row.createdByUserId as number);
+
+        let updatedByUser = createdByUser;
+        if (row.updatedByUserId !== createdByUser?.id) {
+            updatedByUser = await findUserById(row.updatedByUserId);
+        }
+
+        return {
+            item: row.item as string,
+            source: row.source ?? "UNKNOWN",
+            file: row.file,
+            createdByUser,
+            updatedByUser,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt
+        } as MarksheetLog;
+    }));
+
+    return queryResult;
+}
+
+// // Replace this function with actual logic to fetch user based on marksheet createdBy information
+// async function fetchCreatedByUser(): Promise<UserType> {
+//     // This could be a lookup based on the marksheet, for now, assume it returns a mock user
+//     return { id: 1, name: "John Doe", email: "john.doe@example.com" }; // Replace with actual user fetching logic
+// }
+
 
 export async function findMarksheetById(id: number): Promise<MarksheetType | null> {
     const [foundMarksheet] = await db.select().from(marksheetModel).where(eq(marksheetModel.id, id));
@@ -308,7 +363,7 @@ async function addAcademicIdentifier(marksheet: MarksheetRow, student: Student) 
     }).returning();
 }
 
-async function processStudent(arr: MarksheetRow[], stream: Stream, semester: number, fileName: string) {
+async function processStudent(arr: MarksheetRow[], stream: Stream, semester: number, fileName: string, user: User) {
     // Step 1: Check if the uid already exist
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.uid, arr[0].uid));
 
@@ -334,6 +389,8 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
         year: arr[0].year1,
         source: "FILE_UPLOAD",
         file: fileName,
+        createdByUserId: user.id as number,
+        updatedByUserId: user.id as number,
     }
 
     marksheet = (await db.insert(marksheetModel).values(marksheet).returning())[0];

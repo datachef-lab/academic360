@@ -114,7 +114,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     header: "Registration No.",
   },
   {
-    accessorKey: "Roll No.",
+    accessorKey: "rollNumber",
     header: "Roll No.",
   },
   {

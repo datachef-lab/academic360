@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { UploadCloud } from "lucide-react";
+import { Input } from "../ui/input";
 
 export default function FileUpload() {
   const [file, setFile] = useState<File | null>(null);
@@ -14,21 +14,11 @@ export default function FileUpload() {
   };
 
   return (
-    <div className="border-dashed border-2 border-gray-300 rounded-lg p-6 text-center bg-gray-50 hover:bg-gray-100 transition">
-      <label className="cursor-pointer">
-        <input
-          type="file"
-          accept=".xlsx, .xls"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="hidden"
-        />
-        <UploadCloud className="mx-auto text-gray-500" size={36} />
-        <p className="text-gray-600 mt-2">Click or Drag to Upload Excel File</p>
-      </label>
-      {file && <p className="mt-2 text-sm text-green-600">{file.name}</p>}
-      <Button onClick={handleUpload} className="mt-4" disabled={!file}>
-        Upload
-      </Button>
-    </div>
+    <form className="bg-transparent flex gap-3 border-none shadow-none max-w-none p-0">
+      <div className="flex ">
+        <Input type="file" />
+      </div>
+      <Button variant="destructive">Upload</Button>
+    </form>
   );
 }

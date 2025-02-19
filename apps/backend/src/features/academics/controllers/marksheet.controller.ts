@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { addMarksheet, findMarksheetById, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
+import { User } from "@/features/user/models/user.model.js";
 
 export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -25,7 +26,7 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
         sendUpdate(`Processing started for ${fileName}...`);
 
         // Process file and get logs in real-time
-        const isUploaded = await uploadFile(fileName, sendUpdate);
+        const isUploaded = await uploadFile(fileName, sendUpdate, req.user as User);
 
         sendUpdate(`Processing completed for ${fileName}`);
         res.end();
@@ -40,7 +41,7 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
 
 export const createMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const newMarksheet = await addMarksheet(req.body as MarksheetType);
+        const newMarksheet = await addMarksheet(req.body as MarksheetType, req.user as User);
         if (!newMarksheet) {
             res.status(429).json(new ApiError(429, "Unable to create the marksheet!"));
             return;
@@ -73,7 +74,7 @@ export const updatedMarksheet = async (req: Request, res: Response, next: NextFu
     try {
         const { id } = req.params;
 
-        const savedMarksheet = await saveMarksheet(+id, req.body as MarksheetType);
+        const savedMarksheet = await saveMarksheet(+id, req.body as MarksheetType, req.user as User);
 
         if (!savedMarksheet) {
             res.status(400).json(new ApiError(404, "Unable to save the marksheet!"));

@@ -21,7 +21,7 @@ import IssueRetun from "./components/LibManagement/IssueRetun";
 import Dashboard from "./components/LibManagement/Dashboard";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
-import AllActivities from "./components/manage-marksheet/AllActivities";
+
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
@@ -44,9 +44,9 @@ const router = createBrowserRouter([
       { path: "academics-add", element: <AddStudentPage /> },
       {
         path: "manage-marksheet",
-        element: <ManageMarksheetPage />,
+        element: <Outlet />,
         children: [
-          { path: "", element: <AllActivities /> },
+          { path: "", element: <ManageMarksheetPage /> },
           {
             path: ":framework",
             element: <Outlet />,
