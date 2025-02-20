@@ -6,8 +6,8 @@ import { userTypeEnum } from "./helper.js";
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull(),
-    email: varchar({ length: 500 }).notNull().unique(),
-    password: varchar({ length: 255 }).notNull(),
+    email: varchar({ length: 500 }).unique(),
+    password: varchar({ length: 255 }),
     phone: varchar({ length: 255 }),
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),

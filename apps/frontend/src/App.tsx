@@ -20,7 +20,6 @@ import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
-import GradeCard from "./pages/GradeCard";
 import Dashboard from "./components/LibManagement/Dashboard";
 
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
@@ -54,7 +53,7 @@ const router = createBrowserRouter([
             children: [
               { path: "", element: <FrameworkActivitiesTab /> },
               {
-                path: ":uid",
+                path: ":rollNumber",
                 element: <Outlet />,
                 children: [
                   { path: "", element: <StudentMarksheetsPage /> },
@@ -78,14 +77,6 @@ const router = createBrowserRouter([
         children: [
           { path: "", element: <SearchStudentPage /> },
           { path: ":studentId", element: <StudentPage /> },
-        ],
-      },
-      {
-        path: "student-Marksheet",
-        element: <Outlet />,
-        children: [
-          { path: "", element: <GradeCard /> },
-         
         ],
       },
       { path: "profile", element: <UserProfilePage /> },

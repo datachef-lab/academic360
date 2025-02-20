@@ -19,6 +19,6 @@ export interface AcademicIdentifier {
     abcId: string | null,
     apprid: string | null,
     checkRepeat: boolean,
-    createdAt: Date,
-    updatedAt: Date,
+    createdAt?: Date,
+    updatedAt?: Date,
 }

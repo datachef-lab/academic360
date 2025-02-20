@@ -21,10 +21,10 @@ export default function HomeLayout() {
 
   return (
     <ThemeProvider>
-      <SidebarProvider>
+      <SidebarProvider className="w-screen overflow-x-hidden">
         <AppSidebar />
-        <SidebarInset>
-          <header className="flex justify-between pr-4 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+        <SidebarInset className="w-[100%] px-2 pr-5">
+          <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
               <Separator orientation="vertical" className="mr-2 h-4" />
@@ -56,7 +56,7 @@ export default function HomeLayout() {
               <ModeToggle />
             </div>
           </header>
-          <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
             <Outlet />
           </div>
         </SidebarInset>

@@ -4,6 +4,7 @@ import { AcademicIdentifier } from "@/features/user/models/academicIdentifier.mo
 import { UserType } from "../user/user";
 
 export interface MarksheetType extends Omit<Marksheet, "createdByUserId" | "updatedByUserId"> {
+    name: string;
     subjects: SubjectType[];
     createdByUser: UserType;
     updatedByUser: UserType;

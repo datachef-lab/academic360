@@ -4,7 +4,7 @@ import { MarksheetType } from "@/types/academics/marksheet.js";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
-import { findAllStreams, findStreamByName } from "./stream.service.js";
+import { findAllStreams, findStreamById, findStreamByName } from "./stream.service.js";
 import { Stream } from "../models/stream.model.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
@@ -23,15 +23,46 @@ import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 import { MarksheetLog } from "@/types/academics/marksheet-logs.js";
 import { UserType } from "@/types/user/user.js";
 import { findUserById } from "@/features/user/services/user.service.js";
+import { StudentType } from "@/types/user/student.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
 export async function addMarksheet(marksheet: MarksheetType, user: User): Promise<MarksheetType | null> {
     // Return if the student not found
-    let student = await findStudentById(marksheet.studentId);
-    if (!student) {
-        return null;
+    let student: Student | null = null;
+    if (marksheet.studentId) {
+        student = await findStudentById(marksheet.studentId);
     }
+
+    if (!student) {
+        // Step 1: Add the user
+        const newUser = await addUser({ name: marksheet.name, uid: null });
+
+        // Step 2: Add the student
+        student = await addStudent({
+            userId: newUser.id as number,
+            uid: null,
+            framework: marksheet.academicIdentifier.frameworkType as "CBCS" | "CCF",
+            shift: null
+        }) as Student;
+
+        // Step 3: Add the academic-identifier
+        const foundStream = await findStreamById(marksheet.academicIdentifier.streamId as number);
+        if (!foundStream) {
+            throw Error("Invalid stream");
+        }
+
+        await addAcademicIdentifier({
+            studentId: student.id as number,
+            stream: foundStream.name,
+            framework: marksheet.academicIdentifier.frameworkType as "CBCS" | "CCF",
+            uid: marksheet.academicIdentifier.uid || null,
+            registrationNumber: marksheet.academicIdentifier.registrationNumber as string,
+            rollNumber: marksheet.academicIdentifier.rollNumber as string,
+            section: marksheet.academicIdentifier.section ? marksheet.academicIdentifier.section : null
+        });
+    }
+
 
     // Step 1: Create the marksheet
     const [newMarksheet] = await db.insert(marksheetModel).values({
@@ -274,8 +305,12 @@ async function marksheetResponseFormat(marksheet: Marksheet): Promise<MarksheetT
     const createdByUser = await findUserById(marksheet.createdByUserId as number);
     const updatedByUser = await findUserById(marksheet.updatedByUserId as number);
 
+    const [student] = await db.select().from(studentModel).where(eq(studentModel.id, marksheet.studentId as number));
+    const [user] = await db.select().from(userModel).where(eq(userModel.id, student.userId as number));
+
     const formattedMarksheet: MarksheetType = {
         ...marksheet,
+        name: user.name as string,
         subjects,
         academicIdentifier: academicIdentifier as AcademicIdentifierType,
         createdByUser: createdByUser as UserType,
@@ -320,11 +355,29 @@ const cleanString = (value: unknown): string | undefined => {
     return undefined; // Return undefined for non-string values
 };
 
-async function addUser(marksheet: MarksheetRow) {
-    const email = `${cleanString(marksheet.uid)?.toUpperCase()}@thebges.edu.in`;
+interface AddUserProps {
+    name: string;
+    uid: string | null;
+}
+async function addUser({ name, uid }: AddUserProps) {
+    if (!uid) {
+        // Create the new user
+        const [newUser] = await db.insert(userModel).values({
+            name: name?.trim()?.toUpperCase(),
+            email: null,
+            password: null,
+            phone: null,
+            type: "STUDENT",
+            whatsappNumber: null,
+        }).returning();
+
+        return newUser;
+    }
+
+    const email = `${cleanString(uid)?.toUpperCase()}@thebges.edu.in`;
 
     // Hash the password before storing it in the database
-    const hashedPassword = await bcrypt.hash(marksheet.uid.trim()?.toUpperCase(), 10);
+    const hashedPassword = await bcrypt.hash(uid.trim()?.toUpperCase(), 10);
 
     // Return, if the email already exist
     const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
@@ -335,7 +388,7 @@ async function addUser(marksheet: MarksheetRow) {
 
     // Create the new user
     const [newUser] = await db.insert(userModel).values({
-        name: marksheet.name?.trim()?.toUpperCase(),
+        name: name?.trim()?.toUpperCase(),
         email: email.trim().toLowerCase(),
         password: hashedPassword,
         phone: null,
@@ -346,43 +399,65 @@ async function addUser(marksheet: MarksheetRow) {
     return newUser;
 }
 
-async function addStudent(marksheet: MarksheetRow, user: User) {
-    const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, user.id as number));
+interface AddStudentProps {
+    userId: number;
+    uid: string | null,
+    framework: "CBCS" | "CCF";
+    shift: "DAY" | "MORNING" | "AFTERNOON" | "EVENING" | null;
+}
+
+async function addStudent({ userId, uid, framework, shift }: AddStudentProps) {
+    const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, userId as number));
     if (existingStudent) {
         return existingStudent;
     }
 
     let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined;
-    if (marksheet.uid.startsWith("11") || marksheet.uid.startsWith("14")) {
-        level = "POST_GRADUATE";
-    } else if (!marksheet.uid.startsWith("B")) {
-        level = "UNDER_GRADUATE";
+    if (uid) {
+        if (uid.startsWith("11") || uid.startsWith("14")) {
+            level = "POST_GRADUATE";
+        } else if (!uid.startsWith("B")) {
+            level = "UNDER_GRADUATE";
+        }
     }
 
     const [newStudent] = await db.insert(studentModel).values({
-        userId: user.id as number,
-        framework: marksheet.framework,
-        shift: marksheet.shift && ["DAY", "MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING" : null,
+        userId: userId as number,
+        framework: framework,
+        level,
+        shift: shift,
     }).returning();
+
+    // ["DAY", "MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING" : null
 
     return newStudent;
 }
 
-async function addAcademicIdentifier(marksheet: MarksheetRow, student: Student) {
-    const stream = await findStreamByName(marksheet.stream);
+interface AddAcademicIdentifierProps {
+    studentId: number;
+    stream: string;
+    framework: "CBCS" | "CCF";
+    uid: string | null;
+    registrationNumber: string;
+    rollNumber: string;
+    section: string | null;
+}
 
-    if (!stream) {
+async function addAcademicIdentifier({ studentId, stream, framework, uid, registrationNumber, rollNumber, section }: AddAcademicIdentifierProps) {
+    const foundStream = await findStreamByName(stream);
+
+    if (!foundStream) {
         throw Error("Invalid stream");
     }
 
     await db.insert(academicIdentifierModel).values({
-        studentId: student.id as number,
-        streamId: stream.id as number,
-        frameworkType: marksheet.framework.toUpperCase().trim() as "CCF" | "CBCS",
-        uid: cleanString(marksheet.uid)?.toUpperCase(),
-        registrationNumber: marksheet.registration_no.trim(),
-        rollNumber: marksheet.roll_no.trim(),
-        section: marksheet.section,
+        studentId: studentId as number,
+        streamId: foundStream.id as number,
+        frameworkType: framework.toUpperCase().trim() as "CCF" | "CBCS",
+        uid: uid ? cleanString(uid)?.toUpperCase() : null,
+        registrationNumber: registrationNumber.trim(),
+        rollNumber: rollNumber.trim(),
+        section: section,
     }).returning();
 }
 
@@ -403,10 +478,23 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
         const user = await addUser(arr[0]);
 
         // Step 2: Add the student
-        student = await addStudent(arr[0], user);
+        student = await addStudent({
+            framework: arr[0].framework as "CBCS" | "CCF",
+            shift: arr[0].shift as "DAY" | "MORNING" | "AFTERNOON" | "EVENING",
+            uid: arr[0].uid,
+            userId: user.id as number,
+        });
 
         // Step 3: Add the academic-identifier
-        await addAcademicIdentifier(arr[0], student);
+        await addAcademicIdentifier({
+            framework: arr[0].framework as "CBCS" | "CCF",
+            registrationNumber: arr[0].registration_no,
+            rollNumber: arr[0].roll_no,
+            section: arr[0].section,
+            stream: stream.name,
+            studentId: student.id as number,
+            uid: arr[0].uid,
+        });
     }
 
     if (!student) {
