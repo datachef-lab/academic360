@@ -1,21 +1,89 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const frameworkTypeEnum = pgEnum("framework_type", ["CCF", "CBCS"]);
+export const frameworkTypeEnum = pgEnum("framework_type", [
+    "CCF",
+    "CBCS"
+]);
 
-export const placeOfStayTypeEnum = pgEnum('place_of_stay_type', ["OWN", "HOSTEL", "FAMILY_FRIENDS", "PAYING_GUEST", "RELATIVES"]);
+export const placeOfStayTypeEnum = pgEnum('place_of_stay_type', [
+    "OWN",
+    "HOSTEL",
+    "FAMILY_FRIENDS",
+    "PAYING_GUEST",
+    "RELATIVES",
+]);
 
-export const localityTypeEnum = pgEnum("locality_type", ["RURAL", "URBAN"]);
+export const localityTypeEnum = pgEnum("locality_type", [
+    "RURAL",
+    "URBAN",
+]);
 
-export const courseTypeEnum = pgEnum("course_type", ["HONOURS", "GENERAL"]);
+export const degreeProgrammeTypeEnum = pgEnum("degree_programme_type", [
+    "HONOURS",
+    "GENERAL",
+]);
 
-export const parentTypeEnum = pgEnum("parent_type", ["BOTH", "FATHER_ONLY", "MOTHER_ONLY"]);
+export const degreeLevelTypeEnum = pgEnum('degree_level_type', [
+    "SECONDARY",
+    "HIGHER_SECONDARY",
+    "UNDER_GRADUATE",
+    "POST_GRADUATE",
+]);
 
-export const genderTypeEnum = pgEnum('gender_type', ["MALE", "FEMALE", "TRANSGENDER"]);
+export const parentTypeEnum = pgEnum("parent_type", [
+    "BOTH",
+    "FATHER_ONLY",
+    "MOTHER_ONLY"
+]);
 
-export const disabilityTypeEnum = pgEnum('disability_type', ["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]);
+export const genderTypeEnum = pgEnum('gender_type', [
+    "MALE",
+    "FEMALE",
+    "TRANSGENDER"
+]);
 
-export const communityTypeEnum = pgEnum("community_type", ["GUJARATI", "NON-GUJARATI"]);
+export const disabilityTypeEnum = pgEnum('disability_type', [
+    "VISUAL",
+    "HEARING_IMPAIRMENT",
+    "VISUAL_IMPAIRMENT",
+    "ORTHOPEDIC",
+    "OTHER",
+]);
 
-export const shiftTypeEnum = pgEnum("shift_type", ["DAY", "MORNING", "AFTERNOON", "EVENING"]);
+export const communityTypeEnum = pgEnum("community_type", [
+    "GUJARATI",
+    "NON-GUJARATI"
+]);
 
-export const userTypeEnum = pgEnum('user_type', ["ADMIN", "STUDENT", "TEACHER"]);
+export const userTypeEnum = pgEnum('user_type', [
+    "ADMIN",
+    "STUDENT",
+    "TEACHER",
+]);
+
+export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
+    "SPECIAL",
+    "COMMON",
+    "HONOURS",
+    "GENERAL",
+    "ELECTIVE",
+]);
+
+export const marksheetSourceEnum = pgEnum("marksheet_source", [
+    "FILE_UPLOAD", 
+    "ADDED"
+]);
+
+export const classTypeEnum = pgEnum("class_type", [
+    "CLASS",
+    "SEMESTER",
+]);
+
+export const paperModeTypeEnum = pgEnum("paper_mode_type", [
+    "THEORETICAL",
+    "PRACTICAL",
+    "VIVA",
+    "ASSIGNMENT",
+    "PROJECT",
+    "MCQ",
+]);

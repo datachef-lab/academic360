@@ -3,9 +3,8 @@ import { studentModel } from "@/features/user/models/student.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { userModel } from "@/features/user/models/user.model";
-
-export const marksheetSourceEnum = pgEnum("marksheet_source", ["FILE_UPLOAD", "ADDED"]);
+import { userModel } from "@/features/user/models/user.model.js";
+import { marksheetSourceEnum } from "@/features/user/models/helper.js";
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
@@ -18,7 +17,7 @@ export const marksheetModel = pgTable("marksheets", {
     remarks: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-    source: marksheetSourceEnum().default("FILE_UPLOAD"),
+    source: marksheetSourceEnum(),
     file: varchar({ length: 700 }),
     createdByUserId: integer().notNull().references(() => userModel.id),
     updatedByUserId: integer().notNull().references(() => userModel.id),

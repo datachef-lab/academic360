@@ -3,9 +3,14 @@ import { AcademicIdentifier, academicIdentifierModel } from "../models/academicI
 import { findStreamById } from "@/features/academics/services/stream.service.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
+import { Shift } from "@/features/academics/models/shift.model.js";
+import { findShiftById } from "@/features/academics/services/shift.services.js";
+import { StreamType } from "@/types/academics/stream.js";
+import { Section } from "@/features/academics/models/section.model.js";
+import { findSectionById } from "@/features/academics/services/section.service.js";
 
 export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    const { stream, ...props } = academicIdentifier;
+    const { stream, section, shift, ...props } = academicIdentifier;
 
     const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({ ...props }).returning();
 
@@ -84,13 +89,29 @@ export async function academicIdentifierResponseFormat(academicIdentifier: Acade
         return null;
     }
 
-    const { streamId, ...props } = academicIdentifier;
+    const { streamId, shiftId, sectionId, ...props } = academicIdentifier;
 
-    const formattedAcademiIdentifier: AcademicIdentifierType = { ...props };
-
+    let stream: StreamType | null = null;
     if (streamId) {
-        formattedAcademiIdentifier.stream = await findStreamById(streamId);
+        stream = await findStreamById(streamId as number);
     }
+
+    let shift: Shift | null = null;
+    if (shiftId) {
+        shift = await findShiftById(shiftId as number);
+    }
+
+    let section: Section | null = null;
+    if (sectionId) {
+        section = await findSectionById(sectionId as number);
+    }
+
+    const formattedAcademiIdentifier: AcademicIdentifierType = { 
+        ...props, 
+        stream: stream as StreamType, 
+        section, 
+        shift 
+    };
 
     return formattedAcademiIdentifier;
 }

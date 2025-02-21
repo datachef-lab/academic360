@@ -6,8 +6,6 @@ import { addressModel } from "./address.model.js";
 import { relations } from "drizzle-orm";
 import { placeOfStayTypeEnum } from "./helper.js";
 
-
-
 export const accommodationModel = pgTable("accommodation", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").unique().references(() => studentModel.id),

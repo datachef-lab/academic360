@@ -6,10 +6,11 @@ import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { addAcademicIdentifier, findAcademicIdentifierById, findAcademicIdentifierByStudentId, saveAcademicIdentifier } from "../services/academicIdentifier.service.js";
 import { AcademicHistoryType } from "@/types/user/academic-history.js";
+import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 
 export const createAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const newAcademicIdentifier = await addAcademicIdentifier(req.body as AcademicHistoryType);
+        const newAcademicIdentifier = await addAcademicIdentifier(req.body as AcademicIdentifierType);
 
         res.status(201).json(new ApiResponse(201, "SUCCESS", newAcademicIdentifier, "New academicIdentifier is added to db!"));
 
@@ -63,7 +64,7 @@ export const updateAcademicIdentifier = async (req: Request, res: Response, next
     try {
         const { id } = req.params;
 
-        const updatedAcademicIdentifier = await saveAcademicIdentifier(Number(id), req.body as AcademicIdentifier);
+        const updatedAcademicIdentifier = await saveAcademicIdentifier(Number(id), req.body as AcademicIdentifierType);
 
         if (!updatedAcademicIdentifier) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "academicIdentifier not found"));

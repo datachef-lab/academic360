@@ -9,10 +9,8 @@ import { findAll } from "@/utils/helper.js";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database
-    let hashedPassword: string | null = null;
-    if (user.password) {
-        hashedPassword = await bcrypt.hash(user.password, 10)
-    }
+    let hashedPassword = await bcrypt.hash(user.password, 10)
+    
     user.password = hashedPassword;
 
     // Create a new user

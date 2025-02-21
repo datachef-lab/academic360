@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { createAcademicHistorySchema } from "@/features/user/models/academicHistory.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 

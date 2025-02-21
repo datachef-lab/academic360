@@ -7,8 +7,6 @@ import { z } from "zod";
 import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
 import { parentTypeEnum } from "./helper.js";
 
-
-
 export const parentModel = pgTable("parent_details", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
