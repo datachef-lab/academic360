@@ -1,12 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getAllStreams } from "@/services/stream";
-import { Course } from "@/types/enums";
+import { DegreeProgramme } from "@/types/enums";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function Header() {
   const [selectedStream, setSelectedStream] = useState<string>("BCOM");
-  const [selectedCourse, setSelectedCourse] = useState<Course>("HONOURS");
+  const [selectedCourse, setSelectedCourse] = useState<DegreeProgramme>("HONOURS");
   const [selectedSemester, setSelectedSemester] = useState<number>(1);
 
   const { data } = useQuery({
@@ -44,7 +44,7 @@ export default function Header() {
 
         {/* Course Dropdown */}
         <div className="w-full sm:w-56">
-          <Select value={selectedCourse} onValueChange={(value) => setSelectedCourse(value as Course)}>
+          <Select value={selectedCourse} onValueChange={(value) => setSelectedCourse(value as DegreeProgramme)}>
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">
               <SelectValue placeholder="Select Course" />
             </SelectTrigger>

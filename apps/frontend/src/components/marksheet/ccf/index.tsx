@@ -15,7 +15,6 @@ import InputInitials from "./InputInitials";
 import { getSearchedStudentsByRollNumber } from "@/services/student";
 import { Student } from "@/types/user/student";
 import { Framework } from "@/types/enums";
-import { previousDay } from "date-fns";
 
 const columns = [
   "Course Code (Course Type)",
@@ -32,7 +31,7 @@ const MarksheetCCF = () => {
   const { user } = useAuth();
   const { framework, rollNumber, marksheetId } = useParams();
 
-  const [subjectMetadataArr, setSubjectMetadataArr] = useState<SubjectMetadata[]>([]);
+  const [, setSubjectMetadataArr] = useState<SubjectMetadata[]>([]);
   const [marksheet, setMarksheet] = useState<Marksheet | null>();
   const [student, setStudent] = useState<Student | null>();
 
@@ -83,7 +82,7 @@ const MarksheetCCF = () => {
           frameworkType: framework as Framework,
           rfid: null,
           stream: null,
-          course: null,
+          degreeProgramme: null,
           section: "",
           classRollNumber: null,
           apaarId: null,

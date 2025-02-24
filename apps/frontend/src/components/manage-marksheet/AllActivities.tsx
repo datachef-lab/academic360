@@ -94,7 +94,6 @@
 //   );
 // }
 
-import React from "react";
 
 export default function AllActivities() {
   return <div>AllActivities</div>;
