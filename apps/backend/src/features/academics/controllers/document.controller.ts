@@ -5,7 +5,7 @@ import { db } from "@/db/index.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { getFile, scanExistingMarksheetFilesByRollNumber } from "../services/document.service";
+import { getFile, scanExistingMarksheetFilesByRollNumber } from "../services/document.service.js";
 
 //createDocumentMetadata
 export const createDocumentMetadata = async (

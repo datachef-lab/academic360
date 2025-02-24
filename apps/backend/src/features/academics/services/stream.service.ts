@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { Stream, streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
-import { findDegreeById } from "@/features/resources/services/degree.service";
+import { findDegreeById } from "@/features/resources/services/degree.service.js";
 import { StreamType } from "@/types/academics/stream.js";
 import { and, eq } from "drizzle-orm";
 

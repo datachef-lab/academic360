@@ -1,4 +1,4 @@
-import { degreeLevelTypeEnum } from "@/features/user/models/helper";
+import { degreeLevelTypeEnum } from "@/features/user/models/helper.js";
 import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

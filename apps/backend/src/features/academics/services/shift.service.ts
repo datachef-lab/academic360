@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { Shift, shiftModel } from "../models/shift.model";
+import { db } from "@/db/index.js";
+import { Shift, shiftModel } from "../models/shift.model.js";
 import { eq } from "drizzle-orm";
 
 export async function findShiftById(id: number): Promise<Shift | null> {

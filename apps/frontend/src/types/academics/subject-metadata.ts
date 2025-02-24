@@ -1,4 +1,4 @@
-import { Course, Framework, SubjectCategory } from "../enums";
+import { DegreeProgramme, Framework, SubjectCategory } from "../enums";
 import { Specialization } from "../resources/specialization";
 import { Stream } from "./stream";
 
@@ -12,7 +12,7 @@ export interface SubjectType {
 export interface SubjectMetadata {
     readonly id?: number;
     stream: Stream;
-    course: Course;
+    degreeProgramme: DegreeProgramme;
     semester: number;
     framework: Framework;
     specialization: Specialization | null;
