@@ -3,7 +3,7 @@ import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata
 import { addStream, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { addSpecialization, findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { Specialization, specializationModel } from "@/features/user/models/specialization.model.js";
-import { Stream } from "../models/stream.model.js";
+import { Stream, streamModel } from "../models/stream.model.js";
 import { db } from "@/db/index.js";
 import { and, eq, SQLWrapper } from "drizzle-orm";
 import path from "path";
@@ -13,6 +13,7 @@ import { SubjectRow } from "@/types/academics/subject-row.js";
 import { subjectTypeModel, SubjectTypeModel } from "../models/subjectType.model.js";
 import { addDegree, findDegreeById, findDegreeByName } from "@/features/resources/services/degree.service.js";
 import { StreamType } from "@/types/academics/stream.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,22 +31,40 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
     // Read the file from the `/public/temp/` directory
     const filePath = path.resolve(directoryName, "../../../..", "public", "temp", fileName);
 
+    let degrees = await db.select().from(degreeModel);
+
     const subjectArr = readExcelFile<SubjectRow>(filePath);
 
     for (let i = 0; i < subjectArr.length; i++) {
 
         const streamName = subjectArr[i].Stream.toUpperCase().trim().split(" ")[0];
-        let foundStream = await findStreamByNameAndProgrammee(streamName, subjectArr[i].Course);
+
+        let foundDegree = degrees.find(ele => ele.name === streamName.toUpperCase().trim());
+        if (!foundDegree) {
+            const [newDegree] = await db.insert(degreeModel).values({ name: streamName.toUpperCase().trim(), level: streamName.startsWith('B') ? "UNDER_GRADUATE" : "POST_GRADUATE" }).returning();
+            foundDegree = newDegree;
+
+            degrees = await db.select().from(degreeModel);
+        }
+
+        let [foundStream] = await db.select().from(streamModel).where(and(
+            eq(streamModel.degreeId, foundDegree.id),
+            eq(streamModel.framework, subjectArr[i].Framework),
+            eq(streamModel.degreeProgramme, subjectArr[i].Course),
+        ));
+
         if (!foundStream) {
-            let foundDegree = await findDegreeByName(streamName);
-            if (!foundDegree) {
-                foundDegree = await addDegree(streamName);
-            }
-            foundStream = await addStream({
-                degree: foundDegree!,
+            const [newStream] = await db.insert(streamModel).values({
+                degreeId: foundDegree.id as number,
                 degreeProgramme: subjectArr[i].Course,
-                framework: subjectArr[i].Framework  
-            })
+                framework: subjectArr[i].Framework,
+            } as Stream).returning();
+
+            if (!newStream) {
+                throw Error("Unable to create new stream...!");
+            }
+
+            foundStream = newStream;
 
             if (!foundStream) {
                 throw Error("Unable to create new stream...!");
@@ -65,12 +84,18 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
 
         let subjectType: SubjectTypeModel | null = null;
         if (subjectArr[i]["Subject Type"]) {
+            console.log("in if, ", subjectArr[i]["Subject Type"])
             const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
             if (!foundSubjectType) {
                 const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
                 subjectType = newSubjectType;
             }
+            else {
+                subjectType = foundSubjectType;
+            }
         }
+
+        console.log("subjectType:", subjectType);
 
         await db.insert(subjectMetadataModel).values({
             streamId: foundStream.id as number,

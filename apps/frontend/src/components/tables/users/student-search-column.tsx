@@ -131,19 +131,6 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     },
   },
   {
-    accessorKey: "specialization",
-    header: "Specialization",
-    cell: ({ row }) => {
-      const student = row.original;
-
-      if (student.specialization) {
-        return <p>{student.specialization.name}</p>;
-      }
-
-      return <p>-</p>;
-    },
-  },
-  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {

@@ -3,7 +3,7 @@ import { Stream, streamModel } from "@/features/academics/models/stream.model.js
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service";
 import { StreamType } from "@/types/academics/stream.js";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function addStream(stream: StreamType): Promise<StreamType | null> {
     const { degree, ...props } = stream;
@@ -52,7 +52,12 @@ export async function findStreamByNameAndProgrammee(name: string, degreeProgramm
     })
         .from(streamModel)
         .leftJoin(degreeModel, eq(degreeModel.id, streamModel.degreeId))
-        .where(eq(streamModel.degreeProgramme, degreeProgramme));
+        .where(
+            and(
+                eq(degreeModel.name, name), // Filter by degree name
+                eq(streamModel.degreeProgramme, degreeProgramme)
+            )
+        );
 
     const formattedStream = await streamResponseFormat(foundStream);
 

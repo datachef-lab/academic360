@@ -9,6 +9,12 @@ export async function getAllStudents(page: number, pageSize: number): Promise<Ap
     return response.data;
 }
 
+export async function getStudentById(id: number): Promise<ApiResonse<Student>> {
+    const response = await axiosInstance.get(`/api/students/query?id=${id}`);
+    console.log(response.data);
+    return response.data;
+}
+
 export async function getSearchedStudents(page: number, pageSize: number, searchText: string): Promise<ApiResonse<PaginatedResponse<Student>>> {
     const response = await axiosInstance.get(`/api/students/search?page=${page}&pageSize=${pageSize}&searchText=${searchText}`);
     console.log(response.data);
