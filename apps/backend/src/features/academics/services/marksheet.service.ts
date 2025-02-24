@@ -4,8 +4,7 @@ import { MarksheetType } from "@/types/academics/marksheet.js";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
-import { findAllStreams, findStreamById, findStreamByName } from "./stream.service.js";
-import { Stream } from "../models/stream.model.js";
+import { findAllStreams, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
@@ -17,13 +16,14 @@ import { SubjectType } from "@/types/academics/subject.js";
 import { addSubject, findSubjectsByMarksheetId, saveSubject, subjectResponseFormat } from "./subject.service.js";
 import bcrypt from "bcrypt";
 import { User, userModel } from "@/features/user/models/user.model.js";
-import { calculateCGPA, calculatePercentage, calculateSGPA, formatMarks, getClassification, getLetterGrade, getRemarks } from "@/utils/helper.js";
-import { findAcademicIdentifierById, findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
+import { calculateCGPA, calculateSGPA, formatMarks, getClassification, getLetterGrade, getRemarks } from "@/utils/helper.js";
+import { findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
 import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 import { MarksheetLog } from "@/types/academics/marksheet-logs.js";
 import { UserType } from "@/types/user/user.js";
 import { findUserById } from "@/features/user/services/user.service.js";
-import { StudentType } from "@/types/user/student.js";
+import { StreamType } from "@/types/academics/stream.js";
+import { Section, sectionModel } from "../models/section.model.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -36,30 +36,24 @@ export async function addMarksheet(marksheet: MarksheetType, user: User): Promis
 
     if (!student) {
         // Step 1: Add the user
-        const newUser = await addUser({ name: marksheet.name, uid: null });
-
+        const newUser = await addUser({ name: marksheet.name, uid: marksheet.academicIdentifier.uid as string });
+        if (!newUser) {
+            return null;
+        }
         // Step 2: Add the student
         student = await addStudent({
             userId: newUser.id as number,
-            uid: null,
-            framework: marksheet.academicIdentifier.frameworkType as "CBCS" | "CCF",
-            shift: null
+            uid: marksheet.academicIdentifier.uid as string,
         }) as Student;
 
         // Step 3: Add the academic-identifier
-        const foundStream = await findStreamById(marksheet.academicIdentifier.streamId as number);
-        if (!foundStream) {
-            throw Error("Invalid stream");
-        }
-
         await addAcademicIdentifier({
             studentId: student.id as number,
-            stream: foundStream.name,
-            framework: marksheet.academicIdentifier.frameworkType as "CBCS" | "CCF",
+            stream: marksheet.academicIdentifier.stream || null,
             uid: marksheet.academicIdentifier.uid || null,
             registrationNumber: marksheet.academicIdentifier.registrationNumber as string,
             rollNumber: marksheet.academicIdentifier.rollNumber as string,
-            section: marksheet.academicIdentifier.section ? marksheet.academicIdentifier.section : null
+            sectionId: marksheet.academicIdentifier.section ? marksheet.academicIdentifier.section.id as number : null
         });
     }
 
@@ -133,7 +127,7 @@ export async function uploadFile(fileName: string, user: User): Promise<boolean>
 
             for (let sem = 1; sem <= 6; sem++) { // Iterate over the semesters
                 // Filter the data
-                const arr = filterData({
+                const arr = await filterData({
                     dataArr,
                     semester: sem,
                     framework: dataArr[0].framework,
@@ -155,7 +149,7 @@ export async function uploadFile(fileName: string, user: User): Promise<boolean>
                     const subjectArr = arr.filter(row => row.roll_no === arr[i].roll_no);
                     console.log("processing student:", subjectArr.length, subjectArr[0].roll_no, "dataArr:", dataArr.length, "arr:", arr.length);
                     // Process the student
-                    const result = await processStudent(subjectArr, streams[s], sem, fileName, user);
+                    const result = await processStudent(subjectArr, streams[s] as StreamType, sem, fileName, user);
                     // console.log("result:", result);
 
                     // Mark the uid as done
@@ -221,7 +215,6 @@ export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog
             source: marksheetModel.source,
             file: marksheetModel.file,
             createdByUserId: marksheetModel.createdByUserId,
-            framework: academicIdentifierModel.frameworkType,
             updatedByUserId: marksheetModel.updatedByUserId,
             createdAt: marksheetModel.createdAt,
             updatedAt: marksheetModel.updatedAt,
@@ -323,18 +316,18 @@ async function marksheetResponseFormat(marksheet: Marksheet): Promise<MarksheetT
 interface FilterDataProps {
     dataArr: MarksheetRow[];
     framework: "CBCS" | "CCF";
-    stream: Stream;
+    stream: StreamType;
     year: number;
     semester: number;
 }
 
-function filterData({ dataArr, stream, framework, year, semester }: FilterDataProps) {
-
-    const isBCOM = stream.name === "BCOM";
+async function filterData({ dataArr, stream, framework, year, semester }: FilterDataProps) {
+    const isBCOM = stream?.degree.name === "BCOM";
     const yearKey = isBCOM && framework === "CBCS" ? "year2" : "year1";
 
     return dataArr.filter(row =>
-        cleanStream(row.stream) === stream.name &&
+        cleanStream(row.stream) === stream?.degree.name &&
+        row.course.toUpperCase().trim() === stream.degreeProgramme &&
         row[yearKey] === year &&
         row.semester === semester
     );
@@ -362,16 +355,16 @@ interface AddUserProps {
 async function addUser({ name, uid }: AddUserProps) {
     if (!uid) {
         // Create the new user
-        const [newUser] = await db.insert(userModel).values({
-            name: name?.trim()?.toUpperCase(),
-            email: null,
-            password: null,
-            phone: null,
-            type: "STUDENT",
-            whatsappNumber: null,
-        }).returning();
+        // const [newUser] = await db.insert(userModel).values({
+        //     name: name?.trim()?.toUpperCase(),
+        //     email: null,
+        //     password: null,
+        //     phone: null,
+        //     type: "STUDENT",
+        //     whatsappNumber: null,
+        // } as User).returning();
 
-        return newUser;
+        return null;
     }
 
     const email = `${cleanString(uid)?.toUpperCase()}@thebges.edu.in`;
@@ -402,11 +395,9 @@ async function addUser({ name, uid }: AddUserProps) {
 interface AddStudentProps {
     userId: number;
     uid: string | null,
-    framework: "CBCS" | "CCF";
-    shift: "DAY" | "MORNING" | "AFTERNOON" | "EVENING" | null;
 }
 
-async function addStudent({ userId, uid, framework, shift }: AddStudentProps) {
+async function addStudent({ userId, uid }: AddStudentProps) {
     const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, userId as number));
     if (existingStudent) {
         return existingStudent;
@@ -423,9 +414,6 @@ async function addStudent({ userId, uid, framework, shift }: AddStudentProps) {
 
     const [newStudent] = await db.insert(studentModel).values({
         userId: userId as number,
-        framework: framework,
-        level,
-        shift: shift,
     }).returning();
 
     // ["DAY", "MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING" : null
@@ -435,33 +423,25 @@ async function addStudent({ userId, uid, framework, shift }: AddStudentProps) {
 
 interface AddAcademicIdentifierProps {
     studentId: number;
-    stream: string;
-    framework: "CBCS" | "CCF";
+    stream: StreamType | null;
     uid: string | null;
     registrationNumber: string;
     rollNumber: string;
-    section: string | null;
+    sectionId: number | null;
 }
 
-async function addAcademicIdentifier({ studentId, stream, framework, uid, registrationNumber, rollNumber, section }: AddAcademicIdentifierProps) {
-    const foundStream = await findStreamByName(stream);
-
-    if (!foundStream) {
-        throw Error("Invalid stream");
-    }
-
+async function addAcademicIdentifier({ studentId, stream, uid, registrationNumber, rollNumber, sectionId }: AddAcademicIdentifierProps) {
     await db.insert(academicIdentifierModel).values({
         studentId: studentId as number,
-        streamId: foundStream.id as number,
-        frameworkType: framework.toUpperCase().trim() as "CCF" | "CBCS",
+        streamId: stream ? stream.id as number : null,
         uid: uid ? cleanString(uid)?.toUpperCase() : null,
         registrationNumber: registrationNumber.trim(),
         rollNumber: rollNumber.trim(),
-        section: section,
+        sectionId: sectionId,
     }).returning();
 }
 
-async function processStudent(arr: MarksheetRow[], stream: Stream, semester: number, fileName: string, user: User) {
+async function processStudent(arr: MarksheetRow[], stream: StreamType, semester: number, fileName: string, user: User) {
     console.log("in processStudent(), arr:", arr.length)
     if (arr.length === 0) {
         return;
@@ -476,22 +456,29 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
     if (!foundAcademicIdentifier) { // TODO: Create new student
         // Step 1: Add the user
         const user = await addUser(arr[0]);
+        if (!user) {
+            return;
+        }
 
         // Step 2: Add the student
         student = await addStudent({
-            framework: arr[0].framework as "CBCS" | "CCF",
-            shift: arr[0].shift as "DAY" | "MORNING" | "AFTERNOON" | "EVENING",
             uid: arr[0].uid,
             userId: user.id as number,
         });
 
-        // Step 3: Add the academic-identifier
+        // Step 3: Add the section
+        let section: Section | null = null;
+        if (arr[0].section) {
+            const [newSection] = await db.select().from(sectionModel).where(eq(sectionModel.name, arr[0].section));
+            section = newSection;
+        }
+
+        // Step 4: Add the academic-identifier
         await addAcademicIdentifier({
-            framework: arr[0].framework as "CBCS" | "CCF",
             registrationNumber: arr[0].registration_no,
             rollNumber: arr[0].roll_no,
-            section: arr[0].section,
-            stream: stream.name,
+            sectionId: section ? section.id as number : null,
+            stream,
             studentId: student.id as number,
             uid: arr[0].uid,
         });
@@ -518,7 +505,6 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
     const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
         eq(subjectMetadataModel.streamId, stream.id as number),
         eq(subjectMetadataModel.semester, semester),
-        eq(subjectMetadataModel.framework, arr[0].framework),
     ));
 
     let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
@@ -534,7 +520,7 @@ async function processStudent(arr: MarksheetRow[], stream: Stream, semester: num
             marksheetId: marksheet.id,
             subjectMetadataId: subjectMetadata.id,
             year1: arr[i].year1,
-            year2: stream.name === "BCOM" ? Number(arr[i].year2) : null,
+            year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
             internalMarks: formatMarks(arr[i].internal_marks),
             theoryMarks: formatMarks(arr[i].theory_marks),
             practicalMarks: arr[i].practical_marks ? formatMarks(arr[i].practical_marks) : null,
@@ -623,8 +609,6 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     if (!foundStudent) {
         return;
     }
-    foundStudent.framework = marksheet.subjects[0].subjectMetadata.framework;
-    console.log("Framework:", marksheet.subjects[0].subjectMetadata.framework);
     // For Passing the semester, update the student fields
     if (marksheet.sgpa) {
         // Updated the last passed year
@@ -647,15 +631,15 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     if (!foundAcademicIdentifier.rollNumber) {
         foundAcademicIdentifier.rollNumber = marksheet.academicIdentifier.rollNumber as string;
     }
-    if (!foundAcademicIdentifier.course) {
-        foundAcademicIdentifier.course = marksheet.academicIdentifier.course ?? null;
-    }
-    if (!foundAcademicIdentifier.frameworkType) {
-        foundAcademicIdentifier.frameworkType = marksheet.subjects[0].subjectMetadata.framework;
-    }
-    if (!foundAcademicIdentifier.section) {
-        foundAcademicIdentifier.section = marksheet.academicIdentifier.section ?? null;
-    }
+    // if (!foundAcademicIdentifier.course) {
+    //     foundAcademicIdentifier.course = marksheet.academicIdentifier.course ?? null;
+    // }
+    // if (!foundAcademicIdentifier.frameworkType) {
+    //     foundAcademicIdentifier.frameworkType = marksheet.subjects[0].subjectMetadata.framework;
+    // }
+    // if (!foundAcademicIdentifier.section) {
+    //     foundAcademicIdentifier.section = marksheet.academicIdentifier.section ?? null;
+    // }
 
     await db.update(academicIdentifierModel).set(foundAcademicIdentifier).where(eq(academicIdentifierModel.id, foundAcademicIdentifier.id as number));
 
@@ -675,7 +659,7 @@ export async function validateData(dataArr: MarksheetRow[]) {
 
             for (let sem = 1; sem <= 6; sem++) { // Iterate over the semesters
                 // Filter the data
-                const arr = filterData({
+                const arr = await filterData({
                     dataArr,
                     semester: sem,
                     framework: dataArr[0].framework,
@@ -700,7 +684,6 @@ export async function validateData(dataArr: MarksheetRow[]) {
                     const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
                         eq(subjectMetadataModel.streamId, streams[s].id as number),
                         eq(subjectMetadataModel.semester, sem),
-                        eq(subjectMetadataModel.framework, arr[0].framework),
                     ));
 
                     // Check all the subjects (range of marks, subject name, duplicates)
@@ -751,7 +734,7 @@ export async function validateData(dataArr: MarksheetRow[]) {
                         }
 
                     }
-                    console.log(`Done year ${y} | stream ${streams[s].name} | semester ${sem} | Total: ${i + 1} ${arr.length}`);
+                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1} ${arr.length}`);
                 }
             }
         }
@@ -836,7 +819,7 @@ export async function cleanData(dataArr: MarksheetRow[]) {
     for (let y = startingYear; y <= new Date().getFullYear(); y++) {
         for (let s = 0; s < streams.length; s++) {
             for (let sem = 1; sem <= 6; sem++) {
-                const arr = filterData({
+                const arr = await filterData({
                     dataArr,
                     semester: sem,
                     framework: dataArr[0].framework,
@@ -854,7 +837,7 @@ export async function cleanData(dataArr: MarksheetRow[]) {
                     // Normalize and clean the data
                     studentMksArr = studentMksArr.map((mks) => ({
                         ...mks,
-                        stream: streams[s].name.toUpperCase().trim(),
+                        stream: streams[s].degree.name.toUpperCase().trim(),
                         uid: mks.uid.toUpperCase().trim(),
                         registration_no: cleanTilde(mks.registration_no) as string,
                         roll_no: cleanTilde(mks.roll_no) as string,
@@ -874,7 +857,7 @@ export async function cleanData(dataArr: MarksheetRow[]) {
                     formattedArr.push(...studentMksArr);
                     doneRollNumber.add(arr[i].roll_no); // Mark roll number as processed
 
-                    console.log(`Done year ${y} | stream ${streams[s].name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
+                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
                 }
             }
         }

@@ -1,6 +1,6 @@
 import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
 import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata.model.js";
-import { addStream, findStreamById, findStreamByName } from "./stream.service.js";
+import { addStream, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { addSpecialization, findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { Specialization, specializationModel } from "@/features/user/models/specialization.model.js";
 import { Stream } from "../models/stream.model.js";
@@ -11,6 +11,8 @@ import { fileURLToPath } from "url";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { SubjectRow } from "@/types/academics/subject-row.js";
 import { subjectTypeModel, SubjectTypeModel } from "../models/subjectType.model.js";
+import { addDegree, findDegreeById, findDegreeByName } from "@/features/resources/services/degree.service.js";
+import { StreamType } from "@/types/academics/stream.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -33,16 +35,20 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
     for (let i = 0; i < subjectArr.length; i++) {
 
         const streamName = subjectArr[i].Stream.toUpperCase().trim().split(" ")[0];
-        let foundStream = await findStreamByName(streamName);
+        let foundStream = await findStreamByNameAndProgrammee(streamName, subjectArr[i].Course);
         if (!foundStream) {
+            let foundDegree = await findDegreeByName(streamName);
+            if (!foundDegree) {
+                foundDegree = await addDegree(streamName);
+            }
             foundStream = await addStream({
-                name: streamName,
-                duration: 6,
-                numberOfSemesters: 6
-            });
+                degree: foundDegree!,
+                degreeProgramme: subjectArr[i].Course,
+                framework: subjectArr[i].Framework  
+            })
 
             if (!foundStream) {
-                throw Error("Unable to add subjects, as stream cannot be created");
+                throw Error("Unable to create new stream...!");
             }
         }
 
@@ -101,17 +107,13 @@ export async function findSubjectMetdataById(id: number): Promise<SubjectMetadat
 
 interface FindSubjectMetdataByFiltersProps {
     streamId: number;
-    course: "HONOURS" | "GENERAL";
     semester: number;
-    framework: "CCF" | "CBCS";
 }
 
-export async function findSubjectMetdataByFilters({ streamId, course, semester, framework }: FindSubjectMetdataByFiltersProps): Promise<SubjectMetadataType[]> {
+export async function findSubjectMetdataByFilters({ streamId, semester }: FindSubjectMetdataByFiltersProps): Promise<SubjectMetadataType[]> {
     const foundSubjectMetadatas = await db.select().from(subjectMetadataModel).where(and(
         eq(subjectMetadataModel.streamId, streamId),
-        eq(subjectMetadataModel.course, course),
         eq(subjectMetadataModel.semester, semester),
-        eq(subjectMetadataModel.framework, framework),
     ));
 
     const formattedSubjectMetadatas = (await Promise.all(foundSubjectMetadatas.map(async (sbj) => {
@@ -144,9 +146,9 @@ async function subjectMetadataResponseFormat(subjectMetadata: SubjectMetadata | 
     const formattedSubjectMetadata = {
         ...props,
         specialization,
-        stream: stream as Stream,
+        stream,
         subjectType
-    }
+    } as SubjectMetadataType
 
     return formattedSubjectMetadata;
 

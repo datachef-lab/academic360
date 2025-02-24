@@ -39,19 +39,20 @@ export async function findStreamById(id: number): Promise<StreamType | null> {
     return formattedStream;
 }
 
-export async function findStreamByName(name: string): Promise<StreamType | null> {
+export async function findStreamByNameAndProgrammee(name: string, degreeProgramme: "HONOURS" | "GENERAL"): Promise<StreamType | null> {
     const [foundStream] = await db.select({
         id: streamModel.id,
         framework: streamModel.framework,
         degreeId: streamModel.degreeId,
-        degree_programme_type: streamModel.degree_programme_type,
+        degreeProgramme: streamModel.degreeProgramme,
         duration: streamModel.duration,
         numberOfSemesters: streamModel.numberOfSemesters,
         createdAt: streamModel.createdAt,
         updatedAt: streamModel.updatedAt,
     })
         .from(streamModel)
-        .leftJoin(degreeModel, eq(degreeModel.name, name.toUpperCase().trim()));
+        .leftJoin(degreeModel, eq(degreeModel.id, streamModel.degreeId))
+        .where(eq(streamModel.degreeProgramme, degreeProgramme));
 
     const formattedStream = await streamResponseFormat(foundStream);
 

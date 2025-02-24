@@ -9,7 +9,7 @@ export const streamModel = pgTable('streams', {
     id: serial().primaryKey(),
     framework: frameworkTypeEnum(),
     degreeId: integer("degree_id_fk").notNull().references(() => degreeModel.id),
-    degree_programme_type: degreeProgrammeTypeEnum(),
+    degreeProgramme: degreeProgrammeTypeEnum(),
     duration: integer(),
     numberOfSemesters: integer(),
     createdAt: timestamp().notNull().defaultNow(),

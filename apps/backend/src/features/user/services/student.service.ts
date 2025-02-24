@@ -4,8 +4,8 @@ import { Student, studentModel } from "../models/student.model.js";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { findAll } from "@/utils/helper.js";
-import { removeAcademicHistory, saveAcademicHistory } from "./academicHistory.service.js";
-import { addAcademicIdentifier, findAcademicIdentifierById, findAcademicIdentifierByStudentId, removeAcademicIdentifier, saveAcademicIdentifier } from "./academicIdentifier.service.js";
+import { removeAcademicHistory } from "./academicHistory.service.js";
+import { addAcademicIdentifier, findAcademicIdentifierByStudentId, removeAcademicIdentifier, saveAcademicIdentifier } from "./academicIdentifier.service.js";
 import { removeAccommodationByStudentId } from "./accommodation.service.js";
 import { removeAdmissionByStudentId } from "./admission.service.js";
 import { removeParentsByStudentId } from "./parentDetails.service.js";
@@ -18,8 +18,6 @@ import { removeMarksheetByStudentId } from "@/features/academics/services/marksh
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { findUserById } from "./user.service.js";
 import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
-import { userModel } from "../models/user.model.js";
-import { nationalityModel } from "@/features/resources/models/nationality.model.js";
 
 
 export async function addStudent(student: StudentType): Promise<StudentType | null> {

@@ -1,1 +1,0 @@
-ALTER TYPE "public"."shift_type" ADD VALUE 'DAY' BEFORE 'MORNING';
