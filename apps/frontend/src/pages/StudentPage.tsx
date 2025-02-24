@@ -96,6 +96,9 @@ import { useState } from "react";
 // }
 
 import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router-dom";
+import { getStudentById } from "@/services/student";
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -111,7 +114,17 @@ const studentTabs = [
 ];
 
 export default function StudentPage() {
+  const { studentId } = useParams();
+
   const [activeTab, setActiveTab] = useState(studentTabs[0]);
+
+  const { data } = useQuery({
+    queryKey: ["student", studentId],
+    queryFn: async () => {
+      const response = await getStudentById(Number(studentId));
+      return response.payload;
+    },
+  });
 
   return (
     <div className="w-full h-full flex gap-5">
@@ -120,16 +133,26 @@ export default function StudentPage() {
         {/* Student Details Header */}
         <div className="border-b pb-2 space-y-2">
           <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight">
-            <p>HARSH NILESH DESAI</p>
+            <p>{data?.name}</p>
           </h2>
           <div className="space-x-2 flex flex-wrap">
-            <Badge variant="outline" className="flex items-center gap-1">
-              INDIA
-            </Badge>
-            <Badge className="bg-green-700 flex items-center gap-1">Graduated</Badge>
-            <Badge className="bg-blue-500 flex items-center gap-1">BCOM</Badge>
-            <Badge className="bg-red-500 flex items-center gap-1">GUJARATI</Badge>
-            <Badge className="bg-violet-500 flex items-center gap-1">CBCF</Badge>
+            {data?.personalDetails?.nationality?.name && (
+              <Badge variant="outline" className="flex items-center gap-1">
+                {data?.personalDetails?.nationality?.name}
+              </Badge>
+            )}
+            {data?.community && <Badge className="bg-green-700 flex items-center gap-1">{data?.community}</Badge>}
+            {data?.academicIdentifier?.stream && (
+              <Badge className="bg-blue-500 flex items-center gap-1">
+                {data.academicIdentifier.stream.degree.name}
+              </Badge>
+            )}
+            {data?.community && <Badge className="bg-red-500 flex items-center gap-1">{data?.community}</Badge>}
+            {data?.academicIdentifier?.stream && (
+              <Badge className="bg-violet-500 flex items-center gap-1">
+                {data.academicIdentifier.stream.framework}
+              </Badge>
+            )}
             <Badge className="bg-gray-500 flex items-center gap-1">GEN</Badge>
           </div>
         </div>

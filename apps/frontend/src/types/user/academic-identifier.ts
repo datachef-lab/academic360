@@ -1,5 +1,5 @@
 import { Stream } from "../academics/stream";
-import { Course, Framework } from "../enums";
+import { DegreeProgramme, Framework } from "../enums";
 
 export interface AcademicIdentifier {
     readonly id?: number,
@@ -7,7 +7,7 @@ export interface AcademicIdentifier {
     frameworkType: Framework | null,
     rfid: string | null,
     stream: Stream | null,
-    course: Course | null,
+    degreeProgramme: DegreeProgramme | null,
     cuFormNumber: string | null,
     uid: string | null,
     oldUid: string | null,
@@ -19,6 +19,6 @@ export interface AcademicIdentifier {
     abcId: string | null,
     apprid: string | null,
     checkRepeat: boolean,
-    createdAt: Date,
-    updatedAt: Date,
+    createdAt?: Date,
+    updatedAt?: Date,
 }

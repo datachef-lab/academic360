@@ -114,7 +114,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     header: "Registration No.",
   },
   {
-    accessorKey: "Roll No.",
+    accessorKey: "rollNumber",
     header: "Roll No.",
   },
   {
@@ -125,19 +125,6 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
 
       if (student.stream) {
         return <p>{student.stream.name}</p>;
-      }
-
-      return <p>-</p>;
-    },
-  },
-  {
-    accessorKey: "specialization",
-    header: "Specialization",
-    cell: ({ row }) => {
-      const student = row.original;
-
-      if (student.specialization) {
-        return <p>{student.specialization.name}</p>;
       }
 
       return <p>-</p>;

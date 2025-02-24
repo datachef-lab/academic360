@@ -6,6 +6,7 @@ import {
     getDocument,
     getDocumentMetadataById,
     getDocumentMetadataByName,
+    getExistingMarksheetFilesByRollNumber,
     updateDocumentMetadata,
     uploadDocument,
 } from "@/features/academics/controllers/document.controller.js";
@@ -33,6 +34,8 @@ router.put("/:id", updateDocumentMetadata);
 router.delete("/:id", deleteDocumentMetadata);
 
 router.post("/get", getDocument);
+
+router.post("/scan-marksheet", getExistingMarksheetFilesByRollNumber);
 
 router.post("/upload", uploadDocument);
 

@@ -12,13 +12,13 @@ import { Address, addressModel } from "../models/address.model.js";
 import { admissionModel } from "../models/admission.model.js";
 import { parentModel } from "../models/parent.model.js";
 import { personModel } from "../models/person.model.js";
-import { gaurdianModel, Guardian } from "../models/guardian.model.js";
+import { gaurdianModel } from "../models/guardian.model.js";
 import { Health, healthModel } from "../models/health.model.js";
 import { emergencyContactModel } from "../models/emergencyContact.model.js";
 import { personalDetailsModel } from "../models/personalDetails.model.js";
 import { academicHistoryModel } from "../models/academicHistory.model.js";
 import { transportDetailsModel } from "../models/transportDetails.model.js";
-import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { number } from "zod";
 import { occupationModel, Occupation } from "@/features/resources/models/occupation.model.js";
@@ -42,9 +42,11 @@ import { spec } from "node:test/reporters";
 import { fileURLToPath } from "node:url";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { streamModel } from "@/features/academics/models/stream.model.js";
-import { SubjectMetadata, subjectMetadataModel, subjectCategoryTypeEnum } from "@/features/academics/models/subjectMetadata.model.js";
+import { SubjectMetadata, subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
 import { SubjectRow } from "@/types/academics/subject-row.js";
 import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/subjectType.model.js";
+import { findDegreeByName } from "@/features/resources/services/degree.service.js";
+import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -775,21 +777,29 @@ export async function processStudent(oldStudent: OldStudent) {
     await addTransportDetails(oldStudent, student);
 }
 
-export async function addStream(name: string) {
+export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENERAL", framework: "CCF" | "CBCS") {
     name = name.trim();
     if (name.endsWith(" (H)") || name.endsWith(" (G)")) {
         name = name.split(' ')[0];
     }
 
-    const [existingStream] = await db.select().from(streamModel).where(eq(streamModel.name, name));
+    const existingStream = await findStreamByNameAndProgrammee(name, degreeProgramme);
     if (existingStream) {
         return existingStream;
     }
+
+    let foundDegree = await findDegreeByName(name);
+    if (!foundDegree) {
+        const [newDegree] = await db.insert(degreeModel).values({ name }).returning();
+        foundDegree = newDegree;
+    }
+
     const [newStream] = await db.insert(streamModel).values({
-        name,
+        degreeId: foundDegree.id as number,
+        degreeProgramme,
+        framework,
         duration: 3,
         numberOfSemesters: 6,
-        level: "UNDER_GRADUATE",
     }).returning();
 
     return newStream;
@@ -801,7 +811,7 @@ export async function addStreamsAndSubjects() {
     const subjectArr = readExcelFile<SubjectRow>(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
     console.log(subjectArr.length)
     for (let i = 0; i < subjectArr.length; i++) {
-        const stream = await addStream(subjectArr[i].Stream);
+        const stream = await addStream(subjectArr[i].Stream, subjectArr[i].Course, subjectArr[i].Framework);
 
         let specialization: Specialization | undefined;
         if (subjectArr[i].Specialization) {

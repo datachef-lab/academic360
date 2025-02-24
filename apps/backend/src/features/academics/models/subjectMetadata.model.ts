@@ -5,28 +5,17 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
 import { specializationModel } from "@/features/user/models/specialization.model.js";
-import { courseTypeEnum } from "@/features/user/models/helper.js";
+
 import { subjectTypeModel } from "./subjectType.model.js";
-
-export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
-    "SPECIAL",
-    "COMMON",
-    "HONOURS",
-    "GENERAL",
-    "ELECTIVE",
-]);
-
-export const frameworkTypeEnum = pgEnum("framework_type", ["CCF", "CBCS"]);
+import { subjectCategoryTypeEnum } from "@/features/user/models/helper.js";
 
 export const subjectMetadataModel = pgTable("subject_metadatas", {
     id: serial().primaryKey(),
     streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
-    course: courseTypeEnum(),
     semester: integer().notNull(),
-    framework: frameworkTypeEnum().notNull(),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
     category: subjectCategoryTypeEnum(),
-    subjectTypeId: integer().references(() => subjectTypeModel.id),
+    subjectTypeId: integer("subject_type_id_fk").notNull().references(() => subjectTypeModel.id),
     name: varchar({ length: 255 }).notNull(),
     isOptional: boolean().default(false),
     credit: integer(),

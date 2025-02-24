@@ -3,8 +3,8 @@ import { studentModel } from "@/features/user/models/student.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-
-export const marksheetSourceEnum = pgEnum("marksheet_source", ["FILE_UPLOAD", "ADDED"]);
+import { userModel } from "@/features/user/models/user.model.js";
+import { marksheetSourceEnum } from "@/features/user/models/helper.js";
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
@@ -17,15 +17,25 @@ export const marksheetModel = pgTable("marksheets", {
     remarks: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-    source: marksheetSourceEnum().default("FILE_UPLOAD"),
+    source: marksheetSourceEnum(),
     file: varchar({ length: 700 }),
+    createdByUserId: integer().notNull().references(() => userModel.id),
+    updatedByUserId: integer().notNull().references(() => userModel.id),
 });
 
 export const marksheetRelations = relations(marksheetModel, ({ one }) => ({
     student: one(studentModel, {
         fields: [marksheetModel.studentId],
         references: [studentModel.id]
-    })
+    }),
+    createdByUser: one(userModel, {
+        fields: [marksheetModel.createdByUserId],
+        references: [userModel.id]
+    }),
+    updatedByUser: one(userModel, {
+        fields: [marksheetModel.updatedAt],
+        references: [userModel.id]
+    }),
 }));
 
 export const createMarksheetModel = createInsertSchema(marksheetModel);

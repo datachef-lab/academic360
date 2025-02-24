@@ -4,23 +4,21 @@ import { streamModel } from "@/features/academics/models/stream.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { courseTypeEnum, frameworkTypeEnum } from "./helper.js";
-
-
+import { sectionModel } from "@/features/academics/models/section.model.js";
+import { shiftModel } from "@/features/academics/models/shift.model.js";
 
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
-    frameworkType: frameworkTypeEnum(),
     rfid: varchar({ length: 255 }),
     streamId: integer("stream_id_fk").references(() => streamModel.id),
-    course: courseTypeEnum(),
+    shiftId: integer("shift_id_fk").references(() => shiftModel.id),
     cuFormNumber: varchar({ length: 255 }),
     uid: varchar({ length: 255 }),
     oldUid: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
     rollNumber: varchar({ length: 255 }),
-    section: varchar({ length: 255 }),
+    sectionId: integer("section_id_fk").references(() => sectionModel.id),
     classRollNumber: varchar({ length: 255 }),
     apaarId: varchar({ length: 255 }),
     abcId: varchar({ length: 255 }),
@@ -38,6 +36,14 @@ export const academicIdentifierRelations = relations(academicIdentifierModel, ({
     stream: one(streamModel, {
         fields: [academicIdentifierModel.streamId],
         references: [streamModel.id],
+    }),
+    shift: one(shiftModel, {
+        fields: [academicIdentifierModel.shiftId],
+        references: [shiftModel.id],
+    }),
+    section: one(sectionModel, {
+        fields: [academicIdentifierModel.sectionId],
+        references: [sectionModel.id],
     }),
 }));
 

@@ -1,1 +1,0 @@
-ALTER TABLE "subject_metadatas" ALTER COLUMN "is_optional" SET DEFAULT false;

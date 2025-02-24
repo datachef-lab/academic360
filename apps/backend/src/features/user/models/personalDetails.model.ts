@@ -12,8 +12,6 @@ import { languageMediumModel } from "@/features/resources/models/languageMedium.
 import { disabilityCodeModel } from "./disabilityCode.model.js";
 import { disabilityTypeEnum, genderTypeEnum } from "./helper.js";
 
-
-
 export const personalDetailsModel = pgTable("personal_details", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().references(() => studentModel.id),

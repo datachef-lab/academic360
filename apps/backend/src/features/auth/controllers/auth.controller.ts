@@ -42,7 +42,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             return;
         }
 
-        const isPasswordMatch = await bcrypt.compare(password, foundUser.password);
+        const isPasswordMatch = await bcrypt.compare(password, foundUser.password as string);
 
         if (!isPasswordMatch) {
             res.status(401).json(new ApiError(401, "Please provide the valid credentials."));

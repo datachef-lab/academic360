@@ -4,12 +4,13 @@ import { db } from "@/db/index.js";
 import { User, userModel } from "../models/user.model.js";
 import { PayloadType, UserType } from "@/types/user/user.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
-import { findStudentById } from "./student.service.js";
+import { findStudentById, findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database
-    const hashedPassword = await bcrypt.hash(user.password, 10);
+    let hashedPassword = await bcrypt.hash(user.password, 10)
+    
     user.password = hashedPassword;
 
     // Create a new user
@@ -146,7 +147,7 @@ export async function userResponseFormat(givenUser: User): Promise<UserType | nu
 
     let payload: PayloadType = null;
     if (givenUser.type == "STUDENT") {
-        const studentPayload = await findStudentById(givenUser.id as number);
+        const studentPayload = await findStudentByUserId(givenUser.id as number);
         payload = studentPayload ? studentPayload : null;
     }
     return { ...givenUser, payload };
