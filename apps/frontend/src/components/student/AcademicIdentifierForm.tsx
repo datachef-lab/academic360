@@ -3,48 +3,37 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { z } from "zod";
 import {
-  User,
-  Settings,
-  Barcode,
-  Layers,
-  ClipboardCheck,
-  FileText,
-  Fingerprint,
-  Hash,
-  IdCard,
-  ListOrdered,
-  LayoutGrid,
-  Landmark,
-  BadgeCheck,
-  ShieldCheck,
+  User, Settings, Barcode, Layers, ClipboardCheck, FileText, Fingerprint, 
+  Hash, IdCard, ListOrdered, LayoutGrid, Landmark, BadgeCheck, ShieldCheck, 
+  RefreshCw 
 } from "lucide-react";
+import { academicIdentifier } from "@/types/user/academic-identifier";
 
 const studentSchema = z.object({
   studentId: z.number().min(1, "Student ID is required"),
-  frameworkType: z.string().optional(),
-  rfid: z.string().max(255).optional(),
-  streamId: z.number().optional(),
-  course: z.string().optional(),
-  cuFormNumber: z.string().max(255).optional(),
-  uid: z.string().max(255).optional(),
-  oldUid: z.string().max(255).optional(),
-  registrationNumber: z.string().max(255).optional(),
-  rollNumber: z.string().max(255).optional(),
-  section: z.string().max(255).optional(),
-  classRollNumber: z.string().max(255).optional(),
-  apaarId: z.string().max(255).optional(),
-  abcId: z.string().max(255).optional(),
-  apprid: z.string().max(255).optional(),
+  frameworkType: z.enum(["CCF", "CBCS"]).nullable(),
+  rfid: z.string().nullable(),
+  stream: z.any().nullable(),
+  degreeProgramme: z.enum(["HONOURS", "GENERAL"]).nullable(),
+  cuFormNumber: z.string().nullable(),
+  uid: z.string().nullable(),
+  oldUid: z.string().nullable(),
+  registrationNumber: z.string().nullable(),
+  rollNumber: z.string().nullable(),
+  section: z.string().nullable(),
+  classRollNumber: z.string().nullable(),
+  apaarId: z.string().nullable(),
+  abcId: z.string().nullable(),
+  apprid: z.string().nullable(),
+  checkRepeat: z.boolean().default(false),
 });
-
-type StudentFormData = z.infer<typeof studentSchema>;
 
 const formElement = [
   { name: "studentId", label: "Student ID", type: "number", icon: <User className="w-5 h-5 text-gray-500" /> },
   { name: "frameworkType", label: "Framework Type", type: "text", icon: <Settings className="w-5 h-5 text-gray-500" /> },
   { name: "rfid", label: "RFID", type: "text", icon: <Barcode className="w-5 h-5 text-gray-500" /> },
-  { name: "streamId", label: "Stream ID", type: "number", icon: <Layers className="w-5 h-5 text-gray-500" /> },
-  { name: "course", label: "Course", type: "text", icon: <ClipboardCheck className="w-5 h-5 text-gray-500" /> },
+  { name: "stream", label: "Stream", type: "text", icon: <Layers className="w-5 h-5 text-gray-500" /> },
+  { name: "degreeProgramme", label: "Degree Programme", type: "text", icon: <ClipboardCheck className="w-5 h-5 text-gray-500" /> },
   { name: "cuFormNumber", label: "CU Form Number", type: "text", icon: <FileText className="w-5 h-5 text-gray-500" /> },
   { name: "uid", label: "UID", type: "text", icon: <Fingerprint className="w-5 h-5 text-gray-500" /> },
   { name: "oldUid", label: "Old UID", type: "text", icon: <Hash className="w-5 h-5 text-gray-500" /> },
@@ -55,15 +44,16 @@ const formElement = [
   { name: "apaarId", label: "APAAR ID", type: "text", icon: <BadgeCheck className="w-5 h-5 text-gray-500" /> },
   { name: "abcId", label: "ABC ID", type: "text", icon: <ShieldCheck className="w-5 h-5 text-gray-500" /> },
   { name: "apprid", label: "Appr ID", type: "text", icon: <ShieldCheck className="w-5 h-5 text-gray-500" /> },
+  { name: "checkRepeat", label: "Check Repeat", type: "checkbox", icon: <RefreshCw className="w-5 h-5 text-gray-500" /> },
 ];
 
-const AcademicIdentifier = () => {
-  const [formData, setFormData] = useState<StudentFormData>({
+const AcademicIdentifierForm = () => {
+  const [formData, setFormData] = useState<academicIdentifier>({
     studentId: 0,
-    frameworkType: "",
+    frameworkType: null,
     rfid: "",
-    streamId: undefined,
-    course: "",
+    stream: null,
+    degreeProgramme: null,
     cuFormNumber: "",
     uid: "",
     oldUid: "",
@@ -74,21 +64,23 @@ const AcademicIdentifier = () => {
     apaarId: "",
     abcId: "",
     apprid: "",
+    checkRepeat: false,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    
     setFormData((prev) => ({
       ...prev,
-      [name]:name==="studentId"?Number(value): value,
+      [name]: type === "checkbox" ? checked : name === "studentId" ? Number(value) : value || null,
     }));
-    setErrors((prev)=>{
-      const newErrors={...prev};
+
+    setErrors((prev) => {
+      const newErrors = { ...prev };
       delete newErrors[name];
       return newErrors;
-
     });
   };
 
@@ -101,7 +93,6 @@ const AcademicIdentifier = () => {
       parsed.error.errors.forEach((err) => {
         formattedErrors[err.path[0]] = err.message;
       });
-      console.log("error msg**", formattedErrors);
       setErrors(formattedErrors);
     } else {
       console.log("Form Data Submitted:", parsed.data);
@@ -114,23 +105,35 @@ const AcademicIdentifier = () => {
       <div className="max-w-[90%] w-full grid grid-cols-2 gap-6">
         {formElement.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">
-           <div className="relative  p-1">
-            {errors[name] ? (<span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>): null}
-            <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+            <div className="relative p-1">
+              {errors[name] && <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>}
+              <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
+                {label}
+              </label>
             </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
-              <Input
-                id={name}
-                name={name}
-                type={type}
-                value={formData[name as keyof StudentFormData] || ""}
-                placeholder={label}
-                onChange={handleChange}
-                className={`w-full pl-10 pr-3  py-2 ${errors[name] ? 'border-red-500' : ''}`}
-              />
+              {type === "checkbox" ? (
+                <Input
+                  id={name}
+                  name={name}
+                  type="checkbox"
+                  checked={formData[name as keyof academicIdentifier] as boolean}
+                  onChange={handleChange}
+                  className="ml-10"
+                />
+              ) : (
+                <Input
+                  id={name}
+                  name={name}
+                  type={type}
+                  value={(formData[name as keyof academicIdentifier] as string) || ""}
+                  placeholder={label}
+                  onChange={handleChange}
+                  className={`w-full pl-10 pr-3 py-2 ${errors[name] ? "border-red-500" : ""}`}
+                />
+              )}
             </div>
-            {/* {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>} */}
           </div>
         ))}
         <div className="col-span-2">
@@ -143,4 +146,4 @@ const AcademicIdentifier = () => {
   );
 };
 
-export default AcademicIdentifier;
+export default AcademicIdentifierForm;

@@ -3,32 +3,34 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { z } from "zod";
 import { User, Home, MapPin, Calendar } from "lucide-react";
+import { Accommodation } from "@/types/user/accommodation";
 
 const studentAccommodationSchema = z.object({
   studentId: z.number().min(1, "Student ID is required"),
   placeOfStay: z.string().min(1, "Place of Stay is required"),
   addressId: z.number().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
 });
 
-type StudentAccommodationFormData = z.infer<typeof studentAccommodationSchema>;
+
 
 const formElements = [
   { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "placeOfStay", label: "Place of Stay", type: "text", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "addressId", label: "Address ID", type: "number", icon: <MapPin className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "address", label: "Address ", type: "string", icon: <MapPin className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "startDate", label: "Start Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "endDate", label: "End Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
 ];
 
-const Accommodation = () => {
-  const [formData, setFormData] = useState<StudentAccommodationFormData>({
+const AccommodationForm = () => {
+  const [formData, setFormData] = useState<Accommodation>({
     studentId: 0,
-    placeOfStay: "",
-    addressId: undefined,
-    startDate: "",
-    endDate: "",
+    placeOfStay: null,
+    address: null,
+    startDate: new Date(),
+    endDate: new Date(),
+    
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -78,7 +80,7 @@ const Accommodation = () => {
                 id={name}
                 name={name}
                 type={type}
-                value={formData[name as keyof StudentAccommodationFormData] || ""}
+                value={type === "date" ? (formData[name as keyof Accommodation] as Date)?.toISOString().split("T")[0] : formData[name as keyof Accommodation]?.toString() || ""}
                 placeholder={label}
                 onChange={handleChange}
                 className={`w-full pl-10 pr-3 py-2 ${errors[name] ? 'border-red-500' : ''}`}
@@ -97,4 +99,4 @@ const Accommodation = () => {
   );
 };
 
-export default Accommodation;
+export default AccommodationForm;
