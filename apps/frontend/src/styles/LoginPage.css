@@ -325,4 +325,35 @@
       font-size: 0.9rem;
     }
   }
-  
+/* Update the autofill styling rules */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  /* Change from rgba(0, 0, 0, 0.2) to transparent */
+  -webkit-box-shadow: 0 0 0 30px transparent inset !important;
+  -webkit-text-fill-color: #e7e7e7 !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #e7e7e7;
+  background-color: transparent !important;
+}
+
+/* Add this new rule to force transparent background */
+input {
+  background-color: transparent !important;
+}
+
+/* Ensure the input-div maintains its styling when containing an autofilled input */
+.input-div:has(input:-webkit-autofill) {
+  background: transparent;
+}
+
+/* Ensure the focus state is maintained when autofill is active */
+.input-div:has(input:-webkit-autofill) > div > h5 {
+  top: -5px;
+  font-size: 15px;
+}
+
+.input-div:has(input:-webkit-autofill) > .i > i {
+  color: #2182f9;
+}
