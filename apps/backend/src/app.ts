@@ -39,6 +39,10 @@ import {
     studentRouter,
     nationalityRouter,
     religionRouter,
+   
+    academicHistoryRouter,
+    academicIdentifierRouter,
+    accommodationRouter,
     stateRouter,
     degreeRouter,
     occupationRouter,
@@ -178,8 +182,11 @@ app.use("/api/transports", transportRouter);
 app.use("/api/degree", degreeRouter);
 
 app.use("/api/occupations", occupationRouter);
-
 app.use("/api/annual-incomes", annualIncomeRouter);
+app.use("/api/annual-incomes", annualIncomeRouter);
+app.use("/api/academicIdentifiers", academicIdentifierRouter);
+app.use("/api/academicHistories", academicHistoryRouter);
+app.use("/api/accommodations", accommodationRouter);
 
 app.use(errorHandler);
 

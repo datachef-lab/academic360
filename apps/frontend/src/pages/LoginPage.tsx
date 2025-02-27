@@ -16,7 +16,8 @@ const LoginPage: React.FC = () => {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (data) => {
-      console.log("Login successful:", data);
+      console.log("Login ***successful:", data.payload);
+      localStorage.setItem("token", data.payload.accessToken);
       navigate("/home", { replace: true });
     },
   });
