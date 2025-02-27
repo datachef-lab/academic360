@@ -1,22 +1,17 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { z } from "zod";
-import { User, Home, MapPin, Calendar } from "lucide-react";
-import { Accommodation } from "@/types/user/accommodation";
 
-const studentAccommodationSchema = z.object({
-  studentId: z.number().min(1, "Student ID is required"),
-  placeOfStay: z.string().min(1, "Place of Stay is required"),
-  addressId: z.number().optional(),
-  startDate: z.date().optional(),
-  endDate: z.date().optional(),
-});
+import { Home, MapPin, Calendar } from "lucide-react";
+import { Accommodation } from "@/types/user/accommodation";
+import { saveAccommodation } from "@/services/stream";
+import { useMutation } from "@tanstack/react-query";
+
 
 
 
 const formElements = [
-  { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
+  
   { name: "placeOfStay", label: "Place of Stay", type: "text", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "address", label: "Address ", type: "string", icon: <MapPin className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "startDate", label: "Start Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
@@ -47,22 +42,17 @@ const AccommodationForm = () => {
       return newErrors;
     });
   };
-
+  const saveData=useMutation({
+    mutationFn:saveAccommodation,
+    onSuccess: (formData) => {
+      console.log("data saved:", formData);
+    }
+  })
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    const parsed = studentAccommodationSchema.safeParse(formData);
+    saveData.mutate(formData);
 
-    if (!parsed.success) {
-      const formattedErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((err) => {
-        formattedErrors[err.path[0]] = err.message;
-      });
-      console.log("error msg**", formattedErrors);
-      setErrors(formattedErrors);
-    } else {
-      console.log("Form Data Submitted:", parsed.data);
-      setErrors({});
-    }
+    
   };
 
   return (

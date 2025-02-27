@@ -1,32 +1,19 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { z } from "zod";
+
 import {
   User, Settings, Barcode, Layers, ClipboardCheck, FileText, Fingerprint, 
   Hash, IdCard, ListOrdered, LayoutGrid, Landmark, BadgeCheck, ShieldCheck, 
   RefreshCw 
 } from "lucide-react";
 import { academicIdentifier } from "@/types/user/academic-identifier";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getAllStreams, saveAcademicIdentifier } from "@/services/stream";
+import { Stream } from "@/types/academics/stream";
+// import { useQuery } from "@tanstack/react-query";
 
-const studentSchema = z.object({
-  studentId: z.number().min(1, "Student ID is required"),
-  frameworkType: z.enum(["CCF", "CBCS"]).nullable(),
-  rfid: z.string().nullable(),
-  stream: z.any().nullable(),
-  degreeProgramme: z.enum(["HONOURS", "GENERAL"]).nullable(),
-  cuFormNumber: z.string().nullable(),
-  uid: z.string().nullable(),
-  oldUid: z.string().nullable(),
-  registrationNumber: z.string().nullable(),
-  rollNumber: z.string().nullable(),
-  section: z.string().nullable(),
-  classRollNumber: z.string().nullable(),
-  apaarId: z.string().nullable(),
-  abcId: z.string().nullable(),
-  apprid: z.string().nullable(),
-  checkRepeat: z.boolean().default(false),
-});
+
 
 const formElement = [
   { name: "studentId", label: "Student ID", type: "number", icon: <User className="w-5 h-5 text-gray-500" /> },
@@ -66,8 +53,18 @@ const AcademicIdentifierForm = () => {
     apprid: "",
     checkRepeat: false,
   });
-
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const saveData=useMutation({
+    mutationFn:saveAcademicIdentifier,
+    onSuccess: (formData) => {
+      console.log("data saved:", formData);
+    }
+  })
+  
+  // const [streamValue, setStreamValue] = useState<Stream>();
+  const {data}=useQuery<Stream[]>({
+    queryKey:["stream"],
+    queryFn:getAllStreams,
+  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -77,28 +74,23 @@ const AcademicIdentifierForm = () => {
       [name]: type === "checkbox" ? checked : name === "studentId" ? Number(value) : value || null,
     }));
 
-    setErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors[name];
-      return newErrors;
-    });
+  
   };
-
+  const handleSelect=(e:React.ChangeEvent<HTMLSelectElement>)=>{
+    // setStreamValue(e.target.value);
+    const selectedStream = data?.find((stream) => stream.name === e.target.value) || null;
+    setFormData((prev)=>({
+      ...prev,
+      stream: selectedStream
+    }))
+    console.log("Selected Stream:", selectedStream);
+  }
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    const parsed = studentSchema.safeParse(formData);
-
-    if (!parsed.success) {
-      const formattedErrors: Record<string, string> = {};
-      parsed.error.errors.forEach((err) => {
-        formattedErrors[err.path[0]] = err.message;
-      });
-      setErrors(formattedErrors);
-    } else {
-      console.log("Form Data Submitted:", parsed.data);
-      setErrors({});
-    }
+    saveData.mutate(formData);
+ 
   };
+ 
 
   return (
     <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
@@ -106,7 +98,7 @@ const AcademicIdentifierForm = () => {
         {formElement.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">
             <div className="relative p-1">
-              {errors[name] && <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span>}
+             
               <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
                 {label}
               </label>
@@ -130,12 +122,20 @@ const AcademicIdentifierForm = () => {
                   value={(formData[name as keyof academicIdentifier] as string) || ""}
                   placeholder={label}
                   onChange={handleChange}
-                  className={`w-full pl-10 pr-3 py-2 ${errors[name] ? "border-red-500" : ""}`}
+                  className={`w-full pl-10 pr-3 py-2 `}
                 />
               )}
             </div>
           </div>
         ))}
+        <select onChange={handleSelect}>
+        <option value="">-- Choose Stream --</option>
+        {data?.map((index)=>(
+          <option key={index.id} value={index.name}>{index.name}</option>
+        ))}
+
+
+        </select>
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
             Submit
