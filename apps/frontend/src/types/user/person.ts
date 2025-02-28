@@ -13,6 +13,6 @@ export interface Person {
     qualification?: Qualification | null;
     occupation?: Occupation | null;
     officeAddress?: Address | null;
-    createdAt: Date,
-    updatedAt: Date,
+    createdAt?: Date,
+    updatedAt?: Date,
 }

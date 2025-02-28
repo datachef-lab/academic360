@@ -4,6 +4,6 @@ export interface Guardian {
     readonly id?: number;
     studentId: number,
     gaurdianDetails: Person | null;
-    createdAt: Date,
-    updatedAt: Date,
+    createdAt?: Date,
+    updatedAt?: Date,
 }

@@ -8,7 +8,7 @@ import qualificationRouter from "@/features/resources/routes/qualification.route
 import transportRouter from "@/features/resources/routes/transport.routes.js";
 import countryRouter from "@/features/resources/routes/country.routes.js";
 import degreeRouter from "@/features/resources/routes/degree.routes.js";
-import nationalityRouter from "@/features/resources/routes/nationality.route.js";
+import nationalityRouter from "@/features/resources/routes/nationality.routes.js";
 import occupationRouter from "@/features/resources/routes/occupation.routes.js";
 import pickupPointRouter from "@/features/resources/routes/pickupPoint.routes.js";
 import religionRouter from "@/features/resources/routes/religion.routes.js";

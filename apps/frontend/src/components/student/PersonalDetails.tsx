@@ -5,9 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Globe, IdCard, Languages, Mail, User } from "lucide-react";
+import { CalendarIcon, Globe, IdCard, Languages, Mail, Podcast, User } from "lucide-react";
 import { Home } from "lucide-react";
+import { useEffect, useState } from "react";
+import { nationality } from "@/services/nationality";
+import { Nationality } from "@/types/resources/nationality";
+import { languages } from "@/services/language-medium";
+import { LanguageMedium } from "@/types/resources/language-medium";
+import { religion } from "@/services/religion";
+import { Religion } from "@/types/resources/religion";
 
 // Define the validation schema
 const personalDetailsSchema = z.object({
@@ -37,9 +43,60 @@ export default function PersonalDetail() {
     console.log("Form Data: ", data);
   };
 
+  const [nationalities, setNationalities] = useState<Nationality[]>([]);
+  const [language, setLanguage] = useState<LanguageMedium[]>([]);
+  const [religions, setReligions] = useState<Religion[]>([]);
+
+  useEffect(() => {
+    // nationality
+    async function getAllNationality() {
+      try {
+        const response = await nationality();
+        console.log("Nationality is coming...", response)
+        if (response.payload && response.payload.content) {
+          setNationalities(response.payload.content);
+        }
+      } catch (error) {
+        console.log("Error fetching nationality...", error);
+      }
+    }
+    getAllNationality();
+
+    // languages
+    async function getAllLanguages() {
+      try {
+        const response = await languages();
+        console.log("Languages is coming...", response);
+        if (response.payload && response.payload.content) {
+          setLanguage(response.payload.content);
+        }
+      } catch (error) {
+        console.log("Error fetching Language...", error);
+      }
+    }
+    getAllLanguages();
+
+    // religion
+    async function getAllReligions() {
+      try {
+        const response = await religion();
+        console.log("Languages is coming...", response);
+        if (response.payload && response.payload.content) {
+          setReligions(response.payload.content);
+        }
+      } catch (error) {
+        console.log("Error fetching Language...", error);
+      }
+    }
+    getAllReligions()
+
+  }, []);
   return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-transparent border-none shadow-none m-0 p-0 w-full">
+    <div className="w-full max-w-none flex flex-col justify-center items-center p-4">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="bg-transparent border-none shadow-none m-0 p-0 max-w-none grid grid-cols-2 gap-4"
+      >
         {/* Aadhaar Card */}
         <div className="mt-4 ">
           <Label className="flex items-center gap-2">
@@ -77,7 +134,9 @@ export default function PersonalDetail() {
             <CalendarIcon className="w-5 h-5 text-blue-600" />
             Date of Birth
           </Label>
-          <Calendar mode="single" selected={new Date()} onSelect={(date) => setValue("dateOfBirth", date!)} />
+          <div className="relative">
+            <Input type="date" name="dateOfBirth" className="w-full p-2 border rounded-md" />
+          </div>
           {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth.message?.toString()}</p>}
         </div>
 
@@ -87,25 +146,61 @@ export default function PersonalDetail() {
             <Globe className="w-5 h-5 text-blue-600" />
             Nationality
           </Label>
-          <Input type="text" {...register("nationality")} placeholder="Enter Nationality" />
+          <Select onValueChange={(value) => setValue("nationality", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Nationality" />
+            </SelectTrigger>
+            <SelectContent>
+              {nationalities.map((nationality) => (
+                <SelectItem key={nationality.id} value={nationality.name}>
+                  {nationality.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.nationality && <p className="text-red-500 text-sm">{errors.nationality.message?.toString()}</p>}
         </div>
 
         {/* Mother Tongue */}
         <div className="mt-4">
           <Label className="flex items-center gap-2">
             <Languages className="w-5 h-5 text-blue-600" />
-            Mother Tongue
+            Mother Tounge
           </Label>
-          <Input type="text" {...register("motherTongue")} placeholder="Enter Mother Tongue" />
+          <Select onValueChange={(value) => setValue("language", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Mother Tounge" />
+            </SelectTrigger>
+            <SelectContent>
+              {language.map((language) => (
+                <SelectItem key={language.id} value={language.name}>
+                  {language.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.language && <p className="text-red-500 text-sm">{errors.language.message?.toString()}</p>}
         </div>
 
         {/* Religion */}
         <div className="mt-4">
           <Label className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
+            <Podcast className="w-5 h-5 text-blue-600" />
             Religion
           </Label>
-          <Input type="text" {...register("religion")} placeholder="Enter Religion" />
+          <Select onValueChange={(value) => setValue("religion", value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Religion" />
+            </SelectTrigger>
+            <SelectContent>
+              {religions.map((religion) => (
+                <SelectItem key={religion.id} value={religion.name}>
+                  {religion.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {errors.religion && <p className="text-red-500 text-sm">{errors.religion.message?.toString()}</p>}
         </div>
 
         {/* Residential Address */}
