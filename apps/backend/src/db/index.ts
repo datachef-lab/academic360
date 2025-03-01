@@ -14,13 +14,13 @@ export const db = drizzle(pool, { casing: "snake_case" });
 // Test the connection 🔌
 export const connectToDatabase = async () => {
   try {
-    const client: PoolClient = await pool.connect(); // Test the connection ✔️
+    const client: PoolClient = await pool.connect(); // Test the connection ✔
     console.log(process.env.DATABASE_URL);
     console.log("[backend] - Connected to the database successfully. 🎉");
     client.release(); // Release the connection back to the pool
   } catch (error) {
     console.log(process.env.DATABASE_URL);
-    console.error("[backend] - Failed to connect to the database: ⚠️", error);
+    console.error("[backend] - Failed to connect to the database: ⚠", error);
     process.exit(1); // Exit the application if the database connection fails
   }
 };
@@ -50,7 +50,7 @@ export const connectToMySQL = async () => {
     console.log(rows);
     console.log("[MySQL] - Connected successfully. 🎉");
   } catch (error) {
-    console.error("[MySQL] - Connection failed: ⚠️", error);
+    console.error("[MySQL] - Connection failed: ⚠", error);
     // process.exit(1); // Exit the application if the database connection fails
   }
 };

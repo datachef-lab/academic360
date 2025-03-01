@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 import { getFile, scanExistingMarksheetFilesByRollNumber } from "../services/document.service.js";
 
-//createDocumentMetadata
+//createDocum
 export const createDocumentMetadata = async (
     req: Request,
     res: Response,

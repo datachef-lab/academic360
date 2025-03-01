@@ -46,6 +46,7 @@ import {
     stateRouter,
     degreeRouter,
     occupationRouter,
+    emergencyContactRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -181,6 +182,7 @@ app.use("/api/transports", transportRouter);
 
 app.use("/api/degree", degreeRouter);
 
+app.use("/api/emergency-contact", emergencyContactRouter);
 app.use("/api/occupations", occupationRouter);
 app.use("/api/annual-incomes", annualIncomeRouter);
 app.use("/api/annual-incomes", annualIncomeRouter);
