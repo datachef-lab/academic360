@@ -106,14 +106,17 @@
 // export default EmergencyContact;
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { User, Users, Mail, Phone, Briefcase, Home } from "lucide-react";
+import { useEffect, useState } from "react";
+import {  Users, Mail, Phone, Briefcase, Home } from "lucide-react";
 import { EmergencyContact } from "@/types/user/emergency-contact";
+import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {  getEmergencyContact } from "@/services/academic";
 
 
 
 const formElements = [
-  { name: "studentId", label: "Student ID", type: "number", icon: <User className="text-gray-500 w-5 h-5" /> },
+  
   { name: "personName", label: "Guardian's Name", type: "text", icon: <Users className="text-gray-500 w-5 h-5" /> },
   { name: "relationToStudent", label: "Relation to Student", type: "text", icon: <Users className="text-gray-500 w-5 h-5" /> },
   { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 w-5 h-5" /> },
@@ -132,6 +135,28 @@ const EmergencyContactForm = () => {
     officePhone: "",
     residentialPhone: "",
   });
+
+  
+  const location = useLocation();
+  const studentId  = location.pathname.split("/").pop();
+
+const id=Number(studentId);
+
+const { data } = useQuery({
+  queryKey: ["academicIdentifier", id],
+  queryFn: () => getEmergencyContact(id),
+  enabled: !!id, 
+});
+
+useEffect(() => {
+  if (data?.payload) {
+    console.log("Fetched Data:", data.payload);
+    setFormData((prev) => ({
+      ...prev,
+      ...data.payload, // ✅ Merge API response with form state
+    }));
+  }
+}, [data]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

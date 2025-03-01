@@ -46,7 +46,7 @@ const id=Number(studentId);
 const { data } = useQuery({
   queryKey: ["academicIdentifier", id],
   queryFn: () => getAcademicIdentifier(id),
-  enabled: !!id, // Ensures query runs only if studentId is present
+  enabled: !!id,
 });
 
 useEffect(() => {

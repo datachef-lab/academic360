@@ -1,118 +1,8 @@
-// import { Input } from "@/components/ui/input";
-// import { Button } from "@/components/ui/button";
-// import { useEffect, useState } from "react";
-
-// import { Home, MapPin, Calendar } from "lucide-react";
-// import { Accommodation } from "@/types/user/accommodation";
-// import { saveAccommodation } from "@/services/stream";
-// import { useMutation, useQuery } from "@tanstack/react-query";
-// import { useLocation } from "react-router-dom";
-// import { getAccommodation } from "@/services/academic";
-
-
-
-
-// const formElements = [
-  
-//   { name: "placeOfStay", label: "Place of Stay", type: "text", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
-//   { name: "address", label: "Address ", type: "string", icon: <MapPin className="text-gray-500 dark:text-white w-5 h-5" /> },
-//   { name: "startDate", label: "Start Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
-//   { name: "endDate", label: "End Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
-// ];
-
-// const AccommodationForm = () => {
-//   const [formData, setFormData] = useState<Accommodation>({
-//     studentId: 0,
-//     placeOfStay: null,
-//     address: null,
-//     startDate: new Date(),
-//     endDate: new Date(),
-    
-//   });
-
-//   const location = useLocation();
-//   const studentId  = location.pathname.split("/").pop();
-
-// const id=Number(studentId);
-
-// const { data } = useQuery({
-//   queryKey: ["accommodation", id],
-//   queryFn: () => getAccommodation(id),
-//   enabled: !!id, // Ensures query runs only if studentId is present
-// });
-
-// useEffect(() => {
-//   if (data?.payload) {
-//     console.log("Fetched Data:", data.payload);
-//     setFormData((prev) => ({
-//       ...prev,
-//       ...data.payload, // ✅ Merge API response with form state
-//     }));
-//   }
-// }, [data]);
-  
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({
-//       ...prev,
-//       [name]: name === "placeOfStay" ? value : name.includes("Date") ? value : Number(value),
-//     }));
-   
-//   };
-//   const saveData=useMutation({
-//     mutationFn:saveAccommodation,
-//     onSuccess: (formData) => {
-//       console.log("data saved:", formData);
-//     }
-//   })
-//   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
-//     e.preventDefault();
-//     saveData.mutate(formData);
-
-    
-//   };
-
-//   return (
-//     <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
-//       <div className="max-w-[90%] w-full grid grid-cols-2 gap-7">
-//         {formElements.map(({ name, label, type, icon }) => (
-//           <div key={name} className="flex flex-col mr-8">
-//             <div className="relative  p-1">
-            
-//               <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
-//             </div>
-//             <div className={`relative`}>
-//               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
-//               <Input
-//                 id={name}
-//                 name={name}
-//                 type={type}
-//                 value={type === "date" ? (formData[name as keyof Accommodation] as Date)?.toISOString().split("T")[0] : formData[name as keyof Accommodation]?.toString() || ""}
-//                 placeholder={label}
-//                 onChange={handleChange}
-//                 className={`w-full pl-10 pr-3 py-2 `}
-//               />
-//             </div>
-
-//           </div>
-//         ))}
-//         <div className="col-span-2">
-//           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
-//             Submit
-//           </Button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AccommodationForm;
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Home, MapPin, Calendar, Globe, Phone, User } from "lucide-react";
-import { Accommodation} from "@/types/user/accommodation";
+import { Accommodation } from "@/types/user/accommodation";
 import { saveAccommodation } from "@/services/stream";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
@@ -121,7 +11,6 @@ import { Address } from "@/types/resources/address";
 
 const formElements = [
   { name: "placeOfStay", label: "Place of Stay", type: "text", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
-  
   { name: "startDate", label: "Start Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "endDate", label: "End Date", type: "date", icon: <Calendar className="text-gray-500 dark:text-white w-5 h-5" /> },
 ];
@@ -146,7 +35,7 @@ const AccommodationForm = () => {
     startDate: new Date(),
     endDate: new Date(),
     addressData: {
-      id:0,
+      id: 0,
       country: "",
       state: "",
       city: "",
@@ -155,7 +44,6 @@ const AccommodationForm = () => {
       localityType: "RURAL",
       phone: "",
       pincode: "",
-     
     },
   });
 
@@ -171,24 +59,25 @@ const AccommodationForm = () => {
 
   useEffect(() => {
     if (data?.payload) {
-      console.log("**",data.payload.address);
-      console.log("**1",data.payload.address.localityType);
+      console.log("Fetched data:", data.payload);
+      const addressData = data.payload.address || {};
       setFormData((prev) => ({
         ...prev,
         ...data.payload,
-        addressData: { ...prev.address, ...data.payload.address },
+        addressData: {
+          ...prev.addressData,
+          ...addressData,
+        },
       }));
     }
   }, [data]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : name === "studentId" ? Number(value) : value || null,
+      [name]: type === "checkbox" ? checked : name === "studentId" ? Number(value) : value || "",
     }));
-
   };
 
   const saveData = useMutation({

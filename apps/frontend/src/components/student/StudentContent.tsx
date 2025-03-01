@@ -1,4 +1,4 @@
-import AcademicHistory from "./AcademicHistory";
+import AcademicHistory from "./AcademicHistoryForm";
 import AcademicIdentifier from "./AcademicIdentifierForm";
 import Accommodation from "./AccommodationForm";
 import EmergencyContact from "./EmergencyContactForm";
