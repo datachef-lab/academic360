@@ -5,6 +5,17 @@
 // import { CustomPaginationState } from "../settings/SettingsContent";
 // import { useQuery } from "@tanstack/react-query";
 
+import { fetchMarksheetLogs } from "@/services/marksheet-apis";
+import { useQuery } from "@tanstack/react-query";
+import { DataTable } from "../ui/data-table";
+import { marksheetLogsColumns } from "../tables/users/marksheet-log";
+import { CustomPaginationState } from "../settings/SettingsContent";
+import { useState } from "react";
+import { MarksheetLog } from "@/types/academics/marksheet";
+
+// import { fetchMarksheetLogs } from "@/services/marksheet-apis";
+// import { useQuery } from "@tanstack/react-query";
+
 // export default function AllActivities() {
 //   const [data, setData] = useState<ManageMarksheetType[]>([]);
 //   const [searchText, setSearchText] = useState("");
@@ -94,7 +105,43 @@
 //   );
 // }
 
-
 export default function AllActivities() {
-  return <div>AllActivities</div>;
+  const [searchText, setSearchText] = useState("");
+  const setDataLength = useState<number>(0)[1];
+  const [data, setData] = useState<MarksheetLog[]>([]);
+
+  const [pagination, setPagination] = useState<CustomPaginationState>({
+    pageIndex: 0, // TanStack Table is 0-based
+    pageSize: 10,
+    totalElements: 0,
+    totalPages: 1,
+  });
+
+  const { isFetching: isFetchingDefault, refetch } = useQuery({
+    queryKey: ["marksheet-logs"],
+    queryFn: async () => {
+      const response = await fetchMarksheetLogs(1, 10, searchText);
+      console.log("in query, ", response.payload);
+
+      setData(response.payload);
+      return response.payload as MarksheetLog[];
+    },
+    enabled: true,
+  });
+
+  console.log(data);
+
+  return (
+    <DataTable
+      isLoading={isFetchingDefault}
+      data={data}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      columns={marksheetLogsColumns}
+      pagination={pagination}
+      setPagination={setPagination}
+      setDataLength={setDataLength}
+      refetch={refetch}
+    />
+  );
 }
