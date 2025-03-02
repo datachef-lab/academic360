@@ -1,4 +1,4 @@
-import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { studentModel } from "./student.model.js";
 import { relations } from "drizzle-orm";
 import { personModel } from "./person.model.js";
@@ -7,36 +7,41 @@ import { z } from "zod";
 import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
 import { parentTypeEnum } from "./helper.js";
 
-export const parentModel = pgTable("parent_details", {
+export const familyModel = pgTable("family_details", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     parentType: parentTypeEnum(),
     fatherDetailsId: integer("father_details_person_id_fk").references(() => personModel.id),
     motherDetailsId: integer("mother_details_person_id_fk").references(() => personModel.id),
+    guardianDetailsId: integer("guardian_details_person_id_fk").references(() => personModel.id),
     annualIncomeId: integer("annual_income_id_fk").references(() => annualIncomeModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const parentRelations = relations(parentModel, ({ one }) => ({
+export const parentRelations = relations(familyModel, ({ one }) => ({
     student: one(studentModel, {
-        fields: [parentModel.studentId],
+        fields: [familyModel.studentId],
         references: [studentModel.id]
     }),
     father: one(personModel, {
-        fields: [parentModel.fatherDetailsId],
+        fields: [familyModel.fatherDetailsId],
         references: [personModel.id]
     }),
     mother: one(personModel, {
-        fields: [parentModel.motherDetailsId],
+        fields: [familyModel.motherDetailsId],
+        references: [personModel.id]
+    }),
+    guardian: one(personModel, {
+        fields: [familyModel.guardianDetailsId],
         references: [personModel.id]
     }),
     annualIncome: one(annualIncomeModel, {
-        fields: [parentModel.annualIncomeId],
+        fields: [familyModel.annualIncomeId],
         references: [annualIncomeModel.id]
     }),
 }));
 
-export const createParentSchema = createInsertSchema(parentModel);
+export const createFamilySchema = createInsertSchema(familyModel);
 
-export type Parent = z.infer<typeof createParentSchema>;
+export type Family = z.infer<typeof createFamilySchema>;

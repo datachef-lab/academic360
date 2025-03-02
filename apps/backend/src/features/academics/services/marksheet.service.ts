@@ -4,9 +4,9 @@ import { MarksheetType } from "@/types/academics/marksheet.js";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
-import { findAllStreams, findStreamByNameAndProgrammee } from "./stream.service.js";
+import { findAllStreams, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, max, sql } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -130,7 +130,6 @@ export async function uploadFile(fileName: string, user: User): Promise<boolean>
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });
@@ -207,8 +206,82 @@ export async function saveMarksheet(id: number, marksheet: MarksheetType, user: 
     return formattedMarksheet;
 }
 
-export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog[]> {
+// export async function findMarksheetLogs(page: number = 1, pageSize: number = 10, searchText: string): Promise<MarksheetLog[]> {
+//     // Query the marksheet table with filtering and user join
+//     const result = await db
+//         .select({
+//             item: marksheetModel.file,
+//             source: marksheetModel.source,
+//             file: marksheetModel.file,
+//             createdByUserId: marksheetModel.createdByUserId,
+//             updatedByUserId: marksheetModel.updatedByUserId,
+//             createdAt: marksheetModel.createdAt,
+//             updatedAt: marksheetModel.updatedAt,
+//         })
+//         .from(marksheetModel)
+//         .leftJoin(userModel, and(eq(marksheetModel.studentId, userModel.id))) // Adjust based on your schema
+//         .leftJoin(academicIdentifierModel, and(eq(academicIdentifierModel.studentId, studentModel.id))) // Adjust based on your schema
+//         .where(searchText ? ilike(marksheetModel.file, `%${searchText}%`) : undefined)
+//         .groupBy(marksheetModel.source, marksheetModel.file, userModel.id, userModel.name, userModel.email, marksheetModel.createdAt)
+//         .orderBy(desc(marksheetModel.createdAt));
+
+
+//     // Map the query result to the MarksheetLog interface
+//     const queryResult = Promise.all(result.map(async (row) => {
+//         const createdByUser = await findUserById(row.createdByUserId as number);
+
+//         let updatedByUser = createdByUser;
+//         if (row.updatedByUserId !== createdByUser?.id) {
+//             updatedByUser = await findUserById(row.updatedByUserId);
+//         }
+
+//         return {
+//             item: row.item as string,
+//             source: row.source ?? "UNKNOWN",
+//             file: row.file,
+//             createdByUser,
+//             updatedByUser,
+//             createdAt: row.createdAt,
+//             updatedAt: row.updatedAt
+//         } as MarksheetLog;
+//     }));
+
+//     return queryResult;
+// }
+
+export async function findMarksheetLogs(
+    page: number = 1,
+    pageSize: number = 10,
+    searchText?: string
+): Promise<MarksheetLog[]> {
     // Query the marksheet table with filtering and user join
+    // const result = await db
+    //     .select({
+    //         item: marksheetModel.file,
+    //         source: marksheetModel.source,
+    //         file: marksheetModel.file,
+    //         createdByUserId: marksheetModel.createdByUserId,
+    //         updatedByUserId: marksheetModel.updatedByUserId,
+    //         createdAt: marksheetModel.createdAt,
+    //         updatedAt: marksheetModel.updatedAt,
+    //     })
+    //     .from(marksheetModel)
+    //     .leftJoin(userModel, eq(marksheetModel.studentId, userModel.id)) // Assuming correct relation
+    //     .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, marksheetModel.studentId)) // Adjusted relation
+    //     .where(searchText ? ilike(marksheetModel.file, `%${searchText}%`) : undefined)
+    //     .groupBy(
+    //         marksheetModel.source,
+    //         marksheetModel.file,
+    //         marksheetModel.createdAt,
+    //         marksheetModel.createdByUserId,
+    //         marksheetModel.updatedByUserId,
+    //         marksheetModel.updatedAt
+    //     )
+    //     // .distinctOn([marksheetModel.file]) // Ensures unique records based on file
+    //     .orderBy(desc(marksheetModel.createdAt))
+    //     .limit(pageSize)
+    //     .offset((page - 1) * pageSize);
+
     const result = await db
         .select({
             item: marksheetModel.file,
@@ -220,24 +293,49 @@ export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog
             updatedAt: marksheetModel.updatedAt,
         })
         .from(marksheetModel)
-        .leftJoin(userModel, and(eq(marksheetModel.studentId, userModel.id))) // Adjust based on your schema
-        .leftJoin(academicIdentifierModel, and(eq(academicIdentifierModel.studentId, studentModel.id))) // Adjust based on your schema
-        .where(searchText ? ilike(marksheetModel.file, `%${searchText}%`) : undefined)
-        .groupBy(marksheetModel.source, marksheetModel.file, userModel.id, userModel.name, userModel.email, marksheetModel.createdAt)
-        .orderBy(desc(marksheetModel.createdAt));
+        .where(
+            eq(
+                marksheetModel.createdAt,
+                db.select({ maxCreatedAt: max(marksheetModel.createdAt) })
+                    .from(marksheetModel)
+                    .where(eq(marksheetModel.file, marksheetModel.file))
+            )
+        )
+        .orderBy(desc(marksheetModel.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+
+
+    // Find the framework
 
 
     // Map the query result to the MarksheetLog interface
-    const queryResult = Promise.all(result.map(async (row) => {
-        const createdByUser = await findUserById(row.createdByUserId as number);
+    return Promise.all(result.map(async (row) => {
+        const marksheets = await db.select().from(marksheetModel).where(eq(marksheetModel.createdAt, row.createdAt));
 
-        let updatedByUser = createdByUser;
-        if (row.updatedByUserId !== createdByUser?.id) {
-            updatedByUser = await findUserById(row.updatedByUserId);
-        }
+        const data = await db
+            .select()
+            .from(academicIdentifierModel)
+            .leftJoin(marksheetModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
+            .where(eq(marksheetModel.id, marksheets[0].id));
+
+        console.log("data:", data)
+
+
+
+        console.log("data[0].academic_identifiers.streamId:", data[0].academic_identifiers.streamId)
+        const foundStream = await findStreamById(data[0].academic_identifiers.streamId as number);
+        console.log(foundStream)
+
+
+        const createdByUser = row.createdByUserId ? await findUserById(row.createdByUserId) : null;
+        const updatedByUser = row.updatedByUserId && row.updatedByUserId !== row.createdByUserId
+            ? await findUserById(row.updatedByUserId)
+            : createdByUser;
 
         return {
-            item: row.item as string,
+            item: foundStream?.degree.name,
             source: row.source ?? "UNKNOWN",
             file: row.file,
             createdByUser,
@@ -246,9 +344,10 @@ export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog
             updatedAt: row.updatedAt
         } as MarksheetLog;
     }));
-
-    return queryResult;
 }
+
+
+
 
 // // Replace this function with actual logic to fetch user based on marksheet createdBy information
 // async function fetchCreatedByUser(): Promise<UserType> {
@@ -315,20 +414,20 @@ async function marksheetResponseFormat(marksheet: Marksheet): Promise<MarksheetT
 
 interface FilterDataProps {
     dataArr: MarksheetRow[];
-    framework: "CBCS" | "CCF";
     stream: StreamType;
     year: number;
     semester: number;
 }
 
-async function filterData({ dataArr, stream, framework, year, semester }: FilterDataProps) {
+async function filterData({ dataArr, stream, year, semester }: FilterDataProps) {
     const isBCOM = stream?.degree.name === "BCOM";
-    const yearKey = isBCOM && framework === "CBCS" ? "year2" : "year1";
-
+    const yearKey = isBCOM && stream.framework === "CBCS" ? "year2" : "year1";
+    console.log(cleanStream(dataArr[0].stream), stream.framework)
     return dataArr.filter(row =>
         cleanStream(row.stream) === stream?.degree.name &&
         row.course.toUpperCase().trim() === stream.degreeProgramme &&
         row[yearKey] === year &&
+        row.framework === stream.framework &&
         row.semester === semester
     );
 }
@@ -446,13 +545,13 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
     if (arr.length === 0) {
         return;
     }
+    let student: Student | null = null;
     // Step 1: Check if the roll_no already exist
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(
         sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
         arr[0].roll_no.replace(/[^a-zA-Z0-9]/g, '')
     ));
 
-    let [student] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId as number));
     if (!foundAcademicIdentifier) { // TODO: Create new student
         // Step 1: Add the user
         const user = await addUser(arr[0]);
@@ -483,6 +582,12 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
             uid: arr[0].uid,
         });
     }
+    else {
+        foundAcademicIdentifier.streamId = stream.id as number;
+        await db.update(academicIdentifierModel).set({ streamId: stream.id as number }).where(eq(academicIdentifierModel.id, foundAcademicIdentifier.id))
+        const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId as number));
+        student = foundStudent;
+    }
 
     if (!student) {
         throw Error("Unable to create the new student");
@@ -510,7 +615,7 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
     let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
 
     for (let i = 0; i < arr.length; i++) {
-        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.name === arr[i].subject.toUpperCase().trim());
+        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.marksheetCode === arr[i].subject.toUpperCase().trim());
 
         if (!subjectMetadata) {
             throw Error("Invalid subject input got detected!");
@@ -631,6 +736,9 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     if (!foundAcademicIdentifier.rollNumber) {
         foundAcademicIdentifier.rollNumber = marksheet.academicIdentifier.rollNumber as string;
     }
+    if (!foundAcademicIdentifier.streamId) {
+        foundAcademicIdentifier.streamId = marksheet.academicIdentifier.stream?.id as number;
+    }
     // if (!foundAcademicIdentifier.course) {
     //     foundAcademicIdentifier.course = marksheet.academicIdentifier.course ?? null;
     // }
@@ -662,7 +770,6 @@ export async function validateData(dataArr: MarksheetRow[]) {
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });
@@ -675,12 +782,12 @@ export async function validateData(dataArr: MarksheetRow[]) {
 
                     doneRollNumber.add(arr[i].roll_no);
 
+                    // Select all the subject rows for the uid: arr[i].roll_no
                     const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
 
-                    // Select all the subject rows for the uid: arr[i].roll_no
-                    const subjectArr = arr.filter(row => row.roll_no === arr[i].roll_no);
-
                     // Fetch the subjects
+                    console.log("streamId:", streams[s].id);
+                    console.log("sem:", sem);
                     const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
                         eq(subjectMetadataModel.streamId, streams[s].id as number),
                         eq(subjectMetadataModel.semester, sem),
@@ -688,9 +795,9 @@ export async function validateData(dataArr: MarksheetRow[]) {
 
                     // Check all the subjects (range of marks, subject name, duplicates)
                     const seenSubjects = new Set<number>(); // Track subject IDs for duplicate check
-
+                    console.log(subjectMetadataArr);
                     for (let k = 0; k < studentMksArr.length; k++) {
-                        const subjectMetadata = subjectMetadataArr.find(ele => ele.name === studentMksArr[k].subject.toUpperCase().trim());
+                        const subjectMetadata = subjectMetadataArr.find(ele => ele.marksheetCode === studentMksArr[k].subject.toUpperCase().trim());
 
                         // ✅ Ensure subjectMetadata exists before proceeding
                         if (!subjectMetadata) {
@@ -822,7 +929,6 @@ export async function cleanData(dataArr: MarksheetRow[]) {
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });

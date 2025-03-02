@@ -3,8 +3,7 @@ import { addressModel } from "../models/address.model.js";
 import { eq } from "drizzle-orm";
 import { Person, personModel } from "../models/person.model.js";
 import { PersonType } from "@/types/user/person.js";
-import { gaurdianModel } from "../models/guardian.model.js";
-import { parentModel } from "../models/parent.model.js";
+import { familyModel } from "../models/family.model.js";
 import { addAddress, addressResponseFormat, findAddressById, saveAddress } from "./address.service.js";
 import { findOccupationById } from "@/features/resources/services/occupation.service.js";
 import { findQualificationById } from "@/features/resources/services/qualification.service.js";
@@ -71,17 +70,14 @@ export async function removePerson(id: number): Promise<boolean | null> {
     }
 
     // Delete the person: -
-    // Step 1: Delete the parents
-    await db.delete(parentModel).where(eq(parentModel.fatherDetailsId, id)).returning();
-    await db.delete(parentModel).where(eq(parentModel.motherDetailsId, id)).returning();
+    // Step 1: Delete the family
+    await db.delete(familyModel).where(eq(familyModel.fatherDetailsId, id)).returning();
+    await db.delete(familyModel).where(eq(familyModel.motherDetailsId, id)).returning();
 
-    // Step 2: Delete the guardian
-    await db.delete(gaurdianModel).where(eq(gaurdianModel.gaurdianDetailsId, id)).returning();
-
-    // Step 3: Delete the person
+    // Step 2: Delete the person
     await db.delete(personModel).where(eq(personModel.id, id));
 
-    // Step 4: Delete the address
+    // Step 3: Delete the address
     if (foundPerson.officeAddressId) {
         const [deletedAddress] = await db.delete(addressModel).where(eq(addressModel.id, foundPerson.officeAddressId)).returning();
         if (!deletedAddress) return false;
@@ -99,13 +95,10 @@ export async function removePersonByAddressId(officeAddressId: number): Promise<
 
     // Delete the person: -
     // Step 1: Delete the parents
-    await db.delete(parentModel).where(eq(parentModel.fatherDetailsId, foundPerson.id)).returning();
-    await db.delete(parentModel).where(eq(parentModel.motherDetailsId, foundPerson.id)).returning();
+    await db.delete(familyModel).where(eq(familyModel.fatherDetailsId, foundPerson.id)).returning();
+    await db.delete(familyModel).where(eq(familyModel.motherDetailsId, foundPerson.id)).returning();
 
-    // Step 2: Delete the guardian
-    await db.delete(gaurdianModel).where(eq(gaurdianModel.gaurdianDetailsId, foundPerson.id)).returning();
-
-    // Step 3: Delete the person
+    // Step 2: Delete the person
     const [deletedPerson] = await db.delete(personModel).where(eq(personModel.id, foundPerson.id)).returning();
 
     if (!deletedPerson) {

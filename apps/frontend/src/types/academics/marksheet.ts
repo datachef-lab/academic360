@@ -21,3 +21,13 @@ export interface Marksheet {
     name: string;
     academicIdentifier: AcademicIdentifier;
 }
+
+export interface MarksheetLog {
+    item: string;
+    source: string;
+    file: string | null;
+    createdByUser: User;
+    updatedByUser: User;
+    createdAt: Date;
+    updatedAt: Date;
+}

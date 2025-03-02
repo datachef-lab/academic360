@@ -75,7 +75,7 @@ export const marksheetSourceEnum = pgEnum("marksheet_source", [
 ]);
 
 export const classTypeEnum = pgEnum("class_type", [
-    "CLASS",
+    "YEAR",
     "SEMESTER",
 ]);
 

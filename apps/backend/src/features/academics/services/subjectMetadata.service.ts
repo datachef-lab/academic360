@@ -83,19 +83,48 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
         }
 
         let subjectType: SubjectTypeModel | null = null;
-        if (subjectArr[i]["Subject Type"]) {
-            console.log("in if, ", subjectArr[i]["Subject Type"])
-            const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
-            if (!foundSubjectType) {
-                const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
-                subjectType = newSubjectType;
-            }
-            else {
-                subjectType = foundSubjectType;
-            }
+
+        const [foundSubjectType] =
+            await db
+                .select()
+                .from(subjectTypeModel)
+                .where(
+                    and(
+                        eq(subjectTypeModel.irpName, subjectArr[i]["Subject Type as per IRP"].toUpperCase().trim()),
+                        eq(subjectTypeModel.marksheetName, subjectArr[i]["Subject Type as per Marksheet"].toUpperCase().trim()),
+                    )
+                );
+        if (!foundSubjectType) {
+            const [newSubjectType] =
+                await db
+                    .insert(subjectTypeModel)
+                    .values({
+                        irpName: subjectArr[i]["Subject Type as per IRP"].toUpperCase().trim(),
+                        marksheetName: subjectArr[i]["Subject Type as per Marksheet"].toUpperCase().trim(),
+                    }).returning();
+            subjectType = newSubjectType;
+        }
+        else {
+            subjectType = foundSubjectType;
         }
 
+
         console.log("subjectType:", subjectType);
+
+        // const whereConditions = [
+        //     eq(subjectMetadataModel.streamId, foundStream.id),
+        //     // eq(subjectMetadataModel.fullMarks, ),
+        //     // eq(subjectMetadataModel.fullMarksInternal, ),
+        //     // eq(subjectMetadataModel.fullMarksPractical, ),
+        //     // eq(subjectMetadataModel.fullMarksTheory, ),
+        //     // eq(subjectMetadataModel.fullMarksTutorial, ),
+        //     // eq(subjectMetadataModel.fullMarksViva, ),
+        //     // eq(subjectMetadataModel.fullMarksProject, ),
+        //     eq(subjectMetadataModel.isOptional, !!subjectArr[i].Optional),
+        //     // eq(subjectMetadataModel.subjectTypeId, subjectType),
+        //     eq(subjectMetadataModel.category, subjectArr[i].Category),
+        //     // eq(subjectMetadataModel.specializationId, ),
+        // ]
 
         await db.insert(subjectMetadataModel).values({
             streamId: foundStream.id as number,
@@ -109,10 +138,12 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
 
             isOptional: subjectArr[i].Optional ? true : false,
             subjectTypeId: subjectType ? subjectType.id as number : null,
-            framework: subjectArr[i].Framework,
             category: subjectArr[i].Category,
             specializationId: specialization ? specialization.id as number : undefined,
-            name: subjectArr[i]["Subject Name"],
+            marksheetCode: subjectArr[i]["Subject Code as per Marksheet"],
+            irpCode: subjectArr[i]["Subject Code as per IRP"],
+            irpName: subjectArr[i]["Subject Name as per Marksheet (also in IRP)"],
+            name: subjectArr[i]["Subject Name as per Marksheet (also in IRP)"],
             semester: subjectArr[i].Semester,
             credit: subjectArr[i].Credit,
             course: subjectArr[i].Course,
