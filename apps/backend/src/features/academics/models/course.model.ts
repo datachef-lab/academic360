@@ -1,14 +1,14 @@
 import { relations } from "drizzle-orm";
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { streamModel } from "./stream.model.js";
 
 export const courseModel = pgTable('courses', {
     id: serial().primaryKey(),
-    streamId: serial().notNull(),
+    streamId: integer("stream_id_fk").references(() => streamModel.id),
     name: varchar({ length: 500 }).notNull(),
-    shortName: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
     codePrefix: varchar({ length: 10 }),
     universityCode: varchar({ length: 10 }),
     createdAt: timestamp().notNull().defaultNow(),

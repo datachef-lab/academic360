@@ -1,4 +1,4 @@
-import { classTypeEnum } from "@/features/user/models/helper";
+import { classTypeEnum } from "@/features/user/models/helper.js";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
