@@ -8,8 +8,11 @@ import { OldClass } from "@/types/old-data/old-class.js";
 import { OldSection } from "@/types/old-data/old-section.js";
 import { Section, sectionModel } from "../models/section.model.js";
 import { OldShift } from "@/types/old-data/old-shift.js";
-import { shiftModel } from "../models/shift.model.js";
-import { batchModel } from "../models/batch.model.js";
+import { Shift, shiftModel } from "../models/shift.model.js";
+import { Batch, batchModel } from "../models/batch.model.js";
+import { BatchType } from "@/types/academics/batch.js";
+import { CourseType } from "@/types/academics/course.js";
+import { findCourseById } from "./course.service.js";
 
 const BATCH_SIZE = 500;
 
@@ -197,7 +200,48 @@ export async function loadOlderBatches() {
 
         }
     }
+}
 
+export async function findBatchById(id: number): Promise<BatchType | null> {
+    const [foundBatch] = await db.select().from(batchModel).where(eq(batchModel.id, id));
 
+    const formattedBatch = await batchFormatResponse(foundBatch);
+
+    return formattedBatch;
+}
+
+export async function batchFormatResponse(batch: Batch | null): Promise<BatchType | null> {
+    if (!batch) {
+        return null;
+    }
+
+    const { classId, courseId, sectionId, shiftId, ...props } = batch;
+
+    let academicClass: Class | null = null;
+    if (classId) {
+        const [foundClass] = await db.select().from(classModel).where(eq(classModel.id, classId));
+        academicClass = foundClass;
+    }
+
+    let course: CourseType | null = null;
+    if (courseId) {
+        course = await findCourseById(courseId);
+    }
+
+    let section: Section | null = null;
+    if (sectionId) {
+        const [foundSection] = await db.select().from(sectionModel).where(eq(sectionModel.id, sectionId));
+        section = foundSection;
+    }
+
+    let shift: Shift | null = null;
+    if (shiftId) {
+        const [foundShift] = await db.select().from(shiftModel).where(eq(shiftModel.id, shiftId));
+        section = foundShift;
+    }
+
+    const formattedBatch: BatchType = { ...props, course, academicClass, section, shift };
+
+    return formattedBatch;
 
 }

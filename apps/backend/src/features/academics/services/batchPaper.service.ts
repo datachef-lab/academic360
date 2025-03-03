@@ -18,6 +18,9 @@ import { academicIdentifierModel } from "@/features/user/models/academicIdentifi
 import { OldStudent } from "@/types/old-student.js";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { studentPaperModel } from "../models/studentPaper.model.js";
+import { BatchPaperType } from "@/types/academics/batch-paper.js";
+import { findPaperById } from "./paper.service.js";
+import { PaperType } from "@/types/academics/paper.js";
 
 const BATCH_SIZE = 500;
 
@@ -451,4 +454,21 @@ export async function loadPaperSubjects() {
 
     //     }
     // }
+}
+
+export async function batchPaperFormatResponse(batchPaper: BatchPaper | null): Promise<BatchPaperType | null> {
+    if (!batchPaper) {
+        return null;
+    }
+
+    const { paperId, ...props } = batchPaper;
+
+    const foundPaper = await findPaperById(paperId);
+
+    const formattedBatchPaper: BatchPaperType = {
+        ...props,
+        paper: foundPaper as PaperType
+    }
+
+    return formattedBatchPaper;
 }

@@ -179,6 +179,16 @@ export async function findSubjectMetdataByFilters({ streamId, semester }: FindSu
     return formattedSubjectMetadatas;
 }
 
+export async function findSubjectMetdataByStreamId(streamId: number) {
+    const foundSubjectMetadatas = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.streamId, streamId));
+
+    const formattedSubjectMetadatas = (await Promise.all(foundSubjectMetadatas.map(async (sbj) => {
+        return await subjectMetadataResponseFormat(sbj);
+    }))).filter((sbj): sbj is SubjectMetadataType => sbj !== null);
+
+    return formattedSubjectMetadatas;
+}
+
 async function subjectMetadataResponseFormat(subjectMetadata: SubjectMetadata | null): Promise<SubjectMetadataType | null> {
     if (!subjectMetadata) {
         return null;

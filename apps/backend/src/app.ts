@@ -44,6 +44,7 @@ import {
     occupationRouter,
     batchRouter,
     batchPaperRouter,
+    studentPaperRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -148,6 +149,8 @@ app.use("/api/streams", streamRouter);
 app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use("/api/marksheets", marksheetRouter);
+
+app.use("/api/student-papers/", studentPaperRouter);
 
 app.use("/api/subjects", subjectRouter);
 
