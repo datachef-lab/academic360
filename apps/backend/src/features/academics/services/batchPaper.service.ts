@@ -45,7 +45,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
                     WHERE id = ${subjectTypeId}`
             ) as [OldSubjectType[], any]
     )[0];
-    console.log("in getMappedSubjectMetadata(), oldSubjectType:", oldSubjectType.subjectTypeName.trim().toUpperCase())
+    // console.log("in getMappedSubjectMetadata(), oldSubjectType:", oldSubjectType.subjectTypeName.trim().toUpperCase())
     const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.irpName, oldSubjectType.subjectTypeName.trim().toUpperCase()));
 
     if (!foundSubjectType) {
@@ -53,7 +53,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
         return null;
     }
 
-    console.log("foundSubjectType:", foundSubjectType);
+    console.log("foundSubjectType:", foundSubjectType.irpName, foundSubjectType.marksheetName);
     const [oldSubject] = (
         await mysqlConnection
             .query(`
@@ -87,7 +87,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
 }
 
 async function processPaper(oldBatchPaper: OldBatchPaper) {
-    console.log(oldBatchPaper.paperId)
+    // console.log(oldBatchPaper.paperId)
     if (!oldBatchPaper.paperId) {
         return null;
     }
@@ -110,7 +110,7 @@ async function processPaper(oldBatchPaper: OldBatchPaper) {
             ) as [OldPaperSubject[], any]
     )[0];
 
-    console.log("in processPaper(), oldPaperSubject:", oldPaperSubject, "from oldBatchPaper:", oldBatchPaper);
+    // console.log("in processPaper(), oldPaperSubject:", oldPaperSubject, "from oldBatchPaper:", oldBatchPaper);
 
 
 
@@ -180,7 +180,7 @@ async function processPaper(oldBatchPaper: OldBatchPaper) {
         displayName: oldPaper.displayName ? oldPaper.displayName.trim().toUpperCase() : null,
     }).returning();
 
-    console.log("in processPaper(), created new paper:", newPaper);
+    console.log("in processPaper(), created new paper");
 
     return newPaper;
 }
@@ -236,7 +236,7 @@ async function processBatchPaper(oldBatchPaper: OldBatchPaper) {
         return null;
     }
 
-    console.log("in processBatchPaper(), oldBatchPaper:", oldBatchPaper);
+    // console.log("in processBatchPaper(), oldBatchPaper:", oldBatchPaper);
 
     const foundPaper = await processPaper(oldBatchPaper);
     if (!foundPaper) {
@@ -277,20 +277,21 @@ async function processBatchPaper(oldBatchPaper: OldBatchPaper) {
 }
 
 async function processStudentPaper(oldBatchPaper: OldBatchPaper, batchPaper: BatchPaper) {
-
+    console.log("\n[Processing student]... oldBatchPaper.ID:", oldBatchPaper.ID);
     const [rows] = await mysqlConnection.query(`
         SELECT COUNT(*) AS totalRows 
         FROM ${oldStudentPaperTable} 
         WHERE parent_id = ${oldBatchPaper.ID}
     `);
     const { totalRows } = (rows as { totalRows: number }[])[0];
+    console.log(`[Processing student] totalRows: ${totalRows},`, rows);
 
     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
 
     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-        console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
+        console.log(`\n[Processing student] Migrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
 
         const [rows] = await mysqlConnection.query(`
             SELECT * 
@@ -309,7 +310,7 @@ async function processStudentPaper(oldBatchPaper: OldBatchPaper, batchPaper: Bat
                     .query(`
                             SELECT * 
                             FROM studentpersonaldetails
-                            WHERE id = ${oldDataArr[0].studentId}`
+                            WHERE id = ${oldDataArr[i].studentId}`
                     ) as [OldStudent[], any]
             )[0];
 
@@ -353,7 +354,7 @@ async function processStudentPaper(oldBatchPaper: OldBatchPaper, batchPaper: Bat
                 })
                 .returning();
 
-            console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
+            console.log(`in processing student's inner nested loopBatch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
         }
 
     }
@@ -367,7 +368,7 @@ export async function loadPaperSubjects() {
     const subjectMetadataArr = await db.select().from(subjectMetadataModel);
 
     for (let i = 0; i < subjectMetadataArr.length; i++) {
-        const subjectType = subjectTypeArr.find(ele => ele.id === subjectMetadataArr[i].id);
+        const subjectType = subjectTypeArr.find(ele => ele.id === subjectMetadataArr[i].subjectTypeId);
 
         if (!subjectType) continue;
 
@@ -394,9 +395,6 @@ export async function loadPaperSubjects() {
         if (oldSubjectResult.length === 0) continue;
         const oldSubject = oldSubjectResult[0];
 
-
-        console.log(oldSubjectType, oldSubject);
-
         const [rows] = await mysqlConnection.query(`
             SELECT COUNT(*) AS totalRows 
             FROM ${oldBatchPaperTable} 
@@ -409,7 +407,7 @@ export async function loadPaperSubjects() {
         for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
             const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-            console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
+            console.log(`\n[main loop] - Migrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
 
             const [rows] = await mysqlConnection.query(`
                 SELECT * FROM ${oldBatchPaperTable} 
@@ -424,7 +422,7 @@ export async function loadPaperSubjects() {
                 } catch (error) {
                     console.log(error)
                 }
-                console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
+                console.log(`[main loop] - Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
 
             }
         }

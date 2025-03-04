@@ -1,6 +1,6 @@
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { NextFunction, Request, Response } from "express";
-import { findStudentPapersByRollNumber } from "../services/studentPaper.service.js";
+import { findStudentPapersByRollNumber, findStudents } from "../services/studentPaper.service.js";
 
 export const getStudentPapers = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -11,9 +11,11 @@ export const getStudentPapers = async (req: Request, res: Response, next: NextFu
             return;
         }
 
-        const studentPapers = await findStudentPapersByRollNumber(Number(streamId), String(rollNumber));
+        console.log(streamId, rollNumber)
 
-        res.status(200).json(new ApiResponse(200, "SUCCESS", studentPapers, "Student papers fetched successfully!"));
+        await findStudents();
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Student papers fetched successfully!"));
 
     } catch (error) {
         handleError(error, res, next);
