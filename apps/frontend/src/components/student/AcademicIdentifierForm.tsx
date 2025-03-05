@@ -116,13 +116,13 @@ useEffect(() => {
   // const numericStudentId = studentId ? Number(studentId) : 0; // Convert to number safely
   // console.log("studentId2***",id);
   // const handleSelect=(e:React.ChangeEvent<HTMLSelectElement>)=>{
-  //   // setStreamValue(e.target.value);
-  //   // const selectedStream = streams?.find((stream) => stream.name === e.target.value) || null;
-  //   // setFormData((prev)=>({
-  //   //   ...prev,
-  //   //   stream: selectedStream
-  //   // }))
-  //   // console.log("Selected Stream:", selectedStream);
+  //   setStreamValue(e.target.value);
+  //   const selectedStream = streams?.find((stream) => stream.name === e.target.value) || null;
+  //   setFormData((prev)=>({
+  //     ...prev,
+  //     stream: selectedStream
+  //   }))
+  //   console.log("Selected Stream:", selectedStream);
   // }
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();

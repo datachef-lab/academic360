@@ -13,7 +13,7 @@ router.get("/query", (req, res, next) => {
         getAcademicHistoryById(req, res, next);
     }else if(studentId){
         getAcademicHistoryByStudentId(req, res, next);
-
+//3sdkj
     } else {
         getAllAcademicHistory(req, res, next);
     }

@@ -51,12 +51,15 @@ export const getEmergencyContactByStudentId =async(req:Request,res:Response,next
             handleError(error, res, next);
         }
 }
-
+//h
 export const updateEmergencyContact = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { id } = req.query;
+        const { id } = req.params;
+        console.log("body",req.body);
+        const {createdAt,updatedAt,...props}=req.body as EmergencyContact
+//sa
 
-        const updatedEmergencyContact = await db.update(emergencyContactModel).set(req.body).where(eq(emergencyContactModel.id, Number(id))).returning();
+        const updatedEmergencyContact = await db.update(emergencyContactModel).set({...props}).where(eq(emergencyContactModel.id, Number(id))).returning();
 
         if (!updatedEmergencyContact) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Emergency Contact not found"));

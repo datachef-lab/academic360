@@ -61,7 +61,11 @@ export const updateAccommodation = async (req: Request, res: Response, next: Nex
     }
     try {
         const { id } = req.query;
-        const validateData = createAccommodationSchema.parse(req.body);
+         console.log("body",req.body);
+                const {createdAt,updatedAt,...props}=req.body as Accommodation;
+        
+        
+        const validateData = createAccommodationSchema.parse(props);
         const record = await db.update(accommodationModel).set(validateData).where(eq(accommodationModel.id, Number(id))).returning();
         if (!record) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "accommodation not found"));

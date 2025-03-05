@@ -11,7 +11,7 @@ router.post("/", createAccommodation);
 
 router.get("/query", (req, res, next) => {
     const { id, studentId } = req.query;
-
+//65
     if (id) {
         return getAccommodationById(req, res, next);
     } else if (studentId) {
@@ -22,6 +22,6 @@ router.get("/query", (req, res, next) => {
     }
 });
 
-router.put("/:id", updateAccommodation);
+router.put("/query", updateAccommodation);
 
 export default router;

@@ -14,6 +14,6 @@ export const saveAcademicIdentifier = async (formData:academicIdentifier) => {
 };
 
 export const saveAccommodation = async (formData:Accommodation) => {
-    const response = await axiosInstance.post(`/api/streams/`,formData);
+    const response = await axiosInstance.post(`/api/Accommodation/`,formData);
     return response.data;
 };

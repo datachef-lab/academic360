@@ -153,9 +153,7 @@ export const deleteInstitutions = async (
             .returning();
 
         if (deletedInstitutions.length > 0) {
-            res
-                .status(200)
-                .json(
+            res.status(200).json(
                     new ApiResponse(
                         200,
                         "SUCCESS",

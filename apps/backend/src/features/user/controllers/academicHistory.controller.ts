@@ -4,7 +4,7 @@ import { handleError } from "@/utils/handleError.js";
 
 import { AcademicHistoryType } from "@/types/user/academic-history.js";
 import { addAcademicHistory, findAcademicHistoryById, findAcademicHistoryByStudentId, findAllAcademicHistory, removeAcademicHistory, saveAcademicHistory } from "@/features/user/services/academicHistory.service.js";
-
+// gwrgwrgw
 export const createAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newAcadeicHistory = await addAcademicHistory(req.body as AcademicHistoryType);;
