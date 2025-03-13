@@ -155,7 +155,7 @@ export async function addUser(oldStudent: OldStudent, db: DbType) {
 
     return newUser;
 }
-
+//sdfadef
 export async function addStudent(oldStudent: OldStudent, user: User, db: DbType) {
     const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, user.id as number));
     if (existingStudent) {

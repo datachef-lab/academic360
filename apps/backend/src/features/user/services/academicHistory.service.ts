@@ -56,14 +56,16 @@ export async function saveAcademicHistory(id: number, academicHistory: AcademicH
     const {
         lastBoardUniversity,
         lastInstitution,
+        createdAt,updatedAt,
         lastResult,
         specialization,
         id: academicHistoryId,
         studentId,
+        
         ...props
     } = academicHistory;
 
-    // Return if the academic-history does not exist
+    // Return if the academic-history does no exist  const {createdAt,updatedAt,...props}=req.body as EmergencyContact
     const foundAcademicHistory = await findAcademicHistoryById(id);
     if (!foundAcademicHistory) {
         return null;
@@ -71,6 +73,7 @@ export async function saveAcademicHistory(id: number, academicHistory: AcademicH
     // Update the academic-history
     const [updatedAcademicHistory] = await db.update(academicHistoryModel).set({
         ...props,
+        
         lastBoardUniversityId: lastBoardUniversity?.id,
         lastInstitutionId: lastInstitution?.id,
         lastResultId: lastResult?.id,

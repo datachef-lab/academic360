@@ -9,7 +9,7 @@ export async function getAllStreams(): Promise<Stream[]> {
     return response.data;
 }
 export const saveAcademicIdentifier = async (formData:academicIdentifier) => {
-    const response = await axiosInstance.post(`/api/streams/`,formData);
+    const response = await axiosInstance.post(`/api/academicIdentifiers`,formData);
     return response.data;
 };
 

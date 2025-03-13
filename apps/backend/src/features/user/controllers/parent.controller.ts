@@ -10,7 +10,7 @@ import { ParentType } from "@/types/user/parent.js";
 export const createParent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newParent = await addParent(req.body as ParentType);
-
+//hm
         res.status(201).json(new ApiResponse(201, "SUCCESS", newParent, "New Parent is added to db!"));
 
     } catch (error) {
