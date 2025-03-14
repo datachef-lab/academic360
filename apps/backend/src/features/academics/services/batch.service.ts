@@ -13,6 +13,8 @@ import { Batch, batchModel } from "../models/batch.model.js";
 import { BatchType } from "@/types/academics/batch.js";
 import { CourseType } from "@/types/academics/course.js";
 import { findCourseById } from "./course.service.js";
+import { OldSession } from "@/types/academics/session.js";
+import { Session, sessionModel } from "../models/session.model.js";
 
 const BATCH_SIZE = 500;
 
@@ -50,6 +52,39 @@ export async function processCourse(courseId: number): Promise<Course> {
     }
 
     return foundCourse;
+}
+
+export async function processSession(oldSessionId: number) {
+    const [result] = (
+        await mysqlConnection.query(`
+            SELECT * 
+            FROM currentsessionmaster
+            WHERE id = ${oldSessionId}
+        `) as [OldSession[], any]
+    );
+    const [oldSession] = result;
+
+    const [foundSession] = await db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.name, oldSession.sessionName));
+
+    if (foundSession) {
+        return foundSession;
+    }
+
+    const [newSession] = await db
+        .insert(sessionModel)
+        .values({
+            name: oldSession.sessionName.trim(),
+            from: oldSession.fromDate.toISOString(),
+            to: oldSession.toDate.toISOString(),
+            codePrefix: oldSession.codeprefix,
+            isCurrentSession: oldSession.iscurrentsession,
+        } as Session)
+        .returning();
+
+    return newSession;
 }
 
 export async function processClass(classId: number): Promise<Class> {
@@ -107,6 +142,10 @@ export async function processSection(sectionId: number) {
 }
 
 export async function processShift(shiftId: number) {
+    if (!shiftId || shiftId === 0) {
+        return null;
+    }
+
     const [shiftResult] =
         await mysqlConnection
             .query(`
@@ -131,7 +170,7 @@ export async function processShift(shiftId: number) {
     return foundShift;
 }
 
-async function processBatch(oldBatch: OldBatch) {
+export async function processBatch(oldBatch: OldBatch) {
     console.log("batchResult:", oldBatch);
 
     const course = await processCourse(oldBatch.courseId);
@@ -139,12 +178,17 @@ async function processBatch(oldBatch: OldBatch) {
     const shift = await processShift(oldBatch.shiftId);
     let section: Section | null = null;
 
+    const session = await processSession(oldBatch.sessionId);
+
     const whereConditions = [
         eq(batchModel.courseId, course.id as number),
         eq(batchModel.classId, academicClass.id as number),
-        eq(batchModel.shiftId, shift.id as number),
-        eq(batchModel.session, oldBatch.sessionId),
+        eq(batchModel.sessionId, session.id as number),
     ]
+
+    if (shift) {
+        whereConditions.push(eq(batchModel.shiftId, shift.id as number));
+    }
 
     if (oldBatch.sectionId && oldBatch.sectionId !== 0) {
         section = await processSection(oldBatch.sectionId);
@@ -163,14 +207,20 @@ async function processBatch(oldBatch: OldBatch) {
             courseId: course.id as number,
             classId: academicClass.id as number,
             sectionId: section ? section.id as number : null,
-            shiftId: shift.id as number,
-            session: oldBatch.sessionId,
+            shiftId: shift ? shift.id as number : null,
+            sessionId: session.id as number,
         }).returning();
 
         return newBatch;
     }
 
-    return foundBatch;
+    const [updatedBatch] = await db
+        .update(batchModel)
+        .set({ sessionId: session.id as number })
+        .where(eq(batchModel.id, foundBatch.id as number))
+        .returning();
+
+    return updatedBatch;
 }
 
 export async function loadOlderBatches() {

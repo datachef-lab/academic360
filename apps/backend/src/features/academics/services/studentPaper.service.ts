@@ -56,7 +56,7 @@ export async function findStudents() {
                 class: formattedBatch?.academicClass?.name,
                 section: formattedBatch?.section?.name,
                 shift: formattedBatch?.shift?.name,
-                session: formattedBatch?.session,
+                session: formattedBatch?.sessionId,
                 rollNumber: foundAcademicIdentifier?.rollNumber,
                 paper: formattedBatchPaper?.paper.name,
                 subject: formattedBatchPaper?.paper.offeredSubject.subjectMetadata.name,
@@ -137,7 +137,7 @@ export async function findStudentPapersByRollNumber(streamId: number, rollNumber
             );
 
         // Sort the batches by session in descending
-        batchArr = batchArr.sort((a, b) => b.session - a.session);
+        batchArr = batchArr.sort((a, b) => ((b.sessionId as number) - (a.sessionId as number)));
 
         for (let i = 0; i < batchArr.length; i++) {
             // Create the object for the result
