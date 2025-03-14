@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { Stream, streamModel } from "@/features/academics/models/stream.model.js";
-import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
 import { StreamType } from "@/types/academics/stream.js";
 import { and, eq } from "drizzle-orm";
@@ -27,6 +27,8 @@ export async function findAllStreams(): Promise<StreamType[]> {
     const formattedStreams = (await Promise.all(streams.map(async (stream) => {
         return await streamResponseFormat(stream);
     }))).filter((stream): stream is StreamType => stream !== null);
+
+    console.log(formattedStreams);
 
     return formattedStreams;
 }
@@ -70,10 +72,10 @@ export async function streamResponseFormat(stream: Stream | null): Promise<Strea
     }
     const { degreeId, ...props } = stream;
 
-    let degree = await findDegreeById(degreeId);
+    let degree = await findDegreeById(degreeId) as Degree;
 
     return {
         ...props,
-        degree: degree
-    } as StreamType;
+        degree
+    };
 }

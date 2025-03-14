@@ -46,6 +46,8 @@ import {
     stateRouter,
     degreeRouter,
     occupationRouter,
+    batchRouter,
+    batchPaperRouter,
     emergencyContactRouter,
     addressRouter,
 } from "@/features/index.js";
@@ -138,6 +140,10 @@ passport.serializeUser((user, done) => done(null, user));
 passport.deserializeUser((user: Express.User, done) => done(null, user));
 
 app.use("/auth", authRouter);
+
+app.use("/api/batches/old-data", batchRouter);
+
+app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
 

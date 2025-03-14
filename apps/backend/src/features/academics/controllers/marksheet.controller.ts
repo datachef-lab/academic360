@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById, findMarksheetLogs, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
@@ -130,6 +130,7 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
 
 export const getMarksheetById = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log("\n\nin fetch by id\n\n");
         const { id } = req.params;
 
         const foundMarksheet = await findMarksheetById(+id);
@@ -140,6 +141,20 @@ export const getMarksheetById = async (req: Request, res: Response, next: NextFu
         }
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", foundMarksheet, "Marksheet fetched successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getMarksheetsLogs = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { page, pageSize, searchText } = req.query;
+
+        console.log("\n\n", page, pageSize, searchText, "\n\n")
+
+        const marksheetLogs = await findMarksheetLogs(Number(page), Number(pageSize), searchText as string);
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", marksheetLogs, "Marksheet Logs fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }

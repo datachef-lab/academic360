@@ -11,6 +11,7 @@ export const paperModel = pgTable("papers", {
     name: varchar({ length: 500 }),
     shortName: varchar({ length: 500 }),
     mode: paperModeTypeEnum(),
+    displayName: varchar({ length: 500 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
