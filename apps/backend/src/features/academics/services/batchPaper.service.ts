@@ -390,7 +390,7 @@ async function processStudentPaper() {
         };
 
 
-        if (!oldBatchResult[0].classId || (oldBatchResult[0].classId && oldBatchResult[0].classId === 1 || oldBatchResult[0].classId === 2 || oldBatchResult[0].classId === 3)) {
+        if (!oldBatchResult[0].classId || (oldBatchResult[0].classId && [1, 2, 3].includes(oldBatchResult[0].classId))) {
             console.log(b, "in continue, oldBatch.classId:", oldBatchResult[0]?.classId || "N/A")
             continue;
         }
@@ -399,7 +399,7 @@ async function processStudentPaper() {
 
 
         const [rows2] = await mysqlConnection.query(`
-            SELECT DISTINCT COUNT(sessionId) AS sessionId 
+            SELECT DISTINCT sessionId
             FROM ${oldBatchTable}
             WHERE id = ${oldBatchResult[0].id}
         `);
@@ -407,10 +407,11 @@ async function processStudentPaper() {
         console.log("sessions:", sessions);
 
         for (let s = 0; s < sessions.length; s++) {
+            if (sessions[s].sessionId < 16) continue
             await processSession(sessions[s].sessionId);
 
             const [rows2] = await mysqlConnection.query(`
-                SELECT DISTINCT COUNT(classId) AS classId
+                SELECT DISTINCT classId
                 FROM ${oldBatchTable}
                 WHERE id = ${oldBatchResult[0].id}
             `);
@@ -585,9 +586,9 @@ async function processStudentPaper() {
                             SELECT * 
                             FROM ${oldBatchPaperTable} 
                             WHERE 
-                                parent_id = ${oldBatchResult[0].id},
-                                subjectTypeId = ${oldSubjectType.id}
-                                subjectId = ${oldSubject.id}
+                                parent_id = ${oldBatchResult[0].id}
+                                AND subjectTypeId = ${oldSubjectType.id}
+                                AND subjectId = ${oldSubject.id}
                         `) as [OldBatchPaper[], any]
                     );
                     const batchPaper = await processBatchPaper(oldBatchPaperResult[0], foundSubjectMetadata);
