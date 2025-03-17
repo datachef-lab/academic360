@@ -42,6 +42,8 @@ import {
     stateRouter,
     degreeRouter,
     occupationRouter,
+    personalDetailsRouter,
+    healthRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -172,6 +174,10 @@ app.use("/api/board-universities", boardUniversityRouter);
 app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
+
+app.use("/api/personal-details", personalDetailsRouter);
+
+app.use("/api/health-details", healthRouter);
 
 app.use("/api/transports", transportRouter);
 
