@@ -1,6 +1,8 @@
 import "dotenv/config";
 import app from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
+import { extractServices } from "./features/ai-agent/utils/tools";
+// import { tools } from "./features/ai-agent/utils/tools";
 
 const PORT = process.env.PORT || 8080;
 
@@ -15,6 +17,8 @@ const PORT = process.env.PORT || 8080;
             );
             console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
             console.log("Press Ctrl+C to stop the application.\n");
+            // console.log(tools)
+            // extractServices()
         });
     } catch (error) {
         console.error("[backend] - Failed to start the application: ⚠️\n", error);

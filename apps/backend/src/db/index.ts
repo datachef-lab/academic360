@@ -3,6 +3,7 @@ import pg, { PoolClient } from "pg";
 import { createConnection } from "mysql2/promise"; // For MySQL
 import { drizzle } from "drizzle-orm/node-postgres";
 
+
 // Create a connection pool
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -49,6 +50,7 @@ export const connectToMySQL = async () => {
     ); // Simple query to test the connection
     console.log(rows);
     console.log("[MySQL] - Connected successfully. 🎉");
+
   } catch (error) {
     console.error("[MySQL] - Connection failed: ⚠️", error);
     // process.exit(1); // Exit the application if the database connection fails

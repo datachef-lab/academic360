@@ -70,13 +70,18 @@ export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
 ]);
 
 export const marksheetSourceEnum = pgEnum("marksheet_source", [
-    "FILE_UPLOAD", 
+    "FILE_UPLOAD",
     "ADDED"
 ]);
 
 export const classTypeEnum = pgEnum("class_type", [
     "YEAR",
     "SEMESTER",
+]);
+
+export const senderTypeEnum = pgEnum("sender_type", [
+    "USER",
+    "AI",
 ]);
 
 export const paperModeTypeEnum = pgEnum("paper_mode_type", [
