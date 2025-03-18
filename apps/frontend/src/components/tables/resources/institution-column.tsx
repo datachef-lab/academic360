@@ -18,4 +18,11 @@ export const institutionColumns: ColumnDef<Institution>[] = [
         accessorKey: "address",
         header: "Address",
     },
+    //  {
+    //         accessorKey:"actions",
+    //         header:"Actions",
+    //         cell:({row})=>{
+    //             return <ActionMenu institution={row.original} />
+    //         }
+    //     }
 ];

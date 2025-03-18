@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import EditUserModal from "./EditUserModal";
+import EditUserModal from "../../settings/EditModal/EditUserModal";
 
 interface Props {
   // Define your props here

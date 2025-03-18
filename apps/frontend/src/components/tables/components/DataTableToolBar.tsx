@@ -23,15 +23,17 @@ export function DataTableToolbar<TData>({
   refetch,
 }: DataTableToolbarProps<TData>) {
   // Debounce function (calls refetch only after user stops typing for 500ms)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
     debounce((query: string) => {
       table.setGlobalFilter(query);
-      refetch(); // Trigger the API call manually
+      refetch(); 
     }, 500),
     [table, refetch]
   );
+  // console.log("Available columns:", table.getAllColumns().map((col) => col.id));
+  const typeColumn = table.getAllColumns().find((col) => col.id === "type");
 
-  // Handle input change
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchText(value);
@@ -47,9 +49,9 @@ export function DataTableToolbar<TData>({
           onChange={handleSearchChange} // Use the debounced function
           className="max-w-sm"
         />
-        {table.getColumn("type") && (
+        {typeColumn && (
           <DataTableFacetedFilter
-            column={table.getColumn("type")}
+            column={typeColumn}
             title="Account"
             options={[
               { label: "Admin", value: "ADMIN" },

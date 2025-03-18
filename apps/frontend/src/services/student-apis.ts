@@ -1,10 +1,15 @@
 import { ResultStatus } from "@/types/enums";
+import { AnnualIncome } from "@/types/resources/annual-income";
 import { BoardUniversity } from "@/types/resources/board-university";
+import { Category } from "@/types/resources/category";
+import { Degree } from "@/types/resources/degree";
 import { Institution } from "@/types/resources/institution";
+import { Religion } from "@/types/resources/religion";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { academicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { EmergencyContact } from "@/types/user/emergency-contact";
+import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
 
 export const  updateEmergencyContact = async (formData: EmergencyContact,id: number) => {
@@ -124,3 +129,56 @@ export const createAcademicHistory = async (formData: AcademicHistory) => {
     })
     return res.data;
 };
+
+export const UpdateDegree =async (formData:Degree,id:number)=>{
+    console.log("formdata",formData);
+    console.log("id",id);
+    const res=await axiosInstance.put(`/api/degree/${id}`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}
+export const UpdateCategory =async (formData:Category,id:number)=>{
+    console.log("formdata",formData);
+    console.log("id",id);
+    const res=await axiosInstance.put(`/api/categories/${id}`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}
+export const UpdateAnnualIncome =async (formData:AnnualIncome,id:number)=>{
+    console.log("formdata",formData);
+    console.log("id",id);
+    const res=await axiosInstance.put(`/api/annual-incomes/${id}`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}
+
+export const UpdateReligion =async (formData:Religion,id:number)=>{
+    console.log("formdata",formData);
+    console.log("id",id);
+    const res=await axiosInstance.put(`/api/religions/${id}`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}
+
+export const UpdateUser =async (formData:User,id:number)=>{
+    console.log("formdata",formData);
+    console.log("id",id);
+    const res=await axiosInstance.put(`/api/users/${id}`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}

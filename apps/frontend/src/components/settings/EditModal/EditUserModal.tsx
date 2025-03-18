@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserIcon, Mail, Phone, MessageCircle  } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { UpdateUser } from '@/services/student-apis';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface EditUserProps {
   // Define your props here
@@ -23,11 +25,12 @@ interface EditUserProps {
 }
 const USER_TYPES=["STUDENT","TEACHER","ADMIN"];
 const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
-    const [formData, setFormData] = useState<User>({
-    name:"",
-    email: "",
-    phone: "",
-    whatsappNumber:  "",
+  const queryClient = useQueryClient();  
+  const [formData, setFormData] = useState<User>({
+    name:user.name||"",
+    email:user.email|| "",
+    phone:user.phone || "",
+    whatsappNumber: user.whatsappNumber ||  "",
     type: user.type ,
     image: user.image || "",
     disabled: user.disabled || false,
@@ -35,6 +38,19 @@ const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
     updatedAt: user.updatedAt || new Date(),
     });
 
+     const updateData=useMutation({
+          mutationFn:(formData:User)=>{
+            if(user.id!==undefined){
+              return UpdateUser(formData, user.id);
+            }
+            throw new Error(`User ID is undefined`);
+          },
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["User"] });
+            onClose();
+          }
+
+        })
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
        const { name, value } = e.target;
         setFormData((prev) => ({
@@ -59,6 +75,7 @@ const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
     
       const handleSubmit = () => {
         console.log("Updated User Data:", formData);
+        updateData.mutate(formData);
         onClose();
       };
 
@@ -138,10 +155,7 @@ const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
               </SelectContent>
             </Select>
           </div>
-          {/* <div className="flex items-center space-x-3 col-span-2">
-              <Label htmlFor="disabled" className="pl-1">Disable User</Label>
-              <Switch checked={formData.disabled} onCheckedChange={handleToggleDisable} />
-            </div> */}
+         
         </div>
 
         <DialogFooter className="flex justify-end space-x-4 pt-4">

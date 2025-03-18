@@ -62,7 +62,7 @@ export const updateAccommodation = async (req: Request, res: Response, next: Nex
     try {
         const { id } = req.query;
          console.log("body",req.body);
-                const {createdAt,updatedAt,...props}=req.body as Accommodation;
+         const {createdAt,updatedAt,...props}=req.body as Accommodation;
         
         
         const validateData = createAccommodationSchema.parse(props);

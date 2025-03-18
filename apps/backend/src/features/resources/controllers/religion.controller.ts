@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { religionModel } from "@/features/resources/models/religion.model.js";
+import { Religion, religionModel } from "@/features/resources/models/religion.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
@@ -56,11 +56,11 @@ export const updateReligionRecord = async (
   next: NextFunction,
 ) => {
   try {
-    const { id } = req.query;
-    const updatedData = req.body;
+    const { id } = req.params;
+   const {createdAt,updatedAt,...props}=req.body as Religion
     const records = await db
       .update(religionModel)
-      .set(updatedData)
+      .set(props)
       .where(eq(religionModel.id, Number(id)))
       .returning();
     if (records) {

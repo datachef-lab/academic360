@@ -190,7 +190,7 @@ app.use("/api/degree", degreeRouter);
 //kjh
 app.use("/api/emergency-contact", emergencyContactRouter);
 app.use("/api/occupations", occupationRouter);
-app.use("/api/annual-incomes", annualIncomeRouter);
+
 app.use("/api/annual-incomes", annualIncomeRouter);
 app.use("/api/academicIdentifiers", academicIdentifierRouter);
 app.use("/api/academicHistories", academicHistoryRouter);

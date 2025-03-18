@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 
-import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 import { findAll } from "@/utils/helper.js";
 
 
@@ -26,15 +26,16 @@ export const getAllDegree = async (req: Request, res: Response, next: NextFuncti
         handleError(e, res, next);
     }
 };
-
+// ss
 
 export const updateDegree = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { id } = req.query;
-        console.log("*body*", req.query);
+        const { id } = req.params;
+         console.log("body",req.body);
+         const {createdAt,updatedAt,...props}=req.body as Degree
         console.log("id**", id);
-        const updatedData = req.body;
-        const record = await db.update(degreeModel).set(updatedData).where(eq(degreeModel.id, Number(id))).returning();
+        
+        const record = await db.update(degreeModel).set(props).where(eq(degreeModel.id, Number(id))).returning();
         if (!record) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Degree not found"));
         }
