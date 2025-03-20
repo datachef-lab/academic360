@@ -10,7 +10,7 @@ export const bloodGroupColumns: ColumnDef<BloodGroup>[] = [
   {
     id: "actions",
     header: "Actions",
-    cell: ({ row }) => <BloodGroupActions bloodGroup={row.original} />,
+    cell: ({ row }) => <BloodGroupActions bloodGroup={row.original} />, // Use the new component
   },
 ];
 
