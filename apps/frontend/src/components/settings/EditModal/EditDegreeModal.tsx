@@ -35,7 +35,7 @@ const EditDegreeModal: React.FC<EditDegree> = ({type, data, onClose }) => {
     updatedAt: data.updatedAt || new Date(),
     
     });
-
+const activeSetting={label:"Degree"}
 const updateData = useMutation({
   mutationFn: (formData:Degree) => {
     if (data.id !== undefined) {
@@ -43,9 +43,10 @@ const updateData = useMutation({
     }
     throw new Error(`${type} ID is undefined`);
   },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["Degree"]});
-    onClose();
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({
+      queryKey: [activeSetting.label],
+    });
   },
 });
 

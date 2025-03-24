@@ -73,6 +73,7 @@ export const updateReligionRecord = async (
             "Religion records updated successfully",
           ),
         );
+        // 
     }
     res
       .status(404)

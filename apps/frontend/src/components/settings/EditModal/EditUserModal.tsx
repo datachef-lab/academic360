@@ -19,12 +19,14 @@ import { UpdateUser } from '@/services/student-apis';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 interface EditUserProps {
-  // Define your props here
-  user:User;
-  onClose:()=>void;
+  user: User;
+  onClose: () => void;
+ 
 }
 const USER_TYPES=["STUDENT","TEACHER","ADMIN"];
-const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
+const EditUserModal: React.FC<EditUserProps> = ({ user, onClose }) => {
+  const  activeSetting={label:"users"}
+  const pagination= { pageIndex: 0, pageSize: 10 };
   const queryClient = useQueryClient();  
   const [formData, setFormData] = useState<User>({
     name:user.name||"",
@@ -45,10 +47,11 @@ const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
             }
             throw new Error(`User ID is undefined`);
           },
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["User"] });
-            onClose();
-          }
+          onSuccess: async () => {
+            await queryClient.invalidateQueries({
+              queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+            });
+          },
 
         })
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,4 +175,4 @@ const ComponentName: React.FC<EditUserProps> = ({ user, onClose }) => {
   );
 };
 
-export default ComponentName;
+export default EditUserModal;
