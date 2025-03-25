@@ -193,20 +193,24 @@ async function processPaper(oldBatchPaper: OldBatchPaper, subjectMetadata: Subje
 }
 
 async function getBatch(oldBatchPaper: OldBatchPaper) {
-    const [oldBatch] = (
-        await mysqlConnection
+    console.log("oldBatchPaper:", oldBatchPaper)
+    const oldBatchResult =
+        (await mysqlConnection
             .query(`
                     SELECT * 
                     FROM ${oldBatchTable} 
                     WHERE id = ${oldBatchPaper.parent_id}`
-            ) as [OldBatch[], any]
-    )[0];
+            ) as [OldBatch[], any])[0]
+        ;
 
-    const session = await processSession(oldBatch.sessionId);
-
-    if (!oldBatch) {
+    if (oldBatchResult.length === 0) {
         return null;
     }
+
+    const oldBatch = oldBatchResult[0];
+    const session = await processSession(oldBatch.sessionId);
+
+
 
     const course = await processCourse(oldBatch.courseId);
     const academicClass = await processClass(oldBatch.classId);
@@ -309,27 +313,39 @@ async function getStream(obj: StudentSubjectCourse): Promise<Stream | null> {
     };
 
     // Find the appropriate degree short name
-    const degreeKey = Object.keys(degreeMap).find((key) => courseName.startsWith(key));
+    const degreeKey = Object.keys(degreeMap).find((key) => courseName.trim().toUpperCase().startsWith(key));
     if (!degreeKey) return null;
 
-    const degreeName = degreeMap[degreeKey];
+    let degreeName = degreeMap[degreeKey];
+    let degreeProgramme: "HONOURS" | "GENERAL" | null = "HONOURS";
+
+    if (degreeName === "BCOM (G)") {
+        degreeName = "BCOM";
+        degreeProgramme = "GENERAL";
+    }
+    else if (degreeName === "BCOM (H)") {
+        degreeName = "BCOM";
+        degreeProgramme = "HONOURS";
+    }
+
     let degree: Degree | null = await findDegreeByName(degreeName);
+
     if (!degree) {
         const [newDegree] = await db.insert(degreeModel).values({ name: degreeName }).returning();
         degree = newDegree;
     }
 
     // Fetch the stream
+    const whereConditions = [
+        eq(streamModel.degreeId, degree.id as number),
+        eq(streamModel.framework, "CCF"),
+        eq(streamModel.degreeProgramme, degreeProgramme)
+    ];
+
     let [foundStream] = await db
         .select()
         .from(streamModel)
-        .where(
-            and(
-                eq(streamModel.degreeId, degree.id as number),
-                eq(streamModel.framework, "CCF"),
-                eq(streamModel.degreeProgramme, "HONOURS")
-            )
-        );
+        .where(and(...whereConditions));
 
 
     if (!foundStream) {
@@ -349,6 +365,8 @@ async function getStream(obj: StudentSubjectCourse): Promise<Stream | null> {
 
     return foundStream || null;
 }
+
+
 
 
 
@@ -376,18 +394,23 @@ async function processStudentPaper() {
     // `);
     // const { totalRows: totalClasses } = (rows3 as { totalRows: number }[])[0];
 
-    for (let b = 1; b <= totalBatches; b++) {
+    for (let b = 1; b <= 2190; b++) { // Temp changes
+        console.log("b:", b)
+        if (b < 1993) continue; // Temp Condition
+
         const [oldBatchResult] = (
             await mysqlConnection.query(`
                 SELECT * 
                 FROM studentpaperlinkingmain
-                WHERE id = ${b}
+                WHERE id = ${b} AND sessionId >= 16
             `) as [OldBatch[], any]
         );
 
         if (oldBatchResult.length === 0) {
+            console.log("continue, not found")
             continue
         };
+
 
 
         if (!oldBatchResult[0].classId || (oldBatchResult[0].classId && [1, 2, 3].includes(oldBatchResult[0].classId))) {
@@ -395,33 +418,18 @@ async function processStudentPaper() {
             continue;
         }
 
-        const batch: Batch = await processBatch(oldBatchResult[0]);
+        await processBatch(oldBatchResult[0]);
 
+        for (let s = 1; s <= 18; s++) {
 
-        const [rows2] = await mysqlConnection.query(`
-            SELECT DISTINCT sessionId
-            FROM ${oldBatchTable}
-            WHERE id = ${oldBatchResult[0].id}
-        `);
-        const sessions = (rows2 as { sessionId: number }[]);
-        console.log("sessions:", sessions);
+            if (s <= 16) continue // Temp Condition
 
-        for (let s = 0; s < sessions.length; s++) {
-            if (sessions[s].sessionId < 16) continue
-            await processSession(sessions[s].sessionId);
+            const session = await processSession(s);
 
-            const [rows2] = await mysqlConnection.query(`
-                SELECT DISTINCT classId
-                FROM ${oldBatchTable}
-                WHERE id = ${oldBatchResult[0].id}
-            `);
-            const classes = (rows2 as { classId: number }[]);
-            console.log("classes:", classes);
+            for (let c = 1; c <= 9; c++) {
+                const academicClass = await processClass(c);
 
-            for (let c = 0; c < classes.length; c++) {
-                const academicClass = await processClass(classes[c].classId);
-
-                console.log("academicClass:", academicClass.type)
+                // console.log("academicClass:", academicClass.type)
                 if (academicClass.type === "YEAR") continue;
 
                 // TODO: Paginate
@@ -447,8 +455,8 @@ async function processStudentPaper() {
                                 subject sb
                             where 
                                 m.id = ${b}
-                                and m.sessionid = ${sessions[s].sessionId} 
-                                and m.classid = ${classes[c].classId} 
+                                and m.sessionid = ${s} 
+                                and m.classid = ${c} 
                                 and m.id = p.parent_id 
                                 and p.allstudents = 1 
                                 and m.courseid = h.courseid 
@@ -481,8 +489,8 @@ async function processStudentPaper() {
                                 subject sb 
                             where 
                                 m.id = ${b}
-                                and m.sessionid = ${sessions[s].sessionId} 
-                                and m.classid = ${classes[c].classId} 
+                                and m.sessionid = ${s} 
+                                and m.classid = ${c} 
                                 and m.id=p.parent_id 
                                 and p.allstudents=0 
                                 and p.id=ss.parent_id 
@@ -502,12 +510,96 @@ async function processStudentPaper() {
                     `) as [StudentSubjectCourse[], any]
                 );
 
+                if (s == 16 && c == 5 && b === 2190) {
+
+                    console.log(`
+                        (
+                            select distinct 
+                                co.coursename,
+                                cl.classname,
+                                s.name,
+                                s.codenumber,
+                                st.subjecttypename,
+                                sb.subjectname
+                            from 
+                                studentpaperlinkingmain m,
+                                studentpaperlinkingpaperlist p,
+                                historicalrecord h,
+                                studentpersonaldetails s,
+                                course co,
+                                classes cl,
+                                subjecttype st,
+                                subject sb
+                            where 
+                                m.id = ${b}
+                                and m.sessionid = ${s} 
+                                and m.classid = ${c} 
+                                and m.id = p.parent_id 
+                                and p.allstudents = 1 
+                                and m.courseid = h.courseid 
+                                and m.classid = h.classid 
+                                and m.sectionid = h.sectionid 
+                                and m.shiftid = h.shiftid 
+                                and m.sessionid = h.sessionid 
+                                and h.parent_id = s.id 
+                                and m.courseid = co.id 
+                                and m.classid = cl.id 
+                                and p.subjectTypeId = st.id 
+                                and p.subjectId = sb.id 
+                        ) union (
+                            select distinct 
+                                co.coursename,
+                                cl.classname,
+                                s.name,
+                                s.codenumber,
+                                st.subjecttypename,
+                                sb.subjectname
+                            from 
+                                studentpaperlinkingmain m,
+                                studentpaperlinkingpaperlist p,
+                                studentpaperlinkingstudentlist ss,
+                                historicalrecord h,
+                                studentpersonaldetails s,
+                                course co,
+                                classes cl,
+                                subjecttype st,
+                                subject sb 
+                            where 
+                                m.id = ${b}
+                                and m.sessionid = ${s} 
+                                and m.classid = ${c} 
+                                and m.id=p.parent_id 
+                                and p.allstudents=0 
+                                and p.id=ss.parent_id 
+                                and m.courseid=h.courseid 
+                                and m.classid=h.classid 
+                                and m.sectionid=h.sectionid 
+                                and m.shiftid=h.shiftid 
+                                and m.sessionid=h.sessionid 
+                                and h.parent_id=s.id 
+                                and m.courseid=co.id 
+                                and m.classid=cl.id 
+                                and p.subjectTypeId=st.id 
+                                and p.subjectId=sb.id 
+                                and ss.studentid=s.id 
+                        )
+                    order by coursename, codenumber, subjectTypeName;
+                    `)
+
+                }
+
                 console.log("after fetch, total data:", result.length);
                 // Process all the student's subjects
                 for (let i = 0; i < result.length; i++) {
+                    console.log(`session: ${s} \t class: ${c} batch: ${b} `);
                     // 1. Identify the stream
                     const stream = await getStream(result[i]);
-
+                    console.log(stream);
+                    if (!stream) {
+                        console.log("stream for", result[i].coursename, "not found");
+                        continue;
+                    }
+                    console.log(result[i]);
                     // 2. Identify the semester
                     let sem: number | undefined;
                     switch (academicClass.name.trim().toUpperCase()) {
@@ -536,18 +628,19 @@ async function processStudentPaper() {
                             sem = 8;
                             break;
                     }
-
+                    console.log("sem:", sem, session, academicClass);
                     // 3. Identify the subject-type
                     const [foundSubjectType] = await db
                         .select()
                         .from(subjectTypeModel)
                         .where(eq(subjectTypeModel.irpName, result[i].subjecttypename.trim().toUpperCase()));
-
+                    console.log("foundSubjectType:", foundSubjectType.irpName, "res:", result[i].subjecttypename.trim().toUpperCase())
                     if (!foundSubjectType) continue;
 
                     if (!sem) continue;
 
                     // 4. Map and add all the subjects to the batch-papers
+                    console.log("using:", stream?.id, sem, foundSubjectType.id, result[i].subjectname.trim().toUpperCase())
                     const [foundSubjectMetadata] = await db
                         .select()
                         .from(subjectMetadataModel)
@@ -556,43 +649,58 @@ async function processStudentPaper() {
                                 eq(subjectMetadataModel.streamId, stream?.id as number),
                                 eq(subjectMetadataModel.semester, sem),
                                 eq(subjectMetadataModel.subjectTypeId, foundSubjectType.id),
-                                eq(subjectMetadataModel.irpName, result[i].subjectname),
+                                eq(subjectMetadataModel.irpName, result[i].subjectname.trim().toUpperCase()),
                             )
                         );
-
+                    console.log("foundSubjectMetadata:", foundSubjectMetadata)
                     if (!foundSubjectMetadata) continue;
 
                     // 5. Add the batch paper
-                    const [oldSubjectTypeResult] = (
-                        await mysqlConnection.query(`
-                            SELECT * 
-                            FROM ${oldSubjectTypeTable} 
-                            WHERE subjectTypeName = ${result[i].subjecttypename}
-                        `) as [OldSubjectType[], any]
-                    );
+                    console.log("Add the batch paper")
+                    const [oldSubjectTypeResult] = await mysqlConnection.query(
+                        `SELECT * FROM ${oldSubjectTypeTable} WHERE subjectTypeName = ?`,
+                        [result[i].subjecttypename]
+                    ) as [OldSubjectType[], any];
+
                     const oldSubjectType = oldSubjectTypeResult[0];
 
                     const [oldSubjectResult] = (
                         await mysqlConnection.query(`
-                            SELECT * 
-                            FROM ${oldSubjectTable} 
-                            WHERE subjectName = ${result[i].subjectname}
-                        `) as [OldSubject[], any]
+                            SELECT * FROM ${oldSubjectTable} WHERE subjectName = ?`,
+                            [result[i].subjectname]
+                        ) as [OldSubject[], any]
                     );
                     const oldSubject = oldSubjectResult[0];
 
-                    const [oldBatchPaperResult] = (
-                        await mysqlConnection.query(`
-                            SELECT * 
-                            FROM ${oldBatchPaperTable} 
-                            WHERE 
-                                parent_id = ${oldBatchResult[0].id}
-                                AND subjectTypeId = ${oldSubjectType.id}
-                                AND subjectId = ${oldSubject.id}
-                        `) as [OldBatchPaper[], any]
-                    );
-                    const batchPaper = await processBatchPaper(oldBatchPaperResult[0], foundSubjectMetadata);
+                    // const [oldBatchPaperResult] = (
+                    //     await mysqlConnection.query(`
+                    //         SELECT * 
+                    //         FROM ${oldBatchPaperTable} 
+                    //         WHERE 
+                    //             parent_id = ${oldBatchResult[0].id}
+                    //             AND subjectTypeId = ${oldSubjectType.id}
+                    //             AND subjectId = ${oldSubject.id}
+                    //     `) as [OldBatchPaper[], any]
+                    // );
+                    console.log(oldBatchResult[0]?.id, oldSubjectType, oldSubject)
+                    console.log(`SELECT * FROM ${oldBatchPaperTable} WHERE parent_id = ${oldBatchResult[0]?.id} AND subjectTypeId = ${oldSubjectType.id} AND subjectId = ${oldSubject.id}`)
+                    const [oldBatchPaperResult] = await mysqlConnection.query(
+                        `SELECT * FROM ${oldBatchPaperTable} WHERE parent_id = ? AND subjectTypeId = ? AND subjectId = ?`,
+                        [oldBatchResult[0]?.id, oldSubjectType?.id, oldSubject?.id]
+                    ) as [OldBatchPaper[], any];
 
+                    if (oldBatchPaperResult.length === 0) {
+                        console.log("continue, oldbatch paer not exist");
+                        continue;
+                    }
+
+                    console.log("oldBatchPaperResult[0]:", oldBatchPaperResult[0])
+                    const batchPaper = await processBatchPaper(oldBatchPaperResult[0], foundSubjectMetadata);
+                    console.log("batchPaper:", batchPaper)
+                    if (!batchPaper) {
+                        console.log("not found batchPaper")
+                        continue;
+                    }
                     // 6. Fetch the student
                     const [academicIdentifier] = await db
                         .select()
@@ -607,6 +715,7 @@ async function processStudentPaper() {
                             eq(studentPaperModel.studentId, academicIdentifier.studentId),
                             eq(studentPaperModel.batchPaperId, batchPaper?.id as number),
                         ));
+                    console.log("foundStudentPaper:", foundStudentPaper)
                     if (!foundStudentPaper) {
                         await db.insert(studentPaperModel).values({
                             batchPaperId: batchPaper?.id as number,
@@ -620,9 +729,9 @@ async function processStudentPaper() {
 
             }
 
-            console.log("done session:", sessions[s].sessionId);
+            console.log("done session:", s);
         }
-        console.log("done batch:", b);
+        console.log("done batch:", oldBatchResult[0].id);
     }
 
 

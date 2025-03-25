@@ -4,16 +4,16 @@ import { findStudentPapersByRollNumber, findStudents } from "../services/student
 
 export const getStudentPapers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { streamId, rollNumber } = req.query;
+        const { rollNumber } = req.query;
 
-        if (!streamId || !rollNumber) {
-            res.status(400).json(new ApiError(400, "Please provide the valid `streamId` and `rollNumber`"));
+        if (!rollNumber) {
+            res.status(400).json(new ApiError(400, "Please provide the valid `rollNumber`"));
             return;
         }
 
-        console.log(streamId, rollNumber)
+        console.log(rollNumber)
 
-        await findStudents();
+        await findStudentPapersByRollNumber(rollNumber as string);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Student papers fetched successfully!"));
 

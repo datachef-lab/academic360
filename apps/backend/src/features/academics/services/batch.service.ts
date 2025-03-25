@@ -2,7 +2,7 @@ import { db, mysqlConnection } from "@/db/index.js";
 import { OldBatch } from "@/types/old-data/old-batch.js";
 import { OldCourse } from "@/types/old-data/old-course.js";
 import { Course, courseModel } from "../models/course.model.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Class, classModel } from "../models/class.model.js";
 import { OldClass } from "@/types/old-data/old-class.js";
 import { OldSection } from "@/types/old-data/old-section.js";
@@ -170,6 +170,7 @@ export async function processShift(shiftId: number) {
     return foundShift;
 }
 
+
 export async function processBatch(oldBatch: OldBatch) {
     console.log("batchResult:", oldBatch);
 
@@ -223,6 +224,30 @@ export async function processBatch(oldBatch: OldBatch) {
     return updatedBatch;
 }
 
+export async function refactorBatchSession() {
+    for (let i = 1; i < 2041; i++) {
+        // const [foundBatch] = await db.select().from(batchModel).where(eq(batchModel.id, i));
+        console.log("i:", i)
+        const { rows } = await db.execute(sql`SELECT * FROM batches WHERE id = ${i}`)
+
+        if (i == 1) {
+            console.log("session:", rows[0], "rows[0]['session']:", rows[0]["session"] as number)
+        }
+
+        const session = await processSession(rows[0]["session"] as number);
+        console.log("db session:", session)
+
+        const { rows: updatedRow } = await db.execute(sql`UPDATE batches SET session_id_fk = ${session.id} WHERE id = ${i}`)
+        console.log("updatedRow:", updatedRow);
+
+        // if (!foundBatchPaper) continue;
+
+        // await db.update(batchModel).set({
+        //     "sessionId": foundBatchPaper["session"]
+        // }).where(eq(batchModel.id, i));
+    }
+}
+
 export async function loadOlderBatches() {
     console.log(`\n\nCounting rows from table ${oldBatchTable}...`);
 
@@ -265,7 +290,7 @@ export async function batchFormatResponse(batch: Batch | null): Promise<BatchTyp
         return null;
     }
 
-    const { classId, courseId, sectionId, shiftId, ...props } = batch;
+    const { classId, courseId, sectionId, shiftId, sessionId, ...props } = batch;
 
     let academicClass: Class | null = null;
     if (classId) {
@@ -290,7 +315,13 @@ export async function batchFormatResponse(batch: Batch | null): Promise<BatchTyp
         section = foundShift;
     }
 
-    const formattedBatch: BatchType = { ...props, course, academicClass, section, shift };
+    let session: Session | null = null;
+    if (sessionId) {
+        const [foundSession] = await db.select().from(sessionModel).where(eq(sessionModel.id, sessionId as number));
+        session = foundSession;
+    }
+
+    const formattedBatch: BatchType = { ...props, course, academicClass, section, shift, session: session };
 
     return formattedBatch;
 
