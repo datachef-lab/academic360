@@ -5,12 +5,26 @@ import { Eye } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const NationalityActions = ({ nationality }: { nationality: Nationality }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editedName, setEditedName] = useState(nationality.name);
   const [editedCode, setEditedCode] = useState(nationality.code ?? "");
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: updateNationality,
+    onSuccess: () => {
+      // Invalidate and refetch the nationalities query
+      queryClient.invalidateQueries({ queryKey: ["Nationality"] });
+      setIsDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Failed to update Nationality:", error);
+      alert("Failed to update Nationality. Please try again.");
+    },
+  });
 
   const handleSave = async () => {
     if (!editedName.trim()) {
@@ -18,23 +32,11 @@ export const NationalityActions = ({ nationality }: { nationality: Nationality }
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await updateNationality({
-        id: Number(nationality.id),
-        name: editedName,
-        code: Number(editedCode),
-      });
-
-      console.log("Updated Nationality:", response);
-
-      setIsDialogOpen(false);
-    } catch (error) {
-      console.error("Failed to update Nationality:", error);
-      alert("Failed to update Nationality. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    updateMutation.mutate({
+      id: Number(nationality.id),
+      name: editedName,
+      code: Number(editedCode),
+    });
   };
 
   return (
@@ -83,8 +85,8 @@ export const NationalityActions = ({ nationality }: { nationality: Nationality }
             </div>
 
             {/* Save Button */}
-            <Button onClick={handleSave} disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save"}
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogContent>

@@ -5,11 +5,25 @@ import { BloodGroup } from "@/types/resources/blood-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Eye } from "lucide-react";
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const BloodGroupActions = ({ bloodGroup }: { bloodGroup: BloodGroup }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editedType, setEditedType] = useState(bloodGroup.type);
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: updateBloodGroup,
+    onSuccess: () => {
+      // Invalidate and refetch the blood groups query
+      queryClient.invalidateQueries({ queryKey: ["Blood Groups"] });
+      setIsDialogOpen(false);
+    },
+    onError: (error) => {
+      console.error("Failed to update blood group:", error);
+      alert("Failed to update blood group. Please try again.");
+    },
+  });
 
   const handleSave = async () => {
     if (!editedType.trim()) {
@@ -17,22 +31,10 @@ export const BloodGroupActions = ({ bloodGroup }: { bloodGroup: BloodGroup }) =>
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const response = await updateBloodGroup({
-        id: Number(bloodGroup.id),
-        type: editedType,
-      });
-
-      console.log("Updated blood group:", response);
-
-      setIsDialogOpen(false); // Close the dialog after saving
-    } catch (error) {
-      console.error("Failed to update blood group:", error);
-      alert("Failed to update blood group. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    updateMutation.mutate({
+      id: Number(bloodGroup.id),
+      type: editedType,
+    });
   };
 
   return (
@@ -58,8 +60,8 @@ export const BloodGroupActions = ({ bloodGroup }: { bloodGroup: BloodGroup }) =>
           </DialogHeader>
           <div className="space-y-4">
             <Input value={editedType} onChange={(e) => setEditedType(e.target.value)} />
-            <Button onClick={handleSave} disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save"}
+            <Button onClick={handleSave} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogContent>
