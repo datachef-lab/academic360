@@ -28,7 +28,7 @@ export async function findAllStreams(): Promise<StreamType[]> {
         return await streamResponseFormat(stream);
     }))).filter((stream): stream is StreamType => stream !== null);
 
-    console.log(formattedStreams);
+    // console.log(formattedStreams);
 
     return formattedStreams;
 }

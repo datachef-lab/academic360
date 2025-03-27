@@ -41,8 +41,8 @@ const EditReligionModal: React.FC<EditReligion> = ({ type,data, onClose }) => {
         throw new Error(`${type} ID is undefined`);
       },
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["getReligion"]});
-        onClose();
+        queryClient.invalidateQueries({ queryKey: ["Religion"]});
+       
       },
     })
 

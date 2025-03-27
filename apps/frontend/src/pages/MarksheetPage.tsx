@@ -7,7 +7,7 @@ import MarksheetCCF from "../components/marksheet/ccf";
 import { getFile, getScanMarksheets } from "@/services/document-apis";
 
 export default function MarksheetPage() {
-  const { framework, rollNumber } = useParams();
+  const { framework, rollNumber } = useParams<{ framework: string; rollNumber: string }>();
   const [existingFiles, setExistingFiles] = useState<{ year: number; filePath: string }[]>([]);
 
   useQuery({
@@ -30,13 +30,13 @@ export default function MarksheetPage() {
     <div className="w-full h-[92vh] flex">
       <ResizablePanelGroup direction="horizontal" className="w-full h-full">
         {/* Left Panel - Marksheet */}
-        <ResizablePanel className=" p-4 shadow-md rounded-md">
+        <ResizablePanel className=" p-4 shadow-md rounded-md min-w-[1100px]">
           <MarksheetCCF />
         </ResizablePanel>
-        <ResizableHandle className="bg-red-500 mx-2" />
+        <ResizableHandle className="" />
 
         {/* Right Panel - Tabs for Years */}
-        <ResizablePanel className="">
+        <ResizablePanel className="w-1/4">
           {existingFiles.length > 0 ? (
             <Tabs defaultValue={existingFiles[0].year.toString()} className="w-full">
               {/* Tabs List - Scrollable for better UX */}

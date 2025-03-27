@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import Header from "./Header";
-import { SubjectMetadata } from "@/types/academics/subject-metadata";
+import { SubjectMetadata, SubjectType } from "@/types/academics/subject-metadata";
 import { useQuery } from "@tanstack/react-query";
 import { getSubjectMetadataByFilters } from "@/services/subject-metadata";
 import { useParams } from "react-router-dom";
@@ -15,6 +15,8 @@ import InputInitials from "./InputInitials";
 import { getSearchedStudentsByRollNumber } from "@/services/student";
 import { Student } from "@/types/user/student";
 import { Framework } from "@/types/enums";
+import { Stream } from "@/types/academics/stream";
+import { InputBox } from "./InputBox";
 
 const columns = [
   "Course Code (Course Type)",
@@ -31,7 +33,7 @@ const MarksheetCCF = () => {
   const { user } = useAuth();
   const { framework, rollNumber, marksheetId } = useParams();
 
-  const [, setSubjectMetadataArr] = useState<SubjectMetadata[]>([]);
+  const [subjectMetadataArr, setSubjectMetadataArr] = useState<SubjectMetadata[]>([]);
   const [marksheet, setMarksheet] = useState<Marksheet | null>();
   const [student, setStudent] = useState<Student | null>();
 
@@ -148,10 +150,356 @@ const MarksheetCCF = () => {
     },
   });
 
+  function getLetterGrade(subject: Subject) {
+    if (subject.totalMarks === null) {
+      return null;
+    }
+
+    const foundSubjectMetadata = subject.subjectMetadata;
+
+    if (!foundSubjectMetadata) {
+      return null;
+    }
+
+    if (
+      subject.internalMarks &&
+      foundSubjectMetadata.fullMarksInternal &&
+      calculatePercentage(Number(subject.internalMarks), foundSubjectMetadata.fullMarksInternal) < 30
+    ) {
+      return "F(IN)";
+    }
+    if (
+      subject.practicalMarks &&
+      foundSubjectMetadata.fullMarksPractical &&
+      calculatePercentage(Number(subject.practicalMarks), foundSubjectMetadata.fullMarksPractical) < 30
+    ) {
+      return "F(PR)";
+    }
+    if (
+      subject.theoryMarks &&
+      foundSubjectMetadata.fullMarksTheory &&
+      calculatePercentage(Number(subject.theoryMarks), foundSubjectMetadata.fullMarksTheory) < 30
+    ) {
+      return "F(TH)";
+    }
+    if (
+      subject.tutorialMarks &&
+      foundSubjectMetadata.fullMarksTutorial &&
+      calculatePercentage(Number(subject.tutorialMarks), foundSubjectMetadata.fullMarksTutorial) < 30
+    ) {
+      return "F(TU)";
+    }
+
+    const subjectPercent = calculatePercentage(subject.totalMarks as number, foundSubjectMetadata?.fullMarks as number);
+
+    if (subjectPercent >= 90 && subjectPercent <= 100) {
+      return "A++";
+    }
+    if (subjectPercent >= 80 && subjectPercent < 90) {
+      return "A+";
+    }
+    if (subjectPercent >= 70 && subjectPercent < 80) {
+      return "A";
+    }
+    if (subjectPercent >= 60 && subjectPercent < 70) {
+      return "B+";
+    }
+    if (subjectPercent >= 50 && subjectPercent < 60) {
+      return "B";
+    }
+    if (subjectPercent >= 40 && subjectPercent < 50) {
+      return "C+";
+    }
+    if (subjectPercent >= 30 && subjectPercent < 40) {
+      return "C";
+    }
+    if (subjectPercent >= 0 && subjectPercent < 30) {
+      return "F";
+    }
+  }
+
+  //   async function getClassification(cgpa: number, studentId: number) {
+  //     const marksheetList: MarksheetType[] = await findMarksheetsByStudentId(studentId);
+
+  //     let isClearedSemester = false;
+  //     for (let i = 0; i < 6; i++) {
+  //       const marksheetObj = marksheetList.find((marksheet) => marksheet.semester == i + 1);
+  //       if (!marksheetObj || !marksheetObj.sgpa) {
+  //         isClearedSemester = false;
+  //         break;
+  //       }
+  //       isClearedSemester = true;
+  //     }
+
+  //     if (!isClearedSemester) {
+  //       return "Previous Semester not cleared";
+  //     } else {
+  //       if (cgpa >= 9 && cgpa <= 10) {
+  //         return "Outstanding";
+  //       } else if (cgpa >= 8 && cgpa < 9) {
+  //         return "Excellent";
+  //       } else if (cgpa >= 7 && cgpa < 8) {
+  //         return "Very Good";
+  //       } else if (cgpa >= 6 && cgpa < 7) {
+  //         return "Good";
+  //       } else if (cgpa >= 5 && cgpa < 6) {
+  //         return "Average";
+  //       } else if (cgpa >= 4 && cgpa < 5) {
+  //         return "Fair";
+  //       } else if (cgpa >= 3 && cgpa < 4) {
+  //         return "Satisfactory";
+  //       } else if (cgpa >= 0 && cgpa < 3) {
+  //         return "Fail";
+  //       }
+  //     }
+  //   }
+
+  function getRemarks(
+    marksheetPercent: number,
+    stream: Stream,
+    course: "HONOURS" | "GENERAL",
+    semester: number,
+    subjects: Subject[],
+  ) {
+    // Firstly check if all the subjects are got cleared, if not then return "Semester not cleared."
+    for (let i = 0; i < subjects.length; i++) {
+      const subject = subjects[i];
+
+      const subjectMetadata = subjects[i].subjectMetadata;
+
+      if (
+        subject.internalMarks &&
+        subjectMetadata.fullMarksInternal &&
+        calculatePercentage(Number(subject.internalMarks), subjectMetadata.fullMarksInternal) < 30
+      ) {
+        return "Semester not cleared.";
+      }
+      if (
+        subject.practicalMarks &&
+        subjectMetadata.fullMarksPractical &&
+        calculatePercentage(Number(subject.practicalMarks), subjectMetadata.fullMarksPractical) < 30
+      ) {
+        return "Semester not cleared.";
+      }
+      if (
+        subject.theoryMarks &&
+        subjectMetadata.fullMarksTheory &&
+        calculatePercentage(Number(subject.theoryMarks), subjectMetadata.fullMarksTheory) < 30
+      ) {
+        return "Semester not cleared.";
+      }
+      if (
+        subject.tutorialMarks &&
+        subjectMetadata.fullMarksTutorial &&
+        calculatePercentage(Number(subject.tutorialMarks), subjectMetadata.fullMarksTutorial) < 30
+      ) {
+        return "Semester not cleared.";
+      }
+      if (subjects[i].totalMarks === null || subjects[i].totalMarks === -1) {
+        return "Semester not cleared.";
+      }
+
+      const percentMarks = ((subjects[i].totalMarks as number) * 100) / subjects[i].subjectMetadata.fullMarks;
+
+      if (percentMarks < 30) {
+        return "Semester not cleared.";
+      }
+    }
+
+    // Get the remarks by total_marks percentage
+    if (marksheetPercent < 30) {
+      // For failed marksheet
+      return "Semester not cleared.";
+    } else {
+      // For passed marksheet
+      if (semester != 6) {
+        // For semester: 1, 2, 3, 4, 5
+        return "Semester Cleared.";
+      } else {
+        // For semester: 6
+        if (stream.degree.name.toUpperCase() !== "BCOM") {
+          // For BA & BSC
+          return "Qualified with Honours.";
+        } else {
+          // For BCOM
+          if (course.toUpperCase() === "HONOURS") {
+            // For honours
+            return "Semester cleared with honours.";
+          } else {
+            // For general
+            return "Semester cleared with general.";
+          }
+        }
+      }
+    }
+  }
+
+  function calculatePercentage(totalMarks: number, fullMarks: number) {
+    return (totalMarks * 100) / fullMarks;
+  }
+
+  function calculateSGPA(marksheet: Marksheet) {
+    let totalMarksObtained = 0,
+      fullMarksSum = 0,
+      ngp_credit = 0,
+      creditSum = 0;
+    for (let i = 0; i < marksheet.subjects.length; i++) {
+      if (!marksheet.subjects[i].totalMarks) {
+        continue; // If totalMarks is not present, then continue to the next subject
+      }
+
+      const subject = marksheet.subjects[i];
+
+      const subjectMetadata = marksheet.subjects[i].subjectMetadata;
+
+      if (
+        subject.internalMarks &&
+        subjectMetadata.fullMarksInternal &&
+        calculatePercentage(Number(subject.internalMarks), subjectMetadata.fullMarksInternal) < 30
+      ) {
+        return null;
+      }
+      if (
+        subject.practicalMarks &&
+        subjectMetadata.fullMarksPractical &&
+        calculatePercentage(Number(subject.practicalMarks), subjectMetadata.fullMarksPractical) < 30
+      ) {
+        return null;
+      }
+      if (
+        subject.theoryMarks &&
+        subjectMetadata.fullMarksTheory &&
+        calculatePercentage(Number(subject.theoryMarks), subjectMetadata.fullMarksTheory) < 30
+      ) {
+        return null;
+      }
+      if (
+        subject.tutorialMarks &&
+        subjectMetadata.fullMarksTutorial &&
+        calculatePercentage(Number(subject.tutorialMarks), subjectMetadata.fullMarksTutorial) < 30
+      ) {
+        return null;
+      }
+
+      const subjectPercent = ((subject.totalMarks as number) * 100) / subject.subjectMetadata.fullMarks;
+
+      if (subjectPercent < 30) {
+        console.log(`Subject Percentage: ${subjectPercent}`);
+        return null; // If any subject is failed, return null immediately
+      }
+
+      if (marksheet.subjects[i].totalMarks) {
+        totalMarksObtained += marksheet.subjects[i].totalMarks as number;
+      }
+      fullMarksSum += marksheet.subjects[i].subjectMetadata.fullMarks;
+
+      if (!marksheet.subjects[i].subjectMetadata.credit || !marksheet.subjects[i].ngp) {
+        continue;
+      }
+      ngp_credit += Number(marksheet.subjects[i].ngp) * (marksheet.subjects[i].subjectMetadata.credit as number);
+      creditSum += marksheet.subjects[i].subjectMetadata.credit as number;
+    }
+    const marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
+    if (marksheetPercent < 30) {
+      return null;
+    }
+    console.log("Calculating SGPA...");
+    return (ngp_credit / creditSum).toFixed(3);
+  }
+
+  //   async function calculateCGPA(studentId: number): Promise<number | null> {
+  //     const marksheetList = await findMarksheetsByStudentId(studentId);
+
+  //     const updatedMarksheetList: MarksheetType[] = [];
+
+  //     // Step 1: Select and update all the passed marksheets
+  //     for (let semester = 1; semester <= 6; semester++) {
+  //       // Filter marksheets for the current semester
+  //       const semesterWiseArr = marksheetList.filter((mks) => mks.semester === semester);
+
+  //       if (semesterWiseArr.length === 0) {
+  //         return null;
+  //       }
+
+  //       // Sort all the filtered marksheets by createdAt (assuming createdAt is a Date object)
+  //       semesterWiseArr.sort((a, b) => new Date(a.createdAt as Date).getTime() - new Date(b.createdAt as Date).getTime());
+
+  //       let updatedSemesterMarksheet: MarksheetType = semesterWiseArr[0];
+
+  //       for (let i = 0; i < semesterWiseArr.length; i++) {
+  //         if (semesterWiseArr[i].sgpa) {
+  //           // Student had cleared the semester
+  //           updatedSemesterMarksheet = semesterWiseArr[i];
+  //           continue;
+  //         }
+  //         // If student has not cleared the semester, then do go on updating the subjects upto recent status.
+  //         const { subjects } = semesterWiseArr[i];
+  //         for (let j = 0; j < subjects.length; j++) {
+  //           updatedSemesterMarksheet.subjects = updatedSemesterMarksheet.subjects.map((sbj) => {
+  //             if (subjects[j].subjectMetadata.id === sbj.subjectMetadata.id) {
+  //               return subjects[j]; // Return the recent changes for the subject
+  //             }
+  //             return sbj; // Otherwise, return the existing state which are not changed
+  //           });
+  //         }
+  //       }
+
+  //       updatedMarksheetList.push(updatedSemesterMarksheet);
+  //     }
+
+  //     let sgpa_totalcredit = 0,
+  //       creditSumAllSem = 0;
+
+  //     for (let i = 1; i <= 6; i++) {
+  //       const marksheet = marksheetList.find((obj) => obj.semester == i);
+  //       if (!marksheet) {
+  //         return null;
+  //       }
+  //       const sgpa = formatMarks(marksheet.sgpa as string) as number;
+  //       const totalCredit = calculateTotalCredit(marksheet);
+  //       sgpa_totalcredit += sgpa * totalCredit;
+  //       creditSumAllSem += totalCredit;
+  //     }
+
+  //     // Return the cgpa
+  //     return parseFloat((sgpa_totalcredit / creditSumAllSem).toFixed(3));
+  //   }
+
+  function formatMarks(marks: string | null): number | null {
+    console.log(marks);
+    if (!marks) {
+      return null;
+    }
+
+    if (marks.toString().trim() === "") {
+      return null;
+    }
+
+    if (marks.toString().toUpperCase() === "AB") {
+      return -1;
+    }
+
+    const tmpMarks = Number(marks);
+    return isNaN(tmpMarks) ? null : tmpMarks;
+  }
+
+  function calculateTotalCredit(marksheet: Marksheet) {
+    let totalCredit = 0;
+    for (let i = 0; i < marksheet.subjects.length; i++) {
+      if (!marksheet.subjects[i].subjectMetadata.credit) {
+        continue;
+      }
+
+      totalCredit += marksheet.subjects[i].subjectMetadata.credit as number;
+    }
+
+    return totalCredit;
+  }
+
   return (
-    <div className=" w-full h-full overflow-auto">
+    <div className=" w-full h-full overflow-auto text-xs">
       <Header />
-      <div className="w-[1240px]">
+      <div className="w-[1000px]">
         <InputInitials marksheet={marksheet} />
         <div className="w-full border border-gray-300 shadow-sm rounded-lg">
           {/* Table Header */}
@@ -189,7 +537,12 @@ const MarksheetCCF = () => {
                 <div className="border-r border-gray-300">
                   <div className="text-left h-full">
                     <p className="flex items-center px-2 h-1/3">Theory</p>
-                    <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">Practical</p>
+                    {subject.subjectMetadata.fullMarksTutorial && (
+                      <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">Tutorial</p>
+                    )}
+                    {subject.subjectMetadata.fullMarksPractical && (
+                      <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">Practical</p>
+                    )}
                     <p className="flex items-center justify-end px-2 h-1/3 font-semibold uppercase text-right">Total</p>
                   </div>
                 </div>
@@ -197,12 +550,21 @@ const MarksheetCCF = () => {
                 {/* Full Marks */}
                 <div className="border-r border-gray-300">
                   <div className="h-full">
-                    <p className="flex justify-center items-center px-2 h-1/3">
-                      {subject.subjectMetadata.fullMarksTheory}
-                    </p>
-                    <p className="flex justify-center items-center px-2 h-1/3 border-t border-b border-gray-300">
-                      {subject.subjectMetadata.fullMarksPractical}
-                    </p>
+                    {subject.subjectMetadata.fullMarksTheory && (
+                      <p className="flex justify-center items-center px-2 h-1/3">
+                        {subject.subjectMetadata.fullMarksTheory}
+                      </p>
+                    )}
+                    {subject.subjectMetadata.fullMarksTutorial && (
+                      <p className="flex justify-center items-center px-2 h-1/3 border-t border-b border-gray-300">
+                        {subject.subjectMetadata.fullMarksTutorial}
+                      </p>
+                    )}
+                    {subject.subjectMetadata.fullMarksPractical && (
+                      <p className="flex justify-center items-center px-2 h-1/3 border-t border-b border-gray-300">
+                        {subject.subjectMetadata.fullMarksPractical}
+                      </p>
+                    )}
                     <p className="flex items-center justify-center font-semibold px-2 h-1/3 text-right">
                       {subject.subjectMetadata.fullMarks}
                     </p>
@@ -211,14 +573,29 @@ const MarksheetCCF = () => {
 
                 {/* Marks Obtained */}
                 <div className="border-r border-gray-300">
-                  <Input
+                  {subject.subjectMetadata.fullMarksTheory && (
+                    <div className="h-1/3">
+                      <InputBox fullMarks={subject.subjectMetadata.fullMarksTheory} />
+                    </div>
+                  )}
+                  {subject.subjectMetadata.fullMarksTutorial && (
+                    <div className="border-t border-b h-1/3 w-full">
+                      <InputBox fullMarks={subject.subjectMetadata.fullMarksTutorial} />
+                    </div>
+                  )}
+                  {subject.subjectMetadata.fullMarksPractical && (
+                    <div className="border-t border-b h-1/3 w-full">
+                      <InputBox fullMarks={subject.subjectMetadata.fullMarksPractical} />
+                    </div>
+                  )}
+                  {/* <Input
                     className="rounded w-full text-center border-none border-b"
                     value={subject.theoryMarks as string}
                   />
                   <Input
                     className="rounded w-full text-center border-r-0 border-l-0"
                     value={subject.practicalMarks as string}
-                  />
+                  /> */}
                   <p className="flex items-center justify-center font-semibold px-2 h-1/3 text-right">0</p>
                 </div>
 

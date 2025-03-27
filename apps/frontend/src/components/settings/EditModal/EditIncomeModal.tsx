@@ -30,7 +30,7 @@ const EditIncomeModal: React.FC<EditAnnualIncome> = ({type, data, onClose }) => 
     createdAt: data.createdAt || new Date(),
     updatedAt: data.updatedAt || new Date()
   });
-  const activeSetting={label:"AnnualIncome"};
+  
 const updateData = useMutation({
   mutationFn: (formData:AnnualIncome) => {
     if (data.id !== undefined) {
@@ -40,7 +40,7 @@ const updateData = useMutation({
   },
   onSuccess: async () => {
      await queryClient.invalidateQueries({
-      queryKey: [activeSetting.label],
+      queryKey: ["Annual Income"],
     });
   },
 });

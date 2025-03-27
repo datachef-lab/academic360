@@ -46,8 +46,8 @@ const EditBoardUniversityModal: React.FC<EditUserBoardUniversity> = ({ type,data
         throw new Error(`${type} ID is undefined`);
       },
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["getBoardUniversity"]});
-        onClose();
+        queryClient.invalidateQueries({ queryKey: ["Board Universities"]});
+        
       },
     })
 

@@ -164,11 +164,8 @@ export const UpdateAnnualIncome =async (formData:AnnualIncome,id:number)=>{
 export const UpdateReligion =async (formData:Religion,id:number)=>{
     console.log("formdata",formData);
     console.log("id",id);
-    const res=await axiosInstance.put(`/api/religions/${id}`,formData,{
-        headers:{
-            "Authorization": `Bearer ${localStorage.getItem("token")}`,
-       } 
-    })
+    const res=await axiosInstance.put(`/api/religions/${id}`,formData   
+    )
     return res.data;
 }
 

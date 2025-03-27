@@ -50,6 +50,40 @@ export const getAllReligion = async (
   }
 };
 
+// export const updateReligionRecord = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     const { id } = req.params;
+//    const {createdAt,updatedAt,...props}=req.body as Religion
+//     const records = await db
+//       .update(religionModel)
+//       .set(props)
+//       .where(eq(religionModel.id, Number(id)))
+//       .returning();
+//     if (records) {
+//       res
+//         .status(200)
+//         .json(
+//           new ApiResponse(
+//             200,
+//             "UPDATED",
+//             "Religion records updated successfully",
+//           ),
+//         );
+//         // 
+//     }
+//     res
+//       .status(404)
+//       .json(
+//         new ApiResponse(404, "NOT_FOUND", null, "religion record not found"),
+//       );
+//   } catch (error) {
+//     handleError(error, res, next);
+//   }
+// };
 export const updateReligionRecord = async (
   req: Request,
   res: Response,
@@ -57,33 +91,39 @@ export const updateReligionRecord = async (
 ) => {
   try {
     const { id } = req.params;
-   const {createdAt,updatedAt,...props}=req.body as Religion
+    const { createdAt, updatedAt, ...props } = req.body as Religion;
+
     const records = await db
       .update(religionModel)
       .set(props)
       .where(eq(religionModel.id, Number(id)))
       .returning();
-    if (records) {
-      res
+
+    // ✅ Check if records exist and return immediately after sending response
+    if (records.length > 0) {
+      return res
         .status(200)
         .json(
           new ApiResponse(
             200,
             "UPDATED",
+            records, // ✅ Changed from string to actual records
             "Religion records updated successfully",
           ),
         );
-        // 
     }
-    res
+
+    // ✅ Moved into `else` block so it's not executed after a successful update
+    return res
       .status(404)
       .json(
-        new ApiResponse(404, "NOT_FOUND", null, "religion record not found"),
+        new ApiResponse(404, "NOT_FOUND", null, "Religion record not found"),
       );
   } catch (error) {
     handleError(error, res, next);
   }
 };
+
 
 export const deleteReligionRecord = async (
   req: Request,

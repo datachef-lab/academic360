@@ -25,8 +25,7 @@ interface EditUserProps {
 }
 const USER_TYPES=["STUDENT","TEACHER","ADMIN"];
 const EditUserModal: React.FC<EditUserProps> = ({ user, onClose }) => {
-  const  activeSetting={label:"users"}
-  const pagination= { pageIndex: 0, pageSize: 10 };
+  
   const queryClient = useQueryClient();  
   const [formData, setFormData] = useState<User>({
     name:user.name||"",
@@ -49,7 +48,7 @@ const EditUserModal: React.FC<EditUserProps> = ({ user, onClose }) => {
           },
           onSuccess: async () => {
             await queryClient.invalidateQueries({
-              queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+              queryKey: ["All Users"],
             });
           },
 

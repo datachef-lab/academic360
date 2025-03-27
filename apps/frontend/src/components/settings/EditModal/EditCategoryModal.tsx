@@ -38,9 +38,7 @@ const EditCategoryModal: React.FC<EditUserBoardUniversity> = ({ type, data, onCl
     updatedAt: new Date(),
   });
 
-  const activeSetting = { label: 'categories' }; // Define activeSetting with a label property
-  const pagination = { pageIndex: 0, pageSize: 10 }; // Define pagination with pageIndex and pageSize properties
-
+ 
   const updateData = useMutation({
     mutationFn: (formData: Category) => {
       if (data.id !== undefined) {
@@ -50,9 +48,9 @@ const EditCategoryModal: React.FC<EditUserBoardUniversity> = ({ type, data, onCl
     },
     onSuccess: async () => {
      queryClient.invalidateQueries({
-        queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
+        queryKey: ["Categories"],
       });
-      onClose();
+    
     },
   });
 
