@@ -5,6 +5,7 @@ import {
     deleteReligionRecord,
     getAllReligion,
     updateReligionRecord,
+   
 } from "@/features/resources/controllers/religion.controller.js";
 
 const router = express.Router();
