@@ -7,9 +7,8 @@ import { subjectModel } from "@/features/academics/models/subject.model";
 import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model";
 import { academicIdentifierModel } from "../models/academicIdentifier.model";
 import { userModel } from "../models/user.model";
-import { handleError } from "@/utils";
+import { ApiResponse, handleError } from "@/utils";
 
-// Define the expected response structure
 interface StudentReport {
     id: number | 0;
     rollNumber : string |null;
@@ -33,10 +32,9 @@ export const getReportId = async (req: Request, res: Response,next:NextFunction)
         const { studentId } = req.params;
 
         if (!studentId) {
-             res.status(400).json({ message: "Student ID is required." });
+             res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Student ID is required."));
         }
 
-        // Fetch student records
         const studentRecords = await db
             .select({
                 id: marksheetModel.studentId,
@@ -62,15 +60,13 @@ export const getReportId = async (req: Request, res: Response,next:NextFunction)
             .where(eq(marksheetModel.studentId, Number(studentId)));
 
         if (!studentRecords.length) {
-        res.status(404).json({ message: "No records found for the given student ID." });
+        res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No report found for the given student ID."));
         }
 
-        // Calculate total full marks and total obtained marks
         const totalfullMarks = studentRecords.reduce((sum, record) => sum + record.fullMarks, 0);
         const totalobtainedMarks = studentRecords.reduce((sum, record) => sum + (record.obtainedMarks ?? 0), 0);
         const percentage = totalfullMarks > 0 ? ((totalobtainedMarks * 100) / totalfullMarks).toFixed(2) : "0.00";
 
-        // Construct the response
         const response: StudentReport = {
             id: studentRecords[0].id,
             rollNumber: studentRecords[0].rollNumber,
@@ -89,14 +85,14 @@ export const getReportId = async (req: Request, res: Response,next:NextFunction)
             percentage
         };
 
-         res.status(200).json(response);
+         res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Report fetched successfully!"));
     } catch (error) {
        handleError(error,res,next)
     }
 };
 export const getAllReports= async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // Fetch all student records from the database
+     
         const studentRecords = await db
             .select({
                 id: marksheetModel.studentId,
@@ -121,10 +117,10 @@ export const getAllReports= async (req: Request, res: Response, next: NextFuncti
             .innerJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
 
         if (!studentRecords.length) {
-            res.status(404).json({ message: "No student records found." });
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No report found for the given student ID."));
         }
 
-        // Group records by student ID
+    
         const studentData: { [key: number]: StudentReport } = {};
 
         studentRecords.forEach(record => {
@@ -151,14 +147,14 @@ export const getAllReports= async (req: Request, res: Response, next: NextFuncti
             studentData[record.id].totalobtainedMarks += record.obtainedMarks ?? 0;
         });
 
-        // Calculate percentage for each student
-        Object.values(studentData).forEach(student => {
+     
+       const response = Object.values(studentData).forEach(student => {
             student.percentage = student.totalfullMarks > 0
                 ? ((student.totalobtainedMarks * 100) / student.totalfullMarks).toFixed(2)+"%"
                 : "0.00%";
         });
 
-        res.status(200).json(Object.values(studentData));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", response, "All reports are fetched!"));
     } catch (error) {
         handleError(error, res, next);
     }
