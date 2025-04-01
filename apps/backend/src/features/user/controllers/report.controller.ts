@@ -8,6 +8,7 @@ import { subjectMetadataModel } from "@/features/academics/models/subjectMetadat
 import { academicIdentifierModel } from "../models/academicIdentifier.model";
 import { userModel } from "../models/user.model";
 import { ApiResponse, handleError } from "@/utils";
+import { getReports } from "../services/reports.service";
 
 interface StudentReport {
     id: number | 0;
@@ -90,72 +91,24 @@ export const getReportId = async (req: Request, res: Response,next:NextFunction)
        handleError(error,res,next)
     }
 };
-export const getAllReports= async (req: Request, res: Response, next: NextFunction) => {
-    try {
-     
-        const studentRecords = await db
-            .select({
-                id: marksheetModel.studentId,
-                rollNumber: academicIdentifierModel.rollNumber,
-                registrationNumber: academicIdentifierModel.registrationNumber,
-                uid: academicIdentifierModel.uid,
-                name: userModel.name,
-                semester: marksheetModel.semester,
-                year: marksheetModel.year,
-                fullMarks: subjectMetadataModel.fullMarks,
-                obtainedMarks: subjectModel.totalMarks,
-                credit: subjectMetadataModel.credit,
-                sgpa: marksheetModel.sgpa,
-                cgpa: marksheetModel.cgpa,
-                letterGrade: marksheetModel.classification,
-                remarks: marksheetModel.remarks
-            })
-            .from(marksheetModel)
-            .innerJoin(academicIdentifierModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
-            .innerJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
-            .innerJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
-            .innerJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
 
-        if (!studentRecords.length) {
-            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No report found for the given student ID."));
+
+export const getAllReports = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const page = parseInt(req.query.page as string, 10) || 1;
+        const pageSize = parseInt(req.query.pageSize as string, 10) || 10;
+        const searchText = req.query.searchText as string || "";
+
+        if (isNaN(page) || isNaN(pageSize) || page < 1 || pageSize < 1) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid page or pageSize."));
         }
 
-    
-        const studentData: { [key: number]: StudentReport } = {};
-
-        studentRecords.forEach(record => {
-            if (!studentData[record.id]) {
-                studentData[record.id] = {
-                    id: record.id,
-                    rollNumber: record.rollNumber,
-                    registrationNumber: record.registrationNumber,
-                    uid: record.uid,
-                    name: record.name,
-                    semester: record.semester,
-                    year: record.year,
-                    totalfullMarks: 0,
-                    totalobtainedMarks: 0,
-                    credit: record.credit ?? 0,
-                    sgpa: record.sgpa ? Number(record.sgpa) : 0,
-                    cgpa: record.cgpa ? Number(record.cgpa) : 0,
-                    letterGrade: record.letterGrade,
-                    remarks: record.remarks,
-                    percentage: "0.00"
-                };
-            }
-            studentData[record.id].totalfullMarks += record.fullMarks;
-            studentData[record.id].totalobtainedMarks += record.obtainedMarks ?? 0;
-        });
-
-     
-       const response = Object.values(studentData).forEach(student => {
-            student.percentage = student.totalfullMarks > 0
-                ? ((student.totalobtainedMarks * 100) / student.totalfullMarks).toFixed(2)+"%"
-                : "0.00%";
-        });
-
-        res.status(200).json(new ApiResponse(200, "SUCCESS", response, "All reports are fetched!"));
+        const reportsData = await getReports({ page, pageSize, searchText });
+        if(!reportsData) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No reports found."));
+        }
+        res.status(200).json(new ApiResponse(200, "SUCCESS", reportsData, "Reports retrieved successfully."));
     } catch (error) {
-        handleError(error, res, next);
+       handleError(error, res, next);
     }
 };

@@ -1,6 +1,6 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { getAllReports, getReportId } from "../controllers/report.controller";
+import {  getAllReports, getReportId } from "../controllers/report.controller";
 
 const router = express.Router();
 
