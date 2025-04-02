@@ -7,6 +7,7 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { io } from "@/app.js";
+import { sendFileUploadNotification, sendEditNotification, sendUpdateNotification } from "@/utils/notificationHelpers.js";
 
 export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     const socketId = req.body.socketId;
@@ -26,6 +27,9 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
             stage: 'completed',
             message: 'File processed successfully!',
         });
+
+        // Send real-time notification to all users
+        sendFileUploadNotification(req, fileName);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", isUploaded, "Marksheets uploaded successfully!"));
 
@@ -55,6 +59,13 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
             res.status(429).json(new ApiError(429, "Unable to create the marksheet!"));
             return;
         }
+
+        // Send real-time notification
+        sendEditNotification(
+            req, 
+            `Marksheet #${newMarksheet.id}`, 
+            'Marksheet'
+        );
 
         res.status(201).json(new ApiResponse(201, "CREATED", newMarksheet, "Marksheet created successfully!"));
     } catch (error) {
@@ -104,6 +115,13 @@ export const updatedMarksheet = async (req: Request, res: Response, next: NextFu
             res.status(400).json(new ApiError(404, "Unable to save the marksheet!"));
             return;
         }
+
+        // Send real-time notification
+        sendUpdateNotification(
+            req, 
+            `Marksheet #${id}`, 
+            'Marksheet'
+        );
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", savedMarksheet, "Marksheet saved successfully!"));
     } catch (error) {

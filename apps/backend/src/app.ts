@@ -11,8 +11,9 @@ import passport from "passport";
 import { db } from "./db/index.js";
 import { eq } from "drizzle-orm";
 import { createServer } from 'http';
-import { Server, Socket } from 'socket.io';
+import { Server } from 'socket.io';
 import { corsOptions } from "@/config/corsOptions.js";
+import { socketService } from "./services/socketService.js";
 
 import { logger, errorHandler } from "@/middlewares/index.js";
 
@@ -66,21 +67,17 @@ app.use(express.urlencoded({ extended: true, limit: "180kb" }));
 
 app.use(cookieParser());
 
+// Setup Socket.IO with CORS
 export const io = new Server(httpServer, {
     cors: {
-        origin: process.env.CORS_ORIGIN! || 'http://localhost:5173', // Frontend URL
+        origin: process.env.CORS_ORIGIN! || 'http://localhost:5173',
         methods: ['GET', 'POST'],
+        credentials: true,
     },
 });
 
-// Socket.IO connection (minimal setup)
-io.on('connection', (socket: Socket) => {
-    console.log('Client connected:', socket.id);
-
-    socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
-    });
-});
+// Initialize the socket service with our io instance
+socketService.initialize(io);
 
 app.use(
     expressSession({

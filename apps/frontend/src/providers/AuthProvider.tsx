@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, ReactNode, createContext } from "react";
+import React, { useState, useCallback, useEffect, ReactNode, createContext, useContext } from "react";
 import axiosInstance from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 import { User } from "@/types/user/user";
@@ -13,6 +13,14 @@ export interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
 
 interface AuthProviderProps {
   children: ReactNode;

@@ -2,42 +2,46 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell } from "lucide-react";
-
-// Sample notification data
-const notifications = [
-  {
-    id: 1,
-    title: "New Admission Request",
-    description: "A new admission request has been submitted.",
-    status: "new", // new, urgent, resolved
-    timestamp: "5 minutes ago",
-    readTime: null, // Not read yet
-  },
-  {
-    id: 2,
-    title: "Library Book Due",
-    description: "Reminder: 'The Great Gatsby' is due tomorrow.",
-    status: "urgent",
-    timestamp: "2 hours ago",
-    readTime: null, // Not read yet
-  },
-  {
-    id: 3,
-    title: "System Maintenance",
-    description: "Scheduled maintenance on Jan 25, 2025.",
-    status: "resolved",
-    timestamp: "1 day ago",
-    readTime: "12 hours ago", // Already read
-  },
-];
+import { Bell, FileUp, Edit, RefreshCw, Info, Check, Trash2 } from "lucide-react";
+import { useNotifications } from "@/hooks/useNotifications";
+import { useState } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 export default function NotificationPanel() {
-  // Calculate unread notifications
-  const unreadCount = notifications.filter((notification) => !notification.readTime).length;
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearNotifications } = useNotifications();
+  const [isOpen, setIsOpen] = useState(false);
+  
+  // When panel opens, mark all as read
+  const handleOpen = (open: boolean) => {
+    setIsOpen(open);
+    if (open) {
+      markAllAsRead();
+    }
+  };
+
+  // Get icon based on notification type
+  const getIconForType = (type: string) => {
+    switch (type) {
+      case 'upload':
+        return <FileUp className="h-4 w-4 text-green-500" />;
+      case 'edit':
+        return <Edit className="h-4 w-4 text-blue-500" />;
+      case 'update':
+        return <RefreshCw className="h-4 w-4 text-orange-500" />;
+      default:
+        return <Info className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  // Format notification timestamp
+  const formatTimestamp = (timestamp: Date) => {
+    const date = new Date(timestamp);
+    return format(date, 'MMM dd, yyyy hh:mm a');
+  };
 
   return (
-    <Sheet>
+    <Sheet open={isOpen} onOpenChange={handleOpen}>
       <SheetTrigger>
         <Button size="icon" variant="ghost" className="relative border">
           <Bell />
@@ -49,46 +53,66 @@ export default function NotificationPanel() {
         </Button>
       </SheetTrigger>
       <SheetContent className="w-[350px] sm:w-[400px] right-0">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>Notifications</SheetTitle>
-        </SheetHeader>
-        <div className="space-y-4 mt-4">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 ${
-                notification.status === "new"
-                  ? "border-blue-500"
-                  : notification.status === "urgent"
-                    ? "border-red-500"
-                    : "border-gray-300"
-              }`}
+          {notifications.length > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={clearNotifications}
+              className="flex gap-1 items-center text-xs"
             >
-              <CardHeader className="flex justify-between items-center">
-                <CardTitle className="text-sm font-semibold">{notification.title}</CardTitle>
-
-                <Badge
-                  variant={
-                    notification.status === "new"
-                      ? "default"
-                      : notification.status === "urgent"
-                        ? "destructive"
-                        : "secondary"
-                  }
-                  className="capitalize inline"
-                >
-                  {notification.status}
-                </Badge>
-              </CardHeader>
-              <CardContent className="px-4">
-                <p className="text-sm ">{notification.description}</p>
-              </CardContent>
-              <CardFooter className="flex justify-between border-t items-center px-4 py-2">
-                <span className="text-xs ">Received: {notification.timestamp}</span>
-                <span className="text-xs ">{notification.readTime ? `Read: ${notification.readTime}` : "Unread"}</span>
-              </CardFooter>
-            </Card>
-          ))}
+              <Trash2 className="h-3 w-3" /> Clear All
+            </Button>
+          )}
+        </SheetHeader>
+        
+        <div className="space-y-4 mt-4 max-h-[80vh] overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No notifications to display
+            </div>
+          ) : (
+            notifications.map((notification) => (
+              <Card 
+                key={notification.id} 
+                className={cn(
+                  "transition-colors", 
+                  notification.read ? "bg-background" : "bg-muted/20"
+                )}
+              >
+                <CardHeader className="p-3 pb-1">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      {getIconForType(notification.type)}
+                      <CardTitle className="text-sm">{notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}</CardTitle>
+                    </div>
+                    {!notification.read && (
+                      <Badge variant="outline" className="text-xs bg-blue-500 hover:bg-blue-600 text-white">New</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-3 pt-0">
+                  <p className="text-sm">{notification.message}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatTimestamp(notification.createdAt)}
+                  </p>
+                </CardContent>
+                {!notification.read && (
+                  <CardFooter className="p-3 pt-0">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="ml-auto flex items-center gap-1 text-xs"
+                      onClick={() => markAsRead(notification.id)}
+                    >
+                      <Check className="h-3 w-3" /> Mark as read
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+            ))
+          )}
         </div>
       </SheetContent>
     </Sheet>

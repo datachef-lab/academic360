@@ -15,6 +15,7 @@ import {
 } from "@/pages";
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
+import { NotificationProvider } from "./providers/NotificationProvider";
 import StudentPage from "./pages/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
@@ -34,7 +35,9 @@ const router = createBrowserRouter([
     path: "/home",
     element: (
       <AuthProvider>
-        <HomeLayout />
+        <NotificationProvider>
+          <HomeLayout />
+        </NotificationProvider>
       </AuthProvider>
     ),
     children: [

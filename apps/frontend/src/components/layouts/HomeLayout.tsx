@@ -14,6 +14,7 @@ import styles from "@/styles/HomeLayout.module.css";
 import NotifcationPanel from "../globals/NotifcationPanel";
 import GlobalSearch from "../globals/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ConnectionStatus } from "../globals/ConnectionStatus";
 
 export default function HomeLayout() {
   const location = useLocation(); // Get current route location
@@ -51,6 +52,7 @@ export default function HomeLayout() {
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2">
+              <ConnectionStatus />
               <GlobalSearch />
               <NotifcationPanel />
               <ModeToggle />
