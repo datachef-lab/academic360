@@ -5,6 +5,7 @@ import { mockData } from "@/lib/Data";
 import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
 import { columns } from "@/components/reports/columns";
 import { DataTable } from "@/components/reports/DataTable";
+// import { useQuery } from "@tanstack/react-query";
 
 
 const Page: React.FC = () => {
@@ -22,7 +23,14 @@ const Page: React.FC = () => {
 
     setFilteredData(filtered);
   };
-
+// const {data,isLoading}=useQuery({
+//   queryKey:["reports"],
+//   queryFn:()=>getAllReports,
+//   enabled:false,
+//   onSuccess:(data)=>{
+//     setFilteredData(data)
+//   }
+// });
   return (
     <div>
      <div className="mt-4"> <FilterAndExportComponent onFilter={handleFilter} filteredData={filteredData} /></div>

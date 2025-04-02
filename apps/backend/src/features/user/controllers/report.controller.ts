@@ -91,7 +91,79 @@ export const getReportId = async (req: Request, res: Response,next:NextFunction)
        handleError(error,res,next)
     }
 };
+// export const getAllReports= async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+     
+//         const studentRecords = await db
+//             .select({
+//                 id: marksheetModel.studentId,
+//                 rollNumber: academicIdentifierModel.rollNumber,
+//                 registrationNumber: academicIdentifierModel.registrationNumber,
+//                 uid: academicIdentifierModel.uid,
+//                 name: userModel.name,
+//                 semester: marksheetModel.semester,
+//                 year: marksheetModel.year,
+//                 fullMarks: subjectMetadataModel.fullMarks,
+//                 obtainedMarks: subjectModel.totalMarks,
+//                 credit: subjectMetadataModel.credit,
+//                 sgpa: marksheetModel.sgpa,
+//                 cgpa: marksheetModel.cgpa,
+//                 letterGrade: marksheetModel.classification,
+//                 remarks: marksheetModel.remarks
+//             })
+//             .from(academicIdentifierModel)
+//             .leftJoin(marksheetModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
+//             .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+//             .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+//             .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
 
+//         if (!studentRecords.length) {
+//             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No report found for the given student ID."));
+//         }
+
+    
+//         const studentData: { [key: number]: StudentReport } = {};
+
+//         studentRecords.forEach(record => {
+//             if (record.id !== null && !studentData[record.id]) {
+//                 studentData[record.id] = {
+//                     id: record.id,
+//                     rollNumber: record.rollNumber,
+//                     registrationNumber: record.registrationNumber,
+//                     uid: record.uid,
+//                     name: record.name,
+//                     semester: record.semester ?? 0,
+//                     year: record.year??0,
+//                     totalfullMarks: record.fullMarks??0,
+//                     totalobtainedMarks: record.obtainedMarks ?? 0,
+//                     credit: record.credit ?? 0,
+//                     sgpa: record.sgpa ? Number(record.sgpa) : 0,
+//                     cgpa: record.cgpa ? Number(record.cgpa) : 0,
+//                     letterGrade: record.letterGrade,
+//                     remarks: record.remarks,
+//                     percentage: "0.00"
+//                 };
+//             }
+//             if (record.id !== null) {
+//                 studentData[record.id].totalfullMarks += record.fullMarks ?? 0;
+//             }
+//             if (record.id !== null) {
+//                 studentData[record.id].totalobtainedMarks += record.obtainedMarks ?? 0;
+//             }
+//         });
+
+     
+//        Object.values(studentData).forEach(student => {
+//             student.percentage = student.totalfullMarks > 0
+//                 ? ((student.totalobtainedMarks * 100) / student.totalfullMarks).toFixed(2)+"%"
+//                 : "0.00%";
+//         });
+
+//         res.status(200).json(new ApiResponse(200, "SUCCESS", studentData, "All reports are fetched!"));
+//     } catch (error) {
+//         handleError(error, res, next);
+//     }
+// };
 
 export const getAllReports = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -33,14 +33,14 @@ export const getReports = async ({ page, pageSize, searchText }: ReportQueryPara
                             credit: subjectMetadataModel.credit,
                             sgpa: marksheetModel.sgpa,
                             cgpa: marksheetModel.cgpa,
-                            letterGrade: marksheetModel.classification,
+                            letterGrade: subjectModel.letterGrade,
                             remarks: marksheetModel.remarks
                         })
                         .from(marksheetModel)
-                        .innerJoin(academicIdentifierModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
-                        .innerJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
-                        .innerJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
-                        .innerJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
+                        .leftJoin(academicIdentifierModel, eq(marksheetModel.studentId,academicIdentifierModel.studentId))
+                        .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+                        .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+                        .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
        
         if (searchText && searchText.trim()) {
             const baseQuery = student.where(
@@ -70,7 +70,7 @@ export const getReports = async ({ page, pageSize, searchText }: ReportQueryPara
 
         const studentData: { [key: number]: any } = {};
         reports.forEach(record => {
-            if (!studentData[record.id]) {
+            if (record.id !== null && !studentData[record.id]) {
                 studentData[record.id] = {
                     id: record.id,
                     rollNumber: record.rollNumber,
@@ -89,8 +89,8 @@ export const getReports = async ({ page, pageSize, searchText }: ReportQueryPara
                     percentage: "0.00%"
                 };
             }
-            studentData[record.id].totalfullMarks += record.fullMarks;
-            studentData[record.id].totalobtainedMarks += record.obtainedMarks ?? 0;
+            // studentData[record.id].totalfullMarks += record.fullMarks;
+            // studentData[record.id].totalobtainedMarks += record.obtainedMarks ?? 0;
         });
 
         const formattedData = Object.values(studentData).map((student) => ({
