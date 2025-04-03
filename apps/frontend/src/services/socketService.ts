@@ -1,10 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 import { toast } from 'sonner';
+import React from 'react';
 
 // Match the notification type definition from backend
 export interface Notification {
   id: string;
   userId?: string;
+  userName?: string;
   type: 'upload' | 'edit' | 'update' | 'info';
   message: string;
   createdAt: Date;
@@ -16,6 +18,7 @@ export interface Notification {
 interface RawNotification {
   id: string;
   userId?: string;
+  userName?: string;
   type: 'upload' | 'edit' | 'update' | 'info';
   message: string;
   createdAt: string | Date;
@@ -38,9 +41,10 @@ class SocketService {
   private socket: Socket | null = null;
   private notificationListeners: NotificationCallback[] = [];
   private connected = false;
-  private userId: string | null = null;
+  private userName: string | null = null;
   private connectListeners: ConnectionCallback[] = [];
   private disconnectListeners: ConnectionCallback[] = [];
+  private pendingAuth: { userName: string } | null = null;
 
   // Connect to the socket server
   connect() {
@@ -84,16 +88,28 @@ class SocketService {
     this.disconnectListeners = this.disconnectListeners.filter(cb => cb !== onDisconnect);
   }
 
-  // Authenticate the socket with user ID
-  authenticate(userId: string) {
-    if (!this.socket || !this.connected) {
-      console.warn('[SocketService] Cannot authenticate - socket not connected');
+  // Authenticate the socket with user name
+  authenticate(userName: string) {
+    // Store the auth info
+    this.userName = userName;
+    this.pendingAuth = { userName };
+
+    // If we're already connected, send the auth immediately
+    if (this.socket && this.connected) {
+      this.sendAuthentication();
+    }
+  }
+
+  // Internal method to send authentication
+  private sendAuthentication() {
+    if (!this.socket || !this.connected || !this.pendingAuth) {
       return;
     }
 
-    this.userId = userId;
-    this.socket.emit('authenticate', userId);
-    console.log(`[SocketService] Authenticated user: ${userId}`);
+    const { userName } = this.pendingAuth;
+    this.socket.emit('authenticate', { userName });
+    console.log(`[SocketService] Authenticated user: ${userName}`);
+    this.pendingAuth = null;
   }
 
   // Disconnect from the server
@@ -109,7 +125,7 @@ class SocketService {
       this.socket.disconnect();
       this.socket = null;
       this.connected = false;
-      this.userId = null;
+      this.userName = null;
       
       console.log('[SocketService] Disconnected from server');
     } catch (error) {
@@ -136,16 +152,20 @@ class SocketService {
     // Notify all connect listeners
     this.connectListeners.forEach(listener => listener());
     
-    // Show toast notification for connection
-    toast("Connected to server", {
+    // Show toast notification for connection with user name if available
+    const connectionMessage = this.userName 
+      ? ` ${this.userName} connected to server`
+      : "Connected to server";
+    
+    toast(React.createElement('div', { dangerouslySetInnerHTML: { __html: connectionMessage } }), {
       description: "Real-time notifications are enabled",
       icon: "🔌",
+      richColors: true,
+      className: 'notification-toast',
     });
     
-    // Re-authenticate if we had a userId
-    if (this.userId) {
-      this.authenticate(this.userId);
-    }
+    // Send pending authentication if any
+    this.sendAuthentication();
   };
 
   private handleDisconnect = () => {
@@ -155,10 +175,16 @@ class SocketService {
     // Notify all disconnect listeners
     this.disconnectListeners.forEach(listener => listener());
     
-    // Show toast notification for disconnection
-    toast("Disconnected from server", {
+    // Show toast notification for disconnection with user name if available
+    const disconnectionMessage = this.userName 
+      ? `${this.userName} disconnected from server`
+      : "Disconnected from server";
+    
+    toast(React.createElement('div', { dangerouslySetInnerHTML: { __html: disconnectionMessage } }), {
       description: "Real-time notifications are disabled",
       icon: "⚠️",
+      richColors: true,
+      className: 'notification-toast',
     });
   };
 
@@ -171,16 +197,59 @@ class SocketService {
       createdAt: notification.createdAt ? new Date(notification.createdAt) : new Date(),
     };
     
-    // Show toast notification
-    toast(typedNotification.message, {
-      description: new Date(typedNotification.createdAt).toLocaleTimeString(),
-      icon: this.getIconForNotificationType(typedNotification.type),
+    // Create a formatted message with the user's name in bold if available
+    const formattedMessage = notification.userName 
+      ? `<strong>${notification.userName}</strong> ${notification.message}`
+      : notification.message;
+    
+    // Get the appropriate icon and color based on notification type
+    const { icon } = this.getNotificationStyle(typedNotification.type);
+    
+    // Format the timestamp
+    const timeString = new Date(typedNotification.createdAt).toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    // Show toast notification with enhanced styling
+    toast(React.createElement('div', { dangerouslySetInnerHTML: { __html: formattedMessage } }), {
+      description: timeString,
+      icon,
       duration: 4000,
+      richColors: true,
+      className: 'notification-toast',
     });
     
     // Call all registered listeners
     this.notificationListeners.forEach(callback => callback(typedNotification));
   };
+
+  // Helper function to get notification style based on type
+  private getNotificationStyle(type: Notification['type']): { icon: string; color: string } {
+    switch (type) {
+      case 'upload':
+        return {
+          icon: '📤',
+          color: 'linear-gradient(to right, #3b82f6, #2563eb)'
+        };
+      case 'edit':
+        return {
+          icon: '✏️',
+          color: 'linear-gradient(to right, #10b981, #059669)'
+        };
+      case 'update':
+        return {
+          icon: '🔄',
+          color: 'linear-gradient(to right, #8b5cf6, #7c3aed)'
+        };
+      case 'info':
+      default:
+        return {
+          icon: 'ℹ️',
+          color: 'linear-gradient(to right, #6b7280, #4b5563)'
+        };
+    }
+  }
 
   private handleError = (error: SocketError | Error | unknown) => {
     console.error('[SocketService] Connection error:', error);
@@ -191,33 +260,10 @@ class SocketService {
       icon: "❌",
     });
   };
-  
-  // Helper functions for UI presentation
-  private getToastTypeFromNotification(notification: Notification): 'success' | 'info' | 'warning' | 'error' {
-    switch (notification.type) {
-      case 'upload':
-        return 'success';
-      case 'edit':
-        return 'info';
-      case 'update':
-        return 'info';
-      default:
-        return 'info';
-    }
-  }
-  
-  private getIconForNotificationType(type: Notification['type']) {
-    switch (type) {
-      case 'upload':
-        return '📤';
-      case 'edit':
-        return '✏️';
-      case 'update':
-        return '🔄';
-      case 'info':
-      default:
-        return 'ℹ️';
-    }
+
+  // Get the current user's name
+  getUserName(): string | null {
+    return this.userName;
   }
 }
 

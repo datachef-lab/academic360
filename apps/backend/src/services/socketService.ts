@@ -5,11 +5,12 @@ import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 export interface Notification {
   id: string;
   userId?: string; // Target user ID (if specific to a user)
+  userName?: string; // Name of the user who performed the action
   type: 'upload' | 'edit' | 'update' | 'info';
   message: string;
   createdAt: Date;
   read: boolean;
-  meta?: Record<string, any>; // Additional metadata
+  meta?: Record<string, unknown>; // Additional metadata
 }
 
 // Socket service class
