@@ -20,7 +20,7 @@ frontend.env
 # Testing
 coverage
 tmp.txt
-
+report.servicecopy.ts
 # Turbo
 .turbo
 
