@@ -52,7 +52,6 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id))
         .$dynamic();
 
-    // Build conditions array
     const conditions = [];
     
     if (searchText && searchText.trim()) {
@@ -86,13 +85,11 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         );
     }
 
-    // Apply conditions to query if any exist
     let query = baseQuery;
     if (conditions.length > 0) {
         query = query.where(and(...conditions));
     }
-
-    // First get all records without pagination
+  
     const allReportResult = await query;
     // console.log('Query returned', allReportResult.length, 'records')
 
@@ -106,7 +103,6 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         };
     }
 
-    // Process results into student data structure
     const studentData: Record<number, any> = {};
     
     allReportResult.forEach(record => {
@@ -131,7 +127,6 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         }
     });
 
-    // Populate subjects for each student
     allReportResult.forEach(record => {
         if (!studentData[record.id].subjects) {
             studentData[record.id].subjects = [];
@@ -165,7 +160,7 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         }
     });
 
-    // Format data and calculate statuses
+  
     const allFormattedData = Object.values(studentData).map((student) => {
         student.totalFullMarks = student.subjects.reduce((sum: number, sub: any) => sum + sub.fullMarks, 0);
         student.totalObtainedMarks = student.subjects.reduce((sum: number, sub: any) => sum + (sub.obtainedMarks || 0), 0);
@@ -174,13 +169,11 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         const percentage = student.totalFullMarks > 0
             ? (student.totalObtainedMarks / student.totalFullMarks) * 100
             : 0;
-
-        // Determine failure conditions
+  
         const hasFailedSubject = student.subjects.some((sub: any) => sub.status === "FAIL");
         const hasLowPercentage = percentage < 30;
         const isFailed = hasFailedSubject || hasLowPercentage;
 
-        // Set detailed status
         let status: string;
         if (hasFailedSubject && hasLowPercentage) {
             status = "FAIL (Subjects & Overall <30%)";
@@ -192,7 +185,6 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
             status = "PASS";
         }
 
-        // Format subjects with history
         const subjectsWithHistory = student.subjects.map((sub: any) => {
             const baseSubject = {
                 name: sub.name,
@@ -224,14 +216,12 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         };
     });
 
-    // Filter based on status if showFailedOnly is true
     const filteredData = showFailedOnly
         ? allFormattedData.filter(student => 
-            student.status.startsWith("FAIL") // Only include FAIL statuses
+            student.status.startsWith("FAIL")
           )
         : allFormattedData;
 
-    // Apply pagination AFTER all processing is done
     const paginatedData = filteredData.slice(
         (page - 1) * pageSize,
         page * pageSize
