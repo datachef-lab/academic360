@@ -1,7 +1,7 @@
 
 import { db } from "@/db/index";
 import { marksheetModel } from "@/features/academics/models/marksheet.model";
-import { eq, ilike, or, count, and, gt } from "drizzle-orm";
+import { eq, ilike, or, count, and, gt, lte } from "drizzle-orm";
 import { academicIdentifierModel } from "../models/academicIdentifier.model";
 import { userModel } from "../models/user.model";
 import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model";
@@ -21,9 +21,14 @@ type ReportQueryParams = {
 }
 
 
-export const getReports = async ({ page, pageSize, searchText, stream, framework, semester, year, showFailedOnly }: ReportQueryParams) => {
-    
-    const baseQuery = db
+export const getReports = async ({ page, pageSize, stream, framework, semester, year, showFailedOnly }: ReportQueryParams) => {
+    const filters = [
+        year !== undefined ? eq(marksheetModel.year, year): undefined,
+        framework ? eq(streamModel.framework, framework as "CCF" | "CBCS") : undefined,
+        stream ? eq(degreeModel.name, stream) : undefined,
+        semester !== undefined ? eq(marksheetModel.semester, semester) : undefined,
+      ];
+    const query = db
         .select({
             id: marksheetModel.studentId,
             rollNumber: academicIdentifierModel.rollNumber,
@@ -50,48 +55,12 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
         .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
         .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
         .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id))
-        .$dynamic();
+        .where(and(...filters.filter(Boolean)));
 
-    const conditions = [];
-    
-    if (searchText && searchText.trim()) {
-        conditions.push(
-            or(
-                ilike(userModel.name, `%${searchText}%`),
-                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`),
-                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`)
-            )
-        );
-    }
-    
-    if (stream) {
-        conditions.push(eq(degreeModel.name, stream));
-    }
-    
-    if (framework) {
-        conditions.push(eq(streamModel.framework, framework as "CCF" | "CBCS"));
-    }
-    
-    if (semester !== undefined) {
-        conditions.push(eq(marksheetModel.semester, semester));
-    }
-    
-    if (year && semester != null) {
-        conditions.push(
-            or(
-                eq(marksheetModel.year, year),
-                and(gt(marksheetModel.year, year), eq(marksheetModel.semester, semester))
-            )
-        );
-    }
-
-    let query = baseQuery;
-    if (conditions.length > 0) {
-        query = query.where(and(...conditions));
-    }
+   
   
     const allReportResult = await query;
-    // console.log('Query returned', allReportResult.length, 'records')
+    console.log('Query returned', allReportResult.length, 'records')
 
     if (!allReportResult || allReportResult.length === 0) {
         return {
@@ -209,9 +178,10 @@ export const getReports = async ({ page, pageSize, searchText, stream, framework
             percentage: percentage.toFixed(2) + "%",
             isFailed,
             status,
-            historicalStatus: year
-                ? (student.year <= year && isFailed ? "FAILED" : "PASSED")
-                : isFailed ? "FAILED" : "PASSED",
+            historicalStatus: year 
+  ? (student.year <= year && isFailed ? "FAILED" : "PASSED")
+  : isFailed ? "FAILED" : "PASSED",
+    
             subjects: subjectsWithHistory,
         };
     });

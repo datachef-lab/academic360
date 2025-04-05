@@ -1,40 +1,55 @@
-
-
-import React, { useState } from "react";
-import { mockData } from "@/lib/Data";
+import React, { useEffect, useState } from "react";
 import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
-import { columns } from "@/components/reports/columns";
+import { ReportColumns } from "@/components/reports/columns";
 import { DataTable } from "@/components/reports/DataTable";
-// import { useQuery } from "@tanstack/react-query";
-
+import { getAllReports } from "@/services/student-apis";
+import { useQuery } from "@tanstack/react-query";
+import { useReportStore } from "@/components/globals/useReportStore";
 
 const Page: React.FC = () => {
-  const [filteredData, setFilteredData] = useState(mockData);
+  const { filters, setFilteredData, filteredData } = useReportStore();
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
-  const handleFilter = ({ stream, year }: { stream: string | null; year: string | null }) => {
-    let filtered = mockData;
+  const { data } = useQuery({
+    queryKey: ["reports", filters, pagination],
+    queryFn: () =>
+      getAllReports({
+        stream: filters.stream ?? undefined,
+        year: filters.year ?? undefined,
+        framework: filters.framework ?? undefined,
+        semester: filters.semester,
+        showFailedOnly: filters.showFailedOnly,
+        page: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+      }),
+  });
 
-    if (stream && stream !== "All") {
-      filtered = filtered.filter((item) => item.stream === stream);
+  useEffect(() => {
+    if (data) {
+      // console.log("Data fetched from api ******", JSON.stringify(data.payload.content, null, 2));
+      setFilteredData(data.payload.content);
     }
-    if (year) {
-      filtered = filtered.filter((item) => item.year.toString() === year);
-    }
+    // console.log("Filtered Data in report page ******:", JSON.stringify(filteredData, null, 2));
+  }, [data, setFilteredData, filteredData]);
 
-    setFilteredData(filtered);
-  };
-// const {data,isLoading}=useQuery({
-//   queryKey:["reports"],
-//   queryFn:()=>getAllReports,
-//   enabled:false,
-//   onSuccess:(data)=>{
-//     setFilteredData(data)
-//   }
-// });
   return (
     <div>
-     <div className="mt-4"> <FilterAndExportComponent onFilter={handleFilter} filteredData={filteredData} /></div>
-      <DataTable columns={columns} data={filteredData} />
+      <div className="mt-10">
+        {" "}
+        <FilterAndExportComponent />
+      </div>
+      <div className=" mx-auto max-w-[1270px]  p-2"> 
+        <DataTable
+          columns={ReportColumns}
+          data={filteredData || []}
+          pageCount={data?.payload.totalPages || 0}
+          pagination={pagination}
+          onPaginationChange={setPagination}
+        />
+      </div>
     </div>
   );
 };

@@ -1,58 +1,46 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { Payment } from "./types";
-// import { ArrowUpDown } from "lucide-react"
-// import { Button } from "@/components/ui/button";
+import { Report } from "./types";
 
-export const columns: ColumnDef<Payment>[] = [
+export const ReportColumns: ColumnDef<Report>[] = [
   {
-    accessorKey: "roll",
+    accessorKey: "id",
+    header: "ID",
+  },
+  {
+    accessorKey: "rollNumber",
     header: "Roll No.",
   },
   {
-    accessorKey: "semester",
-    header: "Semester",
+    accessorKey: "registrationNumber",
+    header: "Registration No.",
+  },
+  {
+    accessorKey: "uid",
+    header: "UID",
   },
   {
     accessorKey: "name",
     header: "Name",
   },
   {
+    accessorKey: "stream",
+    header: "Stream",
+  },
+  {
+    accessorKey: "framework",
+    header: "Framework",
+  },
+  {
+    accessorKey: "semester",
+    header: "Semester",
+  },
+  {
     accessorKey: "year",
     header: "Year",
-  },
-  // {
-  //   accessorKey: "email",
-  //   header: ({ column }) => {
-  //     return (
-  //       <Button
-  //         variant="ghost"
-  //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-  //       >
-  //         Email
-  //         <ArrowUpDown className="ml-2 h-4 w-4" />
-  //       </Button>
-  //     )
-  //   },
-  // },
-  {
-    accessorKey: "fullMarks",
-    header: "Full Marks",
-  },
-  {
-    accessorKey: "marksObtained",
-    header: "Marks Obtained",
-  },
-  {
-    accessorKey: "semesterCredit",
-    header: "Semester Credit",
   },
   {
     accessorKey: "sgpa",
     header: "SGPA",
-  },
-  {
-    accessorKey: "cumulativeCredit",
-    header: "Cumulative Credit",
   },
   {
     accessorKey: "cgpa",
@@ -63,8 +51,38 @@ export const columns: ColumnDef<Payment>[] = [
     header: "Grade",
   },
   {
-    accessorKey: "stream",
-    header: "stream",
+    accessorKey: "remarks",
+    header: "Remarks",
   },
+
+  {
+    accessorKey: "totalFullMarks",
+    header: "Total Full Marks",
+  },
+  {
+    accessorKey: "totalObtainedMarks",
+    header: "Total Marks Obtained",
+  },
+  {
+    accessorKey: "totalCredit",
+    header: " Credit",
+  },
+  {
+    accessorKey: "status",
+    header: "Status",
+  },
+  {
+    accessorKey: "percentage",
+    header: "Percentage",
+  },
+  // {
+  //   accessorKey: "isFailed",
+  //   header: "Failed?",
+  //   cell: ({ row }) => (row.original.isFailed ? "Yes" : "No"),
+  // },
  
+  // {
+  //   accessorKey: "historicalStatus",
+  //   header: "Historical Status",
+  // },
 ];

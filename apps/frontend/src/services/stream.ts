@@ -6,7 +6,7 @@ import axiosInstance from "@/utils/api";
 
 export async function getAllStreams(): Promise<Stream[]> {
     const response = await axiosInstance.get(`/api/streams`);
-    return response.data;
+    return response.data.payload;
 }
 export const saveAcademicIdentifier = async (formData:academicIdentifier) => {
     const response = await axiosInstance.post(`/api/academicIdentifiers`,formData);

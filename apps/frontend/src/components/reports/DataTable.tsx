@@ -10,25 +10,37 @@ import {
   useReactTable,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
 import { DataTablePagination } from "./Pagination";
-import { Search } from "lucide-react";
-
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
+  pageCount: number;
+  onPaginationChange: (pagination: { pageIndex: number; pageSize: number }) => void;
+  pagination: { pageIndex: number; pageSize: number };
 }
 
-export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData, TValue>) {
+export function DataTable<TData, TValue>({
+  columns,
+  data,
+  pageCount,
+  pagination,
+  onPaginationChange,
+}: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
   const table = useReactTable({
     data,
     columns,
+    pageCount,
+    manualPagination: true,
+    onPaginationChange: (updater) => {
+      const newPagination = typeof updater === "function" ? updater(pagination) : updater;
+      onPaginationChange(newPagination);
+    },
+
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -38,31 +50,13 @@ export function DataTable<TData, TValue>({ columns, data }: DataTableProps<TData
     state: {
       sorting,
       columnFilters,
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10,
-        pageIndex: 0,
-      },
+      pagination,
     },
   });
 
   return (
     <div className=" p-4 space-y-4">
-      {/* <div className="flex-wrap w-full py-6 space-y-5 rounded-md border shadow-md border-gray-400"> */}
-        <div className="mb-10 ml-2 w-auto">
-          <div className="  p-1 max-w-sm relative">
-          <span className="absolute right-3  top-3"> <Search size={21}></Search></span>
-          <Input
-            placeholder="Filter by name..."
-            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-            onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-            className="max-w-sm border border-gray-400"
-          />
-        {/* </div> */}
-        </div>
-        
-      </div>
+      
 
       <div className="rounded-md border shadow-md  border-gray-400 ">
         <Table>

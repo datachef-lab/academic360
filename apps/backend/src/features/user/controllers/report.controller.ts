@@ -9,8 +9,6 @@ import { academicIdentifierModel } from "../models/academicIdentifier.model";
 import { userModel } from "../models/user.model";
 import { ApiResponse, handleError } from "@/utils";
 import { getReports } from "../services/reports.service";
-import { StreamType } from "@/types/academics/stream";
-import { error } from "console";
 
 interface StudentReport {
     id: number | 0;
@@ -37,7 +35,7 @@ type FrameworkType = "CCF" | "CBCS";
 interface ReportQueryParams {
     page?: number;
     pageSize?: number;
-    searchText?: string;
+
     stream?: string;
     framework?: FrameworkType;
     semester?: number;
@@ -115,25 +113,21 @@ export const getAllReports = async (req: Request, res: Response, next: NextFunct
         const {
             page = 1,
             pageSize = 10,
-            searchText = "",
+
             stream,
             framework,
             year,
             semester,
-            showFailedOnly 
+            showFailedOnly
         } = req.query as ReportQueryParams;
 
-
         if (page < 1 || pageSize < 1) {
-
             throw new Error("Invalid page or pageSize.");
-
         }
 
         const reportsData = await getReports({
             page,
             pageSize,
-            searchText,
             stream,
             framework,
             year,

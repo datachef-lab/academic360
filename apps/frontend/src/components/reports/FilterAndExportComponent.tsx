@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,37 +11,69 @@ import * as XLSX from "xlsx";
 import autoTable, { RowInput } from "jspdf-autotable";
 import { jsPDF } from "jspdf";
 import { ChevronDown } from "lucide-react";
-import { Payment } from "./types";
+import { Stream } from "@/types/academics/stream";
+import { useQuery } from "@tanstack/react-query";
+import { getAllStreams } from "@/services/stream";
+import { useReportStore } from "../globals/useReportStore";
 
-type Stream = "BCOM" | "BA" | "BSC" ;
-type Year = "2021" | "2022" | "2023" | "2024" | "2025" ;
+type Year = "2021" | "2022" | "2023" | "2024" | "2025";
+type Framework = "CCF" | "CBCS";
 
-interface FilterAndExportProps {
-  onFilter: (filters: { stream: Stream | null; year: Year | null }) => void;
-  filteredData: Payment[]; 
-}
-
-const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, filteredData }) => {
+const FilterAndExportComponent: React.FC = () => {
   const [stream, setStream] = useState<Stream | null>(null);
   const [year, setYear] = useState<Year | null>(null);
+  const [semester, setSemester] = useState<number | null>(null);
+  const [framework, setFramework] = useState<Framework | null>(null);
+  const { setFilters, filteredData } = useReportStore();
+
+  const { data } = useQuery({
+    queryKey: ["streams"],
+    queryFn: getAllStreams,
+  });
+  const streamMemo = useMemo(() => {
+    if (!data) {
+      console.warn("No data received from API");
+      return [];
+    }
+
+    const streamMap = new Map();
+    data.forEach((item: Stream) => {
+      if (item.degree) {
+        streamMap.set(item.degree.id, { id: item.degree.id, name: item.degree.name });
+      }
+    });
+    const degreeNames = [...streamMap.values()];
+    console.log("Distinct Degree Names:", degreeNames);
+    return degreeNames;
+  }, [data]);
 
   const handleApplyFilters = () => {
-    onFilter({ stream, year });
+    console.log(
+      "Applying Filters - Stream:",
+      stream?.name,
+      "Year:",
+      year,
+      "Framework:",
+      framework,
+      "Semester:",
+      semester,
+    );
+    setFilters({ stream: stream ? stream.name : null, year, framework, semester: semester ?? undefined });
   };
+  const semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
   const handleExportPDF = () => {
+    console.log("Exporting as PDF");
     const doc = new jsPDF();
     doc.text("Exported Report", 10, 10);
-    // doc.text(`Stream: ${stream || "All"}`, 10, 20);
-    // doc.text(`Year: ${year || "All"}`, 10, 30);
-  
+
     if (filteredData.length > 0) {
       const headers = [Object.keys(filteredData[0])];
       const rows = filteredData.map((row) => Object.values(row));
       autoTable(doc, {
         head: headers,
         body: rows as unknown as RowInput[],
-        startY: 30, 
+        startY: 30,
         theme: "grid",
         styles: { fontSize: 6, cellPadding: 3 },
         headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: "bold" },
@@ -52,8 +83,9 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
     }
     doc.save("filtered_report.pdf");
   };
-  
+
   const handleExportExcel = () => {
+    console.log("Exporting as Excel");
     if (filteredData.length === 0) {
       alert("No data available to export!");
       return;
@@ -66,35 +98,89 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
   };
 
   return (
-    <div className="px-6 w-full flex items-center justify-between">
+    <div className="px-5 w-full flex items-center justify-between">
       <div className="flex flex-row items-center gap-16 p-1">
         <div className="w-full flex gap-2">
-       
+          {/* Stream Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="border border-gray-400" variant="outline">
-                {stream ? stream : "Stream"} <ChevronDown />
+              <Button className="border border-gray-400 " variant="outline">
+                {stream ? stream.name : "Select Stream"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              {[ "BCOM", "BA", "BSC"].map((option) => (
-                <DropdownMenuItem key={option} onClick={() => setStream(option as Stream)}>
+              {streamMemo.map((option) => (
+                <DropdownMenuItem
+                  key={option.id}
+                  onClick={() => {
+                    console.log("Selected Stream:", option.name);
+                    setStream(option as unknown as Stream);
+                  }}
+                >
+                  {option.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Year Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="border border-gray-400" variant="outline">
+                {year ? year : "Year"} <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {["2021", "2022", "2023", "2024", "2025"].map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => {
+                    console.log("Selected Year:", option);
+                    setYear(option as Year);
+                  }}
+                >
                   {option}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-  
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="border border-gray-400"  variant="outline">
-                {year ? year : "Year"} <ChevronDown />
+              <Button className="border border-gray-400" variant="outline">
+                {framework ? framework : "Framework"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              {["2021", "2022", "2023", "2024", "2025"].map((option) => (
-                <DropdownMenuItem key={option} onClick={() => setYear(option as Year)}>
+              {["CCF", "CBCS"].map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => {
+                    console.log("Selected framework:", option);
+                    setFramework(option as Framework);
+                  }}
+                >
+                  {option}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="border border-gray-400" variant="outline">
+                {semester ? `Semester ${semester}` : "Semester"} <ChevronDown />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {semesterOptions.map((option) => (
+                <DropdownMenuItem
+                  key={option}
+                  onClick={() => {
+                    console.log("Selected framework:", option);
+                    setSemester(option);
+                  }}
+                >
                   {option}
                 </DropdownMenuItem>
               ))}
@@ -102,7 +188,7 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
           </DropdownMenu>
         </div>
 
-        <Button variant="outline" className="border border-gray-400"  onClick={handleApplyFilters}>
+        <Button variant="outline" className="border border-gray-400" onClick={handleApplyFilters}>
           Apply Filters
         </Button>
       </div>
@@ -111,7 +197,7 @@ const FilterAndExportComponent: React.FC<FilterAndExportProps> = ({ onFilter, fi
       <div>
         <Popover>
           <PopoverTrigger asChild>
-            <Button className="border border-gray-400"  variant="outline">
+            <Button className="border border-gray-400" variant="outline">
               Export <ChevronDown />
             </Button>
           </PopoverTrigger>

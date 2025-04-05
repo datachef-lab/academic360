@@ -12,6 +12,7 @@ import { EmergencyContact } from "@/types/user/emergency-contact";
 import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
 
+
 export const  updateEmergencyContact = async (formData: EmergencyContact,id: number) => {
     const response = await axiosInstance.put(`/api/emergency-contact/${id}`,formData,
         {
@@ -178,4 +179,31 @@ export const UpdateUser =async (formData:User,id:number)=>{
        } 
     })
     return res.data;
+}
+type ReportFilters = {
+    page?: number;
+    pageSize?: number;
+    framework?: string;
+    stream?: string;
+    year?: string;
+    searchText?: string;
+    semester?: number;
+    showFailedOnly?: boolean;
+  };
+  
+export const getAllReports = async (filters:ReportFilters={}) => {
+    const query=Object.entries(filters)
+.filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key,value])=>`${key}=${encodeURIComponent(String(value))}`)
+    .join("&");
+
+    const url = `/api/reports/query${query ? "?" + query : ""}`;
+
+    const response = await axiosInstance.get(url,{
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        } 
+    });
+   
+    return response.data;
 }
