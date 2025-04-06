@@ -1,5 +1,5 @@
 {
-  "id": "fdb7b117-a9fd-4008-88bb-fcb36d002cbf",
+  "id": "fd6cbc81-65bb-4c91-a178-65e70af533b3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -38,11 +38,11 @@
           "primaryKey": false,
           "notNull": false
         },
-        "session": {
-          "name": "session",
+        "session_id_fk": {
+          "name": "session_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -106,6 +106,19 @@
           "tableTo": "shifts",
           "columnsFrom": [
             "shift_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "batches_session_id_fk_sessions_id_fk": {
+          "name": "batches_session_id_fk_sessions_id_fk",
+          "tableFrom": "batches",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -596,6 +609,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -648,6 +667,70 @@
           "type": "varchar(500)",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from": {
+          "name": "from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to": {
+          "name": "to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_current_session": {
+          "name": "is_current_session",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "code_prefix": {
+          "name": "code_prefix",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1048,11 +1131,23 @@
           "primaryKey": false,
           "notNull": true
         },
+        "irp_name": {
+          "name": "irp_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "irp_code": {
           "name": "irp_code",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "marksheet_code": {
           "name": "marksheet_code",
@@ -3237,86 +3332,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.guardians": {
-      "name": "guardians",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "guardian_details_person_id_fk": {
-          "name": "guardian_details_person_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "guardians_student_id_fk_students_id_fk": {
-          "name": "guardians_student_id_fk_students_id_fk",
-          "tableFrom": "guardians",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "guardians_guardian_details_person_id_fk_person_id_fk": {
-          "name": "guardians_guardian_details_person_id_fk_person_id_fk",
-          "tableFrom": "guardians",
-          "tableTo": "person",
-          "columnsFrom": [
-            "guardian_details_person_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "guardians_student_id_fk_unique": {
-          "name": "guardians_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.health": {
       "name": "health",
       "schema": "",
@@ -3429,131 +3444,6 @@
       "uniqueConstraints": {
         "health_student_id_fk_unique": {
           "name": "health_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.parent_details": {
-      "name": "parent_details",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "parent_type": {
-          "name": "parent_type",
-          "type": "parent_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "father_details_person_id_fk": {
-          "name": "father_details_person_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mother_details_person_id_fk": {
-          "name": "mother_details_person_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "annual_income_id_fk": {
-          "name": "annual_income_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "parent_details_student_id_fk_students_id_fk": {
-          "name": "parent_details_student_id_fk_students_id_fk",
-          "tableFrom": "parent_details",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "parent_details_father_details_person_id_fk_person_id_fk": {
-          "name": "parent_details_father_details_person_id_fk_person_id_fk",
-          "tableFrom": "parent_details",
-          "tableTo": "person",
-          "columnsFrom": [
-            "father_details_person_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "parent_details_mother_details_person_id_fk_person_id_fk": {
-          "name": "parent_details_mother_details_person_id_fk_person_id_fk",
-          "tableFrom": "parent_details",
-          "tableTo": "person",
-          "columnsFrom": [
-            "mother_details_person_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "parent_details_annual_income_id_fk_annual_incomes_id_fk": {
-          "name": "parent_details_annual_income_id_fk_annual_incomes_id_fk",
-          "tableFrom": "parent_details",
-          "tableTo": "annual_incomes",
-          "columnsFrom": [
-            "annual_income_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "parent_details_student_id_fk_unique": {
-          "name": "parent_details_student_id_fk_unique",
           "nullsNotDistinct": false,
           "columns": [
             "student_id_fk"

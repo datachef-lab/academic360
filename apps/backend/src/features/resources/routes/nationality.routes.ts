@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post("/", createNationality);
 router.get("/", getAllNationality);
-router.put("/", updateNationality);
+router.put("/:id", updateNationality);
 router.delete("/", deleteNationality);
 
 export default router;
