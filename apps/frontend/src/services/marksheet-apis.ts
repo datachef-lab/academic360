@@ -8,3 +8,9 @@ export async function fetchMarksheetLogs(page: number = 1, pageSize: number = 10
     console.log(response.data);
     return response.data;
 }
+
+export async function uploadFile(body: FormData): Promise<ApiResonse<boolean>> {
+    const response = await axiosInstance.post(`/api/marksheets/upload`, body);
+    console.log(response.data);
+    return response.data;
+}

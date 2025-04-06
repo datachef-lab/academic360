@@ -2,14 +2,19 @@ import { db, mysqlConnection } from "@/db/index.js";
 import { OldBatch } from "@/types/old-data/old-batch.js";
 import { OldCourse } from "@/types/old-data/old-course.js";
 import { Course, courseModel } from "../models/course.model.js";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Class, classModel } from "../models/class.model.js";
 import { OldClass } from "@/types/old-data/old-class.js";
 import { OldSection } from "@/types/old-data/old-section.js";
 import { Section, sectionModel } from "../models/section.model.js";
 import { OldShift } from "@/types/old-data/old-shift.js";
-import { shiftModel } from "../models/shift.model.js";
-import { batchModel } from "../models/batch.model.js";
+import { Shift, shiftModel } from "../models/shift.model.js";
+import { Batch, batchModel } from "../models/batch.model.js";
+import { BatchType } from "@/types/academics/batch.js";
+import { CourseType } from "@/types/academics/course.js";
+import { findCourseById } from "./course.service.js";
+import { OldSession } from "@/types/academics/session.js";
+import { Session, sessionModel } from "../models/session.model.js";
 
 const BATCH_SIZE = 500;
 
@@ -47,6 +52,39 @@ export async function processCourse(courseId: number): Promise<Course> {
     }
 
     return foundCourse;
+}
+
+export async function processSession(oldSessionId: number) {
+    const [result] = (
+        await mysqlConnection.query(`
+            SELECT * 
+            FROM currentsessionmaster
+            WHERE id = ${oldSessionId}
+        `) as [OldSession[], any]
+    );
+    const [oldSession] = result;
+
+    const [foundSession] = await db
+        .select()
+        .from(sessionModel)
+        .where(eq(sessionModel.name, oldSession.sessionName));
+
+    if (foundSession) {
+        return foundSession;
+    }
+
+    const [newSession] = await db
+        .insert(sessionModel)
+        .values({
+            name: oldSession.sessionName.trim(),
+            from: oldSession.fromDate.toISOString(),
+            to: oldSession.toDate.toISOString(),
+            codePrefix: oldSession.codeprefix,
+            isCurrentSession: oldSession.iscurrentsession,
+        } as Session)
+        .returning();
+
+    return newSession;
 }
 
 export async function processClass(classId: number): Promise<Class> {
@@ -104,6 +142,10 @@ export async function processSection(sectionId: number) {
 }
 
 export async function processShift(shiftId: number) {
+    if (!shiftId || shiftId === 0) {
+        return null;
+    }
+
     const [shiftResult] =
         await mysqlConnection
             .query(`
@@ -128,7 +170,8 @@ export async function processShift(shiftId: number) {
     return foundShift;
 }
 
-async function processBatch(oldBatch: OldBatch) {
+
+export async function processBatch(oldBatch: OldBatch) {
     console.log("batchResult:", oldBatch);
 
     const course = await processCourse(oldBatch.courseId);
@@ -136,12 +179,17 @@ async function processBatch(oldBatch: OldBatch) {
     const shift = await processShift(oldBatch.shiftId);
     let section: Section | null = null;
 
+    const session = await processSession(oldBatch.sessionId);
+
     const whereConditions = [
         eq(batchModel.courseId, course.id as number),
         eq(batchModel.classId, academicClass.id as number),
-        eq(batchModel.shiftId, shift.id as number),
-        eq(batchModel.session, oldBatch.sessionId),
+        eq(batchModel.sessionId, session.id as number),
     ]
+
+    if (shift) {
+        whereConditions.push(eq(batchModel.shiftId, shift.id as number));
+    }
 
     if (oldBatch.sectionId && oldBatch.sectionId !== 0) {
         section = await processSection(oldBatch.sectionId);
@@ -160,14 +208,44 @@ async function processBatch(oldBatch: OldBatch) {
             courseId: course.id as number,
             classId: academicClass.id as number,
             sectionId: section ? section.id as number : null,
-            shiftId: shift.id as number,
-            session: oldBatch.sessionId,
+            shiftId: shift ? shift.id as number : null,
+            sessionId: session.id as number,
         }).returning();
 
         return newBatch;
     }
 
-    return foundBatch;
+    const [updatedBatch] = await db
+        .update(batchModel)
+        .set({ sessionId: session.id as number })
+        .where(eq(batchModel.id, foundBatch.id as number))
+        .returning();
+
+    return updatedBatch;
+}
+
+export async function refactorBatchSession() {
+    for (let i = 1; i < 2041; i++) {
+        // const [foundBatch] = await db.select().from(batchModel).where(eq(batchModel.id, i));
+        console.log("i:", i)
+        const { rows } = await db.execute(sql`SELECT * FROM batches WHERE id = ${i}`)
+
+        if (i == 1) {
+            console.log("session:", rows[0], "rows[0]['session']:", rows[0]["session"] as number)
+        }
+
+        const session = await processSession(rows[0]["session"] as number);
+        console.log("db session:", session)
+
+        const { rows: updatedRow } = await db.execute(sql`UPDATE batches SET session_id_fk = ${session.id} WHERE id = ${i}`)
+        console.log("updatedRow:", updatedRow);
+
+        // if (!foundBatchPaper) continue;
+
+        // await db.update(batchModel).set({
+        //     "sessionId": foundBatchPaper["session"]
+        // }).where(eq(batchModel.id, i));
+    }
 }
 
 export async function loadOlderBatches() {
@@ -197,7 +275,54 @@ export async function loadOlderBatches() {
 
         }
     }
+}
 
+export async function findBatchById(id: number): Promise<BatchType | null> {
+    const [foundBatch] = await db.select().from(batchModel).where(eq(batchModel.id, id));
 
+    const formattedBatch = await batchFormatResponse(foundBatch);
+
+    return formattedBatch;
+}
+
+export async function batchFormatResponse(batch: Batch | null): Promise<BatchType | null> {
+    if (!batch) {
+        return null;
+    }
+
+    const { classId, courseId, sectionId, shiftId, sessionId, ...props } = batch;
+
+    let academicClass: Class | null = null;
+    if (classId) {
+        const [foundClass] = await db.select().from(classModel).where(eq(classModel.id, classId));
+        academicClass = foundClass;
+    }
+
+    let course: CourseType | null = null;
+    if (courseId) {
+        course = await findCourseById(courseId);
+    }
+
+    let section: Section | null = null;
+    if (sectionId) {
+        const [foundSection] = await db.select().from(sectionModel).where(eq(sectionModel.id, sectionId));
+        section = foundSection;
+    }
+
+    let shift: Shift | null = null;
+    if (shiftId) {
+        const [foundShift] = await db.select().from(shiftModel).where(eq(shiftModel.id, shiftId));
+        section = foundShift;
+    }
+
+    let session: Session | null = null;
+    if (sessionId) {
+        const [foundSession] = await db.select().from(sessionModel).where(eq(sessionModel.id, sessionId as number));
+        session = foundSession;
+    }
+
+    const formattedBatch: BatchType = { ...props, course, academicClass, section, shift, session: session };
+
+    return formattedBatch;
 
 }

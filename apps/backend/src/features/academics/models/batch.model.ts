@@ -6,6 +6,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { shiftModel } from "./shift.model.js";
+import { sessionModel } from "./session.model.js";
 
 export const batchModel = pgTable('batches', {
     id: serial().primaryKey(),
@@ -13,7 +14,7 @@ export const batchModel = pgTable('batches', {
     classId: integer("class_id_fk").notNull().references(() => classModel.id),
     sectionId: integer("section_id_fk").references(() => sectionModel.id),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id),
-    session: integer().notNull(),
+    sessionId: integer("session_id_fk").references(() => sessionModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -34,6 +35,10 @@ export const batchRelations = relations(batchModel, ({ one }) => ({
     shift: one(shiftModel, {
         fields: [batchModel.shiftId],
         references: [shiftModel.id],
+    }),
+    session: one(sessionModel, {
+        fields: [batchModel.sessionId],
+        references: [sessionModel.id],
     }),
 }));
 

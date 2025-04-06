@@ -10,7 +10,8 @@ import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
 import { eq } from "drizzle-orm";
-
+import { createServer } from 'http';
+import { Server, Socket } from 'socket.io';
 import { corsOptions } from "@/config/corsOptions.js";
 
 import { logger, errorHandler } from "@/middlewares/index.js";
@@ -44,6 +45,7 @@ import {
     occupationRouter,
     batchRouter,
     batchPaperRouter,
+    studentPaperRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -51,6 +53,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const PORT = process.env.PORT || 8080;
+const httpServer = createServer(app);
 
 app.use(logger);
 
@@ -61,6 +65,22 @@ app.use(express.json({ limit: "180kb" }));
 app.use(express.urlencoded({ extended: true, limit: "180kb" }));
 
 app.use(cookieParser());
+
+export const io = new Server(httpServer, {
+    cors: {
+        origin: process.env.CORS_ORIGIN! || 'http://localhost:5173', // Frontend URL
+        methods: ['GET', 'POST'],
+    },
+});
+
+// Socket.IO connection (minimal setup)
+io.on('connection', (socket: Socket) => {
+    console.log('Client connected:', socket.id);
+
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+});
 
 app.use(
     expressSession({
@@ -149,6 +169,8 @@ app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use("/api/marksheets", marksheetRouter);
 
+app.use("/api/student-papers/", studentPaperRouter);
+
 app.use("/api/subjects", subjectRouter);
 
 app.use("/api/nationality", nationalityRouter);
@@ -200,4 +222,4 @@ app.all("*", (req: Request, res: Response) => {
     }
 });
 
-export default app;
+export { app, httpServer };

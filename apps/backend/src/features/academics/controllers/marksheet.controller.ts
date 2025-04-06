@@ -6,34 +6,26 @@ import { User } from "@/features/user/models/user.model.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { io } from "@/app.js";
 
 export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
+    const socketId = req.body.socketId;
+    const socket = io.sockets.sockets.get(socketId as string);
+    if (!req.file || !socket) {
+        res.status(400).json({ message: "No file uploaded or invalid socket" });
+        return;
+    }
+
     try {
-        if (!req.file) {
-            res.status(400).json({ message: "No file uploaded" });
-            return;
-        }
-
         const fileName = req.file.filename;
-        console.log("File Name: ", fileName);
-
-        // // Set headers for SSE (Server-Sent Events)
-        // res.setHeader("Content-Type", "text/event-stream");
-        // res.setHeader("Cache-Control", "no-cache");
-        // res.setHeader("Connection", "keep-alive");
-
-        // // Periodic function to send messages
-        // const sendUpdate = (message: string) => {
-        //     res.write(`data: ${message}\n\n`);
-        // };
-
-        // sendUpdate(`Processing started for ${fileName}...`);
 
         // Process file and get logs in real-time
-        const isUploaded = await uploadFile(fileName, req.user as User);
+        const isUploaded = await uploadFile(fileName, req.user as User, socket);
 
-        // sendUpdate(`Processing completed for ${fileName}`);
-        // res.end();
+        socket.emit('progress', {
+            stage: 'completed',
+            message: 'File processed successfully!',
+        });
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", isUploaded, "Marksheets uploaded successfully!"));
 
@@ -48,71 +40,13 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
             });
         });
 
-        // next();
     } catch (error) {
+        socket.emit('progress', { stage: 'error', message: 'Error processing file' });
         handleError(error, res, next);
     }
 };
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
-
-// export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//         if (!req.file) {
-//             res.status(400).json({ message: "No file uploaded" });
-//             return;
-//         }
-
-//         const fileName = req.file.filename;
-//         console.log("File Name: ", fileName);
-
-//         // Set headers for SSE (Server-Sent Events)
-//         res.setHeader("Content-Type", "text/event-stream");
-//         res.setHeader("Cache-Control", "no-cache");
-//         res.setHeader("Connection", "keep-alive");
-
-//         // Function to send updates
-//         const sendUpdate = (message: string) => {
-//             if (!res.writableEnded) {  // Ensure response is open
-//                 res.write(`data: ${message}\n\n`);
-//             }
-//         };
-
-//         sendUpdate(`Processing started for ${fileName}...`);
-
-//         try {
-//             // Process file and send real-time updates
-//             await uploadFile(fileName, sendUpdate, req.user as User);
-
-//             sendUpdate(`Processing completed for ${fileName}`);
-//         } catch (error) {
-//             console.error("Processing error:", error);
-//             sendUpdate(`Error: ${(error as Error).message}`);
-//         } finally {
-//             if (!res.writableEnded) res.end();
-//         }
-
-//         // 🔹 Ensure the file is deleted after the response is sent
-//         res.on("finish", () => {
-//             if (req.file) {
-//                 const filePath = path.resolve(directoryName, "../../../..", "public", "temp", req.file.filename);
-//                 fs.unlink(filePath, (err) => {
-//                     if (err) {
-//                         console.error(`Error deleting file: ${filePath}`, err);
-//                     }
-//                 });
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error("Unexpected error:", error);
-//         if (!res.headersSent) {
-//             res.status(500).json({ message: "Internal server error" });
-//         }
-//     }
-// };
-
-
 
 export const createMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     try {

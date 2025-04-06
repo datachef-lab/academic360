@@ -63,6 +63,7 @@ export const userColumns: ColumnDef<User>[] = [
     cell: ({ row }) => {
       const user = row.original;
 
+
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

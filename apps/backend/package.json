@@ -23,6 +23,7 @@
     "author": "Harsh Nilesh Desai",
     "license": "ISC",
     "dependencies": {
+        "@types/socket.io": "^3.0.1",
         "bcrypt": "^5.1.1",
         "cookie-parser": "^1.4.7",
         "cors": "^2.8.5",
@@ -40,6 +41,7 @@
         "passport": "^0.7.0",
         "passport-google-oauth20": "^2.0.0",
         "pg": "^8.13.1",
+        "socket.io": "^4.8.1",
         "uuid": "^11.0.3",
         "xlsx": "^0.18.5",
         "zod": "^3.24.1"
