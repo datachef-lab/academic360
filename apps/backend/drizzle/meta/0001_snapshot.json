@@ -1,6 +1,6 @@
 {
-  "id": "fdb7b117-a9fd-4008-88bb-fcb36d002cbf",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "7e961615-e77c-4c28-8dd3-73636052186e",
+  "prevId": "fdb7b117-a9fd-4008-88bb-fcb36d002cbf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -596,6 +596,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1048,11 +1054,23 @@
           "primaryKey": false,
           "notNull": true
         },
+        "irp_name": {
+          "name": "irp_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "irp_code": {
           "name": "irp_code",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "marksheet_code": {
           "name": "marksheet_code",

@@ -1,6 +1,6 @@
 {
-  "id": "fdb7b117-a9fd-4008-88bb-fcb36d002cbf",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "0e8df4cb-18b2-4162-ba04-caa7029b4ade",
+  "prevId": "700ce466-1e09-4c74-bb35-68c15110dc54",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -38,11 +38,11 @@
           "primaryKey": false,
           "notNull": false
         },
-        "session": {
-          "name": "session",
+        "session_id_fk": {
+          "name": "session_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -106,6 +106,19 @@
           "tableTo": "shifts",
           "columnsFrom": [
             "shift_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "batches_session_id_fk_sessions_id_fk": {
+          "name": "batches_session_id_fk_sessions_id_fk",
+          "tableFrom": "batches",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -596,6 +609,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -648,6 +667,70 @@
           "type": "varchar(500)",
           "primaryKey": false,
           "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "from": {
+          "name": "from",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to": {
+          "name": "to",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_current_session": {
+          "name": "is_current_session",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "code_prefix": {
+          "name": "code_prefix",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1048,11 +1131,23 @@
           "primaryKey": false,
           "notNull": true
         },
+        "irp_name": {
+          "name": "irp_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "irp_code": {
           "name": "irp_code",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "marksheet_code": {
           "name": "marksheet_code",
