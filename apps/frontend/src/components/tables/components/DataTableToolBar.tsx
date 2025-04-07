@@ -3,7 +3,7 @@ import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback } from "react";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { Plus, TrashIcon } from "lucide-react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
@@ -22,23 +22,16 @@ export function DataTableToolbar<TData>({
   setSearchText,
   refetch,
 }: DataTableToolbarProps<TData>) {
-  // Create a ref to store the debounced function
-  const debouncedFn = useRef<ReturnType<typeof debounce>>();
-  
-  // Create a memoized search function using useCallback
-  const debouncedSearch = useCallback((query: string) => {
-    // If there's no existing debounced function or dependencies changed, create a new one
-    if (!debouncedFn.current) {
-      debouncedFn.current = debounce((value: string) => {
-        table.setGlobalFilter(value);
-        refetch(); // Trigger the API call manually
-      }, 500);
-    }
-    
-    // Call the debounced function with the current query
-    debouncedFn.current(query);
-  }, [table, refetch]);
+  // Debounce function (calls refetch only after user stops typing for 500ms)
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      table.setGlobalFilter(query);
+      refetch(); // Trigger the API call manually
+    }, 500),
+    [table, refetch]
+  );
 
+  // Handle input change
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setSearchText(value);
@@ -51,12 +44,12 @@ export function DataTableToolbar<TData>({
         <Input
           placeholder="Search..."
           value={searchText}
-          onChange={handleSearchChange}
+          onChange={handleSearchChange} // Use the debounced function
           className="max-w-sm"
         />
-        {typeColumn && (
+        {table.getColumn("type") && (
           <DataTableFacetedFilter
-            column={typeColumn}
+            column={table.getColumn("type")}
             title="Account"
             options={[
               { label: "Admin", value: "ADMIN" },
