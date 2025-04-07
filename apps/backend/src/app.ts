@@ -24,6 +24,7 @@ import {
     documentRouter,
     marksheetRouter,
     streamRouter,
+    statsRouter,
     subjectMetadataRouter,
     subjectRouter,
     countryRouter,
@@ -208,6 +209,8 @@ app.use("/api/degree", degreeRouter);
 app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
+
+app.use("/api/stats", statsRouter);
 
 app.use(errorHandler);
 

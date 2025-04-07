@@ -1,4 +1,4 @@
-import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter, streamRouter, studentPaperRouter, subjectMetadataRouter, subjectRouter } from "./academics/routes/index.js";
+import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter, statsRouter, streamRouter, studentPaperRouter, subjectMetadataRouter, subjectRouter } from "./academics/routes/index.js";
 import authRouter from "@/features/auth/routes/auth.route.js";
 import { bloodGroupRouter, boardUniversityRouter, categoryRouter, cityRouter, countryRouter, degreeRouter, institutionRouter, languageMediumRouter, nationalityRouter, occupationRouter, pickupPointRouter, qualificationRouter, religionRouter, stateRouter, transportRouter } from "./resources/routes/index.js";
 import { academicHistoryRouter, academicIdentifierRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
@@ -7,6 +7,7 @@ export {
     documentRouter,
     marksheetRouter,
     streamRouter,
+    statsRouter,
     subjectRouter,
     subjectMetadataRouter,
     authRouter,
