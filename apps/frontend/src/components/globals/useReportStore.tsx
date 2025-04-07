@@ -1,5 +1,5 @@
-// stores/reportStore.ts
-import { create } from 'zustand';
+import { Framework } from "@/types/enums";
+import { create } from "zustand";
 
 interface Subject {
   name: string;
@@ -33,44 +33,58 @@ interface Report {
   status: string;
   historicalStatus: string;
 }
-
-type ReportFilters= {
+type uiFilters = {
+  selectedStream: { name: string } | null;
+  selectedYear: string | null;
+  selectedSemester: number | null;
+  selectedFramework: Framework | null;
+};
+type ReportFilters = {
   stream: string | null;
   year: string | null;
   framework?: string | null;
-  semester?: number | 0;
-  showFailedOnly?: boolean;
- 
+  semester?: number | null;
+  // showFailedOnly?: boolean;
+
   page?: number | 0;
   pageSize?: number | 0;
-}
+};
 
 interface ReportStore {
   filters: ReportFilters;
+  uiFilters: uiFilters;
   filteredData: Report[];
   setFilters: (filters: ReportFilters) => void;
   setFilteredData: (data: Report[]) => void;
+  setUiFilters: (uiFilters: Partial<uiFilters>) => void;
 }
-
-
 
 export const useReportStore = create<ReportStore>((set) => ({
   filters: {
     stream: null,
     year: null,
     framework: null,
-    semester: 0,
-    showFailedOnly: false,
+    semester: null,
+    // showFailedOnly: false,
     page: 0,
     pageSize: 0,
   },
+  uiFilters: {
+    selectedStream: null,
+    selectedYear: null,
+    selectedSemester: null,
+    selectedFramework: null,
+  },
+
   filteredData: [],
   setFilters: (filters) => {
-    console.log('Setting filters:', filters);
     set({ filters });
   },
+  setUiFilters: (uiFilters) => {
+    set((state) => ({ uiFilters: { ...state.uiFilters, ...uiFilters } }));
+  },
+
   setFilteredData: (filteredData) => {
-    console.log('Setting filtered data:1***', filteredData);
     set({ filteredData });
   },
 }));

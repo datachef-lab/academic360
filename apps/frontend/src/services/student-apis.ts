@@ -192,12 +192,14 @@ type ReportFilters = {
   };
   
 export const getAllReports = async (filters:ReportFilters={}) => {
+    // console.log("Filters in getAllReports:", filters);
     const query=Object.entries(filters)
 .filter(([, value]) => value !== undefined && value !== null && value !== "")
     .map(([key,value])=>`${key}=${encodeURIComponent(String(value))}`)
     .join("&");
-
+// console.log("Query string:", query);
     const url = `/api/reports/query${query ? "?" + query : ""}`;
+    // console.log("URL:", url);
 
     const response = await axiosInstance.get(url,{
         headers: {

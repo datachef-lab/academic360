@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -20,11 +20,8 @@ type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 type Framework = "CCF" | "CBCS";
 
 const FilterAndExportComponent: React.FC = () => {
-  const [stream, setStream] = useState<Stream | null>(null);
-  const [year, setYear] = useState<Year | null>(null);
-  const [semester, setSemester] = useState<number | null>(null);
-  const [framework, setFramework] = useState<Framework | null>(null);
-  const { setFilters, filteredData } = useReportStore();
+
+  const { setFilters, filteredData,uiFilters,setUiFilters } = useReportStore();
 
   const { data } = useQuery({
     queryKey: ["streams"],
@@ -32,7 +29,7 @@ const FilterAndExportComponent: React.FC = () => {
   });
   const streamMemo = useMemo(() => {
     if (!data) {
-      console.warn("No data received from API");
+      //console.warn("No data received from API");
       return [];
     }
 
@@ -43,27 +40,36 @@ const FilterAndExportComponent: React.FC = () => {
       }
     });
     const degreeNames = [...streamMap.values()];
-    console.log("Distinct Degree Names:", degreeNames);
+    //console.log("Distinct Degree Names:", degreeNames);
     return degreeNames;
   }, [data]);
 
   const handleApplyFilters = () => {
-    console.log(
-      "Applying Filters - Stream:",
-      stream?.name,
-      "Year:",
-      year,
-      "Framework:",
-      framework,
-      "Semester:",
-      semester,
-    );
-    setFilters({ stream: stream ? stream.name : null, year, framework, semester: semester ?? undefined });
+     //console.log("Applying Filters - Stream:", uiFilters.selectedStream?.name, "Year:", uiFilters.selectedYear, "Framework:", uiFilters.selectedFramework, "Semester:", uiFilters.selectedSemester);
+    setFilters({ 
+      stream: uiFilters.selectedStream?.name || null, 
+      year:uiFilters.selectedYear,
+      framework:uiFilters.selectedFramework, 
+      semester: uiFilters.selectedSemester});
+  };
+  const handleStreamSelect = (option: { name: string }) => {
+    setUiFilters({ selectedStream: option });
+  };
+  const handleYearSelect = (year: Year) => {
+    setUiFilters({ selectedYear: year });
+  };
+
+  const handleFrameworkSelect = (framework: Framework) => {
+    setUiFilters({ selectedFramework: framework });
+  };
+
+  const handleSemesterSelect = (semester: number) => {
+    setUiFilters({ selectedSemester: semester });
   };
   const semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
   const handleExportPDF = () => {
-    console.log("Exporting as PDF");
+    //console.log("Exporting as PDF");
     const doc = new jsPDF();
     doc.text("Exported Report", 10, 10);
 
@@ -75,7 +81,7 @@ const FilterAndExportComponent: React.FC = () => {
         body: rows as unknown as RowInput[],
         startY: 30,
         theme: "grid",
-        styles: { fontSize: 6, cellPadding: 3 },
+        styles: { fontSize: 3, cellPadding: 1 },
         headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: "bold" },
       });
     } else {
@@ -85,7 +91,7 @@ const FilterAndExportComponent: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    console.log("Exporting as Excel");
+    //console.log("Exporting as Excel");
     if (filteredData.length === 0) {
       alert("No data available to export!");
       return;
@@ -105,7 +111,7 @@ const FilterAndExportComponent: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400 " variant="outline">
-                {stream ? stream.name : "Select Stream"} <ChevronDown />
+                {uiFilters.selectedStream ? uiFilters.selectedStream .name : "Select Stream"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -113,8 +119,8 @@ const FilterAndExportComponent: React.FC = () => {
                 <DropdownMenuItem
                   key={option.id}
                   onClick={() => {
-                    console.log("Selected Stream:", option.name);
-                    setStream(option as unknown as Stream);
+                    //console.log("Selected Stream:", option.name);
+                    handleStreamSelect(option as unknown as Stream);
                   }}
                 >
                   {option.name}
@@ -127,7 +133,7 @@ const FilterAndExportComponent: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400" variant="outline">
-                {year ? year : "Year"} <ChevronDown />
+                {uiFilters.selectedYear ? uiFilters.selectedYear : "Year"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -135,8 +141,8 @@ const FilterAndExportComponent: React.FC = () => {
                 <DropdownMenuItem
                   key={option}
                   onClick={() => {
-                    console.log("Selected Year:", option);
-                    setYear(option as Year);
+                    //console.log("Selected Year:", option);
+                    handleYearSelect(option as Year);
                   }}
                 >
                   {option}
@@ -148,7 +154,7 @@ const FilterAndExportComponent: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400" variant="outline">
-                {framework ? framework : "Framework"} <ChevronDown />
+                {uiFilters.selectedFramework ? uiFilters.selectedFramework : "Framework"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -156,8 +162,8 @@ const FilterAndExportComponent: React.FC = () => {
                 <DropdownMenuItem
                   key={option}
                   onClick={() => {
-                    console.log("Selected framework:", option);
-                    setFramework(option as Framework);
+                    //console.log("Selected framework:", option);
+                    handleFrameworkSelect(option as Framework);
                   }}
                 >
                   {option}
@@ -169,7 +175,7 @@ const FilterAndExportComponent: React.FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="border border-gray-400" variant="outline">
-                {semester ? `Semester ${semester}` : "Semester"} <ChevronDown />
+                {uiFilters.selectedSemester ? `Semester ${uiFilters.selectedSemester}` : "Semester"} <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -177,8 +183,8 @@ const FilterAndExportComponent: React.FC = () => {
                 <DropdownMenuItem
                   key={option}
                   onClick={() => {
-                    console.log("Selected framework:", option);
-                    setSemester(option);
+                    //console.log("Selected framework:", option);
+                    handleSemesterSelect(option);
                   }}
                 >
                   {option}
