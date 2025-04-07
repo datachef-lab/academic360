@@ -3,7 +3,7 @@ import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { Plus, TrashIcon } from "lucide-react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
@@ -22,17 +22,22 @@ export function DataTableToolbar<TData>({
   setSearchText,
   refetch,
 }: DataTableToolbarProps<TData>) {
-  // Debounce function (calls refetch only after user stops typing for 500ms)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(
-    debounce((query: string) => {
-      table.setGlobalFilter(query);
-      refetch(); 
-    }, 500),
-    [table, refetch]
-  );
-  // console.log("Available columns:", table.getAllColumns().map((col) => col.id));
-  const typeColumn = table.getAllColumns().find((col) => col.id === "type");
+  // Create a ref to store the debounced function
+  const debouncedFn = useRef<ReturnType<typeof debounce>>();
+  
+  // Create a memoized search function using useCallback
+  const debouncedSearch = useCallback((query: string) => {
+    // If there's no existing debounced function or dependencies changed, create a new one
+    if (!debouncedFn.current) {
+      debouncedFn.current = debounce((value: string) => {
+        table.setGlobalFilter(value);
+        refetch(); // Trigger the API call manually
+      }, 500);
+    }
+    
+    // Call the debounced function with the current query
+    debouncedFn.current(query);
+  }, [table, refetch]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -46,7 +51,7 @@ export function DataTableToolbar<TData>({
         <Input
           placeholder="Search..."
           value={searchText}
-          onChange={handleSearchChange} // Use the debounced function
+          onChange={handleSearchChange}
           className="max-w-sm"
         />
         {typeColumn && (

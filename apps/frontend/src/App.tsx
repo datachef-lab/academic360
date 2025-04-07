@@ -1,5 +1,4 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
-
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
   AddStudentPage,
@@ -15,6 +14,7 @@ import {
 } from "@/pages";
 import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
+import { NotificationProvider } from "./providers/NotificationProvider";
 import StudentPage from "./pages/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
@@ -26,7 +26,6 @@ import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
-
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
@@ -34,7 +33,9 @@ const router = createBrowserRouter([
     path: "/home",
     element: (
       <AuthProvider>
-        <HomeLayout />
+        <NotificationProvider>
+          <HomeLayout />
+        </NotificationProvider>
       </AuthProvider>
     ),
     children: [
@@ -87,7 +88,11 @@ const router = createBrowserRouter([
 ]);
 
 const App = () => {
-  return <RouterProvider router={router} />;
+  return (
+    <>
+      <RouterProvider router={router} />;
+    </>
+  );
 };
 
 export default App;

@@ -100,7 +100,7 @@ const MarksheetCCF = () => {
 
       setMarksheet((prev) => ({ ...prev, ...newMarksheet }));
     }
-  }, []);
+  }, [framework, marksheetId, rollNumber, student, user]);
 
   useQuery({
     queryKey: ["subjectMetadata"],

@@ -341,7 +341,7 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
           }
         });
       };
-    }, [highlightedPart, date]);
+    }, [highlightedPart, date, handleWheel, id]);
 
     const formatWithTz = (date: Date, fmt: string) => formatInTimeZone(date, timeZone, fmt);
 

@@ -32,7 +32,7 @@ export default function FileUpload() {
     return () => {
       socket.off("progress");
     };
-  }, []);
+  }, [setProcessedData]);
 
   const handleUpload = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
