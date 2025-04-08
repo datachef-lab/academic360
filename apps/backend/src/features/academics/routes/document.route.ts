@@ -11,6 +11,7 @@ import {
     uploadDocument,
 } from "@/features/academics/controllers/document.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import documentScannerRouter from "@/features/document/routes/documentScanner.js";
 
 const router = express.Router();
 
@@ -38,5 +39,8 @@ router.post("/get", getDocument);
 router.post("/scan-marksheet", getExistingMarksheetFilesByRollNumber);
 
 router.post("/upload", uploadDocument);
+
+// Add the document scanner routes
+router.use("/scanner", documentScannerRouter);
 
 export default router;
