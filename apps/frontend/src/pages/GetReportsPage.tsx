@@ -13,7 +13,7 @@ const Page: React.FC = () => {
     pageIndex: 0,
     pageSize: 10,
   });
-const debouncePagination= useDebounce(pagination, 500)
+const debouncePagination= useDebounce(pagination, 400);
 const lastPageCountRef = useRef(0); 
 
 

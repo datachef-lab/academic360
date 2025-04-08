@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 import { getAcademicHistory } from "@/services/academic";
 import { createAcademicHistory, updateAcademicHistory } from "@/services/student-apis";
 import { ResultStatus } from "@/types/enums";
+import axios from "axios";
 
 const resultOptions:ResultStatus[] = ["PASS", "FAIL"];
 
@@ -41,11 +42,13 @@ const AcademicHistoryForm = () => {
   const studentId = location.pathname.split("/").pop();
   const id = Number(studentId);
 
-  const { data } = useQuery({
+  const { data ,error,isError} = useQuery({
     queryKey: ["AcademicHistory", id],
     queryFn: () => getAcademicHistory(id),
     enabled: !!id,
+    retry: false,
   });
+
 const updateData = useMutation({
   mutationFn: (formData: AcademicHistory) => updateAcademicHistory(formData, id),
   onSuccess: (data) => {
@@ -65,7 +68,24 @@ const createData = useMutation({
 
 
   useEffect(() => {
-    if (data?.payload) {
+   
+    if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
+      alert("No academic history found - initializing new record");
+      console.log("error code ***1+*",error.response?.status);
+      // Initialize form with default values
+      setFormData({
+        studentId: 0,
+        lastInstitution: null,
+        lastBoardUniversity: null,
+        specialization: null,
+        studiedUpToClass: null,
+        passedYear: null,
+        lastResult: null,
+        remarks: "",
+      });
+     
+    }
+    else if(data?.payload) {
       console.log("**",data.payload);
       console.log("**1",data.payload?.lastInstitution?.name);
      setFormData((prev) => ({
@@ -77,7 +97,18 @@ const createData = useMutation({
       }));
    
     }
-  }, [data]);
+    else{
+      console.log("error on fetching ",error);
+      
+    }
+    
+   
+   
+  }, [data, error, isError]);
+
+  
+    
+    
 
 
 
@@ -95,10 +126,13 @@ const createData = useMutation({
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if(data?.payload){
-      updateData.mutate(formData);
-    } else{
+    if(isError && axios.isAxiosError(error) && error.response?.status === 404){
+      console.log("No academic history found - creating new record");
       createData.mutate(formData);
+    }
+    else{
+      console.log("Updating academic history:", formData);
+      updateData.mutate(formData);
     }
   };
 
@@ -170,3 +204,5 @@ const handleDropdownChange=(value: string)=>{
 };
 
 export default AcademicHistoryForm;
+
+

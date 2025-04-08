@@ -1,4 +1,5 @@
 import axiosInstance from "@/utils/api";
+import axios from "axios";
 
 
 
@@ -46,8 +47,13 @@ export const getAccommodation = async (studentId: number) => {
 
     }catch(error){
       console.log("error",error);
-      return error;
-      
+    
+      if (axios.isAxiosError(error)) {
+        // Don't swallow the error - let React Query handle it
+        throw error;
+      }
+      throw error;
+      // Re-throw non-Axios errors
     }
     
   };
