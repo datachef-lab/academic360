@@ -17,6 +17,7 @@ const resultOptions:ResultStatus[] = ["PASS", "FAIL"];
 
 const formElement = [
   
+ 
   { name: "lastInstitution", label: "Last Institution", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "lastBoardUniversity", label: "Last Board University", type: "text", icon: <GraduationCap className="text-gray-500  dark:text-white w-5 h-5" /> },
   { name: "studiedUpToClass", label: "Studied Up To Class", type: "text", icon: <BookOpen className="text-gray-500  dark:text-white w-5 h-5" /> },
@@ -26,7 +27,11 @@ const formElement = [
 ];
 
 const AcademicHistoryForm = () => {
+  const location = useLocation();
+  const studentId = location.pathname.split("/").pop();
+  const id = Number(studentId);
   const [selected,setSelected]=useState<ResultStatus>("PASS");
+  const [isNew, setIsNew] = useState(false);
   const [formData, setFormData] = useState<AcademicHistory>({
     studentId: 0,
     lastInstitution: null,
@@ -38,9 +43,7 @@ const AcademicHistoryForm = () => {
     remarks: "",
   });
 
-  const location = useLocation();
-  const studentId = location.pathname.split("/").pop();
-  const id = Number(studentId);
+
 
   const { data ,error,isError} = useQuery({
     queryKey: ["AcademicHistory", id],
@@ -49,14 +52,7 @@ const AcademicHistoryForm = () => {
     retry: false,
   });
 
-const updateData = useMutation({
-  mutationFn: (formData: AcademicHistory) => updateAcademicHistory(formData, id),
-  onSuccess: (data) => {
-    console.log("Data saved:", data);
-    alert("Data saved successfully");
-  },
 
-});
 
 const createData = useMutation({
   mutationFn: (formData: AcademicHistory) =>createAcademicHistory(formData),
@@ -72,9 +68,9 @@ const createData = useMutation({
     if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
       alert("No academic history found - initializing new record");
       console.log("error code ***1+*",error.response?.status);
-      // Initialize form with default values
+      setIsNew(true);
       setFormData({
-        studentId: 0,
+        studentId: id,
         lastInstitution: null,
         lastBoardUniversity: null,
         specialization: null,
@@ -86,8 +82,9 @@ const createData = useMutation({
      
     }
     else if(data?.payload) {
-      console.log("**",data.payload);
-      console.log("**1",data.payload?.lastInstitution?.name);
+      console.log(JSON.stringify(data.payload,null,2));
+      // console.log("**1",data.payload?.lastInstitution?.name);
+      // console.log("**I",data.payload?.lastBoardUniversity?.name);
      setFormData((prev) => ({
         ...prev, 
         lastInstitution: data.payload.lastInstitution?.name || "",
@@ -104,12 +101,19 @@ const createData = useMutation({
     
    
    
-  }, [data, error, isError]);
+  }, [data, error, isError, id]);
 
   
     
     
-
+  const updateData = useMutation({
+    mutationFn: (formData: AcademicHistory) => updateAcademicHistory(id,formData),
+    onSuccess: (data) => {
+      console.log("Data saved:", data);
+      alert("Data saved successfully");
+    },
+  
+  });
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,7 +130,8 @@ const createData = useMutation({
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if(isError && axios.isAxiosError(error) && error.response?.status === 404){
+    if(isNew){
+      console.log("Creating new academic history:", formData);
       console.log("No academic history found - creating new record");
       createData.mutate(formData);
     }
@@ -176,6 +181,7 @@ const handleDropdownChange=(value: string)=>{
             <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
                     <FileText className="text-gray-500 dark:text-gray-300 w-5 h-5" />
                   </span>
+         
               <Button variant="outline" className="w-full font-normal pl-10 justify-between rounded-lg">
                 <span>{formData.lastResult || "Select Result"}</span>
                 <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -195,7 +201,7 @@ const handleDropdownChange=(value: string)=>{
 
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
-            Submit
+           {isNew?"Create":"Update"} 
           </Button>
         </div>
       </div>

@@ -112,8 +112,17 @@ export const updatedAcademicIdentifier = async (formData: academicIdentifier, id
 
 };
 
+export const createAcademicIdentifier=async(formData:academicIdentifier)=>{
+    const res=await axiosInstance.post(`/api/academicIdentifiers/`,formData,{
+        headers:{
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+       } 
+    })
+    return res.data;
+}
 
-export const updateAcademicHistory = async (formData: AcademicHistory, id: number) => {
+
+export const updateAcademicHistory = async ( id: number,formData: AcademicHistory) => {
     const res = await axiosInstance.put(`/api/academicHistories/${id}`,formData,{
         headers:{
              "Authorization": `Bearer ${localStorage.getItem("token")}`,
