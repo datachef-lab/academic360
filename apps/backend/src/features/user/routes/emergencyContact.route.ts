@@ -1,11 +1,11 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
+// import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
 import { createEmergencyContact, getEmergencyContactById, getEmergencyContactByStudentId, updateEmergencyContact } from "../controllers/emergencyContact.controller";
 import { getAddressById } from "../controllers/address.controller";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 router.post("/", createEmergencyContact);
 
 router.get("/query", (req, res, next) => {

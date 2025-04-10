@@ -6,7 +6,8 @@ import { EmergencyContact } from "@/types/user/emergency-contact";
 import { useLocation } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {  getEmergencyContact } from "@/services/academic";
-import { updateEmergencyContact } from "@/services/student-apis";
+import { createEmergencyContact, updateEmergencyContact } from "@/services/student-apis";
+import axios from "axios";
 
 
 
@@ -21,6 +22,7 @@ const formElements = [
 ];
 
 const EmergencyContactForm = () => {
+  const [isNew,setIsNew]=useState(false);
   const [formData, setFormData] = useState<EmergencyContact>({
     studentId: 0,
     personName: "",
@@ -45,21 +47,57 @@ const saveData = useMutation({
   },
 });
 
-const { data } = useQuery({
+const { data,isError,error } = useQuery({
   queryKey: ["EmergencyContact", id],
   queryFn: () => getEmergencyContact(id),
   enabled: !!id, 
 });
+ const createData = useMutation({
+    mutationFn: (formData: EmergencyContact) =>createEmergencyContact(formData),
+    onSuccess: (data) => {
+      console.log("Data saved:", data);
+      console.log("Data saved successfully");
+    },
+  });
 
-useEffect(() => {
-  if (data?.payload) {
-    console.log("Fetched Data:", data.payload);
-    setFormData((prev) => ({
-      ...prev,
-      ...data.payload, 
-    }));
-  }
-}, [data]);
+
+
+
+  useEffect(() => {
+   
+    if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
+      alert("No academic history found - initializing new record");
+      console.log("error code ***1+*",error.response?.status);
+      setIsNew(true);
+      setFormData({
+        studentId: 0,
+        personName: "",
+        relationToStudent: "",
+        email: "",
+        phone: "",
+        officePhone: "",
+        residentialPhone: "",
+      });
+     
+    }
+    else if(data?.payload) {
+      console.log(JSON.stringify(data.payload,null,2));
+      setFormData((prev) => ({
+        ...prev,
+        ...data.payload, 
+      }));
+   
+    }
+    else{
+      console.log("error on fetching ",error);
+      
+    }
+    
+   
+   
+  }, [data, error, isError, id]);
+
+  
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -93,8 +131,17 @@ useEffect(() => {
     e.preventDefault();
     if (validateForm()) {
       console.log("Form Data Submitted:", formData);
-      console.log("Form Data Submitted:", JSON.stringify(formData,null,2));
-      saveData.mutate(formData);
+      
+      if(isNew){
+        console.log("Form Data Submitted:", JSON.stringify(formData,null,2));
+        console.log("No academic history found - creating new record");
+        createData.mutate(formData);
+      }
+      else{
+        // console.log("Updating academic history:", formData);
+        console.log("Updating academic history:", JSON.stringify(formData,null,2));
+        saveData.mutate(formData);
+      }
       setErrors({});
     }
   };
@@ -124,7 +171,7 @@ useEffect(() => {
         ))}
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
-            Submit
+            {isNew?"Create":"Update"}
           </Button>
         </div>
       </div>

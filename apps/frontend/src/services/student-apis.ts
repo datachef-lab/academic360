@@ -44,6 +44,16 @@ export const updateAccommodation = async (formData: Accommodation, id: number) =
     })
     return res.data;
 };
+export const createAccommodation = async (formData: Accommodation) => {
+    const response = await axiosInstance.post(`/api/accommodations`,formData,
+        {
+            headers: {
+                "Authorization": `Bearer ${localStorage.getItem("token")}`, 
+            },
+        }  
+    )
+    return response.data;
+};
 
 
 

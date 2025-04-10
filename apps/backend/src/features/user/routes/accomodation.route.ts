@@ -1,11 +1,11 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
+// import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
 
 import { createAccommodation, getAccommodationById, getAccommodationByStudentId, updateAccommodation } from "../controllers/accommodation.controller.js";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 router.post("/", createAccommodation);
 
