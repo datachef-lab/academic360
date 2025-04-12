@@ -220,7 +220,7 @@ const AccommodationForm = () => {
     console.log("Final formData before saving:", formData);
     console.log("formData", JSON.stringify(formData, null, 2));
     if(isNew){
-      createData.mutate(formData);
+     createData.mutate(formData);
     }else{
       saveData.mutate(formData);
     }

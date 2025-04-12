@@ -1,28 +1,28 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import {  School, GraduationCap, Calendar, FileText, BookOpen, ClipboardList, MessageSquare, ChevronDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {  School, GraduationCap, Calendar, FileText, BookOpen, ClipboardList, MessageSquare, ChevronDown, Book } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { getAcademicHistory } from "@/services/academic";
+import { getAcademicHistory, getAllSpecialization } from "@/services/academic";
 import { createAcademicHistory, updateAcademicHistory } from "@/services/student-apis";
 import { ResultStatus } from "@/types/enums";
 import axios from "axios";
+import { Specialization } from "@/types/resources/specialization";
 
 const resultOptions:ResultStatus[] = ["PASS", "FAIL"];
 
 
 const formElement = [
   
- 
+  { name: "id", label: "ID", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "lastInstitution", label: "Last Institution", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "lastBoardUniversity", label: "Last Board University", type: "text", icon: <GraduationCap className="text-gray-500  dark:text-white w-5 h-5" /> },
   { name: "studiedUpToClass", label: "Studied Up To Class", type: "text", icon: <BookOpen className="text-gray-500  dark:text-white w-5 h-5" /> },
-  { name: "passedYear", label: "Passed Year", type: "text", icon: <Calendar className="text-gray-500 w-5 h-5  dark:text-white" /> },
-  { name: "specialization", label: "Specialization", type: "text", icon: <ClipboardList className="text-gray-500  dark:text-white w-5 h-5" /> },
+  { name: "passedYear", label: "Passed Year", type: "text", icon: <Calendar className="text-gray-500 w-5 h-5  dark:text-white" /> }, { name: "specialization", label: "Specialization", type: "text", icon: <ClipboardList className="text-gray-500  dark:text-white w-5 h-5" /> },
   { name: "remarks", label: "Remarks", type: "text", icon: <MessageSquare className="text-gray-500 w-5  dark:text-white h-5" /> },
 ];
 
@@ -32,6 +32,7 @@ const AcademicHistoryForm = () => {
   const id = Number(studentId);
   const [selected,setSelected]=useState<ResultStatus>("PASS");
   const [isNew, setIsNew] = useState(false);
+  const [selectedSpecialization, setSelectedSpecialization] = useState<{ id: number; name: string } | null>(null);
   const [formData, setFormData] = useState<AcademicHistory>({
     studentId: 0,
     lastInstitution: null,
@@ -43,7 +44,26 @@ const AcademicHistoryForm = () => {
     remarks: "",
   });
 
+const { data:specialization } = useQuery({
+    queryKey: ["specialization"],
+    queryFn: getAllSpecialization,
+  });
+  const SpecializationMemo = useMemo(() => {
+    if (!specialization) {
+      //// console.warn("No streamData received from API");
+      return [];
+    }
 
+    const specializationMap = new Map();
+    specialization.forEach((item: Specialization) => {
+      if (item) {
+        specializationMap.set(item.id, { id: item.id, name: item.name });
+      }
+    });
+    const specializationNames = [...specializationMap.values()];
+    // // console.log("Distinct Degree Names:", degreeNames);
+    return specializationNames;
+  }, [specialization]);
 
   const { data ,error,isError} = useQuery({
     queryKey: ["AcademicHistory", id],
@@ -67,7 +87,7 @@ const createData = useMutation({
    
     if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
       alert("No academic history found - initializing new record");
-      console.log("error code ***1+*",error.response?.status);
+      // console.log("error code ***1+*",error.response?.status);
       setIsNew(true);
       setFormData({
         studentId: id,
@@ -83,8 +103,8 @@ const createData = useMutation({
     }
     else if(data?.payload) {
       console.log(JSON.stringify(data.payload,null,2));
-      // console.log("**1",data.payload?.lastInstitution?.name);
-      // console.log("**I",data.payload?.lastBoardUniversity?.name);
+      // // console.log("**1",data.payload?.lastInstitution?.name);
+      // // console.log("**I",data.payload?.lastBoardUniversity?.name);
      setFormData((prev) => ({
         ...prev, 
         lastInstitution: data.payload.lastInstitution?.name || "",
@@ -114,7 +134,14 @@ const createData = useMutation({
     },
   
   });
-
+const handleStreamSelect = (option: { id: number; name: string }) => {
+  // console.log("option selected",option);
+  setSelectedSpecialization(option);
+  setFormData(prev => ({
+    ...prev,
+    specialization: { ...(prev.specialization || {}), option } as Specialization, 
+  }));
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -131,8 +158,8 @@ const createData = useMutation({
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if(isNew){
-      console.log("Creating new academic history:", formData);
-      console.log("No academic history found - creating new record");
+      // console.log("Creating new academic history:", formData);
+      // console.log("No academic history found - creating new record");
       createData.mutate(formData);
     }
     else{
@@ -198,6 +225,33 @@ const handleDropdownChange=(value: string)=>{
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+         <div className=" flex pr-8 w-full flex-col">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Specialization</label>
+                 
+              <DropdownMenu>
+                    <DropdownMenuTrigger className="relative" >
+                       <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                                      <Book className="text-gray-500 dark:text-gray-300 w-5 h-5" />
+                                        </span>
+                      <Button className="border border-gray-400 w-full pl-10 flex items-center justify-between " variant="outline">
+                      {selectedSpecialization ? selectedSpecialization.name : "Select Stream"} <ChevronDown />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      {SpecializationMemo.map((option) => (
+                        <DropdownMenuItem
+                          key={option.id}
+                          onClick={() => {
+                            //// console.log("Selected Stream:", option.name);
+                            handleStreamSelect(option);
+                          }}
+                        >
+                          {option.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+              </div>
 
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">

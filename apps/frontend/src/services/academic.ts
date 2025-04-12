@@ -64,8 +64,8 @@ export const getAcademicHistory = async (studentId: number) => {
         },
       });
     // console.log("res data1**",response.data);
-    // console.log("res,data**",response.data.payload);
-    return response.data.payload;
+    console.log("res,data**",response.data.payload);
+    return response.data;
 
   } catch (error) {
     console.log("error", error);
@@ -126,7 +126,7 @@ export const getBoardUniversity = async (id: number) => {
   const response = await axiosInstance.get(`/api/board-universities/${id}`,
     {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`, // ✅ Send Bearer token
+        Authorization: `Bearer ${localStorage.getItem("token")}`, 
       },
     });
 
@@ -149,4 +149,20 @@ export const getBoardResultStatus = async (id: number) => {
   console.log("res,data**", response.data.payload);
   console.log("res data test*****", response.data?.payload?.name);
   return response.data;
+};
+
+
+export const getAllSpecialization = async () => {
+ 
+
+  const response = await axiosInstance.get(`/api/specialization`,
+    {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`, // ✅ Send Bearer token
+      },
+    });
+
+  console.log("res,data**", response.data.payload);
+  console.log("res data test*****", response.data?.payload?.name);
+  return response.data.payload;
 };
