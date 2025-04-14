@@ -61,7 +61,7 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     console.log("Error Provider Setup");
     setupAxiosInterceptors(showError); // Setup Axios interceptors on mount
-  }, []);
+  }, [showError]);
 
   return (
     <ErrorContext.Provider value={{ showError }}>

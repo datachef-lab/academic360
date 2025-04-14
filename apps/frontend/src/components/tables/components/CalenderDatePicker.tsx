@@ -308,40 +308,12 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
     };
 
     React.useEffect(() => {
-      const firstDayElement = document.getElementById(`firstDay-${id}`);
-      const firstMonthElement = document.getElementById(`firstMonth-${id}`);
-      const firstYearElement = document.getElementById(`firstYear-${id}`);
-      const secondDayElement = document.getElementById(`secondDay-${id}`);
-      const secondMonthElement = document.getElementById(`secondMonth-${id}`);
-      const secondYearElement = document.getElementById(`secondYear-${id}`);
-
-      const elements = [
-        firstDayElement,
-        firstMonthElement,
-        firstYearElement,
-        secondDayElement,
-        secondMonthElement,
-        secondYearElement,
-      ];
-
-      const addPassiveEventListener = (element: HTMLElement | null) => {
-        if (element) {
-          element.addEventListener("wheel", handleWheel as unknown as EventListener, {
-            passive: false,
-          });
-        }
-      };
-
-      elements.forEach(addPassiveEventListener);
+      window.addEventListener("wheel", handleWheel, { passive: false });
 
       return () => {
-        elements.forEach((element) => {
-          if (element) {
-            element.removeEventListener("wheel", handleWheel as unknown as EventListener);
-          }
-        });
+        window.removeEventListener("wheel", handleWheel);
       };
-    }, [highlightedPart, date]);
+    }, [id, handleWheel]);
 
     const formatWithTz = (date: Date, fmt: string) => formatInTimeZone(date, timeZone, fmt);
 

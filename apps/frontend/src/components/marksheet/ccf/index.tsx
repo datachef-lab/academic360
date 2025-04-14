@@ -9,12 +9,10 @@ import Footer from "./Footer";
 import { Input } from "@/components/ui/input";
 import { Marksheet } from "@/types/academics/marksheet";
 import { useAuth } from "@/hooks/useAuth";
-import { User } from "@/types/user/user";
 import { Subject } from "@/types/academics/subject";
 import InputInitials from "./InputInitials";
 import { getSearchedStudentsByRollNumber } from "@/services/student";
 import { Student } from "@/types/user/student";
-import { Framework } from "@/types/enums";
 
 const columns = [
   "Course Code (Course Type)",
@@ -55,50 +53,10 @@ const MarksheetCCF = () => {
   });
 
   useEffect(() => {
-    // Fetch marksheet data if marksheetId is present
-    if (marksheetId && marksheetId !== "new") {
-      // fetch marksheet data
-    } else {
-      // create new marksheet
-      const newMarksheet: Marksheet = {
-        studentId: 0,
-        year: 0,
-        cgpa: null,
-        classification: null,
-        semester: 1,
-        sgpa: null,
-        remarks: null,
-        source: "ADDED",
-        file: null,
-        createdByUser: user as User,
-        updatedByUser: user as User,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        subjects: [],
-        name: student?.name as string,
-        academicIdentifier: {
-          rollNumber: rollNumber as string,
-          studentId: 0,
-          frameworkType: framework as Framework,
-          rfid: null,
-          stream: null,
-          degreeProgramme: null,
-          section: "",
-          classRollNumber: null,
-          apaarId: null,
-          abcId: null,
-          apprid: null,
-          checkRepeat: false,
-          cuFormNumber: null,
-          uid: null,
-          oldUid: null,
-          registrationNumber: "",
-        },
-      };
-
-      setMarksheet((prev) => ({ ...prev, ...newMarksheet }));
-    }
-  }, []);
+    // TODO: Implement getClassTestsByStudentIdAndMarksheetId function or replace with appropriate API call
+    // getClassTestsByStudentIdAndMarksheetId();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [framework, marksheetId, rollNumber, student?.name, user]);
 
   useQuery({
     queryKey: ["subjectMetadata"],

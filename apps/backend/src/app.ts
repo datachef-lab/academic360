@@ -44,6 +44,9 @@ import {
     occupationRouter,
     personalDetailsRouter,
     healthRouter,
+    addressRouter,
+    parentRouter,
+    personRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -167,6 +170,8 @@ app.use("/api/blood-groups", bloodGroupRouter);
 
 app.use("/api/categories", categoryRouter);
 
+app.use("/api/address", addressRouter);
+
 app.use("/api/languages", languageMediumRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
@@ -186,6 +191,10 @@ app.use("/api/degree", degreeRouter);
 app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
+
+app.use("/api/parents", parentRouter);
+
+app.use("/api/person", personRouter);
 
 app.use(errorHandler);
 

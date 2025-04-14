@@ -20,21 +20,52 @@ export const createAddress = async (req: Request, res: Response, next: NextFunct
 
 
 
-export const getAddressById = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { id } = req.query;
+// export const getAddressById = async (req: Request, res: Response, next: NextFunction) => {
+//     try {
+//         const { id } = req.query;
 
-        const foundAddress = await findAddressById(Number(id));
+//         const foundAddress = await findAddressById(Number(id));
 
-        if (!foundAddress) {
-            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Address of ID${id}  not found`));
-            return;
-        }
+//         if (!foundAddress) {
+//             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Address of ID${id}  not found`));
+//             return;
+//         }
         
-        res.status(200).json(new ApiResponse(200, "SUCCESS", foundAddress, "Fetched Address successfully!"));
-    } catch (error) {
-        handleError(error, res, next);
+//         res.status(200).json(new ApiResponse(200, "SUCCESS", foundAddress, "Fetched Address successfully!"));
+//     } catch (error) {
+//         handleError(error, res, next);
+//     }
+// };
+
+// getAddressById
+export const getAddressById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { id } = req.params;
+    const address = await db
+      .select()
+      .from(addressModel)
+      .where(eq(addressModel.id, Number(id)))
+      .limit(1);
+
+    if (!address[0]) {
+      res
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, "Address not found"));
+      return;
     }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", address[0], "Fetched Address!"),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
 };
 
 export const updateAddress = async (req: Request, res: Response, next: NextFunction) => {

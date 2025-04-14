@@ -8,16 +8,17 @@ const router = express.Router();
 router.use(verifyJWT);
 
 router.post("/", createAddress);
+router.get("/:id", getAddressById);
 
-router.get("/query", (req, res, next) => {
-    const { id } = req.query;
-    console.log(id);
-    if (id) {
-        getAddressById(req, res, next);
-    } else {
-        next();
-    }
-});
+// router.get("/query", (req, res, next) => {
+//     const { id } = req.query;
+//     console.log(id);
+//     if (id) {
+//         getAddressById(req, res, next);
+//     } else {
+//         next();
+//     }
+// });
 
 router.put("/:id", updateAddress);
 

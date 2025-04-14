@@ -1,4 +1,15 @@
-import { IdCard, Mail, Phone, User, Image, Briefcase, GraduationCap, Home, BadgeIndianRupee, Syringe } from "lucide-react";
+import {
+  IdCard,
+  Mail,
+  Phone,
+  User,
+  Image,
+  Briefcase,
+  GraduationCap,
+  Home,
+  BadgeIndianRupee,
+  Syringe,
+} from "lucide-react";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -8,14 +19,49 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useEffect, useState } from "react";
 import { annualIncome } from "@/services/annual-income";
 import { AnnualIncome } from "@/types/resources/annual-income";
+import { fetchAllOccupations, fetchAllQualifications, fetchPersonByStudentId } from "@/services/personal-details";
+import { useParams } from "react-router-dom";
+import { Qualification } from "@/types/resources/qualification";
+import { Occupation } from "@/types/resources/occupation";
+import { Person } from "@/types/user/person";
+import { ApiResonse } from "@/types/api-response";
+import { fetchAllPersonByStudentId } from "@/services/health";
+// import { ApiResponse } from "@/types/api-response";
+
+interface PersonResponse {
+  httpStatusCode: number;
+  payload: Person;
+  httpStatus: string;
+  message: string;
+}
+
+interface AnnualIncomeResponse {
+  httpStatusCode: number;
+  payload: {
+    content: AnnualIncome[];
+    page: number;
+    pageSize: number;
+    totalElements: number;
+    totalPages: number;
+  };
+  httpStatus: string;
+  message: string;
+}
 
 export default function ParentDetails() {
   const [parentType, setParentType] = useState("BOTH"); // Default to "BOTH"
   const [income, setIncome] = useState<AnnualIncome[]>([]);
+  const [occupations, setOccupations] = useState<Occupation[]>([]);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [personData, setPersonData] = useState<Person | null>(null);
+  const { studentId } = useParams<{ studentId: string }>();
+
+  // Combined useEffect for all data fetching
   useEffect(() => {
+    // Get All AnnualIncomes
     async function getAnnualIncome() {
       try {
-        const response = await annualIncome();
+        const response = (await annualIncome()) as unknown as AnnualIncomeResponse;
         console.log("Annual Income is coming...", response);
         if (response.payload && response.payload.content) {
           setIncome(response.payload.content);
@@ -24,8 +70,63 @@ export default function ParentDetails() {
         console.log("Error fetching Language...", error);
       }
     }
+
+    // Get All PersonsById
+    async function getAllPersons() {
+      if (!studentId) return;
+      try {
+        const response = (await fetchPersonByStudentId(+studentId)) as unknown as PersonResponse;
+        console.log("Persons is coming...", response);
+        if (response.payload) {
+          setPersonData(response.payload);
+        }
+      } catch (error) {
+        console.log("Error fetching persons...", error);
+      }
+    }
+
+    // Get All Occupations
+    async function getAllOccupations() {
+      try {
+        const response = (await fetchAllOccupations()) as unknown as ApiResonse<{ content: Occupation[] }>;
+        console.log("Occupation is coming...", response);
+        if (response.payload && response.payload.content) {
+          setOccupations(response.payload.content);
+        }
+      } catch (error) {
+        console.log("Error fetching Occupations...", error);
+      }
+    }
+
+    // Get All Qualifications
+    async function getAllQualifications() {
+      try {
+        const response = (await fetchAllQualifications()) as unknown as ApiResonse<{ content: Qualification[] }>;
+        console.log("Qualifications is coming...", response);
+        if (response.payload && response.payload.content) {
+          setQualifications(response.payload.content);
+        }
+      } catch (error) {
+        console.log("Error fetching Qualfications...", error);
+      }
+    }
+
+    
+      async function fetchAllPersons() {
+        if (!studentId) return;
+        try {
+          const response = await fetchAllPersonByStudentId(+studentId);
+          console.log("Guardian Details is coming.....",response)
+        } catch (error) {
+          console.log("Error fetching guardian....",error)
+        }
+      }
+      fetchAllPersons();
     getAnnualIncome();
-  }, []);
+    getAllPersons();
+    getAllOccupations();
+    getAllQualifications();
+  }, [studentId]);
 
   return (
     <div className="flex justify-center items-center w-full p-6">
@@ -62,14 +163,24 @@ export default function ParentDetails() {
                         <User className="w-5 h-5 text-blue-600" />
                         Name
                       </Label>
-                      <Input type="text" placeholder="Enter Father's Name" />
+                      <Input
+                        type="text"
+                        placeholder="Enter Father's Name"
+                        value={personData?.name || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, name: e.target.value } : null))}
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <Mail className="w-5 h-5 text-blue-600" />
                         Email
                       </Label>
-                      <Input type="email" placeholder="Enter Email" />
+                      <Input
+                        type="email"
+                        placeholder="Enter Email"
+                        value={personData?.email || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, email: e.target.value } : null))}
+                      />
                     </div>
                   </div>
 
@@ -79,14 +190,26 @@ export default function ParentDetails() {
                         <Phone className="w-5 h-5 text-blue-600" />
                         Phone
                       </Label>
-                      <Input type="text" placeholder="Enter Phone Number" />
+                      <Input
+                        type="text"
+                        placeholder="Enter Phone Number"
+                        value={personData?.phone || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, phone: e.target.value } : null))}
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <IdCard className="w-5 h-5 text-blue-600" />
                         Aadhaar Number
                       </Label>
-                      <Input type="text" placeholder="Enter Aadhaar Number" />
+                      <Input
+                        type="text"
+                        placeholder="Enter Aadhaar Number"
+                        value={personData?.aadhaarCardNumber || ""}
+                        onChange={(e) =>
+                          setPersonData((prev) => (prev ? { ...prev, aadhaarCardNumber: e.target.value } : null))
+                        }
+                      />
                     </div>
                   </div>
 
@@ -96,14 +219,28 @@ export default function ParentDetails() {
                         <GraduationCap className="w-5 h-5 text-blue-600" />
                         Qualification
                       </Label>
-                      <Input type="text" placeholder="Enter Qualification" />
+                      <select className="w-full p-2 border rounded-md">
+                        <option value="">Select Qualification</option>
+                        {qualifications.map((qualification) => (
+                          <option key={qualification.id} value={qualification.id}>
+                            {qualification.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <Briefcase className="w-5 h-5 text-blue-600" />
                         Occupation
                       </Label>
-                      <Input type="text" placeholder="Enter Occupation" />
+                      <select className="w-full p-2 border rounded-md">
+                        <option value="">Select Occupation</option>
+                        {occupations.map((occupation) => (
+                          <option key={occupation.id} value={occupation.id}>
+                            {occupation.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <div className="mt-4">
@@ -113,9 +250,9 @@ export default function ParentDetails() {
                     </Label>
                     <select className="w-full p-2 border rounded-md">
                       <option value="">Select Annual Income</option>
-                      {income.map((income, index) => (
-                        <option key={index} value={income.range}>
-                          {income.range}
+                      {income.map((incomeItem) => (
+                        <option key={incomeItem.id} value={incomeItem.id}>
+                          {incomeItem.range}
                         </option>
                       ))}
                     </select>
@@ -135,7 +272,14 @@ export default function ParentDetails() {
                         <Phone className="w-5 h-5 text-blue-600" />
                         Office Phone
                       </Label>
-                      <Input type="text" placeholder="Enter Office Phone" />
+                      <Input
+                        type="text"
+                        placeholder="Enter Office Phone"
+                        value={personData?.officePhone || ""}
+                        onChange={(e) =>
+                          setPersonData((prev) => (prev ? { ...prev, officePhone: e.target.value } : null))
+                        }
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
@@ -143,6 +287,15 @@ export default function ParentDetails() {
                         Upload Image
                       </Label>
                       <Input type="file" />
+                      {personData?.image && (
+                        <div className="mt-2">
+                          <img
+                            src={personData.image}
+                            alt="Profile"
+                            className="max-w-[100px] max-h-[100px] rounded-md"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </AccordionContent>
@@ -162,14 +315,24 @@ export default function ParentDetails() {
                         <User className="w-5 h-5 text-blue-600" />
                         Name
                       </Label>
-                      <Input type="text" placeholder="Enter Mother's Name" />
+                      <Input 
+                        type="text" 
+                        placeholder="Enter Mother's Name" 
+                        value={personData?.name || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, name: e.target.value } : null))}
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <Mail className="w-5 h-5 text-blue-600" />
                         Email
                       </Label>
-                      <Input type="email" placeholder="Enter Email" />
+                      <Input 
+                        type="email" 
+                        placeholder="Enter Email" 
+                        value={personData?.email || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, email: e.target.value } : null))}
+                      />
                     </div>
                   </div>
 
@@ -179,14 +342,24 @@ export default function ParentDetails() {
                         <Phone className="w-5 h-5 text-blue-600" />
                         Phone
                       </Label>
-                      <Input type="text" placeholder="Enter Phone Number" />
+                      <Input 
+                        type="text" 
+                        placeholder="Enter Phone Number" 
+                        value={personData?.phone || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, phone: e.target.value } : null))}
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <IdCard className="w-5 h-5 text-blue-600" />
                         Aadhaar Number
                       </Label>
-                      <Input type="text" placeholder="Enter Aadhaar Number" />
+                      <Input 
+                        type="text" 
+                        placeholder="Enter Aadhaar Number" 
+                        value={personData?.aadhaarCardNumber || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, aadhaarCardNumber: e.target.value } : null))}
+                      />
                     </div>
                   </div>
 
@@ -196,14 +369,28 @@ export default function ParentDetails() {
                         <GraduationCap className="w-5 h-5 text-blue-600" />
                         Qualification
                       </Label>
-                      <Input type="text" placeholder="Enter Qualification" />
+                      <select className="w-full p-2 border rounded-md">
+                        <option value="">Select Qualification</option>
+                        {qualifications.map((qualification) => (
+                          <option key={qualification.id} value={qualification.id}>
+                            {qualification.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
                         <Briefcase className="w-5 h-5 text-blue-600" />
                         Occupation
                       </Label>
-                      <Input type="text" placeholder="Enter Occupation" />
+                      <select className="w-full p-2 border rounded-md">
+                        <option value="">Select Occupation</option>
+                        {occupations.map((occupation) => (
+                          <option key={occupation.id} value={occupation.id}>
+                            {occupation.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -212,7 +399,14 @@ export default function ParentDetails() {
                       <BadgeIndianRupee className="w-5 h-5 text-blue-600" />
                       Annual Income
                     </Label>
-                    <Input type="number" placeholder="Enter Annual Income" />
+                    <select className="w-full p-2 border rounded-md">
+                      <option value="">Select Annual Income</option>
+                      {income.map((incomeItem) => (
+                        <option key={incomeItem.id} value={incomeItem.id}>
+                          {incomeItem.range}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="mt-4">
@@ -229,7 +423,12 @@ export default function ParentDetails() {
                         <Phone className="w-5 h-5 text-blue-600" />
                         Office Phone
                       </Label>
-                      <Input type="text" placeholder="Enter Office Phone" />
+                      <Input 
+                        type="text" 
+                        placeholder="Enter Office Phone" 
+                        value={personData?.officePhone || ""}
+                        onChange={(e) => setPersonData((prev) => (prev ? { ...prev, officePhone: e.target.value } : null))}
+                      />
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
@@ -237,6 +436,15 @@ export default function ParentDetails() {
                         Upload Image
                       </Label>
                       <Input type="file" />
+                      {personData?.image && (
+                        <div className="mt-2">
+                          <img
+                            src={personData.image}
+                            alt="Profile"
+                            className="max-w-[100px] max-h-[100px] rounded-md"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </AccordionContent>
@@ -289,15 +497,44 @@ export default function ParentDetails() {
                       <GraduationCap className="w-5 h-5 text-blue-600" />
                       Qualification
                     </Label>
-                    <Input type="text" placeholder="Enter Qualification" />
+                    <select className="w-full p-2 border rounded-md">
+                      <option value="">Select Qualification</option>
+                      {qualifications.map((qualification) => (
+                        <option key={qualification.id} value={qualification.id}>
+                          {qualification.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <Label className="flex items-center gap-2">
                       <Briefcase className="w-5 h-5 text-blue-600" />
                       Occupation
                     </Label>
-                    <Input type="text" placeholder="Enter Occupation" />
+                    <select className="w-full p-2 border rounded-md">
+                      <option value="">Select Occupation</option>
+                      {occupations.map((occupation) => (
+                        <option key={occupation.id} value={occupation.id}>
+                          {occupation.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <Label className="flex items-center gap-2">
+                    <BadgeIndianRupee className="w-5 h-5 text-blue-600" />
+                    Annual Income
+                  </Label>
+                  <select className="w-full p-2 border rounded-md">
+                    <option value="">Select Annual Income</option>
+                    {income.map((incomeItem) => (
+                      <option key={incomeItem.id} value={incomeItem.id}>
+                        {incomeItem.range}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="mt-4">

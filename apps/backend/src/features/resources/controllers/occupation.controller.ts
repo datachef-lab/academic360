@@ -26,7 +26,36 @@ export const getAllOccupation = async (req: Request, res: Response, next: NextFu
     }
 };
 
+// Get a specific occupation
+export const getOccupationById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const { id } = req.params;
+        const occupation = await db
+            .select()
+            .from(occupationModel)
+            .where(eq(occupationModel.id, Number(id)))
+            .limit(1);
 
+        if (!occupation[0]) {
+            res
+                .status(404)
+                .json(new ApiResponse(404, "NOT_FOUND", null, "Occupation not found"));
+            return;
+        }
+
+        res
+            .status(200)
+            .json(
+                new ApiResponse(200, "SUCCESS", occupation[0], "Fetched all Occupations!"),
+            );
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
 export const updateOccupation = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.query;
