@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useMemo, useState } from "react";
 
-import {  School, GraduationCap, Calendar, FileText, BookOpen, ClipboardList, MessageSquare, ChevronDown, Book } from "lucide-react";
+import {  School, GraduationCap, Calendar, FileText, BookOpen, ClipboardList, MessageSquare, ChevronDown, Book, FilePlus, CheckCircle, PenLine } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -12,6 +12,8 @@ import { createAcademicHistory, updateAcademicHistory } from "@/services/student
 import { ResultStatus } from "@/types/enums";
 import axios from "axios";
 import { Specialization } from "@/types/resources/specialization";
+
+import { toast } from "sonner";
 
 const resultOptions:ResultStatus[] = ["PASS", "FAIL"];
 
@@ -86,7 +88,10 @@ const createData = useMutation({
   useEffect(() => {
    
     if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
-      alert("No academic history found - initializing new record");
+      toast.info("No academic info found. Starting a new record for you!", {
+        icon: <FilePlus />,
+      });
+       
       // console.log("error code ***1+*",error.response?.status);
       setIsNew(true);
       setFormData({
@@ -158,13 +163,19 @@ const handleStreamSelect = (option: { id: number; name: string }) => {
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if(isNew){
-      // console.log("Creating new academic history:", formData);
-      // console.log("No academic history found - creating new record");
+      console.log("Creating new academic history:", formData);
+      console.log("No academic history found - creating new record");
       createData.mutate(formData);
+      toast.success("Academic record has been successfully created.",{
+        icon:<CheckCircle/>,
+            });
     }
     else{
       console.log("Updating academic history:", formData);
       updateData.mutate(formData);
+      toast.success("Your data has been successfully updated.",{
+        icon:<PenLine/>,
+            });
     }
   };
 
