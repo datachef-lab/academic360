@@ -78,7 +78,7 @@ const data = {
     },
     {
       title: "Library",
-      url: "/home/library",
+      url: "#",
       icon: BookOpen,
       items: [
         { title: "Dashboard", url: "/home/lib" },
@@ -131,11 +131,11 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar collapsible="icon" {...props} className="bg-violet-400">
+      <SidebarHeader >
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent >
         <NavMain items={data.navMain} />
       </SidebarContent>
       <SidebarFooter className="px-0 flex justify-center">
