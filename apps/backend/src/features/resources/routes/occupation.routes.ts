@@ -12,8 +12,12 @@ const router = express.Router();
 
 router.post("/", createOccupation);
 router.get("/", getAllOccupation);
+
 router.get("/:id", getOccupationById);
 router.put("/", updateOccupation);
+
+router.put("/:id", updateOccupation);
+
 router.delete("/", deleteOccupation);
 
 export default router;

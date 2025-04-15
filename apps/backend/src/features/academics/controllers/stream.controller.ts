@@ -5,10 +5,11 @@ import { eq } from "drizzle-orm";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { ApiError } from "@/utils/ApiError.js";
+import { findAllStreams } from "../services/stream.service.js";
 
 export const getStreams = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const streams = await db.select().from(streamModel);
+        const streams = await findAllStreams();
         res.status(200).json(new ApiResponse(200, "SUCCESS", streams, "Streams fetched successfully."));
     } catch (error) {
         handleError(error, res, next);

@@ -8,8 +8,7 @@ import { removeAcademicHistory } from "./academicHistory.service.js";
 import { addAcademicIdentifier, findAcademicIdentifierByStudentId, removeAcademicIdentifier, saveAcademicIdentifier } from "./academicIdentifier.service.js";
 import { removeAccommodationByStudentId } from "./accommodation.service.js";
 import { removeAdmissionByStudentId } from "./admission.service.js";
-import { removeParentsByStudentId } from "./parentDetails.service.js";
-import { removeGuardianByStudentId } from "./guardian.service.js";
+import { removeFamilysByStudentId } from "./family.service.js";
 import { removeHealthByStudentId } from "./health.service.js";
 import { removeEmergencyContactByStudentId } from "./emergencyContact.service.js";
 import { removeTransportDetailsByStudentId } from "./transportDetail.service.js";
@@ -121,34 +120,30 @@ export async function removeStudent(id: number): Promise<boolean | null> {
     if (isDeleted !== null && !isDeleted) return false;
 
     // Step 5: Delete the parent-details
-    isDeleted = await removeParentsByStudentId(id);
+    isDeleted = await removeFamilysByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 6: Delete the guardian-details
-    isDeleted = await removeGuardianByStudentId(id);
-    if (isDeleted !== null && !isDeleted) return false;
-
-    // Step 7: Delete the health
+    // Step 6: Delete the health
     isDeleted = await removeHealthByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 8: Delete the emergency-contact
+    // Step 7: Delete the emergency-contact
     isDeleted = await removeEmergencyContactByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 9: Delete the transport-details
+    // Step 8: Delete the transport-details
     isDeleted = await removeTransportDetailsByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 10: Delete the personal-details
+    // Step 9: Delete the personal-details
     isDeleted = await removePersonalDetailsByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 11: Delete all the marksheets
+    // Step 10: Delete all the marksheets
     isDeleted = await removeMarksheetByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 12: Delete the student
+    // Step 11: Delete the student
     const [deletedStudent] = await db.delete(studentModel).where(eq(studentModel.id, id)).returning();
     if (!deletedStudent) {
         return false;

@@ -1,5 +1,5 @@
 {
-  "id": "ee6b1046-65c4-440b-b834-2de993387d0c",
+  "id": "fdb7b117-a9fd-4008-88bb-fcb36d002cbf",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -28,6 +28,12 @@
         },
         "section_id_fk": {
           "name": "section_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shift_id_fk": {
+          "name": "shift_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -87,6 +93,19 @@
           "tableTo": "sections",
           "columnsFrom": [
             "section_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "batches_shift_id_fk_shifts_id_fk": {
+          "name": "batches_shift_id_fk_shifts_id_fk",
+          "tableFrom": "batches",
+          "tableTo": "shifts",
+          "columnsFrom": [
+            "shift_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -229,11 +248,11 @@
           "primaryKey": true,
           "notNull": true
         },
-        "stream_id": {
-          "name": "stream_id",
-          "type": "serial",
+        "stream_id_fk": {
+          "name": "stream_id_fk",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -245,7 +264,7 @@
           "name": "short_name",
           "type": "varchar(500)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "code_prefix": {
           "name": "code_prefix",
@@ -275,7 +294,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "courses_stream_id_fk_streams_id_fk": {
+          "name": "courses_stream_id_fk_streams_id_fk",
+          "tableFrom": "courses",
+          "tableTo": "streams",
+          "columnsFrom": [
+            "stream_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -1015,8 +1048,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "irp_code": {
+          "name": "irp_code",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "marksheet_code": {
+          "name": "marksheet_code",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -1149,14 +1188,26 @@
           "primaryKey": true,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "irp_name": {
+          "name": "irp_name",
           "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
         },
-        "short_name": {
-          "name": "short_name",
+        "irp_short_name": {
+          "name": "irp_short_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marksheet_name": {
+          "name": "marksheet_name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marksheet_short_name": {
+          "name": "marksheet_short_name",
           "type": "varchar(500)",
           "primaryKey": false,
           "notNull": false
@@ -3042,6 +3093,150 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.family_details": {
+      "name": "family_details",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "student_id_fk": {
+          "name": "student_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_type": {
+          "name": "parent_type",
+          "type": "parent_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "father_details_person_id_fk": {
+          "name": "father_details_person_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mother_details_person_id_fk": {
+          "name": "mother_details_person_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "guardian_details_person_id_fk": {
+          "name": "guardian_details_person_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "annual_income_id_fk": {
+          "name": "annual_income_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "family_details_student_id_fk_students_id_fk": {
+          "name": "family_details_student_id_fk_students_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "students",
+          "columnsFrom": [
+            "student_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_father_details_person_id_fk_person_id_fk": {
+          "name": "family_details_father_details_person_id_fk_person_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "person",
+          "columnsFrom": [
+            "father_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_mother_details_person_id_fk_person_id_fk": {
+          "name": "family_details_mother_details_person_id_fk_person_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "person",
+          "columnsFrom": [
+            "mother_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_guardian_details_person_id_fk_person_id_fk": {
+          "name": "family_details_guardian_details_person_id_fk_person_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "person",
+          "columnsFrom": [
+            "guardian_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_annual_income_id_fk_annual_incomes_id_fk": {
+          "name": "family_details_annual_income_id_fk_annual_incomes_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "annual_incomes",
+          "columnsFrom": [
+            "annual_income_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "family_details_student_id_fk_unique": {
+          "name": "family_details_student_id_fk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "student_id_fk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.guardians": {
       "name": "guardians",
       "schema": "",
@@ -4151,7 +4346,7 @@
       "name": "class_type",
       "schema": "public",
       "values": [
-        "CLASS",
+        "YEAR",
         "SEMESTER"
       ]
     },

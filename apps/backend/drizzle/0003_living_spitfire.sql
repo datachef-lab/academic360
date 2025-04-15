@@ -1,0 +1,1 @@
+ALTER TABLE "batches" ALTER COLUMN "session_id_fk" DROP NOT NULL;

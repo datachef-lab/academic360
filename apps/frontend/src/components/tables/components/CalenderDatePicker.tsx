@@ -313,7 +313,11 @@ export const CalendarDatePicker = React.forwardRef<HTMLButtonElement, CalendarDa
       return () => {
         window.removeEventListener("wheel", handleWheel);
       };
+
     }, [id, handleWheel]);
+
+    }, [highlightedPart, date, handleWheel, id]);
+
 
     const formatWithTz = (date: Date, fmt: string) => formatInTimeZone(date, timeZone, fmt);
 

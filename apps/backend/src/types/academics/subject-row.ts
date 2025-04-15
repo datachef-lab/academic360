@@ -3,8 +3,11 @@ export interface SubjectRow {
     "Course": "HONOURS" | "GENERAL";
     "Semester": number;
     "Specialization": string | null;
-    "Subject Type": string;
-    "Subject Name": string;
+    "Subject Type as per Marksheet": string;
+    "Subject Type as per IRP": string;
+    "Subject Name as per Marksheet (also in IRP)": string;
+    "Subject Code as per Marksheet": string;
+    "Subject Code as per IRP": string;
     "Credit": number;
     "TH": number | null;
     "TU": number | null;

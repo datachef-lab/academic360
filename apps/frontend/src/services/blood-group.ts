@@ -7,3 +7,9 @@ export async function bloodGroup(): Promise<ApiResonse<PaginatedResponse<BloodGr
   const response = await axiosInstance.get("/api/blood-groups", { withCredentials: true });
   return response.data;
 }
+
+export async function updateBloodGroup(data: { id: number; type: string }): Promise<ApiResonse<BloodGroup[]>> {
+  console.log("blood group is coming....", data);
+  const response = await axiosInstance.put(`/api/blood-groups/${data.id}`, data);
+  return response.data;
+}

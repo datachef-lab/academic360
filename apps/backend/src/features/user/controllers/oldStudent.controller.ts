@@ -10,9 +10,8 @@ import { Student, studentModel } from "../models/student.model.js";
 import { accommodationModel } from "../models/accommodation.model.js";
 import { Address, addressModel } from "../models/address.model.js";
 import { admissionModel } from "../models/admission.model.js";
-import { parentModel } from "../models/parent.model.js";
+import { familyModel } from "../models/family.model.js";
 import { personModel } from "../models/person.model.js";
-import { gaurdianModel } from "../models/guardian.model.js";
 import { Health, healthModel } from "../models/health.model.js";
 import { emergencyContactModel } from "../models/emergencyContact.model.js";
 import { personalDetailsModel } from "../models/personalDetails.model.js";
@@ -47,6 +46,8 @@ import { SubjectRow } from "@/types/academics/subject-row.js";
 import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/subjectType.model.js";
 import { findDegreeByName } from "@/features/resources/services/degree.service.js";
 import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
+import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
+import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -296,10 +297,10 @@ async function categorizeIncome(income: string | null | undefined) {
 }
 
 
-export async function addParent(oldStudent: OldStudent, student: Student) {
-    const [existingParent] = await db.select().from(parentModel).where(eq(parentModel.studentId, student.id as number));
-    if (existingParent) {
-        return existingParent;
+export async function addFamily(oldStudent: OldStudent, student: Student) {
+    const [existingFamily] = await db.select().from(familyModel).where(eq(familyModel.studentId, student.id as number));
+    if (existingFamily) {
+        return existingFamily;
     }
 
     let parentType: "BOTH" | "FATHER_ONLY" | "MOTHER_ONLY" | null = null;
@@ -352,59 +353,36 @@ export async function addParent(oldStudent: OldStudent, student: Student) {
 
     }).returning();
 
-    const annualIncome = await categorizeIncome(oldStudent.annualFamilyIncome);
-
-    const [newParent] = await db.insert(parentModel).values({
-        studentId: student.id as number,
-        annualIncomeId: annualIncome ? annualIncome.id : undefined,
-        parentType,
-        fatherDetailsId: father.id,
-        motherDetailsId: mother.id
-    }).returning();
-
-    return newParent;
-}
-
-export async function addGuardian(oldStudent: OldStudent, student: Student) {
-    const [existingGuardian] = await db.select().from(gaurdianModel).where(eq(gaurdianModel.studentId, student.id as number));
-    if (existingGuardian) {
-        return existingGuardian;
-    }
-
-    let guardianOfficeAddress: Address | undefined;
-    if (oldStudent.guardianOffAddress) {
-        const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.guardianOffAddress?.toUpperCase().trim(),
-        }).returning();
-        guardianOfficeAddress = address;
-    }
-
     let guardianOccupation: Occupation | undefined;
     if (oldStudent.guardianOccupation) {
-        const [guardianOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.guardianOccupation}`) as [{ id: number, occupationName: string }[], any];
+        const [guardianOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.fatherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (guardianOccupationResult.length > 0) {
             guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName, db);
         }
     }
 
-    const [guardianPerson] = await db.insert(personModel).values({
-        name: oldStudent.guardianName?.trim()?.toUpperCase(),
+    const [guardian] = await db.insert(personModel).values({
+        name: oldStudent.guardianName?.toUpperCase()?.trim(),
         email: oldStudent.guardianEmail?.trim().toLowerCase(),
         aadhaarCardNumber: formatAadhaarCardNumber(oldStudent.gurdianaadharno),
         phone: oldStudent.guardianMobNo?.trim(),
-        image: oldStudent.guardianPic?.trim(),
-        occupationId: guardianOccupation ? guardianOccupation.id : undefined,
         officePhone: oldStudent.guardianOffPhone?.trim(),
-        officeAddressId: guardianOfficeAddress ? guardianOfficeAddress.id as number : undefined
-
+        image: oldStudent.guardianPic?.trim(),
+        occupationId: guardianOccupation ? guardianOccupation.id : undefined
     }).returning();
 
-    const [newGuardian] = await db.insert(gaurdianModel).values({
+    const annualIncome = await categorizeIncome(oldStudent.annualFamilyIncome);
+
+    const [newFamily] = await db.insert(familyModel).values({
         studentId: student.id as number,
-        gaurdianDetailsId: guardianPerson.id as number
+        annualIncomeId: annualIncome ? annualIncome.id : undefined,
+        parentType,
+        fatherDetailsId: father.id,
+        motherDetailsId: mother.id,
+        guardianDetailsId: guardian.id,
     }).returning();
 
-    return newGuardian;
+    return newFamily;
 }
 
 export async function addHealth(oldStudent: OldStudent, student: Student) {
@@ -752,28 +730,25 @@ export async function processStudent(oldStudent: OldStudent) {
     // Step 4: Check for the admission
     await addAdmission(oldStudent, student);
 
-    // Step 5: Check for the parents
-    await addParent(oldStudent, student);
+    // Step 5: Check for the Familys
+    await addFamily(oldStudent, student);
 
-    // Step 6: Check for the guardian
-    await addGuardian(oldStudent, student);
-
-    // Step 7: Check for the health
+    // Step 6: Check for the health
     await addHealth(oldStudent, student);
 
-    // Step 8: Check for the emergency-contact
+    // Step 7: Check for the emergency-contact
     await addEmergencyContact(oldStudent, student);
 
-    // Step 9: Check for the personal-details
+    // Step 8: Check for the personal-details
     await addPersonalDetails(oldStudent, student);
 
-    // Step 10: Check for the academic-history
+    // Step 9: Check for the academic-history
     await addAcademicHistory(oldStudent, student);
 
-    // Step 11: Check for the academic-identifier
+    // Step 10: Check for the academic-identifier
     await addAcademicIdentifier(oldStudent, student);
 
-    // Step 12: Check for the transport-details
+    // Step 11: Check for the transport-details
     await addTransportDetails(oldStudent, student);
 }
 
@@ -805,53 +780,54 @@ export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENE
     return newStream;
 }
 
-export async function addStreamsAndSubjects() {
-    const directoryName = path.dirname(fileURLToPath(import.meta.url));
+// export async function addStreamsAndSubjects() {
+//     const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
-    const subjectArr = readExcelFile<SubjectRow>(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
-    console.log(subjectArr.length)
-    for (let i = 0; i < subjectArr.length; i++) {
-        const stream = await addStream(subjectArr[i].Stream, subjectArr[i].Course, subjectArr[i].Framework);
+//     const subjectArr = readExcelFile<SubjectRow>(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
+//     console.log(subjectArr.length)
+//     for (let i = 0; i < subjectArr.length; i++) {
+//         const stream = await addStream(subjectArr[i].Stream, subjectArr[i].Course, subjectArr[i].Framework);
 
-        let specialization: Specialization | undefined;
-        if (subjectArr[i].Specialization) {
-            specialization = await addSpecialization(subjectArr[i].Specialization as string);
-        }
+//         let specialization: Specialization | undefined;
+//         if (subjectArr[i].Specialization) {
+//             specialization = await addSpecialization(subjectArr[i].Specialization as string);
+//         }
 
-        let subjectType: SubjectTypeModel | null = null;
-        if (subjectArr[i]["Subject Type"]) {
-            const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
-            if (!foundSubjectType) {
-                const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
-                subjectType = newSubjectType;
-            }
-        }
+//         let subjectType: SubjectTypeModel | null = null;
+//         if (subjectArr[i]["Subject Type"]) {
+//             const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
+//             if (!foundSubjectType) {
+//                 const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
+//                 subjectType = newSubjectType;
+//             }
+//         }
 
-        await db.insert(subjectMetadataModel).values({
-            streamId: stream.id as number,
-            fullMarks: 100,
-            fullMarksInternal: subjectArr[i].IN,
-            fullMarksTheory: subjectArr[i].TH,
-            fullMarksTutorial: subjectArr[i].TU,
-            fullMarksPractical: subjectArr[i].PR,
-            fullMarksProject: subjectArr[i].PROJ,
-            fullMarksViva: subjectArr[i].VIVA,
-            isOptional: subjectArr[i].Optional ? true : false,
-            subjectTypeId: subjectType ? subjectType.id as number : null,
-            framework: "CBCS",
-            category: subjectArr[i].Category,
-            specializationId: specialization ? specialization.id as number : undefined,
-            name: subjectArr[i]["Subject Name"],
-            semester: subjectArr[i].Semester,
-            credit: subjectArr[i].Credit,
-            course: subjectArr[i].Course,
-        } as SubjectMetadata).returning();
-    }
-}
+//         await db.insert(subjectMetadataModel).values({
+//             streamId: stream.id as number,
+//             fullMarks: 100,
+//             fullMarksInternal: subjectArr[i].IN,
+//             fullMarksTheory: subjectArr[i].TH,
+//             fullMarksTutorial: subjectArr[i].TU,
+//             fullMarksPractical: subjectArr[i].PR,
+//             fullMarksProject: subjectArr[i].PROJ,
+//             fullMarksViva: subjectArr[i].VIVA,
+//             isOptional: subjectArr[i].Optional ? true : false,
+//             subjectTypeId: subjectType ? subjectType.id as number : null,
+//             framework: "CBCS",
+//             category: subjectArr[i].Category,
+//             specializationId: specialization ? specialization.id as number : undefined,
+//             name: subjectArr[i]["Subject Name"],
+//             semester: subjectArr[i].Semester,
+//             credit: subjectArr[i].Credit,
+//             course: subjectArr[i].Course,
+//         } as SubjectMetadata).returning();
+//     }
+// }
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
     // await addStreamsAndSubjects();
     try {
+        await loadOlderBatches();
         console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
         const [rows] = await mysqlConnection.query('SELECT COUNT(*) AS totalRows FROM studentpersonaldetails');
         const { totalRows } = (rows as { totalRows: number }[])[0];
@@ -862,16 +838,23 @@ export const createOldStudent = async (req: Request, res: Response, next: NextFu
 
         for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
             const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+
             console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
             const [rows] = await mysqlConnection.query(`SELECT * FROM studentpersonaldetails LIMIT ${BATCH_SIZE} OFFSET ${offset}`) as [OldStudent[], any];
             const oldDataArr = rows as OldStudent[];
             // const filterData = oldDataArr.filter(ele => ele.communityid != null);
             for (let i = 0; i < oldDataArr.length; i++) {
-                await processStudent(oldDataArr[i]);
+                try {
+                    await processStudent(oldDataArr[i]);
+                } catch (error) {
+                    console.log(error)
+                }
                 console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${oldDataArr[i]?.name}`);
 
             }
         }
+
+        await loadPaperSubjects();
 
         res.status(201).json(new ApiResponse(201, "SUCCESS", true, "Student added successfully!"));
     } catch (error) {

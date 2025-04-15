@@ -1,6 +1,6 @@
-import { studentModel } from "@/features/user/models/student.model";
+import { studentModel } from "@/features/user/models/student.model.js";
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { batchPaperModel } from "./batchPaper.model";
+import { batchPaperModel } from "./batchPaper.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

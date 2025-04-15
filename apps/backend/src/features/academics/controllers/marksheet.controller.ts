@@ -1,39 +1,35 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById, findMarksheetLogs, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import { io } from "@/app.js";
+import { sendFileUploadNotification, sendEditNotification, sendUpdateNotification } from "@/utils/notificationHelpers.js";
 
 export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
+    const socketId = req.body.socketId;
+    const socket = io.sockets.sockets.get(socketId as string);
+    if (!req.file || !socket) {
+        res.status(400).json({ message: "No file uploaded or invalid socket" });
+        return;
+    }
+
     try {
-        if (!req.file) {
-            res.status(400).json({ message: "No file uploaded" });
-            return;
-        }
-
         const fileName = req.file.filename;
-        console.log("File Name: ", fileName);
-
-        // // Set headers for SSE (Server-Sent Events)
-        // res.setHeader("Content-Type", "text/event-stream");
-        // res.setHeader("Cache-Control", "no-cache");
-        // res.setHeader("Connection", "keep-alive");
-
-        // // Periodic function to send messages
-        // const sendUpdate = (message: string) => {
-        //     res.write(`data: ${message}\n\n`);
-        // };
-
-        // sendUpdate(`Processing started for ${fileName}...`);
 
         // Process file and get logs in real-time
-        const isUploaded = await uploadFile(fileName, req.user as User);
+        const isUploaded = await uploadFile(fileName, req.user as User, socket);
 
-        // sendUpdate(`Processing completed for ${fileName}`);
-        // res.end();
+        socket.emit('progress', {
+            stage: 'completed',
+            message: 'File processed successfully!',
+        });
+
+        // Send real-time notification to all users
+        sendFileUploadNotification(req, fileName);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", isUploaded, "Marksheets uploaded successfully!"));
 
@@ -48,71 +44,13 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
             });
         });
 
-        // next();
     } catch (error) {
+        socket.emit('progress', { stage: 'error', message: 'Error processing file' });
         handleError(error, res, next);
     }
 };
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
-
-// export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
-//     try {
-//         if (!req.file) {
-//             res.status(400).json({ message: "No file uploaded" });
-//             return;
-//         }
-
-//         const fileName = req.file.filename;
-//         console.log("File Name: ", fileName);
-
-//         // Set headers for SSE (Server-Sent Events)
-//         res.setHeader("Content-Type", "text/event-stream");
-//         res.setHeader("Cache-Control", "no-cache");
-//         res.setHeader("Connection", "keep-alive");
-
-//         // Function to send updates
-//         const sendUpdate = (message: string) => {
-//             if (!res.writableEnded) {  // Ensure response is open
-//                 res.write(`data: ${message}\n\n`);
-//             }
-//         };
-
-//         sendUpdate(`Processing started for ${fileName}...`);
-
-//         try {
-//             // Process file and send real-time updates
-//             await uploadFile(fileName, sendUpdate, req.user as User);
-
-//             sendUpdate(`Processing completed for ${fileName}`);
-//         } catch (error) {
-//             console.error("Processing error:", error);
-//             sendUpdate(`Error: ${(error as Error).message}`);
-//         } finally {
-//             if (!res.writableEnded) res.end();
-//         }
-
-//         // 🔹 Ensure the file is deleted after the response is sent
-//         res.on("finish", () => {
-//             if (req.file) {
-//                 const filePath = path.resolve(directoryName, "../../../..", "public", "temp", req.file.filename);
-//                 fs.unlink(filePath, (err) => {
-//                     if (err) {
-//                         console.error(`Error deleting file: ${filePath}`, err);
-//                     }
-//                 });
-//             }
-//         });
-
-//     } catch (error) {
-//         console.error("Unexpected error:", error);
-//         if (!res.headersSent) {
-//             res.status(500).json({ message: "Internal server error" });
-//         }
-//     }
-// };
-
-
 
 export const createMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -122,6 +60,13 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
             return;
         }
 
+        // Send real-time notification
+        sendEditNotification(
+            req, 
+            `Marksheet #${newMarksheet.id}`, 
+            'Marksheet'
+        );
+
         res.status(201).json(new ApiResponse(201, "CREATED", newMarksheet, "Marksheet created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -130,6 +75,7 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
 
 export const getMarksheetById = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        console.log("\n\nin fetch by id\n\n");
         const { id } = req.params;
 
         const foundMarksheet = await findMarksheetById(+id);
@@ -145,6 +91,20 @@ export const getMarksheetById = async (req: Request, res: Response, next: NextFu
     }
 }
 
+export const getMarksheetsLogs = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { page, pageSize, searchText } = req.query;
+
+        console.log("\n\n", page, pageSize, searchText, "\n\n")
+
+        const marksheetLogs = await findMarksheetLogs(Number(page), Number(pageSize), searchText as string);
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", marksheetLogs, "Marksheet Logs fetched successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
 export const updatedMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -155,6 +115,13 @@ export const updatedMarksheet = async (req: Request, res: Response, next: NextFu
             res.status(400).json(new ApiError(404, "Unable to save the marksheet!"));
             return;
         }
+
+        // Send real-time notification
+        sendUpdateNotification(
+            req, 
+            `Marksheet #${id}`, 
+            'Marksheet'
+        );
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", savedMarksheet, "Marksheet saved successfully!"));
     } catch (error) {

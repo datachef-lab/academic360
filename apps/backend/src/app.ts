@@ -10,8 +10,10 @@ import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
 import { eq } from "drizzle-orm";
-
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import { corsOptions } from "@/config/corsOptions.js";
+import { socketService } from "./services/socketService.js";
 
 import { logger, errorHandler } from "@/middlewares/index.js";
 
@@ -45,8 +47,10 @@ import {
     personalDetailsRouter,
     healthRouter,
     addressRouter,
-    parentRouter,
     personRouter,
+    batchRouter,
+    batchPaperRouter,
+    studentPaperRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 
@@ -54,6 +58,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const PORT = process.env.PORT || 8080;
+const httpServer = createServer(app);
 
 app.use(logger);
 
@@ -64,6 +70,18 @@ app.use(express.json({ limit: "180kb" }));
 app.use(express.urlencoded({ extended: true, limit: "180kb" }));
 
 app.use(cookieParser());
+
+// Setup Socket.IO with CORS
+export const io = new Server(httpServer, {
+    cors: {
+        origin: process.env.CORS_ORIGIN! || 'http://localhost:5173',
+        methods: ['GET', 'POST'],
+        credentials: true,
+    },
+});
+
+// Initialize the socket service with our io instance
+socketService.initialize(io);
 
 app.use(
     expressSession({
@@ -138,6 +156,10 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 
 app.use("/auth", authRouter);
 
+app.use("/api/batches/old-data", batchRouter);
+
+app.use("/api/batch-papers/old-data", batchPaperRouter);
+
 app.use("/api/users", userRouter);
 
 app.use("/api/students", studentRouter);
@@ -147,6 +169,8 @@ app.use("/api/streams", streamRouter);
 app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use("/api/marksheets", marksheetRouter);
+
+app.use("/api/student-papers/", studentPaperRouter);
 
 app.use("/api/subjects", subjectRouter);
 
@@ -192,7 +216,7 @@ app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
 
-app.use("/api/parents", parentRouter);
+
 
 app.use("/api/person", personRouter);
 
@@ -209,4 +233,4 @@ app.all("*", (req: Request, res: Response) => {
     }
 });
 
-export default app;
+export { app, httpServer };

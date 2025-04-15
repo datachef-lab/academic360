@@ -4,9 +4,9 @@ import { MarksheetType } from "@/types/academics/marksheet.js";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { db } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
-import { findAllStreams, findStreamByNameAndProgrammee } from "./stream.service.js";
+import { findAllStreams, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, max, sql } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -24,6 +24,7 @@ import { UserType } from "@/types/user/user.js";
 import { findUserById } from "@/features/user/services/user.service.js";
 import { StreamType } from "@/types/academics/stream.js";
 import { Section, sectionModel } from "../models/section.model.js";
+import { DefaultEventsMap, Socket } from "socket.io";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -98,30 +99,42 @@ export async function addMarksheet(marksheet: MarksheetType, user: User): Promis
     return formattedMarksheet;
 }
 
-export async function uploadFile(fileName: string, user: User): Promise<boolean> {
+export async function uploadFile(fileName: string, user: User, socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>): Promise<boolean> {
     // Read the file from the `/public/temp/` directory
+    socket.emit('progress', { stage: 'reading', message: 'Reading file...' });
+
     const filePath = path.resolve(directoryName, "../../../..", "public", "temp", fileName);
     console.log("\nReading file...")
     let dataArr = readExcelFile<MarksheetRow>(filePath);
-    console.log(dataArr.length)
-    // sendUpdate("File read successfully. Validating data...");
+    console.log(dataArr.length);
+
+    socket.emit('progress', { stage: 'reading_done', message: 'File read success...' });
     console.log("\nFile read successfully. Validating data...\n")
+
+
     // Check if all the entries are valid.
     console.log("validating data...")
-    await validateData(dataArr);
-    // sendUpdate("Data validation completed.");
+    try {
+        await validateData(dataArr, socket);
+    } catch (error) {
+        throw error
+    }
+
+
     console.log("cleaning data...")
-    dataArr = await cleanData(dataArr);
-
-
+    dataArr = await cleanData(dataArr, socket);
+    console.log("rec'd clean data:", dataArr.length);
+    socket.emit('progress', { stage: 'processing_data', message: 'Processing the data...' });
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
 
     // Step 2: Fetch all the streams
     const streams = await findAllStreams();
 
+    console.log("startingYear:", startingYear);
+
     // Step 3: Loop over the array.
-    for (let y = startingYear; y < new Date().getFullYear(); y++) { // Iterate over the years
+    for (let y = startingYear; y <= new Date().getFullYear(); y++) { // Iterate over the years
 
         for (let s = 0; s < streams.length; s++) { // Iterate over the streams
 
@@ -130,7 +143,6 @@ export async function uploadFile(fileName: string, user: User): Promise<boolean>
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });
@@ -155,13 +167,27 @@ export async function uploadFile(fileName: string, user: User): Promise<boolean>
                     // Mark the uid as done
                     doneRollNumber.push(arr[i].roll_no);
 
+                    socket.emit('progress', {
+                        stage: 'processing_data',
+                        message: `Done ${subjectArr[0].name} | year: ${y} | semester: ${sem} |  Registration No.: ${subjectArr[0].registration_no} | Roll No.: ${subjectArr[0].roll_no}`
+                    });
+
                     // sendUpdate(`Processed student: ${arr[i].roll_no}`);
                 }
                 console.log(`Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`);
+                socket.emit('progress', {
+                    stage: 'processing_data',
+                    message: `Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`
+                });
             }
         }
     }
 
+    console.log("done ")
+    socket.emit('progress', {
+        stage: 'completed',
+        message: 'File processed successfully!',
+    });
     return true;
 }
 
@@ -207,8 +233,11 @@ export async function saveMarksheet(id: number, marksheet: MarksheetType, user: 
     return formattedMarksheet;
 }
 
-export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog[]> {
-    // Query the marksheet table with filtering and user join
+export async function findMarksheetLogs(
+    page: number = 1,
+    pageSize: number = 10,
+    searchText?: string
+): Promise<MarksheetLog[]> {
     const result = await db
         .select({
             item: marksheetModel.file,
@@ -220,24 +249,51 @@ export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog
             updatedAt: marksheetModel.updatedAt,
         })
         .from(marksheetModel)
-        .leftJoin(userModel, and(eq(marksheetModel.studentId, userModel.id))) // Adjust based on your schema
-        .leftJoin(academicIdentifierModel, and(eq(academicIdentifierModel.studentId, studentModel.id))) // Adjust based on your schema
-        .where(searchText ? ilike(marksheetModel.file, `%${searchText}%`) : undefined)
-        .groupBy(marksheetModel.source, marksheetModel.file, userModel.id, userModel.name, userModel.email, marksheetModel.createdAt)
-        .orderBy(desc(marksheetModel.createdAt));
+        .where(
+            eq(
+                marksheetModel.createdAt,
+                db.select({ maxCreatedAt: max(marksheetModel.createdAt) })
+                    .from(marksheetModel)
+                    .where(eq(marksheetModel.file, marksheetModel.file))
+            )
+        )
+        .orderBy(desc(marksheetModel.createdAt))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize);
+
+
+
+    // Find the framework
 
 
     // Map the query result to the MarksheetLog interface
-    const queryResult = Promise.all(result.map(async (row) => {
-        const createdByUser = await findUserById(row.createdByUserId as number);
-
-        let updatedByUser = createdByUser;
-        if (row.updatedByUserId !== createdByUser?.id) {
-            updatedByUser = await findUserById(row.updatedByUserId);
+    const logs = await Promise.all(result.map(async (row) => {
+        const marksheets = await db.select().from(marksheetModel).where(eq(marksheetModel.createdAt, row.createdAt));
+        if (!marksheets.length) {
+            return null;
         }
+        const data = await db
+            .select()
+            .from(academicIdentifierModel)
+            .leftJoin(marksheetModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
+            .where(eq(marksheetModel.id, marksheets[0].id));
+
+        // console.log("data:", data)
+
+
+
+        // console.log("data[0].academic_identifiers.streamId:", data[0].academic_identifiers.streamId)
+        const foundStream = await findStreamById(data[0].academic_identifiers.streamId as number);
+        // console.log(foundStream)
+
+
+        const createdByUser = row.createdByUserId ? await findUserById(row.createdByUserId) : null;
+        const updatedByUser = row.updatedByUserId && row.updatedByUserId !== row.createdByUserId
+            ? await findUserById(row.updatedByUserId)
+            : createdByUser;
 
         return {
-            item: row.item as string,
+            item: foundStream?.degree.name,
             source: row.source ?? "UNKNOWN",
             file: row.file,
             createdByUser,
@@ -246,16 +302,8 @@ export async function getMarksheetLogs(searchText: string): Promise<MarksheetLog
             updatedAt: row.updatedAt
         } as MarksheetLog;
     }));
-
-    return queryResult;
+    return logs.filter((log): log is MarksheetLog => log !== null);
 }
-
-// // Replace this function with actual logic to fetch user based on marksheet createdBy information
-// async function fetchCreatedByUser(): Promise<UserType> {
-//     // This could be a lookup based on the marksheet, for now, assume it returns a mock user
-//     return { id: 1, name: "John Doe", email: "john.doe@example.com" }; // Replace with actual user fetching logic
-// }
-
 
 export async function findMarksheetById(id: number): Promise<MarksheetType | null> {
     const [foundMarksheet] = await db.select().from(marksheetModel).where(eq(marksheetModel.id, id));
@@ -315,20 +363,20 @@ async function marksheetResponseFormat(marksheet: Marksheet): Promise<MarksheetT
 
 interface FilterDataProps {
     dataArr: MarksheetRow[];
-    framework: "CBCS" | "CCF";
     stream: StreamType;
     year: number;
     semester: number;
 }
 
-async function filterData({ dataArr, stream, framework, year, semester }: FilterDataProps) {
+async function filterData({ dataArr, stream, year, semester }: FilterDataProps) {
     const isBCOM = stream?.degree.name === "BCOM";
-    const yearKey = isBCOM && framework === "CBCS" ? "year2" : "year1";
-
+    const yearKey = isBCOM && stream.framework === "CBCS" ? "year2" : "year1";
+    // console.log(cleanStream(dataArr[0].stream), stream.framework)
     return dataArr.filter(row =>
         cleanStream(row.stream) === stream?.degree.name &&
         row.course.toUpperCase().trim() === stream.degreeProgramme &&
         row[yearKey] === year &&
+        row.framework === stream.framework &&
         row.semester === semester
     );
 }
@@ -442,17 +490,17 @@ async function addAcademicIdentifier({ studentId, stream, uid, registrationNumbe
 }
 
 async function processStudent(arr: MarksheetRow[], stream: StreamType, semester: number, fileName: string, user: User) {
-    console.log("in processStudent(), arr:", arr.length)
+    // console.log("in processStudent(), arr:", arr.length)
     if (arr.length === 0) {
         return;
     }
+    let student: Student | null = null;
     // Step 1: Check if the roll_no already exist
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(
         sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
         arr[0].roll_no.replace(/[^a-zA-Z0-9]/g, '')
     ));
 
-    let [student] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId as number));
     if (!foundAcademicIdentifier) { // TODO: Create new student
         // Step 1: Add the user
         const user = await addUser(arr[0]);
@@ -483,6 +531,12 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
             uid: arr[0].uid,
         });
     }
+    else {
+        foundAcademicIdentifier.streamId = stream.id as number;
+        await db.update(academicIdentifierModel).set({ streamId: stream.id as number }).where(eq(academicIdentifierModel.id, foundAcademicIdentifier.id))
+        const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId as number));
+        student = foundStudent;
+    }
 
     if (!student) {
         throw Error("Unable to create the new student");
@@ -510,7 +564,7 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
     let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
 
     for (let i = 0; i < arr.length; i++) {
-        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.name === arr[i].subject.toUpperCase().trim());
+        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.marksheetCode === arr[i].subject.toUpperCase().trim());
 
         if (!subjectMetadata) {
             throw Error("Invalid subject input got detected!");
@@ -631,6 +685,9 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     if (!foundAcademicIdentifier.rollNumber) {
         foundAcademicIdentifier.rollNumber = marksheet.academicIdentifier.rollNumber as string;
     }
+    if (!foundAcademicIdentifier.streamId) {
+        foundAcademicIdentifier.streamId = marksheet.academicIdentifier.stream?.id as number;
+    }
     // if (!foundAcademicIdentifier.course) {
     //     foundAcademicIdentifier.course = marksheet.academicIdentifier.course ?? null;
     // }
@@ -646,12 +703,16 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     return;
 }
 
-export async function validateData(dataArr: MarksheetRow[]) {
+export async function validateData(dataArr: MarksheetRow[], socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
+    socket.emit('progress', { stage: 'validating_data', message: 'Validating the data provided...' });
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
+    console.log("in validateData(), startingYear:", startingYear);
 
     // Step 2: Fetch all the streams
     const streams = await findAllStreams();
+
+
     // Step 3: Loop over the array.
     for (let y = startingYear; y <= new Date().getFullYear(); y++) { // Iterate over the years
 
@@ -662,7 +723,6 @@ export async function validateData(dataArr: MarksheetRow[]) {
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });
@@ -675,12 +735,12 @@ export async function validateData(dataArr: MarksheetRow[]) {
 
                     doneRollNumber.add(arr[i].roll_no);
 
+                    // Select all the subject rows for the uid: arr[i].roll_no
                     const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
 
-                    // Select all the subject rows for the uid: arr[i].roll_no
-                    const subjectArr = arr.filter(row => row.roll_no === arr[i].roll_no);
-
                     // Fetch the subjects
+                    // console.log("streamId:", streams[s].id);
+                    // console.log("sem:", sem);
                     const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
                         eq(subjectMetadataModel.streamId, streams[s].id as number),
                         eq(subjectMetadataModel.semester, sem),
@@ -688,9 +748,9 @@ export async function validateData(dataArr: MarksheetRow[]) {
 
                     // Check all the subjects (range of marks, subject name, duplicates)
                     const seenSubjects = new Set<number>(); // Track subject IDs for duplicate check
-
+                    // console.log(subjectMetadataArr);
                     for (let k = 0; k < studentMksArr.length; k++) {
-                        const subjectMetadata = subjectMetadataArr.find(ele => ele.name === studentMksArr[k].subject.toUpperCase().trim());
+                        const subjectMetadata = subjectMetadataArr.find(ele => ele.marksheetCode === studentMksArr[k].subject.toUpperCase().trim());
 
                         // ✅ Ensure subjectMetadata exists before proceeding
                         if (!subjectMetadata) {
@@ -734,85 +794,26 @@ export async function validateData(dataArr: MarksheetRow[]) {
                         }
 
                     }
-                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1} ${arr.length}`);
+                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
+
                 }
+                socket.emit('progress', {
+                    stage: 'validating_data',
+                    message: `Done year ${y} | stream ${streams[s].degree.name} | semester ${sem}`
+                });
             }
         }
     }
 }
 
 
-// export async function cleanData(dataArr: MarksheetRow[]) {
-//     // Step 1: Find the smallest year from the dataArr[]
-//     const startingYear = Math.min(...dataArr.map(row => row.year1));
+export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
+    socket.emit('progress', { stage: 'cleaning_data', message: 'Cleaning the data...' });
+    console.log("in cleanData(), dataArr:", dataArr.length);
 
-//     // Step 2: Fetch all the streams
-//     const streams = await findAllStreams();
-
-//     // Step 3: Loop over the array.
-//     const formattedArr = [];
-
-//     for (let y = startingYear; y <= new Date().getFullYear(); y++) { // Iterate over the years
-
-//         for (let s = 0; s < streams.length; s++) { // Iterate over the streams
-
-//             for (let sem = 1; sem <= 6; sem++) { // Iterate over the semesters
-//                 // Filter the data
-//                 const arr = filterData({
-//                     dataArr,
-//                     semester: sem,
-//                     framework: dataArr[0].framework,
-//                     stream: streams[s],
-//                     year: y
-//                 });
-
-
-//                 // Iterate over the arr[]
-//                 const doneRollNumber: string[] = [];
-//                 for (let i = 0; i < arr.length; i++) {
-//                     // Skip the `uid` if already processed
-//                     if (doneRollNumber.includes(arr[i].roll_no)) continue;
-
-//                     const studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
-
-//                     for (let k = 0; k < studentMksArr.length; k++) {
-//                         studentMksArr[k].stream = streams[s].name.toUpperCase().trim();
-//                         studentMksArr[k].uid = studentMksArr[k].uid.toUpperCase().trim();
-//                         studentMksArr[k].registration_no = cleanTilde(studentMksArr[k].registration_no) as string;
-//                         studentMksArr[k].roll_no = cleanTilde(studentMksArr[k].roll_no) as string;
-//                         studentMksArr[k].stream = studentMksArr[k].stream.toUpperCase().trim();
-//                         studentMksArr[k].course = studentMksArr[k].course.toUpperCase().trim();
-//                         studentMksArr[k].name = studentMksArr[k].name.toUpperCase().trim();
-//                         studentMksArr[k].subject = studentMksArr[k].subject.toUpperCase().trim();
-//                         studentMksArr[k].framework = studentMksArr[k].framework.toUpperCase().trim() as "CBCS" | "CCF";
-//                         studentMksArr[k].specialization = studentMksArr[k].framework.toUpperCase().trim();
-//                         studentMksArr[k].section = studentMksArr[k].section ? (studentMksArr[k].section as string).toUpperCase().trim() : null;
-
-//                         studentMksArr[k].internal_marks = formatMarks(studentMksArr[k].internal_marks)?.toString() || null;
-//                         studentMksArr[k].theory_marks = formatMarks(studentMksArr[k].theory_marks)?.toString() || null;
-//                         studentMksArr[k].tutorial_marks = formatMarks(studentMksArr[k].tutorial_marks)?.toString() || null;
-//                         studentMksArr[k].total = formatMarks(studentMksArr[k].total)?.toString() || null;
-//                         studentMksArr[k].year2 = studentMksArr[k].stream.toUpperCase() !== "BCOM" ? formatMarks(studentMksArr[k].year2)?.toString() || null : null;
-
-//                         formattedArr.push(...studentMksArr);
-//                     }
-
-//                     doneRollNumber.push(arr[i].roll_no);
-
-//                     console.log(`Done year ${y} | stream ${streams[s].name} | semester ${sem} | Total: ${i + 1} ${arr.length}`);
-//                 }
-
-
-//             }
-//         }
-//     }
-
-//     return formattedArr;
-// }
-
-
-export async function cleanData(dataArr: MarksheetRow[]) {
     const startingYear = Math.min(...dataArr.map(row => row.year1));
+
+
     const streams = await findAllStreams();
     const formattedArr: MarksheetRow[] = [];
 
@@ -822,7 +823,6 @@ export async function cleanData(dataArr: MarksheetRow[]) {
                 const arr = await filterData({
                     dataArr,
                     semester: sem,
-                    framework: dataArr[0].framework,
                     stream: streams[s],
                     year: y
                 });
@@ -858,11 +858,16 @@ export async function cleanData(dataArr: MarksheetRow[]) {
                     doneRollNumber.add(arr[i].roll_no); // Mark roll number as processed
 
                     console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
+
                 }
+                socket.emit('progress', {
+                    stage: 'cleaning_data',
+                    message: `Done year ${y} | stream ${streams[s].degree.name} | semester ${sem}`
+                });
             }
         }
     }
-
+    console.log("returning cleaned data:", formattedArr.length);
     return formattedArr;
 }
 

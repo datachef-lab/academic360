@@ -19,7 +19,7 @@ export default function Header() {
   });
 
   return (
-    <div className="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md w-[1240px]">
+    <div className="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md w-[1000px]">
       {/* University Title */}
       <h1 className="font-bold text-4xl text-blue-800 mb-2">UNIVERSITY OF CALCUTTA</h1>
       <h2 className="font-semibold text-xl text-blue-600 mb-6">Grade Card</h2>
