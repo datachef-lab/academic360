@@ -139,17 +139,17 @@ export function NavMain({
                           key={subItem.title}
                         >
                           <SidebarMenuSubItem className="my-1">
-                            <SidebarMenuSubButton asChild>
+                            <SidebarMenuSubButton asChild >
                               <Link
                                 to={subItem.url}
                                 className="group/subitem relative flex items-center rounded-md px-3 py-2 text-sm 
-                                  text-sidebar-foreground/80  hover:text-white transition-all duration-300"
+                                  text-sidebar-foreground/80 hover:text-white active:text-white    transition-all duration-50"
                               >
                                 <span
-                                  className="absolute inset-0 bg-gradient-to-r from-blue-400/70  to-blue-500/80 opacity-0
+                                  className="absolute inset-0 bg-gradient-to-r from-blue-500/50  to-blue-500/80 opacity-0
                                   group-hover/subitem:opacity-100 transition-opacity duration-300 rounded-md"
                                 ></span>
-                                <span className="relative z-10">{subItem.title}</span>
+                                <span className="relative z-10 ">{subItem.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
