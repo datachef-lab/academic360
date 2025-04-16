@@ -26,6 +26,7 @@ import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
+import StudentSubjectsPage from "./pages/StudentSubjectsPage";
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
@@ -66,6 +67,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: "academics-reports", element: <GetReportsPage /> },
+      { path: "subjects", element: <StudentSubjectsPage /> },
       { path: "lib", element: <Dashboard /> },
 
       { path: "catalog", element: <BookCatalog /> },

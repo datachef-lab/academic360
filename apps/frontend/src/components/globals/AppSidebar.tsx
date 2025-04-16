@@ -71,6 +71,10 @@ const data = {
           url: "/home/academics-search",
         },
         {
+          title: "Students Subjects",
+          url: "/home/subjects",
+        },
+        {
           title: "Manage Marksheet",
           url: "/home/manage-marksheet",
         },
