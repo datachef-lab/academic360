@@ -6,7 +6,7 @@ import {
   useReactTable,
   getPaginationRowModel,
 } from '@tanstack/react-table';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 
 import {
   Table,
@@ -74,11 +74,13 @@ export interface Subject {
 
 interface SubjectsTableProps {
   subjects: Subject[];
+  onDelete?: (subjectId: number) => void;
+  canDelete?: boolean;
 }
 
 const columnHelper = createColumnHelper<Subject>();
 
-const SubjectsTable: React.FC<SubjectsTableProps> = ({ subjects }) => {
+const SubjectsTable: React.FC<SubjectsTableProps> = ({ subjects, onDelete, canDelete = false }) => {
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', {
@@ -125,8 +127,26 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({ subjects }) => {
           </Badge>
         ),
       }),
+      ...(canDelete ? [
+        columnHelper.display({
+          id: 'actions',
+          header: 'Actions',
+          cell: ({ row }) => (
+            <div className="flex justify-end">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => onDelete && onDelete(row.original.id)}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ),
+        })
+      ] : []),
     ],
-    []
+    [onDelete, canDelete]
   );
 
   const table = useReactTable({

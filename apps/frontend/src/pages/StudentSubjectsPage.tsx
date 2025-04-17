@@ -7,13 +7,23 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Check, Filter, Search, Plus } from 'lucide-react';
+import { Check, Filter, Search, Plus, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ApiResponse {
   httpStatusCode: number;
@@ -84,6 +94,14 @@ export const StudentSubjectsPage: React.FC = () => {
   const [degreeOptions, setDegreeOptions] = useState<DegreeOption[]>([]);
   const [programmeOptions, setProgrammeOptions] = useState<ProgrammeOption[]>([]);
   const [selectedDegreeId, setSelectedDegreeId] = useState<number>(0);
+
+  // Delete dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [subjectToDelete, setSubjectToDelete] = useState<Subject | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // User can delete subjects state
+  const [userCanDeleteSubjects, setUserCanDeleteSubjects] = useState<boolean>(true);
 
   // Function to clear error state
   const clearError = useCallback(() => {
@@ -390,6 +408,61 @@ export const StudentSubjectsPage: React.FC = () => {
     }
   };
 
+  // Handle delete subject
+  const handleDeleteSubject = async (subjectId: number) => {
+    const subject = subjects.find(s => s.id === subjectId);
+    if (subject) {
+      setSubjectToDelete(subject);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  // Confirm delete subject
+  const confirmDeleteSubject = async () => {
+    if (!subjectToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await axios.delete(`http://localhost:8080/api/subject-metadatas/${subjectToDelete.id}`);
+      
+      if (response.status === 200) {
+        toast({
+          title: 'Success',
+          description: `Subject "${subjectToDelete.name}" deleted successfully`,
+        });
+        
+        // Remove the deleted subject from the state
+        setSubjects(prevSubjects => prevSubjects.filter(subject => subject.id !== subjectToDelete.id));
+      }
+    } catch (error: unknown) {
+      console.error('Error deleting subject:', error);
+      
+      let errorMessage = 'Failed to delete subject. Please try again.';
+      
+      // Try to extract more specific error message
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: errorMessage,
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteDialogOpen(false);
+      setSubjectToDelete(null);
+    }
+  };
+
+  // In a real app, this would come from auth context or a user role check
+  useEffect(() => {
+    // For example, check user permissions from API or auth context
+    // This is a placeholder - in a real app, this would be based on the user's role
+    setUserCanDeleteSubjects(true);
+  }, []);
+
   if (error) {
     return (
       <div className="w-full p-4">
@@ -414,7 +487,7 @@ export const StudentSubjectsPage: React.FC = () => {
       <Card className="mb-6">
         <CardHeader className="bg-slate-50 flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-2xl font-bold">My Subjects</CardTitle>
+            <CardTitle className="text-2xl font-bold">Subjects List</CardTitle>
           </div>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -766,10 +839,50 @@ export const StudentSubjectsPage: React.FC = () => {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <SubjectsTable subjects={filteredSubjects} />
+            <SubjectsTable 
+              subjects={filteredSubjects} 
+              onDelete={handleDeleteSubject} 
+              canDelete={userCanDeleteSubjects}
+            />
           </CardContent>
         </Card>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-500" />
+              Confirm Subject Deletion
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Are you sure you want to delete the following subject?</p>
+              {subjectToDelete && (
+                <div className="bg-slate-50 p-3 rounded-md border">
+                  <p className="font-medium">{subjectToDelete.name}</p>
+                  <div className="flex gap-2 mt-1 text-sm text-slate-600">
+                    <span>Code: {subjectToDelete.irpCode}</span>
+                    <span>•</span>
+                    <span>Semester: {subjectToDelete.semester}</span>
+                  </div>
+                </div>
+              )}
+              <p className="mt-2 text-red-500">This action cannot be undone and may affect student records that reference this subject.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteSubject}
+              disabled={isDeleting}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Subject'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
