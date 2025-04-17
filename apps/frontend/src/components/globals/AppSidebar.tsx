@@ -3,19 +3,26 @@ import {
   BookCheck,
   BookOpen,
   CalendarCheck2,
+  ChevronDown,
   GalleryVerticalEnd,
   GraduationCap,
+  LogOut,
   Settings,
   User,
   UserPlus,
   Workflow,
 } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 
-import { NavMain } from "@/components/globals/NavMain";
-
-import { NavUser } from "@/components/globals/NavUser";
-import { TeamSwitcher } from "@/components/globals/TeamSwitcher";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // This is sample data.
 const data = {
@@ -56,19 +63,22 @@ const data = {
       title: "Academics",
       url: "/home/academics",
       icon: GraduationCap,
-      isActive: true,
       items: [
         {
           title: "Home",
           url: "/home/academics",
         },
         {
-          title: "Get Reports",
-          url: "/home/academics-reports",
+          title: "Add Student",
+          url: "/home/academics-add",
         },
         {
           title: "Search Student",
           url: "/home/academics-search",
+        },
+        {
+          title: "Get Reports",
+          url: "/home/academics-reports",
         },
         {
           title: "Manage Marksheet",
@@ -78,7 +88,7 @@ const data = {
     },
     {
       title: "Library",
-      url: "#",
+      url: "/home/lib",
       icon: BookOpen,
       items: [
         { title: "Dashboard", url: "/home/lib" },
@@ -90,58 +100,208 @@ const data = {
     },
     {
       title: "Attendance",
-      url: "#",
+      url: "/home/attendance",
       icon: CalendarCheck2,
     },
     {
       title: "Admission Dept.",
-      url: "#",
+      url: "/home/admission",
       icon: UserPlus,
       items: [
-        { title: "Dashboard", url: "/home" },
-        { title: "Applications", url: "/home" },
-        { title: "New Admission", url: "/home" },
-        { title: "Fee Management", url: "/home" },
-        { title: "Reports", url: "/home" },
+        { title: "Dashboard", url: "/home/admission" },
+        { title: "Applications", url: "/home/applications" },
+        { title: "New Admission", url: "/home/new-admission" },
+        { title: "Fee Management", url: "/home/fee-management" },
+        { title: "Reports", url: "/home/admission-reports" },
       ],
     },
     {
       title: "Exam Management",
-      url: "#",
+      url: "/home/exam",
       icon: BookCheck,
       items: [
         {
           title: "Examboard",
-          url: "/home",
+          url: "/home/examboard",
         },
       ],
     },
     {
       title: "Faculty",
-      url: "/home",
+      url: "/home/faculty",
       icon: User,
     },
     {
-      title: "Setting",
-      url: "settings",
+      title: "Settings",
+      url: "/home/settings",
       icon: Settings,
     },
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const location = useLocation();
+  const currentPath = location.pathname;
+
+  // Get the base path segment after /home/
+  const pathSegments = currentPath.split("/").filter(Boolean);
+  const basePath = pathSegments.length > 1 ? pathSegments[1] : "";
+
+  const handleLogout = () => {
+    console.log("User logged out");
+    // Add your logout logic here
+  };
+
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-violet-400">
-      <SidebarHeader >
-        <TeamSwitcher teams={data.teams} />
+    <Sidebar collapsible="icon" {...props} className="bg-white border-r">
+      <SidebarHeader className="p-4 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-purple-100">
+            <GalleryVerticalEnd className="h-6 w-6 text-purple-600" />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-800">Academic360</h1>
+            <p className="text-xs text-gray-500">Education Management</p>
+          </div>
+        </div>
       </SidebarHeader>
-      <SidebarContent >
-        <NavMain items={data.navMain} />
+
+      <SidebarContent className="p-0">
+        <div className="mt-4">
+          <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">GENERAL</h3>
+          <div>
+            {data.navMain.map((item) => {
+              // Get the current item's base path
+              const itemBaseSegment = item.url.split("/").filter(Boolean)[1] || "";
+
+              // Check if this item's base path matches the current path's base
+              const isBaseActive = itemBaseSegment === basePath;
+
+              // Check if current path exactly matches this item's URL
+              const isExactMatch = currentPath === item.url;
+
+              // Check if any subitem exactly matches current path
+              const hasActiveSubItem = item.items && item.items.some((subItem) => currentPath === subItem.url);
+
+              // Show subitems if this item's base path matches or has an active subitem
+              const showSubItems = isBaseActive || hasActiveSubItem;
+
+              return (
+                <React.Fragment key={item.title}>
+                  <NavItem
+                    icon={item.icon && <item.icon className="h-5 w-5" />}
+                    href={item.url}
+                    isActive={isExactMatch && (!item.items || item.items.length === 0)}
+                  >
+                    {item.title}
+                  </NavItem>
+
+                  {/* Show subitems if this section is active */}
+                  {showSubItems && item.items && item.items.length > 0 && (
+                    <div className="bg-gray-50 pl-4">
+                      {item.items.map((subItem) => (
+                        <SubNavItem key={subItem.title} href={subItem.url} isActive={currentPath === subItem.url}>
+                          {subItem.title}
+                        </SubNavItem>
+                      ))}
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
       </SidebarContent>
-      <SidebarFooter className="px-0 flex justify-center">
-        <NavUser />
+
+      <SidebarFooter className="mt-auto border-t border-gray-100">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="p-4 cursor-pointer hover:bg-gray-50">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9 border-2 border-green-500">
+                  <AvatarImage src={data.user.avatar || undefined} alt={data.user.name} />
+                  <AvatarFallback className="bg-slate-100 text-slate-800">SH</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-700">{data.user.name}</div>
+                  <div className="text-xs text-gray-500">{data.user.email}</div>
+                </div>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem className="cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer text-red-600" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
+  );
+}
+
+function NavItem({
+  href,
+  icon,
+  children,
+  isActive,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  isActive?: boolean;
+}) {
+  return (
+    <Link
+      to={href}
+      className={cn(
+        "group flex items-center justify-between px-4 py-2.5 text-sm font-medium relative",
+        isActive ? "bg-purple-100 text-purple-800 border-l-4 border-purple-600" : "text-gray-700 hover:bg-gray-100",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span className={cn("h-5 w-5", isActive ? "text-purple-800" : "text-gray-500 group-hover:text-gray-700")}>
+          {icon}
+        </span>
+        <span>{children}</span>
+      </div>
+
+      {isActive && (
+        <div className="absolute right-3">
+          <div className="h-2 w-2 rounded-full bg-purple-600"></div>
+        </div>
+      )}
+    </Link>
+  );
+}
+
+function SubNavItem({ href, children, isActive }: { href: string; children: React.ReactNode; isActive?: boolean }) {
+  return (
+    <Link
+      to={href}
+      className={cn(
+        "group flex items-center px-4 py-2.5 text-sm relative",
+        isActive
+          ? "bg-purple-100 text-purple-800 font-medium border-l-4 border-purple-600"
+          : "text-gray-600 hover:bg-gray-100",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-purple-600" : "bg-gray-400")}></div>
+        <span>{children}</span>
+      </div>
+
+      {isActive && (
+        <div className="absolute right-3">
+          <div className="h-2 w-2 rounded-full bg-purple-600"></div>
+        </div>
+      )}
+    </Link>
   );
 }
