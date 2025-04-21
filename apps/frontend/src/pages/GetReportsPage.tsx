@@ -1,11 +1,8 @@
-
-
 import React, { useState } from "react";
 import { mockData } from "@/lib/Data";
 import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
 import { columns } from "@/components/reports/columns";
 import { DataTable } from "@/components/reports/DataTable";
-
 
 const Page: React.FC = () => {
   const [filteredData, setFilteredData] = useState(mockData);
@@ -25,7 +22,10 @@ const Page: React.FC = () => {
 
   return (
     <div>
-     <div className="mt-4"> <FilterAndExportComponent onFilter={handleFilter} filteredData={filteredData} /></div>
+      <div className="mt-4">
+        {" "}
+        <FilterAndExportComponent onFilter={handleFilter} filteredData={filteredData} />
+      </div>
       <DataTable columns={columns} data={filteredData} />
     </div>
   );
