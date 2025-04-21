@@ -36,6 +36,27 @@
       "when": 1742293678771,
       "tag": "0004_lush_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1745170682953,
+      "tag": "0005_thankful_lorna_dane",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1745173648378,
+      "tag": "0006_careful_kabuki",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1745225971622,
+      "tag": "0007_chemical_miek",
+      "breakpoints": true
     }
   ]
 }
