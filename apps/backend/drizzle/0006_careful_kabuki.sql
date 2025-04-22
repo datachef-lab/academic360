@@ -1,0 +1,1 @@
+ALTER TABLE "subject_metadatas" ALTER COLUMN "subject_type_id_fk" DROP NOT NULL;

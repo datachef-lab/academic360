@@ -780,81 +780,52 @@ export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENE
     return newStream;
 }
 
-// export async function addStreamsAndSubjects() {
-//     const directoryName = path.dirname(fileURLToPath(import.meta.url));
+export async function loadStudents() {
+    // STEP 1: Count the total numbers of students
+    console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
+    const [rows] = await mysqlConnection.query(`
+        SELECT COUNT(*) AS totalRows 
+        FROM studentpersonaldetails
+        WHERE academicyearid = 17 OR academicyearid = 18;
+    `);
+    const { totalRows } = (rows as { totalRows: number }[])[0];
+    // STEP 2: Calculate the number of batches
+    const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+    console.log(`\nTotal rows to migrate: ${totalRows}`);
+    // STEP 3: Loop over the batches
+    for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+        const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-//     const subjectArr = readExcelFile<SubjectRow>(path.resolve(directoryName, "../../../..", "public", "temp", "subjects.xlsx"));
-//     console.log(subjectArr.length)
-//     for (let i = 0; i < subjectArr.length; i++) {
-//         const stream = await addStream(subjectArr[i].Stream, subjectArr[i].Course, subjectArr[i].Framework);
+        console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
+        const [rows] = await mysqlConnection.query(`
+            SELECT * 
+            FROM studentpersonaldetails
+            WHERE academicyearid = 17 OR academicyearid = 18
+            LIMIT ${BATCH_SIZE} 
+            OFFSET ${offset};
+        `) as [OldStudent[], any];
+        const oldDataArr = rows as OldStudent[];
+        // const filterData = oldDataArr.filter(ele => ele.communityid != null);
+        for (let i = 0; i < oldDataArr.length; i++) {
+            try {
+                await processStudent(oldDataArr[i]);
+            } catch (error) {
+                console.log(error)
+            }
+            console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${oldDataArr[i]?.name}`);
 
-//         let specialization: Specialization | undefined;
-//         if (subjectArr[i].Specialization) {
-//             specialization = await addSpecialization(subjectArr[i].Specialization as string);
-//         }
-
-//         let subjectType: SubjectTypeModel | null = null;
-//         if (subjectArr[i]["Subject Type"]) {
-//             const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.name, subjectArr[i]["Subject Type"].toUpperCase().trim()));
-//             if (!foundSubjectType) {
-//                 const [newSubjectType] = await db.insert(subjectTypeModel).values({ name: subjectArr[i]["Subject Type"].toUpperCase().trim() }).returning();
-//                 subjectType = newSubjectType;
-//             }
-//         }
-
-//         await db.insert(subjectMetadataModel).values({
-//             streamId: stream.id as number,
-//             fullMarks: 100,
-//             fullMarksInternal: subjectArr[i].IN,
-//             fullMarksTheory: subjectArr[i].TH,
-//             fullMarksTutorial: subjectArr[i].TU,
-//             fullMarksPractical: subjectArr[i].PR,
-//             fullMarksProject: subjectArr[i].PROJ,
-//             fullMarksViva: subjectArr[i].VIVA,
-//             isOptional: subjectArr[i].Optional ? true : false,
-//             subjectTypeId: subjectType ? subjectType.id as number : null,
-//             framework: "CBCS",
-//             category: subjectArr[i].Category,
-//             specializationId: specialization ? specialization.id as number : undefined,
-//             name: subjectArr[i]["Subject Name"],
-//             semester: subjectArr[i].Semester,
-//             credit: subjectArr[i].Credit,
-//             course: subjectArr[i].Course,
-//         } as SubjectMetadata).returning();
-//     }
-// }
+        }
+    }
+}
 
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
-    // await addStreamsAndSubjects();
     try {
+        // STEP 1: Load all the batches
         await loadOlderBatches();
-        console.log('\n\nCounting rows from table \`studentpersonaldetails\`...');
-        const [rows] = await mysqlConnection.query('SELECT COUNT(*) AS totalRows FROM studentpersonaldetails');
-        const { totalRows } = (rows as { totalRows: number }[])[0];
+        // STEP 2: Count the total numbers of students
+        await loadStudents();
 
-        const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
-
-        console.log(`\nTotal rows to migrate: ${totalRows}`);
-
-        for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
-            const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
-
-            console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
-            const [rows] = await mysqlConnection.query(`SELECT * FROM studentpersonaldetails LIMIT ${BATCH_SIZE} OFFSET ${offset}`) as [OldStudent[], any];
-            const oldDataArr = rows as OldStudent[];
-            // const filterData = oldDataArr.filter(ele => ele.communityid != null);
-            for (let i = 0; i < oldDataArr.length; i++) {
-                try {
-                    await processStudent(oldDataArr[i]);
-                } catch (error) {
-                    console.log(error)
-                }
-                console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${oldDataArr[i]?.name}`);
-
-            }
-        }
-
-        await loadPaperSubjects();
+        // await loadPaperSubjects();
 
         res.status(201).json(new ApiResponse(201, "SUCCESS", true, "Student added successfully!"));
     } catch (error) {

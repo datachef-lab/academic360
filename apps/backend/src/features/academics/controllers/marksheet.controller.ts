@@ -19,7 +19,7 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
 
     try {
         const fileName = req.file.filename;
-
+        console.log(req.user, "user in upload file");
         // Process file and get logs in real-time
         const isUploaded = await uploadFile(fileName, req.user as User, socket);
 
@@ -62,8 +62,8 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
 
         // Send real-time notification
         sendEditNotification(
-            req, 
-            `Marksheet #${newMarksheet.id}`, 
+            req,
+            `Marksheet #${newMarksheet.id}`,
             'Marksheet'
         );
 
@@ -118,8 +118,8 @@ export const updatedMarksheet = async (req: Request, res: Response, next: NextFu
 
         // Send real-time notification
         sendUpdateNotification(
-            req, 
-            `Marksheet #${id}`, 
+            req,
+            `Marksheet #${id}`,
             'Marksheet'
         );
 

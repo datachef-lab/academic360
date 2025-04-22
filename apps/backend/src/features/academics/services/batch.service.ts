@@ -172,8 +172,6 @@ export async function processShift(shiftId: number) {
 
 
 export async function processBatch(oldBatch: OldBatch) {
-    console.log("batchResult:", oldBatch);
-
     const course = await processCourse(oldBatch.courseId);
     const academicClass = await processClass(oldBatch.classId);
     const shift = await processShift(oldBatch.shiftId);
@@ -251,7 +249,11 @@ export async function refactorBatchSession() {
 export async function loadOlderBatches() {
     console.log(`\n\nCounting rows from table ${oldBatchTable}...`);
 
-    const [rows] = await mysqlConnection.query(`SELECT COUNT(*) AS totalRows FROM ${oldBatchTable}`);
+    const [rows] = await mysqlConnection.query(`
+        SELECT COUNT(*) AS totalRows 
+        FROM ${oldBatchTable} 
+        WHERE sessionId = 16 OR sessionId = 17; 
+    `);
     const { totalRows } = (rows as { totalRows: number }[])[0];
 
     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
@@ -262,7 +264,13 @@ export async function loadOlderBatches() {
         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
         console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
-        const [rows] = await mysqlConnection.query(`SELECT * FROM ${oldBatchTable} LIMIT ${BATCH_SIZE} OFFSET ${offset}`) as [OldBatch[], any];
+        const [rows] = await mysqlConnection.query(`
+            SELECT * 
+            FROM ${oldBatchTable}
+            WHERE sessionId = 16 OR sessionId = 17
+            LIMIT ${BATCH_SIZE} 
+            OFFSET ${offset}
+        `) as [OldBatch[], any];
         const oldDataArr = rows as OldBatch[];
 
         for (let i = 0; i < oldDataArr.length; i++) {
@@ -272,7 +280,6 @@ export async function loadOlderBatches() {
                 console.log(error)
             }
             console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
-
         }
     }
 }
