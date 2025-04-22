@@ -79,7 +79,7 @@
         "swiper": "^11.2.1",
         "tailwind-scrollbar": "^3.1.0",
         "whatwg-url": "^14.1.1",
-        "xlsx": "^0.18.5",
+        "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz",
         "zod": "^3.24.1",
         "zustand": "^5.0.3"
     },
