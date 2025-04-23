@@ -2,15 +2,25 @@ import * as React from "react";
 import {
   BookCheck,
   BookOpen,
-  CalendarCheck2,
+
   ChevronDown,
+  ClipboardPenLine,
+  FileUser,
   GalleryVerticalEnd,
-  GraduationCap,
+ 
+
+ 
+  Home,
+ 
   LogOut,
+  MapPinned,
+  Notebook,
   Settings,
   User,
   UserPlus,
-  Workflow,
+  UserRoundPlus,
+  UserRoundSearch,
+
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -53,90 +63,104 @@ const data = {
       plan: "#development-mode",
     },
   ],
-  navMain: [
+  navDash:[
     {
-      title: "My Workspace",
-      url: "/home",
-      icon: Workflow,
-    },
-    {
-      title: "Academics",
+      title: "Dashboard",
       url: "/home/academics",
-      icon: GraduationCap,
-      items: [
-        {
-          title: "Home",
-          url: "/home/academics",
-        },
-        {
-          title: "Add Student",
-          url: "/home/academics-add",
-        },
-        {
-          title: "Search Student",
-          url: "/home/academics-search",
-        },
-        {
-          title: "Get Reports",
-          url: "/home/academics-reports",
-        },
-        {
-          title: "Manage Marksheet",
-          url: "/home/manage-marksheet",
-        },
-      ],
+      icon: Home,
     },
+  ],
+  navMain: [
+   
+    {
+      title: "Admission & Fees Dept",
+      url: "/home",
+      icon: UserPlus,
+      // items: [
+      //   { title: "Dashboard", url: "/home/admission" },
+      //   { title: "Applications", url: "/home/applications" },
+      //   { title: "New Admission", url: "/home/new-admission" },
+      //   { title: "Fee Management", url: "/home/fee-management" },
+      //   { title: "Reports", url: "/home/admission-reports" },
+      // ],
+    },
+    {
+      title: "Courses & Subject",
+      url: "#",
+      icon: Notebook,
+    },
+    {
+      title: "Exam Management",
+      url: "#",
+      icon: BookCheck,
+      // items: [
+      //   {
+      //     title: "Examboard",
+      //     url: "/home/examboard",
+      //   },
+      // ],
+    },
+    
     {
       title: "Library",
       url: "/home/lib",
       icon: BookOpen,
-      items: [
-        { title: "Dashboard", url: "/home/lib" },
-        { title: "Book Catalog", url: "/home/catalog" },
-        { title: "Issue/Return", url: "/home/issued-book" },
-        { title: "Fines", url: "/home/fine-management" },
-        { title: "Reports", url: "/home/lib-report" },
-      ],
+      // items: [
+      //   { title: "Dashboard", url: "/home/lib" },
+      //   { title: "Book Catalog", url: "/home/catalog" },
+      //   { title: "Issue/Return", url: "/home/issued-book" },
+      //   { title: "Fines", url: "/home/fine-management" },
+      //   { title: "Reports", url: "/home/lib-report" },
+      // ],
     },
+   
+   
+    
     {
-      title: "Attendance",
-      url: "/home/attendance",
-      icon: CalendarCheck2,
-    },
-    {
-      title: "Admission Dept.",
-      url: "/home/admission",
-      icon: UserPlus,
-      items: [
-        { title: "Dashboard", url: "/home/admission" },
-        { title: "Applications", url: "/home/applications" },
-        { title: "New Admission", url: "/home/new-admission" },
-        { title: "Fee Management", url: "/home/fee-management" },
-        { title: "Reports", url: "/home/admission-reports" },
-      ],
-    },
-    {
-      title: "Exam Management",
-      url: "/home/exam",
-      icon: BookCheck,
-      items: [
-        {
-          title: "Examboard",
-          url: "/home/examboard",
-        },
-      ],
-    },
-    {
-      title: "Faculty",
-      url: "/home/faculty",
-      icon: User,
+      title: "Event",
+      url: "#",
+      icon: MapPinned,
     },
     {
       title: "Settings",
       url: "/home/settings",
       icon: Settings,
     },
+
+
+    
   ],
+  navStudent:[
+    // {
+    //   title: "Student",
+    //   url: "/home/academics",
+    //   icon: GraduationCap,
+    // },
+    {
+      title: "Add Student",
+      url: "/home/academics-add",
+      icon: UserRoundPlus,
+    },
+        {
+          title: "Add Marksheet",
+          url: "/home/manage-marksheet",
+          icon: ClipboardPenLine,
+        },
+       
+        {
+          title: "Search Student",
+          url: "/home/academics-search",
+          icon: UserRoundSearch,
+        },
+        {
+          title: "Get Reports",
+          url: "/home/academics-reports",
+          icon: FileUser,
+        },
+       
+     
+    
+  ]
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -167,23 +191,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent className="p-0">
-        <div className="mt-4">
-          <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">GENERAL</h3>
-          <div>
-            {data.navMain.map((item) => {
-              // Get the current item's base path
+        <div className="mt-4 ">
+          {/* Dashboard Link (from navDash) */}
+          <div className="mb-4 ">
+          {data.navDash.map((item) => (
+            <NavItem
+              key={item.title}
+              icon={item.icon && <item.icon className="h-5 w-5" />}
+              href={item.url}
+              isActive={currentPath === item.url}
+            >
+              <span className="text-base">{item.title}</span>
+            </NavItem>
+          ))}
+          </div>
+
+          {/* Administration Section */}
+          <div className="mb-4">
+          <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">Administration</h3>
+          <div className="pl-2">
+            {/* {data.navMain.map((item) => {
               const itemBaseSegment = item.url.split("/").filter(Boolean)[1] || "";
-
-              // Check if this item's base path matches the current path's base
               const isBaseActive = itemBaseSegment === basePath;
-
-              // Check if current path exactly matches this item's URL
               const isExactMatch = currentPath === item.url;
-
-              // Check if any subitem exactly matches current path
-              const hasActiveSubItem = item.items && item.items.some((subItem) => currentPath === subItem.url);
-
-              // Show subitems if this item's base path matches or has an active subitem
+              const hasActiveSubItem = Array.isArray(item.items) && 
+                item.items.some((subItem) => currentPath === subItem.url);
               const showSubItems = isBaseActive || hasActiveSubItem;
 
               return (
@@ -196,11 +228,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     {item.title}
                   </NavItem>
 
-                  {/* Show subitems if this section is active */}
                   {showSubItems && item.items && item.items.length > 0 && (
                     <div className="bg-gray-50 pl-4">
                       {item.items.map((subItem) => (
-                        <SubNavItem key={subItem.title} href={subItem.url} isActive={currentPath === subItem.url}>
+                        <SubNavItem 
+                          key={subItem.title} 
+                          href={subItem.url} 
+                          isActive={currentPath === subItem.url}
+                        >
                           {subItem.title}
                         </SubNavItem>
                       ))}
@@ -208,7 +243,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   )}
                 </React.Fragment>
               );
-            })}
+            })} */}
+              {data.navMain.map((item) => (
+            <NavItem
+              key={item.title}
+              icon={item.icon && <item.icon className="h-5 w-5" />}
+              href={item.url}
+              isActive={currentPath === item.url}
+            >
+              <span className="">{item.title}</span>
+            </NavItem>
+          ))}
+          </div>
+          </div>
+
+          {/* Student Section */}
+          <div className="mb-4">
+          <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">
+             Student
+          </h3>
+          <div className="pl-2">
+          {data.navStudent.map((item) => {
+  const isActive = currentPath === item.url;
+
+  return (
+    <NavItem 
+      key={item.title}
+      icon={item.icon && <item.icon className="h-5 w-5 " />}
+      href={item.url}
+      isActive={isActive}
+    >
+      {item.title}
+    </NavItem>
+  );
+})}
+
+          </div>
           </div>
         </div>
       </SidebarContent>

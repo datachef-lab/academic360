@@ -13,6 +13,9 @@
 // import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 // import { DataTablePagination } from "./Pagination";
 // import { Skeleton } from "../ui/skeleton";
+// import { motion } from "framer-motion";
+// import { ArrowUpDown, FileText, ChevronUp, ChevronDown } from "lucide-react";
+// import { cn } from "@/lib/utils";
 
 // interface DataTableProps<TData, TValue> {
 //   columns: ColumnDef<TData, TValue>[];
@@ -24,7 +27,7 @@
 // }
 
 // export function DataTable<TData, TValue>({
-//   isLoading=false,
+//   isLoading = false,
 //   columns,
 //   data,
 //   pageCount,
@@ -43,8 +46,6 @@
 //       const newPagination = typeof updater === "function" ? updater(pagination) : updater;
 //       onPaginationChange(newPagination);
 //     },
-    
-
 //     getCoreRowModel: getCoreRowModel(),
 //     getPaginationRowModel: getPaginationRowModel(),
 //     onSortingChange: setSorting,
@@ -57,64 +58,127 @@
 //       pagination,
 //     },
 //   });
-//   const skeletonRows = useMemo(
-//     () => Array(pagination.pageSize).fill(null),
-//     [pagination.pageSize]
-//   );
+
+//   const skeletonRows = useMemo(() => Array(pagination.pageSize).fill(null), [pagination.pageSize]);
 
 //   return (
-//     <div className=" p-4 space-y-4">
-      
-
-//       <div className="rounded-md border shadow-md  border-gray-400 ">
+//     <div className="space-y-4">
+//       <div className="rounded-xl border border-slate-200 shadow-lg overflow-hidden bg-white">
 //         <Table>
-//           <TableHeader>
+//           <TableHeader className="bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50">
 //             {table.getHeaderGroups().map((headerGroup) => (
-//               <TableRow key={headerGroup.id} className="rounded-t-md">
-//                 {headerGroup.headers.map((header) => {
-//                   return (
-//                     <TableHead
-//                       key={header.id}
-//                       className={`text-center border-r border-b text-black   dark:text-white`}
-//                     >
+//               <TableRow key={headerGroup.id} className="hover:bg-slate-100/50">
+//                 {headerGroup.headers.map((header) => (
+//                   <TableHead
+//                     key={header.id}
+//                     className="text-center border-r border-slate-200 text-slate-800 font-semibold py-4"
+//                   >
+//                     <div className="flex items-center justify-center gap-2">
 //                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-//                     </TableHead>
-//                   );
-//                 })}
+//                       {header.column.getCanSort() && (
+//                         <motion.button
+//                           whileHover={{ scale: 1.1 }}
+//                           whileTap={{ scale: 0.95 }}
+//                           onClick={header.column.getToggleSortingHandler()}
+//                           className="text-slate-600 hover:text-slate-800"
+//                         >
+//                           {header.column.getIsSorted() === "asc" ? (
+//                             <ChevronUp className="h-4 w-4" />
+//                           ) : header.column.getIsSorted() === "desc" ? (
+//                             <ChevronDown className="h-4 w-4" />
+//                           ) : (
+//                             <ArrowUpDown className="h-4 w-4" />
+//                           )}
+//                         </motion.button>
+//                       )}
+//                     </div>
+//                   </TableHead>
+//                 ))}
 //               </TableRow>
 //             ))}
 //           </TableHeader>
+
 //           <TableBody>
-//           {isLoading ? (
-             
+//             {isLoading ? (
 //               skeletonRows.map((_, index) => (
-//                 <TableRow key={`skeleton-${index}`}>
+//                 <TableRow key={`skeleton-${index}`} className="hover:bg-slate-50/50">
 //                   {columns.map((_, colIndex) => (
-//                     <TableCell key={`skeleton-cell-${index}-${colIndex}`} className="text-center border-r">
-//                       <Skeleton className="h-7 w-full mx-auto" />
+//                     <TableCell
+//                       key={`skeleton-cell-${index}-${colIndex}`}
+//                       className="text-center border-r border-slate-200 py-4"
+//                     >
+//                       <motion.div
+//                         initial={{ opacity: 0.5 }}
+//                         animate={{ opacity: 0.8 }}
+//                         transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
+//                       >
+//                         <Skeleton className="h-6 w-full mx-auto rounded bg-gradient-to-r from-slate-100 to-slate-200" />
+//                       </motion.div>
 //                     </TableCell>
 //                   ))}
 //                 </TableRow>
 //               ))
-//             ) :
-//             table.getRowModel().rows?.length ? (
-//               table.getRowModel().rows.map((row) => (
-//                 <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-//                   {row.getVisibleCells().map((cell) => (
-//                     <TableCell key={cell.id} className="text-center border-r">
-//                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
-//                     </TableCell>
-//                   ))}
-//                 </TableRow>
+//             ) : table.getRowModel().rows?.length ? (
+//               table.getRowModel().rows.map((row, index) => (
+//                 <motion.tr
+//                   key={row.id}
+//                   initial={{ opacity: 0, y: 10 }}
+//                   animate={{ opacity: 1, y: 0 }}
+//                   transition={{ duration: 0.2, delay: index * 0.02 }}
+//                   className={cn(
+//                     " hover:bg-slate-50/50 border-b border-slate-100",
+//                     index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
+//                   )}
+//                 >
+//                   {row.getVisibleCells().map((cell) => {
+//                     const value = cell.getValue();
+//                     const isStatus = typeof value === "string" && ["PASS", "FAIL", "Pending"].includes(value);
+
+
+//                     return (
+//                       <TableCell
+//                         key={cell.id}
+//                         className={cn(
+//                           "text-center border-r border-slate-200 border text-slate-600 ",
+//                           isStatus && "font-medium",
+//                           isStatus && value === "PASS" && "text-emerald-600",
+//                           isStatus && value === "FAIL (Overall <30%)" && "text-rose-600",
+//                           isStatus && value === "Pending" && "text-amber-600",
+
+//                         )}
+//                       >
+//                         {isStatus ? (
+//                           <span
+//                             className={cn(
+//                               "px-3 py-1 rounded-full text-sm inline-block",
+//                               value === "PASS" && "bg-emerald-50",
+//                               value === "FAIL (Overall <30%)" && "bg-rose-50",
+//                               value === "Pending" && "bg-amber-50"
+//                             )}
+//                           >
+//                             {value}
+//                           </span>
+//                         ) : (
+//                           flexRender(cell.column.columnDef.cell, cell.getContext())
+//                         )}
+//                       </TableCell>
+//                     );
+//                   })}
+//                 </motion.tr>
 //               ))
-//               ) : (
+//             ) : (
 //               <TableRow>
-//                 <TableCell colSpan={columns.length} className="h-24 text-center ">
-//                   No results.
+//                 <TableCell colSpan={columns.length} className="h-24 text-center text-slate-600">
+//                   <div className="flex flex-col items-center justify-center gap-2">
+//                     <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }}>
+//                       <FileText className="h-8 w-8 text-slate-400" />
+//                     </motion.div>
+//                     <p className="text-lg font-medium">No results found</p>
+//                     <p className="text-sm text-slate-500">Try adjusting your filters</p>
+//                   </div>
 //                 </TableCell>
 //               </TableRow>
-//             )
-//           }
+//             )}
 //           </TableBody>
 //         </Table>
 //       </div>
@@ -140,7 +204,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataTablePagination } from "./Pagination";
 import { Skeleton } from "../ui/skeleton";
-import { motion } from "framer-motion";
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
@@ -171,6 +234,8 @@ export function DataTable<TData, TValue>({
       const newPagination = typeof updater === "function" ? updater(pagination) : updater;
       onPaginationChange(newPagination);
     },
+
+
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
@@ -183,23 +248,24 @@ export function DataTable<TData, TValue>({
       pagination,
     },
   });
-
   const skeletonRows = useMemo(
     () => Array(pagination.pageSize).fill(null),
     [pagination.pageSize]
   );
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="rounded-xl border  border-gray-300 shadow-md overflow-hidden">
-        <Table className=" ">
-          <TableHeader className="bg-indigo-50">
+    <div className=" p-4 space-y-4">
+
+
+      <div className="rounded-md border shadow-md  border-gray-400 ">
+        <Table className="w-full">
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-indigo-50">
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="text-center border-r border-indigo-100 text-indigo-800 font-semibold py-3"
+                    className="px-4 py-3 text-center whitespace-nowrap border-r border-b" // Added whitespace-nowrap
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -210,49 +276,34 @@ export function DataTable<TData, TValue>({
           <TableBody>
             {isLoading ? (
               skeletonRows.map((_, index) => (
-                <TableRow key={`skeleton-${index}`} className="hover:bg-indigo-50">
+                <TableRow key={`skeleton-${index}`}>
                   {columns.map((_, colIndex) => (
                     <TableCell
                       key={`skeleton-cell-${index}-${colIndex}`}
-                      className="text-center border-r border-indigo-100 py-3"
+                      className="px-4 py-3 text-center whitespace-nowrap border-r"
                     >
-                      <motion.div
-                        initial={{ opacity: 0.5 }}
-                        animate={{ opacity: 0.8 }}
-                        transition={{ repeat: Infinity, repeatType: "reverse", duration: 1 }}
-                      >
-                        <Skeleton className="h-6 w-full mx-auto rounded" />
-                      </motion.div>
+                      <Skeleton className="h-6 w-full" />
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <motion.tr
-                  key={row.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="hover:bg-indigo-50 border-b border-indigo-50"
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="text-center border-r border-indigo-100 py-3 text-indigo-900"
+                      className="px-4 py-3 text-center whitespace-nowrap border-r" // Added whitespace-nowrap
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
-                </motion.tr>
+                </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center text-indigo-700 py-8"
-                >
-                  No results found. Try adjusting your filters.
+                <TableCell colSpan={columns.length} className="px-4 py-3 text-center">
+                  No results.
                 </TableCell>
               </TableRow>
             )}
@@ -260,14 +311,9 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="flex items-center pt-4 justify-end "
-      >
+      <div className="flex items-center justify-end space-x-2 py-4">
         <DataTablePagination table={table} />
-      </motion.div>
+      </div>
     </div>
   );
 }

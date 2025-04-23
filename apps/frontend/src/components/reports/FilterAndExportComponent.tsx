@@ -234,7 +234,19 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import * as XLSX from "xlsx";
 import autoTable, { RowInput } from "jspdf-autotable";
 import { jsPDF } from "jspdf";
-import { ChevronDown, Filter, Download, FileText, FileSpreadsheet } from "lucide-react";
+import {
+
+  Calendar,
+  Code2,
+  BookOpen,
+  Filter,
+  Download,
+  FileText,
+  FileSpreadsheet,
+  ChevronDown,
+  GraduationCap,
+} from "lucide-react";
+
 import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
@@ -324,154 +336,157 @@ const FilterAndExportComponent: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4 w-full">
-        <motion.div 
-         
-          className="flex flex-wrap gap-2 w-full"
-        >
-          {/* Stream Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm">
-                {uiFilters.selectedStream ? uiFilters.selectedStream.name : "Stream"}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-md border border-indigo-100">
-              {streamMemo.map((option) => (
-                <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => handleStreamSelect(option as unknown as Stream)}
-                  className="hover:bg-indigo-50 focus:bg-indigo-50"
-                >
-                  {option.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Year Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm">
-                {uiFilters.selectedYear ? uiFilters.selectedYear : "Year"}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="shadow-lg rounded-md border border-indigo-100">
-              {["2021", "2022", "2023", "2024", "2025"].map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => handleYearSelect(option as Year)}
-                  className="hover:bg-indigo-50 focus:bg-indigo-50"
-                >
-                  {option}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Framework Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm">
-                {uiFilters.selectedFramework ? uiFilters.selectedFramework : "Framework"}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="shadow-lg rounded-md border border-indigo-100">
-              {["CCF", "CBCS"].map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => handleFrameworkSelect(option as Framework)}
-                  className="hover:bg-indigo-50 focus:bg-indigo-50"
-                >
-                  {option}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Semester Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="flex items-center gap-2 bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200 shadow-sm">
-                {uiFilters.selectedSemester ? `Sem ${uiFilters.selectedSemester}` : "Semester"}
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="shadow-lg rounded-md border border-indigo-100">
-              {semesterOptions.map((option) => (
-                <DropdownMenuItem
-                  key={option}
-                  onClick={() => handleSemesterSelect(option)}
-                  className="hover:bg-indigo-50 focus:bg-indigo-50"
-                >
-                  {option}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </motion.div>
-
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={handleApplyFilters}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Apply Filters
-          </Button>
-        </motion.div>
+    <div className="flex p-4 sm:p-6 flex-col border rounded-3xl shadow-lg bg-gradient-to-br from-white to-slate-100 gap-6 sm:gap-8">
+  {/* Header with title and export */}
+  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4 sm:gap-0">
+    <div className="flex items-center gap-3">
+      <div className="bg-teal-100 p-2 rounded-lg shadow-md">
+        <Filter className="h-5 w-5 text-teal-600" />
       </div>
-
-      {/* Export Buttons */}
-
-      <motion.div whileHover={{ scale: 1.05 }}>
-  <Popover>
-    <PopoverTrigger asChild>
-      <Button className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg px-4 py-2 rounded-full transition-all duration-300 flex items-center gap-2">
-        <Download className="h-4 w-4" />
-        Export
-      </Button>
-    </PopoverTrigger>
-    <PopoverContent
-      align="center"
-      sideOffset={8}
-      className="flex justify-center gap-4 p-6 shadow-xl rounded-2xl border border-emerald-300 bg-gradient-to-r from-white/80 via-transparent to-white/80 backdrop-blur-xl w-auto max-w-fit"
-    >
-      {/* PDF Button */}
-      <div className="flex flex-col items-center justify-center text-sm">
-        <button
-          onClick={handleExportPDF}
-          className="group border focus:outline-none flex flex-col gap-0 px-4 py-4 rounded-xl bg-red-100/70 backdrop-blur-md shadow-lg hover:border-red-500 hover:shadow-xl  hover:bg-red-100 transition-all duration-300 cursor-pointer"
-        >
-          <FileText className="w-8 h-8 text-red-600 transition-all duration-300 transform group-hover:scale-125 group-hover:rotate-6 hover:text-red-700" />
-          <span className="mt-2 font-medium text-red-600 group-hover:text-red-700 transition-colors duration-300">
-            PDF
-          </span>
-        </button>
-      </div>
-
-      {/* Excel Button */}
-      <div className="flex flex-col items-center justify-center text-sm">
-        <button
-          onClick={handleExportExcel}
-          className="group border focus:outline-none flex flex-col gap-0 px-4 py-4 rounded-xl bg-blue-100/70 backdrop-blur-md shadow-lg hover:border-blue-500 hover:shadow-xl hover:bg-blue-100 transition-all duration-300 cursor-pointer"
-        >
-          <FileSpreadsheet className="w-8 h-8 text-blue-600 transition-all duration-300 transform group-hover:scale-125 group-hover:rotate-6 hover:text-blue-700" />
-          <span className="mt-2 font-medium text-blue-600 group-hover:text-blue-700 transition-colors duration-300">
-            Excel
-          </span>
-        </button>
-      </div>
-    </PopoverContent>
-  </Popover>
-</motion.div>
-
-
+      <h2 className="text-xl font-sans font-semibold text-gray-800">
+        Filter Options
+      </h2>
     </div>
+
+    {/* Export Buttons */}
+    <motion.div whileHover={{ scale: 1.05 }}>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="center"
+          sideOffset={8}
+          className="flex flex-col sm:flex-row justify-center gap-4 p-4 shadow-2xl rounded-3xl border border-teal-300 bg-white/80 backdrop-blur-xl"
+        >
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border text-red-600 hover:bg-red-100 hover:border-red-500 hover:text-red-700 transition-all shadow-sm hover:shadow-md"
+          >
+            <FileText className="w-5 h-5" />
+            <span className="font-medium">PDF</span>
+          </button>
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-500 hover:text-blue-700 transition-all shadow-sm hover:shadow-md"
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+            <span className="font-medium">Excel</span>
+          </button>
+        </PopoverContent>
+      </Popover>
+    </motion.div>
+  </div>
+
+  {/* Filter Body */}
+  <div className="flex flex-col lg:flex-row gap-4 w-full items-start lg:items-center justify-between">
+    <motion.div className="flex flex-wrap gap-3 w-full">
+      {/* Stream Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
+            <GraduationCap className="w-4 h-4 text-teal-600" />
+            {uiFilters.selectedStream ? uiFilters.selectedStream.name : "Stream"}
+            <ChevronDown className="h-4 w-4 text-slate-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
+          {streamMemo.map((option) => (
+            <DropdownMenuItem
+              key={option.id}
+              onClick={() => handleStreamSelect(option as Stream)}
+              className="hover:bg-slate-100"
+            >
+              {option.name}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Year Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
+            <Calendar className="w-4 h-4 text-teal-600" />
+            {uiFilters.selectedYear || "Year"}
+            <ChevronDown className="h-4 w-4 text-slate-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="shadow-lg rounded-xl border border-slate-200 bg-white">
+          {["2021", "2022", "2023", "2024", "2025"].map((option) => (
+            <DropdownMenuItem
+              key={option}
+              onClick={() => handleYearSelect(option as Year)}
+              className="hover:bg-slate-100"
+            >
+              {option}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Framework Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
+            <Code2 className="w-4 h-4 text-teal-600" />
+            {uiFilters.selectedFramework || "Framework"}
+            <ChevronDown className="h-4 w-4 text-slate-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="shadow-lg rounded-xl border border-slate-200 bg-white">
+          {["CCF", "CBCS"].map((option) => (
+            <DropdownMenuItem
+              key={option}
+              onClick={() => handleFrameworkSelect(option as Framework)}
+              className="hover:bg-slate-100"
+            >
+              {option}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Semester Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
+            <BookOpen className="w-4 h-4 text-teal-600" />
+            {uiFilters.selectedSemester ? `Sem ${uiFilters.selectedSemester}` : "Semester"}
+            <ChevronDown className="h-4 w-4 text-slate-500" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="shadow-lg rounded-xl border border-slate-200 bg-white">
+          {semesterOptions.map((option) => (
+            <DropdownMenuItem
+              key={option}
+              onClick={() => handleSemesterSelect(option)}
+              className="hover:bg-slate-100"
+            >
+              {option}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </motion.div>
+
+    {/* Apply Filters Button */}
+    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <Button
+        onClick={handleApplyFilters}
+        className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-md flex items-center gap-2 px-5 py-2 mt-4 lg:mt-0"
+      >
+        <Filter className="h-4 w-4" />
+        Apply Filters
+      </Button>
+    </motion.div>
+  </div>
+</div>
+
+
   );
 };
 

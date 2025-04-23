@@ -73,7 +73,7 @@ import { getAllReports } from "@/services/student-apis";
 import { useQuery } from "@tanstack/react-query";
 import { useReportStore } from "@/components/globals/useReportStore";
 import useDebounce from "@/components/Hooks/useDebounce";
-import { BarChart2, BookOpen, Filter } from "lucide-react";
+import { BarChart2, BookOpen } from "lucide-react";
 
 const Page: React.FC = () => {
   const { filters, setFilteredData, filteredData } = useReportStore();
@@ -121,12 +121,12 @@ const Page: React.FC = () => {
           className="mt-10 ml-2 mb-10 text-center sm:text-left"
         >
           <div className="flex items-center justify-center sm:justify-start gap-4 mb-3">
-            <BarChart2 className="h-10 w-10 text-indigo-600" strokeWidth={1.5} />
-            <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent">
+            <BarChart2 className="h-10 w-10 " strokeWidth={1.5} />
+            <h1 className="text-3xl md:text-4xl font-bold  bg-clip-text ">
               Student Report
             </h1>
           </div>
-          <p className=" px-3 text-lg text-indigo-700 flex items-center justify-center sm:justify-start gap-2">
+          <p className=" px-3 text-lg  flex items-center justify-center sm:justify-start gap-2">
             <BookOpen className="h-5 w-5" />
             Analyze and export comprehensive student performance data
           </p>
@@ -136,12 +136,9 @@ const Page: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="bg-white border rounded-xl shadow-lg p-6 mb-8"
+          className=" mb-8"
         >
-           <div className="flex items-center gap-3 mb-4">
-            <Filter className="h-5 w-5 text-indigo-600" />
-            <h2 className="text-xl font-semibold text-indigo-800">Filter Options</h2>
-          </div>
+          
           <FilterAndExportComponent />
         </motion.div>
 
@@ -165,9 +162,7 @@ const Page: React.FC = () => {
   );
 };
 
-export default Page;
-
-// import React, { useEffect, useState, useRef } from "react";
+export default Page;// import React, { useEffect, useState, useRef } from "react";
 // import { motion } from "framer-motion";
 // import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
 // import { ReportColumns } from "@/components/reports/columns";
@@ -284,3 +279,4 @@ export default Page;
 // };
 
 // export default Page;
+
