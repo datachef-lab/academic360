@@ -168,8 +168,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentPath = location.pathname;
 
   // Get the base path segment after /home/
-  const pathSegments = currentPath.split("/").filter(Boolean);
-  const basePath = pathSegments.length > 1 ? pathSegments[1] : "";
+  
+  // const pathSegments = currentPath.split("/").filter(Boolean);
+  // const basePath = pathSegments.length > 1 ? pathSegments[1] : "";
 
   const handleLogout = () => {
     console.log("User logged out");
@@ -351,27 +352,27 @@ function NavItem({
   );
 }
 
-function SubNavItem({ href, children, isActive }: { href: string; children: React.ReactNode; isActive?: boolean }) {
-  return (
-    <Link
-      to={href}
-      className={cn(
-        "group flex items-center px-4 py-2.5 text-sm relative",
-        isActive
-          ? "bg-purple-100 text-purple-800 font-medium border-l-4 border-purple-600"
-          : "text-gray-600 hover:bg-gray-100",
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-purple-600" : "bg-gray-400")}></div>
-        <span>{children}</span>
-      </div>
+// function SubNavItem({ href, children, isActive }: { href: string; children: React.ReactNode; isActive?: boolean }) {
+//   return (
+//     <Link
+//       to={href}
+//       className={cn(
+//         "group flex items-center px-4 py-2.5 text-sm relative",
+//         isActive
+//           ? "bg-purple-100 text-purple-800 font-medium border-l-4 border-purple-600"
+//           : "text-gray-600 hover:bg-gray-100",
+//       )}
+//     >
+//       <div className="flex items-center gap-3">
+//         <div className={cn("h-2 w-2 rounded-full", isActive ? "bg-purple-600" : "bg-gray-400")}></div>
+//         <span>{children}</span>
+//       </div>
 
-      {isActive && (
-        <div className="absolute right-3">
-          <div className="h-2 w-2 rounded-full bg-purple-600"></div>
-        </div>
-      )}
-    </Link>
-  );
-}
+//       {isActive && (
+//         <div className="absolute right-3">
+//           <div className="h-2 w-2 rounded-full bg-purple-600"></div>
+//         </div>
+//       )}
+//     </Link>
+//   );
+// }
