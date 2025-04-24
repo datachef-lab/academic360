@@ -8,6 +8,7 @@ import { DataTableViewOptions } from "./DataTableViewOptions";
 import { Plus, TrashIcon } from "lucide-react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { debounce } from "lodash";
+import { useLocation } from "react-router-dom";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -38,7 +39,7 @@ export function DataTableToolbar<TData>({
     // Call the debounced function with the current query
     debouncedFn.current(query);
   }, [table, refetch]);
-
+  const location = useLocation();
   // Handle input change
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
@@ -48,13 +49,15 @@ export function DataTableToolbar<TData>({
 
   return (
     <div className="flex flex-wrap items-center justify-between">
-      <div className="flex flex-1 flex-wrap items-center gap-2">
-        <Input
-          placeholder="Search..."
-          value={searchText}
-          onChange={handleSearchChange}
-          className="max-w-sm"
-        />
+     <div className="flex flex-1 flex-wrap items-center gap-2">
+        {location.pathname !== '/home/downloads' && (
+    <Input
+      placeholder="Search..."
+      value={searchText}
+      onChange={handleSearchChange}
+      className="max-w-sm"
+    />
+  )}
         {table.getColumn("type") && (
           <DataTableFacetedFilter
             column={table.getColumn("type")}
@@ -82,7 +85,7 @@ export function DataTableToolbar<TData>({
           </Button>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      {location.pathname !== '/home/downloads' &&(<div className="flex items-center gap-2">
         {table.getFilteredSelectedRowModel().rows.length > 0 ? (
           <Button variant="outline" size="sm">
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
@@ -98,7 +101,7 @@ export function DataTableToolbar<TData>({
         >
           <Plus />
         </Button>
-      </div>
+      </div>)}
     </div>
   );
 }

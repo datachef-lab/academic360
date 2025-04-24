@@ -6,9 +6,14 @@ import { getAllStudents, getSearchedStudents } from "@/services/student";
 import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
+import { useReportStore } from "@/components/globals/useReportStore";
+
+
 
 export default function SearchStudent() {
+
   const [searchText, setSearchText] = useState("");
+  const {setStudentData,StudentData}=useReportStore();
 
   const [data, setData] = useState<StudentSearchType[]>([]);
   const [dataLength, setDataLength] = useState<number>(0);
@@ -27,9 +32,12 @@ export default function SearchStudent() {
     queryKey: ["search-student", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
     queryFn: async () => {
       const data = await getAllStudents(pagination.pageIndex + 1, pagination.pageSize);
-      console.log(data);
+      console.log("fetched data",JSON.stringify(data.payload.content[0],null,2));
+      
 
       const { content, page, pageSize, totalElements, totalPages } = data.payload;
+      console.log("content/***",content);
+      setStudentData(content);
 
       console.log({ pageIndex: page - 1, pageSize, totalElements, totalPages });
 
@@ -40,6 +48,7 @@ export default function SearchStudent() {
       setData(formattedData);
 
       setDataLength(formattedData.length);
+      console.log("studentData/*****",StudentData);
 
       return formattedData;
     },
@@ -59,6 +68,7 @@ export default function SearchStudent() {
 
         console.log("while searching:", data);
         const { content, page, totalElements, totalPages } = data.payload;
+        
 
         setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
 
@@ -76,6 +86,7 @@ export default function SearchStudent() {
 
   return (
     <div className="overflow-x-auto  w-full h-full  p-2 ">
+      
       <DataTable
         isLoading={isFetchingDefault || isFetchingSearch}
         data={data || []}

@@ -1,4 +1,3 @@
-
 import React, { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +28,15 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
 import { useReportStore } from "../globals/useReportStore";
 import { motion } from "framer-motion";
+import { useLocation } from "react-router-dom";
+import { Student } from "@/types/user/student";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 type Framework = "CCF" | "CBCS";
 
 const FilterAndExportComponent: React.FC = () => {
-  const { setFilters, filteredData, uiFilters, setUiFilters } = useReportStore();
-
+  const { setFilters, filteredData, uiFilters, setUiFilters,StudentData } = useReportStore();
+  const location = useLocation();
   const { data } = useQuery({
     queryKey: ["streams"],
     queryFn: getAllStreams,
@@ -101,15 +102,106 @@ const FilterAndExportComponent: React.FC = () => {
   };
 
   const handleExportExcel = () => {
-    if (filteredData.length === 0) {
+    // Determine which data to use based on current route
+    const exportData = location.pathname === '/home/downloads' ? StudentData : filteredData;
+    
+    if (exportData.length === 0) {
       alert("No data available to export!");
       return;
     }
 
-    const ws = XLSX.utils.json_to_sheet(filteredData);
+    // Transform data to flatten nested objects and format dates
+    const formattedData = exportData.map(student => ({
+      // Basic Student Info
+      'Student ID': (student as Student).id || '',
+      'Name': (student as Student).name || '',
+      'User ID': (student as Student).userId || '',
+      'Community': (student as Student).community || '',
+      'Handicapped': (student as Student).handicapped ? 'Yes' : 'No',
+      'Level': (student as Student).level || '',
+      'Framework': (student as Student).framework || '',
+      'Shift': (student as Student).shift || '',
+      'Last Passed Year': (student as Student).lastPassedYear || '',
+      'Notes': (student as Student).notes || '',
+      'Active': (student as Student).active ? 'Yes' : 'No',
+      'Alumni': (student as Student).alumni ? 'Yes' : 'No',
+      'Leaving Date': (student as Student).leavingDate ? new Date((student as Student).leavingDate).toLocaleDateString() : '',
+      'Leaving Reason': (student as Student).leavingReason || '',
+      'Created At': (student as Student).createdAt ? new Date((student as Student).createdAt).toLocaleDateString() : '',
+      'Updated At': (student as Student).updatedAt ? new Date((student as Student).updatedAt).toLocaleDateString() : '',
+
+      // Specialization
+      'Specialization': (student as Student).specialization?.name || '',
+      'Specialization Sequence': (student as Student).specialization?.sequence || '',
+
+      // Academic Identifier
+      'RFID': (student as Student).academicIdentifier?.rfid || '',
+      'Degree Programme': (student as Student).academicIdentifier?.degreeProgramme || '',
+      'CU Form Number': (student as Student).academicIdentifier?.cuFormNumber || '',
+      'UID': (student as Student).academicIdentifier?.uid || '',
+      'Old UID': (student as Student).academicIdentifier?.oldUid || '',
+      'Registration Number': (student as Student).academicIdentifier?.registrationNumber || '',
+      'Roll Number': (student as Student).academicIdentifier?.rollNumber || '',
+      'Section': (student as Student).academicIdentifier?.section || '',
+      'Class Roll Number': (student as Student).academicIdentifier?.classRollNumber || '',
+      'APAAR ID': (student as Student).academicIdentifier?.apaarId || '',
+      'ABC ID': (student as Student).academicIdentifier?.abcId || '',
+      'APPR ID': (student as Student).academicIdentifier?.apprid || '',
+      'Check Repeat': (student as Student).academicIdentifier?.checkRepeat ? 'Yes' : 'No',
+
+      // Personal Details
+      'Aadhaar Card Number': (student as Student).personalDetails?.aadhaarCardNumber || '',
+      'Nationality': (student as Student).personalDetails?.nationality?.name || '',
+      'Other Nationality': (student as Student).personalDetails?.otherNationality?.name || '',
+      'Religion': (student as Student).personalDetails?.religion?.name || '',
+      'Category': (student as Student).personalDetails?.category?.name || '',
+      'Mother Tongue': (student as Student).personalDetails?.motherTongue?.name || '',
+      'Date of Birth': (student as Student).personalDetails?.dateOfBirth ? new Date((student as Student).personalDetails?.dateOfBirth || '').toLocaleDateString() : '',
+      'Gender': (student as Student).personalDetails?.gender || '',
+      'Email': (student as Student).personalDetails?.email || '',
+      'Alternative Email': (student as Student).personalDetails?.alternativeEmail || '',
+      'Disability': (student as Student).personalDetails?.disability || '',
+      'Disability Code': (student as Student).personalDetails?.disabilityCode?.code || '',
+
+      // Mailing Address
+      'Mailing Address - Country': (student as Student).personalDetails?.mailingAddress?.country || '',
+      'Mailing Address - State': (student as Student).personalDetails?.mailingAddress?.state || '',
+      'Mailing Address - City': (student as Student).personalDetails?.mailingAddress?.city || '',
+      'Mailing Address - Address Line': (student as Student).personalDetails?.mailingAddress?.addressLine || '',
+      'Mailing Address - Landmark': (student as Student).personalDetails?.mailingAddress?.landmark || '',
+      'Mailing Address - Locality Type': (student as Student).personalDetails?.mailingAddress?.localityType || '',
+      'Mailing Address - Phone': (student as Student).personalDetails?.mailingAddress?.phone || '',
+      'Mailing Address - Pincode': (student as Student).personalDetails?.mailingAddress?.pincode || '',
+
+      // Residential Address
+      'Residential Address - Country': (student as Student).personalDetails?.residentialAddress?.country || '',
+      'Residential Address - State': (student as Student).personalDetails?.residentialAddress?.state || '',
+      'Residential Address - City': (student as Student).personalDetails?.residentialAddress?.city || '',
+      'Residential Address - Address Line': (student as Student).personalDetails?.residentialAddress?.addressLine || '',
+      'Residential Address - Landmark': (student as Student).personalDetails?.residentialAddress?.landmark || '',
+      'Residential Address - Locality Type': (student as Student).personalDetails?.residentialAddress?.localityType || '',
+      'Residential Address - Phone': (student as Student).personalDetails?.residentialAddress?.phone || '',
+      'Residential Address - Pincode': (student as Student).personalDetails?.residentialAddress?.pincode || '',
+    }));
+
+    const Data= location.pathname === '/home/downloads' ? formattedData : filteredData;
+    const ws = XLSX.utils.json_to_sheet(Data);
+    
+    // Auto-size columns
+    const colWidths = Object.keys(Data[0] || {}).map(key => ({
+      wch: Math.max(key.length, 15) // minimum width of 15 characters
+    }));
+    ws['!cols'] = colWidths;
+
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Filtered Data");
-    XLSX.writeFile(wb, "filtered_data.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Student Data");
+    
+    // Customize filename based on route
+    const fileName = location.pathname === '/home/downloads' 
+      ? "student_data.xlsx" 
+      : "filtered_data.xlsx";
+      
+    XLSX.writeFile(wb, fileName);
   };
 
   return (
