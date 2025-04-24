@@ -5,6 +5,7 @@ import {
 
   ChevronDown,
   ClipboardPenLine,
+  DownloadCloud,
   FileUser,
   GalleryVerticalEnd,
  
@@ -66,7 +67,7 @@ const data = {
   navDash:[
     {
       title: "Dashboard",
-      url: "/home/academics",
+      url: "/home",
       icon: Home,
     },
   ],
@@ -74,7 +75,7 @@ const data = {
    
     {
       title: "Admission & Fees Dept",
-      url: "/home",
+      url: "/home/admission-fees",
       icon: UserPlus,
       // items: [
       //   { title: "Dashboard", url: "/home/admission" },
@@ -84,14 +85,15 @@ const data = {
       //   { title: "Reports", url: "/home/admission-reports" },
       // ],
     },
+    // AdmissionAndFess
     {
       title: "Courses & Subject",
-      url: "#",
+      url: "/home/courses-subjects",
       icon: Notebook,
     },
     {
       title: "Exam Management",
-      url: "#",
+      url: "/home/exam-management",
       icon: BookCheck,
       // items: [
       //   {
@@ -118,7 +120,7 @@ const data = {
     
     {
       title: "Event",
-      url: "#",
+      url: "/home/event",
       icon: MapPinned,
     },
     {
@@ -138,24 +140,29 @@ const data = {
     // },
     {
       title: "Add Student",
-      url: "/home/academics-add",
+      url: "/home/add-student",
       icon: UserRoundPlus,
     },
         {
           title: "Add Marksheet",
-          url: "/home/manage-marksheet",
+          url: "/home/add-marksheet",
           icon: ClipboardPenLine,
         },
        
         {
           title: "Search Student",
-          url: "/home/academics-search",
+          url: "/home/search-students",
           icon: UserRoundSearch,
         },
         {
           title: "Get Reports",
-          url: "/home/academics-reports",
+          url: "/home/student-reports",
           icon: FileUser,
+        },
+        {
+          title: "Downloads",
+          url: "/home/downloads",
+          icon: DownloadCloud,
         },
        
      

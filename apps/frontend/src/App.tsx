@@ -26,6 +26,10 @@ import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
+import Downloads from "./pages/Downloads";
+import Event from "./pages/Event";
+import CoursesAndSubject from "./pages/Courses&Subject";
+import AdmissionAndFess from "./pages/AdmissionAndFess";
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },
@@ -39,12 +43,16 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
     children: [
-      { path: "", element: <MyWorkspacePage /> },
-      { path: "academics", element: <HomePage /> },
+      { path: "exam-management", element: <MyWorkspacePage /> },
+      { path: "", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
-      { path: "academics-add", element: <AddStudentPage /> },
+      { path: "add-student", element: <AddStudentPage /> },
+      { path: "downloads", element: <Downloads /> },
+      { path: "event", element: <Event /> },
+      { path: "admission-fees", element: <AdmissionAndFess /> },
+      { path: "courses-subjects", element: <CoursesAndSubject /> },
       {
-        path: "manage-marksheet",
+        path: "add-marksheet",
         element: <Outlet />,
         children: [
           { path: "", element: <ManageMarksheetPage /> },
@@ -65,7 +73,7 @@ const router = createBrowserRouter([
           },
         ],
       },
-      { path: "academics-reports", element: <GetReportsPage /> },
+      { path: "student-reports", element: <GetReportsPage /> },
       { path: "lib", element: <Dashboard /> },
 
       { path: "catalog", element: <BookCatalog /> },
@@ -73,7 +81,7 @@ const router = createBrowserRouter([
       { path: "fine-management", element: <LibFineManagement /> },
       { path: "lib-report", element: <LibReport /> },
       {
-        path: "academics-search",
+        path: "search-students",
         element: <Outlet />,
         children: [
           { path: "", element: <SearchStudentPage /> },
