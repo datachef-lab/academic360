@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Category } from "@/types/resources/category";
+import ActionEntityMenu from "../../settings/ActionEntityMenu";
 
 export const categoryColumns: ColumnDef<Category>[] = [
   {
@@ -19,5 +20,13 @@ export const categoryColumns: ColumnDef<Category>[] = [
       }
       return <span>No</span>;
     },
+  
+  },
+  {
+    accessorKey: "action",
+    header: "Action",
+    cell:({row})=>{
+      return <ActionEntityMenu type="Category" data={row.original} ></ActionEntityMenu>
+    }
   },
 ];

@@ -38,7 +38,13 @@ const IssueRetun: React.FC = () => {
    
       <div className=" p-6 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-6">Student Borrowed Books Record</h2>
-      <DataTable columns={IssuedBookColumns} data={IssueBookData}></DataTable>
+      <DataTable 
+        columns={IssuedBookColumns} 
+        data={IssueBookData} 
+        pageCount={10} 
+        onPaginationChange={(page) => console.log("Page changed to:", page)} 
+        pagination={{ pageIndex: 0, pageSize: 10 }} 
+      ></DataTable>
         
       </div>
     </div>

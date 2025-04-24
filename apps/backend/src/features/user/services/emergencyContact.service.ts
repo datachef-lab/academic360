@@ -6,6 +6,7 @@ export async function addEmergencyContact(emergencyContact: EmergencyContact): P
     const [newEmergencyContact] = await db.insert(emergencyContactModel).values(emergencyContact).returning();
     return newEmergencyContact;
 }
+
 export async function findEmergencyContactById(id: number): Promise<EmergencyContact | null> {
     const [foundEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.id, id));
 

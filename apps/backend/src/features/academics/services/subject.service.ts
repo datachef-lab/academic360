@@ -15,7 +15,7 @@ export async function commonSubjectOperation(subject: SubjectType, subjectMetada
         internalMarks: subject.internalMarks,
         theoryMarks: subject.theoryMarks,
         practicalMarks: subject.practicalMarks,
-        tutorialMarks: subject.tutorialMarks,
+
         totalMarks: subject.totalMarks,
         ngp: subject.ngp ? formatMarks(subject.ngp)?.toString() : null,
         tgp: subject.tgp ? formatMarks(subject.tgp)?.toString() : null,

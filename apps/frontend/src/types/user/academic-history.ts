@@ -4,11 +4,11 @@ import { Specialization } from "../resources/specialization";
 import { ResultStatus } from "../enums"
 export interface AcademicHistory {
     readonly id?: number;
+    studentId: number,
     lastInstitution?: Institution | null;
     lastBoardUniversity?: BoardUniversity | null;
-    lastResult?: ResultStatus | null;
     specialization?: Specialization | null;
-    studentId: number,
+    lastResult?: ResultStatus | null;    
     studiedUpToClass: number | null,
     passedYear: number | null,
     remarks: string | null,

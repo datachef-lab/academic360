@@ -67,7 +67,7 @@ export const getBloodGroup = async (
             .from(bloodGroupModel)
             .where(eq(bloodGroupModel.id, Number(id)))
             .limit(1);
-
+// kl
         if (!bloodGroup[0]) {
             res
                 .status(404)

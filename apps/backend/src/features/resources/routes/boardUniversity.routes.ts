@@ -9,13 +9,12 @@ import {
 
 const router = express.Router();
 
-// Create a new  Board University Route
 router.post("/", createBoardUniversity);
 
-// Get all  Board University Route
+
 router.get("/", getAllBoardUniversity);
 
-// Get by  Board University ID
+
 router.get("/:id", getBoardUniversityById);
 
 // Update the  Board University Route

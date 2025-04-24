@@ -71,7 +71,6 @@ export async function streamResponseFormat(stream: Stream | null): Promise<Strea
         return null;
     }
     const { degreeId, ...props } = stream;
-
     let degree = await findDegreeById(degreeId) as Degree;
 
     return {

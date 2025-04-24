@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { religionModel } from "@/features/resources/models/religion.model.js";
+import { Religion, religionModel } from "@/features/resources/models/religion.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
@@ -56,33 +56,68 @@ export const updateReligionRecord = async (
   next: NextFunction,
 ) => {
   try {
-    const { id } = req.query;
-    const updatedData = req.body;
+    const { id } = req.params;
+    const { createdAt, updatedAt, ...props } = req.body as Religion
     const records = await db
       .update(religionModel)
-      .set(updatedData)
+      .set(props)
       .where(eq(religionModel.id, Number(id)))
       .returning();
-    if (records) {
+    if (!records) {
       res
-        .status(200)
+        .status(404)
         .json(
-          new ApiResponse(
-            200,
-            "UPDATED",
-            "Religion records updated successfully",
-          ),
+          new ApiResponse(404, "NOT_FOUND", null, "Religion record not found"),
         );
+     
+      // 
     }
-    res
-      .status(404)
-      .json(
-        new ApiResponse(404, "NOT_FOUND", null, "religion record not found"),
-      );
+    res.status(200).json(new ApiResponse(  200,"UPDATED","Religion records updated successfully", ),);
+   
   } catch (error) {
     handleError(error, res, next);
   }
 };
+// export const updateReligionRecord = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) : Promise<Response | void> => {
+//   try {
+//     const { id } = req.params;
+//     const { createdAt, updatedAt, ...props } = req.body as Religion;
+
+//     const records = await db
+//       .update(religionModel)
+//       .set(props)
+//       .where(eq(religionModel.id, Number(id)))
+//       .returning();
+
+//     // ✅ Check if records exist and return immediately after sending response
+//     if (records.length > 0) {
+//       return res
+//         .status(200)
+//         .json(
+//           new ApiResponse(
+//             200,
+//             "UPDATED",
+//             records, // ✅ Changed from string to actual records
+//             "Religion records updated successfully",
+//           ),
+//         );
+//     }
+
+//     // ✅ Moved into `else` block so it's not executed after a successful update
+//     return res
+//       .status(404)
+//       .json(
+//         new ApiResponse(404, "NOT_FOUND", null, "Religion record not found"),
+//       );
+//   } catch (error) {
+//     handleError(error, res, next);
+//   }
+// };
+
 
 export const deleteReligionRecord = async (
   req: Request,

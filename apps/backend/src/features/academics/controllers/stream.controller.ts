@@ -13,6 +13,7 @@ export const getStreams = async (req: Request, res: Response, next: NextFunction
         res.status(200).json(new ApiResponse(200, "SUCCESS", streams, "Streams fetched successfully."));
     } catch (error) {
         handleError(error, res, next);
+        // 
     }
 };
 

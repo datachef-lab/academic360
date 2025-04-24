@@ -56,7 +56,7 @@ export const getAcademicIdentifierByStudentId = async (req: Request, res: Respon
         handleError(error, res, next);
     }
 };
-
+//sd
 export const updateAcademicIdentifier = async (req: Request, res: Response, next: NextFunction) => {
     if (!req.body) {
         res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Fields content can not be empty"));

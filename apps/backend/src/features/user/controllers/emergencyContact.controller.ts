@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { createEmergencyContactSchema, EmergencyContact, emergencyContactModel } from "../models/emergencyContact.model.js";
-import { addEmergencyContact, findEmergencyContactById } from "../services/emergencyContact.service.js";
+import { addEmergencyContact, findEmergencyContactById, findEmergencyContactByStudentId } from "../services/emergencyContact.service.js";
 
 export const createEmergencyContact = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -34,12 +34,32 @@ export const getEmergencyContactById = async (req: Request, res: Response, next:
         handleError(error, res, next);
     }
 };
-
+export const getEmergencyContactByStudentId =async(req:Request,res:Response,next:NextFunction)=>{
+    try {
+            const { studentId } = req.query;
+    
+            const foundAcademicIdentifier = await findEmergencyContactByStudentId(Number(studentId));
+    
+            if (!foundAcademicIdentifier) {
+                res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `academicIdentifier of ID${studentId}  not found`));
+                return;
+            }
+            res.status(200).json(new ApiResponse(200, "SUCCESS", foundAcademicIdentifier, "Fetched academicIdentifier successfully!"));
+    
+    
+        } catch (error) {
+            handleError(error, res, next);
+        }
+}
+//h
 export const updateEmergencyContact = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { id } = req.query;
+        const { id } = req.params;
+        console.log("body",req.body);
+        const {createdAt,updatedAt,...props}=req.body as EmergencyContact
+//sa
 
-        const updatedEmergencyContact = await db.update(emergencyContactModel).set(req.body).where(eq(emergencyContactModel.id, Number(id))).returning();
+        const updatedEmergencyContact = await db.update(emergencyContactModel).set({...props}).where(eq(emergencyContactModel.id, Number(id))).returning();
 
         if (!updatedEmergencyContact) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Emergency Contact not found"));

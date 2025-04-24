@@ -26,6 +26,7 @@ import { StreamType } from "@/types/academics/stream.js";
 import { Section, sectionModel } from "../models/section.model.js";
 import { DefaultEventsMap, Socket } from "socket.io";
 
+
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
 export async function addMarksheet(marksheet: MarksheetType, user: User): Promise<MarksheetType | null> {
@@ -123,7 +124,7 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
 
     console.log("cleaning data...")
     dataArr = await cleanData(dataArr, socket);
-    console.log("rec'd clean data:", dataArr.length);
+    console.log("rec'd clean data:", dataArr.length, dataArr[0]);
     socket.emit('progress', { stage: 'processing_data', message: 'Processing the data...' });
     // Step 1: Find the smallest year from the dataArr[]
     const startingYear = Math.min(...dataArr.map(row => row.year1));
@@ -131,7 +132,14 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
     // Step 2: Fetch all the streams
     const streams = await findAllStreams();
 
-    console.log("startingYear:", startingYear);
+
+    console.log("in main uploadData(), startingYear:", startingYear);
+
+
+    if (!user) {
+        console.log("user:", user);
+        return false;
+    }
 
     // Step 3: Loop over the array.
     for (let y = startingYear; y <= new Date().getFullYear(); y++) { // Iterate over the years
@@ -158,23 +166,41 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
                     if (doneRollNumber.includes(arr[i].roll_no)) continue;
 
                     // Select all the subject rows for the uid: arr[i].roll_no
-                    const subjectArr = arr.filter(row => row.roll_no === arr[i].roll_no);
-                    console.log("processing student:", subjectArr.length, subjectArr[0].roll_no, "dataArr:", dataArr.length, "arr:", arr.length);
-                    // Process the student
-                    const result = await processStudent(subjectArr, streams[s] as StreamType, sem, fileName, user);
-                    // console.log("result:", result);
-
-                    // Mark the uid as done
-                    doneRollNumber.push(arr[i].roll_no);
-
-                    socket.emit('progress', {
-                        stage: 'processing_data',
-                        message: `Done ${subjectArr[0].name} | year: ${y} | semester: ${sem} |  Registration No.: ${subjectArr[0].registration_no} | Roll No.: ${subjectArr[0].roll_no}`
+                    const subjectArr = arr.filter(row => {
+                        // Normalize roll numbers before comparison
+                        const currentRollNo = (row.roll_no || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+                        const targetRollNo = (arr[i].roll_no || '').trim().replace(/[^a-zA-Z0-9]/g, '');
+                        return currentRollNo === targetRollNo;
                     });
 
-                    // sendUpdate(`Processed student: ${arr[i].roll_no}`);
+                    console.log("subjectArr:", subjectArr.length);
+
+                    if (subjectArr.length === 0) {
+                        console.error(`No subjects found for roll number: ${arr[i].roll_no}`);
+                        continue;
+                    }
+
+                    // console.log("processing student:", subjectArr.length, subjectArr[0].roll_no, "dataArr:", dataArr.length, "arr:", arr.length);
+                    // Process the student
+                    try {
+                        const result = await processStudentV2(subjectArr, streams[s] as StreamType, sem, fileName, user);
+                        console.log("marksheet result:", result);
+                        // Mark the uid as done
+                        doneRollNumber.push(arr[i].roll_no);
+
+                        socket.emit('progress', {
+                            stage: 'processing_data',
+                            message: `Done ${subjectArr[0].name} | year: ${y} | semester: ${sem} |  Registration No.: ${subjectArr[0].registration_no} | Roll No.: ${subjectArr[0].roll_no}`
+                        });
+                    } catch (error) {
+                        console.error(`Error processing student with roll number ${arr[i].roll_no}:`, error);
+                        socket.emit('progress', {
+                            stage: 'processing_data',
+                            message: `Error processing ${arr[i].roll_no}: ${error instanceof Error ? error.message : String(error)}`
+                        });
+                    }
                 }
-                console.log(`Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`);
+                // console.log(`Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`);
                 socket.emit('progress', {
                     stage: 'processing_data',
                     message: `Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`
@@ -183,6 +209,7 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
         }
     }
 
+    console.log(dataArr[23]);
     console.log("done ")
     socket.emit('progress', {
         stage: 'completed',
@@ -371,14 +398,44 @@ interface FilterDataProps {
 async function filterData({ dataArr, stream, year, semester }: FilterDataProps) {
     const isBCOM = stream?.degree.name === "BCOM";
     const yearKey = isBCOM && stream.framework === "CBCS" ? "year2" : "year1";
-    // console.log(cleanStream(dataArr[0].stream), stream.framework)
-    return dataArr.filter(row =>
-        cleanStream(row.stream) === stream?.degree.name &&
-        row.course.toUpperCase().trim() === stream.degreeProgramme &&
-        row[yearKey] === year &&
-        row.framework === stream.framework &&
-        row.semester === semester
-    );
+
+    console.log("FilterData - Looking for:", {
+        degreeName: stream?.degree.name,
+        degreeProgramme: stream.degreeProgramme,
+        year,
+        framework: stream.framework,
+        semester,
+        yearKey
+    });
+
+    // First check if matching data exists
+    const matchingData = dataArr.filter(row => {
+        const streamMatch = cleanStream(row.stream) === stream?.degree.name;
+        const programMatch = row.course.toUpperCase().trim() === stream.degreeProgramme;
+        const yearMatch = Number(row[yearKey]) === year;
+        const frameworkMatch = row.framework === stream.framework;
+        const semesterMatch = Number(row.semester) === semester;
+
+        return streamMatch && programMatch && yearMatch && frameworkMatch && semesterMatch;
+    });
+
+    console.log(`FilterData - Found ${matchingData.length} matching rows`);
+
+    if (matchingData.length > 0) {
+        const sampleRow = matchingData[0];
+        console.log("Sample row values:", {
+            stream: sampleRow.stream,
+            cleanedStream: cleanStream(sampleRow.stream),
+            course: sampleRow.course,
+            year: sampleRow[yearKey],
+            yearAsNumber: Number(sampleRow[yearKey]),
+            framework: sampleRow.framework,
+            semester: sampleRow.semester,
+            semesterAsNumber: Number(sampleRow.semester)
+        });
+    }
+
+    return matchingData;
 }
 
 const cleanStream = (value: unknown): string | undefined => {
@@ -402,11 +459,14 @@ interface AddUserProps {
 }
 async function addUser({ name, uid }: AddUserProps) {
     if (!uid) {
-        // Create the new user
+
+        // const hashedPassword = await bcrypt.hash("default", 10);
+        // // Create the new user
+
         // const [newUser] = await db.insert(userModel).values({
         //     name: name?.trim()?.toUpperCase(),
         //     email: null,
-        //     password: null,
+        //     password: hashedPassword,
         //     phone: null,
         //     type: "STUDENT",
         //     whatsappNumber: null,
@@ -489,6 +549,7 @@ async function addAcademicIdentifier({ studentId, stream, uid, registrationNumbe
     }).returning();
 }
 
+
 async function processStudent(arr: MarksheetRow[], stream: StreamType, semester: number, fileName: string, user: User) {
     // console.log("in processStudent(), arr:", arr.length)
     if (arr.length === 0) {
@@ -564,7 +625,7 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
     let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
 
     for (let i = 0; i < arr.length; i++) {
-        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.marksheetCode === arr[i].subject.toUpperCase().trim());
+        const subjectMetadata = subjectMetadataArr.find(sbj => sbj.marksheetCode === arr[i].paperCode.toUpperCase().trim());
 
         if (!subjectMetadata) {
             throw Error("Invalid subject input got detected!");
@@ -578,7 +639,6 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
             internalMarks: formatMarks(arr[i].internal_marks),
             theoryMarks: formatMarks(arr[i].theory_marks),
             practicalMarks: arr[i].practical_marks ? formatMarks(arr[i].practical_marks) : null,
-            tutorialMarks: formatMarks(arr[i].tutorial_marks),
             totalMarks: formatMarks(arr[i].total),
             letterGrade: arr[i].grade,
             ngp: formatMarks(arr[i].ngp)?.toString(),
@@ -657,6 +717,251 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
     return marksheet;
 }
 
+// Process Student marksheet and subjects (v2)
+async function processStudentV2(arr: MarksheetRow[], stream: StreamType, semester: number, fileName: string, user: User) {
+    console.log("user:", user);
+    console.log("in processStudentV2(), arr:", arr.length)
+    if (arr.length === 0) {
+        console.log("No data found in the marksheet");
+        return;
+    }
+    let student: Student | null = null;
+    // Step 1: Check if the roll_no already exist
+    const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(
+        sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
+        arr[0].roll_no.replace(/[^a-zA-Z0-9]/g, '')
+    ));
+
+    if (!foundAcademicIdentifier) { // Create new student
+        // Step 1: Add the user
+        const user = await addUser(arr[0]);
+        if (!user) {
+            console.error("Unable to add user");
+            return;
+        }
+
+        // Step 2: Add the student
+        student = await addStudent({
+            uid: arr[0].uid,
+            userId: user.id as number,
+        });
+        console.log("added student");
+        // Step 3: Add the section
+        let section: Section | null = null;
+        if (arr[0].section) {
+            const [newSection] = await db.select().from(sectionModel).where(eq(sectionModel.name, arr[0].section));
+            section = newSection;
+        }
+
+        // Step 4: Add the academic-identifier
+        await addAcademicIdentifier({
+            registrationNumber: arr[0].registration_no,
+            rollNumber: arr[0].roll_no,
+            sectionId: section ? section.id as number : null,
+            stream,
+            studentId: student.id as number,
+            uid: arr[0].uid,
+        });
+    }
+    else {
+        foundAcademicIdentifier.streamId = stream.id as number;
+        await db.update(academicIdentifierModel).set({ streamId: stream.id as number }).where(eq(academicIdentifierModel.id, foundAcademicIdentifier.id))
+        const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, foundAcademicIdentifier.studentId as number));
+        student = foundStudent;
+    }
+
+    if (!student) {
+        throw Error("Unable to create the new student");
+    }
+
+    let marksheet: Marksheet = {
+        studentId: student.id as number,
+        semester: arr[0].semester,
+        year: arr[0].year1,
+        source: "FILE_UPLOAD",
+        file: fileName,
+        createdByUserId: user.id as number,
+        updatedByUserId: user.id as number,
+    }
+
+    marksheet = (await db.insert(marksheetModel).values(marksheet).returning())[0];
+
+    const subjects: Subject[] = [];
+
+    const subjectMetadataArr = await db.select().from(subjectMetadataModel).where(and(
+        eq(subjectMetadataModel.streamId, stream.id as number),
+        eq(subjectMetadataModel.semester, semester),
+    ));
+
+    let totalMarksObtained = 0, fullMarksSum = 0, ngp_credit = 0, creditSum = 0;
+
+    for (let i = 0; i < arr.length; i++) {
+        let subjectMetadata = subjectMetadataArr.find(sbj => sbj.marksheetCode === arr[i].paperCode.toUpperCase().trim());
+
+        if (!subjectMetadata) { // Subject not found
+            const fullMarksInternal = arr[i].full_marks_internal ? Number(arr[i].full_marks_internal) : 0;
+            const fullMarksTheory = arr[i].full_marks_theory ? Number(arr[i].full_marks_theory) : 0;
+            const fullMarksPractical = arr[i].full_marks_practical ? Number(arr[i].full_marks_practical) : 0;
+            const fullMarks = fullMarksInternal + fullMarksTheory + fullMarksPractical;
+
+            const subjectName = arr[i].subjectName ? arr[i].subjectName : arr[i].paperCode;
+
+            const internalCredit = arr[i].internal_credit ? Number(arr[i].internal_credit) : 0;
+            const practicalCredit = arr[i].practical_credit ? Number(arr[i].practical_credit) : 0;
+            const theoryCredit = arr[i].theory_credit ? Number(arr[i].theory_credit) : 0;
+            const vivalCredit = arr[i].viva_credit ? Number(arr[i].viva_credit) : 0;
+            const projectCredit = arr[i].project_credit ? Number(arr[i].project_credit) : 0;
+
+            const credit = arr[i].credit ? Number(arr[i].credit) : (internalCredit + practicalCredit + theoryCredit + vivalCredit + projectCredit);
+
+            const fullMarksProject = arr[i].full_marks_project ? Number(arr[i].full_marks_project) : 0;
+            const fullMarksViva = arr[i].full_marks_viva ? Number(arr[i].full_marks_viva) : 0;
+
+            try {
+                const [newSubjectMetadata] = await db.insert(subjectMetadataModel).values({
+                    streamId: stream.id as number,
+                    semester: Number(semester),
+                    marksheetCode: arr[i].paperCode.toUpperCase().trim(),
+                    name: arr[i].subjectName ? arr[i].subjectName.toUpperCase().trim() : arr[i].paperCode.toUpperCase().trim(),
+                    fullMarks,
+                    fullMarksPractical,
+                    fullMarksTheory,
+                    fullMarksInternal,
+                    internalCredit,
+                    practicalCredit,
+                    theoryCredit,
+                    vivalCredit, projectCredit,
+                    credit,
+                    fullMarksProject,
+                    fullMarksViva,
+                    category: "HONOURS"
+                })
+                    .returning();
+
+                subjectMetadata = newSubjectMetadata;
+            } catch (error) {
+                console.error("Error creating subject metadata:", error instanceof Error ? error.message : String(error));
+                console.error("For paper code:", arr[i].paperCode);
+                console.error("With details:", {
+                    streamId: stream.id,
+                    semester,
+                    marksheetCode: arr[i].paperCode.toUpperCase().trim()
+                });
+                throw error;
+            }
+        }
+
+        let subject: Subject = {
+            marksheetId: marksheet.id,
+            subjectMetadataId: subjectMetadata.id,
+            year1: arr[i].year1,
+            year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
+
+            internalMarks: formatMarks(arr[i].internal_marks),
+            internalCredit: arr[i].internal_credit ? Number(arr[i].internal_credit) : 0,
+            internalYear: arr[i].internal_year ? Number(arr[i].internal_year) : null,
+
+            practicalMarks: arr[i].practical_marks ? formatMarks(arr[i].practical_marks) : null,
+            practicalCredit: arr[i].practical_credit ? Number(arr[i].practical_credit) : 0,
+            practicalYear: arr[i].practical_year ? Number(arr[i].practical_year) : null,
+
+            theoryMarks: formatMarks(arr[i].theory_marks),
+            theoryCredit: arr[i].theory_credit ? Number(arr[i].theory_credit) : 0,
+            theoryYear: arr[i].theory_year ? Number(arr[i].theory_year) : null,
+
+            vivalMarks: arr[i].viva_marks ? formatMarks(arr[i].viva_marks) : null,
+            vivalCredit: arr[i].viva_credit ? Number(arr[i].viva_credit) : 0,
+            vivalYear: arr[i].viva_year ? Number(arr[i].viva_year) : null,
+
+            projectMarks: arr[i].project_marks ? formatMarks(arr[i].project_marks) : null,
+            projectCredit: arr[i].project_credit ? Number(arr[i].project_credit) : 0,
+            projectYear: arr[i].project_year ? Number(arr[i].project_year) : null,
+
+            totalMarks: formatMarks(arr[i].total),
+            letterGrade: arr[i].grade,
+            ngp: formatMarks(arr[i].ngp)?.toString(),
+            tgp: formatMarks(arr[i].tgp)?.toString(),
+        };
+
+        // Calculate totalMarksObtained and fullMarksSum
+        let total = formatMarks(arr[i].total);
+        total = (subject.internalMarks ?? 0) + (subject.practicalMarks ?? 0) + (subject.theoryMarks ?? 0);
+        subject.totalMarks = total;
+        totalMarksObtained += total ? total : 0;
+        fullMarksSum += subjectMetadata.fullMarks
+
+        // Calculate NGP and set the letterGrade
+        if (total) {
+            let subjectPercent = (total * 100) / subjectMetadata.fullMarks;
+            // Calculate NGP for each subject as % marks / 10 for each subject
+            subject.ngp = (subjectPercent / 10).toFixed(3).toString();
+
+            subject.tgp = subjectMetadata.credit && subject.ngp ? (Number(subject.ngp) * subjectMetadata.credit).toFixed(3).toString() : null;
+
+            // Mark the letterGrade for each subject
+            subject.letterGrade = await getLetterGrade(subject);
+
+            if (!subject.letterGrade) {
+                subject.status = null;
+            }
+            if (subject.letterGrade?.startsWith("F")) {
+                subject.status = "FAIL";
+                subject.year2 = null;
+            }
+            else {
+                subject.status = "PASS";
+            }
+        }
+
+        // Calculate sum of product of NGP and Credit
+        if (subject.ngp && subjectMetadata.credit) {
+            ngp_credit += +subject.ngp * subjectMetadata.credit;
+
+            // Calculate sum of all credits
+            creditSum += subjectMetadata.credit;
+        }
+
+        // Insert the subject
+        subject = (await db.insert(subjectModel).values(subject).returning())[0];
+
+        subjects.push(subject);
+
+    }
+
+    const tmpMarksheet = (await findMarksheetById(marksheet.id as number)) as MarksheetType;
+    marksheet.sgpa = calculateSGPA(tmpMarksheet);
+    console.log("marksheet.sgpa:", marksheet.sgpa);
+
+    const subjectList: SubjectType[] = (await Promise.all(subjects.map(async (subject) => {
+        return await subjectResponseFormat(subject);
+    }))).filter((subject): subject is SubjectType => subject !== null);
+
+    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
+
+    // Set the remarks for the marksheet
+    marksheet.remarks = getRemarks(marksheetPercent, stream, arr[0].course.toUpperCase() as "HONOURS" | "GENERAL", semester, subjectList);
+
+    if (semester === 6) {
+        const cgpa = await calculateCGPA(marksheet.studentId);
+        if (cgpa) {
+            marksheet.cgpa = cgpa.toString();
+            marksheet.classification = await getClassification(+cgpa, marksheet.studentId);
+        }
+    }
+
+    marksheet = (await db.update(marksheetModel).set(marksheet).where(eq(marksheetModel.id, marksheet.id as number)).returning())[0];
+
+
+    const updatedMarksheet = await marksheetResponseFormat(marksheet);
+
+    console.log("marksheet:", marksheet);
+
+    await postMarksheetOperation(updatedMarksheet as MarksheetType);
+
+
+
+    return marksheet;
+}
 
 async function postMarksheetOperation(marksheet: MarksheetType) {
     const [foundStudent] = await db.select().from(studentModel).where(eq(studentModel.id, marksheet.studentId));
@@ -706,12 +1011,28 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
 export async function validateData(dataArr: MarksheetRow[], socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>) {
     socket.emit('progress', { stage: 'validating_data', message: 'Validating the data provided...' });
     // Step 1: Find the smallest year from the dataArr[]
-    const startingYear = Math.min(...dataArr.map(row => row.year1));
+    const years = dataArr.map(row => Number(row.year1)).filter(y => !isNaN(y));
+    if (years.length === 0) {
+        throw Error("No valid years found in the data");
+    }
+
+    const startingYear = Math.min(...years);
     console.log("in validateData(), startingYear:", startingYear);
+
+    if (dataArr.length === 0) {
+        throw Error("Empty data array");
+    }
+
+    console.log("Sample row from data:", dataArr[0]);
 
     // Step 2: Fetch all the streams
     const streams = await findAllStreams();
-
+    console.log("Available streams:", streams.map(s => ({
+        id: s.id,
+        name: s.degree.name,
+        programme: s.degreeProgramme,
+        framework: s.framework
+    })));
 
     // Step 3: Loop over the array.
     for (let y = startingYear; y <= new Date().getFullYear(); y++) { // Iterate over the years
@@ -750,11 +1071,64 @@ export async function validateData(dataArr: MarksheetRow[], socket: Socket<Defau
                     const seenSubjects = new Set<number>(); // Track subject IDs for duplicate check
                     // console.log(subjectMetadataArr);
                     for (let k = 0; k < studentMksArr.length; k++) {
-                        const subjectMetadata = subjectMetadataArr.find(ele => ele.marksheetCode === studentMksArr[k].subject.toUpperCase().trim());
-
+                        let subjectMetadata = subjectMetadataArr.find(ele => ele.marksheetCode === studentMksArr[k].paperCode.toUpperCase().trim());
+                        console.log("found subjectMetadata:", subjectMetadata?.marksheetCode);
                         // ✅ Ensure subjectMetadata exists before proceeding
-                        if (!subjectMetadata) {
-                            throw Error(`Subject metadata not found for subject: ${studentMksArr[k].subject}`);
+                        if (!subjectMetadata) { // Subject not found
+                            const fullMarksInternal = studentMksArr[k].full_marks_internal ? Number(studentMksArr[k].full_marks_internal) : 0;
+                            const fullMarksTheory = studentMksArr[k].full_marks_theory ? Number(studentMksArr[k].full_marks_theory) : 0;
+                            const fullMarksPractical = studentMksArr[k].full_marks_practical ? Number(studentMksArr[k].full_marks_practical) : 0;
+                            const fullMarks = fullMarksInternal + fullMarksTheory + fullMarksPractical;
+
+                            const subjectName = studentMksArr[k].subjectName ? studentMksArr[k].subjectName : studentMksArr[k].paperCode;
+
+                            const internalCredit = studentMksArr[k].internal_credit ? Number(studentMksArr[k].internal_credit) : 0;
+                            const practicalCredit = studentMksArr[k].practical_credit ? Number(studentMksArr[k].practical_credit) : 0;
+                            const theoryCredit = studentMksArr[k].theory_credit ? Number(studentMksArr[k].theory_credit) : 0;
+                            const vivalCredit = studentMksArr[k].viva_credit ? Number(studentMksArr[k].viva_credit) : 0;
+                            const projectCredit = studentMksArr[k].project_credit ? Number(studentMksArr[k].project_credit) : 0;
+
+                            const credit = studentMksArr[k].credit ? Number(studentMksArr[k].credit) : (internalCredit + practicalCredit + theoryCredit + vivalCredit + projectCredit);
+
+                            const fullMarksProject = studentMksArr[k].full_marks_project ? Number(studentMksArr[k].full_marks_project) : 0;
+                            const fullMarksViva = studentMksArr[k].full_marks_viva ? Number(studentMksArr[k].full_marks_viva) : 0;
+
+
+                            try {
+                                const [newSubjectMetadata] = await db.insert(subjectMetadataModel).values({
+                                    streamId: streams[s].id as number,
+                                    semester: Number(sem),
+                                    marksheetCode: studentMksArr[k].paperCode.toUpperCase().trim(),
+                                    name: subjectName,
+                                    fullMarks,
+                                    fullMarksPractical,
+                                    fullMarksTheory,
+                                    fullMarksInternal,
+                                    internalCredit,
+                                    practicalCredit,
+                                    theoryCredit,
+                                    vivalCredit, projectCredit,
+                                    credit,
+                                    fullMarksProject,
+                                    fullMarksViva,
+                                    category: "HONOURS"
+                                })
+                                    .returning();
+
+                                console.log("Created new subject metadata:", newSubjectMetadata.marksheetCode);
+                                subjectMetadata = newSubjectMetadata;
+                                subjectMetadataArr.push(subjectMetadata);
+                            } catch (error) {
+                                console.error("Error creating subject metadata in validateData:", error instanceof Error ? error.message : String(error));
+                                console.error("For paper code:", studentMksArr[k].paperCode);
+                                console.error("With details:", {
+                                    streamId: streams[s].id,
+                                    semester: sem,
+                                    marksheetCode: studentMksArr[k].paperCode.toUpperCase().trim(),
+                                    fullMarks
+                                });
+                                throw error;
+                            }
                         }
 
                         // ✅ Check for duplicate subjects
@@ -764,37 +1138,47 @@ export async function validateData(dataArr: MarksheetRow[], socket: Socket<Defau
 
                         seenSubjects.add(subjectMetadata?.id as number);
 
+                        // console.log("subjectMetadata:", subjectMetadata)
+
+                        // console.log("checking for :", studentMksArr[k]);
                         // ✅ Check invalid marks range (Assuming 0-100 as valid)
-                        let { internal_marks, theory_marks, total, tutorial_marks, stream, year2: practical_marks } = studentMksArr[k];
+
+                        let { internal_marks, theory_marks, total, practical_marks, full_marks_practical, paperCode, stream, } = studentMksArr[k];
 
                         internal_marks = formatMarks(internal_marks)?.toString() || null;
                         theory_marks = formatMarks(theory_marks)?.toString() || null;
-                        tutorial_marks = formatMarks(tutorial_marks)?.toString() || null;
+                        practical_marks = formatMarks(practical_marks)?.toString() || null;
                         total = formatMarks(total)?.toString() || null;
-                        practical_marks = stream.toUpperCase() !== "BCOM" ? formatMarks(practical_marks)?.toString() || null : null;
+                        // practical_marks = stream.toUpperCase() !== "BCOM" ? formatMarks(practical_marks)?.toString() || null : null;
 
                         if (internal_marks && subjectMetadata?.fullMarksInternal && +internal_marks > (subjectMetadata?.fullMarksInternal as number)) {
+                            console.log("Internal Marks:", internal_marks, "/", subjectMetadata?.fullMarksInternal);
                             throw Error("Invalid marks");
                         }
 
                         if (theory_marks && subjectMetadata?.fullMarksTheory && +theory_marks > (subjectMetadata?.fullMarksTheory as number)) {
+                            console.log("Theory Marks:", theory_marks, "/", subjectMetadata?.fullMarksTheory);
                             throw Error("Invalid marks");
                         }
 
                         if (practical_marks && subjectMetadata?.fullMarksPractical && +practical_marks > (subjectMetadata?.fullMarksPractical as number)) {
+                            console.log("Practical Marks:", +practical_marks, "/", subjectMetadata?.fullMarksPractical);
+                            console.log("in practical_marks:", practical_marks, "arr[i].full_marks_practical:", full_marks_practical);
+                            console.log(paperCode);
                             throw Error("Invalid marks");
                         }
 
-                        if (tutorial_marks && subjectMetadata?.fullMarksTutorial && +tutorial_marks > (subjectMetadata?.fullMarksTutorial as number)) {
-                            throw Error("Invalid marks");
-                        }
+                        // if (tutorial_marks && subjectMetadata?.fullMarksTutorial && +tutorial_marks > (subjectMetadata?.fullMarksTutorial as number)) {
+                        //     throw Error("Invalid marks");
+                        // }
 
                         if (total && subjectMetadata?.fullMarks && +total > (subjectMetadata?.fullMarks as number)) {
+                            console.log("Total Marks:", total, "/", subjectMetadata?.fullMarks);
                             throw Error("Invalid marks");
                         }
 
                     }
-                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
+                    // console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
 
                 }
                 socket.emit('progress', {
@@ -812,7 +1196,7 @@ export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultE
     console.log("in cleanData(), dataArr:", dataArr.length);
 
     const startingYear = Math.min(...dataArr.map(row => row.year1));
-
+    console.log("in cleanData(), startingYear:", startingYear, dataArr[0]);
 
     const streams = await findAllStreams();
     const formattedArr: MarksheetRow[] = [];
@@ -826,6 +1210,8 @@ export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultE
                     stream: streams[s],
                     year: y
                 });
+
+                console.log("filtered arr:", arr.length);
 
                 const doneRollNumber = new Set<string>(); // Use a Set to prevent duplicates
 
@@ -843,13 +1229,14 @@ export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultE
                         roll_no: cleanTilde(mks.roll_no) as string,
                         course: mks.course.toUpperCase().trim(),
                         name: mks.name.toUpperCase().trim(),
-                        subject: mks.subject.toUpperCase().trim(),
+                        paperCode: mks.paperCode.toUpperCase().trim(),
                         framework: mks.framework.toUpperCase().trim() as "CBCS" | "CCF",
                         specialization: mks.specialization ? mks.specialization.toUpperCase().trim() : null,
                         section: mks.section ? mks.section.toUpperCase().trim() : null,
                         internal_marks: formatMarks(mks.internal_marks)?.toString() || null,
                         theory_marks: formatMarks(mks.theory_marks)?.toString() || null,
-                        tutorial_marks: formatMarks(mks.tutorial_marks)?.toString() || null,
+                        practical_marks: formatMarks(mks.practical_marks)?.toString() || null,
+                        // tutorial_marks: formatMarks(mks.tutorial_marks)?.toString() || null,
                         total: formatMarks(mks.total)?.toString() || null,
                         year2: mks.stream.toUpperCase() !== "BCOM" ? formatMarks(mks.year2)?.toString() || null : null,
                     }));
@@ -857,7 +1244,7 @@ export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultE
                     formattedArr.push(...studentMksArr);
                     doneRollNumber.add(arr[i].roll_no); // Mark roll number as processed
 
-                    console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
+                    // console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
 
                 }
                 socket.emit('progress', {
