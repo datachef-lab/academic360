@@ -99,6 +99,7 @@ import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users } fro
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { getStudentById } from "@/services/student";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -131,33 +132,71 @@ export default function StudentPage() {
       {/* Left Content */}
       <div className="w-[80%] h-full">
         {/* Student Details Header */}
-        <div className="border-b pb-2 space-y-2">
-          <h2 className="scroll-m-20 text-3xl font-semibold tracking-tight">
-            <p>{data?.name}</p>
-          </h2>
-          <div className="space-x-2 flex flex-wrap">
-            {data?.personalDetails?.nationality?.name && (
-              <Badge variant="outline" className="flex items-center gap-1">
-                {data?.personalDetails?.nationality?.name}
-              </Badge>
-            )}
-            {data?.community && <Badge className="bg-green-700 flex items-center gap-1">{data?.community}</Badge>}
-            {data?.academicIdentifier?.stream && (
-              <Badge className="bg-blue-500 flex items-center gap-1">
-                {data.academicIdentifier.stream.degree.name}
-              </Badge>
-            )}
-            {data?.community && <Badge className="bg-red-500 flex items-center gap-1">{data?.community}</Badge>}
-            {data?.academicIdentifier?.stream && (
-              <Badge className="bg-violet-500 flex items-center gap-1">
-                {data.academicIdentifier.stream.framework}
-              </Badge>
-            )}
-            <Badge className="bg-gray-500 flex items-center gap-1">GEN</Badge>
+        <div className="border-b pb-6 px-4 md:px-8 my-4 bg-white rounded-xl shadow-sm">
+          <div className="flex gap-6 items-center flex-wrap md:flex-nowrap">
+            {/* Avatar */}
+            <Avatar className="w-28 h-28 ring-2 ring-blue-500 shadow-lg">
+              <AvatarImage
+                className="object-cover"
+                src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${data?.academicIdentifier?.uid}.jpg`}
+                alt={data?.name}
+              />
+              <AvatarFallback className="text-xl font-semibold">{data?.name?.charAt(0)}</AvatarFallback>
+            </Avatar>
+
+            {/* Info */}
+            <div className="flex flex-col gap-3 flex-1">
+              {/* Name & Status */}
+              <div className="flex justify-between flex-wrap items-center gap-2">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800 leading-snug">{data?.name}</h2>
+                  <p className="text-sm text-gray-500 mt-0.5">UID: {data?.academicIdentifier?.uid}</p>
+                </div>
+                <Badge
+                  className={`text-white text-sm px-3 py-1 rounded-full ${
+                    data?.active ? "bg-emerald-500 border border-emerald-600" : "bg-rose-500 border border-rose-600"
+                  }`}
+                >
+                  {data?.active ? "Active" : "Inactive"}
+                </Badge>
+              </div>
+
+              {/* Degree & Stream */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {data?.academicIdentifier?.stream?.degree.name ?? "BCOM"}
+                </span>
+                <span className="bg-indigo-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                  {data?.academicIdentifier?.stream?.framework}
+                </span>
+                {data?.community && (
+                  <span className="bg-pink-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                    {data.community}
+                  </span>
+                )}
+              </div>
+
+              {/* Nationality & Other Info */}
+              <ul className="flex flex-wrap gap-5 mt-1 text-sm text-gray-700">
+                {data?.personalDetails?.nationality?.name && (
+                  <li>
+                    <span className="font-medium text-gray-500">Nationality:</span>{" "}
+                    {data.personalDetails.nationality.name}
+                  </li>
+                )}
+                {data?.academicIdentifier?.stream?.framework && (
+                  <li>
+                    <span className="font-medium text-gray-500">Framework:</span>{" "}
+                    {data.academicIdentifier.stream.framework}
+                  </li>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
+
         {/* Student Content */}
-        <StudentContent activeTab={activeTab} />
+        <StudentContent activeTab={activeTab} studentId={Number(studentId)} />
       </div>
 
       {/* Right Panel - Tabs */}

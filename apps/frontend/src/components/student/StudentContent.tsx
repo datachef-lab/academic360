@@ -10,6 +10,7 @@ import PersonalDetails from "./PersonalDetails";
 import TransportDetails from "./TransportDetails";
 
 type StudentContentProps = {
+    studentId: number;
   activeTab: {
     label: string;
     icon: JSX.Element;
@@ -17,13 +18,13 @@ type StudentContentProps = {
   };
 };
 
-export default function StudentContent({ activeTab }: StudentContentProps) {
+export default function StudentContent({ activeTab, studentId }: StudentContentProps) {
   const handleContent = () => {
     switch (activeTab.label) {
       case "Overview":
         return <OverviewTab />;
       case "Personal Details":
-        return <PersonalDetails />;
+        return <PersonalDetails studentId={studentId} />;
       case "Parent Details":
         return <ParentDetails />;
       case "Guardian Details":
