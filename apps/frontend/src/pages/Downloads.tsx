@@ -48,7 +48,7 @@ const Downloads: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="col-span-full"
           >
-            <div className="bg-white rounded-2xl shadow-lg p-4 ">
+            <div className="bg-white rounded-2xl shadow-lg px-4 py-2 ">
              
               <SearchStudent />
             </div>
