@@ -1,9 +1,9 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
+// import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
 import { createAcademicHistory, deleteAcademicHistory, getAcademicHistoryById, getAcademicHistoryByStudentId, getAllAcademicHistory, updateAcademicHistory } from "../controllers/academicHistory.controller.js";
 
 const router = express.Router();
-router.use(verifyJWT);
+// router.use(verifyJWT);
 router.post("/", createAcademicHistory);
 router.get("/", getAllAcademicHistory);
 router.get("/query", (req, res, next) => {

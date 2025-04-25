@@ -141,7 +141,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-auto mx-auto">
       <Card className="p-6">
         <CardContent className="mt-6 space-y-8">
           <form onSubmit={handleSubmit(onSubmit)}>

@@ -1,8 +1,9 @@
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
-
-import {  School, GraduationCap, Calendar, FileText, BookOpen, ClipboardList, MessageSquare, ChevronDown, Book, FilePlus, CheckCircle, PenLine } from "lucide-react";
+import { School, GraduationCap, Calendar, FileText, BookOpen, MessageSquare, ChevronDown, Book, PenLine, CheckCircle, Save, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -10,33 +11,32 @@ import { useLocation } from "react-router-dom";
 import { getAcademicHistory, getAllSpecialization } from "@/services/academic";
 import { createAcademicHistory, updateAcademicHistory } from "@/services/student-apis";
 import { ResultStatus } from "@/types/enums";
-import axios from "axios";
 import { Specialization } from "@/types/resources/specialization";
-
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/useFetch";
 
-const resultOptions:ResultStatus[] = ["PASS", "FAIL"];
-
+const resultOptions: ResultStatus[] = ["PASS", "FAIL"];
 
 const formElement = [
-  
-  { name: "id", label: "ID", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "id", label: "ID", type: "text", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
   { name: "lastInstitution", label: "Last Institution", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "lastBoardUniversity", label: "Last Board University", type: "text", icon: <GraduationCap className="text-gray-500  dark:text-white w-5 h-5" /> },
-  { name: "studiedUpToClass", label: "Studied Up To Class", type: "text", icon: <BookOpen className="text-gray-500  dark:text-white w-5 h-5" /> },
-  { name: "passedYear", label: "Passed Year", type: "text", icon: <Calendar className="text-gray-500 w-5 h-5  dark:text-white" /> }, { name: "specialization", label: "Specialization", type: "text", icon: <ClipboardList className="text-gray-500  dark:text-white w-5 h-5" /> },
-  { name: "remarks", label: "Remarks", type: "text", icon: <MessageSquare className="text-gray-500 w-5  dark:text-white h-5" /> },
+  { name: "lastBoardUniversity", label: "Last Board University", type: "text", icon: <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "studiedUpToClass", label: "Studied Up To Class", type: "text", icon: <BookOpen className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "passedYear", label: "Passed Year", type: "text", icon: <Calendar className="text-gray-500 w-5 h-5 dark:text-white" /> }, 
+  { name: "remarks", label: "Remarks", type: "text", icon: <MessageSquare className="text-gray-500 w-5 dark:text-white h-5" /> },
 ];
 
 const AcademicHistoryForm = () => {
   const location = useLocation();
   const studentId = location.pathname.split("/").pop();
   const id = Number(studentId);
-  const [selected,setSelected]=useState<ResultStatus>("PASS");
-  const [isNew, setIsNew] = useState(false);
+  const [selected, setSelected] = useState<ResultStatus>("PASS");
+  const [updateID, setUpdateID] = useState<number>();
   const [selectedSpecialization, setSelectedSpecialization] = useState<{ id: number; name: string } | null>(null);
-  const [formData, setFormData] = useState<AcademicHistory>({
-    studentId: 0,
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  const defaultAcademicHistory: AcademicHistory = {
+    studentId: id,
     lastInstitution: null,
     lastBoardUniversity: null,
     specialization: null,
@@ -44,191 +44,182 @@ const AcademicHistoryForm = () => {
     passedYear: null,
     lastResult: null,
     remarks: "",
+  };
+
+  const { data: academicData, loading, error, refetch } = useFetch<AcademicHistory>({
+    getFn: () => getAcademicHistory(id),
+    postFn: (data) => createAcademicHistory(data),
+    default: defaultAcademicHistory
   });
 
-const { data:specialization } = useQuery({
+  const [formData, setFormData] = useState<AcademicHistory>(defaultAcademicHistory);
+
+  const { data: specialization } = useQuery({
     queryKey: ["specialization"],
     queryFn: getAllSpecialization,
   });
-  const SpecializationMemo = useMemo(() => {
-    if (!specialization) {
-      //// console.warn("No streamData received from API");
-      return [];
-    }
 
+  const SpecializationMemo = useMemo(() => {
+    if (!specialization) return [];
     const specializationMap = new Map();
     specialization.forEach((item: Specialization) => {
-      if (item) {
-        specializationMap.set(item.id, { id: item.id, name: item.name });
-      }
+      if (item) specializationMap.set(item.id, { id: item.id, name: item.name });
     });
-    const specializationNames = [...specializationMap.values()];
-    // // console.log("Distinct Degree Names:", degreeNames);
-    return specializationNames;
+    return [...specializationMap.values()];
   }, [specialization]);
 
-  const { data ,error,isError} = useQuery({
-    queryKey: ["AcademicHistory", id],
-    queryFn: () => getAcademicHistory(id),
-    enabled: !!id,
-    retry: false,
-  });
-
-
-
-const createData = useMutation({
-  mutationFn: (formData: AcademicHistory) =>createAcademicHistory(formData),
-  onSuccess: (data) => {
-    console.log("Data saved:", data);
-    alert("Data saved successfully");
-  },
-});
-
-
   useEffect(() => {
-   
-    if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
-      toast.info("No academic info found. Starting a new record for you!", {
-        icon: <FilePlus />,
-      });
-       
-      // console.log("error code ***1+*",error.response?.status);
-      setIsNew(true);
+    if (academicData) {
       setFormData({
-        studentId: id,
-        lastInstitution: null,
-        lastBoardUniversity: null,
-        specialization: null,
-        studiedUpToClass: null,
-        passedYear: null,
-        lastResult: null,
-        remarks: "",
+        ...academicData,
+        lastInstitution: academicData.lastInstitution || null,
+        lastBoardUniversity: academicData.lastBoardUniversity || null,
+        specialization: academicData.specialization || null,
       });
-     
-    }
-    else if(data?.payload) {
-      console.log(JSON.stringify(data.payload,null,2));
-      // // console.log("**1",data.payload?.lastInstitution?.name);
-      // // console.log("**I",data.payload?.lastBoardUniversity?.name);
-     setFormData((prev) => ({
-        ...prev, 
-        lastInstitution: data.payload.lastInstitution?.name || "",
-        lastBoardUniversity: data.payload.lastBoardUniversity?.name || "",
-        specialization: data.payload.specialization?.name || "",
-        ...data.payload,
-      }));
-   
-    }
-    else{
-      console.log("error on fetching ",error);
-      
-    }
-    
-   
-   
-  }, [data, error, isError, id]);
+      setUpdateID(academicData.id);
 
-  
-    
-    
+      if (academicData.specialization?.id) {
+        setSelectedSpecialization({
+          id: academicData.specialization.id,
+          name: academicData.specialization.name || ""
+        });
+      }
+
+      if (academicData.lastResult) {
+        setSelected(academicData.lastResult);
+      }
+    }
+  }, [academicData]);
+
   const updateData = useMutation({
-    mutationFn: (formData: AcademicHistory) => updateAcademicHistory(id,formData),
-    onSuccess: (data) => {
-      console.log("Data saved:", data);
-      alert("Data saved successfully");
+    mutationFn: (formData: AcademicHistory) => updateAcademicHistory(updateID as number, formData),
+    onSuccess: () => {
+      toast.success("Your data has been successfully updated.", {
+        icon: <PenLine />,
+      });
+      refetch();
     },
-  
   });
-const handleStreamSelect = (option: { id: number; name: string }) => {
-  // console.log("option selected",option);
-  setSelectedSpecialization(option);
-  setFormData(prev => ({
-    ...prev,
-    specialization: { ...(prev.specialization || {}), option } as Specialization, 
-  }));
-};
+
+  const handleStreamSelect = (option: { id: number; name: string }) => {
+    setSelectedSpecialization(option);
+    setFormData(prev => ({
+      ...prev,
+      specialization: { ...(prev.specialization || {}), ...option } as Specialization,
+    }));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-  
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: ["studiedUpToClass", "passedYear"].includes(name) 
         ? value === "" ? "" : Number(value) 
         : value,
     }));
   };
-  
 
-  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if(isNew){
-      console.log("Creating new academic history:", formData);
-      console.log("No academic history found - creating new record");
-      createData.mutate(formData);
-      toast.success("Academic record has been successfully created.",{
-        icon:<CheckCircle/>,
-            });
-    }
-    else{
-      console.log("Updating academic history:", formData);
-      updateData.mutate(formData);
-      toast.success("Your data has been successfully updated.",{
-        icon:<PenLine/>,
-            });
-    }
-  };
-
-const handleDropdownChange=(value: string)=>{
+  const handleDropdownChange = (value: string) => {
     setSelected(value as ResultStatus);
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       lastResult: value as ResultStatus,
     }));
+  };
+
+  useEffect(() => {
+    if (updateData.isSuccess) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [updateData.isSuccess]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (loading) return;
+    updateData.mutate(formData);
+  };
+
+  if (loading) {
+    return (
+      <div className="shadow-md border rounded-xl py-6 md:py-10 md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
+        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
+          {formElement.map(({ label }) => (
+            <div key={label} className="flex flex-col space-y-2">
+              <Skeleton className="h-5 w-1/3 rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          ))}
+          <div className="flex flex-col space-y-2">
+            <Skeleton className="h-5 w-1/3 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="flex flex-col space-y-2">
+            <Skeleton className="h-5 w-1/3 rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="col-span-1 sm:col-span-2 mt-2">
+            <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="text-red-500 p-4">Error: {error.message}</div>;
   }
 
   return (
-    <div className=" shadow-md border py-10  w-full flex items-center justify-center px-5">
-
-      <div className="  max-w-[90%] w-full grid grid-cols-2  gap-7">
+    <div className="shadow-md border rounded-xl py-6 md:py-10 md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
+      <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
         {formElement.map(({ name, label, type, icon }) => (
-          <div key={name} className="flex  flex-col mr-8 ">
-            <div className="relative  p-1">
-
-              <label htmlFor={name} className="text-md  text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+          <div key={name} className="flex flex-col">
+            <div className="relative p-1">
+              <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
+                {label}
+              </label>
             </div>
-            <div className="relative ">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                {icon}
+              </span>
               <Input
                 id={name}
                 name={name}
                 type={type}
-                value={formData[name as keyof AcademicHistory]  as string|| ""}
+                value={formData[name as keyof AcademicHistory] as string || ""}
                 placeholder={label}
                 onChange={handleChange}
-                className={`w-full pl-10 pr-3 py-2 `}
-              
+                className="w-full pl-10 pr-3 py-2 rounded-lg text-sm sm:text-base"
               />
             </div>
-           </div>
+          </div>
         ))}
-            <div className="flex flex-col">
-          <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Result Status</label>
+
+        <div className="flex flex-col">
+          <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
+            Result Status
+          </label>
           <DropdownMenu>
             <DropdownMenuTrigger className="relative">
-            <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                    <FileText className="text-gray-500 dark:text-gray-300 w-5 h-5" />
-                  </span>
-         
-              <Button variant="outline" className="w-full font-normal pl-10 justify-between rounded-lg">
+              <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                <FileText className="text-gray-500 dark:text-gray-300 w-4 h-4 sm:w-5 sm:h-5" />
+              </span>
+              <Button variant="outline" className="w-full font-normal pl-8 sm:pl-10 justify-between rounded-lg text-sm sm:text-base">
                 <span>{formData.lastResult || "Select Result"}</span>
-                <ChevronDown className="w-5 h-5 text-gray-500" />
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white dark:bg-gray-700 shadow-lg rounded-lg w-full">
+            <DropdownMenuContent className="bg-white dark:bg-gray-700 shadow-lg rounded-lg w-full min-w-[200px]">
               <DropdownMenuRadioGroup value={selected} onValueChange={handleDropdownChange}>
                 {resultOptions.map((option) => (
-                  <DropdownMenuRadioItem key={option} value={option}>
+                  <DropdownMenuRadioItem 
+                    key={option} 
+                    value={option}
+                    className="text-sm sm:text-base"
+                  >
                     {option}
                   </DropdownMenuRadioItem>
                 ))}
@@ -236,37 +227,64 @@ const handleDropdownChange=(value: string)=>{
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-         <div className=" flex pr-8 w-full flex-col">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Specialization</label>
-                 
-              <DropdownMenu>
-                    <DropdownMenuTrigger className="relative" >
-                       <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                                      <Book className="text-gray-500 dark:text-gray-300 w-5 h-5" />
-                                        </span>
-                      <Button className="border border-gray-400 w-full pl-10 flex items-center justify-between " variant="outline">
-                      {selectedSpecialization ? selectedSpecialization.name : "Select Stream"} <ChevronDown />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      {SpecializationMemo.map((option) => (
-                        <DropdownMenuItem
-                          key={option.id}
-                          onClick={() => {
-                            //// console.log("Selected Stream:", option.name);
-                            handleStreamSelect(option);
-                          }}
-                        >
-                          {option.name}
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-              </div>
 
-        <div className="col-span-2">
-          <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
-           {isNew?"Create":"Update"} 
+        <div className="flex flex-col">
+          <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
+            Specialization
+          </label>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="relative">
+              <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                <Book className="text-gray-500 dark:text-gray-300 w-4 h-4 sm:w-5 sm:h-5" />
+              </span>
+              <Button 
+                className="border border-gray-400 w-full pl-8 sm:pl-10 flex items-center justify-between text-sm sm:text-base" 
+                variant="outline"
+              >
+                {selectedSpecialization ? selectedSpecialization.name : "Select Stream"} 
+                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="min-w-[200px]">
+              {SpecializationMemo.map((option) => (
+                <DropdownMenuItem
+                  key={option.id}
+                  onClick={() => handleStreamSelect(option)}
+                  className="text-sm sm:text-base"
+                >
+                  {option.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="col-span-1 sm:col-span-2 mt-2">
+          <Button 
+            type="submit" 
+            onClick={handleSubmit} 
+            className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
+            disabled={loading || updateData.isPending}
+          >
+            {loading || updateData.isPending ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : showSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                Submit
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -275,5 +293,3 @@ const handleDropdownChange=(value: string)=>{
 };
 
 export default AcademicHistoryForm;
-
-
