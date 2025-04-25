@@ -63,24 +63,24 @@ interface ProgrammeOption {
   degreeId: number;
 }
 
-export const StudentSubjectsPage: React.FC = () => {
+export const CoursesAndSubject: React.FC = () => {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string>('');
-  const [currentSemester, setCurrentSemester] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [subjectType, setSubjectType] = useState<string>('all');
-  const [isOptionalFilter, setIsOptionalFilter] = useState<string>('all');
-  const [degreeFilter, setDegreeFilter] = useState<string>('all');
+  const [error, setError] = useState<string>("");
+  const [currentSemester, setCurrentSemester] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [subjectType, setSubjectType] = useState<string>("all");
+  const [isOptionalFilter, setIsOptionalFilter] = useState<string>("all");
+  const [degreeFilter, setDegreeFilter] = useState<string>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const { toast } = useToast();
 
   // New subject form state
   const [newSubject, setNewSubject] = useState<NewSubject>({
-    name: '',
-    irpCode: '',
-    marksheetCode: '',
+    name: "",
+    irpCode: "",
+    marksheetCode: "",
     subjectTypeId: 0,
     credit: 0,
     fullMarks: 100,
@@ -105,24 +105,24 @@ export const StudentSubjectsPage: React.FC = () => {
 
   // Function to clear error state
   const clearError = useCallback(() => {
-    setError('');
+    setError("");
   }, []);
 
   // Fetch subjects data function
   const fetchSubjects = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await axios.get<ApiResponse>('http://localhost:8080/api/subject-metadatas');
+      const response = await axios.get<ApiResponse>("http://localhost:8080/api/subject-metadatas");
       if (response.data && Array.isArray(response.data.payload)) {
         setSubjects(response.data.payload);
-        setError(''); // Clear any previous error when successful
+        setError(""); // Clear any previous error when successful
       } else {
-        console.error('Invalid response format:', response);
-        setError('Invalid response format. Please check the console for details.');
+        console.error("Invalid response format:", response);
+        setError("Invalid response format. Please check the console for details.");
       }
     } catch (error: unknown) {
-      console.error('Error fetching subjects:', error);
-      setError('Failed to fetch subjects. Please check the console for details.');
+      console.error("Error fetching subjects:", error);
+      setError("Failed to fetch subjects. Please check the console for details.");
     } finally {
       setIsLoading(false);
     }
@@ -138,67 +138,67 @@ export const StudentSubjectsPage: React.FC = () => {
       try {
         // Since the separate API endpoints for subject types, degrees, and streams are not working,
         // we'll extract this information from the subjects data we already have
-        console.log('Using subject-metadatas endpoint to extract dropdown options...');
-        
+        console.log("Using subject-metadatas endpoint to extract dropdown options...");
+
         // Re-fetch the subjects data to ensure we have the most up-to-date information
-        const response = await axios.get<ApiResponse>('http://localhost:8080/api/subject-metadatas');
-        
+        const response = await axios.get<ApiResponse>("http://localhost:8080/api/subject-metadatas");
+
         if (response.data && Array.isArray(response.data.payload)) {
           const subjectData = response.data.payload;
-          
+
           // Extract unique subject types
           const uniqueSubjectTypes = new Map<number, SubjectTypeOption>();
-          subjectData.forEach(subject => {
+          subjectData.forEach((subject) => {
             if (subject.subjectType && !uniqueSubjectTypes.has(subject.subjectType.id)) {
               uniqueSubjectTypes.set(subject.subjectType.id, {
                 id: subject.subjectType.id,
-                marksheetName: subject.subjectType.marksheetName
+                marksheetName: subject.subjectType.marksheetName,
               });
             }
           });
           setSubjectTypeOptions(Array.from(uniqueSubjectTypes.values()));
-          console.log('Extracted subject types:', Array.from(uniqueSubjectTypes.values()));
-          
+          console.log("Extracted subject types:", Array.from(uniqueSubjectTypes.values()));
+
           // Extract unique degrees
           const uniqueDegrees = new Map<number, DegreeOption>();
-          subjectData.forEach(subject => {
+          subjectData.forEach((subject) => {
             if (subject.stream?.degree && !uniqueDegrees.has(subject.stream.degree.id)) {
               uniqueDegrees.set(subject.stream.degree.id, {
                 id: subject.stream.degree.id,
-                name: subject.stream.degree.name
+                name: subject.stream.degree.name,
               });
             }
           });
           setDegreeOptions(Array.from(uniqueDegrees.values()));
-          console.log('Extracted degrees:', Array.from(uniqueDegrees.values()));
-          
+          console.log("Extracted degrees:", Array.from(uniqueDegrees.values()));
+
           // Extract unique programmes/streams
           const uniqueProgrammes = new Map<number, ProgrammeOption>();
-          subjectData.forEach(subject => {
+          subjectData.forEach((subject) => {
             if (subject.stream && !uniqueProgrammes.has(subject.stream.id)) {
               uniqueProgrammes.set(subject.stream.id, {
                 id: subject.stream.id,
                 degreeProgramme: subject.stream.degreeProgramme,
-                degreeId: subject.stream.degree?.id || 0
+                degreeId: subject.stream.degree?.id || 0,
               });
             }
           });
           setProgrammeOptions(Array.from(uniqueProgrammes.values()));
-          console.log('Extracted programmes:', Array.from(uniqueProgrammes.values()));
+          console.log("Extracted programmes:", Array.from(uniqueProgrammes.values()));
         } else {
-          console.error('Failed to extract dropdown options from subjects:', response);
+          console.error("Failed to extract dropdown options from subjects:", response);
           toast({
-            variant: 'destructive',
-            title: 'Data Error',
-            description: 'Could not extract necessary options from subject data.',
+            variant: "destructive",
+            title: "Data Error",
+            description: "Could not extract necessary options from subject data.",
           });
         }
       } catch (error: unknown) {
-        console.error('Error fetching dropdown options:', error);
+        console.error("Error fetching dropdown options:", error);
         toast({
-          variant: 'destructive',
-          title: 'Error',
-          description: 'Failed to fetch dropdown options. Please check the console for details.',
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to fetch dropdown options. Please check the console for details.",
         });
       }
     };
@@ -209,13 +209,13 @@ export const StudentSubjectsPage: React.FC = () => {
   // Filter programmes based on selected degree
   const filteredProgrammes = useMemo(() => {
     if (!selectedDegreeId) return programmeOptions;
-    return programmeOptions.filter(programme => programme.degreeId === selectedDegreeId);
+    return programmeOptions.filter((programme) => programme.degreeId === selectedDegreeId);
   }, [programmeOptions, selectedDegreeId]);
 
   // Safe access to subjects array with fallback to empty array
   const uniqueSemesters = useMemo(() => {
     if (!subjects || !subjects.length) return [];
-    
+
     const semesters = subjects.map((subject) => subject.semester);
     return [...new Set(semesters)].sort((a, b) => a - b);
   }, [subjects]);
@@ -223,7 +223,7 @@ export const StudentSubjectsPage: React.FC = () => {
   // Get unique subject types
   const uniqueSubjectTypes = useMemo(() => {
     if (!subjects || !subjects.length) return [];
-    
+
     const types = subjects.map((subject) => subject.subjectType?.marksheetName).filter(Boolean);
     return [...new Set(types)].sort();
   }, [subjects]);
@@ -231,153 +231,152 @@ export const StudentSubjectsPage: React.FC = () => {
   // Get unique degrees
   const uniqueDegrees = useMemo(() => {
     if (!subjects || !subjects.length) return [];
-    
-    const degrees = subjects
-      .map((subject) => subject.stream?.degree?.name)
-      .filter(Boolean);
-    
+
+    const degrees = subjects.map((subject) => subject.stream?.degree?.name).filter(Boolean);
+
     return [...new Set(degrees)].sort();
   }, [subjects]);
 
   const filteredSubjects = useMemo(() => {
     if (!subjects) return [];
-    
-    return subjects.filter(subject => {
+
+    return subjects.filter((subject) => {
       // Filter by semester
-      if (currentSemester !== 'all' && subject.semester !== parseInt(currentSemester)) {
+      if (currentSemester !== "all" && subject.semester !== parseInt(currentSemester)) {
         return false;
       }
-      
+
       // Filter by search query
-      if (searchQuery && !subject.name.toLowerCase().includes(searchQuery.toLowerCase()) && 
-          !subject.irpCode.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (
+        searchQuery &&
+        !subject.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+        !subject.irpCode.toLowerCase().includes(searchQuery.toLowerCase())
+      ) {
         return false;
       }
-      
+
       // Filter by subject type
-      if (subjectType !== 'all' && subject.subjectType?.marksheetName !== subjectType) {
+      if (subjectType !== "all" && subject.subjectType?.marksheetName !== subjectType) {
         return false;
       }
-      
+
       // Filter by optional status
-      if (isOptionalFilter !== 'all') {
-        const isOptional = isOptionalFilter === 'true';
+      if (isOptionalFilter !== "all") {
+        const isOptional = isOptionalFilter === "true";
         if (subject.isOptional !== isOptional) {
           return false;
         }
       }
-      
+
       // Filter by degree
-      if (degreeFilter !== 'all' && subject.stream?.degree?.name !== degreeFilter) {
+      if (degreeFilter !== "all" && subject.stream?.degree?.name !== degreeFilter) {
         return false;
       }
-      
+
       return true;
     });
   }, [subjects, currentSemester, searchQuery, subjectType, isOptionalFilter, degreeFilter]);
 
   const resetFilters = () => {
-    setCurrentSemester('all');
-    setSearchQuery('');
-    setSubjectType('all');
-    setIsOptionalFilter('all');
-    setDegreeFilter('all');
+    setCurrentSemester("all");
+    setSearchQuery("");
+    setSubjectType("all");
+    setIsOptionalFilter("all");
+    setDegreeFilter("all");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    
+
     // Handle numeric values
-    if (['credit', 'fullMarks', 'semester'].includes(name)) {
-      setNewSubject(prev => ({
+    if (["credit", "fullMarks", "semester"].includes(name)) {
+      setNewSubject((prev) => ({
         ...prev,
-        [name]: value === '' ? 0 : parseFloat(value)
+        [name]: value === "" ? 0 : parseFloat(value),
       }));
     } else {
-      setNewSubject(prev => ({
+      setNewSubject((prev) => ({
         ...prev,
-        [name]: value
+        [name]: value,
       }));
     }
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    if (value === '') return;
-    
-    if (name === 'degreeId') {
+    if (value === "") return;
+
+    if (name === "degreeId") {
       const numValue = parseInt(value);
       setSelectedDegreeId(numValue);
-      
+
       // Reset streamId when degree changes
-      setNewSubject(prev => ({
+      setNewSubject((prev) => ({
         ...prev,
-        streamId: 0
+        streamId: 0,
       }));
-    } else if (['subjectTypeId', 'streamId', 'semester'].includes(name)) {
-      setNewSubject(prev => ({
+    } else if (["subjectTypeId", "streamId", "semester"].includes(name)) {
+      setNewSubject((prev) => ({
         ...prev,
-        [name]: parseInt(value)
+        [name]: parseInt(value),
       }));
     }
   };
 
   const handleCheckboxChange = (checked: boolean) => {
-    setNewSubject(prev => ({
+    setNewSubject((prev) => ({
       ...prev,
-      isOptional: checked
+      isOptional: checked,
     }));
   };
 
   const handleAddSubject = async () => {
     try {
       setIsSubmitting(true);
-      
+
       // Validation checks
       const requiredFields = [
-        { field: 'name', label: 'Subject Name' },
-        { field: 'irpCode', label: 'Subject Code' },
-        { field: 'subjectTypeId', label: 'Subject Type' },
-        { field: 'credit', label: 'Credit' },
-        { field: 'streamId', label: 'Programme' },
-        { field: 'semester', label: 'Semester' },
-        { field: 'fullMarks', label: 'Full Marks' }
+        { field: "name", label: "Subject Name" },
+        { field: "irpCode", label: "Subject Code" },
+        { field: "subjectTypeId", label: "Subject Type" },
+        { field: "credit", label: "Credit" },
+        { field: "streamId", label: "Programme" },
+        { field: "semester", label: "Semester" },
+        { field: "fullMarks", label: "Full Marks" },
       ];
-      
-      const missingFields = requiredFields.filter(
-        ({ field }) => !newSubject[field as keyof NewSubject]
-      );
-      
+
+      const missingFields = requiredFields.filter(({ field }) => !newSubject[field as keyof NewSubject]);
+
       if (missingFields.length > 0) {
         toast({
-          variant: 'destructive',
-          title: 'Validation Error',
-          description: `Please fill in the following fields: ${missingFields.map(f => f.label).join(', ')}`,
+          variant: "destructive",
+          title: "Validation Error",
+          description: `Please fill in the following fields: ${missingFields.map((f) => f.label).join(", ")}`,
         });
         return;
       }
 
-      console.log('Submitting subject data:', newSubject);
-      
+      console.log("Submitting subject data:", newSubject);
+
       // Submit the new subject to the API
-      const response = await axios.post('http://localhost:8080/api/subject-metadatas', newSubject);
-      
+      const response = await axios.post("http://localhost:8080/api/subject-metadatas", newSubject);
+
       if (response.status === 201 || response.status === 200) {
         toast({
-          title: 'Success',
-          description: 'Subject added successfully',
+          title: "Success",
+          description: "Subject added successfully",
         });
-        
+
         // Refresh the subjects list and close the dialog
-        const refreshResponse = await axios.get<ApiResponse>('http://localhost:8080/api/subject-metadatas');
+        const refreshResponse = await axios.get<ApiResponse>("http://localhost:8080/api/subject-metadatas");
         if (refreshResponse.data && Array.isArray(refreshResponse.data.payload)) {
           setSubjects(refreshResponse.data.payload);
         }
-        
+
         // Reset form and close dialog
         setNewSubject({
-          name: '',
-          irpCode: '',
-          marksheetCode: '',
+          name: "",
+          irpCode: "",
+          marksheetCode: "",
           subjectTypeId: 0,
           credit: 0,
           fullMarks: 100,
@@ -389,18 +388,18 @@ export const StudentSubjectsPage: React.FC = () => {
         setIsAddDialogOpen(false);
       }
     } catch (error: unknown) {
-      console.error('Error adding subject:', error);
-      
-      let errorMessage = 'Failed to add subject. Please try again.';
-      
+      console.error("Error adding subject:", error);
+
+      let errorMessage = "Failed to add subject. Please try again.";
+
       // Try to extract more specific error message
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       toast({
-        variant: 'destructive',
-        title: 'Error',
+        variant: "destructive",
+        title: "Error",
         description: errorMessage,
       });
     } finally {
@@ -410,7 +409,7 @@ export const StudentSubjectsPage: React.FC = () => {
 
   // Handle delete subject
   const handleDeleteSubject = async (subjectId: number) => {
-    const subject = subjects.find(s => s.id === subjectId);
+    const subject = subjects.find((s) => s.id === subjectId);
     if (subject) {
       setSubjectToDelete(subject);
       setIsDeleteDialogOpen(true);
@@ -420,33 +419,33 @@ export const StudentSubjectsPage: React.FC = () => {
   // Confirm delete subject
   const confirmDeleteSubject = async () => {
     if (!subjectToDelete) return;
-    
+
     setIsDeleting(true);
     try {
       const response = await axios.delete(`http://localhost:8080/api/subject-metadatas/${subjectToDelete.id}`);
-      
+
       if (response.status === 200) {
         toast({
-          title: 'Success',
+          title: "Success",
           description: `Subject "${subjectToDelete.name}" deleted successfully`,
         });
-        
+
         // Remove the deleted subject from the state
-        setSubjects(prevSubjects => prevSubjects.filter(subject => subject.id !== subjectToDelete.id));
+        setSubjects((prevSubjects) => prevSubjects.filter((subject) => subject.id !== subjectToDelete.id));
       }
     } catch (error: unknown) {
-      console.error('Error deleting subject:', error);
-      
-      let errorMessage = 'Failed to delete subject. Please try again.';
-      
+      console.error("Error deleting subject:", error);
+
+      let errorMessage = "Failed to delete subject. Please try again.";
+
       // Try to extract more specific error message
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         errorMessage = error.response.data.message;
       }
-      
+
       toast({
-        variant: 'destructive',
-        title: 'Error',
+        variant: "destructive",
+        title: "Error",
         description: errorMessage,
       });
     } finally {
@@ -469,7 +468,7 @@ export const StudentSubjectsPage: React.FC = () => {
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
-        <Button 
+        <Button
           onClick={() => {
             clearError();
             fetchSubjects(); // Use the extracted function
@@ -502,7 +501,9 @@ export const StudentSubjectsPage: React.FC = () => {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Subject Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="name">
+                      Subject Name <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="name"
                       name="name"
@@ -512,7 +513,9 @@ export const StudentSubjectsPage: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="irpCode">Subject Code <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="irpCode">
+                      Subject Code <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="irpCode"
                       name="irpCode"
@@ -525,10 +528,12 @@ export const StudentSubjectsPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="subjectTypeId">Subject Type <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="subjectTypeId">
+                      Subject Type <span className="text-red-500">*</span>
+                    </Label>
                     <Select
-                      value={newSubject.subjectTypeId ? newSubject.subjectTypeId.toString() : ''}
-                      onValueChange={(value) => handleSelectChange('subjectTypeId', value)}
+                      value={newSubject.subjectTypeId ? newSubject.subjectTypeId.toString() : ""}
+                      onValueChange={(value) => handleSelectChange("subjectTypeId", value)}
                     >
                       <SelectTrigger id="subjectTypeId">
                         <SelectValue placeholder="Select subject type" />
@@ -549,12 +554,14 @@ export const StudentSubjectsPage: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="credit">Credit <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="credit">
+                      Credit <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="credit"
                       name="credit"
                       type="number"
-                      value={newSubject.credit || ''}
+                      value={newSubject.credit || ""}
                       onChange={handleInputChange}
                       placeholder="Enter credit value"
                       min={0}
@@ -566,10 +573,12 @@ export const StudentSubjectsPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="degreeId">Degree <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="degreeId">
+                      Degree <span className="text-red-500">*</span>
+                    </Label>
                     <Select
-                      value={selectedDegreeId ? selectedDegreeId.toString() : ''}
-                      onValueChange={(value) => handleSelectChange('degreeId', value)}
+                      value={selectedDegreeId ? selectedDegreeId.toString() : ""}
+                      onValueChange={(value) => handleSelectChange("degreeId", value)}
                     >
                       <SelectTrigger id="degreeId">
                         <SelectValue placeholder="Select degree" />
@@ -590,15 +599,24 @@ export const StudentSubjectsPage: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="streamId">Programme <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="streamId">
+                      Programme <span className="text-red-500">*</span>
+                    </Label>
                     <Select
-                      value={newSubject.streamId ? newSubject.streamId.toString() : ''}
-                      onValueChange={(value) => handleSelectChange('streamId', value)}
+                      value={newSubject.streamId ? newSubject.streamId.toString() : ""}
+                      onValueChange={(value) => handleSelectChange("streamId", value)}
                       disabled={!selectedDegreeId || filteredProgrammes.length === 0}
                     >
                       <SelectTrigger id="streamId">
-                        <SelectValue placeholder={!selectedDegreeId ? "Select a degree first" : 
-                          filteredProgrammes.length === 0 ? "No programmes for selected degree" : "Select programme"} />
+                        <SelectValue
+                          placeholder={
+                            !selectedDegreeId
+                              ? "Select a degree first"
+                              : filteredProgrammes.length === 0
+                                ? "No programmes for selected degree"
+                                : "Select programme"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {filteredProgrammes.length > 0 ? (
@@ -619,10 +637,12 @@ export const StudentSubjectsPage: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="semester">Semester <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="semester">
+                      Semester <span className="text-red-500">*</span>
+                    </Label>
                     <Select
                       value={newSubject.semester.toString()}
-                      onValueChange={(value) => handleSelectChange('semester', value)}
+                      onValueChange={(value) => handleSelectChange("semester", value)}
                     >
                       <SelectTrigger id="semester">
                         <SelectValue placeholder="Select semester" />
@@ -637,12 +657,14 @@ export const StudentSubjectsPage: React.FC = () => {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="fullMarks">Full Marks <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="fullMarks">
+                      Full Marks <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="fullMarks"
                       name="fullMarks"
                       type="number"
-                      value={newSubject.fullMarks || ''}
+                      value={newSubject.fullMarks || ""}
                       onChange={handleInputChange}
                       placeholder="Enter full marks"
                       min={0}
@@ -662,11 +684,7 @@ export const StudentSubjectsPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Checkbox 
-                    id="isOptional" 
-                    checked={newSubject.isOptional}
-                    onCheckedChange={handleCheckboxChange}
-                  />
+                  <Checkbox id="isOptional" checked={newSubject.isOptional} onCheckedChange={handleCheckboxChange} />
                   <Label htmlFor="isOptional">Optional Subject</Label>
                 </div>
               </div>
@@ -675,7 +693,7 @@ export const StudentSubjectsPage: React.FC = () => {
                   Cancel
                 </Button>
                 <Button onClick={handleAddSubject} disabled={isSubmitting}>
-                  {isSubmitting ? 'Adding...' : 'Add Subject'}
+                  {isSubmitting ? "Adding..." : "Add Subject"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -696,7 +714,7 @@ export const StudentSubjectsPage: React.FC = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Semester</label>
                 <Select value={currentSemester} onValueChange={setCurrentSemester}>
@@ -713,7 +731,7 @@ export const StudentSubjectsPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Degree</label>
                 <Select value={degreeFilter} onValueChange={setDegreeFilter}>
@@ -730,7 +748,7 @@ export const StudentSubjectsPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Subject Type</label>
                 <Select value={subjectType} onValueChange={setSubjectType}>
@@ -747,7 +765,7 @@ export const StudentSubjectsPage: React.FC = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="space-y-2">
                 <label className="text-sm font-medium">Optional</label>
                 <Select value={isOptionalFilter} onValueChange={setIsOptionalFilter}>
@@ -762,32 +780,32 @@ export const StudentSubjectsPage: React.FC = () => {
                 </Select>
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4" />
                 <span className="text-sm font-medium">Filters Applied</span>
-                {currentSemester !== 'all' && (
+                {currentSemester !== "all" && (
                   <Badge variant="outline" className="gap-1 text-xs">
                     Semester {currentSemester}
                     <Check className="h-3 w-3" />
                   </Badge>
                 )}
-                {degreeFilter !== 'all' && (
+                {degreeFilter !== "all" && (
                   <Badge variant="outline" className="gap-1 text-xs">
                     {degreeFilter}
                     <Check className="h-3 w-3" />
                   </Badge>
                 )}
-                {subjectType !== 'all' && (
+                {subjectType !== "all" && (
                   <Badge variant="outline" className="gap-1 text-xs">
                     {subjectType}
                     <Check className="h-3 w-3" />
                   </Badge>
                 )}
-                {isOptionalFilter !== 'all' && (
+                {isOptionalFilter !== "all" && (
                   <Badge variant="outline" className="gap-1 text-xs">
-                    {isOptionalFilter === 'true' ? 'Optional' : 'Required'}
+                    {isOptionalFilter === "true" ? "Optional" : "Required"}
                     <Check className="h-3 w-3" />
                   </Badge>
                 )}
@@ -798,20 +816,18 @@ export const StudentSubjectsPage: React.FC = () => {
                   </Badge>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={resetFilters}>
                   Reset Filters
                 </Button>
-                <Badge variant="secondary">
-                  Total: {filteredSubjects.length} subjects
-                </Badge>
+                <Badge variant="secondary">Total: {filteredSubjects.length} subjects</Badge>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-      
+
       {isLoading ? (
         <Card>
           <CardHeader className="pb-0">
@@ -822,11 +838,13 @@ export const StudentSubjectsPage: React.FC = () => {
               <table className="w-full caption-bottom text-sm">
                 <thead>
                   <tr className="border-b transition-colors hover:bg-muted/50">
-                    {Array(8).fill(null).map((_, i) => (
-                      <th key={i} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                        <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
-                      </th>
-                    ))}
+                    {Array(8)
+                      .fill(null)
+                      .map((_, i) => (
+                        <th key={i} className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                          <div className="h-4 w-32 bg-muted rounded animate-pulse"></div>
+                        </th>
+                      ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -839,9 +857,9 @@ export const StudentSubjectsPage: React.FC = () => {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <SubjectsTable 
-              subjects={filteredSubjects} 
-              onDelete={handleDeleteSubject} 
+            <SubjectsTable
+              subjects={filteredSubjects}
+              onDelete={handleDeleteSubject}
               canDelete={userCanDeleteSubjects}
             />
           </CardContent>
@@ -868,17 +886,19 @@ export const StudentSubjectsPage: React.FC = () => {
                   </div>
                 </div>
               )}
-              <p className="mt-2 text-red-500">This action cannot be undone and may affect student records that reference this subject.</p>
+              <p className="mt-2 text-red-500">
+                This action cannot be undone and may affect student records that reference this subject.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={confirmDeleteSubject}
               disabled={isDeleting}
               className="bg-red-500 hover:bg-red-600 text-white"
             >
-              {isDeleting ? 'Deleting...' : 'Delete Subject'}
+              {isDeleting ? "Deleting..." : "Delete Subject"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -887,4 +907,4 @@ export const StudentSubjectsPage: React.FC = () => {
   );
 };
 
-export default StudentSubjectsPage;
+export default CoursesAndSubject;

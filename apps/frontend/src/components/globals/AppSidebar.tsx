@@ -7,7 +7,6 @@ import {
   DownloadCloud,
   FileUser,
   GalleryVerticalEnd,
-  GraduationCap,
   Home,
   LogOut,
   MapPinned,
@@ -67,74 +66,23 @@ const data = {
     },
   ],
   navMain: [
-    {
-      title: "Academics",
-      url: "/home/academics",
-      icon: GraduationCap,
-      isActive: true,
-      items: [
-        {
-          title: "Home",
-          url: "/home/academics",
-        },
-        {
-          title: "Get Reports",
-          url: "/home/academics-reports",
-        },
-        {
-          title: "Search Student",
-          url: "/home/academics-search",
-        },
-        {
-          title: "Students Subjects",
-          url: "/home/subjects",
-        },
-        {
-          title: "Manage Marksheet",
-          url: "/home/manage-marksheet",
-        },
-      ],
-    },
-    {
-      title: "Library",
-      url: "/home/library",
-      icon: BookOpen,
-      items: [
-        { title: "Dashboard", url: "/home/lib" },
-        { title: "Book Catalog", url: "/home/catalog" },
-        { title: "Issue/Return", url: "/home/issued-book" },
-        { title: "Fines", url: "/home/fine-management" },
-        { title: "Reports", url: "/home/lib-report" },
-      ],
-    },
+    
     {
       title: "Admission & Fees Dept",
       url: "/home/admission-fees",
       icon: UserPlus,
-      // items: [
-      //   { title: "Dashboard", url: "/home/admission" },
-      //   { title: "Applications", url: "/home/applications" },
-      //   { title: "New Admission", url: "/home/new-admission" },
-      //   { title: "Fee Management", url: "/home/fee-management" },
-      //   { title: "Reports", url: "/home/admission-reports" },
-      // ],
     },
-    // AdmissionAndFess
+
     {
       title: "Courses & Subject",
       url: "/home/courses-subjects",
       icon: Notebook,
     },
+
     {
       title: "Exam Management",
       url: "/home/exam-management",
       icon: BookCheck,
-      // items: [
-      //   {
-      //     title: "Examboard",
-      //     url: "/home/examboard",
-      //   },
-      // ],
     },
     
     {
@@ -149,9 +97,7 @@ const data = {
       //   { title: "Reports", url: "/home/lib-report" },
       // ],
     },
-   
-   
-    
+ 
     {
       title: "Event",
       url: "/home/event",
@@ -167,11 +113,6 @@ const data = {
     
   ],
   navStudent:[
-    // {
-    //   title: "Student",
-    //   url: "/home/academics",
-    //   icon: GraduationCap,
-    // },
     {
       title: "Add Student",
       url: "/home/add-student",
@@ -198,9 +139,6 @@ const data = {
           url: "/home/downloads",
           icon: DownloadCloud,
         },
-       
-     
-    
   ]
 };
 
