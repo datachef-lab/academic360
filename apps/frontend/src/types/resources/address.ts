@@ -5,9 +5,8 @@ export interface Address {
     city: string | null;
     addressLine: string | null;
     landmark: string | null;
-    locality: "RURAL" | "URBAN" | null;
+    localityType: "RURAL" | "URBAN" | null;
     phone: string | null;
     pincode: string | null;
-    createdAt: Date;
-    updatedAt: Date;
+    
 }

@@ -38,7 +38,7 @@ export async function findAcademicIdentifierByStudentId(studentId: number): Prom
 }
 
 export async function saveAcademicIdentifier(id: number, academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    const { studentId, stream, id: academicIdentifierId, ...props } = academicIdentifier;
+    const { studentId, stream,createdAt,updatedAt, id: academicIdentifierId, ...props } = academicIdentifier;
 
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
     if (!foundAcademicIdentifier) {

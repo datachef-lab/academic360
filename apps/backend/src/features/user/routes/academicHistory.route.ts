@@ -1,16 +1,19 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createAcademicHistory, deleteAcademicHistory, getAcademicHistory, getAllAcademicHistory, updateAcademicHistory } from "../controllers/academicHistory.controller.js";
+import { createAcademicHistory, deleteAcademicHistory, getAcademicHistoryById, getAcademicHistoryByStudentId, getAllAcademicHistory, updateAcademicHistory } from "../controllers/academicHistory.controller.js";
 
 const router = express.Router();
 router.use(verifyJWT);
 router.post("/", createAcademicHistory);
 router.get("/", getAllAcademicHistory);
 router.get("/query", (req, res, next) => {
-    const { id } = req.query;
+    const { id ,studentId} = req.query;
     console.log(id);
     if (id) {
-        getAcademicHistory(req, res, next);
+        getAcademicHistoryById(req, res, next);
+    }else if(studentId){
+        getAcademicHistoryByStudentId(req, res, next);
+
     } else {
         getAllAcademicHistory(req, res, next);
     }

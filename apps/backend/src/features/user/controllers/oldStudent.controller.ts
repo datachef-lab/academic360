@@ -156,7 +156,7 @@ export async function addUser(oldStudent: OldStudent, db: DbType) {
 
     return newUser;
 }
-
+//sdfadef
 export async function addStudent(oldStudent: OldStudent, user: User, db: DbType) {
     const [existingStudent] = await db.select().from(studentModel).where(eq(studentModel.userId, user.id as number));
     if (existingStudent) {
@@ -750,6 +750,8 @@ export async function processStudent(oldStudent: OldStudent) {
 
     // Step 11: Check for the transport-details
     await addTransportDetails(oldStudent, student);
+
+    return student;
 }
 
 export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENERAL", framework: "CCF" | "CBCS") {

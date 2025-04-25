@@ -8,8 +8,8 @@ import { createDegree, deleteDegree, getAllDegree, updateDegree } from "@/featur
     
     router.post("/", createDegree);
     router.get("/", getAllDegree);
-    router.put("/", updateDegree);
-    router.delete("/", deleteDegree);
+    router.put("/:id", updateDegree);
+    router.delete("/:id", deleteDegree);
     
     export default router;
     

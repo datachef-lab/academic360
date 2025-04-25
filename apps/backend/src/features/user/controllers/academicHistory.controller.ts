@@ -3,8 +3,8 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 
 import { AcademicHistoryType } from "@/types/user/academic-history.js";
-import { addAcademicHistory, findAcademicHistoryById, findAllAcademicHistory, removeAcademicHistory, saveAcademicHistory } from "@/features/user/services/academicHistory.service.js";
-
+import { addAcademicHistory, findAcademicHistoryById, findAcademicHistoryByStudentId, findAllAcademicHistory, removeAcademicHistory, saveAcademicHistory } from "@/features/user/services/academicHistory.service.js";
+// gwrgwrgw
 export const createAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const newAcadeicHistory = await addAcademicHistory(req.body as AcademicHistoryType);;
@@ -14,7 +14,7 @@ export const createAcademicHistory = async (req: Request, res: Response, next: N
     }
 };
 
-export const getAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
+export const getAcademicHistoryById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.query;
 
@@ -32,6 +32,23 @@ export const getAcademicHistory = async (req: Request, res: Response, next: Next
     }
 };
 
+export const getAcademicHistoryByStudentId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { studentId } = req.query;
+
+        
+        const foundAcademicHistory = await findAcademicHistoryByStudentId(Number(studentId));
+        
+        if (!foundAcademicHistory) {
+            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `academicHistory of studentId ${studentId} not found`));
+        }
+        
+        res.status(200).json(new ApiResponse(200, "SUCCESS", foundAcademicHistory, "Fetched academicHistory successfully!"));
+
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
 export const getAllAcademicHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const academicHistories = await findAllAcademicHistory(1, 10);

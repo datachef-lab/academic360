@@ -4,7 +4,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
+import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
 import { findAll } from "@/utils/helper.js";
 
 // Create a new Board University
@@ -104,7 +104,7 @@ export const updateBoardUniversity = async (
     try {
         const { id } = req.params;
         console.log(id);
-        const updatedBoardUniversity = req.body;
+         const {createdAt,updatedAt,...props}=req.body as BoardUniversity
 
         const existingBoardUniversity = await db
             .select()
@@ -119,7 +119,7 @@ export const updateBoardUniversity = async (
 
         const updatedBoards = await db
             .update(boardUniversityModel)
-            .set(updatedBoardUniversity)
+            .set(props)
             .where(eq(boardUniversityModel.id, +id))
             .returning();
 

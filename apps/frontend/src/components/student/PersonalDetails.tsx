@@ -4,163 +4,229 @@ import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Globe, IdCard, Languages, Mail, User } from "lucide-react";
-import { Home } from "lucide-react";
+import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { format } from "date-fns";
+import { useFetch } from "@/hooks/useFetch";
+import { addPersonalDetails, findPersonalDetailsByStudentId } from "@/services/personal-details-api";
+import { PersonalDetails } from "@/types/user/personal-details";
+import { useEffect } from "react";
+import AddressForm from "./AddressForm";
 
 // Define the validation schema
 const personalDetailsSchema = z.object({
-  aadhaarCardNumber: z.string().min(12, "Aadhaar must be 12 digits").max(16),
-  email: z.string().email("Invalid email"),
-  alternativeEmail: z.string().optional(),
-  dateOfBirth: z.date(),
-  nationality: z.string().optional(),
-  motherTongue: z.string().optional(),
-  religion: z.string().optional(),
-  residentialAddress: z.string().optional(),
-  gender: z.enum(["MALE", "FEMALE", "TRANSGENDER"]),
-  disability: z.enum(["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]).optional(),
+  aadhaarCardNumber: z.string().nullable(),
+  email: z.string().email("Invalid email").nullable(),
+  alternativeEmail: z.string().nullable().optional(),
+  dateOfBirth: z.date().nullable(),
+  nationality: z.any().nullable().optional(),
+  motherTongue: z.any().nullable().optional(),
+  religion: z.any().nullable().optional(),
+  residentialAddress: z.any().nullable().optional(),
+  mailingAddress: z.any().nullable().optional(),
+  category: z.any().nullable().optional(),
+  gender: z.enum(["MALE", "FEMALE", "TRANSGENDER"]).nullable(),
+  disability: z.enum(["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]).nullable(),
 });
 
-export default function PersonalDetail() {
+type FormValues = z.infer<typeof personalDetailsSchema>;
+
+interface PersonalDetailProps {
+  studentId: number;
+}
+
+export default function PersonalDetail({ studentId }: PersonalDetailProps) {
+  const { data, loading, refetch } = useFetch<PersonalDetails>({
+    getFn: async () => (await findPersonalDetailsByStudentId(studentId)).payload,
+    postFn: async (personalDetails: PersonalDetails) => {
+      const result = await addPersonalDetails(personalDetails);
+      return result.payload as PersonalDetails;
+    },
+    default: {
+      aadhaarCardNumber: null,
+      alternativeEmail: null,
+      dateOfBirth: null,
+      nationality: null,
+      motherTongue: null,
+      religion: null,
+      residentialAddress: null,
+      mailingAddress: null,
+      category: null,
+      gender: null,
+      disability: "OTHER",
+      email: null,
+      studentId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as unknown as PersonalDetails,
+  });
+
   const {
     register,
     handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm({
+    watch,
+    reset,
+    formState: { isDirty },
+  } = useForm<FormValues>({
     resolver: zodResolver(personalDetailsSchema),
+    defaultValues: {
+      aadhaarCardNumber: null,
+      email: null,
+      alternativeEmail: null,
+      dateOfBirth: null,
+      nationality: null,
+      motherTongue: null,
+      religion: null,
+      residentialAddress: null,
+      mailingAddress: null,
+      category: null,
+      gender: null,
+      disability: null,
+    },
   });
 
-  const onSubmit = (data: unknown) => {
-    console.log("Form Data: ", data);
+  // Update form when data is loaded
+  useEffect(() => {
+    if (data) {
+      console.log("Data loaded:", data);
+      reset({
+        aadhaarCardNumber: data.aadhaarCardNumber,
+        email: data.email,
+        alternativeEmail: data.alternativeEmail || "",
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        nationality: data.nationality,
+        motherTongue: data.motherTongue,
+        religion: data.religion,
+        residentialAddress: data.residentialAddress,
+        mailingAddress: data.mailingAddress,
+        category: data.category,
+        gender: data.gender,
+        disability: data.disability,
+      });
+    }
+  }, [data, reset]);
+
+  const dateOfBirth = watch("dateOfBirth");
+  const residentialAddress = watch("residentialAddress");
+  const mailingAddress = watch("mailingAddress");
+  const nationality = watch("nationality");
+  const religion = watch("religion");
+  const category = watch("category");
+  const aadhaarCardNumber = watch("aadhaarCardNumber");
+
+  console.log("Form values:", {
+    aadhaarCardNumber,
+    gender: watch("gender"),
+    email: watch("email"),
+  });
+
+  const onSubmit = (formData: FormValues) => {
+    console.log("Form Data: ", formData);
+    if (data) {
+      // Update the data and refetch
+      const updatedData = {
+        ...data,
+        ...formData,
+        disability: formData.disability || "OTHER",
+      };
+
+      addPersonalDetails(updatedData as PersonalDetails)
+        .then(() => refetch())
+        .catch((err) => console.error("Error updating personal details:", err));
+    }
   };
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <div className="w-full">
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-transparent border-none shadow-none m-0 p-0 w-full">
-        {/* Aadhaar Card */}
-        <div className="mt-4 ">
-          <Label className="flex items-center gap-2">
-            <IdCard className="w-5 h-5 text-blue-600" />
-            Aadhaar Card Number
-          </Label>
-          <Input type="text" {...register("aadhaarCardNumber")} placeholder="Enter Aadhaar Number" />
-          {errors.aadhaarCardNumber?.message && (
-            <p className="text-red-500 text-sm">{errors.aadhaarCardNumber.message.toString()}</p>
-          )}
-        </div>
+    <div className="max-w-4xl mx-auto">
+      <Card className="p-6">
+        <CardContent className="mt-6 space-y-8">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Debug output */}
+            <div className="mb-4 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
+              <p className="font-bold">Debug: Aadhaar Card Number</p>
+              <p>data.aadhaarCardNumber: {data?.aadhaarCardNumber}</p>
+              <p>form aadhaarCardNumber: {aadhaarCardNumber}</p>
+            </div>
 
-        {/* Email */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-gray-500" />
-            Email
-          </Label>
-          <Input type="email" {...register("email")} placeholder="Enter Email" />
-          {errors.email?.message && <p className="text-red-500 text-sm">{errors.email.message.toString()}</p>}
-        </div>
+            {/* PERSONAL DETAILS */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-1">Personal Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label className="flex items-center gap-2">
+                    <IdCard />
+                    Aadhaar Number
+                  </Label>
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <IdCard className="h-4 w-4 text-gray-500" />
+                    </div>
+                    <Input className="pl-10 bg-white dark:bg-gray-950" value={aadhaarCardNumber || ""} readOnly />
+                  </div>
+                </div>
 
-        {/* Alternative Email */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-gray-500" />
-            Alternative Email
-          </Label>
-          <Input type="email" {...register("alternativeEmail")} placeholder="Enter Alternative Email" />
-        </div>
+                <InputWithIcon
+                  label="Date of Birth"
+                  icon={<CalendarIcon />}
+                  value={dateOfBirth ? format(dateOfBirth, "PPP") : ""}
+                  readOnly
+                />
+                <InputWithIcon label="Gender" icon={<User />} value={watch("gender") || ""} readOnly />
+                <InputWithIcon label="Religion" icon={<BookOpen />} value={religion?.name || ""} readOnly />
+                <InputWithIcon label="Category" icon={<BookOpen />} value={category?.name || ""} readOnly />
+                <InputWithIcon label="Nationality" icon={<Globe />} value={nationality?.name || ""} readOnly />
+              </div>
+            </section>
 
-        {/* Date of Birth */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-blue-600" />
-            Date of Birth
-          </Label>
-          <Calendar mode="single" selected={new Date()} onSelect={(date) => setValue("dateOfBirth", date!)} />
-          {errors.dateOfBirth && <p className="text-red-500 text-sm">{errors.dateOfBirth.message?.toString()}</p>}
-        </div>
+            {/* CONTACT DETAILS */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-1">Contact Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <InputWithIcon label="Email" icon={<Mail />} {...register("email")} />
+                <InputWithIcon label="Alternative Email" icon={<Mail />} {...register("alternativeEmail")} />
+              </div>
 
-        {/* Nationality */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <Globe className="w-5 h-5 text-blue-600" />
-            Nationality
-          </Label>
-          <Input type="text" {...register("nationality")} placeholder="Enter Nationality" />
-        </div>
+              {/* Residential Address */}
+              <AddressForm address={residentialAddress} onChange={() => {}} />
 
-        {/* Mother Tongue */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <Languages className="w-5 h-5 text-blue-600" />
-            Mother Tongue
-          </Label>
-          <Input type="text" {...register("motherTongue")} placeholder="Enter Mother Tongue" />
-        </div>
+              {/* Mailing Address */}
+              <AddressForm address={mailingAddress} onChange={() => {}} />
+            </section>
 
-        {/* Religion */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            Religion
-          </Label>
-          <Input type="text" {...register("religion")} placeholder="Enter Religion" />
-        </div>
+            {/* DISABILITY INFO */}
+            <section className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-1">Other</h3>
+              <InputWithIcon label="Disability" icon={<Sparkles />} value={watch("disability") || "None"} readOnly />
+            </section>
 
-        {/* Residential Address */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <Home className="w-5 h-5 text-blue-600" />
-            Residential Address
-          </Label>
-          <Input type="text" {...register("residentialAddress")} placeholder="Enter Residential Address" />
-        </div>
-
-        {/* Gender Selection */}
-        <div className="mt-4">
-          <Label className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            Gender
-          </Label>
-          <Select onValueChange={(value) => setValue("gender", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="MALE">Male</SelectItem>
-              <SelectItem value="FEMALE">Female</SelectItem>
-              <SelectItem value="TRANSGENDER">Transgender</SelectItem>
-            </SelectContent>
-          </Select>
-          {errors.gender && <p className="text-red-500 text-sm">{errors.gender.message?.toString()}</p>}
-        </div>
-
-        {/* Disability Selection */}
-        <div className="mt-4">
-          <Label className=" flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            Disability
-          </Label>
-          <Select onValueChange={(value) => setValue("disability", value)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Disability (if any)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="VISUAL">Visual</SelectItem>
-              <SelectItem value="HEARING_IMPAIRMENT">Hearing Impairment</SelectItem>
-              <SelectItem value="VISUAL_IMPAIRMENT">Visual Impairment</SelectItem>
-              <SelectItem value="ORTHOPEDIC">Orthopedic</SelectItem>
-              <SelectItem value="OTHER">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Submit Button */}
-        <Button type="submit" className="w-full bg-blue-600 text-white mt-4">
-          Submit
-        </Button>
-      </form>
+            <Button type="submit" className="mt-4" disabled={!isDirty}>
+              <Save className="w-4 h-4 mr-2" /> Save Changes
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+interface InputWithIconProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label: string;
+  icon: React.ReactNode;
+}
+
+const InputWithIcon = ({ label, icon, ...props }: InputWithIconProps) => (
+  <div className="space-y-1">
+    <Label className="flex items-center gap-2">
+      {icon}
+      {label}
+    </Label>
+    <div className="relative">
+      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</div>
+      <Input className="pl-10 bg-white dark:bg-gray-950" {...props} />
+    </div>
+  </div>
+);

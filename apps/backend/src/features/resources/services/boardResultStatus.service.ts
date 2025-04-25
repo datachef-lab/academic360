@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
+import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
 import { eq } from "drizzle-orm";
 
 export async function findBoardResultStatusById(id: number) {
@@ -7,3 +7,9 @@ export async function findBoardResultStatusById(id: number) {
 
     return foundBoardResultStatus;
 }
+export async function CreateResultStatus (data:BoardResultStatus){
+    const newBoardResultStatus = await db.insert(boardResultStatusModel).values(data);
+    return newBoardResultStatus;
+}
+
+// asda

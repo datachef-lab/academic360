@@ -6,7 +6,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sectionModel } from "@/features/academics/models/section.model.js";
 import { shiftModel } from "@/features/academics/models/shift.model.js";
-
+//s
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
