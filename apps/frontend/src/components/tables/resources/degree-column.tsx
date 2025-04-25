@@ -1,5 +1,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Degree } from "@/types/resources/degree";
+import ActionEntityMenu from "../../settings/ActionEntityMenu";
 
 export const degreeColumns: ColumnDef<Degree>[] = [
     {
@@ -9,5 +10,11 @@ export const degreeColumns: ColumnDef<Degree>[] = [
     {
         accessorKey: "sequence",
         header: "Sequence",
+    },
+    {
+        header:"Action",
+        cell:({ row })=>{
+            return <ActionEntityMenu type="Degree" data={row.original}/>
+        }
     },
 ];

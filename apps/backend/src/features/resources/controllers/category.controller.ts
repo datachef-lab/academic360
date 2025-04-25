@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
-import { categoryModel } from "@/features/resources/models/category.model.js";
+import { Category, categoryModel } from "@/features/resources/models/category.model.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { findAll } from "@/utils/helper.js";
 
@@ -83,7 +83,7 @@ export const updateCategory = async (
     try {
         const { id } = req.params;
         console.log(id);
-        const updatedCategory = req.body;
+         const {createdAt,updatedAt,...props}=req.body as Category
 
         const existingCategory = await db
             .select()
@@ -98,7 +98,7 @@ export const updateCategory = async (
 
         const updatedCategories = await db
             .update(categoryModel)
-            .set(updatedCategory)
+            .set(props)
             .where(eq(categoryModel.id, +id))
             .returning();
 

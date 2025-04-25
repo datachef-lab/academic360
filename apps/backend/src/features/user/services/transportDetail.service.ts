@@ -14,9 +14,9 @@ export async function removeTransportDetails(id: number): Promise<boolean | null
         return false; // Failure!
     }
 
-    return true; // Success!
+    return true; 
 }
-
+// sdfd
 export async function removeTransportDetailsByStudentId(studentId: number): Promise<boolean | null> {
     // Return if the transport-detail doesn't exist
     const [foundTransportDetail] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId));

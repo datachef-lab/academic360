@@ -5,6 +5,7 @@ import {
     deleteReligionRecord,
     getAllReligion,
     updateReligionRecord,
+   
 } from "@/features/resources/controllers/religion.controller.js";
 
 const router = express.Router();
@@ -12,7 +13,7 @@ const router = express.Router();
 
 router.post("/", createReligion);
 router.get("/", getAllReligion);
-router.put("/", updateReligionRecord);
-router.delete("/", deleteReligionRecord);
+router.put("/:id", updateReligionRecord);
+router.delete("/:id", deleteReligionRecord);
 
 export default router;

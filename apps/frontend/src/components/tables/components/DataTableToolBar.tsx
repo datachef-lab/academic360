@@ -31,7 +31,7 @@ export function DataTableToolbar<TData>({
     if (!debouncedFn.current) {
       debouncedFn.current = debounce((value: string) => {
         table.setGlobalFilter(value);
-        refetch(); // Trigger the API call manually
+        refetch();
       }, 500);
     }
     

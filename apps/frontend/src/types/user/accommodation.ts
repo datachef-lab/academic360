@@ -8,6 +8,5 @@ export interface Accommodation {
     startDate: Date,
     endDate: Date,
     address: Address | null;
-    createdAt: Date;
-    updatedAt: Date;
+   
 }

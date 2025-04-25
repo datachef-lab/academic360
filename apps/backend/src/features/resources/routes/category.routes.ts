@@ -15,7 +15,6 @@ router.post("/", createNewCategory);
 // Get all category Route
 router.get("/", getAllCategory);
 
-// Get by category ID
 router.get("/:id", getCategoryById);
 
 // Update the category Route
