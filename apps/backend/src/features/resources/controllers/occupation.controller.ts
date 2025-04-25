@@ -5,7 +5,7 @@ import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
 import { occupationModel } from "@/features/resources/models/occupation.model.js";
 import { findAll } from "@/utils/helper.js";
-import { ApiError } from "@/utils";
+import { ApiError } from "@/utils/index.js";
 
 export const createOccupation = async (
   req: Request,

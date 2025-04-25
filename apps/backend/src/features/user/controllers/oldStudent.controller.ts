@@ -750,6 +750,8 @@ export async function processStudent(oldStudent: OldStudent) {
 
     // Step 11: Check for the transport-details
     await addTransportDetails(oldStudent, student);
+
+    return student;
 }
 
 export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENERAL", framework: "CCF" | "CBCS") {
