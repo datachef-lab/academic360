@@ -33,7 +33,7 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // Authenticate with user ID when user data is available
   useEffect(() => {
     if (user?.id) {
-      socketService.authenticate(String(user.id));
+      socketService.authenticate(String(user?.id));
     }
   }, [user?.id]);
 

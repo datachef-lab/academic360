@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
@@ -20,9 +18,9 @@ const Page: React.FC = () => {
   const debouncePagination = useDebounce(pagination, 400);
   const lastPageCountRef = useRef(0);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["reports", filters, debouncePagination],
-    queryFn: () =>
+  const { data, isLoading } = useQuery(
+    ["reports", filters, debouncePagination],
+    () =>
       getAllReports({
         stream: filters.stream ?? undefined,
         year: filters.year ?? undefined,
@@ -31,9 +29,11 @@ const Page: React.FC = () => {
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
       }),
-    placeholderData: (prevData) => prevData,
-    staleTime: 6000,
-  });
+    {
+      placeholderData: (prevData) => prevData,
+      staleTime: 6000,
+    },
+  );
 
   useEffect(() => {
     if (data) {
@@ -59,9 +59,7 @@ const Page: React.FC = () => {
         >
           <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 mb-3">
             <BarChart2 className="h-10 w-10" strokeWidth={1.5} />
-            <h1 className="text-3xl md:text-4xl font-bold bg-clip-text">
-              Student Report
-            </h1>
+            <h1 className="text-3xl md:text-4xl font-bold bg-clip-text">Student Report</h1>
           </div>
           <p className="text-lg flex items-center justify-center sm:justify-start gap-2">
             <BookOpen className="h-5 w-5" />
@@ -101,4 +99,3 @@ const Page: React.FC = () => {
 };
 
 export default Page;
-

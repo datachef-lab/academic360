@@ -2,7 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { readExcelFile } from "@/utils/readExcel.js";
-import { db } from "@/db/index.js";
+import { db, mysqlConnection } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
 import { findAllStreams, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
@@ -26,6 +26,8 @@ import { StreamType } from "@/types/academics/stream.js";
 import { Section, sectionModel } from "../models/section.model.js";
 import { DefaultEventsMap, Socket } from "socket.io";
 
+import { processStudent as insertStudent } from "@/features/user/controllers/oldStudent.controller.js";
+import { OldStudent } from "@/types/old-data/old-student.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,26 +39,20 @@ export async function addMarksheet(marksheet: MarksheetType, user: User): Promis
     }
 
     if (!student) {
-        // Step 1: Add the user
-        const newUser = await addUser({ name: marksheet.name, uid: marksheet.academicIdentifier.uid as string });
-        if (!newUser) {
+        const [rows] =
+            await mysqlConnection.query(`
+                SELECT * 
+                FROM studentpersonaldetails
+                WHERE univregno = ${marksheet.academicIdentifier.registrationNumber};
+        `) as [OldStudent[], any];
+
+        const foundStudent = rows[rows.length - 1];
+        if (!foundStudent) {
+            console.error("Unable to find the student");
             return null;
         }
-        // Step 2: Add the student
-        student = await addStudent({
-            userId: newUser.id as number,
-            uid: marksheet.academicIdentifier.uid as string,
-        }) as Student;
 
-        // Step 3: Add the academic-identifier
-        await addAcademicIdentifier({
-            studentId: student.id as number,
-            stream: marksheet.academicIdentifier.stream || null,
-            uid: marksheet.academicIdentifier.uid || null,
-            registrationNumber: marksheet.academicIdentifier.registrationNumber as string,
-            rollNumber: marksheet.academicIdentifier.rollNumber as string,
-            sectionId: marksheet.academicIdentifier.section ? marksheet.academicIdentifier.section.id as number : null
-        });
+        student = await insertStudent(foundStudent as OldStudent);
     }
 
 
@@ -562,35 +558,21 @@ async function processStudent(arr: MarksheetRow[], stream: StreamType, semester:
         arr[0].roll_no.replace(/[^a-zA-Z0-9]/g, '')
     ));
 
-    if (!foundAcademicIdentifier) { // TODO: Create new student
-        // Step 1: Add the user
-        const user = await addUser(arr[0]);
-        if (!user) {
-            return;
+    if (!foundAcademicIdentifier) { // Create new student
+        const [rows] =
+            await mysqlConnection.query(`
+                SELECT * 
+                FROM studentpersonaldetails
+                WHERE univregno = ${arr[0].registration_no};
+        `) as [OldStudent[], any];
+
+        const foundStudent = rows[rows.length - 1];
+        if (!foundStudent) {
+            console.error("Unable to find the student");
+            return null;
         }
 
-        // Step 2: Add the student
-        student = await addStudent({
-            uid: arr[0].uid,
-            userId: user.id as number,
-        });
-
-        // Step 3: Add the section
-        let section: Section | null = null;
-        if (arr[0].section) {
-            const [newSection] = await db.select().from(sectionModel).where(eq(sectionModel.name, arr[0].section));
-            section = newSection;
-        }
-
-        // Step 4: Add the academic-identifier
-        await addAcademicIdentifier({
-            registrationNumber: arr[0].registration_no,
-            rollNumber: arr[0].roll_no,
-            sectionId: section ? section.id as number : null,
-            stream,
-            studentId: student.id as number,
-            uid: arr[0].uid,
-        });
+        student = await insertStudent(foundStudent as OldStudent);
     }
     else {
         foundAcademicIdentifier.streamId = stream.id as number;
@@ -733,35 +715,20 @@ async function processStudentV2(arr: MarksheetRow[], stream: StreamType, semeste
     ));
 
     if (!foundAcademicIdentifier) { // Create new student
-        // Step 1: Add the user
-        const user = await addUser(arr[0]);
-        if (!user) {
-            console.error("Unable to add user");
-            return;
+        const [rows] =
+            await mysqlConnection.query(`
+                SELECT * 
+                FROM studentpersonaldetails
+                WHERE univregno = ${arr[0].registration_no};
+        `) as [OldStudent[], any];
+
+        const foundStudent = rows[rows.length - 1];
+        if (!foundStudent) {
+            console.error("Unable to find the student");
+            return null;
         }
 
-        // Step 2: Add the student
-        student = await addStudent({
-            uid: arr[0].uid,
-            userId: user.id as number,
-        });
-        console.log("added student");
-        // Step 3: Add the section
-        let section: Section | null = null;
-        if (arr[0].section) {
-            const [newSection] = await db.select().from(sectionModel).where(eq(sectionModel.name, arr[0].section));
-            section = newSection;
-        }
-
-        // Step 4: Add the academic-identifier
-        await addAcademicIdentifier({
-            registrationNumber: arr[0].registration_no,
-            rollNumber: arr[0].roll_no,
-            sectionId: section ? section.id as number : null,
-            stream,
-            studentId: student.id as number,
-            uid: arr[0].uid,
-        });
+        student = await insertStudent(foundStudent as OldStudent);
     }
     else {
         foundAcademicIdentifier.streamId = stream.id as number;
@@ -855,7 +822,7 @@ async function processStudentV2(arr: MarksheetRow[], stream: StreamType, semeste
             marksheetId: marksheet.id,
             subjectMetadataId: subjectMetadata.id,
             year1: arr[i].year1,
-            year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
+            // year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
 
             internalMarks: formatMarks(arr[i].internal_marks),
             internalCredit: arr[i].internal_credit ? Number(arr[i].internal_credit) : 0,
@@ -887,6 +854,14 @@ async function processStudentV2(arr: MarksheetRow[], stream: StreamType, semeste
         let total = formatMarks(arr[i].total);
         total = (subject.internalMarks ?? 0) + (subject.practicalMarks ?? 0) + (subject.theoryMarks ?? 0);
         subject.totalMarks = total;
+        const subjectPercent = (subject.totalMarks * 100) / subjectMetadata.fullMarks;
+        if (subjectPercent < 30) {
+            subject.year2 = null;
+        }
+        else {
+            // year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
+            subject.year2 = stream.degree.name === "BCOM" ? Number(arr[i].year2) : subject.year1;
+        }
         totalMarksObtained += total ? total : 0;
         fullMarksSum += subjectMetadata.fullMarks
 
@@ -906,7 +881,7 @@ async function processStudentV2(arr: MarksheetRow[], stream: StreamType, semeste
             }
             if (subject.letterGrade?.startsWith("F")) {
                 subject.status = "FAIL";
-                subject.year2 = null;
+                subject.ngp = null;
             }
             else {
                 subject.status = "PASS";
