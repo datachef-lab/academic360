@@ -11,6 +11,7 @@ import { useFetch } from "@/hooks/useFetch";
 import { addPersonalDetails, findPersonalDetailsByStudentId } from "@/services/personal-details-api";
 import { PersonalDetails } from "@/types/user/personal-details";
 import { useEffect } from "react";
+import AddressForm from "./AddressForm";
 
 // Define the validation schema
 const personalDetailsSchema = z.object({
@@ -190,36 +191,10 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               </div>
 
               {/* Residential Address */}
-              <div className="mt-4">
-                <h4 className="text-md font-medium mb-2">Residential Address</h4>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
-                  <p className="mb-2">{residentialAddress?.addressLine}</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p>
-                      <span className="font-medium">Locality:</span> {residentialAddress?.localityType}
-                    </p>
-                    <p>
-                      <span className="font-medium">Pincode:</span> {residentialAddress?.pincode}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <AddressForm address={residentialAddress} onChange={() => {}} />
 
               {/* Mailing Address */}
-              <div className="mt-4">
-                <h4 className="text-md font-medium mb-2">Mailing Address</h4>
-                <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
-                  <p className="mb-2">{mailingAddress?.addressLine}</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p>
-                      <span className="font-medium">Locality:</span> {mailingAddress?.localityType}
-                    </p>
-                    <p>
-                      <span className="font-medium">Pincode:</span> {mailingAddress?.pincode}
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <AddressForm address={mailingAddress} onChange={() => {}} />
             </section>
 
             {/* DISABILITY INFO */}
