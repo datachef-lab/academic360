@@ -28,7 +28,7 @@ const Page: React.FC = () => {
         semester: filters.semester ?? undefined,
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
-      }), // ✅ Corrected
+      }), 
     placeholderData: (prevData) => prevData,
     staleTime: 6000,
   });
