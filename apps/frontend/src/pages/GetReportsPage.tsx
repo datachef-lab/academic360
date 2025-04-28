@@ -18,9 +18,9 @@ const Page: React.FC = () => {
   const debouncePagination = useDebounce(pagination, 400);
   const lastPageCountRef = useRef(0);
 
-  const { data, isLoading } = useQuery(
-    ["reports", filters, debouncePagination],
-    () =>
+  const { data, isLoading } = useQuery({
+    queryKey: ["reports", filters, debouncePagination], 
+    queryFn: () =>
       getAllReports({
         stream: filters.stream ?? undefined,
         year: filters.year ?? undefined,
@@ -28,12 +28,11 @@ const Page: React.FC = () => {
         semester: filters.semester ?? undefined,
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
-      }),
-    {
-      placeholderData: (prevData) => prevData,
-      staleTime: 6000,
-    },
-  );
+      }), // ✅ Corrected
+    placeholderData: (prevData) => prevData,
+    staleTime: 6000,
+  });
+  
 
   useEffect(() => {
     if (data) {
