@@ -21,15 +21,32 @@ export async function addUser(user: User) {
     return formattedUser;
 }
 
-export async function findAllUsers(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<UserType>> {
-    const usersResponse = await findAll<UserType>(userModel, page, pageSize);
+export async function findAllUsers(
+    page: number = 1, 
+    pageSize: number = 10,
+    isAdminCheck: boolean = false
+): Promise<PaginatedResponse<UserType>> {
+    // Use proper Drizzle eq condition
+    const whereCondition = isAdminCheck ? eq(userModel.type, "ADMIN") : undefined;
+
+    const usersResponse = await findAll<UserType>(
+        userModel, 
+        page, 
+        pageSize,
+        "id", 
+        whereCondition 
+    );
 
     // Await Promise.all to resolve async operations
     const content = await Promise.all(usersResponse.content.map(async (user) => {
         return await userResponseFormat(user);
     })) as UserType[];
 
-    const [{ count: countRows }] = await db.select({ count: count() }).from(userModel);
+    // Count should use the same where condition
+    const countQuery = whereCondition
+        ? db.select({ count: count() }).from(userModel).where(whereCondition)
+        : db.select({ count: count() }).from(userModel);
+    const [{ count: countRows }] = await countQuery;
 
     return {
         content,

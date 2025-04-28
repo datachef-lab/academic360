@@ -10,9 +10,12 @@ import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, togg
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { page, pageSize } = req.query;
+        const { page,isAdmin, pageSize } = req.query;
+        const pageParsed = Math.max(Number(page)||1,1);
+        const pageSizeParsed =Math.max(Math.min(Number(pageSize)||10,100),1);
+        const isAdminCheck = String(isAdmin).toLowerCase() === "true";
 
-        const users = await findAllUsers(Number(page), Number(pageSize));
+        const users = await findAllUsers(Number(pageParsed), Number(pageSizeParsed),isAdminCheck);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {

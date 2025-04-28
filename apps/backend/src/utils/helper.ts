@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { AnyColumn, count, desc, SQLWrapper } from "drizzle-orm";
+import { AnyColumn, count, desc, eq, SQLWrapper, SQL } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { PaginatedResponse } from "./PaginatedResponse.js";
 import { Marksheet } from "@/features/academics/models/marksheet.model.js";
@@ -11,11 +11,23 @@ import { Subject } from "@/features/academics/models/subject.model.js";
 import { findSubjectMetdataById } from "@/features/academics/services/subjectMetadata.service.js";
 import { StreamType } from "@/types/academics/stream.js";
 
-export async function findAll<T>(model: PgTable, page: number = 1, pageSize: number = 10, orderByColumn: string = "id"): Promise<PaginatedResponse<T>> {
+export async function findAll<T>(model: PgTable, page: number = 1, pageSize: number = 10, orderByColumn: string = "id", whereCondition?: SQL): Promise<PaginatedResponse<T>> {
     const offset = (page - 1) * pageSize;
+   
+    let query = db.select().from(model);
 
-    const dataArr = await db.select().from(model).limit(pageSize).offset(offset).orderBy(desc(model[orderByColumn as keyof typeof model] as SQLWrapper | AnyColumn));
+    if (whereCondition) {
+        query = (query as any).where(whereCondition);
+    }
 
+    const dataArr = await query
+        .limit(pageSize)
+        .offset(offset)
+        .orderBy(desc(model[orderByColumn as keyof typeof model] as AnyColumn));
+
+    const countQuery = db.select({ count: count() }).from(model);
+
+    
     if (dataArr.length === 0) {
         return {
             content: [],
@@ -26,7 +38,10 @@ export async function findAll<T>(model: PgTable, page: number = 1, pageSize: num
         };
     }
 
-    const [{ count: countRows }] = await db.select({ count: count() }).from(model);
+    const [{ count: countRows }] = whereCondition
+        ? await countQuery.where(whereCondition)
+        : await countQuery;
+
 
     return {
         content: dataArr as T[],
