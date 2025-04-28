@@ -1,7 +1,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+// import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { School, GraduationCap, Calendar, FileText, BookOpen, MessageSquare, ChevronDown, Book, PenLine, CheckCircle, Save, User } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -46,7 +46,7 @@ const AcademicHistoryForm = () => {
     remarks: "",
   };
 
-  const { data: academicData, loading, error, refetch } = useFetch<AcademicHistory>({
+  const { data: academicData, loading, refetch } = useFetch<AcademicHistory>({
     getFn: () => getAcademicHistory(id),
     postFn: (data) => createAcademicHistory(data),
     default: defaultAcademicHistory
@@ -141,36 +141,7 @@ const AcademicHistoryForm = () => {
     updateData.mutate(formData);
   };
 
-  if (loading) {
-    return (
-      <div className="shadow-md border rounded-xl py-6 md:py-10 md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
-        <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
-          {formElement.map(({ label }) => (
-            <div key={label} className="flex flex-col space-y-2">
-              <Skeleton className="h-5 w-1/3 rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          ))}
-          <div className="flex flex-col space-y-2">
-            <Skeleton className="h-5 w-1/3 rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="flex flex-col space-y-2">
-            <Skeleton className="h-5 w-1/3 rounded-md" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="col-span-1 sm:col-span-2 mt-2">
-            <Skeleton className="h-10 w-full sm:w-32 rounded-md" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="text-red-500 p-4">Error: {error.message}</div>;
-  }
-
+ 
   return (
     <div className="shadow-md border rounded-xl py-6 md:py-10 md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
       <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
@@ -241,7 +212,7 @@ const AcademicHistoryForm = () => {
                 className="border border-gray-400 w-full pl-8 sm:pl-10 flex items-center justify-between text-sm sm:text-base" 
                 variant="outline"
               >
-                {selectedSpecialization ? selectedSpecialization.name : "Select Stream"} 
+                {selectedSpecialization ? selectedSpecialization.name : "Select Specialization"} 
                 <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -264,9 +235,9 @@ const AcademicHistoryForm = () => {
             type="submit" 
             onClick={handleSubmit} 
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
-            disabled={loading || updateData.isPending}
+            disabled={ updateData.isPending}
           >
-            {loading || updateData.isPending ? (
+            { updateData.isPending ? (
               <>
                 <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

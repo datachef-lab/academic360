@@ -38,7 +38,7 @@ export const getAccommodation = async (studentId: number) => {
       });
     console.log("res data1**", response.data);
     console.log("res,data**", response.data.payload);
-    return response.data;
+    return response.data.payload;
 
   } catch (error) {
     console.log("error", error);
@@ -92,7 +92,7 @@ export const getEmergencyContact = async (studentId: number) => {
       });
     console.log("res data1**", response.data);
     console.log("res,data**", response.data.payload);
-    return response.data;
+    return response.data.payload;
 
   } catch (error) {
     console.log("error", error);
