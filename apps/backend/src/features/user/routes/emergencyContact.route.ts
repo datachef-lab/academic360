@@ -1,7 +1,7 @@
 // import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createEmergencyContact, getEmergencyContactById, getEmergencyContactByStudentId, updateEmergencyContact } from "../controllers/emergencyContact.controller";
-import { getAddressById } from "../controllers/address.controller";
+import { createEmergencyContact, getEmergencyContactById, getEmergencyContactByStudentId, updateEmergencyContact } from "../controllers/emergencyContact.controller.js";
+import { getAddressById } from "../controllers/address.controller.js";
 
 const router = express.Router();
 

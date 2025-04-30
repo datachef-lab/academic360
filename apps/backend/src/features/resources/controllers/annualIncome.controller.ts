@@ -3,7 +3,7 @@ import { findAll } from "@/utils/helper.js";
 import { NextFunction, Request, Response } from "express";
 import { AnnualIncome, annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { db } from "@/db/index";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 
 export const getAllAnnualIncomes = async (req: Request, res: Response, next: NextFunction) => {

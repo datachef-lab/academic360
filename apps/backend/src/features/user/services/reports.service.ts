@@ -1,13 +1,13 @@
 
-import { db } from "@/db/index";
-import { marksheetModel } from "@/features/academics/models/marksheet.model";
+import { db } from "@/db/index.js";
+import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
 import { eq, ilike, or, count, and, gt, lte } from "drizzle-orm";
-import { academicIdentifierModel } from "../models/academicIdentifier.model";
-import { userModel } from "../models/user.model";
-import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model";
-import { subjectModel } from "@/features/academics/models/subject.model";
-import { streamModel } from "@/features/academics/models/stream.model";
-import { degreeModel } from "@/features/resources/models/degree.model";
+import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { userModel } from "../models/user.model.js";
+import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
+import { subjectModel } from "@/features/academics/models/subject.model.js";
+import { streamModel } from "@/features/academics/models/stream.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
 
 type ReportQueryParams = {
     page: number;

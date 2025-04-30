@@ -1,14 +1,14 @@
 
 import { NextFunction, Request, Response } from "express";
-import { db } from "@/db";
+import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { marksheetModel } from "@/features/academics/models/marksheet.model";
-import { subjectModel } from "@/features/academics/models/subject.model";
-import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model";
-import { academicIdentifierModel } from "../models/academicIdentifier.model";
-import { userModel } from "../models/user.model";
-import { ApiResponse, handleError } from "@/utils";
-import { getReports } from "../services/reports.service";
+import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
+import { subjectModel } from "@/features/academics/models/subject.model.js";
+import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
+import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { userModel } from "../models/user.model.js";
+import { ApiResponse, handleError } from "@/utils/index.js";
+import { getReports } from "../services/reports.service.js";
 
 interface StudentReport {
     id: number | 0;
