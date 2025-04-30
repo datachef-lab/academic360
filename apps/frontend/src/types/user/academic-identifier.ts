@@ -1,7 +1,7 @@
 import { Stream } from "../academics/stream";
 import { DegreeProgramme, Framework } from "../enums";
 
-export interface academicIdentifier {
+export interface AcademicIdentifier {
     readonly id?: number,
     studentId: number,
     frameworkType: Framework | null,

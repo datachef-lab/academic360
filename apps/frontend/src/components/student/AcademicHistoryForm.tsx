@@ -235,9 +235,9 @@ const AcademicHistoryForm = () => {
             type="submit" 
             onClick={handleSubmit} 
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
-            disabled={ updateData.isPending}
+            disabled={ updateData.isLoading }
           >
-            { updateData.isPending ? (
+            { updateData.isLoading ? (
               <>
                 <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

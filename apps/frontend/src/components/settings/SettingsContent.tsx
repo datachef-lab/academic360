@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import axiosInstance from "@/utils/api";
 import { DataTable } from "@/components/ui/data-table";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, RefetchOptions, QueryObserverResult } from "@tanstack/react-query";
 import { User } from "@/types/user/user";
 import { BoardUniversity } from "@/types/resources/board-university";
 import { ApiResonse } from "@/types/api-response";
@@ -116,7 +116,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
   const [dataLength, setDataLength] = useState<number>(0);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [columns, setColumns] = useState<ColumnDef<any, any>[]>([]);
+  const [columns, setColumns] = useState<ColumnDef<unknown, any>[]>([]);
   const [pagination, setPagination] = useState<CustomPaginationState>({
     pageIndex: 0, // TanStack Table is 0-based
     pageSize: 10,
@@ -142,7 +142,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
         pageSize: pagination.pageSize,
       });
       console.log(data);
-      setColumns(tableCol);
+      setColumns(tableCol as ColumnDef<unknown, unknown>[]);
 
       const { content, page, pageSize, totalElements, totalPages } = data.payload;
 
@@ -196,7 +196,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
         pagination={pagination}
         setPagination={setPagination}
         setDataLength={setDataLength}
-        refetch={refetch}
+        refetch={refetch as (options?: RefetchOptions) => Promise<QueryObserverResult<unknown[] | undefined, Error>>}
       />
     </div>
   );

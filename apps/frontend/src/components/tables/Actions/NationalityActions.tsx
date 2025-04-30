@@ -85,8 +85,8 @@ export const NationalityActions = ({ nationality }: { nationality: Nationality }
             </div>
 
             {/* Save Button */}
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Saving..." : "Save"}
+            <Button onClick={handleSave} disabled={updateMutation.isLoading}>
+              {updateMutation.isLoading ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogContent>

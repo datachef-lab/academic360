@@ -13,8 +13,8 @@ export default function Header() {
     queryKey: ["streams"],
     queryFn: async () => {
       const response = await getAllStreams();
-      setSelectedStream(response.payload[0]?.name || "BCOM"); // Handle empty data case
-      return response.payload;
+      setSelectedStream(response[0]?.name || "BCOM"); // Handle empty data case
+      return response;
     },
   });
 

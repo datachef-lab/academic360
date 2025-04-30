@@ -117,7 +117,7 @@ export default function AllActivities() {
     totalPages: 1,
   });
 
-  const { isFetching: isFetchingDefault, refetch } = useQuery({
+  const { isFetching: isFetchingDefault, refetch } = useQuery<MarksheetLog[], Error>({
     queryKey: ["marksheet-logs"],
     queryFn: async () => {
       const response = await fetchMarksheetLogs(1, 10, searchText);

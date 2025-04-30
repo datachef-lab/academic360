@@ -56,7 +56,7 @@ export default function SearchStudent() {
   });
 
   // Fetch the filtered data using React Query
-  const { isFetching: isFetchingSearch, refetch } = useQuery({
+  const { isFetching: isFetchingSearch, refetch } = useQuery<StudentSearchType[], Error>({
     queryKey: ["students", pagination.pageIndex, pagination.pageSize, searchText, dataLength], // Query key with pagination and filter
     queryFn: async () => {
       if (searchText.trim() !== "") {
@@ -80,6 +80,7 @@ export default function SearchStudent() {
 
         return formattedData;
       }
+      return []; // Ensure a fallback return value
     }, // Query function with page, pageSize, and search text
     enabled: false,
   });

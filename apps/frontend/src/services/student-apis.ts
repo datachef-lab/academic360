@@ -6,7 +6,7 @@ import { Degree } from "@/types/resources/degree";
 import { Institution } from "@/types/resources/institution";
 import { Religion } from "@/types/resources/religion";
 import { AcademicHistory } from "@/types/user/academic-history";
-import { academicIdentifier } from "@/types/user/academic-identifier";
+import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { EmergencyContact } from "@/types/user/emergency-contact";
 import { User } from "@/types/user/user";
@@ -112,8 +112,8 @@ export const createBoardResultStatus = async (formData: ResultStatus) => {
     return res.data;
 };
 
-export const updatedAcademicIdentifier = async (formData: academicIdentifier, id: number) => {
-    const res = await axiosInstance.put(`/api/academicIdentifiers/${id}`,formData,{
+export const updatedAcademicIdentifier = async (formData: AcademicIdentifier, id: number) => {
+    const res = await axiosInstance.put(`/api/AcademicIdentifiers/${id}`,formData,{
         headers:{
              "Authorization": `Bearer ${localStorage.getItem("token")}`,
         } 
@@ -122,8 +122,8 @@ export const updatedAcademicIdentifier = async (formData: academicIdentifier, id
 
 };
 
-export const createAcademicIdentifier=async(formData:academicIdentifier)=>{
-    const res=await axiosInstance.post(`/api/academicIdentifiers/`,formData,{
+export const createAcademicIdentifier=async(formData:AcademicIdentifier)=>{
+    const res=await axiosInstance.post(`/api/AcademicIdentifiers/`,formData,{
         headers:{
             "Authorization": `Bearer ${localStorage.getItem("token")}`,
        } 
