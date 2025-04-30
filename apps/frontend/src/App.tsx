@@ -31,6 +31,7 @@ import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
 import SearchStudentPage from "./pages/SearchStudentPage";
+
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },

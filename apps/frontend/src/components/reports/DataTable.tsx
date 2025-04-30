@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className=" bg-white/50 hover:bg-gray-50">
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}

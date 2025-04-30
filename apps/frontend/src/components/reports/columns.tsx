@@ -57,9 +57,9 @@ export const ReportColumns: ColumnDef<Report>[] = [
       </div>
     ),
     cell: ({ row }) => (
-      <div className="text-slate-700 font-semibold">
-        {row.getValue("registrationNumber")}
-      </div>
+      <Badge variant="secondary" className="font-mono  bg-indigo-50 text-indigo-700 hover:bg-indigo-50">
+      {row.getValue("registrationNumber")}
+    </Badge>
     ),
   },
   // {
@@ -410,3 +410,296 @@ export const ReportColumns: ColumnDef<Report>[] = [
   //   },
   // },
 ];
+
+// import { ColumnDef } from "@tanstack/react-table";
+// import { Badge } from "@/components/ui/badge";
+// import { 
+//   CheckCircle2, 
+  
+//   ArrowUpDown, 
+//   GraduationCap, 
+//   BookUser,
+//   Hash,
+//   Percent,
+//   Bookmark,
+//   School,
+//   Calendar,
+//   Gauge,
+//   Trophy,
+//   Star
+// } from "lucide-react";
+// import { Report } from "./types";
+// import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+// export const ReportColumns: ColumnDef<Report>[] = [
+//   {
+//     accessorKey: "rollNumber",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Hash className="h-4 w-4 text-indigo-600" />
+//         <span>Roll No</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => (
+//       <div className="text-slate-700 font-medium pl-2">
+//         {row.getValue("rollNumber")}
+//       </div>
+//     ),
+//   },
+//   {
+//     accessorKey: "registrationNumber",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Bookmark className="h-4 w-4 text-indigo-600" />
+//         <span>Reg No.</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => (
+//       <div className="text-slate-700 font-medium">
+//         <Badge variant="secondary" className="font-mono bg-indigo-50 text-indigo-700 hover:bg-indigo-50">
+//           {row.getValue("registrationNumber")}
+//         </Badge>
+//       </div>
+//     ),
+//   },
+//   {
+//     accessorKey: "name",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <BookUser className="h-4 w-4 text-indigo-600" />
+//         <span>Name</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const name = row.original.name;
+      
+//       const stringToColor = (str: string) => {
+//         let hash = 0;
+//         for (let i = 0; i < str.length; i++) {
+//           hash = str.charCodeAt(i) + ((hash << 5) - hash);
+//         }
+//         return `hsl(${hash % 360}, 70%, 60%)`;
+//       };
+    
+//       const bgColor = stringToColor(name);
+    
+//       return (
+//         <div className="flex items-center">
+//           <Avatar className="h-9 w-9">
+//             <AvatarFallback 
+//               className="text-white font-medium"
+//               style={{ backgroundColor: bgColor }}
+//             >
+//               {name.charAt(0).toUpperCase()}
+//             </AvatarFallback>
+//           </Avatar>
+//           <div className="ml-3">
+//             <div className="font-medium text-gray-900">{name}</div>
+//           </div>
+//         </div>
+//       );
+//     },
+//   },
+//   {
+//     accessorKey: "stream",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <GraduationCap className="h-4 w-4 text-indigo-600" />
+//         <span>Stream</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const stream = row.getValue("stream") as string;
+//       const streamStyles = {
+//         "BSC": "bg-blue-100 text-blue-800 border-blue-200",
+//         "BCOM": "bg-purple-100 text-purple-800 border-purple-200",
+//         "BA": "bg-green-100 text-green-800 border-green-200",
+//         "MA": "bg-amber-100 text-amber-800 border-amber-200",
+//       };
+      
+//       return (
+//         <Badge 
+//           className={`${streamStyles[stream as keyof typeof streamStyles] || "bg-gray-100 text-gray-800"} 
+//           font-medium px-2.5 py-1 rounded-md`}
+//         >
+//           {stream}
+//         </Badge>
+//       );
+//     },
+//   },
+//   {
+//     accessorKey: "year",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Calendar className="h-4 w-4 text-indigo-600" />
+//         <span>Year</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => (
+//       <div className="text-slate-700 font-medium">
+//         Year {row.getValue("year")}
+//       </div>
+//     ),
+//   },
+//   {
+//     accessorKey: "semester",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <School className="h-4 w-4 text-indigo-600" />
+//         <span>Semester</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => (
+//       <div className="text-slate-700 font-medium">
+//         Sem {row.getValue("semester")}
+//       </div>
+//     ),
+//   },
+//   {
+//     accessorKey: "cgpa",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Gauge className="h-4 w-4 text-indigo-600" />
+//         <span>CGPA</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const cgpa = parseFloat(row.getValue("cgpa"));
+//       const cgpaColor = cgpa >= 9 ? "bg-purple-100 text-purple-800" :
+//                        cgpa >= 8 ? "bg-blue-100 text-blue-800" :
+//                        cgpa >= 7 ? "bg-green-100 text-green-800" :
+//                        cgpa >= 6 ? "bg-amber-100 text-amber-800" :
+//                        "bg-red-100 text-red-800";
+      
+//       return (
+//         <Badge className={`${cgpaColor} font-mono font-bold px-2.5 py-1 rounded-md`}>
+//           {row.getValue("cgpa")}
+//         </Badge>
+//       );
+//     },
+//   },
+//   {
+//     accessorKey: "letterGrade",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Trophy className="h-4 w-4 text-indigo-600" />
+//         <span>Grade</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const grade = row.getValue("letterGrade") as string;
+//       const gradeStyles = {
+//         "A++": "bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 border-purple-200",
+//         "A+": "bg-blue-50 text-blue-800 border-blue-200",
+//         "A": "bg-green-50 text-green-800 border-green-200",
+//         "B+": "bg-teal-50 text-teal-800 border-teal-200",
+//         "B": "bg-cyan-50 text-cyan-800 border-cyan-200",
+//         "C+": "bg-amber-50 text-amber-800 border-amber-200",
+//         "C": "bg-orange-50 text-orange-800 border-orange-200",
+//         "D+": "bg-yellow-50 text-yellow-800 border-yellow-200",
+//         "D": "bg-lime-50 text-lime-800 border-lime-200",
+//         "E": "bg-pink-50 text-pink-800 border-pink-200",
+//         "F": "bg-red-50 text-red-800 border-red-200",
+//         "F(TH)": "bg-red-100 text-red-900 border-red-200",
+//         "F(PR)": "bg-red-100 text-red-900 border-red-200",
+//       };
+      
+//       return (
+//         <Badge className={`${gradeStyles[grade as keyof typeof gradeStyles] || "bg-gray-100 text-gray-800"} 
+//           font-bold px-2.5 py-1 rounded-md`}
+//         >
+//           {grade}
+//         </Badge>
+//       );
+//     },
+//   },
+//   {
+//     accessorKey: "status",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+//         <span>Status</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const status = row.getValue("status") as string;
+//       const isPass = status.includes("PASS");
+      
+//       return (
+//         <Badge className={`${isPass ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"} 
+//           font-medium px-2.5 py-1 rounded-md flex items-center gap-1`}
+//         >
+//           {isPass ? (
+//             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+//           ) : null}
+//           {status}
+//         </Badge>
+//       );
+//     },
+//   },
+//   {
+//     accessorKey: "percentage",
+//     header: ({ column }) => (
+//       <div 
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+//       >
+//         <Percent className="h-4 w-4 text-indigo-600" />
+//         <span>Percentage</span>
+//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//       </div>
+//     ),
+//     cell: ({ row }) => {
+//       const score = row.getValue("percentage") as string;
+//       const scoreValue = parseFloat(score.replace('%', ''));
+//       const scoreColor = scoreValue >= 90 ? "bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800" :
+//                        scoreValue >= 75 ? "bg-blue-50 text-blue-800" :
+//                        scoreValue >= 50 ? "bg-green-50 text-green-800" :
+//                        scoreValue >= 30 ? "bg-amber-50 text-amber-800" :
+//                        "bg-red-50 text-red-800";
+      
+//       return (
+//         <Badge className={`${scoreColor} font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1`}>
+//           <Star className="h-3 w-3 opacity-70" />
+//           {score}
+//         </Badge>
+//       );
+//     },
+//   },
+// ];

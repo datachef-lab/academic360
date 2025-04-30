@@ -97,7 +97,7 @@ export function DataTable<TData, TValue>({
   //   }, [table.getRowModel().rows.length]);
 
   return (
-    <div className="space-y-3 p-4  rounded-2xl my-3">
+    <div className="space-y-3 p-1  rounded-2xl my-3">
         <div className="px-6 py-1   rounded-lg ">
         <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
         </div>
