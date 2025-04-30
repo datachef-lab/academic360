@@ -69,12 +69,12 @@ const SearchStudentPage: React.FC = () => {
           </motion.div>
     
           {/* Table Section */}
-          <div className="grid grid-rows-[1fr_auto] p-4 sm:p-6 bg-white/90">
+          <div className="grid grid-rows-[1fr_auto] p-4 sm:p-6  bg-white/90 shadow-lg">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="overflow-hidden rounded-xl border border-gray-200 shadow-md"
+              className="overflow-hidden rounded-xl "
             >
              <SearchStudent></SearchStudent>
             </motion.div>
