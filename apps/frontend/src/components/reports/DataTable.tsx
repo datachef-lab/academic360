@@ -67,15 +67,15 @@ export function DataTable<TData, TValue>({
     <div className=" p-4 space-y-4">
 
 
-      <div className="rounded-md border shadow-md  border-gray-400 ">
+      <div className="rounded-xl border shadow-md overflow-x-hidden border-gray-400 ">
         <Table className="w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="bg-gray-100 hover:bg-gray-100 ">
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className="px-4 py-3 text-center whitespace-nowrap border-r border-b" // Added whitespace-nowrap
+                    className="px-4 py-3  text-center whitespace-nowrap border-r" // Added whitespace-nowrap
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -90,7 +90,7 @@ export function DataTable<TData, TValue>({
                   {columns.map((_, colIndex) => (
                     <TableCell
                       key={`skeleton-cell-${index}-${colIndex}`}
-                      className="px-4 py-3 text-center whitespace-nowrap border-r"
+                      className="px-5 py-4 text-center whitespace-nowrap border-r"
                     >
                       <Skeleton className="h-6 w-full" />
                     </TableCell>
@@ -103,7 +103,7 @@ export function DataTable<TData, TValue>({
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="px-4 py-3 text-center whitespace-nowrap border-r" // Added whitespace-nowrap
+                      className="px-5 py-4 text-center whitespace-nowrap border-r " // Added whitespace-nowrap
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>

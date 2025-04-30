@@ -29,7 +29,7 @@ const Page: React.FC = () => {
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
       }), 
-    placeholderData: (prevData) => prevData,
+    placeholderData: (prevData: typeof Report) => prevData,
     staleTime: 6000,
   });
   

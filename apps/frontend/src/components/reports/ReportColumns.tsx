@@ -9,7 +9,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "id",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <FileText className="h-4 w-4" />
+        <FileText className="h-4 w-4 " />
         <span>ID</span>
       </div>
     ),
@@ -23,7 +23,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "title",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <BookOpen className="h-4 w-4" />
+        <BookOpen className="h-4 w-4 " />
         <span>Title</span>
       </div>
     ),
@@ -37,7 +37,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "author",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <User className="h-4 w-4" />
+        <User className="h-4 w-4 " />
         <span>Author</span>
       </div>
     ),
@@ -51,7 +51,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "date",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <Calendar className="h-4 w-4" />
+        <Calendar className="h-4 w-4 " />
         <span>Date</span>
       </div>
     ),
@@ -65,7 +65,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "status",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <CheckCircle2 className="h-4 w-4" />
+        <CheckCircle2 className="h-4 w-4 " />
         <span>Status</span>
       </div>
     ),
@@ -75,19 +75,19 @@ export const columns: ColumnDef<Report>[] = [
         <div className="flex justify-center">
           {status === "Active" && (
             <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
-              <CheckCircle2 className="h-4 w-4 mr-1" />
+              <CheckCircle2 className="h-4 w-4  mr-1" />
               Active
             </Badge>
           )}
           {status === "Inactive" && (
             <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50">
-              <XCircle className="h-4 w-4 mr-1" />
+              <XCircle className="h-4 w-4  mr-1" />
               Inactive
             </Badge>
           )}
           {status === "Pending" && (
             <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50">
-              <Clock className="h-4 w-4 mr-1" />
+              <Clock className="h-4 w-4  mr-1" />
               Pending
             </Badge>
           )}
@@ -99,7 +99,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "priority",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <Star className="h-4 w-4" />
+        <Star className="h-4 w-4 " />
         <span>Priority</span>
       </div>
     ),
@@ -109,19 +109,19 @@ export const columns: ColumnDef<Report>[] = [
         <div className="flex justify-center">
           {priority === "High" && (
             <Badge className="bg-rose-50 text-rose-700 hover:bg-rose-50">
-              <Star className="h-4 w-4 mr-1" />
+              <Star className="h-4 w-4  mr-1" />
               High
             </Badge>
           )}
           {priority === "Medium" && (
             <Badge className="bg-amber-50 text-amber-700 hover:bg-amber-50">
-              <Star className="h-4 w-4 mr-1" />
+              <Star className="h-4 w-4  mr-1" />
               Medium
             </Badge>
           )}
           {priority === "Low" && (
             <Badge className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50">
-              <Star className="h-4 w-4 mr-1" />
+              <Star className="h-4 w-4  mr-1" />
               Low
             </Badge>
           )}
@@ -133,14 +133,14 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "score",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <Award className="h-4 w-4" />
+        <Award className="h-4 w-4 " />
         <span>Score</span>
       </div>
     ),
     cell: ({ row }) => (
       <div className="flex justify-center">
         <Badge className="bg-blue-50 text-blue-700 hover:bg-blue-50">
-          <Award className="h-4 w-4 mr-1" />
+          <Award className="h-4 w-4  mr-1" />
           {row.getValue("score")}
         </Badge>
       </div>
@@ -150,7 +150,7 @@ export const columns: ColumnDef<Report>[] = [
     accessorKey: "remarks",
     header: () => (
       <div className="flex items-center gap-2 text-slate-800 font-semibold">
-        <FileText className="h-4 w-4" />
+        <FileText className="h-4 w-4 " />
         <span>Remarks</span>
       </div>
     ),
