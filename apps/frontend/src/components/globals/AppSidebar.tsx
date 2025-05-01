@@ -448,7 +448,7 @@ const data = {
   ],
   navMain: [
     {
-      title: "Admission & Fees Dept",
+      title: "Admission & Fees",
       url: "/home/admission-fees",
       icon: UserPlus,
       // items: [
@@ -561,23 +561,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }
 
   return (
-    <Sidebar collapsible="icon" {...props} className="bg-white border-r">
-      <SidebarHeader className="p-4 border-b border-gray-100">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-purple-100">
-            <GalleryVerticalEnd className="h-6 w-6 text-purple-600" />
+    <div className="">
+          <div className="">
+    <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
+      <SidebarHeader className="p-6 border-none border-purple-500 bg-purple-800/95">
+        <Link to="/home" className="flex items-center gap-3">
+          <div className="flex  items-center justify-center p-3 drop-shadow-lg rounded-lg bg-purple-500">
+            <GalleryVerticalEnd className="h-6 w-6 text-white" />
+            
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-800">Academic360</h1>
-            <p className="text-xs text-gray-500">Education Management</p>
+            <h1 className="text-lg font-semibold text-white">Academic360</h1>
+            <p className="text-xs text-purple-100">Education Management</p>
           </div>
-        </div>
+        </Link>
       </SidebarHeader>
 
-      <SidebarContent className="p-0">
-        <div className="mt-4 ">
+      <SidebarContent className="p-0 border-none bg-purple-800/95">
+        <div className="mt-2">
           {/* Dashboard Link (from navDash) */}
-          <div className="mb-4 ">
+          <div className="mb-4 pl-5">
             {data.navDash.map((item) => (
               <NavItem
                 key={item.title}
@@ -585,15 +588,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 href={item.url}
                 isActive={currentPath === item.url}
               >
-                <span className="text-base">{item.title}</span>
+                <span className="text-lg">{item.title}</span>
               </NavItem>
             ))}
           </div>
 
           {/* Administration Section */}
           <div className="mb-4">
-            <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">Administration</h3>
-            <div className="pl-2">
+            <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Administration</h3>
+            <div className="pl-6  ">
               {data.navMain.map((item) => (
                 <NavItem
                   key={item.title}
@@ -601,7 +604,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   href={item.url}
                   isActive={currentPath === item.url}
                 >
-                  <span className="">{item.title}</span>
+                  <span className="text-base">{item.title}</span>
                 </NavItem>
               ))}
             </div>
@@ -609,19 +612,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
           {/* Student Section */}
           <div className="mb-4">
-            <h3 className="mb-2 px-4 text-xs font-medium text-gray-500">Student</h3>
-            <div className="pl-2">
+            <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Student</h3>
+            <div className="pl-6 ">
               {data.navStudent.map((item) => {
                 const isActive = currentPath === item.url;
 
                 return (
                   <NavItem
                     key={item.title}
-                    icon={item.icon && <item.icon className="h-5 w-5 " />}
+                    icon={item.icon && <item.icon className="h-5 w-5" />}
                     href={item.url}
                     isActive={isActive}
                   >
-                    {item.title}
+                    <span className="text-base">{item.title}</span>
                   </NavItem>
                 );
               })}
@@ -630,17 +633,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </div>
       </SidebarContent>
 
-      <SidebarFooter className="mt-auto border-t border-gray-100">
+      <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="p-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200">
+            <div className="p-4 cursor-pointer hover:bg-purple-500 transition-colors duration-200">
               <div className="flex items-center gap-3">
-                <UserAvatar user={{ ...user, id: String(user.id) }} className="" />
+                <UserAvatar user={{ ...user, id: String(user.id) }}  className="" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-700 truncate">{user.name || "User"}</div>
-                  <div className="text-xs text-gray-500 truncate">{user.email || "email@example.com"}</div>
+                  <div className="font-medium text-white truncate">{user.name || "User"}</div>
+                  <div className="text-xs text-purple-200 truncate">{user.email || "email@example.com"}</div>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
               </div>
             </div>
           </DropdownMenuTrigger>
@@ -662,6 +665,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </DropdownMenu>
       </SidebarFooter>
     </Sidebar>
+
+    </div>
+    </div>
   );
 }
 
@@ -671,30 +677,23 @@ interface NavItemProps {
   children: React.ReactNode;
   isActive?: boolean;
 }
-
 function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <Link
       to={href}
       className={cn(
-        "group flex items-center justify-between  transition-colors duration-200 px-4 py-2.5 text-sm font-medium relative",
-        isActive 
-        ? "bg-purple-100 text-purple-800 border-l-4 border-purple-600 hover:text-purple-800" 
-        : "text-gray-700 hover:bg-gray-100 hover:text-gray-900",
+        "group flex items-center transition-all duration-1100 px-6 py-4 text-sm font-medium relative",
+        isActive
+          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-md"
+          : "text-white hover:text-white"
       )}
     >
       <div className="flex items-center gap-3">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-800" : "text-gray-500 group-hover:text-gray-700")}>
+        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white")}>
           {icon}
         </span>
         <span className="text-inherit">{children}</span>
       </div>
-
-      {isActive && (
-        <div className="absolute right-3">
-          <div className="h-2 w-2 rounded-full bg-purple-600"></div>
-        </div>
-      )}
     </Link>
   );
 }

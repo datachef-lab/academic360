@@ -58,9 +58,9 @@ const Page: React.FC = () => {
                               <motion.div
                                 whileHover={{ scale: 1.05, rotate: -5 }}
                                 whileTap={{ scale: 0.95 }}
-                                className="bg-gradient-to-br from-teal-400 to-teal-600 p-3 rounded-xl shadow-lg"
+                                className="bg-gradient-to-br from-teal-400 to-teal-600 p-3 rounded-xl drop-shadow-lg"
                               >
-                                <BarChart2 className="h-6 w-6 text-white" />
+                                <BarChart2 className="h-7 w-7 text-white" />
                               </motion.div>
                               <div>
                                 <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Student Report</h2>

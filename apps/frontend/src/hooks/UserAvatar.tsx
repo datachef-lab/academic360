@@ -24,7 +24,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   return (
 
-    <Avatar className={`${sizeClasses[size]}  drop-shadow-lg overflow-hidden ${className}`}>
+    <Avatar className={`${sizeClasses[size]}  drop-shadow-xl overflow-hidden ${className}`}>
       {user?.avatar ? (
         <AvatarImage 
           src={user.avatar} 

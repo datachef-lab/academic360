@@ -9,10 +9,10 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { AppSidebar } from "@/components/globals/AppSidebar";
-import { ModeToggle } from "@/components/globals/ModeToggle";
+// import { ModeToggle } from "@/components/globals/ModeToggle";
 import styles from "@/styles/HomeLayout.module.css";
 import NotifcationPanel from "../globals/NotifcationPanel";
-import GlobalSearch from "../globals/GlobalSearch";
+// import GlobalSearch from "../globals/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 
 export default function HomeLayout() {
@@ -50,10 +50,10 @@ export default function HomeLayout() {
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <div className="flex items-center gap-2">
-              <GlobalSearch />
+            <div className="flex items-center mr-3 gap-2">
+              {/* <GlobalSearch /> */}
               <NotifcationPanel />
-              <ModeToggle />
+              {/* <ModeToggle /> */}
             </div>
           </header>
           <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">

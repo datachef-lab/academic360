@@ -33,6 +33,9 @@ html {
   background: #555;
 }
 
+.custom-clip {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 23% 100%);
+}
 
 
 @layer base {
