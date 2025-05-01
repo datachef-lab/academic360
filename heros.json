@@ -1,0 +1,95 @@
+ {
+    "personalDetails": {
+      "name": "ASSAM HIGHER SECONDARY EDUCATION COUNCIL",
+      "dateOfBirth": "2025-04-29T18:30:00.000Z",
+      "gender": "Male",
+      "nationality": "",
+      "religion": "",
+      "category": "",
+      "handicapped": "No"
+    },
+    "parentDetails": {
+      "fatherName": "roni",
+      "fatherOccupation": "",
+      "fatherContact": "",
+      "fatherEmail": "",
+      "motherName": "nibha",
+      "motherOccupation": "",
+      "motherContact": "",
+      "motherEmail": "",
+      "annualIncome": "",
+      "address": ""
+    },
+    "guardianDetails": {
+      "guardianName": "rahul",
+      "relationship": "Uncle",
+      "occupation": "Student",
+      "contactNumber": "07906353284",
+      "email": "rounitsingh2002@gmail.com",
+      "address": "C/O BIRENDRA KUMAR SINGH , VILL-BELWAIN , POST-BELWAIN, ROHTAS , BIHAR",
+      "isLocalGuardian": "No"
+    },
+    "healthDetails": {
+      "bloodGroup": "O+",
+      "height": "10",
+      "weight": "25",
+      "allergies": "none",
+      "medicalConditions": "",
+      "medications": "",
+      "emergencyContact": "",
+      "insuranceProvider": "",
+      "insurancePolicyNumber": "",
+      "lastCheckupDate": "2025-05-14",
+      "doctorName": "",
+      "doctorContact": ""
+    },
+    "emergencyContact": {
+      "primaryContactName": "Rounit Kumar Singh",
+      "primaryContactRelationship": "Sibling",
+      "primaryContactPhone": "07906353284",
+      "primaryContactEmail": "rounitsingh2002@gmail.com",
+      "primaryContactAddress": "C/O BIRENDRA KUMAR SINGH , VILL-BELWAIN , POST-BELWAIN, ROHTAS , BIHAR",
+      "secondaryContactName": "Rounit Kumar Singh",
+      "secondaryContactRelationship": "Friend",
+      "secondaryContactPhone": "07906353284",
+      "secondaryContactEmail": "rounitsingh2002@gmail.com",
+      "secondaryContactAddress": "C/O BIRENDRA KUMAR SINGH , VILL-BELWAIN , POST-BELWAIN, ROHTAS , BIHAR"
+    },
+    "academicHistory": {
+      "previousSchool": "lpu",
+      "previousSchoolAddress": "",
+      "previousSchoolBoard": "",
+      "previousSchoolYear": "2020",
+      "previousSchoolGrade": "",
+      "previousSchoolSubjects": "",
+      "previousSchoolActivities": "",
+      "previousSchoolAwards": "",
+      "previousSchoolReasonForLeaving": ""
+    },
+    "academicIdentifier": {
+      "registrationNumber": "017-1211-1953-23",
+      "rollNumber": "231017-11-0482",
+      "uid": "0304240378",
+      "course": "M.Com.",
+      "specialization": "PCM",
+      "year": "3rd",
+      "semester": "2nd",
+      "section": "",
+      "batch": "",
+      "shift": "Evening"
+    },
+    "accommodation": {
+      "accommodationType": "PG",
+      "hostelName": "",
+      "roomNumber": "",
+      "block": "",
+      "floor": "",
+      "checkInDate": "2025-04-28",
+      "checkOutDate": "2025-04-27",
+      "monthlyRent": "2300",
+      "depositAmount": "200000",
+      "address": "C/O BIRENDRA KUMAR SINGH , VILL-BELWAIN , POST-BELWAIN, ROHTAS , BIHAR",
+      "contactPerson": "Rounit Kumar Singh",
+      "contactNumber": "07906353284"
+    }
+  }

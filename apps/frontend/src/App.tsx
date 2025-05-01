@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
+
   AddStudentPage,
   GetReportsPage,
   HomePage,
@@ -31,6 +32,7 @@ import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
 import SearchStudentPage from "./pages/SearchStudentPage";
+
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
