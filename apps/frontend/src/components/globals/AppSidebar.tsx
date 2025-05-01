@@ -682,9 +682,9 @@ function NavItem({ href, icon, children, isActive }: NavItemProps) {
     <Link
       to={href}
       className={cn(
-        "group flex items-center transition-all duration-1100 px-6 py-4 text-sm font-medium relative",
+        "group flex items-center transition-all duration-1100 px-6 py-3 text-sm font-medium relative",
         isActive
-          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-md"
+          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
           : "text-white hover:text-white"
       )}
     >
