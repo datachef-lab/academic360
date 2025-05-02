@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, User, Phone, Mail, Home, Shield } from "lucide-react";
-import { EmergencyContact } from "@/types/student";
+import { CheckCircle2, User, Phone, Mail, Shield } from "lucide-react";
+import { EmergencyContact } from "@/types/user/emergency-contact";
 
 interface EmergencyContactFormProps {
   onSubmit: (data: EmergencyContact) => void;
@@ -14,16 +14,13 @@ interface EmergencyContactFormProps {
 
 export default function EmergencyContactForm({ onSubmit, initialData = {} }: EmergencyContactFormProps) {
   const [formData, setFormData] = useState<EmergencyContact>({
-    primaryContactName: initialData.primaryContactName || "",
-    primaryContactRelationship: initialData.primaryContactRelationship || "",
-    primaryContactPhone: initialData.primaryContactPhone || "",
-    primaryContactEmail: initialData.primaryContactEmail || "",
-    primaryContactAddress: initialData.primaryContactAddress || "",
-    secondaryContactName: initialData.secondaryContactName || "",
-    secondaryContactRelationship: initialData.secondaryContactRelationship || "",
-    secondaryContactPhone: initialData.secondaryContactPhone || "",
-    secondaryContactEmail: initialData.secondaryContactEmail || "",
-    secondaryContactAddress: initialData.secondaryContactAddress || "",
+    studentId: initialData.studentId || 0,
+    personName: initialData.personName || "",
+    relationToStudent: initialData.relationToStudent || "",
+    email: initialData.email || "",
+    phone: initialData.phone || "",
+    officePhone: initialData.officePhone || "",
+    residentialPhone: initialData.residentialPhone || "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,9 +30,9 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
     setIsSubmitting(true);
 
     try {
-      if (!formData.primaryContactName || !formData.primaryContactPhone) {
-        throw new Error("Please fill in all required fields");
-      }
+      // if (!formData.personName || !formData.phone) {
+      //   throw new Error("Please fill in all required fields");
+      // }
 
       await onSubmit(formData);
     } catch (error) {
@@ -46,29 +43,24 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
   };
 
   return (
-    <div
-
-     
-      className="space-y-6 bg-white rounded-xl shadow-sm p-6"
-    >
+    <div className="space-y-6 bg-white rounded-xl shadow-sm p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Primary Contact */}
         <div className="col-span-2">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          {/* <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
             <User className="w-5 h-5" />
-            Primary Emergency Contact
-          </h3>
+            Emergency Contact
+          </h3> */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="primaryContactName" className="flex items-center gap-2 text-gray-700">
+              <Label htmlFor="personName" className="flex items-center gap-2 text-gray-700">
                 <User className="w-4 h-4" />
                 Name *
               </Label>
               <div className="relative">
                 <Input
-                  id="primaryContactName"
-                  value={formData.primaryContactName}
-                  onChange={(e) => setFormData({ ...formData, primaryContactName: e.target.value })}
+                  id="personName"
+                  value={formData.personName || ""}
+                  onChange={(e) => setFormData({ ...formData, personName: e.target.value })}
                   placeholder="Enter name"
                   required
                   className="pl-10"
@@ -78,14 +70,14 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="primaryContactRelationship" className="flex items-center gap-2 text-gray-700">
+              <Label htmlFor="relationToStudent" className="flex items-center gap-2 text-gray-700">
                 <Shield className="w-4 h-4" />
                 Relationship *
               </Label>
               <div className="relative">
                 <Select
-                  value={formData.primaryContactRelationship}
-                  onValueChange={(value) => setFormData({ ...formData, primaryContactRelationship: value })}
+                  value={formData.relationToStudent || ""}
+                  onValueChange={(value) => setFormData({ ...formData, relationToStudent: value })}
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select relationship" />
@@ -104,15 +96,15 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="primaryContactPhone" className="flex items-center gap-2 text-gray-700">
+              <Label htmlFor="phone" className="flex items-center gap-2 text-gray-700">
                 <Phone className="w-4 h-4" />
                 Phone Number *
               </Label>
               <div className="relative">
                 <Input
-                  id="primaryContactPhone"
-                  value={formData.primaryContactPhone}
-                  onChange={(e) => setFormData({ ...formData, primaryContactPhone: e.target.value })}
+                  id="phone"
+                  value={formData.phone || ""}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   placeholder="Enter phone number"
                   type="tel"
                   required
@@ -123,15 +115,15 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="primaryContactEmail" className="flex items-center gap-2 text-gray-700">
+              <Label htmlFor="email" className="flex items-center gap-2 text-gray-700">
                 <Mail className="w-4 h-4" />
                 Email
               </Label>
               <div className="relative">
                 <Input
-                  id="primaryContactEmail"
-                  value={formData.primaryContactEmail}
-                  onChange={(e) => setFormData({ ...formData, primaryContactEmail: e.target.value })}
+                  id="email"
+                  value={formData.email || ""}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="Enter email"
                   type="email"
                   className="pl-10"
@@ -140,86 +132,17 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
               </div>
             </div>
 
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="primaryContactAddress" className="flex items-center gap-2 text-gray-700">
-                <Home className="w-4 h-4" />
-                Address
-              </Label>
-              <div className="relative">
-                <Input
-                  id="primaryContactAddress"
-                  value={formData.primaryContactAddress}
-                  onChange={(e) => setFormData({ ...formData, primaryContactAddress: e.target.value })}
-                  placeholder="Enter address"
-                  className="pl-10"
-                />
-                <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Secondary Contact */}
-        <div className="col-span-2">
-          <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Secondary Emergency Contact
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label htmlFor="secondaryContactName" className="flex items-center gap-2 text-gray-700">
-                <User className="w-4 h-4" />
-                Name
-              </Label>
-              <div className="relative">
-                <Input
-                  id="secondaryContactName"
-                  value={formData.secondaryContactName}
-                  onChange={(e) => setFormData({ ...formData, secondaryContactName: e.target.value })}
-                  placeholder="Enter name"
-                  className="pl-10"
-                />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secondaryContactRelationship" className="flex items-center gap-2 text-gray-700">
-                <Shield className="w-4 h-4" />
-                Relationship
-              </Label>
-              <div className="relative">
-                <Select
-                  value={formData.secondaryContactRelationship}
-                  onValueChange={(value) => setFormData({ ...formData, secondaryContactRelationship: value })}
-                >
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Select relationship" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Parent">Parent</SelectItem>
-                    <SelectItem value="Guardian">Guardian</SelectItem>
-                    <SelectItem value="Sibling">Sibling</SelectItem>
-                    <SelectItem value="Relative">Relative</SelectItem>
-                    <SelectItem value="Friend">Friend</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="secondaryContactPhone" className="flex items-center gap-2 text-gray-700">
+              <Label htmlFor="officePhone" className="flex items-center gap-2 text-gray-700">
                 <Phone className="w-4 h-4" />
-                Phone Number
+                Office Phone
               </Label>
               <div className="relative">
                 <Input
-                  id="secondaryContactPhone"
-                  value={formData.secondaryContactPhone}
-                  onChange={(e) => setFormData({ ...formData, secondaryContactPhone: e.target.value })}
-                  placeholder="Enter phone number"
+                  id="officePhone"
+                  value={formData.officePhone || ""}
+                  onChange={(e) => setFormData({ ...formData, officePhone: e.target.value })}
+                  placeholder="Enter office phone"
                   type="tel"
                   className="pl-10"
                 />
@@ -228,37 +151,20 @@ export default function EmergencyContactForm({ onSubmit, initialData = {} }: Eme
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="secondaryContactEmail" className="flex items-center gap-2 text-gray-700">
-                <Mail className="w-4 h-4" />
-                Email
+              <Label htmlFor="residentialPhone" className="flex items-center gap-2 text-gray-700">
+                <Phone className="w-4 h-4" />
+                Residential Phone
               </Label>
               <div className="relative">
                 <Input
-                  id="secondaryContactEmail"
-                  value={formData.secondaryContactEmail}
-                  onChange={(e) => setFormData({ ...formData, secondaryContactEmail: e.target.value })}
-                  placeholder="Enter email"
-                  type="email"
+                  id="residentialPhone"
+                  value={formData.residentialPhone || ""}
+                  onChange={(e) => setFormData({ ...formData, residentialPhone: e.target.value })}
+                  placeholder="Enter residential phone"
+                  type="tel"
                   className="pl-10"
                 />
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="secondaryContactAddress" className="flex items-center gap-2 text-gray-700">
-                <Home className="w-4 h-4" />
-                Address
-              </Label>
-              <div className="relative">
-                <Input
-                  id="secondaryContactAddress"
-                  value={formData.secondaryContactAddress}
-                  onChange={(e) => setFormData({ ...formData, secondaryContactAddress: e.target.value })}
-                  placeholder="Enter address"
-                  className="pl-10"
-                />
-                <Home className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               </div>
             </div>
           </div>

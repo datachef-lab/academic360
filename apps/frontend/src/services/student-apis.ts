@@ -1,4 +1,5 @@
 import { ResultStatus } from "@/types/enums";
+import { Address } from "@/types/resources/address";
 import { AnnualIncome } from "@/types/resources/annual-income";
 import { BoardUniversity } from "@/types/resources/board-university";
 import { Category } from "@/types/resources/category";
@@ -9,6 +10,9 @@ import { AcademicHistory } from "@/types/user/academic-history";
 import { academicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { EmergencyContact } from "@/types/user/emergency-contact";
+import { Health } from "@/types/user/health";
+import { Parent } from "@/types/user/parent";
+import { PersonalDetails } from "@/types/user/personal-details";
 import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
 
@@ -228,3 +232,40 @@ export const getAllReports = async (filters:ReportFilters={}) => {
    
     return response.data;
 }
+
+
+export const createFamilyDetails = async (formData: Parent) => {
+    const response = await axiosInstance.post(`/api/parents`, formData, {
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+    });
+    return response.data;
+};
+
+export const createHealthDetails = async (formData: Health) => {
+    const response = await axiosInstance.post(`/api/health`, formData, {
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+    });
+    return response.data;
+};
+
+export const createPersonalDetails = async (formData: PersonalDetails) => {
+    const response = await axiosInstance.post(`/api/personal-details`, formData, {
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+    });
+    return response.data;
+};
+
+export const createAddressDetails = async (formData: Address) => {
+    const response = await axiosInstance.post(`/api/address`, formData, {
+        headers: {
+            "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+    });
+    return response.data;
+};

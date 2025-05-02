@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, School, MapPin, Calendar, Award, BookOpen, Activity, Star } from "lucide-react";
-import { AcademicHistory } from "@/types/student";
+import { CheckCircle2, School, Calendar, Award, Edit3 } from "lucide-react";
+import { AcademicHistory } from "@/types/user/academic-history";
+
 
 interface AcademicHistoryFormProps {
   onSubmit: (data: AcademicHistory) => void;
@@ -13,19 +14,28 @@ interface AcademicHistoryFormProps {
 }
 
 export default function AcademicHistoryForm({ onSubmit, initialData = {} }: AcademicHistoryFormProps) {
-  const [formData, setFormData] = useState({
-    previousSchool: initialData.previousSchool || "",
-    previousSchoolAddress: initialData.previousSchoolAddress || "",
-    previousSchoolBoard: initialData.previousSchoolBoard || "",
-    previousSchoolYear: initialData.previousSchoolYear || "",
-    previousSchoolGrade: initialData.previousSchoolGrade || "",
-    previousSchoolSubjects: initialData.previousSchoolSubjects || "",
-    previousSchoolActivities: initialData.previousSchoolActivities || "",
-    previousSchoolAwards: initialData.previousSchoolAwards || "",
-    previousSchoolReasonForLeaving: initialData.previousSchoolReasonForLeaving || "",
+  const [formData, setFormData] = useState<Partial<AcademicHistory>>({
+    studentId: initialData.studentId || 0,
+    lastInstitution: initialData.lastInstitution || null,
+    lastBoardUniversity: initialData.lastBoardUniversity || null,
+    specialization: initialData.specialization || null,
+    lastResult: initialData.lastResult || null,
+    studiedUpToClass: initialData.studiedUpToClass || null,
+    passedYear: initialData.passedYear || null,
+    remarks: initialData.remarks || null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+    ...prev,
+    [name]: ["studiedUpToClass", "passedYear"].includes(name)
+    ? value === "" ? "" : Number(value)
+    : value,
+    }));
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,9 +43,9 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
 
     try {
       // Validate form data
-      if (!formData.previousSchool || !formData.previousSchoolYear) {
-        throw new Error("Please fill in all required fields");
-      }
+      // if (!formData.studentId || !formData.studiedUpToClass || !formData.passedYear) {
+      //   throw new Error("Please fill in all required fields");
+      // }
 
       await onSubmit(formData as AcademicHistory);
     } catch (error) {
@@ -46,172 +56,130 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
   };
 
   return (
-    <div
-    
-      className="space-y-6 bg-white rounded-xl shadow-sm p-6"
-    >
+    <div className="space-y-6 bg-white rounded-xl shadow-sm p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label htmlFor="previousSchool" className="flex items-center gap-2 text-gray-700">
+          <Label htmlFor="studentId" className="flex items-center gap-2 text-gray-700">
             <School className="w-4 h-4" />
-            Previous School *
+            Student ID *
           </Label>
-          <div className="relative">
-            <Input
-              id="previousSchool"
-              value={formData.previousSchool}
-              onChange={(e) => setFormData({ ...formData, previousSchool: e.target.value })}
-              placeholder="Enter previous school name"
-              required
-              className="pl-10"
-            />
-            <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
+          <Input
+            id="studentId"
+            name="studentId"
+            value={formData.studentId || ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter student ID"
+            type="number"
+            required
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="previousSchoolAddress" className="flex items-center gap-2 text-gray-700">
-            <MapPin className="w-4 h-4" />
-            School Address
-          </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolAddress"
-              value={formData.previousSchoolAddress}
-              onChange={(e) => setFormData({ ...formData, previousSchoolAddress: e.target.value })}
-              placeholder="Enter school address"
-              className="pl-10"
-            />
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="previousSchoolBoard" className="flex items-center gap-2 text-gray-700">
+          <Label htmlFor="lastInstitution" className="flex items-center gap-2 text-gray-700">
             <School className="w-4 h-4" />
-            School Board
+            Last Institution
           </Label>
-          <div className="relative">
-            <Select
-              value={formData.previousSchoolBoard}
-              onValueChange={(value) => setFormData({ ...formData, previousSchoolBoard: value })}
-            >
-              <SelectTrigger className="pl-10">
-                <SelectValue placeholder="Select board" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CBSE">CBSE</SelectItem>
-                <SelectItem value="ICSE">ICSE</SelectItem>
-                <SelectItem value="State Board">State Board</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-            <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
+          <Input
+            id="lastInstitution"
+            name="lastInstitution"
+            value={formData.lastInstitution ? String(formData.lastInstitution) : ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter last institution name"
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="previousSchoolYear" className="flex items-center gap-2 text-gray-700">
+          <Label htmlFor="lastBoardUniversity" className="flex items-center gap-2 text-gray-700">
+            <School className="w-4 h-4" />
+            Last Board/University
+          </Label>
+          <Input
+            id="lastBoardUniversity"
+            name="lastBoardUniversity"
+            value={String(formData.lastBoardUniversity) || ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter board/university"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="specialization" className="flex items-center gap-2 text-gray-700">
+            <School className="w-4 h-4" />
+            Specialization
+          </Label>
+          <Input
+            id="specialization"
+            name="specialization"
+            value={formData.specialization ? String(formData.specialization) : ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter specialization"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="lastResult" className="flex items-center gap-2 text-gray-700">
+            <Award className="w-4 h-4" />
+            Last Result
+          </Label>
+          <Select
+            value={formData.lastResult || ""}
+            onValueChange={(value) => handleChange({ target: { name: "lastResult", value } } as React.ChangeEvent<HTMLInputElement>)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select result status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="PASS">Pass</SelectItem>
+              <SelectItem value="FAIL">Fail</SelectItem>
+              <SelectItem value="PENDING">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="studiedUpToClass" className="flex items-center gap-2 text-gray-700">
+            <School className="w-4 h-4" />
+            Studied Up To Class *
+          </Label>
+          <Input
+            id="studiedUpToClass"
+            name="studiedUpToClass"
+            value={formData.studiedUpToClass || ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter class"
+            type="number"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="passedYear" className="flex items-center gap-2 text-gray-700">
             <Calendar className="w-4 h-4" />
             Year of Passing *
           </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolYear"
-              value={formData.previousSchoolYear}
-              onChange={(e) => setFormData({ ...formData, previousSchoolYear: e.target.value })}
-              placeholder="Enter year of passing"
-              type="number"
-              required
-              className="pl-10"
-            />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
+          <Input
+            id="passedYear"
+            name="passedYear"
+            value={formData.passedYear || ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter year of passing"
+            type="number"
+            required
+          />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="previousSchoolGrade" className="flex items-center gap-2 text-gray-700">
-            <Award className="w-4 h-4" />
-            Final Grade/Percentage
+          <Label htmlFor="remarks" className="flex items-center gap-2 text-gray-700">
+            <Edit3 className="w-4 h-4" />
+            Remarks
           </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolGrade"
-              value={formData.previousSchoolGrade}
-              onChange={(e) => setFormData({ ...formData, previousSchoolGrade: e.target.value })}
-              placeholder="Enter final grade/percentage"
-              className="pl-10"
-            />
-            <Award className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="previousSchoolSubjects" className="flex items-center gap-2 text-gray-700">
-            <BookOpen className="w-4 h-4" />
-            Main Subjects
-          </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolSubjects"
-              value={formData.previousSchoolSubjects}
-              onChange={(e) => setFormData({ ...formData, previousSchoolSubjects: e.target.value })}
-              placeholder="Enter main subjects"
-              className="pl-10"
-            />
-            <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="previousSchoolActivities" className="flex items-center gap-2 text-gray-700">
-            <Activity className="w-4 h-4" />
-            Extracurricular Activities
-          </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolActivities"
-              value={formData.previousSchoolActivities}
-              onChange={(e) => setFormData({ ...formData, previousSchoolActivities: e.target.value })}
-              placeholder="Enter extracurricular activities"
-              className="pl-10"
-            />
-            <Activity className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="previousSchoolAwards" className="flex items-center gap-2 text-gray-700">
-            <Star className="w-4 h-4" />
-            Awards/Achievements
-          </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolAwards"
-              value={formData.previousSchoolAwards}
-              onChange={(e) => setFormData({ ...formData, previousSchoolAwards: e.target.value })}
-              placeholder="Enter awards/achievements"
-              className="pl-10"
-            />
-            <Star className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="col-span-2 space-y-2">
-          <Label htmlFor="previousSchoolReasonForLeaving" className="flex items-center gap-2 text-gray-700">
-            <School className="w-4 h-4" />
-            Reason for Leaving
-          </Label>
-          <div className="relative">
-            <Input
-              id="previousSchoolReasonForLeaving"
-              value={formData.previousSchoolReasonForLeaving}
-              onChange={(e) => setFormData({ ...formData, previousSchoolReasonForLeaving: e.target.value })}
-              placeholder="Enter reason for leaving"
-              className="pl-10"
-            />
-            <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
+          <Input
+            id="remarks"
+            name="remarks"
+            value={formData.remarks || ""}
+            onChange={(e) => handleChange(e)}
+            placeholder="Enter remarks"
+          />
         </div>
       </div>
 
@@ -237,4 +205,4 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
       </div>
     </div>
   );
-} 
+}

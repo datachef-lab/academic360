@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,34 +7,34 @@ import {
   CheckCircle2, 
   User, 
   Hash, 
-  BookOpen, 
-  GraduationCap, 
-  Calendar, 
-  Clock, 
-  Users, 
-  Building2,
-
-  Layers
+  GraduationCap
 } from "lucide-react";
-import { AcademicIdentifier } from "@/types/student";
+import { academicIdentifier } from "@/types/user/academic-identifier";
+import { Framework } from "@/types/enums";
 
 interface AcademicIdentifierFormProps {
-  onSubmit: (data: AcademicIdentifier) => void;
-  initialData?: Partial<AcademicIdentifier>;
+  onSubmit: (data: academicIdentifier) => void;
+  initialData?: Partial<academicIdentifier>;
 }
 
 export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: AcademicIdentifierFormProps) {
-  const [formData, setFormData] = useState({
-    registrationNumber: initialData.registrationNumber || "",
-    rollNumber: initialData.rollNumber || "",
-    uid: initialData.uid || "",
-    course: initialData.course || "",
-    specialization: initialData.specialization || "",
-    year: initialData.year || "",
-    semester: initialData.semester || "",
-    section: initialData.section || "",
-    batch: initialData.batch || "",
-    shift: initialData.shift || "",
+  const [formData, setFormData] = useState<academicIdentifier>({
+    studentId: initialData.studentId || 0,
+    frameworkType: initialData.frameworkType || null,
+    rfid: initialData.rfid || null,
+    stream: initialData.stream || null,
+    degreeProgramme: initialData.degreeProgramme || null,
+    cuFormNumber: initialData.cuFormNumber || null,
+    uid: initialData.uid || null,
+    oldUid: initialData.oldUid || null,
+    registrationNumber: initialData.registrationNumber || null,
+    rollNumber: initialData.rollNumber || null,
+    section: initialData.section || null,
+    classRollNumber: initialData.classRollNumber || null,
+    apaarId: initialData.apaarId || null,
+    abcId: initialData.abcId || null,
+    apprid: initialData.apprid || null,
+    checkRepeat: initialData.checkRepeat || false,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,9 +44,9 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
     setIsSubmitting(true);
 
     try {
-      if (!formData.registrationNumber || !formData.rollNumber || !formData.uid || !formData.course) {
-        throw new Error("Please fill in all required fields");
-      }
+      // if (!formData.registrationNumber || !formData.rollNumber || !formData.uid) {
+      //   throw new Error("Please fill in all required fields");
+      // }
 
       await onSubmit(formData);
     } catch (error) {
@@ -58,11 +57,7 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
   };
 
   return (
-    <div
-    
-    
-      className="w-full max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg space-y-8"
-    >
+    <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-xl shadow-lg space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="space-y-2">
           <Label htmlFor="registrationNumber" className="flex items-center gap-2 text-gray-700">
@@ -72,7 +67,7 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
           <div className="relative">
             <Input
               id="registrationNumber"
-              value={formData.registrationNumber}
+              value={formData.registrationNumber || ""}
               onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
               placeholder="Enter registration number"
               required
@@ -90,7 +85,7 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
           <div className="relative">
             <Input
               id="rollNumber"
-              value={formData.rollNumber}
+              value={formData.rollNumber || ""}
               onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value })}
               placeholder="Enter roll number"
               required
@@ -108,7 +103,7 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
           <div className="relative">
             <Input
               id="uid"
-              value={formData.uid}
+              value={formData.uid || ""}
               onChange={(e) => setFormData({ ...formData, uid: e.target.value })}
               placeholder="Enter UID"
               required
@@ -119,144 +114,140 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="course" className="flex items-center gap-2 text-gray-700">
+          <Label htmlFor="frameworkType" className="flex items-center gap-2 text-gray-700">
             <GraduationCap className="w-4 h-4" />
-            Course *
+            Framework Type
           </Label>
           <Select
-            value={formData.course}
-            onValueChange={(value) => setFormData({ ...formData, course: value })}
+            value={formData.frameworkType || ""}
+            onValueChange={(value) => setFormData({ ...formData, frameworkType: value as Framework })}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select course" />
+              <SelectValue placeholder="Select framework type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="B.Sc.">B.Sc.</SelectItem>
-              <SelectItem value="B.Com.">B.Com.</SelectItem>
-              <SelectItem value="B.A.">B.A.</SelectItem>
-              <SelectItem value="M.Sc.">M.Sc.</SelectItem>
-              <SelectItem value="M.Com.">M.Com.</SelectItem>
-              <SelectItem value="M.A.">M.A.</SelectItem>
+              <SelectItem value="CCF">CCF</SelectItem>
+              <SelectItem value="CBCS">CBCS</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="specialization" className="flex items-center gap-2 text-gray-700">
-            <BookOpen className="w-4 h-4" />
-            Specialization
+          <Label htmlFor="rfid" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            RFID
           </Label>
           <div className="relative">
             <Input
-              id="specialization"
-              value={formData.specialization}
-              onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-              placeholder="Enter specialization"
+              id="rfid"
+              value={formData.rfid || ""}
+              onChange={(e) => setFormData({ ...formData, rfid: e.target.value })}
+              placeholder="Enter RFID"
               className="pl-10 w-full"
             />
-            <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="year" className="flex items-center gap-2 text-gray-700">
-            <Calendar className="w-4 h-4" />
-            Year
-          </Label>
-          <Select
-            value={formData.year}
-            onValueChange={(value) => setFormData({ ...formData, year: value })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select year" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1st">1st Year</SelectItem>
-              <SelectItem value="2nd">2nd Year</SelectItem>
-              <SelectItem value="3rd">3rd Year</SelectItem>
-              <SelectItem value="4th">4th Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="semester" className="flex items-center gap-2 text-gray-700">
-            <Layers className="w-4 h-4" />
-            Semester
-          </Label>
-          <Select
-            value={formData.semester}
-            onValueChange={(value) => setFormData({ ...formData, semester: value })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select semester" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1st">1st Semester</SelectItem>
-              <SelectItem value="2nd">2nd Semester</SelectItem>
-              <SelectItem value="3rd">3rd Semester</SelectItem>
-              <SelectItem value="4th">4th Semester</SelectItem>
-              <SelectItem value="5th">5th Semester</SelectItem>
-              <SelectItem value="6th">6th Semester</SelectItem>
-              <SelectItem value="7th">7th Semester</SelectItem>
-              <SelectItem value="8th">8th Semester</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="section" className="flex items-center gap-2 text-gray-700">
-            <Users className="w-4 h-4" />
-            Section
+          <Label htmlFor="cuFormNumber" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            CU Form Number
           </Label>
           <div className="relative">
             <Input
-              id="section"
-              value={formData.section}
-              onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-              placeholder="Enter section"
+              id="cuFormNumber"
+              value={formData.cuFormNumber || ""}
+              onChange={(e) => setFormData({ ...formData, cuFormNumber: e.target.value })}
+              placeholder="Enter CU Form Number"
               className="pl-10 w-full"
             />
-            <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="batch" className="flex items-center gap-2 text-gray-700">
-            <Building2 className="w-4 h-4" />
-            Batch
+          <Label htmlFor="classRollNumber" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            Class Roll Number
           </Label>
           <div className="relative">
             <Input
-              id="batch"
-              value={formData.batch}
-              onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-              placeholder="Enter batch"
+              id="classRollNumber"
+              value={formData.classRollNumber || ""}
+              onChange={(e) => setFormData({ ...formData, classRollNumber: e.target.value })}
+              placeholder="Enter Class Roll Number"
               className="pl-10 w-full"
             />
-            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="shift" className="flex items-center gap-2 text-gray-700">
-            <Clock className="w-4 h-4" />
-            Shift
+          <Label htmlFor="apaarId" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            APAAR ID
           </Label>
-          <Select
-            value={formData.shift}
-            onValueChange={(value) => setFormData({ ...formData, shift: value })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select shift" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Morning">Morning</SelectItem>
-              <SelectItem value="Afternoon">Afternoon</SelectItem>
-              <SelectItem value="Evening">Evening</SelectItem>
-              <SelectItem value="Night">Night</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="relative">
+            <Input
+              id="apaarId"
+              value={formData.apaarId || ""}
+              onChange={(e) => setFormData({ ...formData, apaarId: e.target.value })}
+              placeholder="Enter APAAR ID"
+              className="pl-10 w-full"
+            />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="abcId" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            ABC ID
+          </Label>
+          <div className="relative">
+            <Input
+              id="abcId"
+              value={formData.abcId || ""}
+              onChange={(e) => setFormData({ ...formData, abcId: e.target.value })}
+              placeholder="Enter ABC ID"
+              className="pl-10 w-full"
+            />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="apprid" className="flex items-center gap-2 text-gray-700">
+            <Hash className="w-4 h-4" />
+            APPR ID
+          </Label>
+          <div className="relative">
+            <Input
+              id="apprid"
+              value={formData.apprid || ""}
+              onChange={(e) => setFormData({ ...formData, apprid: e.target.value })}
+              placeholder="Enter APPR ID"
+              className="pl-10 w-full"
+            />
+            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="checkRepeat" className="flex items-center gap-2 text-gray-700">
+            <CheckCircle2 className="w-4 h-4" />
+            Check Repeat
+          </Label>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="checkRepeat"
+              checked={formData.checkRepeat}
+              onChange={(e) => setFormData({ ...formData, checkRepeat: e.target.checked })}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+          </div>
         </div>
       </div>
 

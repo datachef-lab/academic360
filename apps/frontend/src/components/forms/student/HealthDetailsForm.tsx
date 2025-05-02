@@ -5,28 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Droplet, Ruler, Scale, AlertTriangle, Stethoscope, Phone, Shield, Calendar, User } from "lucide-react";
-import { HealthDetails } from "@/types/student";
+import { CheckCircle2, Droplet, Ruler, Scale, AlertTriangle, Stethoscope, Eye } from "lucide-react";
+import { Health } from "@/types/user/health";
+
+
 
 interface HealthDetailsFormProps {
-  onSubmit: (data: HealthDetails) => void;
-  initialData?: Partial<HealthDetails>;
+  onSubmit: (data: Health) => void;
+  initialData?: Partial<Health>;
 }
 
 export default function HealthDetailsForm({ onSubmit, initialData = {} }: HealthDetailsFormProps) {
-  const [formData, setFormData] = useState<HealthDetails>({
-    bloodGroup: initialData.bloodGroup || "",
-    height: initialData.height || "",
-    weight: initialData.weight || "",
-    allergies: initialData.allergies || "",
-    medicalConditions: initialData.medicalConditions || "",
-    medications: initialData.medications || "",
-    emergencyContact: initialData.emergencyContact || "",
-    insuranceProvider: initialData.insuranceProvider || "",
-    insurancePolicyNumber: initialData.insurancePolicyNumber || "",
-    lastCheckupDate: initialData.lastCheckupDate || "",
-    doctorName: initialData.doctorName || "",
-    doctorContact: initialData.doctorContact || "",
+  const [formData, setFormData] = useState<Health>({
+    studentId: initialData.studentId || 0,
+    bloodGroup: initialData.bloodGroup || null,
+    eyePowerLeft: initialData.eyePowerLeft || null,
+    eyePowerRight: initialData.eyePowerRight || null,
+    height: initialData.height || null,
+    width: initialData.width || null,
+    pastMedicalHistory: initialData.pastMedicalHistory || null,
+    pastSurgicalHistory: initialData.pastSurgicalHistory || null,
+    drugAllergy: initialData.drugAllergy || null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,10 +35,6 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
     setIsSubmitting(true);
 
     try {
-      if (!formData.bloodGroup) {
-        throw new Error("Please fill in all required fields");
-      }
-
       await onSubmit(formData);
     } catch (error) {
       console.error("Form submission error:", error);
@@ -48,8 +43,14 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
     }
   };
 
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>, field: keyof HealthDetails) => {
-    setFormData({ ...formData, [field]: e.target.value });
+  const handleNumberInputChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Health) => {
+    const value = e.target.value ? parseFloat(e.target.value) : null;
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>, field: keyof Health) => {
+    const value = e.target.value || null;
+    setFormData({ ...formData, [field]: value });
   };
 
   return (
@@ -61,12 +62,19 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
         <div className="space-y-2">
           <Label htmlFor="bloodGroup" className="flex items-center gap-2 text-gray-700">
             <Droplet className="w-4 h-4" />
-            Blood Group *
+            Blood Group
           </Label>
           <div className="relative">
             <Select
-              value={formData.bloodGroup}
-              onValueChange={(value) => setFormData({ ...formData, bloodGroup: value })}
+              value={formData.bloodGroup?.type || ""}
+              onValueChange={(value) => setFormData({ 
+                ...formData, 
+                bloodGroup: value ? { 
+                  type: value,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                } : null 
+              })}
             >
               <SelectTrigger className="pl-10">
                 <SelectValue placeholder="Select blood group" />
@@ -87,6 +95,44 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="eyePowerLeft" className="flex items-center gap-2 text-gray-700">
+            <Eye className="w-4 h-4" />
+            Left Eye Power
+          </Label>
+          <div className="relative">
+            <Input
+              id="eyePowerLeft"
+              value={formData.eyePowerLeft || ""}
+              onChange={(e) => handleNumberInputChange(e, "eyePowerLeft")}
+              placeholder="Enter left eye power"
+              type="number"
+              step="0.25"
+              className="pl-10"
+            />
+            <Eye className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="eyePowerRight" className="flex items-center gap-2 text-gray-700">
+            <Eye className="w-4 h-4" />
+            Right Eye Power
+          </Label>
+          <div className="relative">
+            <Input
+              id="eyePowerRight"
+              value={formData.eyePowerRight || ""}
+              onChange={(e) => handleNumberInputChange(e, "eyePowerRight")}
+              placeholder="Enter right eye power"
+              type="number"
+              step="0.25"
+              className="pl-10"
+            />
+            <Eye className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="height" className="flex items-center gap-2 text-gray-700">
             <Ruler className="w-4 h-4" />
             Height (cm)
@@ -94,8 +140,8 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
           <div className="relative">
             <Input
               id="height"
-              value={formData.height}
-              onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+              value={formData.height || ""}
+              onChange={(e) => handleNumberInputChange(e, "height")}
               placeholder="Enter height"
               type="number"
               className="pl-10"
@@ -105,15 +151,15 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="weight" className="flex items-center gap-2 text-gray-700">
+          <Label htmlFor="width" className="flex items-center gap-2 text-gray-700">
             <Scale className="w-4 h-4" />
             Weight (kg)
           </Label>
           <div className="relative">
             <Input
-              id="weight"
-              value={formData.weight}
-              onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+              id="width"
+              value={formData.width || ""}
+              onChange={(e) => handleNumberInputChange(e, "width")}
               placeholder="Enter weight"
               type="number"
               className="pl-10"
@@ -123,157 +169,53 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="allergies" className="flex items-center gap-2 text-gray-700">
-            <AlertTriangle className="w-4 h-4" />
-            Allergies
+          <Label htmlFor="pastMedicalHistory" className="flex items-center gap-2 text-gray-700">
+            <Stethoscope className="w-4 h-4" />
+            Past Medical History
           </Label>
           <div className="relative">
             <Textarea
-              id="allergies"
-              value={formData.allergies}
-              onChange={(e) => handleTextareaChange(e, "allergies")}
-              placeholder="Enter any allergies"
+              id="pastMedicalHistory"
+              value={formData.pastMedicalHistory || ""}
+              onChange={(e) => handleTextareaChange(e, "pastMedicalHistory")}
+              placeholder="Enter past medical history"
+              className="pl-10"
+            />
+            <Stethoscope className="absolute left-3 top-4 w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="pastSurgicalHistory" className="flex items-center gap-2 text-gray-700">
+            <Stethoscope className="w-4 h-4" />
+            Past Surgical History
+          </Label>
+          <div className="relative">
+            <Textarea
+              id="pastSurgicalHistory"
+              value={formData.pastSurgicalHistory || ""}
+              onChange={(e) => handleTextareaChange(e, "pastSurgicalHistory")}
+              placeholder="Enter past surgical history"
+              className="pl-10"
+            />
+            <Stethoscope className="absolute left-3 top-4 w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="drugAllergy" className="flex items-center gap-2 text-gray-700">
+            <AlertTriangle className="w-4 h-4" />
+            Drug Allergies
+          </Label>
+          <div className="relative">
+            <Textarea
+              id="drugAllergy"
+              value={formData.drugAllergy || ""}
+              onChange={(e) => handleTextareaChange(e, "drugAllergy")}
+              placeholder="Enter drug allergies"
               className="pl-10"
             />
             <AlertTriangle className="absolute left-3 top-4 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="medicalConditions" className="flex items-center gap-2 text-gray-700">
-            <Stethoscope className="w-4 h-4" />
-            Medical Conditions
-          </Label>
-          <div className="relative">
-            <Textarea
-              id="medicalConditions"
-              value={formData.medicalConditions}
-              onChange={(e) => handleTextareaChange(e, "medicalConditions")}
-              placeholder="Enter any medical conditions"
-              className="pl-10"
-            />
-            <Stethoscope className="absolute left-3 top-4 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="medications" className="flex items-center gap-2 text-gray-700">
-            <Stethoscope className="w-4 h-4" />
-            Current Medications
-          </Label>
-          <div className="relative">
-            <Textarea
-              id="medications"
-              value={formData.medications}
-              onChange={(e) => handleTextareaChange(e, "medications")}
-              placeholder="Enter current medications"
-              className="pl-10"
-            />
-            <Stethoscope className="absolute left-3 top-4 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="emergencyContact" className="flex items-center gap-2 text-gray-700">
-            <Phone className="w-4 h-4" />
-            Emergency Contact
-          </Label>
-          <div className="relative">
-            <Input
-              id="emergencyContact"
-              value={formData.emergencyContact}
-              onChange={(e) => setFormData({ ...formData, emergencyContact: e.target.value })}
-              placeholder="Enter emergency contact number"
-              type="tel"
-              className="pl-10"
-            />
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="insuranceProvider" className="flex items-center gap-2 text-gray-700">
-            <Shield className="w-4 h-4" />
-            Insurance Provider
-          </Label>
-          <div className="relative">
-            <Input
-              id="insuranceProvider"
-              value={formData.insuranceProvider}
-              onChange={(e) => setFormData({ ...formData, insuranceProvider: e.target.value })}
-              placeholder="Enter insurance provider"
-              className="pl-10"
-            />
-            <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="insurancePolicyNumber" className="flex items-center gap-2 text-gray-700">
-            <Shield className="w-4 h-4" />
-            Insurance Policy Number
-          </Label>
-          <div className="relative">
-            <Input
-              id="insurancePolicyNumber"
-              value={formData.insurancePolicyNumber}
-              onChange={(e) => setFormData({ ...formData, insurancePolicyNumber: e.target.value })}
-              placeholder="Enter insurance policy number"
-              className="pl-10"
-            />
-            <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="lastCheckupDate" className="flex items-center gap-2 text-gray-700">
-            <Calendar className="w-4 h-4" />
-            Last Checkup Date
-          </Label>
-          <div className="relative">
-            <Input
-              id="lastCheckupDate"
-              value={formData.lastCheckupDate}
-              onChange={(e) => setFormData({ ...formData, lastCheckupDate: e.target.value })}
-              type="date"
-              className="pl-10"
-            />
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="doctorName" className="flex items-center gap-2 text-gray-700">
-            <User className="w-4 h-4" />
-            Doctor's Name
-          </Label>
-          <div className="relative">
-            <Input
-              id="doctorName"
-              value={formData.doctorName}
-              onChange={(e) => setFormData({ ...formData, doctorName: e.target.value })}
-              placeholder="Enter doctor's name"
-              className="pl-10"
-            />
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="doctorContact" className="flex items-center gap-2 text-gray-700">
-            <Phone className="w-4 h-4" />
-            Doctor's Contact
-          </Label>
-          <div className="relative">
-            <Input
-              id="doctorContact"
-              value={formData.doctorContact}
-              onChange={(e) => setFormData({ ...formData, doctorContact: e.target.value })}
-              placeholder="Enter doctor's contact number"
-              type="tel"
-              className="pl-10"
-            />
-            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           </div>
         </div>
       </div>

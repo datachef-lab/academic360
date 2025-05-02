@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { CheckCircle2, Calendar, User, Mail, MapPin, Globe, Cross, Fingerprint, Languages, Building2, Home, UserCog, Book, School, Clock, Users } from "lucide-react";
+import { CheckCircle2, Calendar, User, Mail, MapPin, Globe, Cross, Fingerprint, Languages, Building2, Home, Copy, UserRound, UserCog, Book, School, Clock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -18,15 +18,14 @@ import { Category } from "@/types/resources/category";
 import { LanguageMedium } from "@/types/resources/language-medium";
 
 interface StudentFormProps {
-  onSubmit: (data: { student?: Student; personalDetails: PersonalDetails }) => void;
+  onSubmit: (data: { student: Student; personalDetails: PersonalDetails }) => void;
   initialData?: {
     student?: Partial<Student>;
     personalDetails?: Partial<PersonalDetails>;
   };
-  showStudentSection?: boolean;
 }
 
-export default function StudentForm({ onSubmit, initialData = {}, showStudentSection = false }: StudentFormProps) {
+export default function StudentForm({ onSubmit, initialData = {} }: StudentFormProps) {
   const [studentData, setStudentData] = useState<Partial<Student>>({
     name: initialData.student?.name || "",
     community: initialData.student?.community || null,
@@ -67,10 +66,8 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
     setIsSubmitting(true);
 
     try {
-      console.log(JSON.stringify(studentData, null, 2));
-      console.log(JSON.stringify(personalDetails, null, 2));
       await onSubmit({
-        student: showStudentSection ? (studentData as Student) : undefined,
+        student: studentData as Student,
         personalDetails: personalDetails as PersonalDetails,
       });
     } catch (error) {
@@ -122,185 +119,184 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
 
   return (
     <div className="space-y-8 bg-white rounded-xl shadow-sm p-8">
-      {showStudentSection && (
-        <div className="space-y-8">
-          <div className="flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-800">Student Information</h2>
+      {/* Student Information Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <User className="w-5 h-5 text-blue-600" />
+          <h2 className="text-xl font-semibold text-gray-800">Student Information</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name" className="flex items-center gap-2 text-gray-700">
+              <User className="w-4 h-4" />
+              Name *
+            </Label>
+            <div className="relative">
+              <Input
+                id="name"
+                value={studentData.name || ""}
+                onChange={(e) => setStudentData({ ...studentData, name: e.target.value })}
+                placeholder="Enter student name"
+                required
+                className="pl-10"
+              />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="name" className="flex items-center gap-2 text-gray-700">
-                <User className="w-4 h-4" />
-                Name *
-              </Label>
-              <div className="relative">
-                <Input
-                  id="name"
-                  value={studentData.name || ""}
-                  onChange={(e) => setStudentData({ ...studentData, name: e.target.value })}
-                  placeholder="Enter student name"
-                  required
-                  className="pl-10"
-                />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+          {/* Community */}
+          <div className="space-y-2">
+            <Label htmlFor="community" className="flex items-center gap-2 text-gray-700">
+              <Users className="w-4 h-4" />
+              Community
+            </Label>
+            <div className="relative">
+              <Select
+                value={studentData.community || undefined}
+                onValueChange={(value: Community) => setStudentData({ ...studentData, community: value })}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Select community" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GUJARATI">Gujarati</SelectItem>
+                  <SelectItem value="NON-GUJARATI">Non-Gujarati</SelectItem>
+                </SelectContent>
+              </Select>
+              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
 
-            {/* Community */}
-            <div className="space-y-2">
-              <Label htmlFor="community" className="flex items-center gap-2 text-gray-700">
-                <Users className="w-4 h-4" />
-                Community
-              </Label>
-              <div className="relative">
-                <Select
-                  value={studentData.community || undefined}
-                  onValueChange={(value: Community) => setStudentData({ ...studentData, community: value })}
-                >
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Select community" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GUJARATI">Gujarati</SelectItem>
-                    <SelectItem value="NON-GUJARATI">Non-Gujarati</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+          {/* Level */}
+          <div className="space-y-2">
+            <Label htmlFor="level" className="flex items-center gap-2 text-gray-700">
+              <School className="w-4 h-4" />
+              Level
+            </Label>
+            <div className="relative">
+              <Select
+                value={studentData.level || undefined}
+                onValueChange={(value: Level) => setStudentData({ ...studentData, level: value })}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Select level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="UNDER_GRADUATE">Undergraduate</SelectItem>
+                  <SelectItem value="POST_GRADUATE">Postgraduate</SelectItem>
+                </SelectContent>
+              </Select>
+              <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
 
-            {/* Level */}
-            <div className="space-y-2">
-              <Label htmlFor="level" className="flex items-center gap-2 text-gray-700">
-                <School className="w-4 h-4" />
-                Level
-              </Label>
-              <div className="relative">
-                <Select
-                  value={studentData.level || undefined}
-                  onValueChange={(value: Level) => setStudentData({ ...studentData, level: value })}
-                >
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Select level" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="UNDER_GRADUATE">Undergraduate</SelectItem>
-                    <SelectItem value="POST_GRADUATE">Postgraduate</SelectItem>
-                  </SelectContent>
-                </Select>
-                <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+          {/* Framework */}
+          <div className="space-y-2">
+            <Label htmlFor="framework" className="flex items-center gap-2 text-gray-700">
+              <Book className="w-4 h-4" />
+              Framework
+            </Label>
+            <div className="relative">
+              <Select
+                value={studentData.framework || undefined}
+                onValueChange={(value: Framework) => setStudentData({ ...studentData, framework: value })}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Select framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CCF">CCF</SelectItem>
+                  <SelectItem value="CBCS">CBCS</SelectItem>
+                </SelectContent>
+              </Select>
+              <Book className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
 
-            {/* Framework */}
-            <div className="space-y-2">
-              <Label htmlFor="framework" className="flex items-center gap-2 text-gray-700">
-                <Book className="w-4 h-4" />
-                Framework
-              </Label>
-              <div className="relative">
-                <Select
-                  value={studentData.framework || undefined}
-                  onValueChange={(value: Framework) => setStudentData({ ...studentData, framework: value })}
-                >
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Select framework" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="CCF">CCF</SelectItem>
-                    <SelectItem value="CBCS">CBCS</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Book className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
+          {/* Shift */}
+          <div className="space-y-2">
+            <Label htmlFor="shift" className="flex items-center gap-2 text-gray-700">
+              <Clock className="w-4 h-4" />
+              Shift
+            </Label>
+            <div className="relative">
+              <Select
+                value={studentData.shift || undefined}
+                onValueChange={(value: Shift) => setStudentData({ ...studentData, shift: value })}
+              >
+                <SelectTrigger className="pl-10">
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MORNING">Morning</SelectItem>
+                  <SelectItem value="AFTERNOON">Afternoon</SelectItem>
+                  <SelectItem value="EVENING">Evening</SelectItem>
+                </SelectContent>
+              </Select>
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
 
-            {/* Shift */}
-            <div className="space-y-2">
-              <Label htmlFor="shift" className="flex items-center gap-2 text-gray-700">
-                <Clock className="w-4 h-4" />
-                Shift
-              </Label>
-              <div className="relative">
-                <Select
-                  value={studentData.shift || undefined}
-                  onValueChange={(value: Shift) => setStudentData({ ...studentData, shift: value })}
-                >
-                  <SelectTrigger className="pl-10">
-                    <SelectValue placeholder="Select shift" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MORNING">Morning</SelectItem>
-                    <SelectItem value="AFTERNOON">Afternoon</SelectItem>
-                    <SelectItem value="EVENING">Evening</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Last Passed Year */}
-            <div className="space-y-2">
-              <Label htmlFor="lastPassedYear" className="flex items-center gap-2 text-gray-700">
-                <School className="w-4 h-4" />
-                Last Passed Year
-              </Label>
-              <div className="relative">
-                <Input
-                  id="lastPassedYear"
-                  type="number"
-                  value={studentData.lastPassedYear || ""}
-                  onChange={(e) => setStudentData({ ...studentData, lastPassedYear: parseInt(e.target.value) })}
-                  placeholder="Enter last passed year"
-                  className="pl-10"
-                />
-                <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2 col-span-2">
-              <Label htmlFor="notes" className="flex items-center gap-2 text-gray-700">
-                <Book className="w-4 h-4" />
-                Notes
-              </Label>
-              <Textarea
-                id="notes"
-                value={studentData.notes || ""}
-                onChange={(e) => setStudentData({ ...studentData, notes: e.target.value })}
-                placeholder="Enter any additional notes"
-                className="min-h-[100px]"
+          {/* Last Passed Year */}
+          <div className="space-y-2">
+            <Label htmlFor="lastPassedYear" className="flex items-center gap-2 text-gray-700">
+              <School className="w-4 h-4" />
+              Last Passed Year
+            </Label>
+            <div className="relative">
+              <Input
+                id="lastPassedYear"
+                type="number"
+                value={studentData.lastPassedYear || ""}
+                onChange={(e) => setStudentData({ ...studentData, lastPassedYear: parseInt(e.target.value) })}
+                placeholder="Enter last passed year"
+                className="pl-10"
               />
+              <School className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
+          </div>
 
-            {/* Handicapped */}
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="handicapped"
-                  checked={studentData.handicapped}
-                  onCheckedChange={(checked) => setStudentData({ ...studentData, handicapped: checked as boolean })}
-                />
-                <Label htmlFor="handicapped" className="text-gray-700">
-                  Handicapped
-                </Label>
-              </div>
+          {/* Notes */}
+          <div className="space-y-2 col-span-2">
+            <Label htmlFor="notes" className="flex items-center gap-2 text-gray-700">
+              <Book className="w-4 h-4" />
+              Notes
+            </Label>
+            <Textarea
+              id="notes"
+              value={studentData.notes || ""}
+              onChange={(e) => setStudentData({ ...studentData, notes: e.target.value })}
+              placeholder="Enter any additional notes"
+              className="min-h-[100px]"
+            />
+          </div>
+
+          {/* Handicapped */}
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="handicapped"
+                checked={studentData.handicapped}
+                onCheckedChange={(checked) => setStudentData({ ...studentData, handicapped: checked as boolean })}
+              />
+              <Label htmlFor="handicapped" className="text-gray-700">
+                Handicapped
+              </Label>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Personal Details Section */}
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div className="flex items-center gap-2">
           <UserCog className="w-5 h-5 text-blue-600" />
           <h2 className="text-xl font-semibold text-gray-800">Personal Details</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Aadhaar Card Number */}
           <div className="space-y-2">
             <Label htmlFor="aadhaarCardNumber" className="flex items-center gap-2 text-gray-700">
@@ -509,7 +505,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
         </div>
 
         {/* Address Section */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-800">Address Information</h2>
@@ -753,4 +749,4 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
       </div>
     </div>
   );
-}
+} 
