@@ -1,24 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CustomPaginationState } from "@/components/settings/SettingsContent";
-
 import { useQuery } from "@tanstack/react-query";
 import { getAllStudents, getSearchedStudents } from "@/services/student";
 import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
-
-
+import "./SearchStudent.css"; // Import custom CSS for table styling
 
 export default function SearchStudent() {
-
   const [searchText, setSearchText] = useState("");
   const {setStudentData,StudentData}=useReportStore();
 
   const [data, setData] = useState<StudentSearchType[]>([]);
   const [dataLength, setDataLength] = useState<number>(0);
-
-  //   const [filteredData, setFilteredData] = useState<StudentSearchType[]>([]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [pagination, setPagination] = useState<CustomPaginationState>({
@@ -27,6 +22,12 @@ export default function SearchStudent() {
     totalElements: 0,
     totalPages: 1,
   });
+
+  // Log the environment variable when component mounts
+  useEffect(() => {
+    console.log("Student profile URL:", import.meta.env.VITE_STUDENT_PROFILE_URL);
+    console.log("Avatar URL format updated to match student detail page");
+  }, []);
 
   const { isFetching: isFetchingDefault } = useQuery({
     queryKey: ["search-student", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
@@ -40,13 +41,20 @@ export default function SearchStudent() {
       setStudentData(content);
 
       console.log({ pageIndex: page - 1, pageSize, totalElements, totalPages });
-
+      
       setPagination((prev) => ({ ...prev, totalElements, totalPages }));
 
       const formattedData = formattedStudent(content);
+      
+      // Debug formatted data to check avatar URLs
+      console.log("First few formatted students:", formattedData.slice(0, 3).map(student => ({
+        id: student.id,
+        name: student.name,
+        uid: student.uid,
+        avatar: student.avatar
+      })));
 
       setData(formattedData);
-
       setDataLength(formattedData.length);
       console.log("studentData/*****",StudentData);
 
@@ -96,7 +104,7 @@ export default function SearchStudent() {
         pagination={pagination}
         setPagination={setPagination}
         setDataLength={setDataLength}
-        refetch={refetch}
+        refetch={refetch as any}
       />
     </div>
   );

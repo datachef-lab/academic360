@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/DatePicker";
-import { CheckCircle2, Calendar, User, Mail, MapPin, Globe, Cross, Fingerprint, Languages, Building2, Home, Copy, UserRound, UserCog, Book, School, Clock } from "lucide-react";
+import { CheckCircle2, Calendar, User, Mail, MapPin, Globe, Cross, Fingerprint, Languages, Building2, Home, UserCog, Book, School, Clock } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -149,7 +149,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
           {/* Community */}
           <div className="space-y-2">
             <Label htmlFor="community" className="flex items-center gap-2 text-gray-700">
-              <Users className="w-4 h-4" />
+              <User className="w-4 h-4" />
               Community
             </Label>
             <div className="relative">
@@ -165,7 +165,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
                   <SelectItem value="NON-GUJARATI">Non-Gujarati</SelectItem>
                 </SelectContent>
               </Select>
-              <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
           </div>
 

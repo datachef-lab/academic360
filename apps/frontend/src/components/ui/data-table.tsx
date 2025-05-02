@@ -97,19 +97,19 @@ export function DataTable<TData, TValue>({
   //   }, [table.getRowModel().rows.length]);
 
   return (
-    <div className="space-y-3 p-1  rounded-2xl my-3">
-        <div className="px-6 py-1   rounded-lg ">
+    <div className="space-y-3 p-1 my-3">
+        <div className="px-6 py-1">
         <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
         </div>
-          <div className=" p-2  overflow-hidden">
+          <div className="p-2 overflow-hidden">
             <Table className="border-separate px-2 border-spacing-y-3 w-full">
               <TableHeader >
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-gray-50  ">
+                  <TableRow key={headerGroup.id} className="bg-gray-50">
                     {headerGroup.headers.map((header) => (
                       <TableHead 
                         key={header.id} 
-                        className="py-3 px-3 first:pl-9 text-center  font-semibold text-base"
+                        className="py-3 px-3 first:pl-9 text-center font-semibold text-base"
                         style={{ width: header.getSize() }}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -136,12 +136,12 @@ export function DataTable<TData, TValue>({
                   table.getRowModel().rows.map((row) => (
                     <TableRow 
                       key={row.id} 
-                       className="  my-24 drop-shadow-md  bg-gray-100 hover:scale-95 rounded-full hover:bg-gray-100 transition-all duration-200 ease-in-out"
+                      className="bg-gray-100"
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
                           key={cell.id} 
-                          className="px-4 py-3 first:pl-10  text-center first:rounded-l-full last:rounded-r-full"
+                          className="px-4 py-3 first:pl-10 text-center"
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>

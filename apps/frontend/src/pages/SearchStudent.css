@@ -1,0 +1,29 @@
+/* Override table row hover effects and rounded borders */
+.search-student-table tr {
+    transform: none !important;
+    transition: none !important;
+    border-radius: 0 !important;
+}
+
+.search-student-table tr:hover {
+    transform: none !important;
+    background-color: #f9fafb !important;
+    scale: 1 !important;
+}
+
+.search-student-table td,
+.search-student-table th {
+    border-radius: 0 !important;
+}
+
+/* Apply these styles to the container */
+.search-student-container .data-table-container {
+    border-radius: 0 !important;
+}
+
+/* Make table rows square, not rounded */
+.search-student-container tr,
+.search-student-container td:first-child,
+.search-student-container td:last-child {
+    border-radius: 0 !important;
+}
