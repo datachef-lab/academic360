@@ -1,0 +1,81 @@
+/* Form Field Styles */
+.ant-form-item {
+  margin-bottom: 1.5rem;
+}
+
+.ant-form-item-label {
+  padding-bottom: 0.5rem;
+}
+
+.ant-form-item-label > label {
+  color: #374151;
+  font-weight: 500;
+}
+
+.ant-input,
+.ant-select-selector,
+.ant-picker {
+  padding-left: 2.5rem !important;
+  height: 3rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid #e5e7eb !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.ant-input:hover,
+.ant-select-selector:hover,
+.ant-picker:hover {
+  border-color: #2563eb !important;
+}
+
+.ant-input:focus,
+.ant-select-selector:focus,
+.ant-picker-focused {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1) !important;
+}
+
+.ant-input-affix-wrapper {
+  padding-left: 2.5rem !important;
+}
+
+.ant-input-textarea {
+  padding-left: 2.5rem !important;
+  min-height: 6rem !important;
+}
+
+/* Select Dropdown Styles */
+.ant-select-dropdown {
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+}
+
+.ant-select-item {
+  padding: 0.75rem 1rem !important;
+}
+
+.ant-select-item-option-selected {
+  background-color: #f3f4f6 !important;
+}
+
+/* Date Picker Styles */
+.ant-picker-panel {
+  border-radius: 0.5rem !important;
+}
+
+.ant-picker-cell-in-view.ant-picker-cell-selected .ant-picker-cell-inner {
+  background-color: #2563eb !important;
+}
+
+/* Form Validation Styles */
+.ant-form-item-has-error .ant-input,
+.ant-form-item-has-error .ant-select-selector,
+.ant-form-item-has-error .ant-picker {
+  border-color: #ef4444 !important;
+}
+
+.ant-form-item-explain-error {
+  color: #ef4444 !important;
+  font-size: 0.875rem !important;
+  margin-top: 0.5rem !important;
+} 

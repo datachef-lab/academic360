@@ -47,10 +47,14 @@ type SettingsContentProps = {
   };
   page?: number;
   pageSize?: number;
+  isAdmin?: boolean;
 };
 
 async function fetchData({ activeSetting, page = 1, pageSize = 10 }: SettingsContentProps) {
-  const response = await axiosInstance.get(`/api${activeSetting.endpoint}?page=${page}&pageSize=${pageSize}`);
+  let url=`/api${activeSetting.endpoint}?page=${page}&pageSize=${pageSize}`;
+  url += activeSetting.label === "All Users" ? `&isAdmin=${true}` : "";
+  console.log("URL", url);
+  const response = await axiosInstance.get(url);
 
   switch (activeSetting.label) {
     case "All Users":
@@ -140,6 +144,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
         activeSetting,
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
+        isAdmin: activeSetting.label === "All Users" ? true : false,
       });
       console.log(data);
       setColumns(tableCol as ColumnDef<unknown, unknown>[]);

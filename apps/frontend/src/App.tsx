@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
+
   AddStudentPage,
   GetReportsPage,
   HomePage,
@@ -8,7 +9,7 @@ import {
   MyWorkspacePage,
   NotFoundPage,
   RootPage,
-  SearchStudentPage,
+
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
@@ -30,6 +31,9 @@ import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
+import SearchStudentPage from "./pages/SearchStudentPage";
+
+
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
   { path: "/login", element: <LoginPage /> },

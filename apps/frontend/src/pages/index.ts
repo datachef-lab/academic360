@@ -3,7 +3,7 @@ import GetReportsPage from "@/pages/GetReportsPage";
 import HomePage from "@/pages/HomePage";
 import LoginPage from "@/pages/LoginPage";
 import RootPage from "@/pages/RootPage";
-import SearchStudentPage from "@/pages/SearchStudentPage";
+import SearchStudentPage from "@/pages/SearchStudent";
 import SettingsPage from "@/pages/SettingsPage";
 import UserProfilePage from "@/pages/UserProfilePage";
 import NotFoundPage from "@/pages/NotFoundPage";

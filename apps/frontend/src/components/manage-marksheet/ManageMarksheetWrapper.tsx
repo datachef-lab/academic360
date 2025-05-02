@@ -31,7 +31,7 @@ export default function ManageMarksheetWrapper({ children }: { children: React.R
     <div className="flex flex-col gap-6">
       <Card className="shadow-lg border rounded-2xl">
         <CardHeader className="border-b p-6">
-          <CardTitle className="text-2xl font-semibold">Manage Marksheet</CardTitle>
+          <CardTitle className="text-2xl font-semibold">Add Marksheet</CardTitle>
         </CardHeader>
         <CardContent className="p-6 flex flex-col gap-6">
           <div className="flex justify-between">

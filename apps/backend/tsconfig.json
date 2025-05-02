@@ -21,6 +21,6 @@
       "@/*": ["./src/*"] // General path for other imports
     }
   },
-  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js"],
+  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js", "../frontend/src/utils/avatar.ts", "../frontend/src/types/Auth"],
   "exclude": ["dist", "node_modules"]
 }

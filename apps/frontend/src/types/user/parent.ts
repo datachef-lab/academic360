@@ -1,3 +1,4 @@
+
 import { ParentType } from "../enums";
 import { AnnualIncome } from "../resources/annual-income";
 import { Person } from "./person";

@@ -1,34 +1,47 @@
 import React from 'react';
-import SearchStudent from './SearchStudentPage';
+import SearchStudent from './SearchStudent';
 import FilterAndExportComponent from '@/components/reports/FilterAndExportComponent';
-import { Download, FileText} from 'lucide-react';
+import { Download} from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Downloads: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-white p-2 sm:p-2 lg:p-4">
       <div className="max-w-auto mx-auto space-y-6">
         {/* Header Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-        >
-          <div className="flex items-center gap-3">
-            <div className="bg-teal-100 p-2 rounded-lg shadow-md">
-              <Download className="h-6 w-6 text-teal-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800">Downloads</h2>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <FileText className="h-4 w-4" />
-            <span>Export your data in multiple formats</span>
-          </div>
-        </motion.div>
+
+         <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-6 sm:p-4 bg-white/30 backdrop-blur-sm"
+                  >
+                    <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+                      <motion.div
+                        whileHover={{ scale: 1.05, rotate: -5 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="bg-gradient-to-br from-teal-400 to-teal-600 p-3 rounded-xl shadow-lg"
+                      >
+                        <Download className="h-6 w-6 text-white" />
+                      </motion.div>
+                      <div>
+                        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Downloads</h2>
+                        <p className="text-sm text-teal-600 font-medium">Export your data in multiple formats</p>
+                      </div>
+                    </div>
+            
+                   
+            
+                  <motion.div
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                      className="h-1 bg-gradient-to-r mt-2 from-teal-400 via-teal-500 to-teal-400 rounded-full origin-left col-span-full"
+                    />
+                  </motion.div>
 
         {/* Main Content Grid */}
-        <div className="grid grid-cols-1 gap-6 w-full ">
+        <div className="grid grid-cols-1 gap-6 p-2 w-full ">
           {/* Filter Section - Full Width */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -48,7 +61,7 @@ const Downloads: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="col-span-full"
           >
-            <div className="bg-white rounded-2xl shadow-lg px-4 py-2 ">
+            <div className=" bg-white rounded-2xl shadow-lg  ">
              
               <SearchStudent />
             </div>

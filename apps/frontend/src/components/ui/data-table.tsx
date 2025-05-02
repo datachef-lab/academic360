@@ -97,63 +97,70 @@ export function DataTable<TData, TValue>({
   //   }, [table.getRowModel().rows.length]);
 
   return (
-    <div className="space-y-5 my-3">
-      <DataTableToolbar table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              Array(pagination.pageSize)
-                .fill(null)
-                .map(() =>
-                  table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => {
-                        return (
-                          <TableHead key={header.id}>
-                            <Skeleton className="h-[16px] rounded-full" />
-                          </TableHead>
-                        );
-                      })}
+    <div className="space-y-3 p-1  rounded-2xl my-3">
+        <div className="px-6 py-1   rounded-lg ">
+        <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
+        </div>
+          <div className=" p-2  overflow-hidden">
+            <Table className="border-separate px-2 border-spacing-y-3 w-full">
+              <TableHeader >
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="bg-gray-50  ">
+                    {headerGroup.headers.map((header) => (
+                      <TableHead 
+                        key={header.id} 
+                        className="py-3 px-3 first:pl-9 text-center  font-semibold text-base"
+                        style={{ width: header.getSize() }}
+                      >
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array(pagination.pageSize).fill(null).map((_, index) => (
+                    <TableRow key={index} className="bg-gray-50 rounded-lg">
+                      {columns.map((_, colIndex) => (
+                        <TableCell 
+                          key={colIndex} 
+                          className="px-4 py-3  first:rounded-l-lg last:rounded-r-lg"
+                        >
+                          <Skeleton className="h-4 w-full rounded-full" />
+                        </TableCell>
+                      ))}
                     </TableRow>
-                  )),
-                )
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-2">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  ))
+                ) : table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow 
+                      key={row.id} 
+                       className="  my-24 drop-shadow-md  bg-gray-100 hover:scale-95 rounded-full hover:bg-gray-100 transition-all duration-200 ease-in-out"
+                    >
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell 
+                          key={cell.id} 
+                          className="px-4 py-3 first:pl-10  text-center first:rounded-l-full last:rounded-r-full"
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                      No results found.
                     </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="my-3">
-        <DataTablePagination table={table} />
-      </div>
-    </div>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="my-3">
+            <DataTablePagination table={table} />
+          </div>
+        </div>
   );
 }
