@@ -8,6 +8,7 @@ export interface Parent {
     parentType: ParentType | null,
     fatherDetails?: Person | null;
     motherDetails?: Person | null;
+    guardianDetails?: Person | null;
     annualIncome?: AnnualIncome | null;
     createdAt: Date,
     updatedAt: Date,

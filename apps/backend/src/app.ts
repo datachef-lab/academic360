@@ -55,7 +55,9 @@ import {
     addressRouter,
     reportRouter,
     specializationRouter,
-    personalDetailsRouter
+    personalDetailsRouter,
+    familyRouter,
+    healthRouter
 
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
@@ -188,6 +190,8 @@ app.use("/api/religions", religionRouter);
 
 app.use("/api/state", stateRouter);
 
+app.use("/api/family", familyRouter);
+
 app.use("/api/nationalities", nationalityRouter);
 
 app.use("/api/countries", countryRouter);
@@ -231,6 +235,8 @@ app.use("/api/academicIdentifiers", academicIdentifierRouter);
 app.use("/api/academicHistories", academicHistoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
+
+app.use("/api/health", healthRouter);
 
 app.use("/api/reports", reportRouter);
 

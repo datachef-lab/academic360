@@ -1,3 +1,7 @@
-export default function AddStudent() {
-  return <div>AddStudent</div>;
+export default function AddStudentPage() {
+  return (
+    <div>
+      Add student page
+    </div>
+  )
 }

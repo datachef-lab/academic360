@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
+import { findPersonalDetailsByStudentId, addPersonalDetails } from "@/services/personal-details-api";
 import { PersonalDetails } from "@/types/user/personal-details";
 import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -68,16 +68,9 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
       return result.payload;
     },
     postFn: async (personalDetails: PersonalDetails) => {
-      // Use addPersonalDetails only if we don't have an ID yet
-      if (!personalDetails.id) {
-        const result = await addPersonalDetails(personalDetails);
-        console.log('Create personal details API response:', result);
-        return result.payload as PersonalDetails;
-      } else {
-        const result = await updatePersonalDetails(personalDetails.id, personalDetails);
-        console.log('Update personal details API response:', result);
-        return result.payload as PersonalDetails;
-      }
+      const result = await addPersonalDetails(personalDetails);
+      console.log('Update personal details API response:', result);
+      return result.payload as PersonalDetails;
     },
     default: {
       ...defaultPersonalDetails,
@@ -95,18 +88,12 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }, [personalDetailsData]);
 
   const updateMutation = useMutation({
-    mutationFn: (formData: PersonalDetails) => {
-      if (formData.id) {
-        return updatePersonalDetails(formData.id, formData);
-      } else {
-        return addPersonalDetails(formData);
-      }
-    },
+    mutationFn: (formData: PersonalDetails) => 
+      addPersonalDetails(formData),
     onSuccess: () => {
       toast.success("Personal details have been successfully updated.", {
         icon: <PenLine />,
       });
-      setShowSuccess(true);
       refetch();
     },
     onError: (error) => {
