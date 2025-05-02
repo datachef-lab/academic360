@@ -40,38 +40,29 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
 
   const { data: healthData, loading, refetch } = useFetch<Health>({
     getFn: async () => {
-      try {
-        const result = await findHealthDetailsByStudentId(studentId);
-        console.log("Health details fetched:", result);
-        
-        // Check if payload exists and is not null
-        if (!result || result.payload === undefined) {
-          return null;
-        }
-        
-        if (result.payload?.bloodGroup?.type) {
-          console.log("Setting blood group from API data:", result.payload.bloodGroup.type);
-          setSelectedBloodGroup(result.payload.bloodGroup.type);
-        }
-        
-        return result.payload;
-      } catch (error) {
-        console.error("Error fetching health details:", error);
+      const result = await findHealthDetailsByStudentId(studentId);
+      console.log("Health details fetched:", result);
+      
+      // Check if payload exists and is not null
+      if (!result || result.payload === undefined) {
         return null;
       }
+      
+      if (result.payload?.bloodGroup?.type) {
+        console.log("Setting blood group from API data:", result.payload.bloodGroup.type);
+        setSelectedBloodGroup(result.payload.bloodGroup.type);
+      }
+      
+      return result.payload;
     },
     postFn: async (data) => {
-      try {
-        const result = await createHealthDetails(data);
-        
-        if (!result || result.payload === undefined) {
-          throw new Error("Invalid API response format");
-        }
-        
-        return result.payload as Health;
-      } catch (error) {
-        throw error;
+      const result = await createHealthDetails(data);
+      
+      if (!result || result.payload === undefined) {
+        throw new Error("Invalid API response format");
       }
+      
+      return result.payload as Health;
     },
     default: {
       ...defaultHealthDetails,
@@ -107,7 +98,7 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
     mutationFn: async (data: Health) => {
       try {
         // First try to update the health details (without blood group data)
-        const { bloodGroup, ...healthDataWithoutBloodGroup } = data;
+        const { ...healthDataWithoutBloodGroup } = data;
         
         console.log("Submitting health data without blood group:", healthDataWithoutBloodGroup);
         
@@ -141,7 +132,7 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
         // If blood group is selected and there's health data with ID
         if (selectedBloodGroup && healthResult?.payload?.id) {
           // Get the blood group ID from the health result if available
-          let bgId = healthResult.payload.bloodGroup?.id || data.bloodGroup?.id || 0;
+          const bgId = healthResult.payload.bloodGroup?.id || data.bloodGroup?.id || 0;
           
           if (bgId > 0) {
             console.log("Updating existing blood group:", { id: bgId, type: selectedBloodGroup });

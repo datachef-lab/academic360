@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IdCard, Mail, Phone, User, Briefcase, GraduationCap, BadgeIndianRupee, Save, CheckCircle } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -356,9 +357,9 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-                  </div>
-                  </div>
-                </div>
+            </div>
+          </div>
+        </div>
 
         {/* Father Details */}
         {shouldShowParentSection("fatherDetails") && (
@@ -372,7 +373,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
                 <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Qualification</label>
-                  </div>
+              </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" />
@@ -384,14 +385,14 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   onChange={(e) => handleNestedNestedChange('fatherDetails', 'qualification', e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
-                  </div>
-                </div>
+              </div>
+            </div>
 
             {/* Father's Occupation */}
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
                 <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Occupation</label>
-                  </div>
+              </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
@@ -403,14 +404,14 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   onChange={(e) => handleNestedNestedChange('fatherDetails', 'occupation', e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
-                  </div>
-                </div>
+              </div>
+            </div>
 
             {/* Father's Image Upload */}
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
                 <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Upload Image</label>
-                </div>
+              </div>
               <div className="relative">
                 {formData.fatherDetails?.image && (
                   <div className="mb-2">
@@ -432,8 +433,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   }}
                   className="w-full py-2"
                 />
-                  </div>
-                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -449,7 +450,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
                 <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Qualification</label>
-                  </div>
+              </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" />
@@ -461,14 +462,14 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   onChange={(e) => handleNestedNestedChange('motherDetails', 'qualification', e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
-                  </div>
-                </div>
+              </div>
+            </div>
 
             {/* Mother's Occupation */}
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
                 <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Occupation</label>
-                  </div>
+              </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
@@ -480,8 +481,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   onChange={(e) => handleNestedNestedChange('motherDetails', 'occupation', e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
-                  </div>
-                </div>
+              </div>
+            </div>
 
             {/* Mother's Image Upload */}
             <div className="flex flex-col mr-8">
@@ -536,8 +537,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
               onChange={(e) => handleNestedNestedChange('guardianDetails', 'qualification', e.target.value)}
               className="w-full pl-10 pr-3 rounded-lg py-2"
             />
-                  </div>
-                </div>
+          </div>
+        </div>
 
         {/* Guardian's Occupation */}
         <div className="flex flex-col mr-8">
@@ -556,7 +557,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
               className="w-full pl-10 pr-3 rounded-lg py-2"
             />
           </div>
-                </div>
+        </div>
 
         {/* Guardian's Image Upload */}
         <div className="flex flex-col mr-8">
@@ -585,7 +586,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
               className="w-full py-2"
             />
           </div>
-                </div>
+        </div>
 
         {/* Annual Income */}
         <div className="col-span-2 mt-4">
@@ -642,11 +643,11 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             ) : (
               <>
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-              Submit
+                Submit
               </>
             )}
-            </Button>
-          </div>
+          </Button>
+        </div>
       </div>
     </div>
   );

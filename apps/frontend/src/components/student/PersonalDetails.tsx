@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
-import { PersonalDetails } from "@/types/user/personal-details";
+import { PersonalDetails as PersonalDetailsType } from "@/types/user/personal-details";
 import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useFetch } from "@/hooks/useFetch";
 
 // Helper function to safely access object properties
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getNameProperty = (obj: any): string => {
   if (obj && typeof obj === 'object' && 'name' in obj && typeof obj.name === 'string') {
     return obj.name;
@@ -16,6 +17,7 @@ const getNameProperty = (obj: any): string => {
   return '';
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getAddressProperty = (obj: any, prop: string): string => {
   if (obj && typeof obj === 'object' && prop in obj && obj[prop] !== null) {
     return obj[prop];
@@ -35,19 +37,19 @@ const genderOptions = [
   { value: "TRANSGENDER", label: "Transgender" },
 ];
 
-const defaultPersonalDetails: PersonalDetails = {
+const defaultPersonalDetails: PersonalDetailsType = {
   studentId: 0,
-      aadhaarCardNumber: null,
-      email: null,
-      alternativeEmail: null,
-      dateOfBirth: null,
-      nationality: null,
-      motherTongue: null,
-      religion: null,
-      residentialAddress: null,
-      mailingAddress: null,
-      category: null,
-      gender: null,
+  aadhaarCardNumber: null,
+  email: null,
+  alternativeEmail: null,
+  dateOfBirth: null,
+  nationality: null,
+  motherTongue: null,
+  religion: null,
+  residentialAddress: null,
+  mailingAddress: null,
+  category: null,
+  gender: null,
   disability: "OTHER",
   createdAt: new Date(),
   updatedAt: new Date(),
@@ -61,31 +63,31 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { data: personalDetailsData, loading, refetch } = useFetch<PersonalDetails>({
+  const { data: personalDetailsData, loading, refetch } = useFetch<PersonalDetailsType>({
     getFn: async () => {
       const result = await findPersonalDetailsByStudentId(studentId);
       console.log('Personal details API response:', result);
       return result.payload;
     },
-    postFn: async (personalDetails: PersonalDetails) => {
+    postFn: async (personalDetails: PersonalDetailsType) => {
       // Use addPersonalDetails only if we don't have an ID yet
       if (!personalDetails.id) {
         const result = await addPersonalDetails(personalDetails);
         console.log('Create personal details API response:', result);
-        return result.payload as PersonalDetails;
+        return result.payload as PersonalDetailsType;
       } else {
         const result = await updatePersonalDetails(personalDetails.id, personalDetails);
         console.log('Update personal details API response:', result);
-        return result.payload as PersonalDetails;
+        return result.payload as PersonalDetailsType;
       }
     },
     default: {
       ...defaultPersonalDetails,
       studentId
-    } as unknown as PersonalDetails,
+    } as PersonalDetailsType,
   });
 
-  const [formData, setFormData] = useState<PersonalDetails>(defaultPersonalDetails);
+  const [formData, setFormData] = useState<PersonalDetailsType>(defaultPersonalDetails);
 
   useEffect(() => {
     if (personalDetailsData) {
@@ -95,7 +97,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }, [personalDetailsData]);
 
   const updateMutation = useMutation({
-    mutationFn: (formData: PersonalDetails) => {
+    mutationFn: (formData: PersonalDetailsType) => {
       if (formData.id) {
         return updatePersonalDetails(formData.id, formData);
       } else {
@@ -182,7 +184,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                   id={name}
                   name={name}
                   type={type}
-                  value={formData[name as keyof PersonalDetails] as string || ""}
+                  value={formData[name as keyof PersonalDetailsType] as string || ""}
                   placeholder={label}
                   onChange={handleChange}
                   className={`w-full pl-10 pr-3 rounded-lg py-2 ${errors[name] ? "border-red-500" : ""}`}
@@ -204,6 +206,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <Input
                 name="dateOfBirth"
                 type="date"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 value={formData.dateOfBirth ? new Date(formData.dateOfBirth as any).toISOString().split('T')[0] : ""}
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -223,7 +226,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <select
                 name="gender"
                 value={formData.gender || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }) as PersonalDetails)}
+                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }) as PersonalDetailsType)}
                 className="w-full pl-10 pr-3 rounded-lg py-2 border"
               >
                 <option value="">Select Gender</option>
@@ -252,12 +255,12 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     setFormData(prev => ({
                       ...prev,
                       religion: { ...prev.religion, name: e.target.value }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   } else {
                     setFormData(prev => ({
                       ...prev,
                       religion: { name: e.target.value, id: 0 }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   }
                 }}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -283,12 +286,12 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     setFormData(prev => ({
                       ...prev,
                       category: { ...prev.category, name: e.target.value }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   } else {
                     setFormData(prev => ({
                       ...prev,
                       category: { name: e.target.value, id: 0 }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   }
                 }}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -314,12 +317,12 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     setFormData(prev => ({
                       ...prev,
                       nationality: { ...prev.nationality, name: e.target.value }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   } else {
                     setFormData(prev => ({
                       ...prev,
                       nationality: { name: e.target.value, id: 0 }
-                    }) as PersonalDetails);
+                    }) as PersonalDetailsType);
                   }
                 }}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -339,7 +342,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <select
                 name="disability"
                 value={formData.disability || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, disability: e.target.value }) as PersonalDetails)}
+                onChange={(e) => setFormData(prev => ({ ...prev, disability: e.target.value }) as PersonalDetailsType)}
                 className="w-full pl-10 pr-3 rounded-lg py-2 border"
               >
                 <option value="">None</option>
@@ -377,7 +380,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.residentialAddress,
                             addressLine: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -399,12 +402,12 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.residentialAddress,
                             pincode: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
                   </div>
-                    </div>
+                </div>
 
                 <div className="flex flex-col gap-1">
                   <label className="font-medium">Landmark</label>
@@ -421,7 +424,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.residentialAddress,
                             landmark: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       placeholder="Enter landmark"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -444,7 +447,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.residentialAddress,
                             phone: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       placeholder="Enter phone number"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -467,7 +470,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.residentialAddress,
                             localityType: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2 border"
                     >
@@ -505,7 +508,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.mailingAddress,
                             addressLine: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -527,7 +530,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.mailingAddress,
                             pincode: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -549,7 +552,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.mailingAddress,
                             landmark: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       placeholder="Enter landmark"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -572,7 +575,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.mailingAddress,
                             phone: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       placeholder="Enter phone number"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -595,7 +598,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                             ...prev.mailingAddress,
                             localityType: e.target.value
                           }
-                        }) as PersonalDetails);
+                        }) as PersonalDetailsType);
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2 border"
                     >
@@ -610,7 +613,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <p className="text-gray-500">No mailing address provided</p>
             )}
           </div>
-              </div>
+        </div>
 
         {/* Submit Button */}
         <div className="col-span-2 mt-6">
@@ -639,7 +642,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                 Save Changes
               </>
             )}
-            </Button>
+          </Button>
         </div>
       </div>
     </div>
