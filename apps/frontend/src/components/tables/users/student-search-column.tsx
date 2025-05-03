@@ -38,6 +38,54 @@ export interface StudentSearchType {
   avatar?: string;
 }
 
+// Avatar cell component with proper React component naming
+function AvatarCell({ row }: { row: { original: StudentSearchType } }) {
+  const student = row.original;
+  const name = student.name;
+  const avatar = student.avatar;
+  
+  const [imgError, setImgError] = useState(false);
+  
+  // Log avatar URL to debug
+  useEffect(() => {
+    if (avatar) {
+      console.log(`Avatar URL for ${name}:`, avatar);
+    }
+  }, [avatar, name]);
+  
+  const stringToColor = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const color = `hsl(${hash % 360}, 70%, 60%)`;
+    return color;
+  };
+
+  const bgColor = stringToColor(name);
+
+  return (
+    <div className="flex items-center justify-center">
+      <Avatar className="h-10 w-10">
+        {avatar && !imgError ? (
+          <AvatarImage 
+            className="object-cover"
+            src={avatar} 
+            alt={name} 
+            onError={() => {
+              console.error(`Avatar failed to load for ${name}:`, avatar);
+              setImgError(true);
+            }}
+          />
+        ) : null}
+        <AvatarFallback style={{ backgroundColor: bgColor }}>
+          {name.charAt(0).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+    </div>
+  );
+}
+
 export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
   {
     accessorKey: "avatar",
@@ -47,52 +95,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
         <span>Avatar</span>
       </div>
     ),
-    cell: ({ row }) => {
-      const student = row.original;
-      const name = student.name;
-      const avatar = student.avatar;
-      
-      const [imgError, setImgError] = useState(false);
-      
-      // Log avatar URL to debug
-      useEffect(() => {
-        if (avatar) {
-          console.log(`Avatar URL for ${name}:`, avatar);
-        }
-      }, [avatar, name]);
-      
-      const stringToColor = (str: string) => {
-        let hash = 0;
-        for (let i = 0; i < str.length; i++) {
-          hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const color = `hsl(${hash % 360}, 70%, 60%)`;
-        return color;
-      };
-    
-      const bgColor = stringToColor(name);
-    
-      return (
-        <div className="flex items-center justify-center">
-          <Avatar className="h-10 w-10">
-            {avatar && !imgError ? (
-              <AvatarImage 
-                className="object-cover"
-                src={avatar} 
-                alt={name} 
-                onError={() => {
-                  console.error(`Avatar failed to load for ${name}:`, avatar);
-                  setImgError(true);
-                }}
-              />
-            ) : null}
-            <AvatarFallback style={{ backgroundColor: bgColor }}>
-              {name.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-      );
-    },
+    cell: ({ row }) => <AvatarCell row={row} />,
   },
   {
     accessorKey: "rollNumber",

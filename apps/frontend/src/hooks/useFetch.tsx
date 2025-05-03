@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 // Generic useFetch hook that works with React Query v4
@@ -35,7 +35,7 @@ export function useFetch<T>({
     },
   );
 
-  const refetch = async () => {
+  const refetch = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getFn();
@@ -50,7 +50,7 @@ export function useFetch<T>({
     } finally {
       setLoading(false);
     }
-  };
+  }, [getFn]);
 
   const updateData = async (newData: T) => {
     if (!postFn) {
@@ -76,7 +76,7 @@ export function useFetch<T>({
     if (!query.isLoading && !query.data && !query.error) {
       refetch();
     }
-  }, []);
+  }, [query.isLoading, query.data, query.error, refetch]);
 
   return {
     data,

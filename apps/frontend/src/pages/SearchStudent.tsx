@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { CustomPaginationState } from "@/components/settings/SettingsContent";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, RefetchOptions, QueryObserverResult } from "@tanstack/react-query";
 import { getAllStudents, getSearchedStudents } from "@/services/student";
 import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
@@ -15,7 +15,7 @@ export default function SearchStudent() {
   const [data, setData] = useState<StudentSearchType[]>([]);
   const [dataLength, setDataLength] = useState<number>(0);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Removed eslint-disable comment since we're fixing the type
   const [pagination, setPagination] = useState<CustomPaginationState>({
     pageIndex: 0, // TanStack Table is 0-based
     pageSize: 10,
@@ -88,9 +88,15 @@ export default function SearchStudent() {
 
         return formattedData;
       }
+      return [];
     }, // Query function with page, pageSize, and search text
     enabled: false,
   });
+
+  // Properly typed refetch function to match DataTable expectations
+  const refetchWrapper = (options?: RefetchOptions): Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> => {
+    return refetch(options) as Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>>;
+  };
 
   return (
     <div className="overflow-x-auto  w-full h-full   ">
@@ -104,7 +110,7 @@ export default function SearchStudent() {
         pagination={pagination}
         setPagination={setPagination}
         setDataLength={setDataLength}
-        refetch={refetch as any}
+        refetch={refetchWrapper}
       />
     </div>
   );
