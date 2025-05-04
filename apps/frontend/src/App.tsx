@@ -21,7 +21,7 @@ import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
-import Dashboard from "./components/LibManagement/Dashboard";
+
 
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
@@ -32,6 +32,7 @@ import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
 import SearchStudentPage from "./pages/SearchStudentPage";
+import LibraryDashboard from "./pages/LibraryDashboard";
 
 
 const router = createBrowserRouter([
@@ -78,7 +79,7 @@ const router = createBrowserRouter([
         ],
       },
       { path: "student-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <Dashboard /> },
+      { path: "lib", element: <LibraryDashboard /> },
 
       { path: "catalog", element: <BookCatalog /> },
       { path: "issued-book", element: <IssueRetun /> },

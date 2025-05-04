@@ -1,23 +1,23 @@
-
-
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Award, User, BookOpen, Code2, ArrowUpDown, GraduationCap, BookUser } from "lucide-react";
 import { Report } from "./types";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "../ui/skeleton";
 
-
+const profileImageUrl = import.meta.env.VITE_STUDENT_PROFILE_URL;
 export const ReportColumns: ColumnDef<Report>[] = [
+
   // {
   //   accessorKey: "id",
   //   header: ({ column }) => (
   //     <div 
-  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
   //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
   //     >
-  //       <FileText className="h-4 w-4 text-teal-600" />
+  //       <FileText className="h-5 w-5 text-purple-500" />
   //       <span>ID</span>
-  //       <ArrowUpDown className="h-4 w-4 " />
+  //     
   //     </div>
   //   ),
   //   cell: ({ row }) => (
@@ -30,12 +30,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "rollNumber",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold  cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>Roll No</span>
-        <ArrowUpDown className="h-4 w-4 " />
+       <ArrowUpDown className="h-4 w-4 " />
       </div>
     ),
     cell: ({ row }) => (
@@ -48,16 +48,16 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "registrationNumber",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <User className="h-4 w-4 text-teal-600" />
+        <User className="h-5 w-5 text-purple-500" />
         <span>Registration No.</span>
-        <ArrowUpDown className="h-4 w-4 " />
+       <ArrowUpDown className="h-4 w-4 " />
       </div>
     ),
     cell: ({ row }) => (
-      <Badge variant="secondary" className="font-mono  bg-indigo-50 text-indigo-700 hover:bg-indigo-50">
+      <Badge variant="secondary" className="font-mono  bg-indigo-50 text-indigo-700 hover:bg-indigo-50 py-1 px-2 drop-shadow-md">
       {row.getValue("registrationNumber")}
     </Badge>
     ),
@@ -66,10 +66,10 @@ export const ReportColumns: ColumnDef<Report>[] = [
   //   accessorKey: "uid",
   //   header: ({ column }) => (
   //     <div 
-  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
   //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
   //     >
-  //       <Calendar className="h-4 w-4 text-teal-600" />
+  //       <Calendar className="h-5 w-5 text-purple-500" />
   //       <span>UID</span>
   //       <ArrowUpDown className="h-4 w-4 " />
   //     </div>
@@ -84,16 +84,16 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "name",
     header: ({ column }) => (
       <div 
-        className="flex items-center justify-center  gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center justify-center  gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookUser className="h-4 w-4 text-teal-600  " />
+        <BookUser className="h-5 w-5 text-purple-500  " />
         <span>Name</span>
         <ArrowUpDown className="h-4 w-4  " />
       </div>
     ),
     cell: ({ row }) => {
-      const name = row.original.name;
+      const { name, uid } = row.original;
       
       const stringToColor = (str: string) => {
         let hash = 0;
@@ -104,12 +104,25 @@ export const ReportColumns: ColumnDef<Report>[] = [
       };
     
       const bgColor = stringToColor(name);
+      const avatar = `${profileImageUrl}/Student_Image_${uid}.jpg`;
     
       return (
         <div className="flex items-center">
           <Avatar className="h-8 w-8">
-            <AvatarFallback style={{ backgroundColor: bgColor }}>
+            {avatar ? (<AvatarImage
+              src={avatar}
+              alt={name}
+              className="object-cover"
+            /> ): 
+            (
+              <AvatarFallback style={{ backgroundColor: bgColor }}>
               {name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+
+            )
+            }
+            <AvatarFallback style={{ backgroundColor: bgColor }}>
+              <Skeleton className="h-8 w-8 rounded-full "></Skeleton>
             </AvatarFallback>
           </Avatar>
           <div className="ml-4">
@@ -123,12 +136,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "stream",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-3 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <GraduationCap className="h-4 w-4 text-teal-600" />
+        <GraduationCap className="h-5 w-5 text-purple-500" />
         <span>Stream</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => {
@@ -142,7 +155,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
       
       return (
         <Badge variant={"outline"}
-          className={`${streamStyles[stream as keyof typeof streamStyles] || "bg-gray-100 text-gray-800"} font-medium border-transparent`}
+          className={`${streamStyles[stream as keyof typeof streamStyles] || "bg-gray-100 text-gray-800 "} font-medium drop-shadow-md border-none py-1 px-2`}
         >
           {stream}
         </Badge>
@@ -153,30 +166,38 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "framework",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <Code2 className="h-4 w-4 text-teal-600" />
+        <Code2 className="h-5 w-5 text-purple-500" />
         <span>Framework</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
-    cell: ({ row }) => (
-      <div className="text-slate-700">
-        {row.getValue("framework")}
-      </div>
-    ),
+    cell: ({ row }) => {
+      const framework = row.getValue("framework") as string;
+      const frameworkStyles = {
+        "CCF": "bg-amber-100 text-amber-700",
+        "CBCs": "bg-amber-100 text-amber-700"
+      };
+      
+      return (
+        <Badge variant="outline" className={`${frameworkStyles[framework as keyof typeof frameworkStyles]} drop-shadow-md border-none text-xs py-1 px-2`}>
+          {framework}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: "year",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <Code2 className="h-4 w-4 text-teal-600" />
+        <Code2 className="h-5 w-5 text-purple-500" />
         <span>Year</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -189,12 +210,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "semester",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>Semester</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -207,12 +228,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "sgpa",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>SGPA</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -225,12 +246,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "cgpa",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>CGPA</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -243,12 +264,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "totalFullMarks",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>Total Full Marks</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -261,12 +282,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "totalObtainedMarks",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>Total Marks Obtained</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -279,12 +300,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "totalCredit",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <BookOpen className="h-4 w-4 text-teal-600" />
+        <BookOpen className="h-5 w-5 text-purple-500" />
         <span>Credit</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => (
@@ -297,12 +318,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "letterGrade",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <Award className="h-4 w-4 text-teal-600" />
+        <Award className="h-5 w-5 text-purple-500" />
         <span>Grade</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => {
@@ -311,7 +332,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
         "A++": "bg-purple-100 text-purple-800",
         "A+": "bg-blue-100 text-blue-800",
         "A": "bg-green-100 text-green-800",
-        "B+": "bg-teal-100 text-teal-800",
+        "B+": "bg-purple-100 text-purple-800",
         "B": "bg-cyan-100 text-cyan-800",
         "C+": "bg-amber-100 text-amber-800",
         "C": "bg-orange-100 text-orange-800",
@@ -334,12 +355,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "status",
     header: ({ column }) => (
       <div 
-        className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <CheckCircle2 className="h-4 w-4 text-teal-600" />
+        <CheckCircle2 className="h-5 w-5 text-purple-500" />
         <span>Status</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => {
@@ -349,9 +370,9 @@ export const ReportColumns: ColumnDef<Report>[] = [
       return (
         <Badge variant={"outline"} className={`${isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"} border-transparent`}>
           {/* {isPass ? (
-            <CheckCircle2 className="h-4 w-4 text-teal-600 mr-1" />
+            <CheckCircle2 className="h-5 w-5 text-purple-500 mr-1" />
           ) : (
-            <XCircle className="h-4 w-4 text-teal-600 mr-1" />
+            <XCircle className="h-5 w-5 text-purple-500 mr-1" />
           )} */}
           {status}
         </Badge>
@@ -362,12 +383,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
     accessorKey: "percentage",
     header: ({ column }) => (
       <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        <Award className="h-4 w-4 text-teal-600" />
+        <Award className="h-5 w-5 text-purple-500" />
         <span>Percentage</span>
-        <ArrowUpDown className="h-4 w-4 " />
+      
       </div>
     ),
     cell: ({ row }) => {
@@ -380,7 +401,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
       
       return (
         <Badge variant={"outline"} className={`${scoreColor} border-transparent p-2`}>
-          {/* <Award className="h-4 w-4 text-teal-600 mr-1" /> */}
+          {/* <Award className="h-5 w-5 text-purple-500 mr-1" /> */}
           {score}
         </Badge>
       );
@@ -390,12 +411,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
   //   accessorKey: "remarks",
   //   header: ({ column }) => (
   //     <div 
-  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
   //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
   //     >
-  //       <FileText className="h-4 w-4 text-teal-600" />
+  //       <FileText className="h-5 w-5 text-purple-500" />
   //       <span>Remarks</span>
-  //       <ArrowUpDown className="h-4 w-4 " />
+  //     
   //     </div>
   //   ),
   //   cell: ({ row }) => {
@@ -436,12 +457,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "rollNumber",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Hash className="h-4 w-4 text-indigo-600" />
+//         <Hash className="h-5 w-5 text-indigo-600" />
 //         <span>Roll No</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => (
@@ -454,12 +475,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "registrationNumber",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Bookmark className="h-4 w-4 text-indigo-600" />
+//         <Bookmark className="h-5 w-5 text-indigo-600" />
 //         <span>Reg No.</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => (
@@ -474,12 +495,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "name",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <BookUser className="h-4 w-4 text-indigo-600" />
+//         <BookUser className="h-5 w-5 text-indigo-600" />
 //         <span>Name</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {
@@ -516,12 +537,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "stream",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <GraduationCap className="h-4 w-4 text-indigo-600" />
+//         <GraduationCap className="h-5 w-5 text-indigo-600" />
 //         <span>Stream</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {
@@ -547,12 +568,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "year",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Calendar className="h-4 w-4 text-indigo-600" />
+//         <Calendar className="h-5 w-5 text-indigo-600" />
 //         <span>Year</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => (
@@ -565,12 +586,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "semester",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <School className="h-4 w-4 text-indigo-600" />
+//         <School className="h-5 w-5 text-indigo-600" />
 //         <span>Semester</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => (
@@ -583,12 +604,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "cgpa",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Gauge className="h-4 w-4 text-indigo-600" />
+//         <Gauge className="h-5 w-5 text-indigo-600" />
 //         <span>CGPA</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {
@@ -610,12 +631,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "letterGrade",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Trophy className="h-4 w-4 text-indigo-600" />
+//         <Trophy className="h-5 w-5 text-indigo-600" />
 //         <span>Grade</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {
@@ -624,7 +645,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //         "A++": "bg-gradient-to-r from-purple-100 to-purple-50 text-purple-800 border-purple-200",
 //         "A+": "bg-blue-50 text-blue-800 border-blue-200",
 //         "A": "bg-green-50 text-green-800 border-green-200",
-//         "B+": "bg-teal-50 text-teal-800 border-teal-200",
+//         "B+": "bg-purple-50 text-purple-800 border-purple-200",
 //         "B": "bg-cyan-50 text-cyan-800 border-cyan-200",
 //         "C+": "bg-amber-50 text-amber-800 border-amber-200",
 //         "C": "bg-orange-50 text-orange-800 border-orange-200",
@@ -649,12 +670,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "status",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+//         <CheckCircle2 className="h-5 w-5 text-indigo-600" />
 //         <span>Status</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {
@@ -666,7 +687,7 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //           font-medium px-2.5 py-1 rounded-md flex items-center gap-1`}
 //         >
 //           {isPass ? (
-//             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+//             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
 //           ) : null}
 //           {status}
 //         </Badge>
@@ -677,12 +698,12 @@ export const ReportColumns: ColumnDef<Report>[] = [
 //     accessorKey: "percentage",
 //     header: ({ column }) => (
 //       <div 
-//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer hover:text-slate-600"
+//         className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
 //         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 //       >
-//         <Percent className="h-4 w-4 text-indigo-600" />
+//         <Percent className="h-5 w-5 text-indigo-600" />
 //         <span>Percentage</span>
-//         <ArrowUpDown className="h-4 w-4 opacity-70" />
+//         <ArrowUpDown className="h-5 w-5 opacity-70" />
 //       </div>
 //     ),
 //     cell: ({ row }) => {

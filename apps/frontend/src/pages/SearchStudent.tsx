@@ -7,6 +7,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
+import { RefetchOptions, QueryObserverResult } from "@tanstack/react-query";
 
 
 
@@ -49,6 +50,12 @@ export default function SearchStudent() {
 
       setDataLength(formattedData.length);
       console.log("studentData/*****",StudentData);
+      console.log("First few formatted students:", formattedData.slice(0, 3).map(student => ({
+        id: student.id,
+        name: student.name,
+        uid: student.uid,
+        avatar: student.avatar
+      })));
 
       return formattedData;
     },
@@ -57,7 +64,7 @@ export default function SearchStudent() {
 
   // Fetch the filtered data using React Query
   const { isFetching: isFetchingSearch, refetch } = useQuery({
-    queryKey: ["students", pagination.pageIndex, pagination.pageSize, searchText, dataLength], // Query key with pagination and filter
+    queryKey: ["students", pagination.pageIndex, pagination.pageSize, searchText, dataLength],
     queryFn: async () => {
       if (searchText.trim() !== "") {
         const data = await getSearchedStudents(
@@ -69,7 +76,6 @@ export default function SearchStudent() {
         console.log("while searching:", data);
         const { content, page, totalElements, totalPages } = data.payload;
         
-
         setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
 
         const formattedData = formattedStudent(content);
@@ -80,12 +86,12 @@ export default function SearchStudent() {
 
         return formattedData;
       }
-    }, // Query function with page, pageSize, and search text
+    },
     enabled: false,
-  });
+  }) as { isFetching: boolean; refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> };
 
   return (
-    <div className="overflow-x-auto  w-full h-full   ">
+    <div className="overflow-x-auto  w-full h-full   bg-transparent ">
       
       <DataTable
         isLoading={isFetchingDefault || isFetchingSearch}

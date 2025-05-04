@@ -636,7 +636,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="p-4 cursor-pointer hover:bg-purple-500 transition-colors duration-200">
+            <div className="p-4 cursor-pointer  transition-colors duration-200">
               <div className="flex items-center gap-3">
                 <UserAvatar user={{ ...user, id: String(user.id) }}  className="" />
                 <div className="flex-1 min-w-0">

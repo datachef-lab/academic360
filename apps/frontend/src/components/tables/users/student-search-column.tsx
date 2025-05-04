@@ -238,7 +238,7 @@
 // // ];
 
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
 import { Stream } from "@/types/academics/stream";
@@ -259,6 +259,7 @@ import {
   FaQuestion
 } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 export interface StudentSearchType {
   readonly id?: number;
   registrationNumber: string | null;
@@ -275,14 +276,15 @@ export interface StudentSearchType {
   active: boolean;
   alumni: boolean;
   leavingDate: Date | null;
+avatar?:string;
 }
 
 export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
   {
     accessorKey: "rollNumber",
     header: () => (
-      <div className="flex items-center justify-center   gap-1 whitespace-nowrap text-slate-800 font-semibold">
-        <Hash className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center   gap-1 whitespace-nowrap text-slate-800 text-base font-semibold">
+        <Hash className="h-5 w-5 text-purple-600" />
         <span>Roll No.</span>
       </div>
     ),
@@ -295,7 +297,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     accessorKey: "registrationNumber",
     header: () => (
       <div className="flex items-center justify-center  gap-1 whitespace-nowrap text-slate-800 font-semibold">
-        <Hash className="h-4 w-4 text-teal-600" />
+        <Hash className="h-5 w-5 text-purple-600" />
         <span>Registration No.</span>
       </div>
     ),
@@ -308,13 +310,14 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     accessorKey: "name",
     header: () => (
       <div className="flex items-center justify-center  gap-1 text-slate-800 font-semibold">
-        <BookUser className="h-4 w-4 text-teal-600" />
+        <BookUser className="h-5 w-5 text-purple-600" />
         <span>Name</span>
       </div>
     ),
     cell: ({ row }) => {
-      const name = row.original.name;
-      
+      const { name,avatar } = row.original;
+      // const avatarUrl = `${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${academicIdentifier?.uid}.jpg`;
+    
       const stringToColor = (str: string) => {
         let hash = 0;
         for (let i = 0; i < str.length; i++) {
@@ -326,10 +329,25 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       const bgColor = stringToColor(name);
     
       return (
-        <div className="flex items-center justify-start whitespace-nowrap ">
-          <Avatar className="h-8 w-8">
-            <AvatarFallback style={{ backgroundColor: bgColor }}>
-              {name.charAt(0).toUpperCase()}
+        <div className="flex items-center justify-start whitespace-nowrap">
+          <Avatar className="h-9 w-9">
+            {avatar ? (
+              <AvatarImage
+                className="object-cover drop-shadow-lg"
+                src={avatar}
+                alt={name}
+                
+              />
+            ) : (
+              <AvatarFallback 
+                className="text-white font-medium"
+                style={{ backgroundColor: bgColor }}
+              >
+                {name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            )}
+            <AvatarFallback style={{ backgroundColor: bgColor }} >
+              <Skeleton className="h-9 w-9  drop-shadow-md rounded-full" />
             </AvatarFallback>
           </Avatar>
           <div className="ml-3">
@@ -343,7 +361,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     accessorKey: "gender",
     header: () => (
       <div className="flex items-center justify-center gap-1 text-slate-700 font-medium">
-        <FaTransgender className="h-4 w-4 text-teal-600 " />
+        <FaTransgender className="h-5 w-5 text-purple-600 " />
         <span className="text-sm">Gender</span>
       </div>
     ),
@@ -391,7 +409,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
     accessorKey: "religion",
     header: () => (
       <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Church className="h-4 w-4 text-teal-600" />
+        <Church className="h-5 w-5 text-purple-600" />
         <span>Religion</span>
       </div>
     ),
@@ -410,7 +428,7 @@ cell: ({ row }) => {
     accessorKey: "category",
     header: () => (
       <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Layers className="h-4 w-4 text-teal-600" />
+        <Layers className="h-5 w-5 text-purple-600" />
         <span>Category</span>
       </div>
     ),
@@ -448,7 +466,7 @@ cell: ({ row }) => {
     accessorKey: "stream",
     header: () => (
       <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Layers className="h-4 w-4 text-teal-600" />
+        <Layers className="h-5 w-5 text-purple-600" />
         <span>Stream</span>
       </div>
     ),
@@ -461,7 +479,7 @@ cell: ({ row }) => {
     accessorKey: "status",
     header: () => (
       <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Layers className="h-4 w-4 text-teal-600" />
+        <Layers className="h-5 w-5 text-purple-600" />
         <span>Status</span>
       </div>
     ),
@@ -488,7 +506,7 @@ cell: ({ row }) => {
   //   accessorKey: "nationality",
   //   header: () => (
   //     <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-  //       <Flag className="h-4 w-4 text-teal-600" />
+  //       <Flag className="h-5 w-5 text-purple-600" />
   //       <span>Nationality</span>
   //     </div>
   //   ),
@@ -497,7 +515,7 @@ cell: ({ row }) => {
   //   accessorKey: "leavingDate",
   //   header: () => (
   //     <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-  //       <CalendarDays className="h-4 w-4 text-teal-600" />
+  //       <CalendarDays className="h-5 w-5 text-purple-600" />
   //       <span>Leaving Date</span>
   //     </div>
   //   ),
@@ -506,7 +524,7 @@ cell: ({ row }) => {
       accessorKey: "actions",
       header: () => (
         <div className="flex items-center justify-start gap-1 text-slate-800 font-semibold">
-          <Eye className="h-4 w-4 text-teal-600" />
+          <Eye className="h-5 w-5 text-purple-600" />
           <span>Actions</span>
         </div>
       ),
@@ -568,7 +586,7 @@ cell: ({ row }) => {
 //     accessorKey: "rollNumber",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-1 whitespace-nowrap text-slate-700 font-medium">
-//         <Hash className="h-4 w-4 text-teal-500" />
+//         <Hash className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Roll No.</span>
 //       </div>
 //     ),
@@ -587,7 +605,7 @@ cell: ({ row }) => {
 //     accessorKey: "registrationNumber",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-1 whitespace-nowrap text-slate-700 font-medium">
-//         <Hash className="h-4 w-4 text-teal-500" />
+//         <Hash className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Reg. No.</span>
 //       </div>
 //     ),
@@ -606,7 +624,7 @@ cell: ({ row }) => {
 //     accessorKey: "name",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-1 text-slate-700 font-medium">
-//         <BookUser className="h-4 w-4 text-teal-500" />
+//         <BookUser className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Student Name</span>
 //       </div>
 //     ),
@@ -653,7 +671,7 @@ cell: ({ row }) => {
 //     accessorKey: "gender",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <FaTransgender className="h-4 w-4 text-teal-500" />
+//         <FaTransgender className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Gender</span>
 //       </div>
 //     ),
@@ -701,7 +719,7 @@ cell: ({ row }) => {
 //     accessorKey: "religion",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <Church className="h-4 w-4 text-teal-500" />
+//         <Church className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Religion</span>
 //       </div>
 //     ),
@@ -720,7 +738,7 @@ cell: ({ row }) => {
 //     accessorKey: "category",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <Layers className="h-4 w-4 text-teal-500" />
+//         <Layers className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Category</span>
 //       </div>
 //     ),
@@ -758,7 +776,7 @@ cell: ({ row }) => {
 //     accessorKey: "stream",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <Layers className="h-4 w-4 text-teal-500" />
+//         <Layers className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Stream</span>
 //       </div>
 //     ),
@@ -777,7 +795,7 @@ cell: ({ row }) => {
 //     accessorKey: "status",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <Layers className="h-4 w-4 text-teal-500" />
+//         <Layers className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Status</span>
 //       </div>
 //     ),
@@ -834,7 +852,7 @@ cell: ({ row }) => {
 //     accessorKey: "actions",
 //     header: () => (
 //       <div className="flex items-center gap-1 text-slate-700 font-medium">
-//         <Eye className="h-4 w-4 text-teal-500" />
+//         <Eye className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm">Actions</span>
 //       </div>
 //     ),
@@ -844,7 +862,7 @@ cell: ({ row }) => {
 //         <Link to={`${student.id}`} className="flex">
 //           <Button 
 //             variant="outline"  
-//             className="border-gray-300 hover:bg-teal-50 hover:text-teal-600 text-xs h-8 px-3"
+//             className="border-gray-300 hover:bg-purple-50 hover:text-purple-600 text-xs h-8 px-3"
 //             size="sm"
 //           >
 //             View Details

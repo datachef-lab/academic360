@@ -36,8 +36,8 @@
 // //   {
 // //       accessorKey: "name",
 // //       header: () => (
-// //         <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-// //           <BookUser className="h-4 w-4 text-teal-600" />
+// //         <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+// //           <BookUser className="h-5 w-5 text-purple-600" />
 // //           <span>Name</span>
 // //         </div>
 // //       ),
@@ -120,7 +120,7 @@ export const userColumns: ColumnDef<User>[] = [
         checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
-        className="border-gray-500 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+        className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
        
       />
     ),
@@ -129,7 +129,7 @@ export const userColumns: ColumnDef<User>[] = [
         checked={row.getIsSelected()}
         onCheckedChange={(value) => row.toggleSelected(!!value)}
         aria-label="Select row"
-        className="border-gray-500 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+        className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
       />
     ),
     enableSorting: false,
@@ -138,8 +138,8 @@ export const userColumns: ColumnDef<User>[] = [
   {
     accessorKey: "name",
     header: () => (
-      <div className="flex items-center  justify-center gap-1 text-slate-800 font-semibold">
-        <BookUser className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center  justify-start pl-6 gap-2 text-slate-800 font-semibold">
+        <BookUser className="h-5 w-5 text-purple-600" />
         <span>Name</span>
       </div>
     ),
@@ -157,8 +157,8 @@ export const userColumns: ColumnDef<User>[] = [
       const bgColor = stringToColor(name);
     
       return (
-        <div className="flex items-center justify-start">
-        <Avatar className="h-9 w-9 border border-teal-100/50 shadow-sm">
+        <div className="flex items-center whitespace-nowrap justify-start">
+        <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
           <AvatarFallback 
             style={{ 
               backgroundColor: bgColor,
@@ -169,7 +169,7 @@ export const userColumns: ColumnDef<User>[] = [
             {name.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
-        <div className="ml-3">
+        <div className="ml-2">
           <div className="text-sm font-semibold text-gray-800">{name}</div>
          
         </div>
@@ -180,8 +180,8 @@ export const userColumns: ColumnDef<User>[] = [
   {
     accessorKey: "email",
     header: () => (
-      <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Mail className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+        <Mail className="h-5 w-5 text-purple-600" />
         <span>Email</span>
       </div>
     ),
@@ -193,8 +193,8 @@ export const userColumns: ColumnDef<User>[] = [
   {
     accessorKey: "type",
     header: () => (
-      <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <UserIcon className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+        <UserIcon className="h-5 w-5 text-purple-600" />
         <span>Type</span>
       </div>
     ),
@@ -234,8 +234,8 @@ export const userColumns: ColumnDef<User>[] = [
   // {
   //   accessorKey: "type",
   //   header: () => (
-  //     <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-  //       <UserIcon className="h-4 w-4 text-teal-600" />
+  //     <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+  //       <UserIcon className="h-5 w-5 text-purple-600" />
   //       <span>Type</span>
   //     </div>
   //   ),
@@ -274,7 +274,7 @@ export const userColumns: ColumnDef<User>[] = [
   //     return (
   //       <Badge 
   //         variant="outline"
-  //         className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium ${config.className}`}
+  //         className={`flex items-center justify-center gap-2 px-2 py-1.5 rounded-md text-xs font-medium ${config.className}`}
   //       >
   //         {config.icon}
   //         {config.label}
@@ -285,15 +285,15 @@ export const userColumns: ColumnDef<User>[] = [
   {
     accessorKey: "phone",
     header: () => (
-      <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Smartphone className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+        <Smartphone className="h-5 w-5 text-purple-600" />
         <span>Phone</span>
       </div>
     ),
     cell: ({ row }) => {
       const phone = row.getValue("phone") as string;
       return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
                        <Badge variant="outline" className="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 border-blue-100">
                          
                          {phone}
@@ -305,8 +305,8 @@ export const userColumns: ColumnDef<User>[] = [
   {
     accessorKey: "whatsappNumber",
     header: () => (
-      <div className="flex items-center justify-center gap-1 whitespace-nowrap text-slate-800 font-semibold">
-        <MessageSquare className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center gap-2 whitespace-nowrap text-slate-800 font-semibold">
+        <MessageSquare className="h-5 w-5 text-purple-600" />
         <span>WhatsApp No.</span>
       </div>
     ),
@@ -331,8 +331,8 @@ export const userColumns: ColumnDef<User>[] = [
   {
     id: "actions",
     header: () => (
-      <div className="flex items-center justify-center gap-1 text-slate-800 font-semibold">
-        <Eye className="h-4 w-4 text-teal-600" />
+      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
+        <Eye className="h-5 w-5 text-purple-600" />
         <span>Actions</span>
       </div>
     ),
@@ -368,7 +368,7 @@ export const userColumns: ColumnDef<User>[] = [
 //         checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
 //         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
 //         aria-label="Select all"
-//         className="border-gray-300/50 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+//         className="border-gray-300/50 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
 //       />
 //     ),
 //     cell: ({ row }) => (
@@ -376,7 +376,7 @@ export const userColumns: ColumnDef<User>[] = [
 //         checked={row.getIsSelected()}
 //         onCheckedChange={(value) => row.toggleSelected(!!value)}
 //         aria-label="Select row"
-//         className="border-gray-300/50 data-[state=checked]:bg-teal-500 data-[state=checked]:border-teal-500"
+//         className="border-gray-300/50 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
 //       />
 //     ),
 //     enableSorting: false,
@@ -386,7 +386,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     accessorKey: "name",
 //     header: () => (
 //       <div className="flex items-center justify-start gap-2 text-slate-700 font-medium">
-//         <BookUser className="h-4 w-4 text-teal-500" />
+//         <BookUser className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm font-semibold">Name</span>
 //       </div>
 //     ),
@@ -405,7 +405,7 @@ export const userColumns: ColumnDef<User>[] = [
     
 //       return (
         // <div className="flex items-center justify-start">
-        //   <Avatar className="h-9 w-9 border border-teal-100/50 shadow-sm">
+        //   <Avatar className="h-9 w-9 border border-purple-100/50 shadow-sm">
         //     <AvatarFallback 
         //       style={{ 
         //         backgroundColor: bgColor,
@@ -428,7 +428,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     accessorKey: "email",
 //     header: () => (
 //       <div className="flex items-center justify-start gap-2 text-slate-700 font-medium">
-//         <Mail className="h-4 w-4 text-teal-500" />
+//         <Mail className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm font-semibold">Email</span>
 //       </div>
 //     ),
@@ -438,7 +438,7 @@ export const userColumns: ColumnDef<User>[] = [
 //         <div className="flex flex-col justify-start">
 //           <p className="text-sm font-medium text-gray-800">{email || "-"}</p>
 //           {row.original.phone && (
-//             <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+//             <p className="text-xs text-gray-500 mt-1 flex items-center gap-2">
 //               <Smartphone className="h-3 w-3" />
 //               {row.original.phone}
 //             </p>
@@ -451,7 +451,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     accessorKey: "type",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-2 text-slate-700 font-medium">
-//         <UserIcon className="h-4 w-4 text-teal-500" />
+//         <UserIcon className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm font-semibold">Role</span>
 //       </div>
 //     ),
@@ -490,7 +490,7 @@ export const userColumns: ColumnDef<User>[] = [
 //       return (
 //         <Badge 
 //           variant="outline"
-//           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium ${config.className}`}
+//           className={`flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs font-medium ${config.className}`}
 //         >
 //           {config.icon}
 //           {config.label}
@@ -502,7 +502,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     accessorKey: "phone",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-2 text-slate-700 font-medium">
-//         <Smartphone className="h-4 w-4 text-teal-500" />
+//         <Smartphone className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm font-semibold">Contact</span>
 //       </div>
 //     ),
@@ -511,7 +511,7 @@ export const userColumns: ColumnDef<User>[] = [
 //       const whatsapp = row.getValue("whatsappNumber") as string;
       
 //       return (
-//         <div className="flex flex-col gap-1">
+//         <div className="flex flex-col gap-2">
 //           {phone && (
 //             <div className="flex items-center gap-2">
 //               <Badge variant="outline" className="px-2.5 py-1 text-xs bg-blue-50 text-blue-600 border-blue-100">
@@ -537,7 +537,7 @@ export const userColumns: ColumnDef<User>[] = [
 //     id: "actions",
 //     header: () => (
 //       <div className="flex items-center justify-center gap-2 text-slate-700 font-medium">
-//         <Eye className="h-4 w-4 text-teal-500" />
+//         <Eye className="h-5 w-5 text-purple-500" />
 //         <span className="text-sm font-semibold">Actions</span>
 //       </div>
 //     ),
