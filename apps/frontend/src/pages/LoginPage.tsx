@@ -72,8 +72,8 @@ const LoginPage = () => {
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-lg sm:text-xl font-bold text-white lg:text-purple-600">BESC Student</span>
-                <span className="text-xs text-purple-200 lg:text-gray-500">CONSOLE</span>
+                <span className="text-lg sm:text-xl font-bold text-white lg:text-purple-600">academic360</span>
+                {/* <span className="text-xs text-purple-200 lg:text-gray-500"></span> */}
               </div>
             </div>
 
