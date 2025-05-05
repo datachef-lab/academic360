@@ -177,7 +177,7 @@ const LoginPage = () => {
             />
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-purple-900/80 to-transparent p-6">
               <h3 className="font-medium text-lg text-white">Bhawanipur Education Society College</h3>
-              <p className="text-sm text-purple-200 mt-1">Student Portal</p>
+              <p className="text-sm text-purple-200 mt-1">academic360</p>
             </div>
           </div>
         </div>
