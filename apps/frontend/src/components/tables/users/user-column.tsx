@@ -98,7 +98,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import ActionMenu from "@/components/tables/users/ActionMenu";
 import { User } from "@/types/user/user";
 // import { DataTableColumnHeader } from "@/components/globals/DataColumnHeader";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
   BookUser, 
@@ -113,32 +113,32 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export const userColumns: ColumnDef<User>[] = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-        className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+  // {
+  //   id: "select",
+  //   header: ({ table }) => (
+  //     <Checkbox
+  //       checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+  //       onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+  //       aria-label="Select all"
+  //       className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
        
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-        className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
+  //     />
+  //   ),
+  //   cell: ({ row }) => (
+  //     <Checkbox
+  //       checked={row.getIsSelected()}
+  //       onCheckedChange={(value) => row.toggleSelected(!!value)}
+  //       aria-label="Select row"
+  //       className="border-gray-500 data-[state=checked]:bg-purple-500 data-[state=checked]:border-purple-500"
+  //     />
+  //   ),
+  //   enableSorting: false,
+  //   enableHiding: false,
+  // },
   {
     accessorKey: "name",
     header: () => (
-      <div className="flex items-center  justify-start pl-6 gap-2 text-slate-800 font-semibold">
+      <div className="flex items-center  justify-start pl-5 gap-2 text-slate-800 font-semibold">
         <BookUser className="h-5 w-5 text-purple-600" />
         <span>Name</span>
       </div>

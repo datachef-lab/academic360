@@ -100,7 +100,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-3 p-1  rounded-2xl my-3">
         <div className="px-6 py-1   rounded-lg ">
-        <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
+        {location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
         </div>
           <div className=" p-2  drop-shadow-md overflow-hidden">
             <Table className="border-separate px-2 border-spacing-y-4 w-full">
@@ -110,7 +110,7 @@ export function DataTable<TData, TValue>({
                     {headerGroup.headers.map((header) => (
                       <TableHead 
                         key={header.id} 
-                        className="py-6 px-4 first:pl-9 text-center   font-semibold text-base"
+                        className="py-6 px-4 first:pl-6 text-center   font-semibold text-base"
                         style={{ width: header.getSize() }}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -142,7 +142,7 @@ export function DataTable<TData, TValue>({
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
                           key={cell.id} 
-                          className="px-4 py-3 first:pl-10  text-center first:rounded-l-lg last:rounded-r-lg"
+                          className="px-4 py-3 first:pl-8  text-center first:rounded-l-lg last:rounded-r-lg"
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>

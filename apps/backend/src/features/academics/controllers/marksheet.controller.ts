@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, findMarksheetLogs, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById, findMarksheetLogs, getAllMarks, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
@@ -72,6 +72,19 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
         handleError(error, res, next);
     }
 }
+
+export const getAllMarksheets = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { page, pageSize, searchText } = req.query;
+
+        const marksheets = await getAllMarks(Number(page), Number(pageSize), searchText as string);
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", marksheets, "Marksheets fetched successfully!"));
+    }
+    catch (error) {
+        handleError(error, res, next);
+    }
+};
 
 export const getMarksheetById = async (req: Request, res: Response, next: NextFunction) => {
     try {

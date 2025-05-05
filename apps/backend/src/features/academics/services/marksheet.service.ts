@@ -6,7 +6,7 @@ import { db, mysqlConnection } from "@/db/index.js";
 import { MarksheetRow } from "@/types/academics/marksheet-row.js";
 import { findAllStreams, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, desc, eq, ilike, max, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, max, sql, count } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -28,6 +28,8 @@ import { DefaultEventsMap, Socket } from "socket.io";
 
 import { processStudent as insertStudent } from "@/features/user/controllers/oldStudent.controller.js";
 import { OldStudent } from "@/types/old-data/old-student.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { streamModel } from "../models/stream.model.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -95,6 +97,78 @@ export async function addMarksheet(marksheet: MarksheetType, user: User): Promis
 
     return formattedMarksheet;
 }
+
+export const getAllMarks = async (
+    page: number = 1,
+    pageSize: number = 10,
+    searchText?: string
+) => {
+    const offset = (page - 1) * pageSize;
+
+    const baseQuery = db
+        .select({
+            id: marksheetModel.studentId,
+            rollNumber: academicIdentifierModel.rollNumber,
+            registrationNumber: academicIdentifierModel.registrationNumber,
+            uid: academicIdentifierModel.uid,
+            name: userModel.name,
+            stream: degreeModel.name,
+            framework: streamModel.framework,
+            semester: marksheetModel.semester,
+            year: marksheetModel.year,
+            subjectName: subjectMetadataModel.name,
+            fullMarks: subjectMetadataModel.fullMarks,
+            obtainedMarks: subjectModel.totalMarks,
+            credit: subjectMetadataModel.credit,
+            sgpa: marksheetModel.sgpa,
+            cgpa: marksheetModel.cgpa,
+            letterGrade: subjectModel.letterGrade,
+            remarks: marksheetModel.remarks
+        })
+        .from(marksheetModel)
+        .leftJoin(academicIdentifierModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
+        .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+        .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+        .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+        .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+        .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
+
+  
+    const countQuery = db
+        .select({ count: count() })
+        .from(marksheetModel)
+        .leftJoin(academicIdentifierModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
+        .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id));
+
+   
+    if (searchText) {
+        const searchPattern = `%${searchText}%`;
+        const searchCondition = sql`${userModel.name} ILIKE ${searchPattern} OR ${academicIdentifierModel.rollNumber} ILIKE ${searchPattern} OR ${academicIdentifierModel.registrationNumber} ILIKE ${searchPattern}`;
+
+        (baseQuery as any).where(searchCondition);
+        (countQuery as any).where(searchCondition);
+    }
+
+  
+    const [results, totalCountResult] = await Promise.all([
+        baseQuery
+            .orderBy(desc(academicIdentifierModel.registrationNumber))
+            .limit(pageSize)
+            .offset(offset),
+        countQuery
+    ]);
+
+    const totalCount = Number(totalCountResult[0]?.count ?? 0);
+
+   
+    return {
+        data: results,
+  
+        total: totalCount,
+        currentPage: page,
+        pageSize: pageSize
+    };
+};
 
 export async function uploadFile(fileName: string, user: User, socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>): Promise<boolean> {
     // Read the file from the `/public/temp/` directory

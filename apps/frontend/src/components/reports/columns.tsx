@@ -27,64 +27,10 @@ export const ReportColumns: ColumnDef<Report>[] = [
   //   ),
   // },
   {
-    accessorKey: "rollNumber",
-    header: ({ column }) => (
-      <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold  cursor-pointer "
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        <BookOpen className="h-5 w-5 text-purple-500" />
-        <span>Roll No</span>
-       <ArrowUpDown className="h-4 w-4 " />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="text-slate-700 font-medium">
-        {row.getValue("rollNumber")}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "registrationNumber",
-    header: ({ column }) => (
-      <div 
-        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        <User className="h-5 w-5 text-purple-500" />
-        <span>Registration No.</span>
-       <ArrowUpDown className="h-4 w-4 " />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <Badge variant="secondary" className="font-mono  bg-indigo-50 text-indigo-700 hover:bg-indigo-50 py-1 px-2 drop-shadow-md">
-      {row.getValue("registrationNumber")}
-    </Badge>
-    ),
-  },
-  // {
-  //   accessorKey: "uid",
-  //   header: ({ column }) => (
-  //     <div 
-  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
-  //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-  //     >
-  //       <Calendar className="h-5 w-5 text-purple-500" />
-  //       <span>UID</span>
-  //       <ArrowUpDown className="h-4 w-4 " />
-  //     </div>
-  //   ),
-  //   cell: ({ row }) => (
-  //     <div className="text-slate-700">
-  //       {row.getValue("uid")}
-  //     </div>
-  //   ),
-  // },
-  {
     accessorKey: "name",
     header: ({ column }) => (
       <div 
-        className="flex items-center justify-center  gap-2 text-slate-800 font-semibold cursor-pointer "
+        className="flex items-center justify-start pl-3  gap-2 text-slate-800 font-semibold cursor-pointer "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         <BookUser className="h-5 w-5 text-purple-500  " />
@@ -132,6 +78,61 @@ export const ReportColumns: ColumnDef<Report>[] = [
       );
     },
   },
+  {
+    accessorKey: "rollNumber",
+    header: ({ column }) => (
+      <div 
+        className="flex items-center gap-2 text-slate-800 font-semibold  cursor-pointer "
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        <BookOpen className="h-5 w-5 text-purple-500" />
+        <span>Roll No</span>
+       <ArrowUpDown className="h-4 w-4 " />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <Badge variant="secondary" className="font-mono  bg-orange-50 text-orange-700 hover:bg-orange-50 py-1 px-2 drop-shadow-md">
+        {row.getValue("rollNumber")}
+      </Badge>
+    ),
+  },
+  {
+    accessorKey: "registrationNumber",
+    header: ({ column }) => (
+      <div 
+        className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        <User className="h-5 w-5 text-purple-500" />
+        <span>Registration No.</span>
+       <ArrowUpDown className="h-4 w-4 " />
+      </div>
+    ),
+    cell: ({ row }) => (
+      <Badge variant="secondary" className="font-mono  bg-indigo-50 text-indigo-700 hover:bg-indigo-50 py-1 px-2 drop-shadow-md">
+      {row.getValue("registrationNumber")}
+    </Badge>
+    ),
+  },
+  // {
+  //   accessorKey: "uid",
+  //   header: ({ column }) => (
+  //     <div 
+  //       className="flex items-center gap-2 text-slate-800 font-semibold cursor-pointer "
+  //       onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+  //     >
+  //       <Calendar className="h-5 w-5 text-purple-500" />
+  //       <span>UID</span>
+  //       <ArrowUpDown className="h-4 w-4 " />
+  //     </div>
+  //   ),
+  //   cell: ({ row }) => (
+  //     <div className="text-slate-700">
+  //       {row.getValue("uid")}
+  //     </div>
+  //   ),
+  // },
+ 
   {
     accessorKey: "stream",
     header: ({ column }) => (

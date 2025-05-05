@@ -25,7 +25,7 @@
 // }: DataTableToolbarProps<TData>) {
 //   // Create a ref to store the debounced function
 //   const debouncedFn = useRef<ReturnType<typeof debounce>>();
-  
+
 //   // Create a memoized search function using useCallback
 //   const debouncedSearch = useCallback((query: string) => {
 //     // If there's no existing debounced function or dependencies changed, create a new one
@@ -35,7 +35,7 @@
 //         refetch();
 //       }, 500);
 //     }
-    
+
 //     // Call the debounced function with the current query
 //     debouncedFn.current(query);
 //   }, [table, refetch]);
@@ -112,11 +112,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
 import { DataTableViewOptions } from "./DataTableViewOptions";
-import { Search, TrashIcon } from "lucide-react";
+import { Search } from "lucide-react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import React, { useCallback, useRef } from "react";
-import { useLocation } from "react-router-dom";
+// import { useLocation } from "react-router-dom";
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>;
@@ -125,14 +125,9 @@ interface DataTableToolbarProps<TData> {
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
 }
 
-export function DataTableToolbar<TData>({
-  table,
-  searchText,
-  setSearchText,
-  refetch,
-}: DataTableToolbarProps<TData>) {
+export function DataTableToolbar<TData>({ table, searchText, setSearchText, refetch }: DataTableToolbarProps<TData>) {
   const debouncedFn = useRef<ReturnType<typeof debounce>>();
-  const location = useLocation();
+  // const location = useLocation();
 
   const debouncedSearch = useCallback(
     (query: string) => {
@@ -144,7 +139,7 @@ export function DataTableToolbar<TData>({
       }
       debouncedFn.current(query);
     },
-    [table, refetch]
+    [table, refetch],
   );
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +151,7 @@ export function DataTableToolbar<TData>({
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-center   rounded-md ">
       {/* Result on the left */}
-      <div className="flex items-center gap-2">
+      {/* <div className="flex border items-center gap-2">
         {table.getFilteredSelectedRowModel().rows.length > 0 ? (
           <Button variant="outline" size="sm">
             <TrashIcon className="mr-2 size-4" aria-hidden="true" />
@@ -171,22 +166,22 @@ export function DataTableToolbar<TData>({
             ? `${table.getFilteredRowModel().rows.length} people in total`
             : "No results"}
         </div>
-      </div>
+      </div> */}
 
       {/* Filters on the right */}
-      {location.pathname !== '/home/downloads' && (
-        <div className="flex flex-wrap items-center  justify-end gap-4">
+<div className="flex item-center w-full  justify-end"></div>
+        <div className="flex flex-row items-center   justify-end gap-4">
           <DataTableViewOptions table={table} />
-          <div className="relative max-w-xs w-full">
-    <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-gray-600 h-4 w-4" />
-    <Input
-      placeholder="Search..."
-      value={searchText}
-      onChange={handleSearchChange}
-      className="pl-10 border drop-shadow-md rounded-full focus:ring-0 focus:ring-offset-0"
-    />
-  </div>
-          
+          <div className="relative max-w-xs   w-full">
+            <Search className="absolute left-3 top-1/2 z-10 -translate-y-1/2 text-gray-600 h-4 w-4" />
+            <Input
+              placeholder="Search..."
+              value={searchText}
+              onChange={handleSearchChange}
+              className="pl-10 border drop-shadow-md rounded-full focus:ring-0 focus:ring-offset-0"
+            />
+          </div>
+
           {table.getColumn("type") && (
             <DataTableFacetedFilter
               column={table.getColumn("type")}
@@ -214,7 +209,7 @@ export function DataTableToolbar<TData>({
             </Button>
           )}
         </div>
-      )}
+        
     </div>
   );
 }

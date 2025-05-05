@@ -281,35 +281,9 @@ avatar?:string;
 
 export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
   {
-    accessorKey: "rollNumber",
-    header: () => (
-      <div className="flex items-center justify-center   gap-1 whitespace-nowrap text-slate-800 text-base font-semibold">
-        <Hash className="h-5 w-5 text-purple-600" />
-        <span>Roll No.</span>
-      </div>
-    ),
-    cell: ({ row }) => {
-      const student = row.original;
-      return student.rollNumber ? <p className="whitespace-nowrap">{student.rollNumber}</p> : <p>-</p>;
-    },
-  },
-  {
-    accessorKey: "registrationNumber",
-    header: () => (
-      <div className="flex items-center justify-center  gap-1 whitespace-nowrap text-slate-800 font-semibold">
-        <Hash className="h-5 w-5 text-purple-600" />
-        <span>Registration No.</span>
-      </div>
-    ),
-    cell: ({ row }) => {
-      const student = row.original;
-      return student.registrationNumber ? <p>{student.registrationNumber}</p> : <p>-</p>;
-    },
-  },
-  {
     accessorKey: "name",
     header: () => (
-      <div className="flex items-center justify-center  gap-1 text-slate-800 font-semibold">
+      <div className="flex items-center justify-start pl-6  gap-1 text-slate-800 font-semibold">
         <BookUser className="h-5 w-5 text-purple-600" />
         <span>Name</span>
       </div>
@@ -357,6 +331,33 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       );
     },
   },
+  {
+    accessorKey: "rollNumber",
+    header: () => (
+      <div className="flex items-center justify-center   gap-1 whitespace-nowrap text-slate-800 text-base font-semibold">
+        <Hash className="h-5 w-5 text-purple-600" />
+        <span>Roll No.</span>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const student = row.original;
+      return student.rollNumber ? <p className="whitespace-nowrap">{student.rollNumber}</p> : <p>-</p>;
+    },
+  },
+  {
+    accessorKey: "registrationNumber",
+    header: () => (
+      <div className="flex items-center justify-center  gap-1 whitespace-nowrap text-slate-800 font-semibold">
+        <Hash className="h-5 w-5 text-purple-600" />
+        <span>Registration No.</span>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const student = row.original;
+      return student.registrationNumber ? <p>{student.registrationNumber}</p> : <p>-</p>;
+    },
+  },
+ 
   {
     accessorKey: "gender",
     header: () => (
