@@ -79,7 +79,7 @@ const LoginPage = () => {
 
             <form onSubmit={handleSubmit} className="grid grid-rows-[auto_auto_1fr_auto] gap-6">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white lg:text-gray-900 mb-2">Welcome Back</h1>
+                {/* <h1 className="text-2xl sm:text-3xl font-bold text-white lg:text-gray-900 mb-2"></h1> */}
                 <p className="text-purple-200 lg:text-gray-500 text-sm">Sign in to continue your journey</p>
               </div>
 
