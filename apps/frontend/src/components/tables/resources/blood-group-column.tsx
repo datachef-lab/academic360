@@ -1,7 +1,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { BloodGroup } from "@/types/resources/blood-group";
 import { BloodGroupActions } from "../Actions/BloodGroupActions";
-import { Droplet, HeartPulse, Settings2 } from 'lucide-react';
+import { Droplet, Settings2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
 export const bloodGroupColumns: ColumnDef<BloodGroup>[] = [
@@ -22,7 +22,7 @@ export const bloodGroupColumns: ColumnDef<BloodGroup>[] = [
             className="px-3 py-1.5 text-sm bg-amber-50 text-amber-700 drop-shadow-md font-mono border-none"
           >
             <div className="flex items-center gap-2">
-              <HeartPulse className="h-4 w-4 text-rose-600" />
+              {/* <HeartPulse className="h-4 w-4 text-rose-600" /> */}
               <span className="font-bold">{bloodType}</span>
             </div>
           </Badge>
