@@ -1,17 +1,13 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
-
   AddStudentPage,
   GetReportsPage,
   HomePage,
   LoginPage,
   MyWorkspacePage,
   NotFoundPage,
-  RootPage,
-
   SearchStudentPage,
-
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
@@ -34,8 +30,7 @@ import CoursesAndSubject from "./pages/CoursesAndSubject";
 import AdmissionAndFees from "./pages/AdmissionAndFees";
 
 const router = createBrowserRouter([
-  { path: "/", element: <RootPage /> },
-  { path: "/login", element: <LoginPage /> },
+  { path: "/", element: <LoginPage /> },
   {
     path: "/home",
     element: (
@@ -102,7 +97,7 @@ const router = createBrowserRouter([
 const App = () => {
   return (
     <>
-      <RouterProvider router={router} />;
+      <RouterProvider router={router} />
     </>
   );
 };
