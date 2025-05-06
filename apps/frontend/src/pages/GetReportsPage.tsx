@@ -77,24 +77,7 @@ const Page: React.FC = () => {
         />
       </motion.div>
       <div className="w-full mt-4  max-w-auto mx-auto p-6 grid grid-cols-1 gap-6">
-        {/* Header Section */}
-        {/* <motion.div
-          initial={{ y: -20 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="text-center sm:text-left"
-        >
-          <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 mb-3">
-            <BarChart2 className="h-10 w-10" strokeWidth={1.5} />
-            <h1 className="text-3xl md:text-4xl font-bold bg-clip-text">Student Report</h1>
-          </div>
-          <p className="text-lg flex items-center justify-center sm:justify-start gap-2">
-            <BookOpen className="h-5 w-5" />
-            Analyze and export comprehensive student performance data
-          </p>
-        </motion.div> */}
-
-        {/* Filter Section */}
+       
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
