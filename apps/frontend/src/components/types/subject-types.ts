@@ -19,7 +19,7 @@ export interface Subject {
     };
   };
   isOptional: boolean;
-  [key: string]: any;
+  [key: string]: string | number | boolean | object | null | undefined;
 }
 
 export interface ApiResponse {

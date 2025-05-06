@@ -831,7 +831,7 @@ export const CoursesAndSubject: React.FC = () => {
     setIsAddSubjectDialogOpen(false);
     setIsEditSubjectMode(false);
     setEditingSubjectId(null);
-  }, []);
+  }, [setNewSubject, setSelectedDegreeId, setIsAddSubjectDialogOpen, setIsEditSubjectMode, setEditingSubjectId]);
 
   // Add a function to handle canceling subject editing
   const handleCancelSubject = useCallback(() => {

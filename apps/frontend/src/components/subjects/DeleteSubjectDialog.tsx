@@ -16,7 +16,7 @@ interface Subject {
   name: string;
   irpCode: string;
   semester: number;
-  [key: string]: any;
+  [key: string]: string | number | boolean | object | null | undefined;
 }
 
 interface DeleteSubjectDialogProps {
