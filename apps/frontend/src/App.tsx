@@ -10,6 +10,8 @@ import {
   NotFoundPage,
   RootPage,
 
+  SearchStudentPage,
+
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
@@ -22,17 +24,14 @@ import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
 import Dashboard from "./components/LibManagement/Dashboard";
-
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
 import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
-import CoursesAndSubject from "./pages/Courses&Subject";
-import AdmissionAndFess from "./pages/AdmissionAndFess";
-import SearchStudentPage from "./pages/SearchStudentPage";
-
+import CoursesAndSubject from "./pages/CoursesAndSubject";
+import AdmissionAndFees from "./pages/AdmissionAndFees";
 
 const router = createBrowserRouter([
   { path: "/", element: <RootPage /> },
@@ -53,7 +52,7 @@ const router = createBrowserRouter([
       { path: "add-student", element: <AddStudentPage /> },
       { path: "downloads", element: <Downloads /> },
       { path: "event", element: <Event /> },
-      { path: "admission-fees", element: <AdmissionAndFess /> },
+      { path: "admission-fees", element: <AdmissionAndFees /> },
       { path: "courses-subjects", element: <CoursesAndSubject /> },
       {
         path: "add-marksheet",
@@ -77,6 +76,7 @@ const router = createBrowserRouter([
           },
         ],
       },
+      { path: "academics-reports", element: <GetReportsPage /> },
       { path: "student-reports", element: <GetReportsPage /> },
       { path: "lib", element: <Dashboard /> },
 

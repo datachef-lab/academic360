@@ -55,12 +55,12 @@ import {
     addressRouter,
     reportRouter,
     specializationRouter,
-    personalDetailsRouter,
     familyRouter,
-    healthRouter
-
+    healthRouter,
+    personalDetailsRouter
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
+import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -239,6 +239,8 @@ app.use("/api/accommodations", accommodationRouter);
 app.use("/api/health", healthRouter);
 
 app.use("/api/reports", reportRouter);
+
+app.use("/api/courses", courseRouter);
 
 app.use(errorHandler);
 

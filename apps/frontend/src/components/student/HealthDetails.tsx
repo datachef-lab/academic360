@@ -2,10 +2,9 @@ import { Diameter, Eye, Syringe, Scale, Save, CheckCircle, PenLine } from "lucid
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Health } from "@/types/user/health";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
 import { 
   findHealthDetailsByStudentId, 
   createHealthDetails, 
@@ -13,6 +12,7 @@ import {
   updateBloodGroup 
 } from "@/services/health-details-api";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Spinner } from "../ui/spinner";
 
 const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -37,9 +37,12 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedBloodGroup, setSelectedBloodGroup] = useState<string>("");
+  const [formData, setFormData] = useState<Health>(defaultHealthDetails);
 
-  const { data: healthData, loading, refetch } = useFetch<Health>({
-    getFn: async () => {
+  // Use React Query to fetch health details
+  const { data: healthData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['healthDetails', studentId],
+    queryFn: async () => {
       const result = await findHealthDetailsByStudentId(studentId);
       console.log("Health details fetched:", result);
       
@@ -48,29 +51,12 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
         return null;
       }
       
-      if (result.payload?.bloodGroup?.type) {
-        console.log("Setting blood group from API data:", result.payload.bloodGroup.type);
-        setSelectedBloodGroup(result.payload.bloodGroup.type);
-      }
-      
       return result.payload;
     },
-    postFn: async (data) => {
-      const result = await createHealthDetails(data);
-      
-      if (!result || result.payload === undefined) {
-        throw new Error("Invalid API response format");
-      }
-      
-      return result.payload as Health;
-    },
-    default: {
-      ...defaultHealthDetails,
-      studentId
-    } as Health
+    enabled: studentId > 0,
+    retry: 1,
+    staleTime: 300000, // 5 minutes
   });
-
-  const [formData, setFormData] = useState<Health>(defaultHealthDetails);
 
   // Initialize form data when health data is loaded
   useEffect(() => {
@@ -87,12 +73,6 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
       setFormData({...defaultHealthDetails, studentId});
     }
   }, [healthData, studentId]);
-
-  // Force an initial load of health data
-  useEffect(() => {
-    refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const updateMutation = useMutation({
     mutationFn: async (data: Health) => {
@@ -252,13 +232,33 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading || !validateForm()) return;
+    if (isLoading || !validateForm()) return;
     console.log("Submitting form data:", formData, "Selected blood group:", selectedBloodGroup);
     updateMutation.mutate(formData);
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-40">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Spinner className="w-8 h-8 text-blue-500" />
+        <span className="ml-2">Loading health details...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-40 text-red-500">
+        <p>Error loading health details</p>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="mt-2"
+        >
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (

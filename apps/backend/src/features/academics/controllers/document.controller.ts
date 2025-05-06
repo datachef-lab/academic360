@@ -10,7 +10,7 @@ import {
   scanExistingMarksheetFilesByRollNumber,
 } from "../services/document.service.js";
 
-//createDocum
+//createDocumentMetadata
 export const createDocumentMetadata = async (
   req: Request,
   res: Response,

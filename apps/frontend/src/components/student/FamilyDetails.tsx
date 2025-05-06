@@ -3,12 +3,12 @@ import { IdCard, Mail, Phone, User, Briefcase, GraduationCap, BadgeIndianRupee, 
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { findFamilyDetailsByStudentId, createFamilyDetails, updateFamilyDetails } from "@/services/Family-details-api";
 import { Parent } from "@/types/user/parent";
 import { ParentType } from "@/types/enums/index";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
+import { Spinner } from "../ui/spinner";
 
 // Helper function to safely access object properties
 const getPersonProperty = (obj: any, property: string): string => {
@@ -116,36 +116,34 @@ interface FamilyDetailsProps {
 export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
-
-  const { data: familyData, loading, refetch } = useFetch<Parent>({
-    getFn: async () => {
-      const result = await findFamilyDetailsByStudentId(studentId);
-      console.log('Family details API response:', result);
-      return result.payload;
-    },
-    postFn: async (familyDetails: Parent) => {
-      const result = await createFamilyDetails(familyDetails);
-      console.log('Create family details API response:', result);
-      return result.payload as Parent;
-    },
-    default: {
-      ...defaultFamilyDetails,
-      studentId
-    } as Parent,
+  const [formData, setFormData] = useState<Parent>({
+    ...defaultFamilyDetails,
+    studentId
   });
 
-  const [formData, setFormData] = useState<Parent>(defaultFamilyDetails);
+  // Use React Query to fetch family details
+  const { data: familyDetails, isLoading, isError, refetch } = useQuery({
+    queryKey: ['familyDetails', studentId],
+    queryFn: async () => {
+      const response = await findFamilyDetailsByStudentId(studentId);
+      return response.payload;
+    },
+    enabled: studentId > 0,
+    retry: 1,
+    staleTime: 300000, // 5 minutes
+  });
 
+  // Update form data when family details are loaded
   useEffect(() => {
-    if (familyData) {
-      console.log("Family details data loaded:", familyData);
-      setFormData(familyData);
+    if (familyDetails) {
+      console.log("Family details data loaded:", familyDetails);
+      setFormData(familyDetails);
     }
-  }, [familyData]);
+  }, [familyDetails]);
 
   const updateMutation = useMutation({
     mutationFn: (data: Parent) => 
-      updateFamilyDetails(data.id || 0, data),
+      data.id ? updateFamilyDetails(data.id, data) : createFamilyDetails(data),
     onSuccess: () => {
       toast.success("Family details have been successfully updated.");
       setShowSuccess(true);
@@ -272,7 +270,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading || !validateForm()) return;
+    if (isLoading || !validateForm()) return;
     console.log("Submitting family form data:", formData);
     updateMutation.mutate(formData);
   };
@@ -285,8 +283,28 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     }));
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-40">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Spinner className="w-8 h-8 text-blue-500" />
+        <span className="ml-2">Loading family details...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-40 text-red-500">
+        <p>Error loading family details</p>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="mt-2"
+        >
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   // Helper to determine if a specific parent section should be shown
@@ -309,7 +327,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     const { name, label, type, icon } = element;
     const fullFieldName = `${parentField}.${name}`;
     const value = getPersonProperty(formData[parentField as keyof Parent], name) || '';
-    const hasError = errors[fullFieldName];
+    const hasError = errors[`${parentField}_${name}`];
 
     return (
       <div key={fullFieldName} className="flex flex-col mr-8">

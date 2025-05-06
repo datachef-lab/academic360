@@ -389,16 +389,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut,
   User,
-  ChevronDown,
+
   Settings,
   BookCheck,
   BookOpen,
+  ChevronDown,
   ClipboardPenLine,
   DownloadCloud,
   FileUser,
   Home,
+  LogOut,
   MapPinned,
   Notebook,
   UserPlus,
@@ -447,34 +448,23 @@ const data = {
     },
   ],
   navMain: [
+    
     {
       title: "Admission & Fees",
       url: "/home/admission-fees",
       icon: UserPlus,
-      // items: [
-      //   { title: "Dashboard", url: "/home/admission" },
-      //   { title: "Applications", url: "/home/applications" },
-      //   { title: "New Admission", url: "/home/new-admission" },
-      //   { title: "Fee Management", url: "/home/fee-management" },
-      //   { title: "Reports", url: "/home/admission-reports" },
-      // ],
     },
-    // AdmissionAndFess
+
     {
       title: "Courses & Subject",
       url: "/home/courses-subjects",
       icon: Notebook,
     },
+
     {
       title: "Exam Management",
       url: "/home/exam-management",
       icon: BookCheck,
-      // items: [
-      //   {
-      //     title: "Examboard",
-      //     url: "/home/examboard",
-      //   },
-      // ],
     },
 
     {
@@ -489,7 +479,7 @@ const data = {
       //   { title: "Reports", url: "/home/lib-report" },
       // ],
     },
-
+ 
     {
       title: "Event",
       url: "/home/event",
@@ -501,39 +491,34 @@ const data = {
       icon: Settings,
     },
   ],
-  navStudent: [
-    // {
-    //   title: "Student",
-    //   url: "/home/academics",
-    //   icon: GraduationCap,
-    // },
+  navStudent:[
     {
       title: "Add Student",
       url: "/home/add-student",
       icon: UserRoundPlus,
     },
-    {
-      title: "Add Marksheet",
-      url: "/home/add-marksheet",
-      icon: ClipboardPenLine,
-    },
-
-    {
-      title: "Search Student",
-      url: "/home/search-students",
-      icon: UserRoundSearch,
-    },
-    {
-      title: "Get Reports",
-      url: "/home/student-reports",
-      icon: FileUser,
-    },
-    {
-      title: "Downloads",
-      url: "/home/downloads",
-      icon: DownloadCloud,
-    },
-  ],
+        {
+          title: "Add Marksheet",
+          url: "/home/add-marksheet",
+          icon: ClipboardPenLine,
+        },
+       
+        {
+          title: "Search Student",
+          url: "/home/search-students",
+          icon: UserRoundSearch,
+        },
+        {
+          title: "Get Reports",
+          url: "/home/student-reports",
+          icon: FileUser,
+        },
+        {
+          title: "Downloads",
+          url: "/home/downloads",
+          icon: DownloadCloud,
+        },
+  ]
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {

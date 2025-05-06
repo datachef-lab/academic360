@@ -6,6 +6,7 @@ import marksheetRouter from "@/features/academics/routes/marksheet.route.js"
 import batchRouter from "@/features/academics/routes/batch.route.js"
 import batchPaperRouter from "@/features/academics/routes/batchPaper.route.js"
 import studentPaperRouter from "@/features/academics/routes/studentPaper.route.js"
+import courseRouter from "@/features/academics/routes/course.route.js"
 
 export {
     streamRouter,
@@ -16,4 +17,5 @@ export {
     batchRouter,
     batchPaperRouter,
     studentPaperRouter,
+    courseRouter,
 }

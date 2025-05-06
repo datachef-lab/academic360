@@ -1,12 +1,12 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
 import { PersonalDetails as PersonalDetailsType } from "@/types/user/personal-details";
 import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
+import { Spinner } from "@/components/ui/spinner";
 
 // Helper function to safely access object properties
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,39 +62,30 @@ interface PersonalDetailProps {
 export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const { data: personalDetailsData, loading, refetch } = useFetch<PersonalDetailsType>({
-    getFn: async () => {
-      const result = await findPersonalDetailsByStudentId(studentId);
-      console.log('Personal details API response:', result);
-      return result.payload;
-    },
-    postFn: async (personalDetails: PersonalDetailsType) => {
-      // Use addPersonalDetails only if we don't have an ID yet
-      if (!personalDetails.id) {
-        const result = await addPersonalDetails(personalDetails);
-        console.log('Create personal details API response:', result);
-        return result.payload as PersonalDetailsType;
-      } else {
-        const result = await updatePersonalDetails(personalDetails.id, personalDetails);
-        console.log('Update personal details API response:', result);
-        return result.payload as PersonalDetailsType;
-      }
-    },
-    default: {
-      ...defaultPersonalDetails,
-      studentId
-    } as PersonalDetailsType,
+  const [formData, setFormData] = useState<PersonalDetailsType>({
+    ...defaultPersonalDetails,
+    studentId
   });
 
-  const [formData, setFormData] = useState<PersonalDetailsType>(defaultPersonalDetails);
+  // Use React Query to fetch personal details
+  const { data: personalDetails, isLoading, isError, refetch } = useQuery({
+    queryKey: ['personalDetails', studentId],
+    queryFn: async () => {
+      const response = await findPersonalDetailsByStudentId(studentId);
+      return response.payload;
+    },
+    enabled: studentId > 0,
+    retry: 1,
+    staleTime: 300000, // 5 minutes
+  });
 
+  // Update form data when personal details are loaded
   useEffect(() => {
-    if (personalDetailsData) {
-      console.log("Personal details data loaded:", personalDetailsData);
-      setFormData(personalDetailsData);
+    if (personalDetails) {
+      console.log("Personal details data loaded:", personalDetails);
+      setFormData(personalDetails);
     }
-  }, [personalDetailsData]);
+  }, [personalDetails]);
 
   const updateMutation = useMutation({
     mutationFn: (formData: PersonalDetailsType) => {
@@ -157,13 +148,33 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    if (loading || !validateForm()) return;
+    if (isLoading || !validateForm()) return;
     console.log("Submitting form data:", formData);
     updateMutation.mutate(formData);
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-40">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Spinner className="w-8 h-8 text-blue-500" />
+        <span className="ml-2">Loading personal details...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-40 text-red-500">
+        <p>Error loading personal details</p>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="mt-2"
+        >
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
