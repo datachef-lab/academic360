@@ -636,11 +636,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="p-4 cursor-pointer  transition-colors duration-200">
+            <div className=" p-1 cursor-pointer  transition-colors duration-200">
               <div className="flex items-center gap-3">
                 <UserAvatar user={{ ...user, id: String(user.id) }}  className="" />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white truncate">{user.name || "User"}</div>
+                  <div className="font-medium text-sm text-white truncate">{user.name || "User"}</div>
                   <div className="text-xs text-purple-200 truncate">{user.email || "email@example.com"}</div>
                 </div>
                 <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
