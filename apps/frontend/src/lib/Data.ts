@@ -3,7 +3,6 @@
 import { Payment } from "@/components/reports/types";
 import { IssuedBook } from "@/types/resources/IssuedBooks";
 
-
 export const mockData: Payment[] = [
     {
         "roll": 1,

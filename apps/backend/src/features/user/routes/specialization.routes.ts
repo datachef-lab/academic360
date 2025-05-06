@@ -1,6 +1,6 @@
 // import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createSpecialization, deleteSpecialization, getAllSpecializations, getSpecializationById, updateSpecialization } from "../controllers/specialization.controller";
+import { createSpecialization, deleteSpecialization, getAllSpecializations, getSpecializationById, updateSpecialization } from "../controllers/specialization.controller.js";
 
 const router = express.Router();
 // router.use(verifyJWT);

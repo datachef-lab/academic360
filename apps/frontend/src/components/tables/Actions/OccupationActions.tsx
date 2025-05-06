@@ -60,8 +60,8 @@ export const OccupationActions = ({ occupation }: { occupation: Occupation }) =>
           </DialogHeader>
           <div className="space-y-4">
             <Input value={editedName} onChange={(e) => setEditedName(e.target.value)} />
-            <Button onClick={handleSave} disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? "Saving..." : "Save"}
+            <Button onClick={handleSave} disabled={updateMutation.isLoading}>
+              {updateMutation.isLoading ? "Saving..." : "Save"}
             </Button>
           </div>
         </DialogContent>

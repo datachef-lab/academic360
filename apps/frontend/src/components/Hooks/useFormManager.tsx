@@ -615,7 +615,7 @@ export const useFormManager = <TData, TError = Error>({
     handleSubmit,
     initializeData,
     isNew,
-    isLoading: createMutation.isPending || updateMutation.isPending,
+    isLoading: createMutation.isLoading || updateMutation.isLoading,
     isError: createMutation.isError || updateMutation.isError,
     error: createMutation.error || updateMutation.error,
   };

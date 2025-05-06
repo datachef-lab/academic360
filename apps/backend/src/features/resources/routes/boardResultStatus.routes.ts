@@ -1,5 +1,5 @@
 import express from "express";
-import { createBoardResultStatus, getBoardResultStatusById, updateBoardResultStatus } from "../controllers/boardResultStatus.controller";
+import { createBoardResultStatus, getBoardResultStatusById, updateBoardResultStatus } from "../controllers/boardResultStatus.controller.js";
 
 const router = express.Router();
 

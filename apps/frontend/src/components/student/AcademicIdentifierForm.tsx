@@ -14,7 +14,7 @@ import {
 
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { academicIdentifier } from "@/types/user/academic-identifier";
+import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getAllStreams, saveAcademicIdentifier } from "@/services/stream";
 import { getAcademicIdentifier } from "@/services/academic";
@@ -73,7 +73,7 @@ const id=Number(studentId);
   }, [streamData]);
 
 const [isNew,setIsNew]=useState(false);
-const [formData, setFormData] = useState<academicIdentifier>({
+const [formData, setFormData] = useState<AcademicIdentifier>({
   studentId: 0,
   frameworkType: null,
   rfid: "",
@@ -96,7 +96,7 @@ const [formData, setFormData] = useState<academicIdentifier>({
 
 
 const { data ,isError,error} = useQuery({
-  queryKey: ["academicIdentifier", id],
+  queryKey: ["AcademicIdentifier", id],
   queryFn: () => getAcademicIdentifier(id),
   enabled: !!id,
   retry: false,
@@ -158,7 +158,7 @@ const { data ,isError,error} = useQuery({
   })
   
   const createData = useMutation({
-    mutationFn: (formData: academicIdentifier) =>createAcademicIdentifier(formData),
+    mutationFn: (formData: AcademicIdentifier) =>createAcademicIdentifier(formData),
     onSuccess: (data) => {
       console.log("Data saved:", data);
       console.log("Data saved successfully");
@@ -222,7 +222,7 @@ const { data ,isError,error} = useQuery({
                   id={name}
                   name={name}
                   type={type}
-                  value={(formData[name as keyof academicIdentifier] as string) || ""}
+                  value={(formData[name as keyof AcademicIdentifier] as string) || ""}
                   placeholder={label}
                   onChange={handleChange}
                   className={`w-full pl-10 pr-3 py-2 `}

@@ -11,8 +11,8 @@ import personalDetailsRouter from '@/features/user/routes/personalDetails.route.
 import transportDetailsRouter from '@/features/user/routes/transportDetails.route.js';
 import userRouter from '@/features/user/routes/user.route.js';
 import studentRouter from '@/features/user/routes/student.route.js';
-import reportRouter from "@/features/user/routes/report.route";
-import specializationRouter from "@/features/user/routes/specialization.routes";
+import reportRouter from "@/features/user/routes/report.route.js";
+import specializationRouter from "@/features/user/routes/specialization.routes.js";
 
 export {
     academicHistoryRouter,

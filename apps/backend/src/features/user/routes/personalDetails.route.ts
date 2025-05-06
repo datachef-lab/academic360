@@ -1,6 +1,6 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express, { NextFunction, Request, Response } from "express";
-import { createPersonalDetails, getPersonalDetailsById, getPersonalDetailsByStudentId } from "../controllers/personalDetails.controller";
+import { createPersonalDetails, getPersonalDetailsById, getPersonalDetailsByStudentId } from "../controllers/personalDetails.controller.js";
 
 const router = express.Router();
 

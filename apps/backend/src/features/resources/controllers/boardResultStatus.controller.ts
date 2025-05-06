@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { CreateResultStatus, findBoardResultStatusById } from "../services/boardResultStatus.service";
-import { ApiResponse, handleError } from "@/utils";
-import { BoardResultStatus, boardResultStatusModel } from "../models/boardResultStatus.model";
+import { CreateResultStatus, findBoardResultStatusById } from "../services/boardResultStatus.service.js";
+import { ApiResponse, handleError } from "@/utils/index.js";
+import { BoardResultStatus, boardResultStatusModel } from "../models/boardResultStatus.model.js";
 import { eq } from "drizzle-orm";
-import { db } from "@/db/index";
+import { db } from "@/db/index.js";
 
 export const createBoardResultStatus = async (req: Request, res: Response, next: NextFunction) => {
     try {

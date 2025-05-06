@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { addPersonalDetails, findPersonalDetailsById, findPersonalDetailsByStudentId } from "../services/personalDetails.service";
-import { PersonalDetailsType } from "@/types/user/personal-details";
-import { ApiResponse, handleError } from "@/utils/index";
+import { addPersonalDetails, findPersonalDetailsById, findPersonalDetailsByStudentId } from "../services/personalDetails.service.js";
+import { PersonalDetailsType } from "@/types/user/personal-details.js";
+import { ApiResponse, handleError } from "@/utils/index.js";
 
 export const createPersonalDetails = async (req: Request, res: Response, next: NextFunction) => {
     try {
