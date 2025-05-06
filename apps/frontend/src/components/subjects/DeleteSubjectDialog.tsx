@@ -10,14 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-interface Subject {
-  id: number;
-  name: string;
-  irpCode: string;
-  semester: number;
-  [key: string]: string | number | boolean | object | null | undefined;
-}
+import { Subject } from '@/services/subject-metadata';
 
 interface DeleteSubjectDialogProps {
   isOpen: boolean;
