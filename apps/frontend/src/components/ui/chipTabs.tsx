@@ -1,6 +1,5 @@
 // components/ChipTabs.tsx
 import { motion } from "framer-motion";
-import React from "react";
 
 interface ChipTabsProps {
   tabs: string[];
@@ -105,7 +104,6 @@ const Chip = ({
           layoutId="pill-tab"
           transition={{
             type: "spring",
-          
             duration: 0.5,
           }}
           className={`absolute inset-0 z-0 bg-gradient-to-r ${colorFrom} ${colorTo} rounded-md shadow-sm`}

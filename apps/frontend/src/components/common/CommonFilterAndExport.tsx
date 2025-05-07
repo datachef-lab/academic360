@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,25 +9,44 @@ import {
 
 import * as XLSX from "xlsx";
 
-import { Calendar, BookOpen, Filter, Download, ChevronDown, GraduationCap } from "lucide-react";
+import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download } from "lucide-react";
 
 import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
+import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 
 import { motion } from "framer-motion";
 
 import { useMarksheetStore } from "@/stores/useTableStore";
 
+import { getAllMarksheet } from "@/services/student-apis";
+import { toast } from "sonner";
+
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 // type Framework = "CCF" | "CBCS";
 
 const FilterAndExportComponent: React.FC = () => {
-  const { setFilters, filteredData, uiFilters, setUiFilters } = useMarksheetStore();
+  const { setFilters, filters, uiFilters, setUiFilters } = useMarksheetStore();
+
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data } = useQuery({
     queryKey: ["streams"],
     queryFn: getAllStreams,
+  });
+
+  const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
+    queryKey: ["export"],
+    queryFn: () =>
+      getAllMarksheet({
+        stream: filters.stream ?? undefined,
+        year: filters.year ?? undefined,
+
+        semester: filters.semester ?? undefined,
+        export: isExporting ? true : false,
+      }),
+    enabled: false, // Do not auto-fetch
   });
 
   const streamMemo = useMemo(() => {
@@ -47,6 +66,7 @@ const FilterAndExportComponent: React.FC = () => {
       year: uiFilters.selectedYear,
       framework: uiFilters.selectedFramework,
       semester: uiFilters.selectedSemester,
+      export: isExporting ? true : false,
     });
   };
 
@@ -68,45 +88,44 @@ const FilterAndExportComponent: React.FC = () => {
 
   const semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  // const handleExportPDF = () => {
-  //   const doc = new jsPDF();
-  //   doc.text("Exported Report", 10, 10);
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    try {
+      const { data: exportData } = await fetchExportData();
 
-  //   if (filteredData.length > 0) {
-  //     const headers = [Object.keys(filteredData[0])];
-  //     const rows = filteredData.map((row) => Object.values(row));
-  //     autoTable(doc, {
-  //       head: headers,
-  //       body: rows as unknown as RowInput[],
-  //       startY: 30,
-  //       theme: "grid",
-  //       styles: { fontSize: 3, cellPadding: 1 },
-  //       headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: "bold" },
-  //     });
-  //   } else {
-  //     doc.text("No data available", 10, 40);
-  //   }
-  //   doc.save("filtered_report.pdf");
-  // };
-  const handleExportExcel = () => {
-    const data = filteredData;
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(data);
+      if (!data || data.length === 0) {
+        toast.error("No data available for export.");
+        return;
+      }
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(exportData.data);
 
-    // Auto-calculate column widths based on content
-    if (data.length > 0) {
-      const header = Object.keys(data[0]);
-      const widths = header.map((key) => ({
-        wch: Math.max(
-          key.length, // Header width
-          ...data.map((row) => String(row[key as keyof typeof row]).length), // Content width
-        ),
-      }));
-      worksheet["!cols"] = widths;
+      // Set dynamic column widths with padding and a minimum width
+      if (exportData.data.length > 0) {
+        const headers = Object.keys(exportData.data[0]);
+
+        worksheet["!cols"] = headers.map((key) => {
+          const maxLength = Math.max(
+            key.length,
+            ...exportData.data.map(
+              (row: MarksheetTableType) => String(row[key as keyof MarksheetTableType] ?? "").length,
+            ),
+          );
+
+          return {
+            wch: Math.max(15, maxLength + 2),
+          };
+        });
+      }
+
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Marksheet");
+
+      XLSX.writeFile(workbook, `Marksheet_${new Date().toISOString().split("T")[0]}.xlsx`);
+    } catch (error) {
+      console.error("Failed to export:", error);
+    } finally {
+      setIsExporting(false);
     }
-
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Marksheet");
-    XLSX.writeFile(workbook, `Marksheet_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
   return (
@@ -125,9 +144,10 @@ const FilterAndExportComponent: React.FC = () => {
           <Button
             className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all"
             onClick={handleExportExcel}
+            disabled={isExporting || isFetchingExport}
           >
             <Download className="h-4 w-4" />
-            Export
+            {isExporting || isFetchingExport ? "Exporting..." : "Export"}
           </Button>
         </motion.div>
       </div>

@@ -75,7 +75,7 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
 
 export const getAllMarksheets = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { page, pageSize, searchText, stream, year, semester } = req.query;
+        const { page, pageSize, searchText, stream, year, semester, export: exportFlag  } = req.query;
 
         const marksheets = await getAllMarks(
             Number(page), 
@@ -83,7 +83,8 @@ export const getAllMarksheets = async (req: Request, res: Response, next: NextFu
             searchText as string,
             stream as string,
             year ? Number(year) : undefined,
-            semester ? Number(semester) : undefined
+            semester ? Number(semester) : undefined,
+            exportFlag === 'true'? true : false 
         );
       if(!marksheets) {
         res.status(404).json(new ApiError(404, "No marksheets found!"));

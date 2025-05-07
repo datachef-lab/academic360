@@ -10,7 +10,7 @@ import CommonFilterAndExport from '../common/CommonFilterAndExport';
 import { MarksheetTableType } from '@/types/tableTypes/MarksheetTableType';
 
 
-const MarksheetDownloads = (): JSX.Element => {
+const MarksheetDownloads: React.FC = () => {
   const {filters,filteredData,setFilteredData}=useMarksheetStore()
   const [pagination, setPagination] = useState({
     pageIndex: 0,
@@ -36,7 +36,7 @@ const MarksheetDownloads = (): JSX.Element => {
 
   useEffect(() => {
     if (marksheetData) {
-      console.log("marksheetData",marksheetData.data);
+      // console.log("marksheetData",marksheetData.data);
       setFilteredData( marksheetData.data);
       lastPageCountRef.current = marksheetData.totalPages;
     }
