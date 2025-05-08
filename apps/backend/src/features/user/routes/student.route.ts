@@ -1,7 +1,7 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express, { Request, Response, NextFunction } from "express";
 import { createOldStudent } from "../controllers/oldStudent.controller.js";
-import { deleteStudent, getAllStudents, getSearchedStudents, getSearchedStudentsByRollNumber, getStudentById, updateStudent } from "../controllers/student.controller.js";
+import { deleteStudent, getAllStudents, getFilteredStudents, getSearchedStudents, getSearchedStudentsByRollNumber, getStudentById, updateStudent } from "../controllers/student.controller.js";
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ router.get("/old-data", createOldStudent);
 router.get("/search", getSearchedStudents);
 
 router.get("/search-rollno", getSearchedStudentsByRollNumber);
-
+router.get("/filtered", getFilteredStudents);
 router.get("/query", (req: Request, res: Response, next: NextFunction) => {
     const { id, page, pageSize } = req.query;
 

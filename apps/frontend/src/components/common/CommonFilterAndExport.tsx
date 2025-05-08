@@ -37,7 +37,7 @@ const FilterAndExportComponent: React.FC = () => {
   });
 
   const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
-    queryKey: ["export"],
+    queryKey: ["export",filters],
     queryFn: () =>
       getAllMarksheet({
         stream: filters.stream ?? undefined,

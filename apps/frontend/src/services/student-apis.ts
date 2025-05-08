@@ -190,6 +190,7 @@ export const UpdateUser = async (formData: User, id: number) => {
   });
   return res.data;
 };
+
 type ReportFilters = {
   page?: number;
   pageSize?: number;
@@ -199,26 +200,38 @@ type ReportFilters = {
   searchText?: string;
   semester?: number;
   showFailedOnly?: boolean;
+  export?: boolean;
 };
-
 export const getAllReports = async (filters: ReportFilters = {}) => {
-  // console.log("Filters in getAllReports:", filters);
-  const query = Object.entries(filters)
-    .filter(([, value]) => value !== undefined && value !== null && value !== "")
-    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
-    .join("&");
-  // console.log("Query string:", query);
-  const url = `/api/reports/query${query ? "?" + query : ""}`;
-  // console.log("URL:", url);
+  try {
+    const { export: isExport, ...rest } = filters;
+    
+    // Build query string from rest filters
+    let query = Object.entries(rest)
+      .filter(([, value]) => value !== undefined && value !== null && value !== "")
+      .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+      .join("&");
 
-  const response = await axiosInstance.get(url, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+    // Add export parameter if needed
+    if (isExport) {
+      query += (query ? "&" : "") + "export=true";
+    }
 
-  return response.data;
+    const url = `/api/reports/query${query ? "?" + query : ""}`;
+    console.log("URL:", url);
+    const response = await axiosInstance.get(url, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching reports:", error);
+    throw error;
+  }
 };
+
 
 type marksheetFilters = {
   page?: number;

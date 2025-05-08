@@ -26,3 +26,35 @@ export async function getSearchedStudentsByRollNumber(page: number, pageSize: nu
     console.log(response.data);
     return response.data;
 }
+
+export async function getFilteredStudents({
+    page = 1,
+    pageSize = 10,
+    stream,
+    year,
+    semester,
+    framework,
+    isExporting = false
+}: {
+    page?: number;
+    pageSize?: number;
+    stream?: string;
+    year?: number;
+    semester?: number;
+    framework?: "CCF" | "CBCS";
+    isExporting?: boolean;
+}): Promise<ApiResonse<PaginatedResponse<Student>>> {
+    const params = new URLSearchParams();
+    if (!isExporting) {
+        if (page) params.append('page', page.toString());
+        if (pageSize) params.append('pageSize', pageSize.toString());
+    }
+    if (stream) params.append('stream', stream);
+    if (year) params.append('year', year.toString());
+    if (semester) params.append('semester', semester.toString());
+    if (framework) params.append('framework', framework);
+    if (isExporting) params.append('isExporting', 'true');
+
+    const response = await axiosInstance.get(`/api/students/filtered?${params.toString()}`);
+    return response.data;
+}

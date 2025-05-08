@@ -35,7 +35,7 @@ type FrameworkType = "CCF" | "CBCS";
 interface ReportQueryParams {
     page?: number;
     pageSize?: number;
-
+    export?: boolean;
     stream?: string;
     framework?: FrameworkType;
     semester?: number;
@@ -113,7 +113,7 @@ export const getAllReports = async (req: Request, res: Response, next: NextFunct
         const {
             page = 1,
             pageSize = 10,
-
+            export: isExport = false, 
             stream,
             framework,
             year,
@@ -132,7 +132,10 @@ export const getAllReports = async (req: Request, res: Response, next: NextFunct
             framework,
             year,
             semester,
-            showFailedOnly
+            showFailedOnly,
+            export: isExport,
+          
+            
         });
 
         if (!reportsData) {

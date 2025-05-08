@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber } from "@/features/user/services/student.service.js";
+import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 
@@ -126,3 +126,32 @@ export const deleteStudent = async (req: Request, res: Response, next: NextFunct
         handleError(error, res, next);
     }
 }
+
+export const getFilteredStudents = async (req: Request, res: Response,next:NextFunction) => {
+    try {
+        const { page = 1, pageSize = 10, stream, year, semester, framework,export:isExport } = req.query;
+        
+        const result = await findFilteredStudents({
+            page: Number(page),
+            pageSize: Number(pageSize),
+            stream: stream as string,
+            year: year ? Number(year) : undefined,
+            semester: semester ? Number(semester) : undefined,
+            framework: framework as "CCF" | "CBCS",
+            export: isExport === "true" ? true : false,
+        });
+
+        res.json({
+            success: true,
+            message: 'Students retrieved successfully',
+            data: result
+        });
+    } catch (error) {
+        console.error('Error in getFilteredStudents:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve students',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+};

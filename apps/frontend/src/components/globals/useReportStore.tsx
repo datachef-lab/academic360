@@ -46,6 +46,7 @@ type ReportFilters = {
   framework?: string | null;
   semester?: number | null;
   // showFailedOnly?: boolean;
+  export?: boolean;
 
   page?: number | 0;
   pageSize?: number | 0;
