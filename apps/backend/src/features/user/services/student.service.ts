@@ -318,7 +318,7 @@ export async function findFilteredStudents({
     year,
     semester,
     framework,
-    export:isExport = false
+    export:isExport
 }: {
     page?: number;
     pageSize?: number;
@@ -374,7 +374,9 @@ export async function findFilteredStudents({
         .where(and(...filters));
 
     let students;
+     console.log("Exporting all students1",isExport);
     if (isExport) {
+        console.log("Exporting all students2",isExport);
        
         students = await query;
     } else {

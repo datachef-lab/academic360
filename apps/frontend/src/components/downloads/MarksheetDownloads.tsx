@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { DataTable } from '../reports/DataTable';
 import { MarksheetColumns } from '../reports/marksheetColumns';
-import { useMarksheetStore } from '@/stores/useTableStore';
+import { useMarksheetStore } from '@/components/globals/useMarksheetStore';
 import CommonFilterAndExport from '../common/CommonFilterAndExport';
 import { MarksheetTableType } from '@/types/tableTypes/MarksheetTableType';
 

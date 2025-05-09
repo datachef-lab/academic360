@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
+import { boolean } from "drizzle-orm/mysql-core";
 
 export const createStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -135,10 +136,10 @@ export const getFilteredStudents = async (req: Request, res: Response,next:NextF
             page: Number(page),
             pageSize: Number(pageSize),
             stream: stream as string,
-            year: year ? Number(year) : undefined,
-            semester: semester ? Number(semester) : undefined,
+            year: Number(year) ,
+            semester: Number(semester),
             framework: framework as "CCF" | "CBCS",
-            export: isExport === "true" ? true : false,
+            export: isExport === "true" ? true : false
         });
 
         res.json({
