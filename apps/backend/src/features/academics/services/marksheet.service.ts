@@ -105,6 +105,27 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
     let dataArr = readExcelFile<MarksheetRow>(filePath);
     console.log(dataArr.length);
 
+    // Validate the data structure early
+    dataArr = dataArr.map(row => {
+        // Ensure uid is always a string
+        if (row.uid === null || row.uid === undefined) {
+            row.uid = '';
+        } else if (typeof row.uid !== 'string') {
+            row.uid = String(row.uid);
+        }
+        
+        // Ensure other required fields are valid strings
+        if (!row.roll_no || typeof row.roll_no !== 'string') {
+            row.roll_no = row.roll_no ? String(row.roll_no) : '';
+        }
+        
+        if (!row.registration_no || typeof row.registration_no !== 'string') {
+            row.registration_no = row.registration_no ? String(row.registration_no) : '';
+        }
+        
+        return row;
+    });
+
     socket.emit('progress', { stage: 'reading_done', message: 'File read success...' });
     console.log("\nFile read successfully. Validating data...\n")
 
@@ -474,7 +495,7 @@ async function addUser({ name, uid }: AddUserProps) {
     const email = `${cleanString(uid)?.toUpperCase()}@thebges.edu.in`;
 
     // Hash the password before storing it in the database
-    const hashedPassword = await bcrypt.hash(uid.trim()?.toUpperCase(), 10);
+    const hashedPassword = await bcrypt.hash(uid ? uid.trim().toUpperCase() : '', 10);
 
     // Return, if the email already exist
     const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
@@ -538,7 +559,7 @@ async function addAcademicIdentifier({ studentId, stream, uid, registrationNumbe
     await db.insert(academicIdentifierModel).values({
         studentId: studentId as number,
         streamId: stream ? stream.id as number : null,
-        uid: uid ? cleanString(uid)?.toUpperCase() : null,
+        uid: uid && typeof uid === 'string' ? cleanString(uid)?.toUpperCase() : null,
         registrationNumber: registrationNumber.trim(),
         rollNumber: rollNumber.trim(),
         sectionId: sectionId,
@@ -1170,67 +1191,103 @@ export async function cleanData(dataArr: MarksheetRow[], socket: Socket<DefaultE
     socket.emit('progress', { stage: 'cleaning_data', message: 'Cleaning the data...' });
     console.log("in cleanData(), dataArr:", dataArr.length);
 
-    const startingYear = Math.min(...dataArr.map(row => row.year1));
-    console.log("in cleanData(), startingYear:", startingYear, dataArr[0]);
+    try {
+        const startingYear = Math.min(...dataArr.map(row => row.year1));
+        console.log("in cleanData(), startingYear:", startingYear);
+        if (dataArr.length > 0) {
+            console.log("First row sample:", {
+                uid: dataArr[0].uid,
+                uid_type: typeof dataArr[0].uid,
+                roll_no: dataArr[0].roll_no,
+                name: dataArr[0].name,
+                registration_no: dataArr[0].registration_no
+            });
+        }
 
-    const streams = await findAllStreams();
-    const formattedArr: MarksheetRow[] = [];
+        const streams = await findAllStreams();
+        const formattedArr: MarksheetRow[] = [];
 
-    for (let y = startingYear; y <= new Date().getFullYear(); y++) {
-        for (let s = 0; s < streams.length; s++) {
-            for (let sem = 1; sem <= 6; sem++) {
-                const arr = await filterData({
-                    dataArr,
-                    semester: sem,
-                    stream: streams[s],
-                    year: y
-                });
+        for (let y = startingYear; y <= new Date().getFullYear(); y++) {
+            for (let s = 0; s < streams.length; s++) {
+                for (let sem = 1; sem <= 6; sem++) {
+                    const arr = await filterData({
+                        dataArr,
+                        semester: sem,
+                        stream: streams[s],
+                        year: y
+                    });
 
-                console.log("filtered arr:", arr.length);
+                    console.log("filtered arr:", arr.length);
 
-                const doneRollNumber = new Set<string>(); // Use a Set to prevent duplicates
+                    const doneRollNumber = new Set<string>(); // Use a Set to prevent duplicates
 
-                for (let i = 0; i < arr.length; i++) {
-                    if (doneRollNumber.has(arr[i].roll_no)) continue; // Skip if already processed
+                    for (let i = 0; i < arr.length; i++) {
+                        try {
+                            if (doneRollNumber.has(arr[i].roll_no)) continue; // Skip if already processed
 
-                    let studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
+                            let studentMksArr = arr.filter(ele => ele.roll_no === arr[i].roll_no);
+                            
+                            // Debug problematic data
+                            if (i === 0) {
+                                console.log("First student in array:", {
+                                    uid: arr[i].uid,
+                                    uid_type: typeof arr[i].uid,
+                                    roll_no: arr[i].roll_no
+                                });
+                            }
 
-                    // Normalize and clean the data
-                    studentMksArr = studentMksArr.map((mks) => ({
-                        ...mks,
-                        stream: streams[s].degree.name.toUpperCase().trim(),
-                        uid: mks.uid.toUpperCase().trim(),
-                        registration_no: cleanTilde(mks.registration_no) as string,
-                        roll_no: cleanTilde(mks.roll_no) as string,
-                        course: mks.course.toUpperCase().trim(),
-                        name: mks.name.toUpperCase().trim(),
-                        paperCode: mks.paperCode.toUpperCase().trim(),
-                        framework: mks.framework.toUpperCase().trim() as "CBCS" | "CCF",
-                        specialization: mks.specialization ? mks.specialization.toUpperCase().trim() : null,
-                        section: mks.section ? mks.section.toUpperCase().trim() : null,
-                        internal_marks: formatMarks(mks.internal_marks)?.toString() || null,
-                        theory_marks: formatMarks(mks.theory_marks)?.toString() || null,
-                        practical_marks: formatMarks(mks.practical_marks)?.toString() || null,
-                        // tutorial_marks: formatMarks(mks.tutorial_marks)?.toString() || null,
-                        total: formatMarks(mks.total)?.toString() || null,
-                        year2: mks.stream.toUpperCase() !== "BCOM" ? formatMarks(mks.year2)?.toString() || null : null,
-                    }));
+                            // Normalize and clean the data
+                            studentMksArr = studentMksArr.map((mks) => {
+                                // Create a safer version of the object with null checks
+                                const safeObj: MarksheetRow = {
+                                    ...mks,
+                                    stream: streams[s].degree.name.toUpperCase().trim(),
+                                    uid: typeof mks.uid === 'string' ? mks.uid.toUpperCase().trim() : '',
+                                    registration_no: cleanTilde(mks.registration_no) || '',
+                                    roll_no: cleanTilde(mks.roll_no) || '',
+                                    course: typeof mks.course === 'string' ? mks.course.toUpperCase().trim() : '',
+                                    name: typeof mks.name === 'string' ? mks.name.toUpperCase().trim() : '',
+                                    paperCode: typeof mks.paperCode === 'string' ? mks.paperCode.toUpperCase().trim() : '',
+                                    framework: (typeof mks.framework === 'string' && 
+                                            (mks.framework.toUpperCase().trim() === 'CBCS' || 
+                                                mks.framework.toUpperCase().trim() === 'CCF')) 
+                                        ? mks.framework.toUpperCase().trim() as "CBCS" | "CCF" 
+                                        : "CBCS",
+                                    specialization: typeof mks.specialization === 'string' ? mks.specialization.toUpperCase().trim() : null,
+                                    section: typeof mks.section === 'string' ? mks.section.toUpperCase().trim() : null,
+                                    internal_marks: formatMarks(mks.internal_marks)?.toString() || null,
+                                    theory_marks: formatMarks(mks.theory_marks)?.toString() || null,
+                                    practical_marks: formatMarks(mks.practical_marks)?.toString() || null,
+                                    total: formatMarks(mks.total)?.toString() || null,
+                                    year2: (typeof mks.stream === 'string' && mks.stream.toUpperCase() !== "BCOM") 
+                                        ? formatMarks(mks.year2)?.toString() || null 
+                                        : null,
+                                };
+                                
+                                // Return the safer object
+                                return safeObj;
+                            });
 
-                    formattedArr.push(...studentMksArr);
-                    doneRollNumber.add(arr[i].roll_no); // Mark roll number as processed
-
-                    // console.log(`Done year ${y} | stream ${streams[s].degree.name} | semester ${sem} | Total: ${i + 1}/${arr.length}`);
-
+                            formattedArr.push(...studentMksArr);
+                            doneRollNumber.add(arr[i].roll_no); // Mark roll number as processed
+                        } catch (error) {
+                            console.error(`Error processing row ${i}:`, error);
+                            console.error("Problematic data:", JSON.stringify(arr[i], null, 2));
+                        }
+                    }
+                    socket.emit('progress', {
+                        stage: 'cleaning_data',
+                        message: `Done year ${y} | stream ${streams[s].degree.name} | semester ${sem}`
+                    });
                 }
-                socket.emit('progress', {
-                    stage: 'cleaning_data',
-                    message: `Done year ${y} | stream ${streams[s].degree.name} | semester ${sem}`
-                });
             }
         }
+        console.log("returning cleaned data:", formattedArr.length);
+        return formattedArr;
+    } catch (error) {
+        console.error("Error in cleanData:", error);
+        throw error;
     }
-    console.log("returning cleaned data:", formattedArr.length);
-    return formattedArr;
 }
 
 
@@ -1239,5 +1296,5 @@ const cleanTilde = (value: unknown): string | null => {
     if (typeof value === 'string') {
         return value.replace(/~/g, '').trim();  // Remove all tildes and trim the string
     }
-    return null;  // Return undefined for non-string values
+    return null;  // Return null for non-string values
 };
