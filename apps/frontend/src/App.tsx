@@ -31,7 +31,6 @@ import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
-import SearchStudentPage from "./pages/SearchStudentPage";
 import LibraryDashboard from "./pages/LibraryDashboard";
 
 
@@ -85,14 +84,15 @@ const router = createBrowserRouter([
       { path: "issued-book", element: <IssueRetun /> },
       { path: "fine-management", element: <LibFineManagement /> },
       { path: "lib-report", element: <LibReport /> },
-      {
-        path: "search-students",
-        element: <Outlet />,
-        children: [
-          { path: "", element: <SearchStudentPage /> },
-          { path: ":studentId", element: <StudentPage /> },
-        ],
-      },
+      { path: "search-students/:studentId", element: <StudentPage /> },
+      // {
+      //   path: "search-students",
+      //   element: <Outlet />,
+      //   children: [
+         
+      //     { path: ":studentId", element: <StudentPage /> },
+      //   ],
+      // },
       { path: "profile", element: <UserProfilePage /> },
       { path: "settings", element: <SettingsPage /> },
     ],

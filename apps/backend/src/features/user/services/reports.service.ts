@@ -16,7 +16,7 @@ type ReportQueryParams = {
   framework?: string;
   semester?: number;
   year?: number;
-  showFailedOnly?: boolean;
+  showFailedOnly?: "PASS" | "FAIL" | undefined;
   export?: boolean;
 };
 
@@ -215,10 +215,17 @@ export const getReports = async ({
     };
   });
 
-  const filteredData = showFailedOnly
-    ? allFormattedData.filter((student) => student.status.startsWith("FAIL"))
-    : allFormattedData;
-    
+  let filteredData 
+  if(showFailedOnly == "FAIL"){
+    filteredData=allFormattedData.filter((student) => student.status.include("FAIL"));
+      }
+  else if(showFailedOnly == "PASS"){
+    filteredData= allFormattedData.filter((student) => student.status.include("PASS"));
+  }
+  else {
+    filteredData=allFormattedData;
+  }
+
   console.log("Export flag:", isExport);
   
   if(isExport){

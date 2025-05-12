@@ -164,9 +164,11 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
     const studentsQuery = db
         .select()
         .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
+                 ilike(userModel.name , `%${searchText}%`),
                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
@@ -184,9 +186,11 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
     const [{ count: countRows }] = await db
         .select({ count: count() })
         .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
+                ilike(userModel.name , `%${searchText}%`),
                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
@@ -286,6 +290,7 @@ export async function searchStudentsByRollNumber(searchText: string, page: numbe
     const [{ count: countRows }] = await db
         .select({ count: count() })
         .from(studentModel)
+        
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
@@ -336,26 +341,7 @@ export async function findFilteredStudents({
     ].filter(Boolean);
 
     const query = db
-        .select({
-            id: studentModel.id,
-            userId: studentModel.userId,
-            community: studentModel.community,
-            handicapped: studentModel.handicapped,
-            specializationId: studentModel.specializationId,
-            lastPassedYear: studentModel.lastPassedYear,
-            notes: studentModel.notes,
-            active: studentModel.active,
-            alumni: studentModel.alumni,
-            leavingDate: studentModel.leavingDate,
-            leavingReason: studentModel.leavingReason,
-            createdAt: studentModel.createdAt,
-            updatedAt: studentModel.updatedAt,
-            name: userModel.name,
-            stream: degreeModel.name,
-            framework: streamModel.framework,
-            semester: marksheetModel.semester,
-            year: marksheetModel.year,
-        })
+        .select()
         .from(studentModel)
         .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
@@ -394,8 +380,8 @@ export async function findFilteredStudents({
         };
     }
 
-    const filteredData = await Promise.all(students.map(async (student) => {
-        return await studentResponseFormat(student);
+    const filteredData = await Promise.all(students.map(async (studentRecord) => {
+        return await studentResponseFormat(studentRecord.students);
     })) as StudentType[];
 
     return {

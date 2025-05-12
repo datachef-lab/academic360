@@ -32,7 +32,7 @@ interface StudentReport {
 
 type FrameworkType = "CCF" | "CBCS";
 
-interface ReportQueryParams {
+type ReportQueryParams= {
     page?: number;
     pageSize?: number;
     export?: boolean;
@@ -40,7 +40,7 @@ interface ReportQueryParams {
     framework?: FrameworkType;
     semester?: number;
     year?: number;
-    showFailedOnly?: boolean;
+    showFailedOnly?: "PASS" | "FAIL" | undefined;
 }
 
 

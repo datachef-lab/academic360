@@ -30,6 +30,7 @@ export async function getSearchedStudents(
   pageSize: number,
   searchText: string,
 ): Promise<ApiResonse<PaginatedResponse<Student>>> {
+ 
   const response = await axiosInstance.get(
     `/api/students/search?page=${page}&pageSize=${pageSize}&searchText=${searchText}`,
   );
@@ -45,7 +46,7 @@ export async function getSearchedStudentsByRollNumber(
   const response = await axiosInstance.get(
     `/api/students/search-rollno?page=${page}&pageSize=${pageSize}&searchText=${searchText}`,
   );
-  console.log(response.data);
+
   return response.data;
 }
 
