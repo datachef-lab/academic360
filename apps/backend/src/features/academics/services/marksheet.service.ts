@@ -679,11 +679,17 @@ export async function findMarksheetById(
 
 export async function findMarksheetsByStudentId(
   studentId: number,
+  semester:number,
 ): Promise<MarksheetType[]> {
+ const filters = [
+  semester ? eq(marksheetModel.semester, semester) : undefined,
+  eq(marksheetModel.studentId, studentId)
+].filter(Boolean);
+
   const marksheets = await db
     .select()
     .from(marksheetModel)
-    .where(eq(marksheetModel.studentId, studentId));
+    .where(and(...filters));
 
   let formattedMarksheets: MarksheetType[] = [];
   formattedMarksheets = (

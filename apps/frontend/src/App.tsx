@@ -27,11 +27,13 @@ import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
-import Downloads from "./pages/Downloads";
+// import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
 import LibraryDashboard from "./pages/LibraryDashboard";
+import GradeCard from "./components/GradeMarks/GradeCard";
+
 
 
 const router = createBrowserRouter([
@@ -51,7 +53,7 @@ const router = createBrowserRouter([
       { path: "", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "add-student", element: <AddStudentPage /> },
-      { path: "downloads", element: <Downloads /> },
+      { path: "downloads", element: < GradeCard/> },
       { path: "event", element: <Event /> },
       { path: "admission-fees", element: <AdmissionAndFess /> },
       { path: "courses-subjects", element: <CoursesAndSubject /> },

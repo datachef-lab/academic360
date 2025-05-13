@@ -95,7 +95,7 @@ import { useState } from "react";
 //   );
 // }
 
-import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users } from "lucide-react";
+import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, List } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { getStudentById } from "@/services/student";
@@ -112,6 +112,7 @@ const studentTabs = [
   { label: "Academic Identifiers", icon: <GraduationCap size={16} />, endpoint: "/academic-identifier" },
   { label: "Accommodation", icon: <Home size={16} />, endpoint: "/accommodation" },
   { label: "Transport Details", icon: <Bus size={16} />, endpoint: "transport-details" },
+  {label: "Student Marksheet", icon: <List size={16} />, endpoint: "/marksheet" },
 ];
 
 export default function StudentPage() {

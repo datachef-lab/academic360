@@ -369,7 +369,7 @@ export async function findFilteredStudents({
       
         students = await query.limit(pageSize).offset((page - 1) * pageSize);
     }
-
+console.log("rows",Number(countRows));
     if (students.length === 0) {
         return {
             content: [],

@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, findMarksheetLogs, getAllMarks, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById, findMarksheetLogs, findMarksheetsByStudentId, getAllMarks, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
@@ -100,9 +100,37 @@ export const getAllMarksheets = async (req: Request, res: Response, next: NextFu
 export const getMarksheetById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log("\n\nin fetch by id\n\n");
-        const { id } = req.params;
+        const { id } = req.query;
 
-        const foundMarksheet = await findMarksheetById(+id);
+        if (id === undefined) {
+            res.status(400).json(new ApiError(400, "Missing 'id' parameter!"));
+            return;
+        }
+
+        const foundMarksheet = await findMarksheetById(Number(id));
+
+        if (!foundMarksheet) {
+            res.status(404).json(new ApiError(404, "Marksheet not found!"));
+            return;
+        }
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", foundMarksheet, "Marksheet fetched successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+// findMarksheetsByStudentId
+export const getMarksheetByStudentId = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        console.log("\n\nin fetch by id\n\n");
+        const { studentId ,semester } = req.query;
+
+        if (studentId === undefined) {
+            res.status(400).json(new ApiError(400, "Missing 'studentId' parameter!"));
+            return;
+        }
+
+        const foundMarksheet = await findMarksheetsByStudentId(Number(studentId),Number(semester));
 
         if (!foundMarksheet) {
             res.status(404).json(new ApiError(404, "Marksheet not found!"));

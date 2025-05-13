@@ -12,6 +12,7 @@ export interface SubjectType {
 export interface SubjectMetadata {
     readonly id?: number;
     stream: Stream;
+    marksheetCode:string;
     degreeProgramme: DegreeProgramme;
     semester: number;
     framework: Framework;
@@ -25,6 +26,8 @@ export interface SubjectMetadata {
     fullMarksTutorial: number;
     fullMarksInternal: number;
     fullMarksPractical: number;
+    practicalCredit:number;
+    theoryCredit:number;
     fullMarksProject: number;
     fullMarksViva: number;
     fullMarks: number;

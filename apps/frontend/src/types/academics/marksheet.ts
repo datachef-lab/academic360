@@ -1,4 +1,4 @@
-import { AcademicIdentifier } from "../user/academic-identifier";
+import { academicIdentifier } from "../user/academic-identifier";
 import { User } from "../user/user";
 import { Subject } from "./subject";
 
@@ -19,7 +19,7 @@ export interface Marksheet {
     updatedByUser: User;
     subjects: Subject[];
     name: string;
-    academicIdentifier: AcademicIdentifier;
+    academicIdentifier: academicIdentifier;
 }
 
 export interface MarksheetLog {

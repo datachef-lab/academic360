@@ -1,3 +1,4 @@
+import GradeCard from "../GradeMarks/GradeCard";
 import AcademicHistory from "./AcademicHistoryForm";
 import AcademicIdentifier from "./AcademicIdentifierForm";
 import Accommodation from "./AccommodationForm";
@@ -41,6 +42,8 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
         return <Accommodation />;
       case "Transport Details":
         return <TransportDetails />;
+        case "Student Marksheet":
+        return <GradeCard />;
       default:
         return <p>No Content!</p>;
     }

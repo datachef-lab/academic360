@@ -1,22 +1,34 @@
+import { useMarksheetFilterStore } from "@/components/globals/useMarksheetFilterStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getAllStreams } from "@/services/stream";
+// import { getAllStreams } from "@/services/stream";
 import { DegreeProgramme } from "@/types/enums";
-import { useQuery } from "@tanstack/react-query";
+// import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 export default function Header() {
-  const [selectedStream, setSelectedStream] = useState<string>("BCOM");
+  // const [selectedStream, setSelectedStream] = useState<string>("BCOM");
   const [selectedCourse, setSelectedCourse] = useState<DegreeProgramme>("HONOURS");
   const [selectedSemester, setSelectedSemester] = useState<number>(1);
+  const {setSemester,setCategory,Category,semester}=useMarksheetFilterStore();
 
-  const { data } = useQuery({
-    queryKey: ["streams"],
-    queryFn: async () => {
-      const response = await getAllStreams();
-      setSelectedStream(response[0]?.name || "BCOM"); // Handle empty data case
-      return response;
-    },
-  });
+    const handleCourseTypeChange = (value: string) => {
+    setSelectedCourse(value as DegreeProgramme);
+    setCategory(value);
+  };
+   const handleSemesterChange = (value: string) => {
+    const numValue = Number(value);
+    setSelectedSemester(numValue);
+    setSemester(numValue);
+  };
+
+  // const { data } = useQuery({
+  //   queryKey: ["streams"],
+  //   queryFn: async () => {
+  //     const response = await getAllStreams();
+  //     setSelectedStream(response[0]?.name || "BCOM"); // Handle empty data case
+  //     return response;
+  //   },
+  // });
 
   return (
     <div className="text-center mb-8 p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow-md w-[1000px]">
@@ -27,7 +39,7 @@ export default function Header() {
       {/* Dropdowns Container */}
       <div className="mt-4 flex flex-col sm:flex-row justify-center items-center gap-4">
         {/* Stream Dropdown */}
-        <div className="w-full sm:w-56">
+        {/* <div className="w-full sm:w-56">
           <Select value={selectedStream} onValueChange={setSelectedStream}>
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">
               <SelectValue placeholder="Select Stream" />
@@ -40,11 +52,14 @@ export default function Header() {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
 
         {/* Course Dropdown */}
         <div className="w-full sm:w-56">
-          <Select value={selectedCourse} onValueChange={(value) => setSelectedCourse(value as DegreeProgramme)}>
+          <Select  
+          value={Category || selectedCourse }
+            onValueChange={handleCourseTypeChange}
+            >
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">
               <SelectValue placeholder="Select Course" />
             </SelectTrigger>
@@ -61,7 +76,10 @@ export default function Header() {
 
         {/* Semester Dropdown */}
         <div className="w-full sm:w-56">
-          <Select value={selectedSemester.toString()} onValueChange={(value) => setSelectedSemester(Number(value))}>
+          <Select 
+             value={semester?.toString() || selectedSemester.toString()}
+            onValueChange={handleSemesterChange}
+          >
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">
               <SelectValue placeholder="Select Semester" />
             </SelectTrigger>

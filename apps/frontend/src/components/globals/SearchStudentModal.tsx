@@ -36,7 +36,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
   const lastPageCountRef = useRef(0);
   const isNavigatingRef = useRef(false);
 
-  // Reset state when modal closes
+  
   const resetState = useCallback(() => {
     setSearchQuery("");
     setSearchResults(undefined);
@@ -73,18 +73,16 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
     }
   };
 
-  // Handle view student details
   const handleViewStudent = useCallback((studentId: number) => {
     isNavigatingRef.current = true;
     onOpenChange(false);
-    // Use setTimeout to ensure modal is fully closed before navigation
     setTimeout(() => {
       navigate(`/home/search-students/${studentId}`);
       isNavigatingRef.current = false;
-    }, 300); // Match this with your modal transition duration
+    }, 100); 
   }, [navigate, onOpenChange]);
 
-  // Handle modal close
+  
   const handleModalClose = useCallback((open: boolean) => {
     if (!open && !isNavigatingRef.current) {
       resetState();
@@ -101,7 +99,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
             alt="Background" 
             className="w-full h-full object-cover opacity-90  blur-[3px]"
           />
-          <div className="absolute inset-0 bg-purple-900/75 backdrop-blur-[2px]"></div>
+          <div className="absolute inset-0 bg-purple-900/75 backdrop-blur-[1px]"></div>
         </div>
         
         <motion.div
