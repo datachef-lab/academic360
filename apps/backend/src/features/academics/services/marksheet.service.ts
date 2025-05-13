@@ -17,6 +17,7 @@ import { addSubject, findSubjectsByMarksheetId, saveSubject, subjectResponseForm
 import bcrypt from "bcrypt";
 import { User, userModel } from "@/features/user/models/user.model.js";
 import { calculateCGPA, calculateSGPA, formatMarks, getClassification, getLetterGrade, getRemarks } from "@/utils/helper.js";
+
 import { findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
 import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 import { MarksheetLog } from "@/types/academics/marksheet-logs.js";
@@ -104,7 +105,7 @@ export async function uploadFile(fileName: string, user: User, socket: Socket<De
 
     const filePath = path.resolve(directoryName, "../../../..", "public", "temp", fileName);
     console.log("\nReading file...")
-    let dataArr = readExcelFile<MarksheetRow>(filePath);
+    let dataArr = await readExcelFile<MarksheetRow>(filePath);
     console.log(dataArr.length);
 
     // Validate the data structure early

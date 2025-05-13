@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, {  useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,10 +6,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
 import * as XLSX from "xlsx";
-import autoTable, { RowInput } from "jspdf-autotable";
-import { jsPDF } from "jspdf";
+
 import {
 
   Calendar,
@@ -17,8 +16,7 @@ import {
   BookOpen,
   Filter,
   Download,
-  FileText,
-  FileSpreadsheet,
+
   ChevronDown,
   GraduationCap,
 } from "lucide-react";
@@ -28,19 +26,41 @@ import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
 import { useReportStore } from "../globals/useReportStore";
 import { motion } from "framer-motion";
-import { useLocation } from "react-router-dom";
-import { Student } from "@/types/user/student";
+// import { useLocation } from "react-router-dom";
+// import { Student } from "@/types/user/student";
+import { getAllReports } from "@/services/student-apis";
+import { toast } from "sonner";
+import { Report } from "./types";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 type Framework = "CCF" | "CBCS";
 
 const FilterAndExportComponent: React.FC = () => {
-  const { setFilters, filteredData, uiFilters, setUiFilters,StudentData } = useReportStore();
-  const location = useLocation();
+  const [isExporting, setIsExporting] = useState(false);
+  const { setFilters,filters, uiFilters, setUiFilters} = useReportStore();
+
+  
+
+
   const { data } = useQuery({
     queryKey: ["streams"],
     queryFn: getAllStreams,
   });
+
+const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
+    queryKey: ["exportReport"],
+    queryFn: () =>
+      getAllReports({
+        stream: filters.stream ?? undefined,
+        year: filters.year ?? undefined,
+        framework: filters.framework ?? undefined,
+        semester: filters.semester ?? undefined,
+        export:true,
+     
+      }),
+    enabled: false, // Do not auto-fetch
+  });
+  
 
   const streamMemo = useMemo(() => {
     if (!data) return [];
@@ -80,130 +100,95 @@ const FilterAndExportComponent: React.FC = () => {
 
   const semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  const handleExportPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Exported Report", 10, 10);
 
-    if (filteredData.length > 0) {
-      const headers = [Object.keys(filteredData[0])];
-      const rows = filteredData.map((row) => Object.values(row));
-      autoTable(doc, {
-        head: headers,
-        body: rows as unknown as RowInput[],
-        startY: 30,
-        theme: "grid",
-        styles: { fontSize: 3, cellPadding: 1 },
-        headStyles: { fillColor: [22, 160, 133], textColor: 255, fontStyle: "bold" },
+  const handleExportExcel = async () => {
+    setIsExporting(true);
+    const { data: reportData } = await getExportData();
+    const exportingData = reportData.payload.content;
+    
+    try {
+      if (!reportData?.payload?.content || reportData.payload.content.length === 0) {
+        toast.error("No data available for export.");
+        return;
+      }
+  
+      // Remove subjects from each student record
+      const dataWithoutSubjects = exportingData.map((student: Report) => {
+        // Explicitly select only the properties we want to keep
+        const {
+          id,
+          rollNumber,
+          registrationNumber,
+          uid,
+          name,
+          semester,
+          stream,
+          framework,
+          year,
+          sgpa,
+          cgpa,
+          letterGrade,
+          remarks,
+          percentage,
+          totalFullMarks,
+          totalObtainedMarks,
+          totalCredit
+        } = student;
+        
+        return {
+          id,
+          rollNumber,
+          registrationNumber,
+          uid,
+          name,
+          semester,
+          stream,
+          framework,
+          year,
+          sgpa,
+          cgpa,
+          letterGrade,
+          remarks,
+          percentage,
+          totalFullMarks,
+          totalObtainedMarks,
+          totalCredit
+        };
       });
-    } else {
-      doc.text("No data available", 10, 40);
+   
+     
+  
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(dataWithoutSubjects);
+  
+      // Set dynamic column widths with padding and a minimum width
+      if (dataWithoutSubjects.length > 0) {
+        const headers = Object.keys(dataWithoutSubjects[0]);
+  
+        worksheet["!cols"] = headers.map((key) => {
+          const maxLength = Math.max(
+            key.length,
+            ...dataWithoutSubjects.map(
+              (row: Report) => String(row[key as keyof typeof row] ?? "").length,
+            ),
+          );
+  
+          return {
+            wch: Math.max(15, maxLength + 2),
+          };
+        });
+      }
+  
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Report");
+      XLSX.writeFile(workbook, `Report_${new Date().toISOString().split("T")[0]}.xlsx`);
+      toast.success("Report exported successfully!");
+    } catch (error) {
+      console.error("Failed to export:", error);
+      toast.error("Failed to export report. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
-    doc.save("filtered_report.pdf");
   };
-
-  const handleExportExcel = () => {
-    // Determine which data to use based on current route
-    const exportData = location.pathname === '/home/downloads' ? StudentData : filteredData;
-    
-    if (exportData.length === 0) {
-      alert("No data available to export!");
-      return;
-    }
-
-    // Transform data to flatten nested objects and format dates
-    const formattedData = exportData.map(student => ({
-      // Basic Student Info
-      'Student ID': (student as Student).id || '',
-      'Name': (student as Student).name || '',
-      'User ID': (student as Student).userId || '',
-      'Community': (student as Student).community || '',
-      'Handicapped': (student as Student).handicapped ? 'Yes' : 'No',
-      'Level': (student as Student).level || '',
-      'Framework': (student as Student).framework || '',
-      'Shift': (student as Student).shift || '',
-      'Last Passed Year': (student as Student).lastPassedYear || '',
-      'Notes': (student as Student).notes || '',
-      'Active': (student as Student).active ? 'Yes' : 'No',
-      'Alumni': (student as Student).alumni ? 'Yes' : 'No',
-      'Leaving Date': (student as Student).leavingDate ? new Date((student as Student).leavingDate).toLocaleDateString() : '',
-      'Leaving Reason': (student as Student).leavingReason || '',
-      'Created At': (student as Student).createdAt ? new Date((student as Student).createdAt).toLocaleDateString() : '',
-      'Updated At': (student as Student).updatedAt ? new Date((student as Student).updatedAt).toLocaleDateString() : '',
-
-      // Specialization
-      'Specialization': (student as Student).specialization?.name || '',
-      'Specialization Sequence': (student as Student).specialization?.sequence || '',
-
-      // Academic Identifier
-      'RFID': (student as Student).academicIdentifier?.rfid || '',
-      'Degree Programme': (student as Student).academicIdentifier?.degreeProgramme || '',
-      'CU Form Number': (student as Student).academicIdentifier?.cuFormNumber || '',
-      'UID': (student as Student).academicIdentifier?.uid || '',
-      'Old UID': (student as Student).academicIdentifier?.oldUid || '',
-      'Registration Number': (student as Student).academicIdentifier?.registrationNumber || '',
-      'Roll Number': (student as Student).academicIdentifier?.rollNumber || '',
-      'Section': (student as Student).academicIdentifier?.section || '',
-      'Class Roll Number': (student as Student).academicIdentifier?.classRollNumber || '',
-      'APAAR ID': (student as Student).academicIdentifier?.apaarId || '',
-      'ABC ID': (student as Student).academicIdentifier?.abcId || '',
-      'APPR ID': (student as Student).academicIdentifier?.apprid || '',
-      'Check Repeat': (student as Student).academicIdentifier?.checkRepeat ? 'Yes' : 'No',
-
-      // Personal Details
-      'Aadhaar Card Number': (student as Student).personalDetails?.aadhaarCardNumber || '',
-      'Nationality': (student as Student).personalDetails?.nationality?.name || '',
-      'Other Nationality': (student as Student).personalDetails?.otherNationality?.name || '',
-      'Religion': (student as Student).personalDetails?.religion?.name || '',
-      'Category': (student as Student).personalDetails?.category?.name || '',
-      'Mother Tongue': (student as Student).personalDetails?.motherTongue?.name || '',
-      'Date of Birth': (student as Student).personalDetails?.dateOfBirth ? new Date((student as Student).personalDetails?.dateOfBirth || '').toLocaleDateString() : '',
-      'Gender': (student as Student).personalDetails?.gender || '',
-      'Email': (student as Student).personalDetails?.email || '',
-      'Alternative Email': (student as Student).personalDetails?.alternativeEmail || '',
-      'Disability': (student as Student).personalDetails?.disability || '',
-      'Disability Code': (student as Student).personalDetails?.disabilityCode?.code || '',
-
-      // Mailing Address
-      'Mailing Address - Country': (student as Student).personalDetails?.mailingAddress?.country || '',
-      'Mailing Address - State': (student as Student).personalDetails?.mailingAddress?.state || '',
-      'Mailing Address - City': (student as Student).personalDetails?.mailingAddress?.city || '',
-      'Mailing Address - Address Line': (student as Student).personalDetails?.mailingAddress?.addressLine || '',
-      'Mailing Address - Landmark': (student as Student).personalDetails?.mailingAddress?.landmark || '',
-      'Mailing Address - Locality Type': (student as Student).personalDetails?.mailingAddress?.localityType || '',
-      'Mailing Address - Phone': (student as Student).personalDetails?.mailingAddress?.phone || '',
-      'Mailing Address - Pincode': (student as Student).personalDetails?.mailingAddress?.pincode || '',
-
-      // Residential Address
-      'Residential Address - Country': (student as Student).personalDetails?.residentialAddress?.country || '',
-      'Residential Address - State': (student as Student).personalDetails?.residentialAddress?.state || '',
-      'Residential Address - City': (student as Student).personalDetails?.residentialAddress?.city || '',
-      'Residential Address - Address Line': (student as Student).personalDetails?.residentialAddress?.addressLine || '',
-      'Residential Address - Landmark': (student as Student).personalDetails?.residentialAddress?.landmark || '',
-      'Residential Address - Locality Type': (student as Student).personalDetails?.residentialAddress?.localityType || '',
-      'Residential Address - Phone': (student as Student).personalDetails?.residentialAddress?.phone || '',
-      'Residential Address - Pincode': (student as Student).personalDetails?.residentialAddress?.pincode || '',
-    }));
-
-    const Data= location.pathname === '/home/downloads' ? formattedData : filteredData;
-    const ws = XLSX.utils.json_to_sheet(Data);
-    
-    // Auto-size columns
-    const colWidths = Object.keys(Data[0] || {}).map(key => ({
-      wch: Math.max(key.length, 15) // minimum width of 15 characters
-    }));
-    ws['!cols'] = colWidths;
-
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Student Data");
-    
-    // Customize filename based on route
-    const fileName = location.pathname === '/home/downloads' 
-      ? "student_data.xlsx" 
-      : "filtered_data.xlsx";
-      
-    XLSX.writeFile(wb, fileName);
-  };
-
   return (
     <div className="flex p-4 sm:p-6 flex-col border rounded-3xl shadow-lg bg-gradient-to-br from-white to-slate-100 gap-6 sm:gap-8">
   {/* Header with title and export */}
@@ -219,35 +204,15 @@ const FilterAndExportComponent: React.FC = () => {
 
     {/* Export Buttons */}
     <motion.div whileHover={{ scale: 1.05 }}>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="center"
-          sideOffset={8}
-          className="flex flex-col sm:flex-row justify-center gap-4 p-4 shadow-2xl rounded-3xl border border-purple-300 bg-white/80 backdrop-blur-xl"
-        >
-          <button
-            onClick={handleExportPDF}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 border text-red-600 hover:bg-red-100 hover:border-red-500 hover:text-red-700 transition-all shadow-sm hover:shadow-md"
-          >
-            <FileText className="w-5 h-5" />
-            <span className="font-medium">PDF</span>
-          </button>
-          <button
-            onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border bg-blue-50 text-blue-600 hover:bg-blue-100 hover:border-blue-500 hover:text-blue-700 transition-all shadow-sm hover:shadow-md"
-          >
-            <FileSpreadsheet className="w-5 h-5" />
-            <span className="font-medium">Excel</span>
-          </button>
-        </PopoverContent>
-      </Popover>
-    </motion.div>
+             <Button
+               className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all"
+               onClick={handleExportExcel}
+               disabled={isExporting || isFetchingExport}
+             >
+               <Download className="h-4 w-4" />
+               {isExporting || isFetchingExport ? "Exporting..." : "Export"}
+             </Button>
+           </motion.div>
   </div>
 
   {/* Filter Body */}

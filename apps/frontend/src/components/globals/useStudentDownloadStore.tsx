@@ -1,46 +1,19 @@
 import { Framework } from "@/types/enums";
+
 import { Student } from "@/types/user/student";
 import { create } from "zustand";
 
-interface Subject {
-  name: string;
-  obtained: number;
-  outOf: number;
-  status: string;
-  credit: number;
-  letterGrade: string;
-}
 
-interface Report {
-  id: number;
-  rollNumber: string;
-  registrationNumber: string;
-  uid: string;
-  name: string;
-  semester: number;
-  stream: string;
-  framework: string;
-  year: number;
-  sgpa: number;
-  cgpa: number;
-  letterGrade: string;
-  remarks: string;
-  percentage: string;
-  subjects: Subject[];
-  totalFullMarks: number;
-  totalObtainedMarks: number;
-  totalCredit: number;
-  isFailed: boolean;
-  status: string;
-  historicalStatus: string;
-}
+
+
+
 type uiFilters = {
   selectedStream: { name: string } | null;
   selectedYear: string | null;
   selectedSemester: number | null;
   selectedFramework: Framework | null;
 };
-type ReportFilters = {
+type StudentFilters = {
   stream: string | null;
   year: string | null;
   framework?: string | null;
@@ -52,19 +25,19 @@ type ReportFilters = {
   pageSize?: number | 0;
 };
 
-interface ReportStore {
-  filters: ReportFilters;
+interface StudentDownloadStore {
+  filters: StudentFilters;
   uiFilters: uiFilters;
-  filteredData: Report[];
+  filteredData: Student[];
   
-  setFilters: (filters: ReportFilters) => void;
-  setFilteredData: (data: Report[]) => void;
+  setFilters: (filters: StudentFilters) => void;
+  setFilteredData: (data: Student[]) => void;
   StudentData: Student[];
   setStudentData:(data:Student[])=>void;
   setUiFilters: (uiFilters: Partial<uiFilters>) => void;
 }
 
-export const useReportStore = create<ReportStore>((set) => ({
+export const useStudentDownloadStore = create<StudentDownloadStore>((set) => ({
   filters: {
     stream: null,
     year: null,

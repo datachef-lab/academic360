@@ -26,7 +26,6 @@ import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActiv
 import MarksheetPage from "./pages/MarksheetPage";
 import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
-import SearchStudentPage from "./pages/SearchStudentPage";
 import LibraryDashboard from "./pages/LibraryDashboard";
 import AdmissionAndFees from "./pages/AdmissionAndFees";
 import CoursesAndSubject from "./pages/CoursesAndSubject";
@@ -82,14 +81,15 @@ const router = createBrowserRouter([
       { path: "issued-book", element: <IssueRetun /> },
       { path: "fine-management", element: <LibFineManagement /> },
       { path: "lib-report", element: <LibReport /> },
-      {
-        path: "search-students",
-        element: <Outlet />,
-        children: [
-          { path: "", element: <SearchStudentPage /> },
-          { path: ":studentId", element: <StudentPage /> },
-        ],
-      },
+      { path: "search-students/:studentId", element: <StudentPage /> },
+      // {
+      //   path: "search-students",
+      //   element: <Outlet />,
+      //   children: [
+         
+      //     { path: ":studentId", element: <StudentPage /> },
+      //   ],
+      // },
       { path: "profile", element: <UserProfilePage /> },
       { path: "settings", element: <SettingsPage /> },
     ],

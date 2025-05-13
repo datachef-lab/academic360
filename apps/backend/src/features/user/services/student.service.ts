@@ -1,4 +1,4 @@
-import { count, eq, ilike, or, sql } from "drizzle-orm";
+import { count, eq, ilike, or, sql, and } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { Student, studentModel } from "../models/student.model.js";
 import { StudentType } from "@/types/user/student.js";
@@ -17,6 +17,10 @@ import { removeMarksheetByStudentId } from "@/features/academics/services/marksh
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { findUserById } from "./user.service.js";
 import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
+import { streamModel } from "@/features/academics/models/stream.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
+import { userModel } from "@/features/user/models/user.model.js";
 
 
 export async function addStudent(student: StudentType): Promise<StudentType | null> {
@@ -43,7 +47,7 @@ export async function addStudent(student: StudentType): Promise<StudentType | nu
 export async function findAllStudent(page: number = 1, pageSize: number = 10): Promise<PaginatedResponse<StudentType>> {
     const studentsResponse = await findAll<StudentType>(studentModel, page, pageSize);
 
-    // Await Promise.all to resolve async operations
+   
     const content = await Promise.all(studentsResponse.content.map(async (student) => {
         return await studentResponseFormat(student);
     })) as StudentType[];
@@ -160,9 +164,11 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
     const studentsQuery = db
         .select()
         .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
+                 ilike(userModel.name , `%${searchText}%`),
                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
@@ -180,9 +186,11 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
     const [{ count: countRows }] = await db
         .select({ count: count() })
         .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
+                ilike(userModel.name , `%${searchText}%`),
                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
@@ -282,6 +290,7 @@ export async function searchStudentsByRollNumber(searchText: string, page: numbe
     const [{ count: countRows }] = await db
         .select({ count: count() })
         .from(studentModel)
+        
         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
         .where(
             or(
@@ -307,6 +316,82 @@ export async function searchStudentsByRollNumber(searchText: string, page: numbe
     };
 }
 
+export async function findFilteredStudents({
+    page = 1,
+    pageSize = 10,
+    stream,
+    year,
+    semester,
+    framework,
+    export:isExport
+}: {
+    page?: number;
+    pageSize?: number;
+    stream?: string;
+    year?: number;
+    semester?: number;
+    framework?: "CCF" | "CBCS";
+    export?: boolean;
+}): Promise<PaginatedResponse<StudentType>> {
+    const filters = [
+        stream ? eq(degreeModel.name, stream) : undefined,
+        year ? eq(marksheetModel.year, year) : undefined,
+        semester ? eq(marksheetModel.semester, semester) : undefined,
+        framework ? eq(streamModel.framework, framework) : undefined,
+    ].filter(Boolean);
+
+    const query = db
+        .select()
+        .from(studentModel)
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+        .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
+        .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+        .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+        .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
+        .where(and(...filters));
+
+    const [{ count: countRows }] = await db
+        .select({ count: count() })
+        .from(studentModel)
+        .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
+        .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+        .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+        .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
+        .where(and(...filters));
+
+    let students;
+     console.log("Exporting all students1",isExport);
+    if (isExport) {
+        console.log("Exporting all students2",isExport);
+       
+        students = await query;
+    } else {
+      
+        students = await query.limit(pageSize).offset((page - 1) * pageSize);
+    }
+
+    if (students.length === 0) {
+        return {
+            content: [],
+            page: isExport ? 1 : page,
+            pageSize: isExport ? Number(countRows) : pageSize,
+            totalElements: 0,
+            totalPages: 0
+        };
+    }
+
+    const filteredData = await Promise.all(students.map(async (studentRecord) => {
+        return await studentResponseFormat(studentRecord.students);
+    })) as StudentType[];
+
+    return {
+        content: filteredData,
+        page: isExport ? 1 : page,
+        pageSize: isExport ? Number(countRows) : pageSize,
+        totalElements: Number(countRows),
+        totalPages: isExport ? 1 : Math.ceil(Number(countRows) / pageSize)
+    };
+}
 
 async function studentResponseFormat(student: Student): Promise<StudentType | null> {
     if (!student) {

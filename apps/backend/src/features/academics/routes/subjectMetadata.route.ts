@@ -14,7 +14,7 @@ router.get("/", getAllSubjectMetadatas);
 
 router.post("/filters", getFilteredSubjectMetadatas);
 
-router.get("/upload", uploadExcelMiddleware, createMultipleSubjects, deleteTempFile);
+router.post("/upload", uploadExcelMiddleware, createMultipleSubjects);
 
 router.get("/query", (req, res, next) => {
     const { id, streamId, semester } = req.query;

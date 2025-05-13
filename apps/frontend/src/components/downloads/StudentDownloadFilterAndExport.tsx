@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -6,28 +7,53 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-
 import * as XLSX from "xlsx";
-
-import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download } from "lucide-react";
-
+import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download, FileCode2 } from "lucide-react";
 import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
-import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 
 import { motion } from "framer-motion";
 
-import { useMarksheetStore } from "@/components/globals/useMarksheetStore";
-
-import { getAllMarksheet } from "@/services/student-apis";
 import { toast } from "sonner";
+import { useStudentDownloadStore } from "../globals/useStudentDownloadStore";
+import { getFilteredStudents } from "@/services/student";
+import { PersonalDetails } from "@/types/user/personal-details";
+import { academicIdentifier } from "@/types/user/academic-identifier";
+import { Specialization } from "@/types/resources/specialization";
+import { Community, Level, Shift } from "@/types/enums";
+
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
-// type Framework = "CCF" | "CBCS";
+type Framework = "CCF" | "CBCS";
 
-const FilterAndExportComponent: React.FC = () => {
-  const { setFilters, filters, uiFilters, setUiFilters } = useMarksheetStore();
+export interface StudentExport {
+    readonly id?: number,
+    name: string;
+    userId: number,
+    community: Community | null,
+     semester?: number;
+     year?:number;
+    handicapped: boolean,
+    level: Level | null,
+    framework: Framework | null,
+    specializationId: number,
+    shift: Shift | null,
+    lastPassedYear: number,
+    notes: string,
+    active: boolean,
+    alumni: boolean,
+    leavingDate: Date,
+    leavingReason: string,
+    specialization?: Specialization | null;
+    academicIdentifier?: academicIdentifier | null;
+    personalDetails?: PersonalDetails | null;
+    createdAt: Date,
+    updatedAt: Date,
+}
+
+const StudentDownloadFilterAndExport: React.FC = () => {
+  const { setFilters, filters, uiFilters, setUiFilters } = useStudentDownloadStore();
 
   const [isExporting, setIsExporting] = useState(false);
 
@@ -36,15 +62,15 @@ const FilterAndExportComponent: React.FC = () => {
     queryFn: getAllStreams,
   });
 
-  const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
-    queryKey: ["export",filters],
+  const { refetch: fetchStudentExportData, isFetching: isFetchingExport } = useQuery({
+    queryKey: ["exportStudent",filters],
     queryFn: () =>
-      getAllMarksheet({
+        getFilteredStudents({
         stream: filters.stream ?? undefined,
         year: filters.year ?? undefined,
-
+        framework: filters.framework ?? undefined,
         semester: filters.semester ?? undefined,
-        export: isExporting ? true : false,
+        export:  true ,
       }),
     enabled: false, // Do not auto-fetch
   });
@@ -78,9 +104,9 @@ const FilterAndExportComponent: React.FC = () => {
     setUiFilters({ selectedYear: year });
   };
 
-  // const handleFrameworkSelect = (framework: Framework) => {
-  //   setUiFilters({ selectedFramework: framework });
-  // };
+  const handleFrameworkSelect = (framework: Framework) => {
+    setUiFilters({ selectedFramework: framework });
+  };
 
   const handleSemesterSelect = (semester: number) => {
     setUiFilters({ selectedSemester: semester });
@@ -88,49 +114,105 @@ const FilterAndExportComponent: React.FC = () => {
 
   const semesterOptions = [1, 2, 3, 4, 5, 6, 7, 8];
 
-  const handleExportExcel = async () => {
-    setIsExporting(true);
-    try {
-      const { data: exportData } = await fetchExportData();
-
-      if (!data || data.length === 0) {
-        toast.error("No data available for export.");
-        return;
-      }
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(exportData.data);
-
-      // Set dynamic column widths with padding and a minimum width
-      if (exportData.data.length > 0) {
-        const headers = Object.keys(exportData.data[0]);
-
-        worksheet["!cols"] = headers.map((key) => {
-          const maxLength = Math.max(
-            key.length,
-            ...exportData.data.map(
-              (row: MarksheetTableType) => String(row[key as keyof MarksheetTableType] ?? "").length,
-            ),
-          );
-
-          return {
-            wch: Math.max(15, maxLength + 2),
-          };
-        });
-      }
-
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Marksheet");
-
-      XLSX.writeFile(workbook, `Marksheet_${new Date().toISOString().split("T")[0]}.xlsx`);
-    } catch (error) {
-      console.error("Failed to export:", error);
-    } finally {
-      setIsExporting(false);
+const handleExportExcel = async () => {
+  setIsExporting(true);
+  try {
+    const { data: exportData } = await fetchStudentExportData();
+   
+    const StudentExportData = exportData?.content ?? [];
+     console.log("exportingData", StudentExportData);
+    if (!StudentExportData || StudentExportData.length === 0) {
+      toast.error("No data available for export.");
+      return;
     }
-  };
+
+    const flattenedData = StudentExportData.map((student: StudentExport) => ({
+
+      "Student ID": student.id,
+      "Name": student.name,
+      "Stream": student.academicIdentifier?.stream?.degree?.name || "",
+      "Framework": student.framework,
+      "Semester": student.semester,
+      "Year": student.year,
+      "Community": student.community,
+      "Handicapped": student.handicapped ? "Yes" : "No",
+
+      "RFID": student.academicIdentifier?.rfid || "",
+      "CU Form Number": student.academicIdentifier?.cuFormNumber || "",
+      "UID": student.academicIdentifier?.uid || "",
+      "Old UID": student.academicIdentifier?.oldUid || "",
+      "Registration Number": student.academicIdentifier?.registrationNumber || "",
+      "Roll Number": student.academicIdentifier?.rollNumber || "",
+      "Class Roll Number": student.academicIdentifier?.classRollNumber || "",
+      "APAAR ID": student.academicIdentifier?.apaarId || "",
+      "ABC ID": student.academicIdentifier?.abcId || "",
+      "APPR ID": student.academicIdentifier?.apprid || "",
+      "Degree Programme": student.academicIdentifier?.stream?.degreeProgramme || "",
+      "Degree Level": student.academicIdentifier?.stream?.degree?.level || "",
+
+      "Aadhaar Number": student.personalDetails?.aadhaarCardNumber || "",
+      "Date of Birth": student.personalDetails?.dateOfBirth 
+        ? new Date(student.personalDetails.dateOfBirth).toLocaleDateString() 
+        : "",
+      "Gender": student.personalDetails?.gender || "",
+      "Email": student.personalDetails?.email || "",
+      "Alternative Email": student.personalDetails?.alternativeEmail || "",
+      "Disability": student.personalDetails?.disability || "None",
+      "Category": student.personalDetails?.category?.name || "",
+      "Category Code": student.personalDetails?.category?.code || "",
+
+      "Mailing Address": student.personalDetails?.mailingAddress?.addressLine || "",
+      "Mailing Pincode": student.personalDetails?.mailingAddress?.pincode || "",
+      "Mailing Locality": student.personalDetails?.mailingAddress?.localityType || "",
+      
+    
+      "Residential Address": student.personalDetails?.residentialAddress?.addressLine || "",
+      "Residential Pincode": student.personalDetails?.residentialAddress?.pincode || "",
+      "Residential Locality": student.personalDetails?.residentialAddress?.localityType || "",
+      
+    
+      "Nationality": student.personalDetails?.nationality?.name || "",
+      "Religion": student.personalDetails?.religion?.name || "",
+      
+     
+      "Created At": student.createdAt 
+        ? new Date(student.createdAt).toLocaleString() 
+        : "",
+      "Updated At": student.updatedAt 
+        ? new Date(student.updatedAt).toLocaleString() 
+        : ""
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+
+    if (flattenedData.length > 0) {
+      const headers = Object.keys(flattenedData[0]);
+      worksheet["!cols"] = headers.map((key) => {
+        const maxLength = Math.max(
+          key.length,
+          ...flattenedData.map(
+            (row: StudentExport) => (row[key as keyof StudentExport] ?? "").toString().length
+          )
+        );
+        return { wch: Math.max(15, maxLength + 2) };
+      });
+    }
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
+    XLSX.writeFile(workbook, `Students_${new Date().toISOString().split("T")[0]}.xlsx`);
+    
+  } catch (error) {
+    console.error("Failed to export:", error);
+    toast.error("Failed to export data");
+  } finally {
+    setIsExporting(false);
+  }
+};
 
   return (
     <div className="flex p-4 sm:p-6 flex-col border rounded-3xl shadow-lg bg-gradient-to-br from-white to-slate-100 gap-6 sm:gap-8">
-      {/* Header with title and export */}
+     
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4 sm:gap-0">
         <div className="flex items-center gap-3">
           <div className="bg-purple-100 p-2 rounded-lg shadow-md">
@@ -139,7 +221,7 @@ const FilterAndExportComponent: React.FC = () => {
           <h2 className="text-xl font-sans font-semibold text-gray-800">Filter Options</h2>
         </div>
 
-        {/* Export Buttons */}
+    
         <motion.div whileHover={{ scale: 1.05 }}>
           <Button
             className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all"
@@ -199,11 +281,11 @@ const FilterAndExportComponent: React.FC = () => {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Framework Dropdown
+          {/* Framework Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <Code2 className="w-4 h-4 text-purple-600" />
+            <FileCode2 className="w-4 h-4 text-purple-600" />
             {uiFilters.selectedFramework || "Framework"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </Button>
@@ -219,7 +301,7 @@ const FilterAndExportComponent: React.FC = () => {
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu> */}
+      </DropdownMenu>
 
           {/* Semester Dropdown */}
           <DropdownMenu>
@@ -259,4 +341,4 @@ const FilterAndExportComponent: React.FC = () => {
   );
 };
 
-export default FilterAndExportComponent;
+export default StudentDownloadFilterAndExport;

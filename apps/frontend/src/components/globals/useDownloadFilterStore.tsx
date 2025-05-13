@@ -96,3 +96,16 @@ export const useDownloadFilterStore = create<ReportStore>((set) => ({
     set({ downloadFilteredData });
   },
 }));
+
+
+type ToggleStore = {
+  isOpen: boolean;
+  toggle: () => void;
+  setOpen: (value: boolean) => void;
+};
+
+export const useToggleStore = create<ToggleStore>((set) => ({
+  isOpen: false,
+  toggle: () => set((state) => ({ isOpen: !state.isOpen })),
+  setOpen: (value) => set({ isOpen: value }),
+}));

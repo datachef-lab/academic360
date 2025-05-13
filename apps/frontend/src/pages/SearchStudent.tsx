@@ -107,6 +107,7 @@ export default function SearchStudent() {
   return (
     <div className="overflow-x-auto  w-full h-full   bg-transparent ">
       
+      
       <DataTable
         isLoading={isFetchingDefault || isFetchingSearch}
         data={data || []}
