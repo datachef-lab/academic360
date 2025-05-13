@@ -33,7 +33,7 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
 
     let degrees = await db.select().from(degreeModel);
 
-    const subjectArr = readExcelFile<SubjectRow>(filePath);
+    const subjectArr = await readExcelFile<SubjectRow>(filePath);
 
     for (let i = 0; i < subjectArr.length; i++) {
 
@@ -84,14 +84,18 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
 
         let subjectType: SubjectTypeModel | null = null;
 
+        const whereConditions = [
+            subjectTypeModel.irpName ?? eq(subjectTypeModel.irpName, subjectArr[i]["Subject Type as per IRP"].toUpperCase().trim()),
+            subjectTypeModel.marksheetName ?? eq(subjectTypeModel.marksheetName, subjectArr[i]["Subject Type as per Marksheet"].toUpperCase().trim()),
+        ].filter (ele => !ele);
+
         const [foundSubjectType] =
             await db
                 .select()
                 .from(subjectTypeModel)
                 .where(
                     and(
-                        eq(subjectTypeModel.irpName, subjectArr[i]["Subject Type as per IRP"].toUpperCase().trim()),
-                        eq(subjectTypeModel.marksheetName, subjectArr[i]["Subject Type as per Marksheet"].toUpperCase().trim()),
+                        ...whereConditions
                     )
                 );
         if (!foundSubjectType) {

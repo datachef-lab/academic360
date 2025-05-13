@@ -47,7 +47,7 @@ const GradeCard = ({ initialData }: GradeCardProps) => {
   useEffect(() => {
     if (marksheetData && Array.isArray(marksheetData) && marksheetData.length > 0) {
       const mks = marksheetData[0];
-      // Get the category from the first subject's subjectMetadata
+
       const category = mks.subjects && mks.subjects.length > 0 ? mks.subjects[0]?.subjectMetadata?.category : null;
       if (category) setCategory(category);
   const remarks = mks.remarks;
@@ -55,7 +55,7 @@ const GradeCard = ({ initialData }: GradeCardProps) => {
   setSgpa(mks.sgpa);
   console.log("*******",remarks);
       const transformedData: GradeCardData = {
-        universityName: "Your University Name", // Replace with actual university name
+        universityName: "Your University Name", 
         studentInfo: {
           name: mks.name || "",
           registrationNo: mks.academicIdentifier?.registrationNumber || "",
@@ -178,7 +178,7 @@ const GradeCard = ({ initialData }: GradeCardProps) => {
     );
   }
 
-  // Calculate grand totals
+
   const grandFullMarks = data.courses.reduce(
     (sum: number, course: Course) => sum + course.components.reduce((s: number, comp: CourseComponent) => s + comp.fullMarks, 0), 0
   );
