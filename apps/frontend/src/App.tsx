@@ -32,7 +32,8 @@ import Event from "./pages/Event";
 import CoursesAndSubject from "./pages/Courses&Subject";
 import AdmissionAndFess from "./pages/AdmissionAndFess";
 import LibraryDashboard from "./pages/LibraryDashboard";
-import GradeCard from "./components/GradeMarks/GradeCard";
+
+import Downloads from "./pages/Downloads";
 
 
 
@@ -53,7 +54,7 @@ const router = createBrowserRouter([
       { path: "", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "add-student", element: <AddStudentPage /> },
-      { path: "downloads", element: < GradeCard/> },
+      { path: "downloads", element: < Downloads/> },
       { path: "event", element: <Event /> },
       { path: "admission-fees", element: <AdmissionAndFess /> },
       { path: "courses-subjects", element: <CoursesAndSubject /> },
