@@ -1,15 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CalendarDays } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 
-const Event: React.FC = () => {
+const AdmissionAndFees: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 py-6 px-5 sm:p-4"
+        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-6 sm:p-4"
       >
         <div className="grid grid-cols-[auto_1fr] items-center gap-4">
           <motion.div
@@ -17,12 +17,12 @@ const Event: React.FC = () => {
             whileTap={{ scale: 0.95 }}
             className="bg-gradient-to-br from-purple-400 to-purple-600 p-3 rounded-xl shadow-xl"
           >
-            <CalendarDays className="h-8 w-8 drop-shadow-xl text-white" />
+            <UserPlus className="h-8 w-8 drop-shadow-xl text-white" />
           </motion.div>
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Events</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Admission & Fees</h2>
             <p className="text-sm text-purple-600 font-medium">
-              Explore upcoming events and important dates
+            Apply for admission or explore our fee details
             </p>
           </div>
         </div>
@@ -41,4 +41,4 @@ const Event: React.FC = () => {
   );
 };
 
-export default Event;
+export default AdmissionAndFees;

@@ -209,8 +209,8 @@ const FilterAndExportComponent: React.FC = () => {
   {/* Header with title and export */}
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-4 sm:gap-0">
     <div className="flex items-center gap-3">
-      <div className="bg-teal-100 p-2 rounded-lg shadow-md">
-        <Filter className="h-5 w-5 text-teal-600" />
+      <div className="bg-purple-100 p-2 rounded-lg shadow-md">
+        <Filter className="h-5 w-5 text-purple-600" />
       </div>
       <h2 className="text-xl font-sans font-semibold text-gray-800">
         Filter Options
@@ -221,7 +221,7 @@ const FilterAndExportComponent: React.FC = () => {
     <motion.div whileHover={{ scale: 1.05 }}>
       <Popover>
         <PopoverTrigger asChild>
-          <Button className="bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all">
+          <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all">
             <Download className="h-4 w-4" />
             Export
           </Button>
@@ -229,7 +229,7 @@ const FilterAndExportComponent: React.FC = () => {
         <PopoverContent
           align="center"
           sideOffset={8}
-          className="flex flex-col sm:flex-row justify-center gap-4 p-4 shadow-2xl rounded-3xl border border-teal-300 bg-white/80 backdrop-blur-xl"
+          className="flex flex-col sm:flex-row justify-center gap-4 p-4 shadow-2xl rounded-3xl border border-purple-300 bg-white/80 backdrop-blur-xl"
         >
           <button
             onClick={handleExportPDF}
@@ -257,7 +257,7 @@ const FilterAndExportComponent: React.FC = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <GraduationCap className="w-4 h-4 text-teal-600" />
+            <GraduationCap className="w-4 h-4 text-purple-600" />
             {uiFilters.selectedStream ? uiFilters.selectedStream.name : "Stream"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </Button>
@@ -279,7 +279,7 @@ const FilterAndExportComponent: React.FC = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <Calendar className="w-4 h-4 text-teal-600" />
+            <Calendar className="w-4 h-4 text-purple-600" />
             {uiFilters.selectedYear || "Year"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </Button>
@@ -301,7 +301,7 @@ const FilterAndExportComponent: React.FC = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <Code2 className="w-4 h-4 text-teal-600" />
+            <Code2 className="w-4 h-4 text-purple-600" />
             {uiFilters.selectedFramework || "Framework"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </Button>
@@ -323,7 +323,7 @@ const FilterAndExportComponent: React.FC = () => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <BookOpen className="w-4 h-4 text-teal-600" />
+            <BookOpen className="w-4 h-4 text-purple-600" />
             {uiFilters.selectedSemester ? `Sem ${uiFilters.selectedSemester}` : "Semester"}
             <ChevronDown className="h-4 w-4 text-slate-500" />
           </Button>
@@ -346,7 +346,7 @@ const FilterAndExportComponent: React.FC = () => {
     <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
       <Button
         onClick={handleApplyFilters}
-        className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-md flex items-center gap-2 px-5 py-2 mt-4 lg:mt-0"
+        className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl shadow-md flex items-center gap-2 px-5 py-2 mt-4 lg:mt-0"
       >
         <Filter className="h-4 w-4" />
         Apply Filters

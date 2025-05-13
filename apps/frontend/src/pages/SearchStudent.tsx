@@ -6,7 +6,6 @@ import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
-import "./SearchStudent.css"; // Import custom CSS for table styling
 
 export default function SearchStudent() {
   const [searchText, setSearchText] = useState("");
@@ -57,6 +56,12 @@ export default function SearchStudent() {
       setData(formattedData);
       setDataLength(formattedData.length);
       console.log("studentData/*****",StudentData);
+      console.log("First few formatted students:", formattedData.slice(0, 3).map(student => ({
+        id: student.id,
+        name: student.name,
+        uid: student.uid,
+        avatar: student.avatar
+      })));
 
       return formattedData;
     },
@@ -65,7 +70,7 @@ export default function SearchStudent() {
 
   // Fetch the filtered data using React Query
   const { isFetching: isFetchingSearch, refetch } = useQuery({
-    queryKey: ["students", pagination.pageIndex, pagination.pageSize, searchText, dataLength], // Query key with pagination and filter
+    queryKey: ["students", pagination.pageIndex, pagination.pageSize, searchText, dataLength],
     queryFn: async () => {
       if (searchText.trim() !== "") {
         const data = await getSearchedStudents(
@@ -77,7 +82,6 @@ export default function SearchStudent() {
         console.log("while searching:", data);
         const { content, page, totalElements, totalPages } = data.payload;
         
-
         setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
 
         const formattedData = formattedStudent(content);
@@ -88,18 +92,20 @@ export default function SearchStudent() {
 
         return formattedData;
       }
-      return [];
-    }, // Query function with page, pageSize, and search text
+    },
     enabled: false,
-  });
+  }) as { isFetching: boolean; refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> };
 
-  // Properly typed refetch function to match DataTable expectations
-  const refetchWrapper = (options?: RefetchOptions): Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> => {
-    return refetch(options) as Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>>;
-  };
+  function refetchWrapper(options?: RefetchOptions | undefined): Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> {
+    if (searchText.trim() === "") {
+      return refetch(options); // Refetch default query when no search text
+    } else {
+      return refetch(options); // Refetch search query when search text is present
+    }
+  }
 
   return (
-    <div className="overflow-x-auto  w-full h-full   ">
+    <div className="overflow-x-auto  w-full h-full   bg-transparent ">
       
       <DataTable
         isLoading={isFetchingDefault || isFetchingSearch}

@@ -19,9 +19,9 @@ export function DataTableViewOptions<TData>({ table }: DataTableViewOptionsProps
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="ml-auto hidden drop-shadow-md rounded-3xl px-4 py-5 lg:flex">
-          <MixerHorizontalIcon className="mr-2 h-4 w-4" />
-          View
+        <Button variant="outline" size="sm" className="ml-auto hidden gap-2  drop-shadow-md rounded-3xl px-4 py-5 lg:flex">
+          <MixerHorizontalIcon className=" h-4 w-4" />
+          <span className="hidden lg:inline">View</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[150px]">

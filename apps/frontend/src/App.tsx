@@ -7,7 +7,6 @@ import {
   LoginPage,
   MyWorkspacePage,
   NotFoundPage,
-  SearchStudentPage,
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
@@ -19,15 +18,19 @@ import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
-import Dashboard from "./components/LibManagement/Dashboard";
+
+
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
 import MarksheetPage from "./pages/MarksheetPage";
 import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
-import CoursesAndSubject from "./pages/CoursesAndSubject";
+import SearchStudentPage from "./pages/SearchStudentPage";
+import LibraryDashboard from "./pages/LibraryDashboard";
 import AdmissionAndFees from "./pages/AdmissionAndFees";
+import CoursesAndSubject from "./pages/CoursesAndSubject";
+
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -73,7 +76,7 @@ const router = createBrowserRouter([
       },
       { path: "academics-reports", element: <GetReportsPage /> },
       { path: "student-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <Dashboard /> },
+      { path: "lib", element: <LibraryDashboard /> },
 
       { path: "catalog", element: <BookCatalog /> },
       { path: "issued-book", element: <IssueRetun /> },

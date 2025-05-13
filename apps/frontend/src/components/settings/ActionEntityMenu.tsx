@@ -47,9 +47,9 @@ const onclick=()=>{
    <button
       onClick={onclick}
       className="flex items-center gap-2 p-2 rounded-lg bg-transparent
-                 text-green-600 font-semibold transition-transform transform hover:scale-110 "
+                 text-green-600 font-semibold  hover:scale-110 "
     >
-      <Edit size={18}  className="" />
+      <Edit size={18}  className="drop-shadow-lg" />
     
     </button>
      

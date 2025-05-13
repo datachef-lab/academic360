@@ -13,7 +13,8 @@ import {
   Building,
   Heart,
   AlertTriangle,
-  StepForward,
+
+  UserPlus2,
 } from "lucide-react";
 import PersonalDetailsForm from "@/components/forms/student/PersonalDetailsForm";
 
@@ -303,7 +304,7 @@ export default function AddStudentPage() {
   const currentStepKey = steps[current].key as keyof StudentFormData;
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="h-full p-4  bg-gradient-to-br from-purple-50 to-white ">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -314,13 +315,13 @@ export default function AddStudentPage() {
           <motion.div
             whileHover={{ scale: 1.05, rotate: -5 }}
             whileTap={{ scale: 0.95 }}
-            className="bg-gradient-to-br from-teal-400 to-teal-600 p-3 rounded-xl shadow-lg"
+            className="bg-gradient-to-br from-purple-400 to-purple-600 p-3.5 rounded-xl shadow-xl"
           >
-            <StepForward className="h-6 w-6 text-white" />
+            <UserPlus2 className="h-7 w-7 drop-shadow-xl text-white" />
           </motion.div>
           <div>
             <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Add Students</h2>
-            <p className="text-sm text-teal-600 font-medium">Complete the multi-step form to register students </p>
+            <p className="text-sm text-purple-600 font-medium">Complete the multi-step form to register students </p>
           </div>
         </div>
 
@@ -328,7 +329,7 @@ export default function AddStudentPage() {
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="h-1 bg-gradient-to-r mt-2 from-teal-400 via-teal-500 to-teal-400 rounded-full origin-left col-span-full"
+          className="h-1 bg-gradient-to-r mt-2 from-purple-400 via-purple-500 to-purple-400 rounded-full origin-left col-span-full"
         />
       </motion.div>
       <div className="max-w-auto mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -443,7 +444,7 @@ export default function AddStudentPage() {
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: (current + 1) / steps.length }}
                   transition={{ duration: 0.8, delay: 0.3 }}
-                  className="h-full bg-gradient-to-r from-teal-400 via-blue-500 to-indigo-500 rounded-full origin-left"
+                  className="h-full bg-gradient-to-r from-purple-400 via-blue-500 to-indigo-500 rounded-full origin-left"
                 />
               </motion.div>
 

@@ -29,6 +29,7 @@ import { DataTableToolbar } from "../tables/components/DataTableToolBar";
 import { CustomPaginationState } from "../settings/SettingsContent";
 import { Skeleton } from "./skeleton";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
+import { SearchX } from "lucide-react";
 
 export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pageIndex" | "pageSize"> {
   columns: ColumnDef<TData, TValue>[];
@@ -97,19 +98,19 @@ export function DataTable<TData, TValue>({
   //   }, [table.getRowModel().rows.length]);
 
   return (
-    <div className="space-y-3 p-1 my-3">
-        <div className="px-6 py-1">
-        <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
+    <div className="space-y-3 p-1  rounded-2xl my-3">
+        <div className="px-6 py-1   rounded-lg ">
+        {location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
         </div>
-          <div className="p-2 overflow-hidden">
-            <Table className="border-separate px-2 border-spacing-y-3 w-full">
+          <div className=" p-2  drop-shadow-md overflow-hidden">
+            <Table className="border-separate px-2 border-spacing-y-4 w-full">
               <TableHeader >
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-gray-50">
+                  <TableRow key={headerGroup.id} className="bg-white hover:bg-white  ">
                     {headerGroup.headers.map((header) => (
                       <TableHead 
                         key={header.id} 
-                        className="py-3 px-3 first:pl-9 text-center font-semibold text-base"
+                        className="py-6 px-4 first:pl-6 text-center   font-semibold text-base"
                         style={{ width: header.getSize() }}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -127,7 +128,7 @@ export function DataTable<TData, TValue>({
                           key={colIndex} 
                           className="px-4 py-3  first:rounded-l-lg last:rounded-r-lg"
                         >
-                          <Skeleton className="h-4 w-full rounded-full" />
+                          <Skeleton className="h-8 w-full rounded-full" />
                         </TableCell>
                       ))}
                     </TableRow>
@@ -136,12 +137,12 @@ export function DataTable<TData, TValue>({
                   table.getRowModel().rows.map((row) => (
                     <TableRow 
                       key={row.id} 
-                      className="bg-gray-100"
+                       className="  my-24 drop-shadow-sm  bg-gray-50  rounded-full hover:bg-gray-50 "
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
                           key={cell.id} 
-                          className="px-4 py-3 first:pl-10 text-center"
+                          className="px-4 py-3 first:pl-8  text-center first:rounded-l-lg last:rounded-r-lg"
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
@@ -149,11 +150,14 @@ export function DataTable<TData, TValue>({
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results found.
-                    </TableCell>
-                  </TableRow>
+                  <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <div className="flex items-center justify-center gap-2 text-gray-700">
+                      <SearchX className="h-5 w-5 text-red-600" />
+                      <span>No data available</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
                 )}
               </TableBody>
             </Table>
