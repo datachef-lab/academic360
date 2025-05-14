@@ -119,7 +119,7 @@ export const getMarksheetById = async (req: Request, res: Response, next: NextFu
         handleError(error, res, next);
     }
 }
-// findMarksheetsByStudentId
+
 export const getMarksheetByStudentId = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log("\n\nin fetch by id\n\n");

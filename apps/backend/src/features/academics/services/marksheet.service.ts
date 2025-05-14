@@ -387,8 +387,8 @@ export async function uploadFile(
     fileName,
   );
   console.log("\nReading file...");
-  let dataArr = readExcelFile<MarksheetRow>(filePath);
-  console.log(dataArr.length);
+  let dataArr = await readExcelFile<MarksheetRow>(filePath);
+  // console.log(dataArr.length);
 
   socket.emit("progress", {
     stage: "reading_done",
@@ -538,7 +538,7 @@ export async function saveMarksheet(
   }
   // Update the subjects
   for (let i = 0; i < marksheet.subjects.length; i++) {
-    if (!marksheet.subjects[i].id) {
+    if (!marksheet.subjects[i].id) {     
       marksheet.subjects[i] = (await addSubject(
         marksheet.subjects[i],
       )) as SubjectType;
@@ -679,7 +679,7 @@ export async function findMarksheetById(
 
 export async function findMarksheetsByStudentId(
   studentId: number,
-  semester:number,
+  semester?:number,
 ): Promise<MarksheetType[]> {
  const filters = [
   semester ? eq(marksheetModel.semester, semester) : undefined,
