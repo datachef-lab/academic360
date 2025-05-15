@@ -387,7 +387,7 @@ export async function uploadFile(
     fileName,
   );
   console.log("\nReading file...");
-  let dataArr = readExcelFile<MarksheetRow>(filePath);
+  let dataArr = await readExcelFile<MarksheetRow>(filePath);
   console.log(dataArr.length);
 
   socket.emit("progress", {
