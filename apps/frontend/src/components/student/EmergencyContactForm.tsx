@@ -3,15 +3,12 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 import { EmergencyContact } from "@/types/user/emergency-contact";
-import { useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import {  getEmergencyContact } from "@/services/academic";
 import { createEmergencyContact, updateEmergencyContact } from "@/services/student-apis";
 import { Users, Mail, Phone, Briefcase, Home, Save, CheckCircle, PenLine } from "lucide-react";
 import { toast } from "sonner";
 import { useFetch } from "@/hooks/useFetch";
-
-
 
 const formElements = [
   { name: "personName", label: "Guardian's Name", type: "text", icon: <Users className="text-gray-500 dark:text-white w-5 h-5" /> },
@@ -32,15 +29,17 @@ const defaultEmergencyContact: EmergencyContact = {
   residentialPhone: "",
 };
 
-const EmergencyContactForm = () => {
-  const location = useLocation();
-  const studentId = location.pathname.split("/").pop();
-  const id = Number(studentId);
+// Define interface for component props
+interface EmergencyContactProps {
+  studentId: number;
+}
+
+const EmergencyContactForm = ({ studentId }: EmergencyContactProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const { data: emergencyContactData, loading, refetch } = useFetch<EmergencyContact>({
-    getFn: () => getEmergencyContact(id),
+    getFn: () => getEmergencyContact(studentId),
     postFn: (data) => createEmergencyContact(data),
     default: defaultEmergencyContact
   });
@@ -56,7 +55,7 @@ const EmergencyContactForm = () => {
   const updateMutation = useMutation({
     mutationFn: (formData: EmergencyContact) => 
       emergencyContactData?.id 
-        ? updateEmergencyContact(formData, id)
+        ? updateEmergencyContact(formData, studentId)
         : createEmergencyContact(formData),
     onSuccess: () => {
       toast.success("Emergency contact has been successfully updated.", {

@@ -26,7 +26,7 @@ export function NavUser() {
     mutationFn: logout,
     onSuccess: () => {
       console.log("User logged out successfully");
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     },
   });
 

@@ -13,7 +13,7 @@ export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrappe
 
   useEffect(() => {
     if (!accessToken) {
-      navigate("/login", { replace: true });
+      navigate("/", { replace: true });
     }
   }, [accessToken, navigate]);
 

@@ -82,7 +82,7 @@ export default function Settings() {
   {/* Main Content */}
   <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full">
     {/* Left Section */}
-    <div className="lg:col-span-3 bg-transparent shadow-lg rounded-lg  grid grid-rows-[auto_1fr]">
+    <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr]">
       <div className="bg-gradient-to-r rounded-t-lg from-indigo-500 to-indigo-500 p-5  text-white">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
            [ {activeSetting.label} ]
@@ -97,7 +97,7 @@ export default function Settings() {
     </div>
 
     {/* Right Section */}
-    <div className="bg-white grid-cols-1 shadow-lg overflow-auto  rounded-lg p-6">
+    <div className="bg-white grid-cols-1 shadow-lg border border-gray-200/70 overflow-auto  rounded-lg p-6">
       <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 grid grid-cols-[auto_1fr] items-center gap-2">
         <span className="bg-purple-500 text-white p-2 rounded-full shadow-md">
           <Settings2 className="h-5 w-5" />

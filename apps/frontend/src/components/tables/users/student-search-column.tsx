@@ -249,7 +249,6 @@ import { Religion } from "@/types/resources/religion";
 import { Specialization } from "@/types/resources/specialization";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
-
 import { Hash, BookUser, Church, Layers, Eye } from 'lucide-react';
 import { 
   FaVenus, 
@@ -414,16 +413,16 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
         <span>Religion</span>
       </div>
     ),
-cell: ({ row }) => {
-  const student = row.original;
-  return student.religion ? (
-    <Badge variant="outline" className="text-xs py-1 px-2 bg-amber-50 text-amber-700 border-amber-200">
-      {student.religion.name}
-    </Badge>
-  ) : (
-    <span className="text-gray-400 text-sm">-</span>
-  );
-},
+    cell: ({ row }) => {
+      const student = row.original;
+      return student.religion ? (
+        <Badge variant="outline" className="text-xs py-1 px-2 bg-amber-50 text-amber-700 border-amber-200">
+          {student.religion.name}
+        </Badge>
+      ) : (
+        <span className="text-gray-400 text-sm">-</span>
+      );
+    },
   },
   {
     accessorKey: "category",
@@ -433,35 +432,35 @@ cell: ({ row }) => {
         <span>Category</span>
       </div>
     ),
-cell: ({ row }) => {
-  const student = row.original;
-  const category = student.category?.name?.toUpperCase();
+    cell: ({ row }) => {
+      const student = row.original;
+      const category = student.category?.name?.toUpperCase();
 
-  const getBadgeStyle = (category: string) => {
-    switch (category) {
-      case "GENERAL":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "SC":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "ST":
-        return "bg-purple-100 text-purple-800 border-purple-200";
-      case "OBC-A":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "OBC-B":
-        return "bg-amber-100 text-amber-800 border-amber-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
+      const getBadgeStyle = (category: string) => {
+        switch (category) {
+          case "GENERAL":
+            return "bg-blue-100 text-blue-800 border-blue-200";
+          case "SC":
+            return "bg-green-100 text-green-800 border-green-200";
+          case "ST":
+            return "bg-purple-100 text-purple-800 border-purple-200";
+          case "OBC-A":
+            return "bg-yellow-100 text-yellow-800 border-yellow-200";
+          case "OBC-B":
+            return "bg-amber-100 text-amber-800 border-amber-200";
+          default:
+            return "bg-gray-100 text-gray-800 border-gray-200";
+        }
+      };
 
-  return category ? (
-    <Badge variant="outline" className={`text-xs py-1 px-2 ${getBadgeStyle(category)}`}>
-      {category}
-    </Badge>
-  ) : (
-    <span className="text-gray-400 text-sm">-</span>
-  );
-},
+      return category ? (
+        <Badge variant="outline" className={`text-xs py-1 px-2 ${getBadgeStyle(category)}`}>
+          {category}
+        </Badge>
+      ) : (
+        <span className="text-gray-400 text-sm">-</span>
+      );
+    },
   },
   {
     accessorKey: "stream",

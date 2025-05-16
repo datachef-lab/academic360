@@ -84,39 +84,55 @@ export async function removeFamily(id: number): Promise<boolean | null> {
 }
 
 export async function saveFamily(id: number, Family: FamilyType): Promise<FamilyType | null> {
-    const [foundFamily] = await db.select().from(familyModel).where(eq(familyModel.id, id));
+    try {
+        const [foundFamily] = await db.select().from(familyModel).where(eq(familyModel.id, id));
 
-    if (!foundFamily) {
-        return null;
-    }
-
-    const { fatherDetails, motherDetails, ...props } = Family;
-
-    // Update the Family fields
-    const [updatedFamily] = await db.update(familyModel).set({
-        ...props,
-        updatedAt: new Date(),
-    }).returning();
-
-    // Update the father-person
-    if (fatherDetails) {
-        const updatedFather = await savePerson(fatherDetails.id as number, fatherDetails);
-        if (!updatedFather) {
+        if (!foundFamily) {
             return null;
         }
-    }
 
-    // Update the mother-person
-    if (motherDetails) {
-        const updatedMother = await savePerson(motherDetails.id as number, motherDetails);
-        if (!updatedMother) {
-            return null;
+        const { fatherDetails, motherDetails, guardianDetails, annualIncome, ...props } = Family;
+
+        // Ensure dates are proper Date objects
+        const updatedProps = {
+            ...props,
+            updatedAt: new Date(),
+        };
+
+        // Update the Family fields
+        const [updatedFamily] = await db.update(familyModel).set(updatedProps).where(eq(familyModel.id, id)).returning();
+
+        // Update the father-person
+        if (fatherDetails && fatherDetails.id) {
+            const updatedFather = await savePerson(fatherDetails.id as number, fatherDetails);
+            if (!updatedFather) {
+                console.warn("Failed to update father details");
+            }
         }
+
+        // Update the mother-person
+        if (motherDetails && motherDetails.id) {
+            const updatedMother = await savePerson(motherDetails.id as number, motherDetails);
+            if (!updatedMother) {
+                console.warn("Failed to update mother details");
+            }
+        }
+        
+        // Update the guardian-person
+        if (guardianDetails && guardianDetails.id) {
+            const updatedGuardian = await savePerson(guardianDetails.id as number, guardianDetails);
+            if (!updatedGuardian) {
+                console.warn("Failed to update guardian details");
+            }
+        }
+
+        const formattedFamily = await familyResponseFormat(updatedFamily);
+
+        return formattedFamily;
+    } catch (error) {
+        console.error("Error in saveFamily service:", error);
+        throw error;
     }
-
-    const formattedFamily = await familyResponseFormat(updatedFamily);
-
-    return formattedFamily;
 }
 
 export async function removeFamilysByStudentId(studentId: number): Promise<boolean | null> {

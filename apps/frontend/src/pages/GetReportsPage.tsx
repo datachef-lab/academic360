@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import FilterAndExportComponent from "@/components/reports/FilterAndExportComponent";
-import { ReportColumns } from "@/components/reports/columns";
+import { ReportColumns } from "@/components/reports/ReportColumns";
 import { DataTable } from "@/components/reports/DataTable";
 import { getAllReports } from "@/services/student-apis";
 import { useQuery } from "@tanstack/react-query";

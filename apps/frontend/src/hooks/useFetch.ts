@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type UseFetchProps<T> = {
     getFn: () => Promise<T | null>;      // fetch existing data, null if not found
@@ -11,7 +11,7 @@ export const useFetch = <T>({ getFn, postFn, default: defaultData }: UseFetchPro
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -29,11 +29,11 @@ export const useFetch = <T>({ getFn, postFn, default: defaultData }: UseFetchPro
         } finally {
             setLoading(false);
         }
-    };
+    }, [getFn, postFn, defaultData]);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     return { data, loading, error, refetch: fetchData };
 };

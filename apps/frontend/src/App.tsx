@@ -1,15 +1,12 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
-
   AddStudentPage,
   GetReportsPage,
   HomePage,
   LoginPage,
   MyWorkspacePage,
   NotFoundPage,
-  RootPage,
-
   SettingsPage,
   UserProfilePage,
 } from "@/pages";
@@ -29,17 +26,17 @@ import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActiv
 import MarksheetPage from "./pages/MarksheetPage";
 // import Downloads from "./pages/Downloads";
 import Event from "./pages/Event";
-import CoursesAndSubject from "./pages/Courses&Subject";
-import AdmissionAndFess from "./pages/AdmissionAndFess";
 import LibraryDashboard from "./pages/LibraryDashboard";
 
+import CoursesAndSubject from "./pages/CoursesAndSubject";
+
 import Downloads from "./pages/Downloads";
+import AdmissionAndFees from "./pages/AdmissionAndFess";
 
 
 
 const router = createBrowserRouter([
-  { path: "/", element: <RootPage /> },
-  { path: "/login", element: <LoginPage /> },
+  { path: "/", element: <LoginPage /> },
   {
     path: "/home",
     element: (
@@ -56,7 +53,7 @@ const router = createBrowserRouter([
       { path: "add-student", element: <AddStudentPage /> },
       { path: "downloads", element: < Downloads/> },
       { path: "event", element: <Event /> },
-      { path: "admission-fees", element: <AdmissionAndFess /> },
+      { path: "admission-fees", element: <AdmissionAndFees /> },
       { path: "courses-subjects", element: <CoursesAndSubject /> },
       {
         path: "add-marksheet",
@@ -80,6 +77,7 @@ const router = createBrowserRouter([
           },
         ],
       },
+      { path: "academics-reports", element: <GetReportsPage /> },
       { path: "student-reports", element: <GetReportsPage /> },
       { path: "lib", element: <LibraryDashboard /> },
 
@@ -106,7 +104,7 @@ const router = createBrowserRouter([
 const App = () => {
   return (
     <>
-      <RouterProvider router={router} />;
+      <RouterProvider router={router} />
     </>
   );
 };

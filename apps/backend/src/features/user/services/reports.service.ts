@@ -7,6 +7,7 @@ import { subjectMetadataModel } from "@/features/academics/models/subjectMetadat
 import { subjectModel } from "@/features/academics/models/subject.model.js";
 import { streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { studentModel } from "../models/student.model.js";
 
 type ReportQueryParams = {
   page: number;
@@ -63,7 +64,8 @@ export const getReports = async ({
       academicIdentifierModel,
       eq(marksheetModel.studentId, academicIdentifierModel.studentId),
     )
-    .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+    .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+    .leftJoin(userModel, eq(studentModel.userId, userModel.id))
     .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
     .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
     .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))

@@ -14,7 +14,11 @@ import {
   ClipboardList,
   BookMarked,
   Calculator,
-  Percent
+  Percent,
+ 
+  FilePenLine,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
 import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -227,6 +231,23 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       </div>
     ),
   },
+   {
+    accessorKey: "marksheetCode",
+    header: ({ column }) => (
+      <div 
+        className="flex items-center justify-start gap-2 text-slate-800 font-semibold cursor-pointer"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        <FilePenLine className="h-5 w-5 text-purple-500" />
+        <span>Marksheet Code</span>
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="text-slate-700 flex items-center justify-start  font-semibold  ">
+        {row.getValue("marksheetCode")}
+      </div>
+    ),
+  },
   {
     accessorKey: "subjectName",
     header: ({ column }) => (
@@ -377,6 +398,34 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       );
     },
   },
+   {
+     accessorKey: "status",
+     header: ({ column }) => (
+       <div 
+         className="flex items-center justify-center gap-2 text-slate-800 font-semibold cursor-pointer "
+         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+       >
+         <CheckCircle2 className="h-5 w-5 text-purple-500" />
+         <span>Status</span>
+       
+       </div>
+     ),
+     cell: ({ row }) => {
+       const status = row.getValue("status") as string;
+       const isPass = status.includes("PASS");
+       
+       return (
+         <Badge variant={"outline"} className={`${isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"} drop-shadow-lg border-transparent`}>
+           {isPass ? (
+             <CheckCircle2 className="h-4 w-4 text-emerald-700 mr-1" />
+           ) : (
+             <XCircle className="h-4 w-4 text-rose-700 mr-1" />
+           )}
+           {status}
+         </Badge>
+       );
+     },
+   },
   {
     accessorKey: "remarks",
     header: ({ column }) => (

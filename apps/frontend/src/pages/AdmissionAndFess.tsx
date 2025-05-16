@@ -9,7 +9,7 @@ const AdmissionAndFees: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-6 sm:p-4"
+        className="grid grid-cols-1 mt-1 sm:grid-cols-[auto_1fr] gap-4 p-6 sm:p-6"
       >
         <div className="grid grid-cols-[auto_1fr] items-center gap-4">
           <motion.div

@@ -10,16 +10,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut,
   User,
-  ChevronDown,
+
   Settings,
   BookCheck,
   BookOpen,
+  ChevronDown,
   ClipboardPenLine,
   DownloadCloud,
   FileUser,
   Home,
+  LogOut,
   MapPinned,
   Notebook,
   UserPlus,
@@ -64,6 +65,7 @@ const data = {
     },
   ],
   navMain: [
+    
     {
       title: "Admission & Fees",
       url: "/home/admission-fees",
@@ -74,6 +76,7 @@ const data = {
       url: "/home/courses-subjects",
       icon: Notebook,
     },
+
     {
       title: "Exam Management",
       url: "/home/exam-management",
@@ -109,7 +112,7 @@ const data = {
     {
       title: "Search Student",
       icon: UserRoundSearch,
-      isModal: true, // Flag to indicate this should open a modal
+      isModal: true, 
     },
     {
       title: "Get Reports",
@@ -199,7 +202,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
             </div>
 
-            {/* Student Section */}
+           
             <div className="mb-4">
               <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">
                 Student
@@ -208,7 +211,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {data.navStudent.map((item) => {
                   const isActive = !isSearchActive && currentPath === item.url;
 
-                  // Special handling for Search Student which opens a modal
+            
                   if (item.isModal) {
                     return (
                       <div
@@ -234,7 +237,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     );
                   }
 
-                  // Regular navigation items
                   return (
                     <NavItem
                       key={item.title}

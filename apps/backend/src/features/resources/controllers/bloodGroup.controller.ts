@@ -11,9 +11,16 @@ import { findAll } from "@/utils/helper.js";
 export const createBloodGroup = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log(req.body);
+        // Ensure dates are properly formatted to avoid issues
+        const bloodGroupData = {
+            ...req.body,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+        
         const newBloodGroupModel = await db
             .insert(bloodGroupModel)
-            .values(req.body);
+            .values(bloodGroupData);
         console.log("New Document added", newBloodGroupModel);
         res
             .status(201)
@@ -94,7 +101,13 @@ export const updateBloodGroup = async (
     try {
         const { id } = req.params;
         console.log(id);
-        const updatedBloodGroup = req.body;
+        
+        // Ensure proper date handling by removing any existing date fields and adding a fresh updatedAt
+        const { createdAt, updatedAt, ...bodyData } = req.body;
+        const updatedBloodGroup = {
+            ...bodyData,
+            updatedAt: new Date(),
+        };
 
         const existingBloodGroup = await db
             .select()
