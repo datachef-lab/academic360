@@ -514,6 +514,7 @@ export async function uploadFile(
         }
     }
 
+    console.log("user:", user);
     console.log(dataArr[23]);
     console.log("done ");
     socket.emit("progress", {
@@ -1924,10 +1925,11 @@ export async function cleanData(
                     );
 
                     // Normalize and clean the data
+                    console.log("mks.uid.toUpperCase().trim() =", studentMksArr.map(ele => ele?.uid))
                     studentMksArr = studentMksArr.map((mks) => ({
                         ...mks,
                         stream: streams[s].degree.name.toUpperCase().trim(),
-                        uid: mks.uid.toUpperCase().trim(),
+                        uid: mks.uid.toString().toUpperCase().trim(),
                         registration_no: cleanTilde(mks.registration_no) as string,
                         roll_no: cleanTilde(mks.roll_no) as string,
                         course: mks.course.toUpperCase().trim(),
