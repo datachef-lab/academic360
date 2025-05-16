@@ -27,7 +27,7 @@ import { PersonalDetails } from "@/types/user/personal-details";
 import { Health } from "@/types/user/health";
 import { EmergencyContact } from "@/types/user/emergency-contact";
 import { AcademicHistory } from "@/types/user/academic-history";
-import { academicIdentifier } from "@/types/user/academic-identifier";
+import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { Parent } from "@/types/user/parent";
 import FamilyDetailsForm from "@/components/forms/student/FamilyDetailsForm";
@@ -45,7 +45,7 @@ export interface StudentFormData {
   healthDetails: Health;
   emergencyContact: EmergencyContact;
   academicHistory: AcademicHistory;
-  academicIdentifier: academicIdentifier;
+  academicIdentifier: AcademicIdentifier;
   accommodation: Accommodation;
 }
 
@@ -137,7 +137,7 @@ export default function AddStudentPage() {
     healthDetails: {} as Health,
     emergencyContact: {} as EmergencyContact,
     academicHistory: {} as AcademicHistory,
-    academicIdentifier: {} as academicIdentifier,
+    academicIdentifier: {} as AcademicIdentifier,
     accommodation: {} as Accommodation,
   });
 
@@ -225,7 +225,7 @@ export default function AddStudentPage() {
       | Health
       | EmergencyContact
       | AcademicHistory
-      | academicIdentifier
+      | AcademicIdentifier
       | Accommodation
       | Address
       | { student?: Student; personalDetails: PersonalDetails },
@@ -473,7 +473,7 @@ export default function AddStudentPage() {
                         | Health
                         | EmergencyContact
                         | AcademicHistory
-                        | academicIdentifier
+                        | AcademicIdentifier
                         | Accommodation
                         | Address
                     }

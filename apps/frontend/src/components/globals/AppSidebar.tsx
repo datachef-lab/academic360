@@ -10,16 +10,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LogOut,
   User,
-  ChevronDown,
+
   Settings,
   BookCheck,
   BookOpen,
+  ChevronDown,
   ClipboardPenLine,
   DownloadCloud,
   FileUser,
   Home,
+  LogOut,
   MapPinned,
   Notebook,
   UserPlus,
@@ -64,6 +65,7 @@ const data = {
     },
   ],
   navMain: [
+    
     {
       title: "Admission & Fees",
       url: "/home/admission-fees",
@@ -74,6 +76,7 @@ const data = {
       url: "/home/courses-subjects",
       icon: Notebook,
     },
+
     {
       title: "Exam Management",
       url: "/home/exam-management",

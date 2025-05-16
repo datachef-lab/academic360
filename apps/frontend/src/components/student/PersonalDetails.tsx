@@ -1,232 +1,661 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { format } from "date-fns";
-import { useFetch } from "@/hooks/useFetch";
-import { addPersonalDetails, findPersonalDetailsByStudentId } from "@/services/personal-details-api";
-import { PersonalDetails } from "@/types/user/personal-details";
-import { useEffect } from "react";
-import AddressForm from "./AddressForm";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
+import { PersonalDetails as PersonalDetailsType } from "@/types/user/personal-details";
+import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
+import { toast } from "sonner";
+import { Spinner } from "@/components/ui/spinner";
 
-// Define the validation schema
-const personalDetailsSchema = z.object({
-  aadhaarCardNumber: z.string().nullable(),
-  email: z.string().email("Invalid email").nullable(),
-  alternativeEmail: z.string().nullable().optional(),
-  dateOfBirth: z.date().nullable(),
-  nationality: z.any().nullable().optional(),
-  motherTongue: z.any().nullable().optional(),
-  religion: z.any().nullable().optional(),
-  residentialAddress: z.any().nullable().optional(),
-  mailingAddress: z.any().nullable().optional(),
-  category: z.any().nullable().optional(),
-  gender: z.enum(["MALE", "FEMALE", "TRANSGENDER"]).nullable(),
-  disability: z.enum(["VISUAL", "HEARING_IMPAIRMENT", "VISUAL_IMPAIRMENT", "ORTHOPEDIC", "OTHER"]).nullable(),
-});
+// Helper function to safely access object properties
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getNameProperty = (obj: any): string => {
+  if (obj && typeof obj === 'object' && 'name' in obj && typeof obj.name === 'string') {
+    return obj.name;
+  }
+  return '';
+};
 
-type FormValues = z.infer<typeof personalDetailsSchema>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getAddressProperty = (obj: any, prop: string): string => {
+  if (obj && typeof obj === 'object' && prop in obj && obj[prop] !== null) {
+    return obj[prop];
+  }
+  return '';
+};
+
+const formElements = [
+  { name: "aadhaarCardNumber", label: "Aadhaar Number", type: "text", icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
+  { name: "alternativeEmail", label: "Alternative Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
+];
+
+const genderOptions = [
+  { value: "MALE", label: "Male" },
+  { value: "FEMALE", label: "Female" },
+  { value: "TRANSGENDER", label: "Transgender" },
+];
+
+const defaultPersonalDetails: PersonalDetailsType = {
+  studentId: 0,
+  aadhaarCardNumber: null,
+  email: null,
+  alternativeEmail: null,
+  dateOfBirth: null,
+  nationality: null,
+  motherTongue: null,
+  religion: null,
+  residentialAddress: null,
+  mailingAddress: null,
+  category: null,
+  gender: null,
+  disability: "OTHER",
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 interface PersonalDetailProps {
   studentId: number;
 }
 
 export default function PersonalDetail({ studentId }: PersonalDetailProps) {
-  const { data, loading, refetch } = useFetch<PersonalDetails>({
-    getFn: async () => (await findPersonalDetailsByStudentId(studentId)).payload,
-    postFn: async (personalDetails: PersonalDetails) => {
-      const result = await addPersonalDetails(personalDetails);
-      return result.payload as PersonalDetails;
-    },
-    default: {
-      aadhaarCardNumber: null,
-      alternativeEmail: null,
-      dateOfBirth: null,
-      nationality: null,
-      motherTongue: null,
-      religion: null,
-      residentialAddress: null,
-      mailingAddress: null,
-      category: null,
-      gender: null,
-      disability: "OTHER",
-      email: null,
-      studentId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as unknown as PersonalDetails,
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<PersonalDetailsType>({
+    ...defaultPersonalDetails,
+    studentId
   });
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { isDirty },
-  } = useForm<FormValues>({
-    resolver: zodResolver(personalDetailsSchema),
-    defaultValues: {
-      aadhaarCardNumber: null,
-      email: null,
-      alternativeEmail: null,
-      dateOfBirth: null,
-      nationality: null,
-      motherTongue: null,
-      religion: null,
-      residentialAddress: null,
-      mailingAddress: null,
-      category: null,
-      gender: null,
-      disability: null,
+  // Use React Query to fetch personal details
+  const { data: personalDetails, isLoading, isError, refetch } = useQuery({
+    queryKey: ['personalDetails', studentId],
+    queryFn: async () => {
+      const response = await findPersonalDetailsByStudentId(studentId);
+      return response.payload;
     },
+    enabled: studentId > 0,
+    retry: 1,
+    staleTime: 300000, // 5 minutes
   });
 
-  // Update form when data is loaded
+  // Update form data when personal details are loaded
   useEffect(() => {
-    if (data) {
-      console.log("Data loaded:", data);
-      reset({
-        aadhaarCardNumber: data.aadhaarCardNumber,
-        email: data.email,
-        alternativeEmail: data.alternativeEmail || "",
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
-        nationality: data.nationality,
-        motherTongue: data.motherTongue,
-        religion: data.religion,
-        residentialAddress: data.residentialAddress,
-        mailingAddress: data.mailingAddress,
-        category: data.category,
-        gender: data.gender,
-        disability: data.disability,
-      });
+    if (personalDetails) {
+      console.log("Personal details data loaded:", personalDetails);
+      setFormData(personalDetails);
     }
-  }, [data, reset]);
+  }, [personalDetails]);
 
-  const dateOfBirth = watch("dateOfBirth");
-  const residentialAddress = watch("residentialAddress");
-  const mailingAddress = watch("mailingAddress");
-  const nationality = watch("nationality");
-  const religion = watch("religion");
-  const category = watch("category");
-  const aadhaarCardNumber = watch("aadhaarCardNumber");
-
-  console.log("Form values:", {
-    aadhaarCardNumber,
-    gender: watch("gender"),
-    email: watch("email"),
+  const updateMutation = useMutation({
+    mutationFn: (formData: PersonalDetailsType) => {
+      if (formData.id) {
+        return updatePersonalDetails(formData.id, formData);
+      } else {
+        return addPersonalDetails(formData);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Personal details have been successfully updated.", {
+        icon: <PenLine />,
+      });
+      setShowSuccess(true);
+      refetch();
+    },
+    onError: (error) => {
+      toast.error("Failed to save personal details. Please try again.");
+      console.error("Error saving personal details:", error);
+    }
   });
 
-  const onSubmit = (formData: FormValues) => {
-    console.log("Form Data: ", formData);
-    if (data) {
-      // Update the data and refetch
-      const updatedData = {
-        ...data,
-        ...formData,
-        disability: formData.disability || "OTHER",
-      };
-
-      addPersonalDetails(updatedData as PersonalDetails)
-        .then(() => refetch())
-        .catch((err) => console.error("Error updating personal details:", err));
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+    
+    // Email validation
+    if (formData.email && !formData.email.includes("@")) {
+      newErrors.email = "Invalid email format";
     }
+    
+    // Alternative email validation (only if provided)
+    if (formData.alternativeEmail && !formData.alternativeEmail.includes("@")) {
+      newErrors.alternativeEmail = "Invalid email format";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
+  };
+
+  useEffect(() => {
+    if (updateMutation.isSuccess) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [updateMutation.isSuccess]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    if (isLoading || !validateForm()) return;
+    console.log("Submitting form data:", formData);
+    updateMutation.mutate(formData);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <Spinner className="w-8 h-8 text-blue-500" />
+        <span className="ml-2">Loading personal details...</span>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col justify-center items-center h-40 text-red-500">
+        <p>Error loading personal details</p>
+        <Button 
+          onClick={() => refetch()} 
+          variant="outline" 
+          className="mt-2"
+        >
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-auto mx-auto">
-      <Card className="p-6">
-        <CardContent className="mt-6 space-y-8">
-          <form onSubmit={handleSubmit(onSubmit)}>
-            {/* Debug output */}
-            <div className="mb-4 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-40">
-              <p className="font-bold">Debug: Aadhaar Card Number</p>
-              <p>data.aadhaarCardNumber: {data?.aadhaarCardNumber}</p>
-              <p>form aadhaarCardNumber: {aadhaarCardNumber}</p>
+    <div className="shadow-lg border py-10 w-full flex items-center rounded-lg justify-center px-5">
+      <div className="max-w-[80%] w-full">
+        {/* Personal Details Section */}
+        <h3 className="text-lg font-medium border-b pb-1 mb-6">PERSONAL DETAILS</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          {formElements.map(({ name, label, type, icon }) => (
+            <div key={name} className="flex flex-col mr-8">
+              <div className="relative p-1">
+                {errors[name] ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
+                <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
+                <Input
+                  id={name}
+                  name={name}
+                  type={type}
+                  value={formData[name as keyof PersonalDetailsType] as string || ""}
+                  placeholder={label}
+                  onChange={handleChange}
+                  className={`w-full pl-10 pr-3 rounded-lg py-2 ${errors[name] ? "border-red-500" : ""}`}
+                />
+              </div>
+              {errors[name] && <p className="text-red-500 text-sm mt-1">{errors[name]}</p>}
             </div>
+          ))}
 
-            {/* PERSONAL DETAILS */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-1">Personal Details</h3>
+          {/* Date of Birth Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Date of Birth</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <CalendarIcon className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <Input
+                name="dateOfBirth"
+                type="date"
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value={formData.dateOfBirth ? new Date(formData.dateOfBirth as any).toISOString().split('T')[0] : ""}
+                onChange={handleChange}
+                className="w-full pl-10 pr-3 rounded-lg py-2"
+              />
+            </div>
+          </div>
+
+          {/* Gender Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Gender</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <User className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <select
+                name="gender"
+                value={formData.gender || ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }) as PersonalDetailsType)}
+                className="w-full pl-10 pr-3 rounded-lg py-2 border"
+              >
+                <option value="">Select Gender</option>
+                {genderOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Religion Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Religion</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <Input
+                name="religion"
+                type="text"
+                value={getNameProperty(formData.religion)}
+                onChange={(e) => {
+                  if (formData.religion) {
+                    setFormData(prev => ({
+                      ...prev,
+                      religion: { ...prev.religion, name: e.target.value }
+                    }) as PersonalDetailsType);
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      religion: { name: e.target.value, id: 0 }
+                    }) as PersonalDetailsType);
+                  }
+                }}
+                className="w-full pl-10 pr-3 rounded-lg py-2"
+              />
+            </div>
+          </div>
+
+          {/* Category Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Category</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <Input
+                name="category"
+                type="text"
+                value={getNameProperty(formData.category)}
+                onChange={(e) => {
+                  if (formData.category) {
+                    setFormData(prev => ({
+                      ...prev,
+                      category: { ...prev.category, name: e.target.value }
+                    }) as PersonalDetailsType);
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      category: { name: e.target.value, id: 0 }
+                    }) as PersonalDetailsType);
+                  }
+                }}
+                className="w-full pl-10 pr-3 rounded-lg py-2"
+              />
+            </div>
+          </div>
+
+          {/* Nationality Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Nationality</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <Globe className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <Input
+                name="nationality"
+                type="text"
+                value={getNameProperty(formData.nationality)}
+                onChange={(e) => {
+                  if (formData.nationality) {
+                    setFormData(prev => ({
+                      ...prev,
+                      nationality: { ...prev.nationality, name: e.target.value }
+                    }) as PersonalDetailsType);
+                  } else {
+                    setFormData(prev => ({
+                      ...prev,
+                      nationality: { name: e.target.value, id: 0 }
+                    }) as PersonalDetailsType);
+                  }
+                }}
+                className="w-full pl-10 pr-3 rounded-lg py-2"
+              />
+            </div>
+          </div>
+
+          {/* Disability Field */}
+          <div className="flex flex-col mr-8">
+            <div className="relative p-1">
+              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Disability</label>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <Sparkles className="text-gray-500 dark:text-white w-5 h-5" />
+              </span>
+              <select
+                name="disability"
+                value={formData.disability || ""}
+                onChange={(e) => setFormData(prev => ({ ...prev, disability: e.target.value }) as PersonalDetailsType)}
+                className="w-full pl-10 pr-3 rounded-lg py-2 border"
+              >
+                <option value="">None</option>
+                <option value="VISUAL">Visual</option>
+                <option value="HEARING_IMPAIRMENT">Hearing Impairment</option>
+                <option value="VISUAL_IMPAIRMENT">Visual Impairment</option>
+                <option value="ORTHOPEDIC">Orthopedic</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Address Section */}
+        <h3 className="text-lg font-medium border-b pb-1 mb-6">ADDRESS DETAILS</h3>
+        
+        {/* Residential Address */}
+        <div className="mb-6">
+          <h4 className="text-md font-medium mb-2">RESIDENTIAL ADDRESS</h4>
+          <div className="p-4 rounded-lg border">
+            {formData.residentialAddress ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="flex items-center gap-2">
-                    <IdCard />
-                    Aadhaar Number
-                  </Label>
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Address Line</label>
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                      <IdCard className="h-4 w-4 text-gray-500" />
-                    </div>
-                    <Input className="pl-10 bg-white dark:bg-gray-950" value={aadhaarCardNumber || ""} readOnly />
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.residentialAddress, 'addressLine')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          residentialAddress: {
+                            ...prev.residentialAddress,
+                            addressLine: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
                   </div>
                 </div>
 
-                <InputWithIcon
-                  label="Date of Birth"
-                  icon={<CalendarIcon />}
-                  value={dateOfBirth ? format(dateOfBirth, "PPP") : ""}
-                  readOnly
-                />
-                <InputWithIcon label="Gender" icon={<User />} value={watch("gender") || ""} readOnly />
-                <InputWithIcon label="Religion" icon={<BookOpen />} value={religion?.name || ""} readOnly />
-                <InputWithIcon label="Category" icon={<BookOpen />} value={category?.name || ""} readOnly />
-                <InputWithIcon label="Nationality" icon={<Globe />} value={nationality?.name || ""} readOnly />
-              </div>
-            </section>
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Pincode</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.residentialAddress, 'pincode')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          residentialAddress: {
+                            ...prev.residentialAddress,
+                            pincode: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
 
-            {/* CONTACT DETAILS */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-1">Contact Information</h3>
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Landmark</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.residentialAddress, 'landmark') || ''}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          residentialAddress: {
+                            ...prev.residentialAddress,
+                            landmark: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      placeholder="Enter landmark"
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Phone</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <Phone className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.residentialAddress, 'phone') || ''}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          residentialAddress: {
+                            ...prev.residentialAddress,
+                            phone: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      placeholder="Enter phone number"
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Locality Type</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <select
+                      value={getAddressProperty(formData.residentialAddress, 'localityType')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          residentialAddress: {
+                            ...prev.residentialAddress,
+                            localityType: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2 border"
+                    >
+                      <option value="URBAN">Urban</option>
+                      <option value="RURAL">Rural</option>
+                      <option value="SEMI_URBAN">Semi-Urban</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-500">No residential address provided</p>
+            )}
+          </div>
+        </div>
+        
+        {/* Mailing Address */}
+        <div className="mb-8">
+          <h4 className="text-md font-medium mb-2">MAILING ADDRESS</h4>
+          <div className="p-4 rounded-lg border">
+            {formData.mailingAddress ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InputWithIcon label="Email" icon={<Mail />} {...register("email")} />
-                <InputWithIcon label="Alternative Email" icon={<Mail />} {...register("alternativeEmail")} />
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Address Line</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.mailingAddress, 'addressLine')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          mailingAddress: {
+                            ...prev.mailingAddress,
+                            addressLine: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Pincode</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.mailingAddress, 'pincode')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          mailingAddress: {
+                            ...prev.mailingAddress,
+                            pincode: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Landmark</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.mailingAddress, 'landmark') || ''}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          mailingAddress: {
+                            ...prev.mailingAddress,
+                            landmark: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      placeholder="Enter landmark"
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Phone</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <Phone className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <Input
+                      value={getAddressProperty(formData.mailingAddress, 'phone') || ''}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          mailingAddress: {
+                            ...prev.mailingAddress,
+                            phone: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      placeholder="Enter phone number"
+                      className="w-full pl-10 pr-3 rounded-lg py-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="font-medium">Locality Type</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                      <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
+                    </span>
+                    <select
+                      value={getAddressProperty(formData.mailingAddress, 'localityType')}
+                      onChange={(e) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          mailingAddress: {
+                            ...prev.mailingAddress,
+                            localityType: e.target.value
+                          }
+                        }) as PersonalDetailsType);
+                      }}
+                      className="w-full pl-10 pr-3 rounded-lg py-2 border"
+                    >
+                      <option value="URBAN">Urban</option>
+                      <option value="RURAL">Rural</option>
+                      <option value="SEMI_URBAN">Semi-Urban</option>
+                    </select>
+                  </div>
+                </div>
               </div>
+            ) : (
+              <p className="text-gray-500">No mailing address provided</p>
+            )}
+          </div>
+        </div>
 
-              {/* Residential Address */}
-              <AddressForm address={residentialAddress} onChange={() => {}} />
-
-              {/* Mailing Address */}
-              <AddressForm address={mailingAddress} onChange={() => {}} />
-            </section>
-
-            {/* DISABILITY INFO */}
-            <section className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-1">Other</h3>
-              <InputWithIcon label="Disability" icon={<Sparkles />} value={watch("disability") || "None"} readOnly />
-            </section>
-
-            <Button type="submit" className="mt-4" disabled={!isDirty}>
-              <Save className="w-4 h-4 mr-2" /> Save Changes
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Submit Button */}
+        <div className="col-span-2 mt-6">
+          <Button 
+            type="submit" 
+            onClick={handleSubmit} 
+            className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
+            disabled={updateMutation.isLoading}
+          >
+            {updateMutation.isLoading ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Processing...
+              </>
+            ) : showSuccess ? (
+              <>
+                <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                Saved
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 sm:w-5 sm:h-5" />
+                Save Changes
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
-
-interface InputWithIconProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label: string;
-  icon: React.ReactNode;
-}
-
-const InputWithIcon = ({ label, icon, ...props }: InputWithIconProps) => (
-  <div className="space-y-1">
-    <Label className="flex items-center gap-2">
-      {icon}
-      {label}
-    </Label>
-    <div className="relative">
-      <div className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</div>
-      <Input className="pl-10 bg-white dark:bg-gray-950" {...props} />
-    </div>
-  </div>
-);

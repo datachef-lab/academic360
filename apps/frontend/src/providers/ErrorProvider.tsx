@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { setupAxiosInterceptors } from "@/utils/api"; // Axios instance with retry logic
 import { toast } from "sonner";
 
@@ -29,7 +29,7 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
   const setErrors = useState<Error[]>([])[1];
 
   // Function to show an error (add to errors array)
-  const showError = (error: Omit<Error, "id">) => {
+  const showError = useCallback((error: Omit<Error, "id">) => {
     console.log("Show Error Fired");
     const newError = {
       ...error,
@@ -56,12 +56,12 @@ export const ErrorProvider = ({ children }: { children: ReactNode }) => {
     setTimeout(() => {
       setErrors((prevErrors) => prevErrors.filter((e) => e.id !== newError.id));
     }, 5000);
-  };
+  }, [setErrors]);
 
   useEffect(() => {
     console.log("Error Provider Setup");
     setupAxiosInterceptors(showError); // Setup Axios interceptors on mount
-  }, []);
+  }, [showError]);
 
   return (
     <ErrorContext.Provider value={{ showError }}>

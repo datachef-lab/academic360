@@ -104,8 +104,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
   { label: "Personal Details", icon: <IdCard size={16} />, endpoint: "/personal-details" },
-  { label: "Parent Details", icon: <Users size={16} />, endpoint: "/parent-details" },
-  { label: "Guardian Details", icon: <Users size={16} />, endpoint: "/guardian" },
+  { label: "Family Details", icon: <Users size={16} />, endpoint: "/family-details" },
   { label: "Health Details", icon: <Heart size={16} />, endpoint: "/health" },
   { label: "Emergency Contact", icon: <Phone size={16} />, endpoint: "/emergency-contact" },
   { label: "Academic History", icon: <Book size={16} />, endpoint: "/academic-history" },

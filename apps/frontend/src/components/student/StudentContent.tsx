@@ -2,12 +2,11 @@ import AcademicHistory from "./AcademicHistoryForm";
 import AcademicIdentifier from "./AcademicIdentifierForm";
 import Accommodation from "./AccommodationForm";
 import EmergencyContact from "./EmergencyContactForm";
-import GuardianDetails from "./GuardianDetails";
 import HealthDetails from "./HealthDetails";
 import OverviewTab from "./OverviewTab";
-import ParentDetails from "./ParentDetails";
 import PersonalDetails from "./PersonalDetails";
 import TransportDetails from "./TransportDetails";
+import FamilyDetails from "./FamilyDetails";
 
 type StudentContentProps = {
     studentId: number;
@@ -25,14 +24,12 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
         return <OverviewTab />;
       case "Personal Details":
         return <PersonalDetails studentId={studentId} />;
-      case "Parent Details":
-        return <ParentDetails />;
-      case "Guardian Details":
-        return <GuardianDetails />;
+      case "Family Details":
+        return <FamilyDetails studentId={studentId} />;
       case "Health Details":
-        return <HealthDetails />;
+        return <HealthDetails studentId={studentId} />;
       case "Emergency Contact":
-        return <EmergencyContact />;
+        return <EmergencyContact studentId={studentId} />;
       case "Academic History":
         return <AcademicHistory />;
       case "Academic Identifiers":

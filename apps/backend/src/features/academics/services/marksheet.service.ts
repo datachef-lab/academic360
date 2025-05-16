@@ -9,7 +9,7 @@ import {
     findStreamById,
 } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, desc, eq, ilike, max, sql, count, or } from "drizzle-orm";
+import { and, count, desc, eq, ilike, max, or, sql } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -63,8 +63,13 @@ export async function addMarksheet(
                 SELECT * 
                 FROM studentpersonaldetails
                 WHERE univregno = ${marksheet.academicIdentifier.registrationNumber};
-        `)) as [OldStudent[], any];
+        `) as [OldStudent[], any];
 
+        const foundStudent = rows[rows.length - 1];
+        if (!foundStudent) {
+            console.error("Unable to find the student");
+            return null;
+        }
         const foundStudent = rows[rows.length - 1];
         if (!foundStudent) {
             console.error("Unable to find the student");
@@ -114,15 +119,24 @@ export async function addMarksheet(
     if (!updatedMarksheet) {
         throw Error("Unable to save the marksheet...!");
     }
+    if (!updatedMarksheet) {
+        throw Error("Unable to save the marksheet...!");
+    }
 
+    const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
     const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
 
     if (!formattedMarksheet) {
         return null;
     }
+    if (!formattedMarksheet) {
+        return null;
+    }
 
     await postMarksheetOperation(formattedMarksheet as MarksheetType);
+    await postMarksheetOperation(formattedMarksheet as MarksheetType);
 
+    return formattedMarksheet;
     return formattedMarksheet;
 }
 
@@ -422,6 +436,10 @@ export async function uploadFile(
         console.log("user:", user);
         return false;
     }
+    if (!user) {
+        console.log("user:", user);
+        return false;
+    }
 
     // Step 3: Loop over the array.
     for (let y = startingYear; y <= new Date().getFullYear(); y++) {
@@ -448,7 +466,13 @@ export async function uploadFile(
                 );
 
                 // sendUpdate(`Processing year ${y}, stream ${streams[s]}, semester ${sem}...`);
+                // sendUpdate(`Processing year ${y}, stream ${streams[s]}, semester ${sem}...`);
 
+                // Iterate over the arr[]
+                const doneRollNumber: string[] = [];
+                for (let i = 0; i < arr.length; i++) {
+                    // Skip the `uid` if already processed
+                    if (doneRollNumber.includes(arr[i].roll_no)) continue;
                 // Iterate over the arr[]
                 const doneRollNumber: string[] = [];
                 for (let i = 0; i < arr.length; i++) {
@@ -467,6 +491,7 @@ export async function uploadFile(
                         return currentRollNo === targetRollNo;
                     });
 
+                    console.log("subjectArr:", subjectArr.length);
                     console.log("subjectArr:", subjectArr.length);
 
                     if (subjectArr.length === 0) {
@@ -561,6 +586,7 @@ export async function saveMarksheet(
     }
 
     foundMarksheet.updatedByUserId = user.id as number;
+    foundMarksheet.updatedByUserId = user.id as number;
 
     const [updatedMarksheet] = await db
         .update(marksheetModel)
@@ -571,15 +597,24 @@ export async function saveMarksheet(
     if (!updatedMarksheet) {
         throw Error("Unable to save the marksheet...!");
     }
+    if (!updatedMarksheet) {
+        throw Error("Unable to save the marksheet...!");
+    }
 
+    const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
     const formattedMarksheet = await marksheetResponseFormat(updatedMarksheet);
 
     if (!formattedMarksheet) {
         return null;
     }
+    if (!formattedMarksheet) {
+        return null;
+    }
 
     await postMarksheetOperation(formattedMarksheet as MarksheetType);
+    await postMarksheetOperation(formattedMarksheet as MarksheetType);
 
+    return formattedMarksheet;
     return formattedMarksheet;
 }
 
@@ -672,7 +707,9 @@ export async function findMarksheetById(
         .where(eq(marksheetModel.id, id));
 
     const formattedMarksheet = await marksheetResponseFormat(foundMarksheet);
+    const formattedMarksheet = await marksheetResponseFormat(foundMarksheet);
 
+    return formattedMarksheet;
     return formattedMarksheet;
 }
 
@@ -698,9 +735,11 @@ export async function findMarksheetsByStudentId(
     );
 
     return formattedMarksheets;
+    return formattedMarksheets;
 }
 
 export async function removeMarksheet(id: number): Promise<boolean | null> {
+    return null;
     return null;
 }
 
@@ -718,11 +757,14 @@ async function marksheetResponseFormat(
     }
 
     const subjects = await findSubjectsByMarksheetId(marksheet.id as number);
+    const subjects = await findSubjectsByMarksheetId(marksheet.id as number);
 
     const academicIdentifier = await findAcademicIdentifierByStudentId(
         marksheet.studentId as number,
     );
 
+    const createdByUser = await findUserById(marksheet.createdByUserId as number);
+    const updatedByUser = await findUserById(marksheet.updatedByUserId as number);
     const createdByUser = await findUserById(marksheet.createdByUserId as number);
     const updatedByUser = await findUserById(marksheet.updatedByUserId as number);
 
@@ -743,11 +785,24 @@ async function marksheetResponseFormat(
         createdByUser: createdByUser as UserType,
         updatedByUser: updatedByUser as UserType,
     };
+    const formattedMarksheet: MarksheetType = {
+        ...marksheet,
+        name: user.name as string,
+        subjects,
+        academicIdentifier: academicIdentifier as AcademicIdentifierType,
+        createdByUser: createdByUser as UserType,
+        updatedByUser: updatedByUser as UserType,
+    };
 
+    return formattedMarksheet;
     return formattedMarksheet;
 }
 
 interface FilterDataProps {
+    dataArr: MarksheetRow[];
+    stream: StreamType;
+    year: number;
+    semester: number;
     dataArr: MarksheetRow[];
     stream: StreamType;
     year: number;
@@ -791,6 +846,7 @@ async function filterData({
     });
 
     console.log(`FilterData - Found ${matchingData.length} matching rows`);
+    console.log(`FilterData - Found ${matchingData.length} matching rows`);
 
     if (matchingData.length > 0) {
         const sampleRow = matchingData[0];
@@ -807,6 +863,7 @@ async function filterData({
     }
 
     return matchingData;
+    return matchingData;
 }
 
 const cleanStream = (value: unknown): string | undefined => {
@@ -816,6 +873,7 @@ const cleanStream = (value: unknown): string | undefined => {
     return undefined; // Return undefined for non-string values
 };
 
+
 const cleanString = (value: unknown): string | undefined => {
     if (typeof value === "string") {
         return value.replace(/[\s\-\/]/g, "").trim();
@@ -824,6 +882,8 @@ const cleanString = (value: unknown): string | undefined => {
 };
 
 interface AddUserProps {
+    name: string;
+    uid: string | null;
     name: string;
     uid: string | null;
 }
@@ -840,10 +900,21 @@ async function addUser({ name, uid }: AddUserProps) {
         //     type: "STUDENT",
         //     whatsappNumber: null,
         // } as User).returning();
+        // const [newUser] = await db.insert(userModel).values({
+        //     name: name?.trim()?.toUpperCase(),
+        //     email: null,
+        //     password: hashedPassword,
+        //     phone: null,
+        //     type: "STUDENT",
+        //     whatsappNumber: null,
+        // } as User).returning();
 
         return null;
     }
+        return null;
+    }
 
+    const email = `${cleanString(uid)?.toUpperCase()}@thebges.edu.in`;
     const email = `${cleanString(uid)?.toUpperCase()}@thebges.edu.in`;
 
     // Hash the password before storing it in the database
@@ -877,6 +948,7 @@ async function addUser({ name, uid }: AddUserProps) {
         .returning();
 
     return newUser;
+    return newUser;
 }
 
 interface AddStudentProps {
@@ -901,6 +973,14 @@ async function addStudent({ userId, uid }: AddStudentProps) {
             level = "UNDER_GRADUATE";
         }
     }
+    let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined;
+    if (uid) {
+        if (uid.startsWith("11") || uid.startsWith("14")) {
+            level = "POST_GRADUATE";
+        } else if (!uid.startsWith("B")) {
+            level = "UNDER_GRADUATE";
+        }
+    }
 
     const [newStudent] = await db
         .insert(studentModel)
@@ -910,11 +990,19 @@ async function addStudent({ userId, uid }: AddStudentProps) {
         .returning();
 
     // ["DAY", "MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING" : null
+    // ["DAY", "MORNING", "AFTERNOON", "EVENING"].includes(marksheet.shift.toUpperCase()) ? marksheet.shift.toUpperCase() as "DAY" | "MORNING" | "AFTERNOON" | "EVENING" : null
 
+    return newStudent;
     return newStudent;
 }
 
 interface AddAcademicIdentifierProps {
+    studentId: number;
+    stream: StreamType | null;
+    uid: string | null;
+    registrationNumber: string;
+    rollNumber: string;
+    sectionId: number | null;
     studentId: number;
     stream: StreamType | null;
     uid: string | null;
@@ -943,6 +1031,7 @@ async function addAcademicIdentifier({
         })
         .returning();
 }
+
 
 async function processStudent(
     arr: MarksheetRow[],
@@ -973,8 +1062,13 @@ async function processStudent(
                 SELECT * 
                 FROM studentpersonaldetails
                 WHERE univregno = ${arr[0].registration_no};
-        `)) as [OldStudent[], any];
+        `) as [OldStudent[], any];
 
+        const foundStudent = rows[rows.length - 1];
+        if (!foundStudent) {
+            console.error("Unable to find the student");
+            return null;
+        }
         const foundStudent = rows[rows.length - 1];
         if (!foundStudent) {
             console.error("Unable to find the student");
@@ -998,6 +1092,9 @@ async function processStudent(
     if (!student) {
         throw Error("Unable to create the new student");
     }
+    if (!student) {
+        throw Error("Unable to create the new student");
+    }
 
     let marksheet: Marksheet = {
         studentId: student.id as number,
@@ -1013,6 +1110,7 @@ async function processStudent(
         await db.insert(marksheetModel).values(marksheet).returning()
     )[0];
 
+    const subjects: Subject[] = [];
     const subjects: Subject[] = [];
 
     const subjectMetadataArr = await db
@@ -1035,6 +1133,9 @@ async function processStudent(
             (sbj) => sbj.marksheetCode === arr[i].paperCode.toUpperCase().trim(),
         );
 
+        if (!subjectMetadata) {
+            throw Error("Invalid subject input got detected!");
+        }
         if (!subjectMetadata) {
             throw Error("Invalid subject input got detected!");
         }
@@ -1065,12 +1166,19 @@ async function processStudent(
             let subjectPercent = (total * 100) / subjectMetadata.fullMarks;
             // Calculate NGP for each subject as % marks / 10 for each subject
             subject.ngp = (subjectPercent / 10).toFixed(3).toString();
+        // Calculate NGP and set the letterGrade
+        if (total) {
+            let subjectPercent = (total * 100) / subjectMetadata.fullMarks;
+            // Calculate NGP for each subject as % marks / 10 for each subject
+            subject.ngp = (subjectPercent / 10).toFixed(3).toString();
 
             subject.tgp =
                 subjectMetadata.credit && subject.ngp
                     ? (Number(subject.ngp) * subjectMetadata.credit).toFixed(3).toString()
                     : null;
 
+            // Mark the letterGrade for each subject
+            subject.letterGrade = await getLetterGrade(subject);
             // Mark the letterGrade for each subject
             subject.letterGrade = await getLetterGrade(subject);
 
@@ -1087,11 +1195,19 @@ async function processStudent(
         // Calculate sum of product of NGP and Credit
         if (subject.ngp && subjectMetadata.credit) {
             ngp_credit += +subject.ngp * subjectMetadata.credit;
+        // Calculate sum of product of NGP and Credit
+        if (subject.ngp && subjectMetadata.credit) {
+            ngp_credit += +subject.ngp * subjectMetadata.credit;
 
             // Calculate sum of all credits
             creditSum += subjectMetadata.credit;
         }
+            // Calculate sum of all credits
+            creditSum += subjectMetadata.credit;
+        }
 
+        // Insert the subject
+        subject = (await db.insert(subjectModel).values(subject).returning())[0];
         // Insert the subject
         subject = (await db.insert(subjectModel).values(subject).returning())[0];
 
@@ -1111,6 +1227,7 @@ async function processStudent(
         )
     ).filter((subject): subject is SubjectType => subject !== null);
 
+    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
     let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
 
     // Set the remarks for the marksheet
@@ -1142,9 +1259,12 @@ async function processStudent(
     )[0];
 
     const updatedMarksheet = await marksheetResponseFormat(marksheet);
+    const updatedMarksheet = await marksheetResponseFormat(marksheet);
 
     await postMarksheetOperation(updatedMarksheet as MarksheetType);
+    await postMarksheetOperation(updatedMarksheet as MarksheetType);
 
+    return marksheet;
     return marksheet;
 }
 
@@ -1180,7 +1300,7 @@ async function processStudentV2(
                 SELECT * 
                 FROM studentpersonaldetails
                 WHERE univregno = ${arr[0].registration_no};
-        `)) as [OldStudent[], any];
+        `) as [OldStudent[], any];
 
         const foundStudent = rows[rows.length - 1];
         if (!foundStudent) {
@@ -1202,6 +1322,9 @@ async function processStudentV2(
         student = foundStudent;
     }
 
+    if (!student) {
+        throw Error("Unable to create the new student");
+    }
     if (!student) {
         throw Error("Unable to create the new student");
     }
@@ -1237,6 +1360,7 @@ async function processStudentV2(
         await db.insert(marksheetModel).values(marksheet).returning()
     )[0];
 
+    const subjects: Subject[] = [];
     const subjects: Subject[] = [];
 
     const subjectMetadataArr = await db
@@ -1353,6 +1477,11 @@ async function processStudentV2(
             subjectMetadataId: subjectMetadata.id,
             year1: arr[i].year1,
             // year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
+        let subject: Subject = {
+            marksheetId: marksheet.id,
+            subjectMetadataId: subjectMetadata.id,
+            year1: arr[i].year1,
+            // year2: stream.degree.name === "BCOM" ? Number(arr[i].year2) : null,
 
             internalMarks: formatMarks(arr[i].internal_marks),
             internalCredit: arr[i].internal_credit
@@ -1373,7 +1502,13 @@ async function processStudentV2(
             theoryMarks: formatMarks(arr[i].theory_marks),
             theoryCredit: arr[i].theory_credit ? Number(arr[i].theory_credit) : 0,
             theoryYear: arr[i].theory_year ? Number(arr[i].theory_year) : null,
+            theoryMarks: formatMarks(arr[i].theory_marks),
+            theoryCredit: arr[i].theory_credit ? Number(arr[i].theory_credit) : 0,
+            theoryYear: arr[i].theory_year ? Number(arr[i].theory_year) : null,
 
+            vivalMarks: arr[i].viva_marks ? formatMarks(arr[i].viva_marks) : null,
+            vivalCredit: arr[i].viva_credit ? Number(arr[i].viva_credit) : 0,
+            vivalYear: arr[i].viva_year ? Number(arr[i].viva_year) : null,
             vivalMarks: arr[i].viva_marks ? formatMarks(arr[i].viva_marks) : null,
             vivalCredit: arr[i].viva_credit ? Number(arr[i].viva_credit) : 0,
             vivalYear: arr[i].viva_year ? Number(arr[i].viva_year) : null,
@@ -1438,12 +1573,19 @@ async function processStudentV2(
             let subjectPercent = (total * 100) / subjectMetadata.fullMarks;
             // Calculate NGP for each subject as % marks / 10 for each subject
             subject.ngp = (subjectPercent / 10).toFixed(3).toString();
+        // Calculate NGP and set the letterGrade
+        if (total) {
+            let subjectPercent = (total * 100) / subjectMetadata.fullMarks;
+            // Calculate NGP for each subject as % marks / 10 for each subject
+            subject.ngp = (subjectPercent / 10).toFixed(3).toString();
 
             subject.tgp =
                 subjectMetadata.credit && subject.ngp
                     ? (Number(subject.ngp) * subjectMetadata.credit).toFixed(3).toString()
                     : null;
 
+            // Mark the letterGrade for each subject
+            subject.letterGrade = await getLetterGrade(subject);
             // Mark the letterGrade for each subject
             subject.letterGrade = await getLetterGrade(subject);
 
@@ -1461,11 +1603,19 @@ async function processStudentV2(
         // Calculate sum of product of NGP and Credit
         if (subject.ngp && subjectMetadata.credit) {
             ngp_credit += +subject.ngp * subjectMetadata.credit;
+        // Calculate sum of product of NGP and Credit
+        if (subject.ngp && subjectMetadata.credit) {
+            ngp_credit += +subject.ngp * subjectMetadata.credit;
 
             // Calculate sum of all credits
             creditSum += subjectMetadata.credit;
         }
+            // Calculate sum of all credits
+            creditSum += subjectMetadata.credit;
+        }
 
+        // Insert the subject
+        subject = (await db.insert(subjectModel).values(subject).returning())[0];
         // Insert the subject
         subject = (await db.insert(subjectModel).values(subject).returning())[0];
 
@@ -1486,6 +1636,7 @@ async function processStudentV2(
         )
     ).filter((subject): subject is SubjectType => subject !== null);
 
+    let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
     let marksheetPercent = (totalMarksObtained * 100) / fullMarksSum;
 
     // Set the remarks for the marksheet
@@ -1517,7 +1668,9 @@ async function processStudentV2(
     )[0];
 
     const updatedMarksheet = await marksheetResponseFormat(marksheet);
+    const updatedMarksheet = await marksheetResponseFormat(marksheet);
 
+    console.log("marksheet:", marksheet);
     console.log("marksheet:", marksheet);
 
     await postMarksheetOperation(updatedMarksheet as MarksheetType);
@@ -1585,6 +1738,7 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
         );
 
     return;
+    return;
 }
 
 export async function validateData(
@@ -1605,11 +1759,17 @@ export async function validateData(
 
     const startingYear = Math.min(...years);
     console.log("in validateData(), startingYear:", startingYear);
+    const startingYear = Math.min(...years);
+    console.log("in validateData(), startingYear:", startingYear);
 
     if (dataArr.length === 0) {
         throw Error("Empty data array");
     }
+    if (dataArr.length === 0) {
+        throw Error("Empty data array");
+    }
 
+    console.log("Sample row from data:", dataArr[0]);
     console.log("Sample row from data:", dataArr[0]);
 
     // Step 2: Fetch all the streams
@@ -1646,7 +1806,13 @@ export async function validateData(
                 for (let i = 0; i < arr.length; i++) {
                     // Skip the `uid` if already processed
                     if (doneRollNumber.has(arr[i].roll_no)) continue;
+                // Iterate over the arr[]
+                const doneRollNumber = new Set<string>();
+                for (let i = 0; i < arr.length; i++) {
+                    // Skip the `uid` if already processed
+                    if (doneRollNumber.has(arr[i].roll_no)) continue;
 
+                    doneRollNumber.add(arr[i].roll_no);
                     doneRollNumber.add(arr[i].roll_no);
 
                     // Select all the subject rows for the uid: arr[i].roll_no
@@ -1784,11 +1950,19 @@ export async function validateData(
                         if (seenSubjects.has(subjectMetadata?.id as number)) {
                             throw Error("Duplicate Subjects");
                         }
+                        // ✅ Check for duplicate subjects
+                        if (seenSubjects.has(subjectMetadata?.id as number)) {
+                            throw Error("Duplicate Subjects");
+                        }
 
+                        seenSubjects.add(subjectMetadata?.id as number);
                         seenSubjects.add(subjectMetadata?.id as number);
 
                         // console.log("subjectMetadata:", subjectMetadata)
+                        // console.log("subjectMetadata:", subjectMetadata)
 
+                        // console.log("checking for :", studentMksArr[k]);
+                        // ✅ Check invalid marks range (Assuming 0-100 as valid)
                         // console.log("checking for :", studentMksArr[k]);
                         // ✅ Check invalid marks range (Assuming 0-100 as valid)
 
@@ -1802,6 +1976,11 @@ export async function validateData(
                             stream,
                         } = studentMksArr[k];
 
+                        internal_marks = formatMarks(internal_marks)?.toString() || null;
+                        theory_marks = formatMarks(theory_marks)?.toString() || null;
+                        practical_marks = formatMarks(practical_marks)?.toString() || null;
+                        total = formatMarks(total)?.toString() || null;
+                        // practical_marks = stream.toUpperCase() !== "BCOM" ? formatMarks(practical_marks)?.toString() || null : null;
                         internal_marks = formatMarks(internal_marks)?.toString() || null;
                         theory_marks = formatMarks(theory_marks)?.toString() || null;
                         practical_marks = formatMarks(practical_marks)?.toString() || null;
@@ -1857,6 +2036,9 @@ export async function validateData(
                             throw Error("Invalid marks");
                         }
 
+                        // if (tutorial_marks && subjectMetadata?.fullMarksTutorial && +tutorial_marks > (subjectMetadata?.fullMarksTutorial as number)) {
+                        //     throw Error("Invalid marks");
+                        // }
                         // if (tutorial_marks && subjectMetadata?.fullMarksTutorial && +tutorial_marks > (subjectMetadata?.fullMarksTutorial as number)) {
                         //     throw Error("Invalid marks");
                         // }
@@ -1965,6 +2147,8 @@ export async function cleanData(
     console.log("returning cleaned data:", formattedArr.length);
     return formattedArr;
 }
+
+
 
 const cleanTilde = (value: unknown): string | null => {
     if (typeof value === "string") {
