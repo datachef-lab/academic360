@@ -55,7 +55,7 @@ export async function refactorStatusAndGrade() {
     const pageSize = 10;
     const pages = Math.round(marksheetCount / pageSize);
 
-    for (let i = 0; i <= pageSize; i++) {
+    for (let i = 0; i <= pages; i++) {
         let marksheets = await db
             .select()
             .from(marksheetModel)
