@@ -263,6 +263,7 @@ export const getAllMarks = async (
             year1: subjectModel.year1,
             year2: subjectModel.year2,
             subjectName: subjectMetadataModel.name,
+            marksheetCode: subjectMetadataModel.marksheetCode,
             theoryMarks: subjectModel.theoryMarks,
             practicalMarks: subjectModel.practicalMarks,
             internalMarks: subjectModel.internalMarks,
