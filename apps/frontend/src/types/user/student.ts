@@ -1,6 +1,6 @@
 import { Community, Framework, Level, Shift } from "../enums";
 import { Specialization } from "../resources/specialization";
-import { academicIdentifier } from "./academic-identifier";
+import { AcademicIdentifier } from "./academic-identifier";
 
 
 import { PersonalDetails } from "./personal-details";
@@ -22,7 +22,7 @@ export interface Student {
     leavingDate: Date,
     leavingReason: string,
     specialization?: Specialization | null;
-    academicIdentifier?: academicIdentifier | null;
+    academicIdentifier?: AcademicIdentifier | null;
     personalDetails?: PersonalDetails | null;
     createdAt: Date,
     updatedAt: Date,

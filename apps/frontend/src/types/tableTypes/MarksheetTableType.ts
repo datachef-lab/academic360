@@ -13,6 +13,7 @@ export type MarksheetTableType = {
   internalMarks: number;
   marksheetCode:string;
   subject: string;
+  
   vivalMarks: number;
   fullMarks: number;
   obtainedMarks: number;

@@ -9,16 +9,16 @@ import {
   Hash, 
   GraduationCap
 } from "lucide-react";
-import { academicIdentifier } from "@/types/user/academic-identifier";
+import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Framework } from "@/types/enums";
 
 interface AcademicIdentifierFormProps {
-  onSubmit: (data: academicIdentifier) => void;
-  initialData?: Partial<academicIdentifier>;
+  onSubmit: (data: AcademicIdentifier) => void;
+  initialData?: Partial<AcademicIdentifier>;
 }
 
 export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: AcademicIdentifierFormProps) {
-  const [formData, setFormData] = useState<academicIdentifier>({
+  const [formData, setFormData] = useState<AcademicIdentifier>({
     studentId: initialData.studentId || 0,
     frameworkType: initialData.frameworkType || null,
     rfid: initialData.rfid || null,

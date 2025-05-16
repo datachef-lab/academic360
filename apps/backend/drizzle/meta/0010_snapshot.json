@@ -1,6 +1,6 @@
 {
-  "id": "15fff9b7-2d6b-40fe-92e2-2667b969843f",
-  "prevId": "a92ae036-6ef3-4481-8337-17095c2b7d7c",
+  "id": "ba45dc38-702e-42eb-b790-879ed6ef0871",
+  "prevId": "15fff9b7-2d6b-40fe-92e2-2667b969843f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4297,7 +4297,12 @@
       "schema": "public",
       "values": [
         "PASS",
-        "FAIL"
+        "FAIL",
+        "P",
+        "F",
+        "F(IN)",
+        "F(PR)",
+        "F(TH)"
       ]
     },
     "public.board_result_type": {

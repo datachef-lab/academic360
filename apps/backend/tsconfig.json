@@ -1,5 +1,5 @@
 {
-//   "extends": "../../tsconfig.json",
+  //   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "module": "ESNext", // Use ESNext for ESM
     "target": "ES2020", // Target modern ECMAScript versions
@@ -21,6 +21,6 @@
       "@/*": ["./src/*"] // General path for other imports
     }
   },
-  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js", "../frontend/src/utils/avatar.ts", "../frontend/src/types/Auth"],
+  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js"],
   "exclude": ["dist", "node_modules"]
 }

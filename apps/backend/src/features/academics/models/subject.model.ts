@@ -5,7 +5,16 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const subjectStatusType = pgEnum("subject_status", ["PASS", "FAIL"]);
+export const subjectStatusType = pgEnum("subject_status", [
+    "PASS",
+    "FAIL",
+
+    "P",
+    "F",
+    "F(IN)",
+    "F(PR)",
+    "F(TH)"
+]);
 
 export const subjectModel = pgTable("subjects", {
     id: serial().primaryKey(),

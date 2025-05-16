@@ -266,6 +266,23 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
     ),
   },
   {
+    accessorKey: "marksheetCode",
+    header: ({ column }) => (
+      <div 
+        className="flex items-center justify-start pl-8 gap-2 text-slate-800 font-semibold cursor-pointer"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        <BookMarked className="h-5 w-5 text-purple-500" />
+        <span>Marksheet Code</span>
+      </div>
+    ),
+    cell: ({ row }) => (
+      <div className="text-slate-700 flex items-center font-semibold  justify-start">
+        {row.getValue("marksheetCode")}
+      </div>
+    ),
+  },
+  {
     accessorKey: "fullMarks",
     header: ({ column }) => (
       <div 
