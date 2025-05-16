@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { useStudentDownloadStore } from "../globals/useStudentDownloadStore";
 import { getFilteredStudents } from "@/services/student";
 import { PersonalDetails } from "@/types/user/personal-details";
-import { academicIdentifier } from "@/types/user/academic-identifier";
+import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Specialization } from "@/types/resources/specialization";
 import { Community, Level, Shift } from "@/types/enums";
 
@@ -46,7 +46,7 @@ export interface StudentExport {
     leavingDate: Date,
     leavingReason: string,
     specialization?: Specialization | null;
-    academicIdentifier?: academicIdentifier | null;
+    academicIdentifier?: AcademicIdentifier | null;
     personalDetails?: PersonalDetails | null;
     createdAt: Date,
     updatedAt: Date,
