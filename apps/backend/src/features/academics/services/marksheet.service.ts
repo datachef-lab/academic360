@@ -9,7 +9,7 @@ import {
     findStreamById,
 } from "./stream.service.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
-import { and, desc, eq, ilike, max, sql, count, or } from "drizzle-orm";
+import { and, desc, eq, ilike, max, sql, count, or, asc } from "drizzle-orm";
 import { findStudentById } from "@/features/user/services/student.service.js";
 import { Student, studentModel } from "@/features/user/models/student.model.js";
 import { Marksheet, marksheetModel } from "../models/marksheet.model.js";
@@ -26,6 +26,7 @@ import bcrypt from "bcrypt";
 import { User, userModel } from "@/features/user/models/user.model.js";
 import {
     calculateCGPA,
+    calculatePercentage,
     calculateSGPA,
     formatMarks,
     getClassification,
@@ -47,6 +48,85 @@ import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { streamModel } from "../models/stream.model.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
+
+export async function refactorStatusAndGrade() {
+    const [{ count: marksheetCount }] = await db.select({ count: count() }).from(marksheetModel);
+
+    const pageSize = 10;
+    const pages = Math.round(marksheetCount / pageSize);
+
+    for (let i = 0; i <= pageSize; i++) {
+        let marksheets = await db
+            .select()
+            .from(marksheetModel)
+            .limit(pageSize)
+            .offset(i * pageSize);
+
+        for (let j = 0; j < marksheets.length; j++) {
+            const subjects = await db
+                .select()
+                .from(subjectModel)
+                .where(eq(subjectModel.marksheetId, marksheets[j].id!));
+
+            for (let k = 0; k < subjects.length; k++) {
+                const subject = subjects[k];
+                if (subject.letterGrade?.startsWith("F")) {
+                    subject.letterGrade = "F";
+                    const [subjectMetadata] = await db
+                        .select()
+                        .from(subjectMetadataModel)
+                        .where(eq(subjectMetadataModel.id, subjects[k].subjectMetadataId!));
+
+                    if (
+                        subject.internalMarks &&
+                        subject.internalMarks > -1 &&
+                        subjectMetadata.fullMarksInternal &&
+                        calculatePercentage(subject.internalMarks, subjectMetadata.fullMarksInternal) < 30
+                    ) { // Internal Failure
+                        subject.status = "F(IN)";
+                    }
+                    else if (
+                        subject.practicalMarks != null &&
+                        subject.practicalMarks > -1 &&
+                        subjectMetadata.fullMarksPractical &&
+                        calculatePercentage(subject.practicalMarks, subjectMetadata.fullMarksPractical) < 30
+                    ) { // Practical Failure
+                        subject.status = "F(PR)";
+                    }
+                    else if (
+                        subject.theoryMarks != null &&
+                        subject.theoryMarks > -1 &&
+                        subjectMetadata.fullMarksTheory &&
+                        calculatePercentage(subject.theoryMarks, subjectMetadata.fullMarksTheory) < 30
+                    ) { // Theory Failure
+                        subject.status = "F(TH)";
+                    }
+                    else { // Default
+                        subject.status = "F";
+                    }
+
+
+
+
+                } else {
+                    subject.status = "P";
+                }
+
+                if (subject.tgp && Number(subject.tgp) < 0) subject.tgp = null;
+                if (subject.ngp && Number(subject.ngp) < 0) subject.ngp = null;
+                if (subject.totalMarks && subject.totalMarks < 0) subject.totalMarks = null;
+
+                await db.
+                    update(subjectModel)
+                    .set(subject)
+                    .where(eq(subjectModel.id, subject.id!));
+
+            }
+        }
+        console.log("done refactor for grade and status in subject table, page:", i + 1, "/", pages);
+    }
+
+}
 
 export async function addMarksheet(
     marksheet: MarksheetType,
@@ -239,6 +319,153 @@ export async function addMarksheet(
 //     throw error;
 //   }
 // };
+
+
+
+
+
+
+
+// export const getAllMarks = async (
+//     page: number = 1,
+//     pageSize: number = 10,
+//     searchText?: string,
+//     stream?: string,
+//     year?: number,
+//     semester?: number,
+//     isExport: boolean = false // New flag for export mode
+// ) => {
+//     const offset = (page - 1) * pageSize;
+
+//     const baseQuery = db
+//         .select({
+//             id: marksheetModel.studentId,
+//             rollNumber: academicIdentifierModel.rollNumber,
+//             registrationNumber: academicIdentifierModel.registrationNumber,
+//             uid: academicIdentifierModel.uid,
+//             name: userModel.name,
+//             stream: degreeModel.name,
+//             framework: streamModel.framework,
+//             semester: marksheetModel.semester,
+//             year1: subjectModel.year1,
+//             year2: subjectModel.year2,
+//             subjectName: subjectMetadataModel.name,
+//             marksheetCode: subjectMetadataModel.marksheetCode,
+//             theoryMarks: subjectModel.theoryMarks,
+//             practicalMarks: subjectModel.practicalMarks,
+//             internalMarks: subjectModel.internalMarks,
+//             fullMarks: subjectMetadataModel.fullMarks,
+//             obtainedMarks: subjectModel.totalMarks,
+//             credit: subjectMetadataModel.credit,
+//             sgpa: marksheetModel.sgpa,
+//             cgpa: marksheetModel.cgpa,
+//             letterGrade: subjectModel.letterGrade,
+//             remarks: marksheetModel.remarks,
+//         })
+//         .from(marksheetModel)
+//         .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+//         .leftJoin(
+//             academicIdentifierModel,
+//             eq(marksheetModel.studentId, academicIdentifierModel.studentId),
+//         )
+//         .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+//         .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+//         .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+//         .leftJoin(
+//             subjectMetadataModel,
+//             eq(subjectModel.subjectMetadataId, subjectMetadataModel.id),
+//         );
+
+//     const countQuery = db
+//         .select({ count: count() })
+//         .from(marksheetModel)
+//         .leftJoin(
+//             academicIdentifierModel,
+//             eq(marksheetModel.studentId, academicIdentifierModel.studentId),
+//         )
+//         .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+//         .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+//         .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id));
+
+//     const whereConditions = [];
+
+//     if (searchText?.trim()) {
+//         const searchPattern = `%${searchText.trim()}%`;
+//         whereConditions.push(
+//             or(
+//                 ilike(userModel.name, searchPattern),
+//                 ilike(academicIdentifierModel.rollNumber, searchPattern),
+//                 ilike(academicIdentifierModel.registrationNumber, searchPattern),
+//             ),
+//         );
+//     }
+
+//     if (stream?.trim()) {
+//         whereConditions.push(eq(degreeModel.name, stream.trim()));
+//     }
+
+//     if (year && !isNaN(year)) {
+//         whereConditions.push(eq(marksheetModel.year, year));
+//     }
+
+//     if (semester && !isNaN(semester) && semester >= 1 && semester <= 12) {
+//         whereConditions.push(eq(marksheetModel.semester, semester));
+//     }
+
+//     if (whereConditions.length > 0) {
+//         const combinedCondition = and(...whereConditions);
+//         baseQuery.where(combinedCondition);
+//         countQuery.where(combinedCondition);
+//     }
+
+
+//     try {
+//         // For exports, we only need the data without pagination
+//         if (isExport) {
+//             const results = await baseQuery
+//                 .orderBy(desc(academicIdentifierModel.registrationNumber));
+
+//             return {
+//                 data: results,
+//                 total: results.length,
+//                 currentPage: 1,
+//                 pageSize: results.length,
+//                 totalPages: 1,
+//             };
+//         }
+
+
+//         const [results, totalCountResult] = await Promise.all([
+//             baseQuery
+//                 .orderBy(desc(academicIdentifierModel.registrationNumber))
+//                 .limit(pageSize)
+//                 .offset(offset),
+//             countQuery,
+//         ]);
+
+//         const totalCount = Number(totalCountResult[0]?.count ?? 0);
+
+//         return {
+//             data: results,
+//             total: totalCount,
+//             currentPage: page,
+//             pageSize: pageSize,
+//             totalPages: Math.ceil(totalCount / pageSize),
+//         };
+//     } catch (error) {
+//         console.error("Error in getAllMarks:", error);
+//         throw error;
+//     }
+// };
+
+
+
+
+
+
+
+
+
 export const getAllMarks = async (
     page: number = 1,
     pageSize: number = 10,
@@ -248,16 +475,18 @@ export const getAllMarks = async (
     semester?: number,
     isExport: boolean = false // New flag for export mode
 ) => {
+    await refactorStatusAndGrade();
     const offset = (page - 1) * pageSize;
 
     const baseQuery = db
         .select({
-            id: marksheetModel.studentId,
-            rollNumber: academicIdentifierModel.rollNumber,
+            id: marksheetModel.id,
             registrationNumber: academicIdentifierModel.registrationNumber,
+            rollNumber: academicIdentifierModel.rollNumber,
             uid: academicIdentifierModel.uid,
             name: userModel.name,
             stream: degreeModel.name,
+            type: streamModel.degreeProgramme,
             framework: streamModel.framework,
             semester: marksheetModel.semester,
             year1: subjectModel.year1,
@@ -273,32 +502,27 @@ export const getAllMarks = async (
             sgpa: marksheetModel.sgpa,
             cgpa: marksheetModel.cgpa,
             letterGrade: subjectModel.letterGrade,
+            status: subjectModel.status,
             remarks: marksheetModel.remarks,
         })
         .from(marksheetModel)
-        .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
-        .leftJoin(
-            academicIdentifierModel,
-            eq(marksheetModel.studentId, academicIdentifierModel.studentId),
-        )
-        .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+        .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+        .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
+        .leftJoin(userModel, eq(userModel.id, studentModel.userId))
         .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
         .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
-        .leftJoin(
-            subjectMetadataModel,
-            eq(subjectModel.subjectMetadataId, subjectMetadataModel.id),
-        );
+        .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+        .leftJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id));
 
     const countQuery = db
         .select({ count: count() })
         .from(marksheetModel)
-        .leftJoin(
-            academicIdentifierModel,
-            eq(marksheetModel.studentId, academicIdentifierModel.studentId),
-        )
-        .leftJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
+        .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+        .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
+        .leftJoin(userModel, eq(userModel.id, studentModel.id))
         .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
         .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id));
+
 
     const whereConditions = [];
 
@@ -336,7 +560,7 @@ export const getAllMarks = async (
         // For exports, we only need the data without pagination
         if (isExport) {
             const results = await baseQuery
-                .orderBy(desc(academicIdentifierModel.registrationNumber));
+                .orderBy(asc(marksheetModel.id));
 
             return {
                 data: results,
@@ -350,7 +574,7 @@ export const getAllMarks = async (
 
         const [results, totalCountResult] = await Promise.all([
             baseQuery
-                .orderBy(desc(academicIdentifierModel.registrationNumber))
+                .orderBy(desc(marksheetModel.id))
                 .limit(pageSize)
                 .offset(offset),
             countQuery,
@@ -370,6 +594,16 @@ export const getAllMarks = async (
         throw error;
     }
 };
+
+
+
+
+
+
+
+
+
+
 
 export async function uploadFile(
     fileName: string,
@@ -1453,10 +1687,37 @@ async function processStudentV2(
                 subject.status = null;
             }
             if (subject.letterGrade?.startsWith("F")) {
-                subject.status = "FAIL";
+                if (
+                    subject.internalMarks &&
+                    subject.internalMarks > -1 &&
+                    subjectMetadata.fullMarksInternal &&
+                    calculatePercentage(subject.internalMarks, subjectMetadata.fullMarksInternal) < 30
+                ) { // Internal Failure
+                    subject.status = "F(IN)";
+                }
+                else if (
+                    subject.practicalMarks != null &&
+                    subject.practicalMarks > -1 &&
+                    subjectMetadata.fullMarksPractical &&
+                    calculatePercentage(subject.practicalMarks, subjectMetadata.fullMarksPractical) < 30
+                ) { // Practical Failure
+                    subject.status = "F(PR)";
+                }
+                else if (
+                    subject.theoryMarks != null &&
+                    subject.theoryMarks > -1 &&
+                    subjectMetadata.fullMarksTheory &&
+                    calculatePercentage(subject.theoryMarks, subjectMetadata.fullMarksTheory) < 30
+                ) { // Theory Failure
+                    subject.status = "F(TH)";
+                }
+                else { // Default
+                    subject.status = "F";
+                }
+
                 subject.ngp = null;
             } else {
-                subject.status = "PASS";
+                subject.status = "P";
             }
         }
 
@@ -1467,6 +1728,10 @@ async function processStudentV2(
             // Calculate sum of all credits
             creditSum += subjectMetadata.credit;
         }
+
+        if (subject.tgp && Number(subject.tgp) < 0) subject.tgp = null;
+        if (subject.ngp && Number(subject.ngp) < 0) subject.ngp = null;
+        if (subject.totalMarks && subject.totalMarks < 0) subject.totalMarks = null;
 
         // Insert the subject
         subject = (await db.insert(subjectModel).values(subject).returning())[0];
@@ -1784,7 +2049,7 @@ export async function validateData(
 
                         // ✅ Check for duplicate subjects
                         if (seenSubjects.has(subjectMetadata?.id as number)) {
-                            throw Error("Duplicate Subjects");
+                            continue;
                         }
 
                         seenSubjects.add(subjectMetadata?.id as number);
