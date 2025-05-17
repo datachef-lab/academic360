@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useReportStore } from "@/components/globals/useReportStore";
 import useDebounce from "@/components/Hooks/useDebounce";
 import { BarChart2 } from "lucide-react";
+import { Report } from "@/components/reports/types";
 
 const Page: React.FC = () => {
   const { filters, setFilteredData, filteredData } = useReportStore();
@@ -29,7 +30,7 @@ const Page: React.FC = () => {
         page: debouncePagination.pageIndex + 1,
         pageSize: debouncePagination.pageSize,
       }),
-    placeholderData: (prevData: typeof Report) => prevData,
+    placeholderData: (prevData: Report ) => prevData,
     staleTime: 10000,
   });
 

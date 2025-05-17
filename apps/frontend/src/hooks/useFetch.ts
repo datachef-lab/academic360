@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState, useCallback } from "react";
 
 type UseFetchProps<T> = {
@@ -33,7 +34,7 @@ export const useFetch = <T>({ getFn, postFn, default: defaultData }: UseFetchPro
 
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+    }, []);
 
     return { data, loading, error, refetch: fetchData };
 };

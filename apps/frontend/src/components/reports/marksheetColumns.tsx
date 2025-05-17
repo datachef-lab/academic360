@@ -265,23 +265,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "marksheetCode",
-    header: ({ column }) => (
-      <div 
-        className="flex items-center justify-start pl-8 gap-2 text-slate-800 font-semibold cursor-pointer"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        <BookMarked className="h-5 w-5 text-purple-500" />
-        <span>Marksheet Code</span>
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="text-slate-700 flex items-center font-semibold  justify-start">
-        {row.getValue("marksheetCode")}
-      </div>
-    ),
-  },
+ 
   {
     accessorKey: "fullMarks",
     header: ({ column }) => (
@@ -428,8 +412,8 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
        </div>
      ),
      cell: ({ row }) => {
-       const status = row.getValue("status") as string;
-       const isPass = status.includes("PASS");
+       const status = row.original.status;
+       const isPass = status?.includes("PASS");
        
        return (
          <Badge variant={"outline"} className={`${isPass ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"} drop-shadow-lg border-transparent`}>
@@ -455,7 +439,7 @@ export const MarksheetColumns: ColumnDef<MarksheetTableType>[] = [
       </div>
     ),
     cell: ({ row }) => {
-      const remarks = row.getValue("remarks") as string;
+      const remarks = row.original.remarks;
       const isCritical = remarks?.includes("not") || remarks?.includes("re-exam");
       
       return (
