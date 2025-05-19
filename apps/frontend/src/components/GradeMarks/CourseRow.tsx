@@ -9,9 +9,10 @@ interface CourseRowProps {
   course: Course;
   onCourseUpdate: (course: Course) => void;
   onCourseDelete: (courseId: string) => void;
+  showActions?: boolean;
 }
 
-const CourseRow = ({ course, onCourseUpdate, onCourseDelete }: CourseRowProps) => {
+const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true }: CourseRowProps) => {
   const [components, setComponents] = useState<CourseComponent[]>(course.components);
   const [isNewCourse, setIsNewCourse] = useState(false);
 
@@ -47,7 +48,7 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete }: CourseRowProps) =
     onCourseUpdate(updatedCourse);
   };
 
-  // Calculate totals
+  
   const totalFullMarks = components.reduce((sum, comp) => sum + comp.fullMarks, 0);
   const totalMarksObtained = components.reduce((sum, comp) => sum + comp.marksObtained, 0);
   const totalCredit = components.reduce((sum, comp) => sum + comp.credit, 0);
@@ -132,13 +133,15 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete }: CourseRowProps) =
               <TableCell rowSpan={components.length + 1} className="align-middle">
                 <div className="px-2 py-1">{status}</div>
               </TableCell>
-              <TableCell rowSpan={components.length + 1} className="align-middle">
-                <DeleteCourseDialog 
-                  courseName={course.courseName} 
-                  onDelete={() => onCourseDelete(course.id)}
-                  isNewCourse={isNewCourse}
-                />
-              </TableCell>
+              {showActions && (
+                <TableCell rowSpan={components.length + 1} className="align-middle">
+                  <DeleteCourseDialog 
+                    courseName={course.courseName} 
+                    onDelete={() => onCourseDelete(course.id)}
+                    isNewCourse={isNewCourse}
+                  />
+                </TableCell>
+              )}
             </>
           )}
         </TableRow>

@@ -1,4 +1,4 @@
-// ✅ Generates initials for fallback avatar
+
 export const getInitials = (name?: string | null): string => {
   if (!name?.trim()) return 'U'; // fallback default
   const names = name.trim().split(/\s+/);
@@ -7,7 +7,7 @@ export const getInitials = (name?: string | null): string => {
   return `${first}${last}`;
 };
 
-// ✅ Generates consistent background color class
+
 export const getColorFromName = (name?: string | null): string => {
   if (!name) return 'bg-gray-400';
   const colors = [

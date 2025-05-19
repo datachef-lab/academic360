@@ -1,4 +1,4 @@
-import GradeCard from "../GradeMarks/GradeCard";
+
 import AcademicHistory from "./AcademicHistoryForm";
 import AcademicIdentifier from "./AcademicIdentifierForm";
 import Accommodation from "./AccommodationForm";
@@ -8,6 +8,7 @@ import OverviewTab from "./OverviewTab";
 import PersonalDetails from "./PersonalDetails";
 import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
+import Marksheet from "../GradeMarks/Marksheet";
 
 type StudentContentProps = {
     studentId: number;
@@ -39,8 +40,8 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
         return <Accommodation />;
       case "Transport Details":
         return <TransportDetails />;
-        case "Student Marksheet":
-        return <GradeCard />;
+        case "Marksheet":
+        return <Marksheet />;
       default:
         return <p>No Content!</p>;
     }

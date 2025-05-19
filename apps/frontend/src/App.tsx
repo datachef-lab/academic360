@@ -32,6 +32,7 @@ import CoursesAndSubject from "./pages/CoursesAndSubject";
 
 import Downloads from "./pages/Downloads";
 import AdmissionAndFees from "./pages/AdmissionAndFess";
+import GradeCard from "./components/GradeMarks/GradeCard";
 
 
 
@@ -85,15 +86,23 @@ const router = createBrowserRouter([
       { path: "issued-book", element: <IssueRetun /> },
       { path: "fine-management", element: <LibFineManagement /> },
       { path: "lib-report", element: <LibReport /> },
-      { path: "search-students/:studentId", element: <StudentPage /> },
-      // {
-      //   path: "search-students",
-      //   element: <Outlet />,
-      //   children: [
+      {
+        path: "search-students",
+        element: <Outlet />,
+        children: [
          
-      //     { path: ":studentId", element: <StudentPage /> },
-      //   ],
-      // },
+          { path: ":studentId", element: <StudentPage /> },
+          { 
+            path: ":studentId",
+            element: <Outlet />,
+            children: [
+              { path: ":marksheetId", element: <GradeCard /> },
+             
+             
+            ]
+          }
+        ]
+      },
       { path: "profile", element: <UserProfilePage /> },
       { path: "settings", element: <SettingsPage /> },
     ],

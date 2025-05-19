@@ -157,57 +157,70 @@ export async function removeStudent(id: number): Promise<boolean | null> {
 }
 
 export async function searchStudent(searchText: string, page: number = 1, pageSize: number = 10) {
-    // Trim spaces and convert searchText to lowercase
     searchText = searchText.trim().toLowerCase();
 
-    // Query students based on student name, roll number, registration number, etc.
+   
     const studentsQuery = db
-        .select()
+        .select({
+            id: studentModel.id,
+            userId: studentModel.userId,
+            specializationId: studentModel.specializationId,
+            name: userModel.name,
+            registrationNumber: academicIdentifierModel.registrationNumber,
+            rollNumber: academicIdentifierModel.rollNumber,
+            uid: academicIdentifierModel.uid
+        })
         .from(studentModel)
         .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
         .where(
             or(
-                 ilike(userModel.name , `%${searchText}%`),
-                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
-                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
-                ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+                ilike(userModel.name, `%${searchText}%`),
+                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`),
+                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`),
+                ilike(academicIdentifierModel.uid, `%${searchText}%`)
             )
-        );
-
-    // Get the paginated students
-    const students = await studentsQuery
+        )
+        .orderBy(userModel.name)
         .limit(pageSize)
         .offset((page - 1) * pageSize);
 
-    console.log(students);
 
-    // Get the total count of students matching the filter
-    const [{ count: countRows }] = await db
-        .select({ count: count() })
-        .from(studentModel)
-        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-        .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
-        .where(
-            or(
-                ilike(userModel.name , `%${searchText}%`),
-                ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
-                ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
-                ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
+        
+    const [students, [{ count: countRows }]] = await Promise.all([
+        studentsQuery,
+        db
+            .select({ count: count() })
+            .from(studentModel)
+            .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+            .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+            .where(
+                or(
+                    ilike(userModel.name, `%${searchText}%`),
+                    ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`),
+                    ilike(academicIdentifierModel.rollNumber, `%${searchText}%`),
+                    ilike(academicIdentifierModel.uid, `%${searchText}%`)
+                )
             )
-        );
+    ]);
 
-    // Map the result to a properly formatted response
-    const content = await Promise.all(students.map(async (studentRecord) => {
-        const student = studentRecord.students; // Extract the student data
-        return await studentResponseFormat(student);
-    }));
+   
+    const content = await Promise.all(
+        students.map(async (student) => {
+            const formattedStudent = await studentResponseFormat({
+                id: student.id,
+                userId: student.userId,
+                specializationId: student.specializationId
+            });
+            return formattedStudent;
+        })
+    );
 
     return {
         content,
         page,
         pageSize,
-        totalElements: Number(countRows), // Now this count is correct!
+        totalElements: Number(countRows),
         totalPages: Math.ceil(Number(countRows) / pageSize)
     };
 }
@@ -220,7 +233,7 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
 //     const studentsQuery = db
 //         .select()
 //         .from(studentModel)
-//         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
+//         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) 
 //         .where(
 //             eq(
 //                 sql`REGEXP_REPLACE(${academicIdentifierModel.rollNumber}, '[^a-zA-Z0-9]', '', 'g')`,
@@ -242,7 +255,7 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
 //         .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id)) // Join with academic identifiers
 //         .where(
 //             or(
-//                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), // Search by registration number
+//                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`), 
 //                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`), // Search by roll number
 //                 ilike(academicIdentifierModel.uid, `%${searchText}%`) // Search by UID
 //             )

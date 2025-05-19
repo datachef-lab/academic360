@@ -2,10 +2,7 @@
 // import { useEffect } from "react";
 // import { useParams } from "react-router-dom";
 
-import StudentContent from "@/components/student/StudentContent";
-import StudentPanel from "@/components/student/StudentPanel";
-import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+
 
 // export default function StudentPage() {
 //   const { studentId } = useParams();
@@ -95,11 +92,15 @@ import { useState } from "react";
 //   );
 // }
 
-import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, List } from "lucide-react";
+import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, FilePenIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { getStudentById } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import StudentContent from "@/components/student/StudentContent";
+import StudentPanel from "@/components/student/StudentPanel";
+import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -111,13 +112,22 @@ const studentTabs = [
   { label: "Academic Identifiers", icon: <GraduationCap size={16} />, endpoint: "/academic-identifier" },
   { label: "Accommodation", icon: <Home size={16} />, endpoint: "/accommodation" },
   { label: "Transport Details", icon: <Bus size={16} />, endpoint: "transport-details" },
-  {label: "Student Marksheet", icon: <List size={16} />, endpoint: "/marksheet" },
+  { label: "Marksheet", icon: <FilePenIcon size={16} />, endpoint: "/marksheet" },
 ];
 
 export default function StudentPage() {
   const { studentId } = useParams();
-
-  const [activeTab, setActiveTab] = useState(studentTabs[0]);
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+  
+    if (location.state?.activeTab) {
+   
+      const matchingTab = studentTabs.find(tab => tab.label === location.state.activeTab.label);
+      return matchingTab || studentTabs[0];
+    }
+   
+    return studentTabs[0];
+  });
 
   const { data } = useQuery({
     queryKey: ["student", studentId],
