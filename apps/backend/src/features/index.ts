@@ -2,6 +2,7 @@ import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter, streamR
 import authRouter from "@/features/auth/routes/auth.route.js";
 import { bloodGroupRouter, boardUniversityRouter, categoryRouter, cityRouter, countryRouter, degreeRouter, institutionRouter, languageMediumRouter, nationalityRouter, occupationRouter, pickupPointRouter, qualificationRouter, religionRouter, stateRouter, transportRouter } from "./resources/routes/index.js";
 import { academicHistoryRouter, academicIdentifierRouter,reportRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter,specializationRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
+import statsRouter from "./user/routes/stats.route.js";
 
 
 export {
@@ -44,4 +45,5 @@ export {
     batchRouter,
     batchPaperRouter,
     studentPaperRouter,
+    statsRouter
 }

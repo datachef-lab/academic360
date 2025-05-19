@@ -57,7 +57,8 @@ import {
     specializationRouter,
     familyRouter,
     healthRouter,
-    personalDetailsRouter
+    personalDetailsRouter,
+    statsRouter
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import { courseRouter } from "@/features/academics/routes/index.js";
@@ -241,6 +242,8 @@ app.use("/api/health", healthRouter);
 app.use("/api/reports", reportRouter);
 
 app.use("/api/courses", courseRouter);
+
+app.use("/api/stats", statsRouter);
 
 app.use(errorHandler);
 

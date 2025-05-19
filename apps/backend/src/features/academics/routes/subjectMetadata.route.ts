@@ -6,7 +6,7 @@ import { deleteTempFile } from "@/middlewares/deleteTempFile.middleware.js";
 
 const router = express.Router();
 
-// router.use(verifyJWT);
+router.use(verifyJWT);
 
 router.post("/", createSubjectMetadata);
 

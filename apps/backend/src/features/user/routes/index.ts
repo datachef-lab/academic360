@@ -13,6 +13,7 @@ import userRouter from '@/features/user/routes/user.route.js';
 import studentRouter from '@/features/user/routes/student.route.js';
 import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/user/routes/specialization.routes.js";
+import statsRouter from "@/features/user/routes/stats.route.js";
 
 export {
     academicHistoryRouter,
@@ -29,5 +30,6 @@ export {
     userRouter,
     studentRouter,
     reportRouter,
-    specializationRouter
+    specializationRouter,
+    statsRouter
 }
