@@ -393,6 +393,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
                 </Button>
               </div>
             )}
+            {/* dialog box for confirming the update  */}
             <div className="flex gap-2">
               <AlertDialog>
                 <AlertDialogTrigger asChild>

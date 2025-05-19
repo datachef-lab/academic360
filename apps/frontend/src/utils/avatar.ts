@@ -1,6 +1,6 @@
 
 export const getInitials = (name?: string | null): string => {
-  if (!name?.trim()) return 'U'; // fallback default
+  if (!name?.trim()) return 'U'; 
   const names = name.trim().split(/\s+/);
   const first = names[0].charAt(0).toUpperCase();
   const last = names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '';
