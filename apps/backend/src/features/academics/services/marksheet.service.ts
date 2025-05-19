@@ -478,7 +478,7 @@ export const getAllMarks = async (
     semester?: number,
     isExport: boolean = false // New flag for export mode
 ) => {
-    await refactorStatusAndGrade();
+    // await refactorStatusAndGrade();
     const offset = (page - 1) * pageSize;
 
     const baseQuery = db
