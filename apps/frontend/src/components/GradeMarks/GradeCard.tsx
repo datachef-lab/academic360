@@ -268,10 +268,9 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
   }
 
   return (
-    <div className="min-h-screen px-4 py-6 print:bg-white print:p-0 ">
+    <div className="min-h-screen px-2 sm:px-4 py-4 sm:py-6 print:bg-white print:p-0 ">
       <div className="mb-4 no-print">
         <motion.div
-         
           whileTap={{ scale: 0.95 }}
           transition={{ duration: 0.2 }}
           className="inline-block"
@@ -279,7 +278,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
           <Button
             variant="outline"
             onClick={handleBack}
-            className="flex drop-shadow-md items-center gap-2 px-6 py-2.5 rounded-full bg-white border border-purple-300   hover:bg-transparent "
+            className="flex drop-shadow-md items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full bg-white border border-purple-300 hover:bg-transparent "
           >
             <motion.div
               animate={{ x: [0, -4, 0] }}
@@ -291,43 +290,42 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
           </Button>
         </motion.div>
       </div>
-      <div className="mx-auto max-w-auto bg-white border border-gray-300/80 drop-shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
-        <div className="grid grid-cols-1 gap-6 p-4 sm:p-6">
-          
+      <div className="mx-auto w-full max-w-auto bg-white border border-gray-300/80 drop-shadow-xl rounded-lg overflow-hidden print:shadow-none print:rounded-none">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6 p-2 sm:p-6">
           <div className="mb-4">
             <Header selectedSemester={semester} hideSemesterDropdown={!!semester} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="flex items-center">
-              <span className="font-semibold mr-2">Name:</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 ">
+            <div className="flex sm:flex-row items-start sm:items-center">
+              <span className="font-semibold mr-0 sm:mr-2 mb-1 sm:mb-0">Name :</span>
               <input
                 type="text"
                 value={studentInfo?.name || ""}
                 onChange={(e) => handleStudentInfoChange("name", e.target.value)}
-                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 flex-1"
+                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 flex-1 w-full sm:w-44"
               />
             </div>
-            <div className="flex items-center justify-center">
-              <span className="font-semibold mr-2">Registration No.:</span>
+            <div className="flex  sm:flex-row items-start sm:items-center justify-center">
+              <span className="font-semibold mr-0 sm:mr-2 mb-1 sm:mb-0">Registration No. :</span>
               <input
                 type="text"
                 value={studentInfo?.registrationNo || ""}
                 onChange={(e) => handleStudentInfoChange("registrationNo", e.target.value)}
-                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 w-44"
+                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 w-full sm:w-44"
               />
             </div>
-            <div className="flex items-center justify-end">
-              <span className="font-semibold mr-2">Roll No.:</span>
+            <div className="flex  sm:flex-row items-start sm:items-center justify-end">
+              <span className="font-semibold mr-0 sm:mr-2 mb-1 sm:mb-0">Roll No. :</span>
               <input
                 type="text"
                 value={studentInfo?.rollNo || ""}
                 onChange={(e) => handleStudentInfoChange("rollNo", e.target.value)}
-                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 w-40"
+                className="border-b border-gray-300 focus:outline-none focus:border-blue-500 px-2 py-1 w-full sm:w-40"
               />
             </div>
           </div>
-          <div className="overflow-x-auto border rounded-md mb-4">
-            <Table className="w-full text-sm">
+          <div className="overflow-x-auto border rounded-md ">
+            <Table className=" text-sm">
               <TableHeader>
                 <TableRow className="bg-gray-200 hover:bg-gray-200">
                   <TableHead className="font-bold text-black border-r text-center whitespace-nowrap">Course Code (Course Type)</TableHead>
@@ -362,7 +360,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
               </TableBody>
             </Table>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-6 mt-6 border-t pt-4">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 border-t pt-4">
             <div className="text-center font-semibold text-lg">
               Semester Grade Point Average (SGPA): {sgpa !== null && sgpa !== undefined ? sgpa : "awaited"}
             </div>
@@ -370,9 +368,9 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
               Remarks: {remarks}
             </div>
           </div>
-          <div className="mt-4 border p-4 bg-gray-50 rounded">
+          <div className="mt-2 border p-2 sm:p-4 bg-gray-50 rounded">
             <h3 className="font-semibold mb-2">Abbreviations</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-1 gap-2 text-sm">
+            <div className="grid grid-cols-1 gap-1 sm:gap-2 text-sm">
               <p>P: Passed in the Course, F: Failed in the Course</p>
               <p>F(TH): Failed in Theoretical, F(PR): Failed in Practical, F(TU): Failed in Tutorial</p>
               <p>AB: Absent, +1: Grace Mark, EC: Examination Cancelled</p>
@@ -380,12 +378,12 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
               <p>N.A.: Not Applicable</p>
             </div>
           </div>
-          <div className="mt-6 flex flex-col sm:flex-row justify-between gap-4 no-print">
+          <div className="mt-6 flex flex-col sm:flex-row justify-between gap-2 sm:gap-4 no-print">
             {showActions && (
               <div>
                 <Button 
                   variant="outline" 
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 w-full sm:w-auto mb-2 sm:mb-0"
                   onClick={handleAddCourse}
                 >
                   <Plus size={16} />
@@ -394,12 +392,12 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
               </div>
             )}
             {/* dialog box for confirming the update  */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
                     variant="default"
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                     disabled={!data || !marksheetData?.id}
                   >
                     <Save size={16} />
@@ -426,7 +424,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
               </AlertDialog>
               <Button 
                 onClick={() => window.print()}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
               >
                 Print
               </Button>
