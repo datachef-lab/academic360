@@ -311,4 +311,254 @@ export const getSemesterStats = async () => {
     console.error("Error fetching semester statistics:", error);
     throw error;
   }
+};
+
+export const getEnrollmentAnalytics = async () => {
+  try {
+    // 1. Query for total students by stream
+    const streamEnrollmentData = await db
+      .select({
+        streamId: streamModel.id,
+        degreeId: streamModel.degreeId,
+        degreeName: degreeModel.name,
+        degreeProgramme: streamModel.degreeProgramme,
+        framework: streamModel.framework,
+        studentCount: countDistinct(studentModel.id),
+      })
+      .from(studentModel)
+      .innerJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+      .innerJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+      .innerJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+      .groupBy(streamModel.id, streamModel.degreeId, degreeModel.name, streamModel.degreeProgramme, streamModel.framework)
+      .orderBy(degreeModel.name);
+
+    // 2. Query for yearly student enrollment data
+    const yearlyEnrollmentData = await db
+      .select({
+        year: marksheetModel.year,
+        studentCount: countDistinct(marksheetModel.studentId),
+      })
+      .from(marksheetModel)
+      .where(sql`${marksheetModel.year} IS NOT NULL`)
+      .groupBy(marksheetModel.year)
+      .orderBy(marksheetModel.year);
+
+    // 3. Query for yearly student enrollment data by stream
+    const streamYearlyData = await db
+      .select({
+        streamId: streamModel.id,
+        degreeId: streamModel.degreeId,
+        degreeName: degreeModel.name,
+        year: marksheetModel.year,
+        studentCount: countDistinct(marksheetModel.studentId),
+      })
+      .from(marksheetModel)
+      .innerJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+      .innerJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+      .innerJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+      .innerJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+      .where(sql`${marksheetModel.year} IS NOT NULL`)
+      .groupBy(streamModel.id, streamModel.degreeId, degreeModel.name, marksheetModel.year)
+      .orderBy(degreeModel.name, marksheetModel.year);
+
+    // Format response for better readability and frontend consumption
+    const streamEnrollment = streamEnrollmentData.map(item => ({
+      streamId: item.streamId,
+      degreeName: item.degreeName,
+      degreeProgramme: item.degreeProgramme,
+      framework: item.framework,
+      studentCount: Number(item.studentCount) || 0
+    }));
+
+    // Format yearly data
+    const yearlyEnrollment = yearlyEnrollmentData.map(item => ({
+      year: item.year,
+      studentCount: Number(item.studentCount) || 0
+    }));
+
+    // Format stream yearly data as a nested structure
+    const streamYearlyEnrollment = streamYearlyData.reduce((acc, item) => {
+      if (!acc[item.streamId]) {
+        acc[item.streamId] = {
+          streamId: item.streamId,
+          degreeName: item.degreeName,
+          yearlyData: {}
+        };
+      }
+      
+      acc[item.streamId].yearlyData[item.year] = Number(item.studentCount) || 0;
+      return acc;
+    }, {} as Record<number, { streamId: number, degreeName: string, yearlyData: Record<number, number> }>);
+
+    return {
+      streamEnrollment,
+      yearlyEnrollment,
+      streamYearlyEnrollment: Object.values(streamYearlyEnrollment)
+    };
+  } catch (error) {
+    console.error("Error fetching enrollment analytics:", error);
+    throw error;
+  }
+};
+
+// Pass percentage analytics function
+export const getPassingPercentage = async () => {
+  try {
+    // Define passing SGPA threshold (can be configured based on institution standards)
+    const passingSgpaThreshold = 5.0; // Using SGPA instead of CGPA since SGPA has data
+    
+    // First, check SGPA values in the database
+    const sgpaRangeResult = await db
+      .select({
+        minSgpa: sql`MIN(${marksheetModel.sgpa})`,
+        maxSgpa: sql`MAX(${marksheetModel.sgpa})`,
+        avgSgpa: sql`AVG(${marksheetModel.sgpa})`,
+        nonNullCount: count()
+      })
+      .from(marksheetModel)
+      .where(sql`${marksheetModel.sgpa} IS NOT NULL`);
+      
+    console.log("SGPA range in database:", sgpaRangeResult);
+
+    // Count total number of students with marksheets
+    const [totalStudentsResult] = await db
+      .select({
+        totalCount: countDistinct(marksheetModel.studentId)
+      })
+      .from(marksheetModel);
+    
+    const totalStudents = Number(totalStudentsResult?.totalCount || 0);
+
+    if (totalStudents === 0) {
+      return {
+        totalStudents: 0,
+        passedStudents: 0,
+        failedStudents: 0,
+        passingPercentage: 0,
+        yearWiseData: [],
+        streamWiseData: []
+      };
+    }
+
+    // Count students who have passed (SGPA >= passing threshold)
+    const [passedStudentsResult] = await db
+      .select({
+        passedCount: countDistinct(marksheetModel.studentId)
+      })
+      .from(marksheetModel)
+      .where(sql`${marksheetModel.sgpa} >= ${passingSgpaThreshold}`);
+    
+    const passedStudents = Number(passedStudentsResult?.passedCount || 0);
+    
+    // Calculate passing percentage
+    const passingPercentage = (passedStudents / totalStudents) * 100;
+    
+    // Get year-wise passing percentage data
+    const yearWiseData = await db
+      .select({
+        year: marksheetModel.year,
+        totalCount: countDistinct(marksheetModel.studentId)
+      })
+      .from(marksheetModel)
+      .where(sql`${marksheetModel.year} IS NOT NULL`)
+      .groupBy(marksheetModel.year)
+      .orderBy(marksheetModel.year);
+    
+    // For each year, get the count of passed students
+    const yearWiseResults = await Promise.all(
+      yearWiseData.map(async (yearData) => {
+        const [passedInYear] = await db
+          .select({
+            passedCount: countDistinct(marksheetModel.studentId)
+          })
+          .from(marksheetModel)
+          .where(
+            and(
+              sql`${marksheetModel.year} = ${yearData.year}`,
+              sql`${marksheetModel.sgpa} >= ${passingSgpaThreshold}`
+            )
+          );
+        
+        const yearPassedCount = Number(passedInYear?.passedCount || 0);
+        const yearTotalCount = Number(yearData.totalCount || 0);
+        const yearPassingPercentage = yearTotalCount > 0 
+          ? (yearPassedCount / yearTotalCount) * 100 
+          : 0;
+        
+        return {
+          year: yearData.year,
+          totalStudents: yearTotalCount,
+          passedStudents: yearPassedCount,
+          failedStudents: yearTotalCount - yearPassedCount,
+          passingPercentage: parseFloat(yearPassingPercentage.toFixed(2))
+        };
+      })
+    );
+    
+    // Get stream-wise data 
+    const streamData = await db
+      .select({
+        streamId: streamModel.id,
+        streamName: streamModel.degreeProgramme,
+        degreeName: degreeModel.name,
+        totalCount: countDistinct(marksheetModel.studentId)
+      })
+      .from(marksheetModel)
+      .innerJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+      .innerJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+      .innerJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+      .innerJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+      .groupBy(streamModel.id, streamModel.degreeProgramme, degreeModel.name);
+    
+    // For each stream, get the count of passed students
+    const streamWiseResults = await Promise.all(
+      streamData.map(async (stream) => {
+        const [passedInStream] = await db
+          .select({
+            passedCount: countDistinct(marksheetModel.studentId)
+          })
+          .from(marksheetModel)
+          .innerJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+          .innerJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+          .innerJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+          .where(
+            and(
+              sql`${streamModel.id} = ${stream.streamId}`,
+              sql`${marksheetModel.sgpa} >= ${passingSgpaThreshold}`
+            )
+          );
+        
+        const streamPassedCount = Number(passedInStream?.passedCount || 0);
+        const streamTotalCount = Number(stream.totalCount || 0);
+        const streamPassingPercentage = streamTotalCount > 0 
+          ? (streamPassedCount / streamTotalCount) * 100 
+          : 0;
+        
+        return {
+          streamId: stream.streamId,
+          streamName: stream.streamName || "Unknown",
+          degreeName: stream.degreeName || "Unknown",
+          totalStudents: streamTotalCount,
+          passedStudents: streamPassedCount,
+          failedStudents: streamTotalCount - streamPassedCount,
+          passingPercentage: parseFloat(streamPassingPercentage.toFixed(2))
+        };
+      })
+    );
+    
+    return {
+      totalStudents,
+      passedStudents,
+      failedStudents: totalStudents - passedStudents,
+      passingPercentage: parseFloat(passingPercentage.toFixed(2)),
+      yearWiseData: yearWiseResults,
+      streamWiseData: streamWiseResults,
+      sgpaThreshold: passingSgpaThreshold,
+      sgpaStats: sgpaRangeResult[0],
+      metricUsed: "SGPA" // Indicate which metric is being used
+    };
+  } catch (error) {
+    console.error("Error calculating passing percentage:", error);
+    throw error;
+  }
 }; 
