@@ -1,98 +1,4 @@
-// import { BookUser, ContactRound, GraduationCapIcon,  Hospital, IndianRupee, User } from "lucide-react";
-// import { useEffect } from "react";
-// import { useParams } from "react-router-dom";
-
-
-
-// export default function StudentPage() {
-//   const { studentId } = useParams();
-
-//   useEffect(() => {
-//     console.log(studentId);
-//   }, [studentId]);
-
-//   return (
-//     <div className="flex flex-col md:flex-row min-h-full p-6 gap-6 bg-gray-100 dark:bg-gray-900 transition-all duration-100">
-
-//       <div className="md:w-3/4 w-full p-6 bg-white dark:bg-gray-800 shadow-xl rounded-2xl transition-all duration-100">
-//         <h2 className="text-3xl font-bold text-gray-800 dark:text-white border-b pb-3">
-//           ABC STUDENT - {studentId}
-//         </h2>
-
-//         <div className="flex flex-col md:flex-row gap-6 mt-6">
-
-//           <div className="w-full md:w-1/3">
-//             <img
-//               src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsoEAMYKHiwI5JH_IlxayW3-9UurHlASFy9A&s"
-//               alt="Student"
-//               className="w-full border h-auto rounded-xl shadow-md"
-//             />
-//           </div>
-
-//           <div className="border w-full md:w-2/3 p-5 bg-gray-50 dark:bg-gray-700 rounded-2xl shadow-md transition-all duration-100">
-//             <h2 className="text-2xl font-semibold text-gray-700 dark:text-white mb-3">Personal Details</h2>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Reg Number:</span> 123456</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Name:</span> ABC</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Last Name:</span> XYZ</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">DOB:</span> 12-12-1999</p>
-//           </div>
-//         </div>
-
-//         <div className="grid md:grid-cols-3 gap-6 mt-6">
-//           <div className="p-5 border bg-white dark:bg-gray-800 shadow-xl rounded-2xl transition-all duration-100 hover:shadow-2xl">
-//             <h3 className="text-md font-semibold text-gray-800 dark:text-white">Contact Details</h3>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Phone:</span> +1234567890</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Email:</span> abc@student.com</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Address:</span> 123 Street, City</p>
-//           </div>
-
-//            <div className="p-5 border bg-white dark:bg-gray-800 shadow-xl rounded-2xl transition-all duration-100 hover:shadow-2xl">
-//             <h3 className="text-md font-semibold text-gray-800 dark:text-white">Academic Details</h3>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Course:</span> B.Com</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Specialization:</span> Accounting</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Year:</span> 3rd</p>
-//           </div>
-
-//           <div className="p-5 border bg-white dark:bg-gray-800 shadow-xl rounded-2xl transition-all duration-100 hover:shadow-2xl">
-//             <h3 className="text-md font-semibold text-gray-800 dark:text-white">Fee Details</h3>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Total Fee:</span> ₹5000</p>
-//             <p className="text-gray-600 dark:text-gray-100"><span className="font-semibold">Paid:</span> ₹4000</p>
-//             <p className="text-red-400 dark:text-red-400"><span className="font-semibold">Due:</span> ₹1000</p>
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Right Sidebar - Navigation Menu */}
-//       <div className="md:w-1/4 w-full bg-white dark:bg-gray-800 shadow-2xl rounded-2xl p-6 transition-all duration-100">
-//       <h3 className="text-xl text-center font-semibold text-gray-800 dark:text-white border-b pb-2">Quick Links</h3>
-//       <div className="flex flex-col items-center justify-center space-y-1">
-//                <ul className="mt-4 ">
-//           <div className="flex gap-2 p-2 ">
-//            <User size={20}/> Personal Details
-//           </div>
-//           <div className="flex gap-2 p-2 ">
-//           <Hospital size={20} />Health Details
-//           </div>
-//           <div className="flex gap-2 p-2 ">
-//           <BookUser size={20} />Parent Details
-//           </div>
-//           <div className="flex gap-2 p-2 ">
-//            <GraduationCapIcon size={20}></GraduationCapIcon> Academic Records
-//           </div>
-//           <div className="flex gap-2 p-2 ">
-//           <IndianRupee size={20}/>Fee Payments
-//           </div>
-//           <div className="flex gap-2 p-2 ">
-//           <ContactRound size={20}/>Contact Details
-//           </div>
-//         </ul>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
-import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, FilePenIcon } from "lucide-react";
+import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, FilePenIcon, Calendar, Menu } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { getStudentById } from "@/services/student";
@@ -101,6 +7,9 @@ import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import { motion } from "framer-motion";
+
+
 
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
@@ -119,13 +28,10 @@ export default function StudentPage() {
   const { studentId } = useParams();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => {
-  
     if (location.state?.activeTab) {
-   
       const matchingTab = studentTabs.find(tab => tab.label === location.state.activeTab.label);
       return matchingTab || studentTabs[0];
     }
-   
     return studentTabs[0];
   });
 
@@ -138,80 +44,158 @@ export default function StudentPage() {
   });
 
   return (
-    <div className="w-full h-full flex gap-5">
-      {/* Left Content */}
-      <div className="w-[80%] h-full">
-        {/* Student Details Header */}
-        <div className="border-b pb-6 px-4 md:px-8 my-4 bg-white rounded-xl shadow-sm">
-          <div className="flex gap-6 items-center flex-wrap md:flex-nowrap">
-            {/* Avatar */}
-            <Avatar className="w-28 h-28 ring-2 ring-blue-500 shadow-lg">
-              <AvatarImage
-                className="object-cover"
-                src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${data?.academicIdentifier?.uid}.jpg`}
-                alt={data?.name}
-              />
-              <AvatarFallback className="text-xl font-semibold">{data?.name?.charAt(0)}</AvatarFallback>
-            </Avatar>
+    <div className="w-full h-screen grid grid-cols-12 gap-6 px-6 py-4  drop-shadow-xl  overflow-hidden">
+    
+      <div className="col-span-9 h-full overflow-y-auto  ">
+        <div className="space-y-6 pb-6">
 
-            {/* Info */}
-            <div className="flex flex-col gap-3 flex-1">
-              {/* Name & Status */}
-              <div className="flex justify-between flex-wrap items-center gap-2">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800 leading-snug">{data?.name}</h2>
-                  <p className="text-sm text-gray-500 mt-0.5">UID: {data?.academicIdentifier?.uid}</p>
-                </div>
-                <Badge
-                  className={`text-white text-sm px-3 py-1 rounded-full ${
-                    data?.active ? "bg-emerald-500 border border-emerald-600" : "bg-rose-500 border border-rose-600"
+          {/* Student Details  */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="rounded-2xl  overflow-hidden  border border-gray-200"
+          >
+            
+            <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-purple-800 h-32 relative">
+              <motion.div 
+                className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"
+                animate={{ 
+                  backgroundPosition: ['0% 0%', '100% 100%'],
+                  opacity: [0.1, 0.2, 0.1]
+                }}
+                transition={{ 
+                  repeat: Infinity, 
+                  repeatType: "reverse", 
+                  duration: 8 
+                }}
+              />
+              
+         
+              <div className="absolute top-4 right-4 flex space-x-2">
+                <Badge 
+                  className={`px-3 py-1 text-sm font-medium drop-shadow-lg rounded-full ${
+                    data?.active 
+                      ? "bg-emerald-500/90 hover:bg-emerald-600 text-white backdrop-blur-sm" 
+                      : "bg-red-500/90 hover:bg-red-500 text-white backdrop-blur-sm"
                   }`}
                 >
                   {data?.active ? "Active" : "Inactive"}
                 </Badge>
+                <Badge 
+                  variant="outline" 
+                  className="bg-white/20 drop-shadow-lg backdrop-blur-sm rounded-full text-white border-white/40 font-medium"
+                >
+                  UID: {data?.academicIdentifier?.uid}
+                </Badge>
               </div>
-
-              {/* Degree & Stream */}
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded-full">
-                  {data?.academicIdentifier?.stream?.degree.name ?? "BCOM"}
-                </span>
-                <span className="bg-indigo-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                  {data?.academicIdentifier?.stream?.framework}
-                </span>
-                {data?.community && (
-                  <span className="bg-pink-500 text-white text-xs font-medium px-2 py-1 rounded-full">
-                    {data.community}
-                  </span>
-                )}
+              
+         
+              <div className="absolute -bottom-14 left-6 ">
+                <Avatar className="w-32 h-32 border-4 border-white shadow-xl">
+                  <AvatarImage
+                    className="object-cover"
+                    src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${data?.academicIdentifier?.uid}.jpg`}
+                    alt={data?.name}
+                  />
+                  <AvatarFallback className="text-2xl font-bold bg-purple-100 text-purple-600">
+                    {data?.name?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
               </div>
-
-              {/* Nationality & Other Info */}
-              <ul className="flex flex-wrap gap-5 mt-1 text-sm text-gray-700">
-                {data?.personalDetails?.nationality?.name && (
-                  <li>
-                    <span className="font-medium text-gray-500">Nationality:</span>{" "}
-                    {data.personalDetails.nationality.name}
-                  </li>
-                )}
-                {data?.academicIdentifier?.stream?.framework && (
-                  <li>
-                    <span className="font-medium text-gray-500">Framework:</span>{" "}
-                    {data.academicIdentifier.stream.framework}
-                  </li>
-                )}
-              </ul>
             </div>
+            
+           
+            <div className="pt-16 pb-6 px-6 bg-white">
+              <div className="flex flex-wrap justify-between items-end mb-4">
+                <div>
+                  <motion.h1 
+                    className="text-2xl md:text-3xl font-bold text-gray-900"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    {data?.name}
+                  </motion.h1>
+                 
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Badge className="bg-purple-100 drop-shadow-sm hover:bg-purple-200 text-purple-800 border-0 rounded-full px-3 py-1">
+                      {data?.academicIdentifier?.stream?.degree.name ?? "BCOM"}
+                    </Badge>
+                    <Badge className="bg-indigo-100 drop-shadow-sm hover:bg-indigo-200 text-indigo-800 border-0 rounded-full px-3 py-1">
+                      {data?.academicIdentifier?.stream?.framework}
+                    </Badge>
+                    {data?.community && (
+                      <Badge className="bg-pink-100 drop-shadow-sm hover:bg-pink-200 text-pink-800 border-0 rounded-full px-3 py-1">
+                        {data.community}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+            
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="flex items-center bg-gradient-to-br from-violet-50 to-purple-50 p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/90 to-purple-500/80 flex items-center justify-center mr-3 drop-shadow-lg">
+                    <User size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">UID</p>
+                    <p className="text-sm font-medium text-gray-700">{data?.academicIdentifier?.uid}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center bg-gradient-to-br from-violet-50 to-purple-50 p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/90 to-purple-500/80 flex items-center justify-center mr-3 drop-shadow-lg">
+                    <IdCard size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Registration No.</p>
+                    <p className="text-sm font-medium text-gray-700">{data?.academicIdentifier?.registrationNumber}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center bg-gradient-to-br from-violet-50 to-purple-50 p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-300">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/90 to-purple-500/80 flex items-center justify-center mr-3 drop-shadow-lg">
+                    <Calendar size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">D.O.B</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      {data?.personalDetails?.dateOfBirth 
+                        ? new Date(data.personalDetails.dateOfBirth).toLocaleDateString()
+                        : ''}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Student Content */}
+          <div className="bg-white/40 rounded-2xl drop-shadow-sm ">
+            <StudentContent activeTab={activeTab} studentId={Number(studentId)} />
           </div>
         </div>
-
-        {/* Student Content */}
-        <StudentContent activeTab={activeTab} studentId={Number(studentId)} />
       </div>
 
-      {/* Right Panel - Tabs */}
-      <div className="w-[20%] h-full">
-        <StudentPanel studentTabs={studentTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Right Panel */}
+      <div className="col-span-3 h-full">
+        <div className="h-auto bg-white rounded-2xl  border border-gray-200 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-violet-600 via-purple-600 to-purple-700/90">
+            <div className="flex items-center gap-3">
+              <div className="p-2 border-2 border-white rounded-xl">
+                <Menu className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Navigation</h3>
+                <p className="text-sm text-gray-100">Quick access menu</p>
+              </div>
+            </div>
+          </div>
+          <StudentPanel studentTabs={studentTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
       </div>
     </div>
   );

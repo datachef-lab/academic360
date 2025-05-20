@@ -104,7 +104,7 @@ const Marksheet = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 md:p-8">
+    <div className="p-2 sm:p-4 md:p-8 border rounded-xl">
       <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-8 text-gray-800 border-b-2 pb-2 sm:pb-3 border-gray-300">
         Marksheet Overview
       </h2>
