@@ -1,7 +1,4 @@
 import express from "express";
-
-// import { verifyJWT } from "@/middlewares/verifyJWT.js";
-
 import {
   addMultipleMarksheet,
   createMarksheet,
@@ -9,7 +6,7 @@ import {
   getMarksheetById,
   getMarksheetByStudentId,
   getMarksheetsLogs,
-  updatedMarksheet,
+  getMarksheetSummary, updatedMarksheet,
 } from "../controllers/marksheet.controller.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 import { deleteTempFile } from "@/middlewares/deleteTempFile.middleware.js";
@@ -19,11 +16,12 @@ const router = express.Router();
 
 router.use(verifyJWT);
 
-router.post(  "/upload",  uploadExcelMiddleware,  addMultipleMarksheet,  deleteTempFile,);
+router.post(  "/upload", uploadExcelMiddleware,  addMultipleMarksheet,  deleteTempFile,);
 
-router.post("/", createMarksheet);
+router.post("/",  createMarksheet);
 
 router.get("/logs", getMarksheetsLogs);
+router.get("/summary", getMarksheetSummary);
 
 router.get("/query", (req, res, next) => {
   const { id, studentId } = req.query;
@@ -38,6 +36,6 @@ router.get("/query", (req, res, next) => {
   }
 });
 
-router.put("/:id", updatedMarksheet);
+router.put("/:id", verifyJWT, updatedMarksheet);
 
 export default router;
