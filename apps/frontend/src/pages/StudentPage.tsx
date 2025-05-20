@@ -44,10 +44,10 @@ export default function StudentPage() {
   });
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-purple-50 to-white grid grid-cols-12 gap-6 px-4 py-4    overflow-hidden">
+    <div className="w-full min-h-screen bg-gradient-to-br from-purple-50 to-white grid grid-cols-12 gap-6 px-4 py-4">
     
-      <div className="col-span-9 h-full overflow-y-auto  ">
-        <div className="space-y-6 pb-6 px-2 drop-shadow-md ">
+      <div className="col-span-9 h-[calc(100vh-2rem)] overflow-y-auto">
+        <div className="space-y-6 pb-6 px-2 drop-shadow-md">
 
           {/* Student Details  */}
           <motion.div 
@@ -182,8 +182,8 @@ export default function StudentPage() {
       </div>
 
       {/* Right Panel */}
-      <div className="col-span-3 h-full">
-        <div className="h-auto bg-white rounded-2xl drop-shadow-md  border border-gray-200 overflow-hidden">
+      <div className="col-span-3 h-[calc(100vh-2rem)] sticky top-4">
+        <div className="h-auto bg-white rounded-2xl drop-shadow-md border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-violet-600 via-purple-600 to-purple-700/90">
             <div className="flex items-center gap-3">
               <div className="p-2 border-2 border-white rounded-xl">
