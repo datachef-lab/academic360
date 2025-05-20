@@ -2271,13 +2271,13 @@ export async function marksheetSummary(uid: string): Promise<MarksheetSummary[]>
 
         for (let i = 0; i < filterMarksheets.length; i++) {
             const { id, cgpa, classification, sgpa, semester, year, remarks } = marksheets[i];
-            
+
             let credits = 0, totalCredits = 0, totalFullMarks = 0, totalMarksObtained: number | null = 0;
             let result: "PASSED" | "FAILED" = "PASSED";
             const failedSubjects: SubjectMetadataType[] = [];
             const year2 = sgpa ? year : null;
-            
-            
+
+
             const subjects = await db
                 .select()
                 .from(subjectModel)
@@ -2285,7 +2285,7 @@ export async function marksheetSummary(uid: string): Promise<MarksheetSummary[]>
                     eq(subjectModel.marksheetId, id!)
                 );
 
-            
+
             for (let j = 0; j < subjects.length; j++) {
                 const foundSubjectMetadata = await findSubjectMetdataById(subjects[j].subjectMetadataId as number);
                 if (!foundSubjectMetadata) {
@@ -2320,6 +2320,10 @@ export async function marksheetSummary(uid: string): Promise<MarksheetSummary[]>
             }
 
             const percentage = totalMarksObtained ? (totalMarksObtained * 100) / totalFullMarks : 0;
+            
+            if (marksheetSummary.some(mks => mks.id === id)) continue;
+
+            result = year2 ? "PASSED" : "FAILED";
 
             marksheetSummary.push({
                 id,
