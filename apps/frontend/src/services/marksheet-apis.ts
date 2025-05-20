@@ -7,7 +7,7 @@ import axiosInstance from "@/utils/api";
 
 
 export async function fetchMarksheetLogs(page: number = 1, pageSize: number = 10, searchText: string): Promise<ApiResonse<MarksheetLog[]>> {
-    const response = await axiosInstance.get(`/api/marksheets/logs?page=${page}&pageSize=${pageSize}&searchText=${searchText}`, { withCredentials: true });
+    const response = await axiosInstance.get(`/api/marksheets/logs?page=${page}&pageSize=${pageSize}&searchText=${searchText}`);
     console.log(response.data);
     return response.data;
 }
@@ -20,13 +20,21 @@ export async function uploadFile(body: FormData): Promise<ApiResonse<boolean>> {
 
 export async function findMarksheetsByStudentId(studentId: number,semester?:number): Promise<ApiResonse<Marksheet>> {
     console.log(semester);
-    const response = await axiosInstance.get(`/api/marksheets/query?studentId=${studentId}&semester=${semester}`,{ withCredentials: true });
+    const response = await axiosInstance.get(`/api/marksheets/query?studentId=${studentId}&semester=${semester}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
     console.log("response",response.data);
     return response.data;
 }
 
 export const updateMarksheetMarks = async (marksheetId: number, marksheetData: Marksheet) => {
-  const response = await axiosInstance.put(`/api/marksheets/${marksheetId}`, marksheetData,{ withCredentials: true });
+  const response = await axiosInstance.put(`/api/marksheets/${marksheetId}`, marksheetData, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
   console.log("response",response.data);
   return response.data;
 };

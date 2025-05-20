@@ -44,19 +44,19 @@ export default function StudentPage() {
   });
 
   return (
-    <div className="w-full h-screen grid grid-cols-12 gap-6 px-6 py-4  drop-shadow-xl  overflow-hidden">
+    <div className="w-full min-h-screen bg-gradient-to-br from-purple-50 to-white grid grid-cols-12 gap-6 px-4 py-4    overflow-hidden">
     
       <div className="col-span-9 h-full overflow-y-auto  ">
-        <div className="space-y-6 pb-6">
+        <div className="space-y-6 pb-6 px-2 drop-shadow-md ">
 
           {/* Student Details  */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="rounded-2xl  overflow-hidden  border border-gray-200"
+            className="border border-gray-200 rounded-2xl  overflow-hidden   "
           >
-            
+            <div className="">
             <div className="bg-gradient-to-br from-violet-600 via-purple-600 to-purple-800 h-32 relative">
               <motion.div 
                 className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent"
@@ -120,7 +120,7 @@ export default function StudentPage() {
                  
                   <div className="flex flex-wrap gap-2 mt-2">
                     <Badge className="bg-purple-100 drop-shadow-sm hover:bg-purple-200 text-purple-800 border-0 rounded-full px-3 py-1">
-                      {data?.academicIdentifier?.stream?.degree.name ?? "BCOM"}
+                      {data?.academicIdentifier?.stream?.degree.name ?? ""}
                     </Badge>
                     <Badge className="bg-indigo-100 drop-shadow-sm hover:bg-indigo-200 text-indigo-800 border-0 rounded-full px-3 py-1">
                       {data?.academicIdentifier?.stream?.framework}
@@ -171,10 +171,11 @@ export default function StudentPage() {
                 </div>
               </div>
             </div>
+            </div>
           </motion.div>
 
           {/* Student Content */}
-          <div className="bg-white/40 rounded-2xl drop-shadow-sm ">
+          <div className="bg-white/10 rounded-2xl  ">
             <StudentContent activeTab={activeTab} studentId={Number(studentId)} />
           </div>
         </div>
@@ -182,7 +183,7 @@ export default function StudentPage() {
 
       {/* Right Panel */}
       <div className="col-span-3 h-full">
-        <div className="h-auto bg-white rounded-2xl  border border-gray-200 overflow-hidden">
+        <div className="h-auto bg-white rounded-2xl drop-shadow-md  border border-gray-200 overflow-hidden">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-violet-600 via-purple-600 to-purple-700/90">
             <div className="flex items-center gap-3">
               <div className="p-2 border-2 border-white rounded-xl">

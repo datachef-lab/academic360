@@ -143,7 +143,7 @@ const AcademicHistoryForm = () => {
 
  
   return (
-    <div className="shadow-md border rounded-xl py-6 md:py-10 md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
+    <div className="shadow-md border rounded-xl py-6 md:py-10 bg-white  md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
       <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
         {formElement.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col">

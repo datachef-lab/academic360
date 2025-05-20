@@ -156,7 +156,7 @@ const AccommodationForm = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-12 py-10 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm">
+    <div className="w-full max-w-6xl mx-auto px-12  py-10 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm">
     {/* Heading */}
     <div className="flex justify-center mb-8">
       <h1 className="text-3xl font-semibold font-sans text-center">Accommodation</h1>
