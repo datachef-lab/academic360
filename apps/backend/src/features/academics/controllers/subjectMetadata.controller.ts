@@ -5,7 +5,7 @@ import { subjectMetadataModel } from "@/features/academics/models/subjectMetadat
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq, and } from "drizzle-orm";
-import { findAllSubjectMetadata, findSubjectMetdataByFilters, uploadSubjects } from "../services/subjectMetadata.service.js";
+import { findAllSubjectMetadata, findSubjectMetdataByFilters, refactorSubejectsWithSubjectMetadata, refactorSubjectIrpCode, uploadSubjects } from "../services/subjectMetadata.service.js";
 
 export const createSubjectMetadata = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -15,6 +15,42 @@ export const createSubjectMetadata = async (req: Request, res: Response, next: N
         handleError(error, res, next);
     }
 };
+
+export const refactorSubjectTypes = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) {
+            res.status(400).json({ message: "No file uploaded" });
+            return;
+        }
+
+        const fileName = req.file.filename; // Get filename from multer
+
+        const isUploaded = await refactorSubejectsWithSubjectMetadata(fileName);
+
+        res.status(200).json({
+            message: isUploaded ? "File uploaded successfully" : "Unable to upload the file data",
+            fileName
+        });
+
+        next();
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const refactorSubjectIrp = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const flag = await refactorSubjectIrpCode();
+
+        res.status(200).json({
+            message: flag,
+        });
+
+        next();
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
 
 export const createMultipleSubjects = async (req: Request, res: Response, next: NextFunction) => {
     try {

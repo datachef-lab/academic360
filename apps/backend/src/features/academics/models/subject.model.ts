@@ -8,7 +8,7 @@ import { z } from "zod";
 export const subjectStatusType = pgEnum("subject_status", [
     "PASS",
     "FAIL",
-
+    "AB",
     "P",
     "F",
     "F(IN)",

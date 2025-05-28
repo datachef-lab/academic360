@@ -47,7 +47,7 @@ import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/
 import { findDegreeByName } from "@/features/resources/services/degree.service.js";
 import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
 import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
-import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
+// import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 

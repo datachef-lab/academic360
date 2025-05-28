@@ -1,6 +1,6 @@
 export interface OldSubject {
-    readonly id?: number;
+    readonly id: number;
     subjectName: string;
-    subjectType: number;
+    subjectTypeId: number;
     univcode: string | null;
 }

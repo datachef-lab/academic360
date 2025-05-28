@@ -1,5 +1,5 @@
 import express from "express";
-import { createMultipleSubjects, createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getFilteredSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
+import { createMultipleSubjects, createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getFilteredSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByStreamId, getSubjectMetadataByStreamIdAndSemester, refactorSubjectIrp, refactorSubjectTypes, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 import { deleteTempFile } from "@/middlewares/deleteTempFile.middleware.js";
@@ -11,6 +11,10 @@ const router = express.Router();
 router.post("/", createSubjectMetadata);
 
 router.get("/", getAllSubjectMetadatas);
+
+router.get("/refactor-types", uploadExcelMiddleware, refactorSubjectTypes);
+
+router.get("/refactor-subject-code", refactorSubjectIrp);
 
 router.post("/filters", getFilteredSubjectMetadatas);
 

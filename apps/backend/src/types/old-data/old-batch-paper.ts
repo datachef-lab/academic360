@@ -1,5 +1,5 @@
 export interface OldBatchPaper {
-    readonly ID?: number;
+    readonly ID: number;
     index_col: number | null;
     parent_id: number | null;
     subjectTypeId: number | null;

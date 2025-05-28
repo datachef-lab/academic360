@@ -6,12 +6,14 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sectionModel } from "@/features/academics/models/section.model.js";
 import { shiftModel } from "@/features/academics/models/shift.model.js";
-//s
+import { courseModel } from "@/features/academics/models/course.model.js";
+
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     rfid: varchar({ length: 255 }),
     streamId: integer("stream_id_fk").references(() => streamModel.id),
+    courseId: integer("course_id_fk").references(() => courseModel.id),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id),
     cuFormNumber: varchar({ length: 255 }),
     uid: varchar({ length: 255 }),
@@ -36,6 +38,10 @@ export const academicIdentifierRelations = relations(academicIdentifierModel, ({
     stream: one(streamModel, {
         fields: [academicIdentifierModel.streamId],
         references: [streamModel.id],
+    }),
+    courseId: one(courseModel, {
+        fields: [academicIdentifierModel.courseId],
+        references: [courseModel.id],
     }),
     shift: one(shiftModel, {
         fields: [academicIdentifierModel.shiftId],

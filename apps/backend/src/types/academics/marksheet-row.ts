@@ -57,4 +57,7 @@ export interface MarksheetRow {
     specialization: string | null;
     shift: "Morning" | "Afternoon" | "Evening" | "Day" | null;
     section: string | null;
+    errorMessage?: string;
+    cgpa: string | number | null | undefined;
+    classification: string | null;
 }

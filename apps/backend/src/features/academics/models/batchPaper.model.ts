@@ -4,11 +4,12 @@ import { paperModel } from "./paper.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
+import { subjectMetadataModel } from "./subjectMetadata.model.js";
 
 export const batchPaperModel = pgTable("batch_papers", {
     id: serial().primaryKey(),
     batchId: integer("batch_id_fk").notNull().references(() => batchModel.id),
-    paperId: integer("paper_id_fk").notNull().references(() => paperModel.id),
+    subjectMetadataId: integer("subject_metadata_id_fk").notNull().references(() => subjectMetadataModel.id),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -18,9 +19,9 @@ export const batchPaperRelations = relations(batchPaperModel, ({ one }) => ({
         fields: [batchPaperModel.batchId],
         references: [batchModel.id],
     }),
-    paper: one(paperModel, {
-        fields: [batchPaperModel.paperId],
-        references: [paperModel.id],
+    subjectMetadata: one(subjectMetadataModel, {
+        fields: [batchPaperModel.subjectMetadataId],
+        references: [subjectMetadataModel.id],
     })
 }));
 
