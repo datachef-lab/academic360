@@ -4,17 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { GradeCardData, Course, StudentInfo } from "../../types/gradeCard";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowLeft, Save } from "lucide-react";
+import { Plus, ArrowLeft, Save, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { generateId } from "../../utils/gradeUtils";
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,22 +34,22 @@ interface GradeCardProps {
   showActions?: boolean;
 }
 
-const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCardProps) => {
+const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardProps) => {
   const navigate = useNavigate();
-  const { studentId} = useParams();
+  const { studentId } = useParams();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const semester = searchParams.get("semester") ? Number(searchParams.get("semester")) : undefined;
 
   const { setCategory } = useMarksheetFilterStore();
-  const [remarks, setRemarks] = useState<string>('');
+  const [remarks, setRemarks] = useState<string>("");
   const [sgpa, setSgpa] = useState<number | null>();
   const [data, setData] = useState<GradeCardData | null>(initialData || null);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(initialData?.studentInfo || null);
 
   const transformCourseToSubject = useCallback((course: Course) => {
-    const theoretical = course.components.find(c => c.componentType === "Theoretical");
-    const practical = course.components.find(c => c.componentType === "Practical");
+    const theoretical = course.components.find((c) => c.componentType === "Theoretical");
+    const practical = course.components.find((c) => c.componentType === "Practical");
 
     return {
       id: course.id,
@@ -71,9 +64,9 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
         marksheetCode: course.courseCode,
         name: course.courseName,
         subjectType: {
-          name: course.courseType
-        }
-      }
+          name: course.courseType,
+        },
+      },
     };
   }, []);
 
@@ -89,7 +82,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
 
       const updatedMarksheet = {
         ...marksheetData,
-        subjects: updatedData.courses.map(transformCourseToSubject)
+        subjects: updatedData.courses.map(transformCourseToSubject),
       };
 
       return updateMarksheetMarks(marksheetData.id, updatedMarksheet);
@@ -101,7 +94,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
     onError: (error) => {
       toast.error("Failed to update marks");
       console.error("Error updating marks:", error);
-    }
+    },
   });
 
   const { data: marksheetData, isLoading } = useQuery({
@@ -119,48 +112,53 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
     staleTime: 10000,
   });
 
-  const transformMarksheetData = useCallback((mks: Marksheet) => {
-    const category = mks.subjects?.[0]?.subjectMetadata?.category;
-    if (category) setCategory(category);
-    setRemarks(mks.remarks || '');
-    setSgpa(mks.sgpa);
+  const transformMarksheetData = useCallback(
+    (mks: Marksheet) => {
+      const category = mks.subjects?.[0]?.subjectMetadata?.category;
+      if (category) setCategory(category);
+      setRemarks(mks.remarks || "");
+      setSgpa(mks.sgpa);
 
-    return {
-      universityName: "Your University Name",
-      studentInfo: {
-        name: mks.name || "",
-        registrationNo: mks.academicIdentifier?.registrationNumber || "",
-        rollNo: mks.academicIdentifier?.rollNumber || "",
-        semester: mks.semester?.toString() || "",
-        examination: mks.year?.toString() || ""
-      },
-      courses: (mks.subjects || []).map((subject: Subject): Course => ({
-        id: subject.id?.toString() || generateId(),
-        courseCode: subject.subjectMetadata?.marksheetCode || "",
-        courseType: subject.subjectMetadata?.subjectType?.name || "course",
-        courseName: subject.subjectMetadata?.name || "",
-        year: mks.year,
-        components: [
-          {
-            id: generateId(),
-            courseId: subject.id?.toString() || "",
-            componentType: "Theoretical",
-            fullMarks: subject.subjectMetadata?.fullMarks || 0,
-            marksObtained: Number(subject.theoryMarks || 0),
-            credit: subject.subjectMetadata?.credit || 0
-          },
-          {
-            id: generateId(),
-            courseId: subject.id?.toString() || "",
-            componentType: "Practical",
-            fullMarks: subject.subjectMetadata?.fullMarksPractical || 0,
-            marksObtained: Number(subject.practicalMarks || 0),
-            credit: subject.subjectMetadata?.practicalCredit || 0
-          }
-        ]
-      }))
-    };
-  }, [setCategory]);
+      return {
+        universityName: "Your University Name",
+        studentInfo: {
+          name: mks.name || "",
+          registrationNo: mks.academicIdentifier?.registrationNumber || "",
+          rollNo: mks.academicIdentifier?.rollNumber || "",
+          semester: mks.semester?.toString() || "",
+          examination: mks.year?.toString() || "",
+        },
+        courses: (mks.subjects || []).map(
+          (subject: Subject): Course => ({
+            id: subject.id?.toString() || generateId(),
+            courseCode: subject.subjectMetadata?.marksheetCode || "",
+            courseType: subject.subjectMetadata?.subjectType?.name || "course",
+            courseName: subject.subjectMetadata?.name || "",
+            year: mks.year,
+            components: [
+              {
+                id: generateId(),
+                courseId: subject.id?.toString() || "",
+                componentType: "Theoretical",
+                fullMarks: subject.subjectMetadata?.fullMarks || 0,
+                marksObtained: Number(subject.theoryMarks || 0),
+                credit: subject.subjectMetadata?.credit || 0,
+              },
+              {
+                id: generateId(),
+                courseId: subject.id?.toString() || "",
+                componentType: "Practical",
+                fullMarks: subject.subjectMetadata?.fullMarksPractical || 0,
+                marksObtained: Number(subject.practicalMarks || 0),
+                credit: subject.subjectMetadata?.practicalCredit || 0,
+              },
+            ],
+          }),
+        ),
+      };
+    },
+    [setCategory],
+  );
 
   useEffect(() => {
     if (marksheetData) {
@@ -170,23 +168,27 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
     }
   }, [marksheetData, transformMarksheetData]);
 
-  const handleStudentInfoChange = useCallback((field: keyof StudentInfo, value: string) => {
-    if (!studentInfo) return;
-    setStudentInfo(prev => ({
-      ...prev!,
-      [field]: value
-    }));
-  }, [studentInfo]);
+  const handleStudentInfoChange = useCallback(
+    (field: keyof StudentInfo, value: string) => {
+      if (!studentInfo) return;
+      setStudentInfo((prev) => ({
+        ...prev!,
+        [field]: value,
+      }));
+    },
+    [studentInfo],
+  );
 
-  const handleCourseUpdate = useCallback((updatedCourse: Course) => {
-    if (!data || !marksheetData?.id) return;
-    setData(prev => ({
-      ...prev!,
-      courses: prev!.courses.map(course => 
-        course.id === updatedCourse.id ? updatedCourse : course
-      )
-    }));
-  }, [data, marksheetData?.id]);
+  const handleCourseUpdate = useCallback(
+    (updatedCourse: Course) => {
+      if (!data || !marksheetData?.id) return;
+      setData((prev) => ({
+        ...prev!,
+        courses: prev!.courses.map((course) => (course.id === updatedCourse.id ? updatedCourse : course)),
+      }));
+    },
+    [data, marksheetData?.id],
+  );
 
   const handleAddCourse = useCallback(() => {
     if (!data) return;
@@ -204,7 +206,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
           componentType: "Theoretical",
           fullMarks: 0,
           marksObtained: 0,
-          credit: 0
+          credit: 0,
         },
         {
           id: generateId(),
@@ -212,78 +214,86 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
           componentType: "Practical",
           fullMarks: 0,
           marksObtained: 0,
-          credit: 0
-        }
-      ]
+          credit: 0,
+        },
+      ],
     };
-    setData(prev => ({
+    setData((prev) => ({
       ...prev!,
-      courses: [...prev!.courses, newCourse]
+      courses: [...prev!.courses, newCourse],
     }));
     toast.success("New course added successfully");
   }, [data]);
 
-  const handleDeleteCourse = useCallback((courseId: string) => {
-    if (!data) return;
-    setData(prev => ({
-      ...prev!,
-      courses: prev!.courses.filter(course => course.id !== courseId)
-    }));
-    toast.success("Course deleted successfully");
-  }, [data]);
+  const handleDeleteCourse = useCallback(
+    (courseId: string) => {
+      if (!data) return;
+      setData((prev) => ({
+        ...prev!,
+        courses: prev!.courses.filter((course) => course.id !== courseId),
+      }));
+      toast.success("Course deleted successfully");
+    },
+    [data],
+  );
 
   const handleBack = useCallback(() => {
-    navigate(`/home/search-students/${studentId}`, { 
-      state: { 
+    navigate(`/home/search-students/${studentId}`, {
+      state: {
         activeTab: {
           label: "Marksheet",
-          endpoint: "/marksheet"
-        }
-      } 
+          endpoint: "/marksheet",
+        },
+      },
     });
   }, [navigate, studentId]);
 
   const { grandFullMarks, grandMarksObtained, grandCredits } = useMemo(() => {
     if (!data) return { grandFullMarks: 0, grandMarksObtained: 0, grandCredits: 0 };
-    
+
     return {
       grandFullMarks: data.courses.reduce(
-        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.fullMarks, 0), 0
+        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.fullMarks, 0),
+        0,
       ),
       grandMarksObtained: data.courses.reduce(
-        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.marksObtained, 0), 0
+        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.marksObtained, 0),
+        0,
       ),
       grandCredits: data.courses.reduce(
-        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.credit, 0), 0
-      )
+        (sum, course) => sum + course.components.reduce((s, comp) => s + comp.credit, 0),
+        0,
+      ),
     };
   }, [data]);
 
   if (isLoading || !data) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-2xl">Loading grade card...</div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="h-full flex flex-col items-center justify-center bg-transparent"
+      >
+        <div className="relative">
+          <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl animate-pulse"></div>
+          <Loader2 className="h-14 w-14 animate-spin text-purple-600 relative z-10" />
+        </div>
+        <p className="text-center text-base text-purple-700 mt-6 font-base">Loading grade card...</p>
+      </motion.div>
     );
   }
 
   return (
     <div className="min-h-screen px-2 sm:px-4 py-4 sm:py-6 print:bg-white print:p-0 ">
       <div className="mb-4 no-print">
-        <motion.div
-          whileTap={{ scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className="inline-block"
-        >
+        <motion.div whileTap={{ scale: 0.95 }} transition={{ duration: 0.2 }} className="inline-block">
           <Button
             variant="outline"
             onClick={handleBack}
             className="flex drop-shadow-md items-center gap-2 px-4 sm:px-6 py-2.5 rounded-full bg-white border border-purple-300 hover:bg-transparent "
           >
-            <motion.div
-              animate={{ x: [0, -4, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            >
+            <motion.div animate={{ x: [0, -4, 0] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}>
               <ArrowLeft className="w-7 h-7 text-purple-700 font-extrabold" />
             </motion.div>
             <span className="font-medium text-purple-700">Back</span>
@@ -328,13 +338,19 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
             <Table className=" text-sm">
               <TableHeader>
                 <TableRow className="bg-gray-200 hover:bg-gray-200">
-                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap">Course Code (Course Type)</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap">
+                    Course Code (Course Type)
+                  </TableHead>
                   <TableHead className="font-bold text-black border-r text-center">Course Name</TableHead>
                   <TableHead className="font-bold text-black border-r text-center w-20">Year</TableHead>
                   <TableHead className="font-bold text-black border-r text-center">Course Component</TableHead>
-                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">Full Marks</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">
+                    Full Marks
+                  </TableHead>
                   <TableHead className="font-bold text-black border-r text-center w-32">Marks Obtained</TableHead>
-                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">Credit</TableHead>
+                  <TableHead className="font-bold text-black border-r text-center whitespace-nowrap w-24">
+                    Credit
+                  </TableHead>
                   <TableHead className="font-bold text-black border-r text-center w-20">Grade</TableHead>
                   <TableHead className="font-bold text-black border-r text-center w-20">Status</TableHead>
                   {showActions && <TableHead className="w-12 text-center">Action</TableHead>}
@@ -351,9 +367,11 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
                   />
                 ))}
                 <TableRow className="bg-blue-100 border-t-2 border-b-2 border-blue-300 font-bold">
-                  <TableCell colSpan={4} className="text-center border-r">Grand Total</TableCell>
+                  <TableCell colSpan={4} className="text-center border-r">
+                    Grand Total
+                  </TableCell>
                   <TableCell className="text-start border-r">{grandFullMarks}</TableCell>
-                  <TableCell className="text-start border-r">{grandMarksObtained}</TableCell>
+                  <TableCell className="text-center border-r">{grandMarksObtained}</TableCell>
                   <TableCell className="text-start border-r">{grandCredits}</TableCell>
                   <TableCell colSpan={3}></TableCell>
                 </TableRow>
@@ -364,9 +382,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
             <div className="text-center font-semibold text-lg">
               Semester Grade Point Average (SGPA): {sgpa !== null && sgpa !== undefined ? sgpa : "awaited"}
             </div>
-            <div className="font-semibold">
-              Remarks: {remarks}
-            </div>
+            <div className="font-semibold">Remarks: {remarks}</div>
           </div>
           <div className="mt-2 border p-2 sm:p-4 bg-gray-50 rounded">
             <h3 className="font-semibold mb-2">Abbreviations</h3>
@@ -381,8 +397,8 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
           <div className="mt-6 flex flex-col sm:flex-row justify-between gap-2 sm:gap-4 no-print">
             {showActions && (
               <div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex items-center gap-2 w-full sm:w-auto mb-2 sm:mb-0"
                   onClick={handleAddCourse}
                 >
@@ -395,7 +411,7 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
             <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button 
+                  <Button
                     variant="default"
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                     disabled={!data || !marksheetData?.id}
@@ -413,19 +429,13 @@ const GradeCard = ({ initialData, marksheetId,  showActions = false }: GradeCard
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleUpdateMarks}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
+                    <AlertDialogAction onClick={handleUpdateMarks} className="bg-green-600 hover:bg-green-700">
                       Confirm Update
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button 
-                onClick={() => window.print()}
-                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
-              >
+              <Button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
                 Print
               </Button>
             </div>

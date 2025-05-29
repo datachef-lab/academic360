@@ -38,6 +38,7 @@ export const subjectModel = pgTable("subjects", {
     projectMarks: integer(),
     projectYear: integer(),
     projectCredit: integer(),
+    totalCredits: integer("total_credits"),
     status: subjectStatusType(),
     ngp: numeric(),
     tgp: numeric(),

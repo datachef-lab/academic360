@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, findMarksheetLogs, findMarksheetsByStudentId, getAllMarks, refactorSubjectName, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById, findMarksheetLogs, findMarksheetsByStudentId, getAllMarks, marksheetSummary, refactorSubjectName, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
@@ -116,21 +116,21 @@ export const createMarksheet = async (req: Request, res: Response, next: NextFun
 
 export const getAllMarksheets = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { page, pageSize, searchText, stream, year, semester, export: exportFlag  } = req.query;
+        const { page, pageSize, searchText, stream, year, semester, export: exportFlag } = req.query;
 
         const marksheets = await getAllMarks(
-            Number(page), 
-            Number(pageSize), 
+            Number(page),
+            Number(pageSize),
             searchText as string,
             stream as string,
             year ? Number(year) : undefined,
             semester ? Number(semester) : undefined,
-            exportFlag === 'true'? true : false 
+            exportFlag === 'true' ? true : false
         );
-      if(!marksheets) {
-        res.status(404).json(new ApiError(404, "No marksheets found!"));
-       
-      }
+        if (!marksheets) {
+            res.status(404).json(new ApiError(404, "No marksheets found!"));
+
+        }
         res.status(200).json(new ApiResponse(200, "SUCCESS", marksheets, "Marksheets fetched successfully!"));
     }
     catch (error) {
@@ -217,6 +217,27 @@ export const updatedMarksheet = async (req: Request, res: Response, next: NextFu
         );
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", savedMarksheet, "Marksheet saved successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}
+
+export const getMarksheetSummary = async (req: Request, res: Response, next: NextFunction) => {
+    const { uid } = req.query as { uid: string | null };
+
+    if (!uid) {
+        res.status(429).json(new ApiError(400, "Uid is required!"));
+        return;
+    }
+
+    try {
+        const mksSummary = await marksheetSummary(uid);
+        if (!mksSummary) {
+            res.status(429).json(new ApiError(429, "Unable to generate the marksheet summary!"));
+            return;
+        }
+
+        res.status(201).json(new ApiResponse(200, "OK", mksSummary, "Marksheet summary fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }

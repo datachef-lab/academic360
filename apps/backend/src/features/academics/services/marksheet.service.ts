@@ -46,6 +46,9 @@ import { processStudent as insertStudent } from "@/features/user/controllers/old
 import { OldStudent } from "@/types/old-data/old-student.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { streamModel } from "../models/stream.model.js";
+import { MarksheetSummary } from "@/types/academics/marksheet-summary.js";
+import { findSubjectMetdataById } from "./subjectMetadata.service.js";
+import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
@@ -55,7 +58,7 @@ export async function refactorStatusAndGrade() {
     const pageSize = 10;
     const pages = Math.round(marksheetCount / pageSize);
 
-    for (let i = 0; i <= pageSize; i++) {
+    for (let i = 0; i <= pages; i++) {
         let marksheets = await db
             .select()
             .from(marksheetModel)
@@ -1654,3 +1657,108 @@ const cleanTilde = (value: unknown): string | null => {
     }
     return null; // Return undefined for non-string values
 };
+
+export async function marksheetSummary(uid: string): Promise<MarksheetSummary[]> {
+    const [foundAcademicIdentifier] = await db
+        .select()
+        .from(academicIdentifierModel)
+        .where(
+            eq(academicIdentifierModel.uid, uid)
+        );
+
+    if (!foundAcademicIdentifier) {
+        return [];
+    }
+
+    const marksheets = await db
+        .select()
+        .from(marksheetModel)
+        .where(
+            eq(marksheetModel.studentId, foundAcademicIdentifier.studentId as number),
+        );
+
+    const marksheetSummary: MarksheetSummary[] = [];
+    for (let sem = 1; sem <= 8; sem++) {
+        const filterMarksheets = marksheets.filter(mks => mks.semester === sem);
+
+        if (filterMarksheets.length === 0) continue;
+
+        for (let i = 0; i < filterMarksheets.length; i++) {
+            const { id, cgpa, classification, sgpa, semester, year, remarks } = marksheets[i];
+
+            let credits = 0, totalCredits = 0, totalFullMarks = 0, totalMarksObtained: number | null = 0;
+            let result: "PASSED" | "FAILED" = "PASSED";
+            const failedSubjects: SubjectMetadataType[] = [];
+            const year2 = sgpa ? year : null;
+
+
+            const subjects = await db
+                .select()
+                .from(subjectModel)
+                .where(
+                    eq(subjectModel.marksheetId, id!)
+                );
+
+
+            for (let j = 0; j < subjects.length; j++) {
+                const foundSubjectMetadata = await findSubjectMetdataById(subjects[j].subjectMetadataId as number);
+                if (!foundSubjectMetadata) {
+                    continue;
+                }
+
+                totalCredits += isNaN(Number(foundSubjectMetadata.credit)) ? 0 : Number(foundSubjectMetadata.credit);
+                if (!subjects[j].totalCredits) {
+                    const { internalCredit, practicalCredit, theoryCredit, projectCredit, vivalCredit } = subjects[j];
+                    credits += (internalCredit ?? 0) + (practicalCredit ?? 0) + (theoryCredit ?? 0) + (projectCredit ?? 0) + (vivalCredit ?? 0);
+                }
+                else {
+                    credits += subjects[j].totalCredits!;
+                }
+
+                totalFullMarks += foundSubjectMetadata.fullMarks;
+                if (totalMarksObtained && subjects[j].totalMarks && subjects[j].totalMarks! >= 0) {
+                    totalMarksObtained += subjects[j].totalMarks!;
+                }
+                else {
+                    totalMarksObtained = null;
+                }
+
+                if (subjects[j].letterGrade?.startsWith("F")) {
+                    failedSubjects.push(foundSubjectMetadata);
+                    result = "FAILED";
+                }
+                else {
+                    result = "PASSED";
+                }
+
+            }
+
+            const percentage = totalMarksObtained ? (totalMarksObtained * 100) / totalFullMarks : 0;
+            
+            if (marksheetSummary.some(mks => mks.id === id)) continue;
+
+            result = year2 ? "PASSED" : "FAILED";
+
+            marksheetSummary.push({
+                id,
+                cgpa,
+                classification,
+                semester,
+                sgpa,
+                remarks,
+                uid,
+                year1: year,
+                year2,
+                credits,
+                totalCredits,
+                percentage,
+                result,
+                failedSubjects,
+            });
+
+
+        }
+    }
+
+    return marksheetSummary;
+}

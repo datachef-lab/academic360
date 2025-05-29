@@ -70,7 +70,7 @@ const TransportDetails = () => {
   };
 
   return (
-    <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
+    <div className="shadow-md border py-10 w-full flex items-center bg-white justify-center px-5">
       <div className="max-w-[80%] w-full grid grid-cols-2 gap-7">
         {formElements.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">

@@ -178,7 +178,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }
 
   return (
-    <div className="shadow-lg border py-10 w-full flex items-center rounded-lg justify-center px-5">
+    <div className="shadow-lg border py-10 w-full bg-white flex items-center rounded-lg justify-center px-5">
       <div className="max-w-[80%] w-full">
         {/* Personal Details Section */}
         <h3 className="text-lg font-medium border-b pb-1 mb-6">PERSONAL DETAILS</h3>

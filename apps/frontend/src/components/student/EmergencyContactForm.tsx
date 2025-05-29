@@ -108,7 +108,7 @@ const EmergencyContactForm = ({ studentId }: EmergencyContactProps) => {
   };
 
   return (
-    <div className="shadow-lg border py-10 w-full flex items-center rounded-lg  justify-center px-5">
+    <div className="shadow-lg border bg-white py-10 w-full flex items-center rounded-lg  justify-center px-5">
       <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
         {formElements.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">

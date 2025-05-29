@@ -109,11 +109,12 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
               disabled={!isNewCourse}
             />
           </TableCell>
-          <TableCell className="border-r">
+          <TableCell className="border-r py-4 px-6">
             <EditableCell 
               value={component.marksObtained}
               onChange={(value) => handleComponentChange(component.id, "marksObtained", Number(value))}
               type="number"
+              className=" border text-center rounded-md"
               max={component.fullMarks}
             />
           </TableCell>
@@ -153,7 +154,7 @@ const CourseRow = ({ course, onCourseUpdate, onCourseDelete, showActions = true 
         <TableCell className="border-r text-start">
           <div className="px-2 py-1">{totalFullMarks}</div>
         </TableCell>
-        <TableCell className="border-r text-start">
+        <TableCell className="border-r text-center">
           <div className="px-2 py-1">{totalMarksObtained}</div>
         </TableCell>
         <TableCell className="border-r text-start">

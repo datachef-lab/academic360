@@ -262,7 +262,7 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
   }
 
   return (
-    <div className="shadow-lg border py-10 w-full flex items-center rounded-lg justify-center px-5">
+    <div className="shadow-lg border bg-white py-10 w-full flex items-center rounded-lg justify-center px-5">
       <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
         {/* Blood Group */}
         <div className="flex flex-col mr-8">

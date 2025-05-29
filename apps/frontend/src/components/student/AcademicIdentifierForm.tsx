@@ -205,7 +205,7 @@ const { data ,isError,error} = useQuery({
  
 
   return (
-    <div className="shadow-md border py-10 w-full flex items-center justify-center px-5">
+    <div className="shadow-md border py-10 w-full flex bg-white items-center justify-center px-5">
       <div className="max-w-[90%] w-full grid grid-cols-2 gap-6">
         {formElement.map(({ name, label, type, icon }) => (
           <div key={name} className="flex flex-col mr-8">

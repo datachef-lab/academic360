@@ -353,7 +353,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   };
 
   return (
-    <div className="shadow-lg border py-10 w-full flex items-center rounded-lg justify-center px-5">
+    <div className="shadow-lg border py-10 w-full bg-white flex items-center rounded-lg justify-center px-5">
       <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
         {/* Parent Type Selection */}
         <div className="col-span-2 mb-4">
