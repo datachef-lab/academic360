@@ -995,7 +995,7 @@ async function getOlderSubjectMappedByNew(subjectMetadata: SubjectMetadata) {
 async function processEachBatchPaperAssociation(oldBatchPaper: {
     oldBatchIdFk: number;
     oldBatchPaperId: number;
-}, batchPaper: BatchPaper) {
+}, batchPaper: BatchPaper, batch: Batch) {
     const [rows] = await mysqlConnection.query(`
         SELECT COUNT(*) AS totalRows
         FROM ${oldStudentPaperTable}
@@ -1079,6 +1079,45 @@ async function processEachBatchPaperAssociation(oldBatchPaper: {
             else {
                 console.log("already exist student association");
             }
+
+            const [savedAcademicIdentifier] = await db
+                .update(academicIdentifierModel)
+                .set({
+                    courseId: batch.courseId
+                })
+                .where(
+                    eq(academicIdentifierModel.studentId, foundStudent.id)
+                )
+                .returning();
+
+            if (savedAcademicIdentifier) {
+                console.log("saved academic-identifier...");
+                // const [[oldStudent]] =
+                //     await mysqlConnection.query(`
+                //         SELECT *
+                //         FROM studentpersonaldetails
+                //         WHERE
+                //             codeNumber = '${savedAcademicIdentifier.uid}';
+                //     `) as [OldStudent[], any];
+
+                // if (oldStudent && oldStudent.coursetype) {
+                //     let framework: "CCF" |"CBCS" | undefined;
+                //     if (oldStudent.coursetype.trim().toUpperCase() == "CCF") {
+                //         framework = "CCF";
+                //     }
+                //     else if (oldStudent.coursetype.trim().toUpperCase() == "CBCS") {
+                //         framework = "CBCS";
+                //     }
+
+                //     if (framework) {
+                //         savedAcademicIdentifier.
+                //     }
+
+                // }
+
+            }
+
+
 
         }
 
@@ -1192,7 +1231,7 @@ async function processOldBatchPapers(oldBatchPapers: { oldBatchIdFk: number, old
                 }
 
                 console.log("going to processEachBatchPaperAssociation()...");
-                await processEachBatchPaperAssociation(oldBatchPapers[j], foundBatchPaper);
+                await processEachBatchPaperAssociation(oldBatchPapers[j], foundBatchPaper, batch);
             }
 
             console.log(`done batch in processOldBatchPapers() - ${currentBatch} / ${totalBatch}`)

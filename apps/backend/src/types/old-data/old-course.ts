@@ -1,5 +1,5 @@
 export interface OldCourse {
-    readonly id?: number;
+    readonly id: number;
     courseName: string;
     courseSName: string | null;
     position: number | null;
