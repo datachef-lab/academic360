@@ -37,7 +37,7 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
 
     for (let i = 0; i < subjectArr.length; i++) {
 
-        const streamName = subjectArr[i].Stream.toUpperCase().trim().split(" ")[0];
+        const streamName = subjectArr[i].Stream.toUpperCase().trim();
 
         let foundDegree = degrees.find(ele => ele.name === streamName.toUpperCase().trim());
         if (!foundDegree) {
@@ -50,7 +50,7 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
         let [foundStream] = await db.select().from(streamModel).where(and(
             eq(streamModel.degreeId, foundDegree.id),
             eq(streamModel.framework, subjectArr[i].Framework),
-            eq(streamModel.degreeProgramme, subjectArr[i].Course),
+            eq(streamModel.degreeProgramme, subjectArr[i].Course!),
         ));
 
         if (!foundStream) {
@@ -131,27 +131,40 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
         //     // eq(subjectMetadataModel.specializationId, ),
         // ]
 
+        const dashIndex = subjectArr[i]["Subject Code as per Marksheet"].indexOf("-");
+        console.log("dashIndex:", dashIndex, subjectArr[i]["Subject Code as per Marksheet"], subjectArr[i]["Subject Code as per IRP"]);
+        // if (subjectMetadata.irpCode == null && dashIndex != -1) {
+        const irpCode = subjectArr[i]["Subject Code as per Marksheet"].substring(0, dashIndex);
+
         await db.insert(subjectMetadataModel).values({
             streamId: foundStream.id as number,
-            fullMarks: subjectArr[i]["Full Marks"] ? formatMarks(String(subjectArr[i]["Full Marks"])) : null,
-            fullMarksInternal: subjectArr[i].IN ? formatMarks(String(subjectArr[i].IN)) : null,
-            fullMarksTheory: subjectArr[i].TH ? formatMarks(String(subjectArr[i].TH)) : null,
-            fullMarksTutorial: subjectArr[i].TU ? formatMarks(String(subjectArr[i].TU)) : null,
-            fullMarksPractical: subjectArr[i].PR ? formatMarks(String(subjectArr[i].PR)) : null,
-            fullMarksProject: subjectArr[i].PROJ ? formatMarks(String(subjectArr[i].PROJ)) : null,
-            fullMarksViva: subjectArr[i].VIVA ? formatMarks(String(subjectArr[i].VIVA)) : null,
 
-            isOptional: subjectArr[i].Optional ? true : false,
+            fullMarks: subjectArr[i]["Full Marks"] ? formatMarks(String(subjectArr[i]["Full Marks"])) : null,
+            fullMarksInternal: subjectArr[i]["Full Marks Internal"] ? formatMarks(String(subjectArr[i]["Full Marks Internal"])) : null,
+            fullMarksTheory: subjectArr[i]["Full Marks Theory"] ? formatMarks(String(subjectArr[i]["Full Marks Theory"])) : null,
+            fullMarksPractical: subjectArr[i]["Full Marks Practical"] ? formatMarks(String(subjectArr[i]["Full Marks Practical"])) : null,
+            fullMarksProject: subjectArr[i]["Full Marks Project"] ? formatMarks(String(subjectArr[i]["Full Marks Project"])) : null,
+            fullMarksViva: subjectArr[i]["Full Marks Viva"] ? formatMarks(String(subjectArr[i]["Full Marks Viva"])) : null,
+
+            isOptional: subjectArr[i]["Is Optional?"] ? true : false,
             subjectTypeId: subjectType ? subjectType.id as number : null,
             category: subjectArr[i].Category,
             specializationId: specialization ? specialization.id as number : undefined,
             marksheetCode: subjectArr[i]["Subject Code as per Marksheet"],
-            irpCode: subjectArr[i]["Subject Code as per IRP"],
+            irpCode: subjectArr[i]["Subject Code as per IRP"] ?? irpCode,
             irpName: subjectArr[i]["Subject Name as per Marksheet (also in IRP)"],
             name: subjectArr[i]["Subject Name as per Marksheet (also in IRP)"],
             semester: subjectArr[i].Semester,
-            credit: subjectArr[i].Credit,
             course: subjectArr[i].Course,
+
+            credit: subjectArr[i]["Total Credit"],
+            internalCredit: subjectArr[i]["Internal Credit"],
+            practicalCredit: subjectArr[i]["Practical Credit"],
+            theoryCredit: subjectArr[i]["Theory Credit"],
+            projectCredit: subjectArr[i]["Practical Credit"],
+            vivalCredit: subjectArr[i]["Viva Credit"],
+
+
         } as SubjectMetadata).returning();
     }
 
@@ -181,7 +194,7 @@ export async function refactorSubejectsWithSubjectMetadata(fileName: string): Pr
         let [foundStream] = await db.select().from(streamModel).where(and(
             eq(streamModel.degreeId, foundDegree.id),
             eq(streamModel.framework, subjectArr[i].Framework),
-            eq(streamModel.degreeProgramme, subjectArr[i].Course),
+            eq(streamModel.degreeProgramme, subjectArr[i].Course!),
         ));
 
         if (!foundStream) {

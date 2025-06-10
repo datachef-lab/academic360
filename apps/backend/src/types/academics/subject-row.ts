@@ -1,23 +1,28 @@
 export interface SubjectRow {
     "Stream": string;
-    "Course": "HONOURS" | "GENERAL";
+    "Course": "HONOURS" | "GENERAL" | undefined;
     "Semester": number;
     "Specialization": string | null;
     "Subject Type as per Marksheet": string;
     "Subject Type as per IRP": string;
     "Subject Name as per Marksheet (also in IRP)": string;
     "Subject Code as per Marksheet": string;
-    "Subject Code as per IRP": string;
-    "Credit": number;
-    "TH": number | null;
-    "TU": number | null;
-    "PR": number | null;
-    "IN": number | null;
+    "Subject Code as per IRP": string | null;
+    "Total Credit": number;
+    "Theory Credit": number;
+    "Practical Credit": number;
+    "Internal Credit": number;
+    "Project Credit": number;
+    "Viva Credit": number;
     "Full Marks": number | null;
-    "Total Subjects": number | null;
+    "Full Marks Theory": number | null;
+    "Full Marks Practical": number | null;
+    "Full Marks Internal": number | null;
+    "Full Marks Project": number | null;
+    "Full Marks Viva": number | null;
+
     "Category": string | null;
     "Framework": "CCF" | "CBCS";
-    "PROJ": number | null;
-    "VIVA": number | null;
-    "Optional": string | null;
+    
+    "Is Optional?": boolean;
 }

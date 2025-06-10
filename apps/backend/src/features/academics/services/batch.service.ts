@@ -2,7 +2,7 @@ import { db, mysqlConnection } from "@/db/index.js";
 import { OldBatch } from "@/types/old-data/old-batch.js";
 import { OldCourse } from "@/types/old-data/old-course.js";
 import { Course, courseModel } from "../models/course.model.js";
-import { and, eq, sql } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { Class, classModel } from "../models/class.model.js";
 import { OldClass } from "@/types/old-data/old-class.js";
 import { OldSection } from "@/types/old-data/old-section.js";
@@ -25,6 +25,9 @@ import { OldStudent } from "@/types/old-data/old-student.js";
 import { processStudent } from "@/features/user/controllers/oldStudent.controller.js";
 import { batchPaperModel } from "../models/batchPaper.model.js";
 import { studentPaperModel } from "../models/studentPaper.model.js";
+import { studentModel } from "@/features/user/models/student.model.js";
+import { findStudentById } from "@/features/user/services/student.service.js";
+import { findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
 
 const BATCH_SIZE = 500;
 
@@ -234,7 +237,7 @@ export async function processBatch(oldBatch: OldBatch) {
 
 
     // Process for batch papers
-    await loadBatchPapers(oldBatch.id!, updatedBatch);
+    // await loadBatchPapers(oldBatch.id!, updatedBatch);
 
     return updatedBatch;
 }
@@ -261,7 +264,7 @@ export async function loadBatchPapers(oldBatchId: number, updatedBatch: Batch) {
             continue;
         }
 
-        // TODO: Insert the batch paper into the new database
+        // Insert the batch paper into the new database
         let [foundBatchPaper] = await db
             .select()
             .from(batchPaperModel)
@@ -335,6 +338,7 @@ export async function loadBatchPapers(oldBatchId: number, updatedBatch: Batch) {
                     await db.insert(studentPaperModel).values({
                         studentId: foundStudent.id as number,
                         batchPaperId: foundBatchPaper.id as number,
+                        batchId: updatedBatch.id!,
                     }).returning();
 
                     console.log(`Inserted new student paper for student ID ${foundStudent.id} and batch paper ID ${foundBatchPaper.id}`);
@@ -365,7 +369,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
         return null;
     }
 
-    console.log("foundSubjectType:", foundSubjectType.irpName, foundSubjectType.marksheetName);
+    // console.log("foundSubjectType:", foundSubjectType.irpName, foundSubjectType.marksheetName);
     const [oldSubject] = (
         await mysqlConnection
             .query(`
@@ -375,7 +379,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
             ) as [OldSubject[], any]
     )[0];
 
-    console.log("Old subject:", oldSubject);
+    // console.log("Old subject:", oldSubject);
 
     const whereConditions = [
         eq(subjectMetadataModel.subjectTypeId, foundSubjectType.id),
@@ -394,7 +398,7 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
             .from(subjectMetadataModel)
             .where(and(...whereConditions));
 
-    console.log('found subjectMetadata:', foundSubjectMetadata);
+    console.log('found subjectMetadata (in new db), irp:', foundSubjectMetadata?.irpName);
     return foundSubjectMetadata;
 }
 
@@ -422,13 +426,148 @@ export async function refactorBatchSession() {
     }
 }
 
+export async function loadStudentSubjects() {
+    const [{ totalStudents }] = await db.select({ totalStudents: count() }).from(studentModel);
+
+    const BATCH_SIZE = 500;
+    const totalBatches = Math.ceil(totalStudents / BATCH_SIZE); // Calculate total number of batches
+    console.log(`\nTotal students: ${totalStudents}`);
+
+    for (let offset = 0; offset < totalStudents; offset += BATCH_SIZE) {
+        const students = await db.select().from(studentModel).limit(BATCH_SIZE).offset(offset);
+        const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+
+        for (let j = 0; j < students.length; j++) {
+            const student = students[j];
+            const academicIdentifier = await findAcademicIdentifierByStudentId(student.id);
+
+            if (!academicIdentifier) {
+                console.log(`No academic identifier found for student ID ${student.id}`);
+                continue;
+            }
+
+            console.log(`\nProcessing student ${student.id} (${currentBatch}/${totalBatches})`);
+
+            // Fetch the student's old data
+            const [[oldStudent]] = await mysqlConnection.query(`
+                SELECT *
+                FROM ${oldStudentTable}
+                WHERE codeNumber = '${academicIdentifier.uid}'
+            `) as [OldStudent[], any];
+
+            if (!oldStudent) {
+                console.log(`No old student data found for student's new db ID: ${student.id}`);
+                continue;
+            }
+
+            // Fetch the student's papers association
+            const [studentPapers] = await mysqlConnection.query(`
+                SELECT * 
+                FROM ${oldStudentPaperTable}
+                WHERE studentId = ${oldStudent.id}
+            `) as [OldStudentPaper[], any];
+
+            console.log(`Found ${studentPapers.length} papers for student ID ${student.id}`);
+
+            if (!studentPapers || studentPapers.length === 0) {
+                console.log(`No papers found for student ID ${student.id}`);
+                continue;
+            }
+
+            const batchPaperIds = studentPapers.map(paper => paper.parent_id);
+
+            // Fetch the batch papers associated with the student's papers
+            const [batchPapers] = await mysqlConnection.query(`
+                SELECT *
+                FROM ${oldBatchPaperTable}
+                WHERE ID IN (${batchPaperIds.join(",")})
+            `) as [OldBatchPaper[], any];
+
+            const batchIds = batchPapers.map(paper => paper.parent_id);
+
+            for (let k = 0; k < batchIds.length; k++) {
+                const batchId = batchIds[k];
+                const [[oldBatch]] = await mysqlConnection.query(`
+                    SELECT *
+                    FROM ${oldBatchTable}
+                    WHERE ID = ${batchId}
+                `) as [OldBatch[], any];
+
+                if (!oldBatch) {
+                    console.log(`No old batch data found for batch ID ${batchId}`);
+                    continue;
+                }
+
+                // Process the batch
+                const foundBatch = await processBatch(oldBatch);
+
+                // Filter the batch papers for the current batch
+                const filteredBatchPapers = batchPapers.filter(paper => paper.parent_id == batchId);
+
+                for (let k = 0; k < filteredBatchPapers.length; k++) {
+                    const oldBatchPaper = batchPapers[k];
+
+                    // Fetch the subject metadata
+                    const subjectMetadata: SubjectMetadata | null = await getMappedSubjectMetadata({ subjectTypeId: oldBatchPaper.subjectTypeId!, subjectId: oldBatchPaper.subjectId! });
+                    if (!subjectMetadata) {
+                        console.log(`No subject metadata found for old subjectTypeId: ${oldBatchPaper.subjectTypeId}, old subjectId: ${oldBatchPaper.subjectId}`);
+                        continue;
+                    }
+
+                    // Insert the batch paper into the new database
+                    let [foundBatchPaper] = await db
+                        .select()
+                        .from(batchPaperModel)
+                        .where(
+                            and(
+                                eq(batchPaperModel.batchId, foundBatch.id as number),
+                                eq(batchPaperModel.subjectMetadataId, subjectMetadata.id as number),
+                            )
+                        );
+
+                    if (!foundBatchPaper) {
+                        const [newBatchPaper] = await db.insert(batchPaperModel).values({
+                            batchId: foundBatch.id as number,
+                            subjectMetadataId: subjectMetadata.id as number,
+                        }).returning();
+
+                        foundBatchPaper = newBatchPaper;
+                    }
+
+                    // Insert the student's paper association into the new database
+                    const [foundStudentPaper] = await db
+                        .select()
+                        .from(studentPaperModel)
+                        .where(
+                            and(
+                                eq(studentPaperModel.studentId, student.id as number),
+                                eq(studentPaperModel.batchPaperId, foundBatchPaper.id as number),
+                            )
+                        );
+
+                    if (!foundStudentPaper) {
+                        await db.insert(studentPaperModel).values({
+                            studentId: student.id as number,
+                            batchPaperId: foundBatchPaper.id as number,
+                            batchId: foundBatch.id!,
+                        }).returning();
+
+
+                        console.log(`Inserted new student paper for student ID ${student.id} and batch paper ID ${foundBatchPaper.id}`);
+                    }
+                }
+            }
+        }
+    }
+}
+
 export async function loadOlderBatches() {
     console.log(`\n\nCounting rows from table ${oldBatchTable}...`);
 
     const [rows] = await mysqlConnection.query(`
         SELECT COUNT(*) AS totalRows 
         FROM ${oldBatchTable} 
-        WHERE sessionId = 16 OR sessionId = 17; 
+        WHERE sessionId > 15; 
     `);
     const { totalRows } = (rows as { totalRows: number }[])[0];
 

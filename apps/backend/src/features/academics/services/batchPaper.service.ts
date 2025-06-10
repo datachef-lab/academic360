@@ -29,19 +29,38 @@
 // import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 // import { number } from "zod";
 
-// const BATCH_SIZE = 500;
+import { db, mysqlConnection } from "@/db/index";
+import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata.model";
+import { SubjectType } from "@/types/academics/subject";
 
-// const oldBatchPaperTable = "studentpaperlinkingpaperlist";
-// const oldSubjectTypeTable = "subjecttype";
-// const oldSubjectTable = "subject";
-// const oldBatchTable = "studentpaperlinkingmain";
-// const oldStudentPaperTable = "studentpaperlinkingstudentlist";
-// const oldCourseTable = "course";
-// const oldClassTable = "classes";
-// const oldSectionTable = "section";
-// const oldShiftTable = "shift";
-// const oldPaperTable = "paperlist";
-// const oldPaperSubjectTable = "papersubject";
+import { SubjectTypeModel, subjectTypeModel } from "../models/subjectType.model";
+import { and, eq, ilike, inArray } from "drizzle-orm";
+import { SubjectMetadataType } from "@/types/academics/subject-metadata";
+import { OldSubjectType } from "@/types/old-data/old-subject-type";
+import { OldSubject } from "@/types/old-data/old-subject";
+import { processBatch } from "./batch.service";
+import { OldBatch } from "@/types/old-data/old-batch";
+import { OldStudentPaper } from "@/types/old-data/old-student-paper";
+import { OldStudent } from "@/types/old-student";
+import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model";
+import { studentModel } from "@/features/user/models/student.model";
+import { BatchPaper, batchPaperModel } from "../models/batchPaper.model";
+import { Batch } from "../models/batch.model";
+import { studentPaperModel } from "../models/studentPaper.model";
+
+const BATCH_SIZE = 500;
+
+const oldBatchPaperTable = "studentpaperlinkingpaperlist";
+const oldSubjectTypeTable = "subjecttype";
+const oldSubjectTable = "subject";
+const oldBatchTable = "studentpaperlinkingmain";
+const oldStudentPaperTable = "studentpaperlinkingstudentlist";
+const oldCourseTable = "course";
+const oldClassTable = "classes";
+const oldSectionTable = "section";
+const oldShiftTable = "shift";
+const oldPaperTable = "paperlist";
+const oldPaperSubjectTable = "papersubject";
 
 // async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectTypeId: number, subjectId: number }) {
 //     const [oldSubjectType] = (
@@ -928,3 +947,501 @@
 
 //     return formattedBatchPaper;
 // }
+
+
+
+
+
+
+
+
+
+
+
+
+async function getOlderSubjectMappedByNew(subjectMetadata: SubjectMetadata) {
+    const [foundSubjectType] = await db
+        .select()
+        .from(subjectTypeModel)
+        .where(
+            eq(subjectTypeModel.id, subjectMetadata.subjectTypeId!)
+        );
+
+    // Fetch the older subject type
+    const [[oldSubjectType]] = await mysqlConnection.query(
+        `SELECT * FROM ?? WHERE LOWER(subjectTypeName) LIKE LOWER(?)`,
+        [oldSubjectTypeTable, foundSubjectType.irpName]
+    ) as [OldSubjectType[], any];
+
+    if (!oldSubjectType) {
+        console.log("Old subject not found by finding from new irp sbjtyp name:", foundSubjectType.irpName);
+        return null;
+    }
+
+    // Fetch the older subject
+    const [[oldSubject]] = await mysqlConnection.query(
+        `SELECT * FROM ?? WHERE LOWER(univcode) LIKE LOWER(?) AND subjectTypeId = ?`,
+        [oldSubjectTable, subjectMetadata.irpCode, oldSubjectType.id]
+    ) as [OldSubject[], any];
+
+    if (!oldSubject) {
+        console.log("Old subject not found by finding from new irp sbj name:", subjectMetadata.irpCode, foundSubjectType.irpName);
+        return null;
+    }
+
+    return { oldSubject, oldSubjectType };
+}
+
+async function processEachBatchPaperAssociation(oldBatchPaper: {
+    oldBatchIdFk: number;
+    oldBatchPaperId: number;
+}, batchPaper: BatchPaper) {
+    const [rows] = await mysqlConnection.query(`
+        SELECT COUNT(*) AS totalRows
+        FROM ${oldStudentPaperTable}
+        WHERE parent_id = ${oldBatchPaper.oldBatchPaperId};
+    `);
+
+    const { totalRows } = (rows as { totalRows: number }[])[0];
+
+    const totalBatch = Math.ceil(totalRows / BATCH_SIZE);
+
+    console.log("in processEachBatchPaperAssociation(), totalRows:", totalRows);
+    for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+        const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+
+        const [oldStudentBatchPaperAssociation] = await mysqlConnection.query(`
+            SELECT
+                sp.studentId AS oldStudentIdFk,
+                s.codeNumber AS uid
+            FROM
+                studentpaperlinkingstudentlist sp,
+                studentpersonaldetails s
+            WHERE
+                sp.parent_id = ${oldBatchPaper.oldBatchPaperId}
+                AND sp.studentId = s.id
+            LIMIT ${BATCH_SIZE} 
+            OFFSET ${offset};
+        `) as [{ oldStudentIdFk: number, uid: string }[], any];
+
+        console.log(`in student-association(), oldStudentBatchPaperAssociation: ${oldStudentBatchPaperAssociation.length}`);
+
+        const tmpArr = await db
+            .select()
+            .from(academicIdentifierModel)
+            .where(
+                inArray(
+                    academicIdentifierModel.uid,
+                    oldStudentBatchPaperAssociation.map(ele => ele.uid.trim())
+                )
+            );
+
+        if (tmpArr.length == 0) {
+            console.log("No student exist... therefore continue");
+            continue;
+        }
+
+
+
+        for (let s = 0; s < oldStudentBatchPaperAssociation.length; s++) {
+            const foundStudent = await getMappedOldStudentByNewStudent(oldStudentBatchPaperAssociation[s].oldStudentIdFk);
+
+            if (!foundStudent) {
+                console.log("in student-association(), not found student... therfore continue...");
+                continue;
+            }
+
+            let [foundStudentAssociation] = await db
+                .select()
+                .from(studentPaperModel)
+                .where(
+                    and(
+                        eq(studentPaperModel.batchId, batchPaper.batchId!),
+                        eq(studentPaperModel.batchPaperId, batchPaper.id!),
+                        eq(studentPaperModel.studentId, foundStudent.id!),
+                    )
+                );
+
+            if (!foundStudentAssociation) {
+                const [newStudentAssociation] = await db
+                    .insert(studentPaperModel)
+                    .values({
+                        batchId: batchPaper.batchId!,
+                        batchPaperId: batchPaper.id!,
+                        studentId: foundStudent.id!,
+                    })
+                    .returning();
+
+                foundStudentAssociation = newStudentAssociation;
+
+                console.log("Student paper association created!");
+            }
+            else {
+                console.log("already exist student association");
+            }
+
+        }
+
+        console.log(`totalEntries in student-association(): ${currentBatch}/${totalBatch}`)
+
+    }
+
+}
+
+async function getMappedOldStudentByNewStudent(oldStudentId: number) {
+    const [[oldStudent]] = await mysqlConnection.query(`
+        SELECT *
+        FROM studentpersonaldetails
+        WHERE id = ${oldStudentId};
+    `) as [OldStudent[], any];
+
+    const [foundAcademicIdentifier] = await db
+        .select()
+        .from(academicIdentifierModel)
+        .where(
+            ilike(academicIdentifierModel.uid, oldStudent.codeNumber.trim())
+        );
+
+    const [foundStudent] = await db
+        .select()
+        .from(studentModel)
+        .where(
+            eq(studentModel.id, foundAcademicIdentifier.studentId)
+        );
+
+    return foundStudent ?? null;
+}
+
+async function processOldBatchPapers(oldBatchPapers: { oldBatchIdFk: number, oldBatchPaperId: number }[], subjectMetadata: SubjectMetadata) {
+    for (let j = 0; j < oldBatchPapers.length; j++) {
+        // console.log(`
+        //     SELECT COUNT(*) AS totalRows
+        //     FROM ${oldBatchTable}
+        //     WHERE 
+        //         id = ${oldBatchPapers[j].oldBatchIdFk}
+        //         AND (
+        //             SELECT COUNT(ID)
+        //             FROM ${oldStudentPaperTable}
+        //             WHERE parent_id = ${oldBatchPapers[j].oldBatchPaperId}
+        //         ) > 0;
+        // `)
+        const [rows] = await mysqlConnection.query(`
+            SELECT COUNT(*) AS totalRows
+            FROM ${oldBatchTable}
+            WHERE 
+                id = ${oldBatchPapers[j].oldBatchIdFk}
+                AND (
+                    SELECT COUNT(ID)
+                    FROM ${oldStudentPaperTable}
+                    WHERE parent_id = ${oldBatchPapers[j].oldBatchPaperId}
+                ) > 0;
+        `);
+
+
+        console.log("rows:", rows, "oldBatchPapers:", j + 1, " / ", oldBatchPapers.length);
+        const { totalRows } = (rows as { totalRows: number }[])[0];
+
+        const totalBatch = Math.ceil(totalRows / BATCH_SIZE);
+
+        console.log("in processEachBatchPaperAssociation(), totalRows:", totalRows);
+        for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+            const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+            const [oldBatches] = await mysqlConnection.query(`
+                    SELECT *
+                    FROM ${oldBatchTable}
+                    WHERE
+                        id = ${oldBatchPapers[j].oldBatchIdFk}
+                        AND (
+                            SELECT COUNT(ID)
+                            FROM ${oldStudentPaperTable}
+                            WHERE parent_id = ${oldBatchPapers[j].oldBatchPaperId}
+                        ) > 0
+                    LIMIT ${BATCH_SIZE} 
+                    OFFSET ${offset};
+                `) as [OldBatch[], any];
+            console.log("in processOldBatchPapers(), old-batches:", oldBatches.length);
+
+            for (let k = 0; k < oldBatches.length; k++) {
+                const oldBatch = oldBatches[k];
+                const batch = await processBatch(oldBatch);
+
+                let [foundBatchPaper] = await db
+                    .select()
+                    .from(batchPaperModel)
+                    .where(
+                        and(
+                            eq(batchPaperModel.batchId, batch.id!),
+                            eq(batchPaperModel.subjectMetadataId, subjectMetadata.id!)
+                        )
+                    );
+
+                if (!foundBatchPaper) {
+                    const [newBatchPaper] = await db
+                        .insert(batchPaperModel)
+                        .values({
+                            batchId: batch.id!,
+                            subjectMetadataId: subjectMetadata.id!,
+                        })
+                        .returning();
+
+                    foundBatchPaper = newBatchPaper;
+
+                    console.log("New Batch Paper created...")
+                } else {
+                    console.log(`Batch Paper (irpName, ${subjectMetadata.irpName}) exist...`);
+                }
+
+                console.log("going to processEachBatchPaperAssociation()...");
+                await processEachBatchPaperAssociation(oldBatchPapers[j], foundBatchPaper);
+            }
+
+            console.log(`done batch in processOldBatchPapers() - ${currentBatch} / ${totalBatch}`)
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    }
+
+
+
+}
+
+export async function loadBatchPapers() {
+    const subjectMetadatas = await db
+        .select()
+        .from(subjectMetadataModel);
+
+    for (let i = 0; i < subjectMetadatas.length; i++) {
+        let oldSubject: OldSubject | null = null;
+        let oldSubjectType: OldSubjectType | null = null;
+        const tmpObj = await getOlderSubjectMappedByNew(subjectMetadatas[i]);
+
+        if (!tmpObj) {
+            console.log("Not found subject metadata for: ", subjectMetadatas[i].irpName);
+            continue
+        };
+        oldSubject = tmpObj.oldSubject;
+        oldSubjectType = tmpObj.oldSubjectType;
+
+        const [oldBatchPapers] = await mysqlConnection.query(`
+            SELECT
+                bp.parent_id AS oldBatchIdFk,
+                bp.ID AS oldBatchPaperId
+            FROM
+                ${oldBatchPaperTable} bp
+            WHERE
+                bp.subjectId = ${oldSubject.id} 
+                AND bp.subjectTypeId = ${oldSubjectType.id}
+                AND (
+                    SELECT COUNT(ID)
+                    FROM ${oldStudentPaperTable}
+                    WHERE parent_id = bp.ID
+                ) > 0
+            ORDER BY parent_id ASC;
+        `) as [{ oldBatchIdFk: number, oldBatchPaperId: number }[], any];
+
+
+        console.log("in loadBatchPapers(), oldBatchPapers:", oldBatchPapers)
+        await processOldBatchPapers(oldBatchPapers, subjectMetadatas[i]);
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // const [batchPapers] = await mysqlConnection.query(`
+    //     SELECT *
+    //     FROM ${oldBatchPaperTable}
+    //     WHERE parent_id = ${oldBatchId}
+    // `) as [OldBatchPaper[], any];
+
+    // if (!batchPapers || batchPapers.length === 0) {
+    //     return;
+    // }
+    // console.log("batchPapers:", batchPapers.length);
+
+    // for (let i = 0; i < batchPapers.length; i++) {
+    //     const oldBatchPaper = batchPapers[i];
+
+    //     // Fetch the subject metadata
+    //     const subjectMetadata: SubjectMetadata | null = await getMappedSubjectMetadata({ subjectTypeId: oldBatchPaper.subjectTypeId!, subjectId: oldBatchPaper.subjectId! });
+    //     if (!subjectMetadata) {
+    //         console.log(`No subject metadata found for old subjectTypeId: ${oldBatchPaper.subjectTypeId}, old subjectId: ${oldBatchPaper.subjectId}`);
+    //         continue;
+    //     }
+
+    //     // Insert the batch paper into the new database
+    //     let [foundBatchPaper] = await db
+    //         .select()
+    //         .from(batchPaperModel)
+    //         .where(
+    //             and(
+    //                 eq(batchPaperModel.batchId, updatedBatch.id as number),
+    //                 eq(batchPaperModel.subjectMetadataId, subjectMetadata.id as number),
+    //             )
+    //         );
+
+    //     if (!foundBatchPaper) {
+    //         const [newBatchPaper] = await db.insert(batchPaperModel).values({
+    //             batchId: updatedBatch.id as number,
+    //             subjectMetadataId: subjectMetadata.id as number,
+    //         }).returning();
+
+    //         foundBatchPaper = newBatchPaper;
+    //     }
+
+    //     // Fetch the student's associated with this subject
+    //     const [rows] = await mysqlConnection.query(`
+    //         SELECT COUNT(*) AS totalRows 
+    //         FROM ${oldStudentPaperTable} 
+    //         WHERE parent_id = ${oldBatchPaper.parent_id}
+    //     `);
+    //     const { totalRows } = (rows as { totalRows: number }[])[0];
+
+    //     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+
+    //     console.log(`\nTotal rows to migrate for student's selected subjects: ${totalRows}`);
+
+    //     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+    //         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+
+    //         console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
+    //         const [rows] = await mysqlConnection.query(`
+    //             SELECT * 
+    //             FROM ${oldStudentPaperTable}
+    //             WHERE parent_id = ${oldBatchPaper.ID}
+    //             LIMIT ${BATCH_SIZE} 
+    //             OFFSET ${offset}
+    //         `) as [OldStudentPaper[], any];
+    //         const oldDataArr = rows as OldStudentPaper[];
+
+    //         for (let s = 0; i < oldDataArr.length; s++) {
+    //             const oldStudentPaper = oldDataArr[s];
+
+    //             // Fetch the student based on old Id
+    //             const [[oldStudent]] = await mysqlConnection.query(`
+    //                 SELECT * 
+    //                 FROM ${oldStudentTable}
+    //                 WHERE id = ${oldStudentPaper.studentId}
+    //             `) as [OldStudent[], any];
+
+    //             if (!oldStudent) continue;
+
+    //             const foundStudent = await processStudent(oldStudent);
+
+    //             // Insert the student's paper association into the new database
+    //             const [foundStudentPaper] = await db
+    //                 .select()
+    //                 .from(studentPaperModel)
+    //                 .where(
+    //                     and(
+    //                         eq(studentPaperModel.studentId, foundStudent.id as number),
+    //                         eq(studentPaperModel.batchPaperId, foundBatchPaper.id as number),
+    //                     )
+    //                 );
+
+    //             if (!foundStudentPaper) {
+    //                 await db.insert(studentPaperModel).values({
+    //                     studentId: foundStudent.id as number,
+    //                     batchPaperId: foundBatchPaper.id as number,
+    //                     batchId: updatedBatch.id!,
+    //                 }).returning();
+
+    //                 console.log(`Inserted new student paper for student ID ${foundStudent.id} and batch paper ID ${foundBatchPaper.id}`);
+    //             }
+
+
+    //             console.log(`Batch for student's paper association: ${currentBatch}/${totalBatches} | Done: ${s + 1}/${oldDataArr.length} | Total Entries: ${totalRows}`);
+    //         }
+    //     }
+    // }
+};
+
+
+async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectTypeId: number, subjectId: number }) {
+    const [oldSubjectType] = (
+        await mysqlConnection
+            .query(`
+                    SELECT * 
+                    FROM ${oldSubjectTypeTable} 
+                    WHERE id = ${subjectTypeId}`
+            ) as [OldSubjectType[], any]
+    )[0];
+    // console.log("in getMappedSubjectMetadata(), oldSubjectType:", oldSubjectType.subjectTypeName.trim().toUpperCase())
+    const [foundSubjectType] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.irpName, oldSubjectType.subjectTypeName.trim().toUpperCase()));
+
+    if (!foundSubjectType) {
+        console.log(`Not found subject type for irpName: ${oldSubjectType.subjectTypeName.trim().toUpperCase()}`)
+        return null;
+    }
+
+    // console.log("foundSubjectType:", foundSubjectType.irpName, foundSubjectType.marksheetName);
+    const [oldSubject] = (
+        await mysqlConnection
+            .query(`
+                    SELECT * 
+                    FROM ${oldSubjectTable} 
+                    WHERE id = ${subjectId} AND subjectTypeId = ${subjectTypeId}`
+            ) as [OldSubject[], any]
+    )[0];
+
+    // console.log("Old subject:", oldSubject);
+
+    const whereConditions = [
+        eq(subjectMetadataModel.subjectTypeId, foundSubjectType.id),
+        // eq(subjectMetadataModel.irpCode, oldSubject.univcode),
+    ];
+
+    if (oldSubject.univcode) {
+        whereConditions.push(
+            eq(subjectMetadataModel.irpCode, oldSubject.univcode?.trim().toUpperCase())
+        );
+    }
+
+    const [foundSubjectMetadata] =
+        await db
+            .select()
+            .from(subjectMetadataModel)
+            .where(and(...whereConditions));
+
+    console.log('found subjectMetadata (in new db), irp:', foundSubjectMetadata?.irpName);
+    return foundSubjectMetadata;
+}
