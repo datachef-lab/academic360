@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   User,
-
   Settings,
   BookCheck,
   BookOpen,
@@ -65,10 +64,9 @@ const data = {
     },
   ],
   navMain: [
-    
     {
-      title: "Admission & Fees",
-      url: "/home/admission-fees",
+      title: "Fees Module",
+      url: "/home/fees-module",
       icon: UserPlus,
     },
     {
@@ -112,7 +110,7 @@ const data = {
     {
       title: "Search Student",
       icon: UserRoundSearch,
-      isModal: true, 
+      isModal: true,
     },
     {
       title: "Get Reports",
@@ -176,7 +174,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   key={item.title}
                   icon={item.icon && <item.icon className="h-5 w-5" />}
                   href={item.url}
-                  isActive={!isSearchActive && currentPath === item.url}
+                  isActive={!isSearchActive && currentPath.startsWith(item.url)}
                 >
                   <span className="text-lg">{item.title}</span>
                 </NavItem>
@@ -185,16 +183,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
             {/* Administration Section */}
             <div className="mb-4">
-              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                Administration
-              </h3>
+              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Administration</h3>
               <div className="pl-6">
                 {data.navMain.map((item) => (
                   <NavItem
                     key={item.title}
                     icon={item.icon && <item.icon className="h-5 w-5" />}
                     href={item.url}
-                    isActive={!isSearchActive && currentPath === item.url}
+                    isActive={!isSearchActive && currentPath.startsWith(item.url)}
                   >
                     <span className="text-base">{item.title}</span>
                   </NavItem>
@@ -202,16 +198,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
             </div>
 
-           
             <div className="mb-4">
-              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                Student
-              </h3>
+              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Student</h3>
               <div className="pl-6">
                 {data.navStudent.map((item) => {
-                  const isActive = !isSearchActive && currentPath === item.url;
+                  const url = item.url ?? "";
+                  const isActive = !isSearchActive && currentPath.startsWith(url);
 
-            
                   if (item.isModal) {
                     return (
                       <div
@@ -224,7 +217,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
                           isSearchActive
                             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                            : "text-white hover:text-white"
+                            : "text-white hover:text-white",
                         )}
                       >
                         <div className="flex items-center gap-3">
@@ -241,7 +234,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <NavItem
                       key={item.title}
                       icon={item.icon && <item.icon className="h-5 w-5" />}
-                      href={item.url || ''}
+                      href={url}
                       isActive={isActive}
                     >
                       <span className="text-base">{item.title}</span>
@@ -287,7 +280,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
       {/* Search Student Modal */}
       <SearchStudentModal
-        open={isSearchModalOpen} 
+        open={isSearchModalOpen}
         onOpenChange={(open) => {
           setIsSearchModalOpen(open);
           if (!open) {
@@ -314,13 +307,11 @@ function NavItem({ href, icon, children, isActive }: NavItemProps) {
         "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative",
         isActive
           ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-          : "text-white hover:text-white"
+          : "text-white hover:text-white",
       )}
     >
       <div className="flex items-center gap-3">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white")}>
-          {icon}
-        </span>
+        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white")}>{icon}</span>
         <span className="text-inherit">{children}</span>
       </div>
     </Link>

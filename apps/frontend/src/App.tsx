@@ -19,7 +19,6 @@ import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
 
-
 import ManageMarksheetPage from "./pages/ManageMarksheetPage";
 import StudentMarksheetsPage from "./pages/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
@@ -31,10 +30,15 @@ import LibraryDashboard from "./pages/LibraryDashboard";
 import CoursesAndSubject from "./pages/CoursesAndSubject";
 
 import Downloads from "./pages/Downloads";
-import AdmissionAndFees from "./pages/AdmissionAndFess";
+import FeesModule from "./pages/FeesModule";
 import GradeCard from "./components/GradeMarks/GradeCard";
 
-
+import FeesStructure from "./pages/fees-module/FeesStructure";
+import AcademicYear from "./pages/fees-module/AcademicYear";
+import FeesSlab from "./pages/fees-module/FeesSlab";
+import FeesReceiptType from "./pages/fees-module/FeesReceiptType";
+import Addon from "./pages/fees-module/Addon";
+import StudentFees from "./pages/fees-module/StudentFees";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -52,9 +56,20 @@ const router = createBrowserRouter([
       { path: "", element: <HomePage /> },
       { path: "student-View", element: <StudentViewPage /> },
       { path: "add-student", element: <AddStudentPage /> },
-      { path: "downloads", element: < Downloads/> },
+      { path: "downloads", element: <Downloads /> },
       { path: "event", element: <Event /> },
-      { path: "admission-fees", element: <AdmissionAndFees /> },
+      {
+        path: "fees-module",
+        element: <FeesModule />,
+        children: [
+          { path: "", element: <FeesStructure /> },
+          { path: "academic-year", element: <AcademicYear /> },
+          { path: "fees-slab", element: <FeesSlab /> },
+          { path: "fees-receipttype", element: <FeesReceiptType /> },
+          { path: "addon", element: <Addon /> },
+          { path: "student-fees", element: <StudentFees /> },
+        ],
+      },
       { path: "courses-subjects", element: <CoursesAndSubject /> },
       {
         path: "add-marksheet",
@@ -90,18 +105,13 @@ const router = createBrowserRouter([
         path: "search-students",
         element: <Outlet />,
         children: [
-         
           { path: ":studentId", element: <StudentPage /> },
-          { 
+          {
             path: ":studentId",
             element: <Outlet />,
-            children: [
-              { path: ":marksheetId", element: <GradeCard /> },
-             
-             
-            ]
-          }
-        ]
+            children: [{ path: ":marksheetId", element: <GradeCard /> }],
+          },
+        ],
       },
       { path: "profile", element: <UserProfilePage /> },
       { path: "settings", element: <SettingsPage /> },
