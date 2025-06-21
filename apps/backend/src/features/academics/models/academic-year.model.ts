@@ -1,0 +1,16 @@
+import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const academicYearModel = pgTable("academic_years", {
+    id: serial().primaryKey(),
+    startYear: varchar({ length: 4 }).notNull(),
+    endYear: varchar({ length: 4 }).notNull(),
+    isCurrentYear: boolean("is_current_year").notNull().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const createAcademicYearSchema = createInsertSchema(academicYearModel);
+
+export type academicYear = z.infer<typeof createAcademicYearSchema>;
