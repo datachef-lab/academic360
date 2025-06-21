@@ -6,49 +6,69 @@ import { User } from "@/features/user/models/user.model.js";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import * as xlsx from 'xlsx';
 import { io } from "@/app.js";
 import { sendFileUploadNotification, sendEditNotification, sendUpdateNotification } from "@/utils/notificationHelpers.js";
 
 export const addMultipleMarksheet = async (req: Request, res: Response, next: NextFunction) => {
     const socketId = req.body.socketId;
     const socket = io.sockets.sockets.get(socketId as string);
+
     if (!req.file || !socket) {
-        res.status(400).json({ message: "No file uploaded or invalid socket" });
-        return;
+        return res.status(400).json({ message: "No file uploaded or invalid socket" });
     }
 
-    try {
-        const fileName = req.file.filename;
-        console.log(req.user, "user in upload file");
-        // Process file and get logs in real-time
-        const isUploaded = await uploadFile(fileName, req.user as User, socket);
+    const fileName = req.file.filename;
+    const filePath = path.join(directoryName, "../../../../public/temp", fileName);
 
+    try {
+        const { status, exceptionalArr } = await uploadFile(fileName, req.user as User, socket);
+
+        if (exceptionalArr.length > 0) {
+            const wb = xlsx.utils.book_new();
+            const ws = xlsx.utils.json_to_sheet(exceptionalArr);
+            xlsx.utils.book_append_sheet(wb, ws, "Exceptions");
+
+            const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+            // Cleanup file before sending
+            fs.unlink(filePath, (err) => {
+                if (err) console.error(`Error deleting file: ${filePath}`, err);
+            });
+
+            res.setHeader("Content-Disposition", "attachment; filename=exceptions.xlsx");
+            res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            return res.send(buffer); // only response
+        }
+
+        // Only emit socket event if successful
         socket.emit('progress', {
             stage: 'completed',
             message: 'File processed successfully!',
         });
 
-        // Send real-time notification to all users
         sendFileUploadNotification(req, fileName);
 
-        res.status(200).json(new ApiResponse(200, "SUCCESS", isUploaded, "Marksheets uploaded successfully!"));
-
-        const filePath = path.join(directoryName, "../../../../public/temp", req.file.filename);
-
-        // Wait for the response to be sent, then delete the file
+        // Setup cleanup after response is sent
         res.on("finish", () => {
             fs.unlink(filePath, (err) => {
-                if (err) {
-                    console.error(`Error deleting file: ${filePath}`, err);
-                }
+                if (err) console.error(`Error deleting file: ${filePath}`, err);
             });
         });
 
+        return res.status(200).json(new ApiResponse(200, "SUCCESS", status, "Marksheets uploaded successfully!"));
+
     } catch (error) {
+        // Cleanup file on error as well
+        fs.unlink(filePath, (err) => {
+            if (err) console.error(`Error deleting file: ${filePath}`, err);
+        });
+
         socket.emit('progress', { stage: 'error', message: 'Error processing file' });
-        handleError(error, res, next);
+        return handleError(error, res, next);
     }
 };
+
 
 export const refactorSubjectNameC = async (req: Request, res: Response, next: NextFunction) => {
     // const socketId = req.body.socketId;
@@ -164,14 +184,14 @@ export const getMarksheetById = async (req: Request, res: Response, next: NextFu
 export const getMarksheetByStudentId = async (req: Request, res: Response, next: NextFunction) => {
     try {
         console.log("\n\nin fetch by id\n\n");
-        const { studentId ,semester } = req.query;
+        const { studentId, semester } = req.query;
 
         if (studentId === undefined) {
             res.status(400).json(new ApiError(400, "Missing 'studentId' parameter!"));
             return;
         }
 
-        const foundMarksheet = await findMarksheetsByStudentId(Number(studentId),Number(semester));
+        const foundMarksheet = await findMarksheetsByStudentId(Number(studentId), Number(semester));
 
         if (!foundMarksheet) {
             res.status(404).json(new ApiError(404, "Marksheet not found!"));

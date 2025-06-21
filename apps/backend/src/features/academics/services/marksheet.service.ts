@@ -22,6 +22,9 @@ import {
     saveSubject,
     subjectResponseFormat,
 } from "./subject.service.js";
+import * as xlsx from 'xlsx';
+import fs from 'fs';
+
 import bcrypt from "bcrypt";
 import { User, userModel } from "@/features/user/models/user.model.js";
 import {
@@ -353,7 +356,7 @@ export async function uploadFile(
     fileName: string,
     user: User,
     socket: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
-): Promise<boolean> {
+): Promise<{ status: boolean, exceptionalArr: MarksheetRow[] }> {
     // Read the file from the `/public/temp/` directory
     socket.emit("progress", { stage: "reading", message: "Reading file..." });
 
@@ -397,7 +400,7 @@ export async function uploadFile(
 
     if (!user) {
         console.log("user:", user);
-        return false;
+        return { exceptionalArr: [], status: false };
     }
 
     // Step 3: Loop over the array.
@@ -498,7 +501,10 @@ export async function uploadFile(
         stage: "completed",
         message: "File processed successfully!",
     });
-    return true;
+
+
+
+    return { status: true, exceptionalArr };
 }
 
 
@@ -1513,7 +1519,6 @@ export async function validateData(
                             practical_marks,
                             full_marks_practical,
                             paperCode,
-                            stream,
                         } = studentMksArr[k];
 
                         internal_marks = formatMarks(internal_marks)?.toString() || null;
@@ -1734,7 +1739,7 @@ export async function marksheetSummary(uid: string): Promise<MarksheetSummary[]>
             }
 
             const percentage = totalMarksObtained ? (totalMarksObtained * 100) / totalFullMarks : 0;
-            
+
             if (marksheetSummary.some(mks => mks.id === id)) continue;
 
             result = year2 ? "PASSED" : "FAILED";
