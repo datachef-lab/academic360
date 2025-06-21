@@ -15,7 +15,7 @@ export const feesComponentModel = pgTable("fees_components", {
         .notNull(),
     isConcessionApplicable: boolean().notNull().default(false),
     amount: doublePrecision().notNull(),
-    concessionAmount: doublePrecision().notNull().default(0),
+    // concessionAmount: doublePrecision().notNull().default(0),
     sequence: integer().notNull().unique(),
     remarks: varchar({ length: 500 }),
     createdAt: timestamp().notNull().defaultNow(),

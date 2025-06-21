@@ -57,7 +57,16 @@ import {
     specializationRouter,
     familyRouter,
     healthRouter,
-    personalDetailsRouter
+    personalDetailsRouter,
+    feesComponentRouter,
+    addonRouter,
+    feesHeadRouter,
+    feesReceiptTypeRouter,
+    feesSlabRouter,
+    feesStructureRouter,
+    studentFeesMappingRouter,
+    feesSlabYearMappingRouter,
+    feesDesignAbstractLevelRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import { courseRouter } from "@/features/academics/routes/index.js";
@@ -241,6 +250,16 @@ app.use("/api/health", healthRouter);
 app.use("/api/reports", reportRouter);
 
 app.use("/api/courses", courseRouter);
+
+app.use("/api/v1/fees/components", feesComponentRouter);
+app.use("/api/v1/fees/addons", addonRouter);
+app.use("/api/v1/fees/heads", feesHeadRouter);
+app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+app.use("/api/v1/fees/slabs", feesSlabRouter);
+app.use("/api/v1/fees/structures", feesStructureRouter);
+app.use("/api/v1/fees/student-fees-mappings", studentFeesMappingRouter);
+app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+app.use("/api/v1/fees", feesDesignAbstractLevelRouter);
 
 app.use(errorHandler);
 

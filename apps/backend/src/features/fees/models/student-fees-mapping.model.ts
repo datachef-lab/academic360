@@ -15,8 +15,10 @@ export const studentFeesMappingModel = pgTable("student_fees_mappings", {
         .notNull(),
     type: studentFeesMappingEnum().notNull().default("FULL"),
     instalmentNumber: integer(),
-    amountPaid: integer(),
+    baseAmount: integer().notNull(),
     lateFee: integer().notNull().default(0),
+    totalPayable: integer().notNull().default(0),
+    amountPaid: integer(),
     paymentStatus: paymentStatusEnum().notNull().default("PENDING").notNull(),
     paymentMode: paymentModeEnum(),
     transactionRef: varchar({ length: 255 }),
@@ -28,4 +30,4 @@ export const studentFeesMappingModel = pgTable("student_fees_mappings", {
 
 export const createStudentFeesMappingSchema = createInsertSchema(studentFeesMappingModel);
 
-export type studentFeesMapping = z.infer<typeof createStudentFeesMappingSchema>;
+export type StudentFeesMapping = z.infer<typeof createStudentFeesMappingSchema>;
