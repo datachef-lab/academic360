@@ -12,6 +12,8 @@ import {
   AlertCircle,
   Search,
 } from "lucide-react";
+import FeeStructureForm from "../../components/fees/fee-structure-form/FeeStructureForm";
+
 interface FeeStructure {
   id: number;
   name: string;
@@ -105,6 +107,7 @@ const FeesStructure: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDragging, setIsDragging] = useState(false);
+  const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New fee form state
@@ -229,6 +232,11 @@ const FeesStructure: React.FC = () => {
     a.click();
   };
 
+  const handleFeeStructureSubmit = (formData: unknown) => {
+    console.log("Fee Structure Form Data:", formData);
+    setShowFeeStructureForm(false);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-3 lg:p-4">
       <div className="mb-4">
@@ -311,11 +319,11 @@ const FeesStructure: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => setShowFeeStructureForm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
             >
               <PlusCircle className="h-3.5 w-3.5" />
-              Add
+              Create Fee Structure
             </button>
 
             <button
@@ -576,6 +584,12 @@ const FeesStructure: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {showFeeStructureForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <FeeStructureForm onClose={() => setShowFeeStructureForm(false)} onSubmit={handleFeeStructureSubmit} />
         </div>
       )}
     </div>

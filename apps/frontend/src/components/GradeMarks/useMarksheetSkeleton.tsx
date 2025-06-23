@@ -1,13 +1,5 @@
-
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
 const TableSkeletonCell = () => (
   <TableCell className="text-center py-5">
@@ -24,10 +16,10 @@ const TableSkeletonHeader = ({ semesterCount }: { semesterCount: number }) => (
       <Skeleton className="h-4 w-24 mx-auto" />
     </TableHead>
     {Array.from({ length: semesterCount }, (_, index) => (
-      <TableHead 
+      <TableHead
         key={index}
         className={`border-b text-center font-semibold text-gray-700 py-5 ${
-          index === semesterCount - 1 ? '' : 'border-r'
+          index === semesterCount - 1 ? "" : "border-r"
         }`}
       >
         <Skeleton className="h-4 w-8 mx-auto" />
@@ -37,7 +29,7 @@ const TableSkeletonHeader = ({ semesterCount }: { semesterCount: number }) => (
 );
 
 const TableSkeletonRow = ({ semesterCount, rowIndex }: { semesterCount: number; rowIndex: number }) => (
-  <TableRow className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+  <TableRow className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}>
     <TableCell className="border-r text-center font-medium text-gray-700 py-5">
       <Skeleton className="h-4 w-16 mx-auto" />
     </TableCell>
@@ -47,7 +39,13 @@ const TableSkeletonRow = ({ semesterCount, rowIndex }: { semesterCount: number; 
   </TableRow>
 );
 
-export const MarksheetSkeleton = ({ yearCount = 3, semesterCount = 4 }: { yearCount?: number; semesterCount?: number }) => (
+export const MarksheetSkeleton = ({
+  yearCount = 3,
+  semesterCount = 4,
+}: {
+  yearCount?: number;
+  semesterCount?: number;
+}) => (
   <div className="p-4 md:p-8">
     <Skeleton className="h-8 w-64 mb-8" />
     <div className="px-14 py-4">
@@ -58,11 +56,7 @@ export const MarksheetSkeleton = ({ yearCount = 3, semesterCount = 4 }: { yearCo
           </TableHeader>
           <TableBody>
             {Array.from({ length: yearCount }, (_, index) => (
-              <TableSkeletonRow 
-                key={index} 
-                rowIndex={index} 
-                semesterCount={semesterCount}
-              />
+              <TableSkeletonRow key={index} rowIndex={index} semesterCount={semesterCount} />
             ))}
           </TableBody>
         </Table>
@@ -73,6 +67,6 @@ export const MarksheetSkeleton = ({ yearCount = 3, semesterCount = 4 }: { yearCo
 
 export const useMarksheetSkeleton = () => {
   return {
-    MarksheetSkeleton
+    MarksheetSkeleton,
   };
-}; 
+};
