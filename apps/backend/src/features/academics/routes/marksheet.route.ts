@@ -16,13 +16,13 @@ import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 
-// router.use(verifyJWT);
+router.use(verifyJWT);
 
 router.post("/upload", uploadExcelMiddleware, addMultipleMarksheet, deleteTempFile,);
 
 router.post("/refactor-subjectnames", uploadExcelMiddleware, refactorSubjectNameC, deleteTempFile,);
 
-router.post("/",  createMarksheet);
+router.post("/", createMarksheet);
 
 router.get("/logs", getMarksheetsLogs);
 router.get("/summary", getMarksheetSummary);

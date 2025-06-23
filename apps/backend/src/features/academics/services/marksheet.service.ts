@@ -403,95 +403,119 @@ export async function uploadFile(
         return { exceptionalArr: [], status: false };
     }
 
+    console.log(exceptionalArr.length, "exceptionalArr:", exceptionalArr);
+    console.log(dataArr.length, "dataArr:", dataArr.length);
+
     // Step 3: Loop over the array.
-    for (let y = startingYear; y <= new Date().getFullYear(); y++) {
-        // Iterate over the years
+    if (dataArr.length > 0) {
+        for (let y = startingYear; y <= new Date().getFullYear(); y++) {
+            // Iterate over the years
+            console.log(exceptionalArr.length, "exceptionalArr:", exceptionalArr);
+            console.log(dataArr.length, "dataArr:", dataArr.length);
 
-        for (let s = 0; s < streams.length; s++) {
-            // Iterate over the streams
+            for (let s = 0; s < streams.length; s++) {
+                // Iterate over the streams
 
-            for (let sem = 1; sem <= 6; sem++) {
-                // Iterate over the semesters
-                // Filter the data
-                const arr = await filterData({
-                    dataArr,
-                    semester: sem,
-                    stream: streams[s],
-                    year: y,
-                });
-
-                console.log(
-                    "after filter-data, arr:",
-                    arr.length,
-                    "dataArr:",
-                    dataArr.length,
-                );
-
-                // sendUpdate(`Processing year ${y}, stream ${streams[s]}, semester ${sem}...`);
-
-                // Iterate over the arr[]
-                const doneRollNumber: string[] = [];
-                for (let i = 0; i < arr.length; i++) {
-                    // Skip the `uid` if already processed
-                    if (doneRollNumber.includes(arr[i].roll_no)) continue;
-
-                    // Select all the subject rows for the uid: arr[i].roll_no
-                    const subjectArr = arr.filter((row) => {
-                        // Normalize roll numbers before comparison
-                        const currentRollNo = (row.roll_no || "")
-                            .trim()
-                            .replace(/[^a-zA-Z0-9]/g, "");
-                        const targetRollNo = (arr[i].roll_no || "")
-                            .trim()
-                            .replace(/[^a-zA-Z0-9]/g, "");
-                        return currentRollNo === targetRollNo;
+                for (let sem = 1; sem <= 6; sem++) {
+                    // Iterate over the semesters
+                    // Filter the data
+                    const arr = await filterData({
+                        dataArr,
+                        semester: sem,
+                        stream: streams[s],
+                        year: y,
                     });
 
-                    console.log("subjectArr:", subjectArr.length);
+                    console.log(
+                        "after filter-data, arr:",
+                        arr.length,
+                        "dataArr:",
+                        dataArr.length,
+                    );
 
-                    if (subjectArr.length === 0) {
-                        console.error(
-                            `No subjects found for roll number: ${arr[i].roll_no}`,
-                        );
-                        continue;
-                    }
+                    // sendUpdate(`Processing year ${y}, stream ${streams[s]}, semester ${sem}...`);
 
-                    // console.log("processing student:", subjectArr.length, subjectArr[0].roll_no, "dataArr:", dataArr.length, "arr:", arr.length);
-                    // Process the student
-                    try {
-                        const result = await processStudentV2(
-                            subjectArr,
-                            streams[s] as StreamType,
-                            sem,
-                            fileName,
-                            user,
-                        );
-                        console.log("marksheet result:", result);
-                        // Mark the uid as done
-                        doneRollNumber.push(arr[i].roll_no);
+                    // Iterate over the arr[]
+                    const doneRollNumber: string[] = [];
+                    for (let i = 0; i < arr.length; i++) {
+                        // Skip the `uid` if already processed
+                        if (doneRollNumber.includes(arr[i].roll_no)) continue;
 
-                        socket.emit("progress", {
-                            stage: "processing_data",
-                            message: `Done ${subjectArr[0].name} | year: ${y} | semester: ${sem} |  Registration No.: ${subjectArr[0].registration_no} | Roll No.: ${subjectArr[0].roll_no}`,
+                        // Select all the subject rows for the uid: arr[i].roll_no
+                        const subjectArr = arr.filter((row) => {
+                            // Normalize roll numbers before comparison
+                            const currentRollNo = (row.roll_no || "")
+                                .trim()
+                                .replace(/[^a-zA-Z0-9]/g, "");
+                            const targetRollNo = (arr[i].roll_no || "")
+                                .trim()
+                                .replace(/[^a-zA-Z0-9]/g, "");
+                            return currentRollNo === targetRollNo;
                         });
-                    } catch (error) {
-                        console.error(
-                            `Error processing student with roll number ${arr[i].roll_no}:`,
-                            error,
-                        );
-                        socket.emit("progress", {
-                            stage: "processing_data",
-                            message: `Error processing ${arr[i].roll_no}: ${error instanceof Error ? error.message : String(error)}`,
-                        });
+
+                        console.log("subjectArr:", subjectArr.length);
+
+                        if (subjectArr.length === 0) {
+                            console.error(
+                                `No subjects found for roll number: ${arr[i].roll_no}`,
+                            );
+                            continue;
+                        }
+
+                        // console.log("processing student:", subjectArr.length, subjectArr[0].roll_no, "dataArr:", dataArr.length, "arr:", arr.length);
+                        // Process the student
+                        try {
+                            const result = await processStudentV2(
+                                subjectArr,
+                                streams[s] as StreamType,
+                                sem,
+                                fileName,
+                                user,
+                            );
+                            console.log("marksheet result:", result);
+                            if (!result.marksheet) {
+                                for (const subject of subjectArr) {
+                                    exceptionalArr.push({
+                                        ...subject,
+                                        errorMessage: result.message,
+                                    });
+                                }
+                            }
+                            // Mark the uid as done
+                            doneRollNumber.push(arr[i].roll_no);
+
+                            socket.emit("progress", {
+                                stage: "processing_data",
+                                message: `Done ${subjectArr[0].name} | year: ${y} | semester: ${sem} |  Registration No.: ${subjectArr[0].registration_no} | Roll No.: ${subjectArr[0].roll_no}`,
+                            });
+                        } catch (error) {
+                            console.error(
+                                `Error processing student with roll number ${arr[i].roll_no}:`,
+                                error,
+                            );
+                            socket.emit("progress", {
+                                stage: "processing_data",
+                                message: `Error processing ${arr[i].roll_no}: ${error instanceof Error ? error.message : String(error)}`,
+                            });
+                        }
                     }
+                    // console.log(`Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`);
+                    socket.emit("progress", {
+                        stage: "processing_data",
+                        message: `Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`,
+                    });
                 }
-                // console.log(`Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`);
-                socket.emit("progress", {
-                    stage: "processing_data",
-                    message: `Processed year ${y} | stream ${streams[s]} | semester ${sem} | Total: ${arr.length}`,
-                });
             }
         }
+    }
+    else {
+        console.log("No data found in the marksheet.");
+        socket.emit("progress", {
+            stage: "completed",
+            message: "No data found in the marksheet.",
+        });
+        return { status: false, exceptionalArr };
+
     }
 
     console.log("user:", user);
@@ -503,7 +527,7 @@ export async function uploadFile(
     });
 
 
-
+    console.log(exceptionalArr.length, "exceptionalArr:", exceptionalArr);
     return { status: true, exceptionalArr };
 }
 
@@ -888,14 +912,14 @@ async function filterData({
     const isBCOM = stream?.degree.name === "BCOM";
     const yearKey = isBCOM && stream.framework === "CBCS" ? "year2" : "year1";
 
-    console.log("FilterData - Looking for:", {
-        degreeName: stream?.degree.name,
-        degreeProgramme: stream.degreeProgramme,
-        year,
-        framework: stream.framework,
-        semester,
-        yearKey,
-    });
+    // console.log("FilterData - Looking for:", {
+    //     degreeName: stream?.degree.name,
+    //     degreeProgramme: stream.degreeProgramme,
+    //     year,
+    //     framework: stream.framework,
+    //     semester,
+    //     yearKey,
+    // });
 
     // First check if matching data exists
     const matchingData = dataArr.filter((row) => {
@@ -915,7 +939,7 @@ async function filterData({
         );
     });
 
-    console.log(`FilterData - Found ${matchingData.length} matching rows`);
+    console.log(`FilterData - Found ${matchingData.length} matching rows`, stream.degree.name, cleanStream(dataArr[0]!.stream! as string)?.trim().toUpperCase(), year, semester);
 
     if (matchingData.length > 0) {
         const sampleRow = matchingData[0];
@@ -1187,10 +1211,13 @@ async function processStudentV2(
                 : null,
             projectCredit: arr[i].project_credit ? Number(arr[i].project_credit) : 0,
             projectYear: arr[i].project_year ? Number(arr[i].project_year) : null,
-
+            totalCredits: arr[i].credit ?? 0,
             totalMarks: formatMarks(arr[i].total),
             letterGrade: arr[i].grade,
-            status: arr[i].status?.toUpperCase() as "PASS" | "FAIL" | "P" | "F" | "F(IN)" | "F(PR)" | "F(TH)" | "AB" | null | undefined,
+            status: arr[i].status?.toUpperCase() ? (
+                arr[i].status?.toUpperCase().trim() === "F(TU)" ? "F(PR)"
+                    : (arr[i].status?.toUpperCase() as "PASS" | "FAIL" | "P" | "F" | "F(IN)" | "F(PR)" | "F(TH)" | "AB" | null | undefined)
+            ) : null,
             ngp: formatMarks(arr[i].ngp)?.toString(),
             tgp: formatMarks(arr[i].tgp)?.toString(),
         };
@@ -1393,6 +1420,70 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     return;
 }
 
+function getCompleteMarksheetRow(row: Partial<MarksheetRow>): MarksheetRow {
+    return {
+        registration_no: row.registration_no || "",
+        roll_no: row.roll_no || "",
+        uid: row.uid || "",
+        framework: row.framework as "CCF" | "CBCS",
+        specialization: row.specialization || null,
+        shift: (row.shift || null) as "Morning" | "Afternoon" | "Evening" | "Day" | null,
+        section: row.section || null,
+        stream: row.stream || "",
+        course: row.course || "",
+        semester: row.semester || 0,
+        name: row.name || "",
+        sgpa: row.sgpa || null,
+        remarks: row.remarks || null,
+        year1: row.year1!,
+        year2: row.year2 || null,
+
+        subjectName: row.subjectName || "",
+        paperCode: row.paperCode!,
+
+        errorMessage: row.errorMessage || "",
+
+        credit: row.credit || null,
+        full_marks: row.full_marks || null,
+
+        internal_marks: row.internal_marks || null,
+        practical_marks: row.practical_marks || null,
+        theory_marks: row.theory_marks || null,
+        project_marks: row.project_marks || null,
+        viva_marks: row.viva_marks || null,
+        total: row.total || null,
+        status: row.status || null,
+        grade: row.grade || null,
+        ngp: row.ngp || null,
+        tgp: row.tgp || null,
+        cgpa: row.cgpa || null,
+        classification: row.classification || null,
+
+        full_marks_internal: row.full_marks_internal || null,
+        full_marks_practical: row.full_marks_practical || null,
+        full_marks_theory: row.full_marks_theory || null,
+        full_marks_project: row.full_marks_project || null,
+        full_marks_viva: row.full_marks_viva || null,
+
+        internal_year: row.internal_year || null,
+        internal_credit: row.internal_credit || null,
+        internal_credit_obtained: row.internal_credit_obtained || null,
+        practical_year: row.practical_year || null,
+        practical_credit: row.practical_credit || null,
+        practical_credit_obtained: row.practical_credit_obtained || null,
+        theory_year: row.theory_year || null,
+        theory_credit: row.theory_credit || null,
+        theory_credit_obtained: row.theory_credit_obtained || null,
+        project_year: row.project_year || null,
+        project_credit: row.project_credit || null,
+        project_credit_obtained: row.project_credit_obtained || null,
+        viva_year: row.viva_year || null,
+        viva_credit: row.viva_credit || null,
+        viva_credit_obtained: row.viva_credit_obtained || null,
+    };
+}
+
+
 export async function validateData(
     dataArr: MarksheetRow[],
     socket?: Socket<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
@@ -1496,7 +1587,7 @@ export async function validateData(
                         if (!subjectMetadata) {
                             // Collect the marksheet entries for such students
                             studentMksArr[k].errorMessage = "The given subject is not found";
-                            exceptionalArr.push(studentMksArr[k]);
+                            exceptionalArr.push(getCompleteMarksheetRow(studentMksArr[k]));
                             continue;
                         }
 
@@ -1540,7 +1631,7 @@ export async function validateData(
                                 subjectMetadata?.fullMarksInternal,
                             );
                             studentMksArr[k].errorMessage = "Invalid internal marks";
-                            exceptionalArr.push(studentMksArr[k]);
+                            exceptionalArr.push(getCompleteMarksheetRow(studentMksArr[k]));
                             continue;
                         }
 
@@ -1557,7 +1648,7 @@ export async function validateData(
                                 subjectMetadata?.fullMarksTheory,
                             );
                             studentMksArr[k].errorMessage = "Invalid theory marks";
-                            exceptionalArr.push(studentMksArr[k]);
+                            exceptionalArr.push(getCompleteMarksheetRow(studentMksArr[k]));
                             continue;
                         }
 
@@ -1581,7 +1672,7 @@ export async function validateData(
                             );
                             console.log(paperCode);
                             studentMksArr[k].errorMessage = "Invalid practical marks";
-                            exceptionalArr.push(studentMksArr[k]);
+                            exceptionalArr.push(getCompleteMarksheetRow(studentMksArr[k]));
                             continue;
                         }
 
@@ -1598,7 +1689,7 @@ export async function validateData(
                                 subjectMetadata?.fullMarks,
                             );
                             studentMksArr[k].errorMessage = "Invalid total marks";
-                            exceptionalArr.push(studentMksArr[k]);
+                            exceptionalArr.push(getCompleteMarksheetRow(studentMksArr[k]));
                             continue;
                         }
 

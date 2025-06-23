@@ -15,7 +15,8 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
     const socket = io.sockets.sockets.get(socketId as string);
 
     if (!req.file || !socket) {
-        return res.status(400).json({ message: "No file uploaded or invalid socket" });
+        res.status(400).json({ message: "No file uploaded or invalid socket" });
+        return;
     }
 
     const fileName = req.file.filename;
@@ -38,7 +39,8 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
 
             res.setHeader("Content-Disposition", "attachment; filename=exceptions.xlsx");
             res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-            return res.send(buffer); // only response
+            res.send(buffer); // only response
+            return;
         }
 
         // Only emit socket event if successful
@@ -56,7 +58,8 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
             });
         });
 
-        return res.status(200).json(new ApiResponse(200, "SUCCESS", status, "Marksheets uploaded successfully!"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", status, "Marksheets uploaded successfully!"));
+        return;
 
     } catch (error) {
         // Cleanup file on error as well
