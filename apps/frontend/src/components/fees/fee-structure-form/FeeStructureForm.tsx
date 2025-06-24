@@ -6,12 +6,18 @@ import { PreviewSimulation } from "./steps/PreviewSimulation";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { FeesStructureDto, FeesSlabYear, AcademicYear, FeesSlab, FeesHead, FeesReceiptType } from "../../../types/fees";
 import { Course } from "../../../types/academics/course";
-import { Degree } from "../../../types/resources/degree";
+// import { Degree } from "../../../types/resources/degree";
 import { Stream } from "../../../types/academics/stream";
 
 interface FeeStructureFormProps {
   onClose: () => void;
   onSubmit: (data: { feesStructure: FeesStructureDto, feesSlabYears: FeesSlabYear[] }) => void;
+  fieldsDisabled?: boolean;
+  disabledSteps?: number[];
+  selectedAcademicYear?: AcademicYear | null;
+  selectedCourse?: Course | null;
+  initialStep?: number;
+  feesStructure?: FeesStructureDto | null;
 }
 
 // const stepImages = [
@@ -28,61 +34,63 @@ const steps = [
   { number: 4, title: "Preview & Simulation", description: "Review and simulate the generated fee structure.", image: "/preview.png" },
 ];
 
-const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }) => {
-  const [currentStep, setCurrentStep] = useState(1);
-
-  // Mock data for initial state to satisfy types
-  const mockDegree: Degree = {
+// Add a mockStream for default values
+const mockStream: Stream = {
+  id: 1,
+  name: 'Default Stream',
+  level: 'UNDER_GRADUATE',
+  framework: 'CCF',
+  degree: {
     id: 1,
-    name: "Bachelor of Commerce",
-    level: "UNDER_GRADUATE",
+    name: 'Default Degree',
+    level: 'UNDER_GRADUATE',
     sequence: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
-  };
+  },
+  degreeProgramme: 'HONOURS',
+  duration: 3,
+  numberOfSemesters: 6,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
-  const mockStream: Stream = {
-    id: 1,
-    name: "B.Com Morning",
-    level: "UNDER_GRADUATE",
-    framework: "CCF",
-    degree: mockDegree,
-    degreeProgramme: "HONOURS",
-    duration: 3,
-    numberOfSemesters: 6,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
+const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit,initialStep = 1, feesStructure }) => {
+  const [currentStep, setCurrentStep] = useState(initialStep);
 
-  const [feesStructure, setFeesStructure] = useState<FeesStructureDto>({
-    closingDate: new Date(),
-    semester: 1,
-    advanceForSemester: 1,
-    startDate: new Date(),
-    endDate: new Date(),
-    onlineStartDate: new Date(),
-    onlineEndDate: new Date(),
-    numberOfInstalments: null,
-    instalmentStartDate: null,
-    instalmentEndDate: null,
-    feesReceiptTypeId: null,
-    academicYear: {
-      id: undefined,
-      startYear: new Date(),
-      endYear: new Date(),
-      isCurrentYear: false,
-    },
-    course: {
-      id: undefined,
-      name: "",
-      stream: mockStream, // Use mock stream
-      shortName: null,
-      codePrefix: null,
-      universityCode: null,
-    },
-    advanceForCourse: null,
-    components: [],
-  });
+  // Use the provided feesStructure as initial state if present
+  const [formFeesStructure, setFormFeesStructure] = useState<FeesStructureDto>(
+    feesStructure || {
+      closingDate: new Date(),
+      semester: 1,
+      advanceForSemester: 1,
+      startDate: new Date(),
+      endDate: new Date(),
+      onlineStartDate: new Date(),
+      onlineEndDate: new Date(),
+      numberOfInstalments: null,
+      instalmentStartDate: null,
+      instalmentEndDate: null,
+      feesReceiptTypeId: null,
+      academicYear: {
+        id: undefined,
+        startYear: new Date(),
+        endYear: new Date(),
+        isCurrentYear: false,
+      },
+      course: {
+        id: undefined,
+        name: "",
+        stream: mockStream,
+        shortName: null,
+        codePrefix: null,
+        universityCode: null,
+      },
+      advanceForCourse: null,
+      components: [],
+    }
+  );
+
   const [feesSlabYears, setFeesSlabYears] = useState<FeesSlabYear[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -91,6 +99,9 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
   const [feesReceiptTypes, setFeesReceiptTypes] = useState<FeesReceiptType[]>([]);
 
   useEffect(() => {
+    setCurrentStep(initialStep);
+    if (feesStructure) setFormFeesStructure(feesStructure);
+
     // Mock fetching data
     const mockCourses: Course[] = [
       { id: 1, name: "B.Com Morning", stream: mockStream, shortName: 'BCOM', codePrefix: 'BCM', universityCode: '123' },
@@ -134,7 +145,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
         }));
         setFeesSlabYears(initialSlabYears);
     }
-  }, []);
+  }, [initialStep, feesStructure]);
 
   const handleNext = () => {
     setCurrentStep((prev) => Math.min(prev + 1, 4));
@@ -145,7 +156,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
   };
 
   const handleSubmit = () => {
-    onSubmit({ feesStructure, feesSlabYears });
+    onSubmit({ feesStructure: formFeesStructure, feesSlabYears });
   };
 
   const currentStepData = steps.find(s => s.number === currentStep)!;
@@ -204,8 +215,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
           {/* Step content here */}
           {currentStep === 1 && (
             <AcademicSetup
-              feesStructure={feesStructure}
-              setFeesStructure={setFeesStructure}
+              feesStructure={formFeesStructure}
+              setFeesStructure={setFormFeesStructure}
               courses={courses}
               academicYears={academicYears}
             />
@@ -216,13 +227,13 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
               setFeesSlabYears={setFeesSlabYears}
               slabs={slabs}
               setSlabs={setSlabs}
-              academicYearId={feesStructure.academicYear!.id}
+              academicYearId={formFeesStructure.academicYear!.id}
             />
           )}
           {currentStep === 3 && (
             <FeeConfiguration
-              feesStructure={feesStructure}
-              setFeesStructure={setFeesStructure}
+              feesStructure={formFeesStructure}
+              setFeesStructure={setFormFeesStructure}
               feeHeads={feeHeads}
               courses={courses}
               feesReceiptTypes={feesReceiptTypes}
@@ -230,7 +241,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
           )}
           {currentStep === 4 && (
             <PreviewSimulation
-              feesStructure={feesStructure}
+              feesStructure={formFeesStructure}
               feeHeads={feeHeads}
               slabs={slabs}
               feesSlabYears={feesSlabYears}

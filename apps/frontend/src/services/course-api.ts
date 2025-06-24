@@ -1,24 +1,6 @@
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-
-export interface Course {
-    id: number;
-    name: string;
-    streamId?: number;
-    shortName?: string;
-    codePrefix?: string;
-    universityCode?: string;
-    createdAt?: string;
-    updatedAt?: string;
-    stream?: {
-        id: number;
-        degreeProgramme: string;
-        degree?: {
-            id: number;
-            name: string;
-        };
-    };
-}
+import { Course } from '@/types/academics/course';
 
 export interface NewCourse {
     name: string;

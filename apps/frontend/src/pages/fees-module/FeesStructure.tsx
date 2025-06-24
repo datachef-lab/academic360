@@ -1,19 +1,20 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Banknote,
   PlusCircle,
-  Upload,
+  // Upload,
   FileDown,
   X,
   AlertCircle,
-  Layers3,
-  CheckCircle,
-  XCircle,
-  Search,
+  // Layers3,
+  // CheckCircle,
+  // XCircle,
+  // Search,
   Filter,
 } from "lucide-react";
 import FeeStructureForm from "../../components/fees/fee-structure-form/FeeStructureForm";
-import { getAllCourses, Course } from "../../services/course-api";
+import { getAllCourses } from "../../services/course-api";
+import { Course } from "@/types/academics/course";
 import { FeesStructureDto, AcademicYear } from "../../types/fees";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+// import { Card, CardContent } from "@/components/ui/card";
 // import { api } from "@/utils/api";
 
 // Hardcoded academic years
@@ -339,6 +340,11 @@ interface SlabType {
   disabled: boolean;
 }
 
+interface SlabManagementProps {
+  showModal: boolean;
+  setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
 const initialSlabData: SlabType[] = [
   { id: 1, name: "Merit Scholarship", code: "MERIT", disabled: false },
   { id: 2, name: "EWS Concession", code: "EWS", disabled: false },
@@ -346,9 +352,8 @@ const initialSlabData: SlabType[] = [
   { id: 4, name: "Staff Ward", code: "STAFF", disabled: true },
 ];
 
-const SlabManagement: React.FC = () => {
+const SlabManagement: React.FC<SlabManagementProps> = ({ showModal, setShowModal }) => {
   const [data, setData] = useState<SlabType[]>(initialSlabData);
-  const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<SlabType | null>(null);
   const [form, setForm] = useState<SlabType>({
     id: 0,
@@ -357,7 +362,7 @@ const SlabManagement: React.FC = () => {
     disabled: false,
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const [filteredData, setFilteredData] = useState<SlabType[]>(initialSlabData);
@@ -421,75 +426,23 @@ const SlabManagement: React.FC = () => {
     setData(data.filter((item) => item.id !== id));
   };
 
-  const totalSlabs = data.length;
-  const enabledSlabs = data.filter((s) => !s.disabled).length;
-  const disabledSlabs = data.filter((s) => s.disabled).length;
+  // const totalSlabs = data.length;
+  // const enabledSlabs = data.filter((s) => !s.disabled).length;
+  // const disabledSlabs = data.filter((s) => s.disabled).length;
 
   return (
     <div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Total Slabs</p>
-                <p className="text-lg font-bold text-gray-900">{totalSlabs}</p>
-              </div>
-              <div className="p-2 bg-purple-100 rounded">
-                <Layers3 className="h-4 w-4 text-purple-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Enabled</p>
-                <p className="text-lg font-bold text-gray-900">{enabledSlabs}</p>
-              </div>
-              <div className="p-2 bg-green-100 rounded">
-                <CheckCircle className="h-4 w-4 text-green-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border border-gray-200 shadow-sm bg-white">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-600">Disabled</p>
-                <p className="text-lg font-bold text-gray-900">{disabledSlabs}</p>
-              </div>
-              <div className="p-2 bg-gray-100 rounded">
-                <XCircle className="h-4 w-4 text-gray-700" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+      {/* Removed Add button from here, now controlled by parent */}
       <div className="bg-white rounded-lg shadow-sm p-3 mb-4 border border-gray-200">
         <div className="flex flex-col gap-3">
-          <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search slab types..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-black"
-            />
-          </div>
-
+          {/* ...existing filter and export buttons... */}
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-all ${
-                showFilters
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-all ${showFilters
                   ? "bg-purple-50 border-purple-300 text-purple-700"
                   : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-              }`}
+                }`}
             >
               <Filter className="h-3.5 w-3.5" />
               Filters
@@ -497,15 +450,6 @@ const SlabManagement: React.FC = () => {
                 <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
               )}
             </button>
-
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              Add
-            </button>
-
             <button
               onClick={handleExport}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
@@ -514,7 +458,6 @@ const SlabManagement: React.FC = () => {
               Export
             </button>
           </div>
-
           {showFilters && (
             <div className="pt-3 border-t border-gray-200">
               <div className="flex flex-wrap gap-3">
@@ -576,11 +519,10 @@ const SlabManagement: React.FC = () => {
                   <TableCell className="px-4 py-3">{item.code}</TableCell>
                   <TableCell className="px-4 py-3">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        item.disabled
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.disabled
                           ? "bg-gray-100 text-gray-700"
                           : "bg-green-100 text-green-700"
-                      }`}
+                        }`}
                     >
                       {item.disabled ? "Disabled" : "Enabled"}
                     </span>
@@ -609,7 +551,7 @@ const SlabManagement: React.FC = () => {
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Edit Slab</DialogTitle>
+            <DialogTitle>{editingItem ? "Edit Slab" : "Add Slab"}</DialogTitle>
             <DialogDescription>
               Make changes to the slab here. Click save when you're done.
             </DialogDescription>
@@ -654,15 +596,17 @@ const SlabManagement: React.FC = () => {
 
 const FeesStructure: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
-  // const [showFilters, setShowFilters] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  // const setIsDragging = useState(false)[1];
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showSlabModal, setShowSlabModal] = useState(false);
+  const [modalFieldsDisabled, setModalFieldsDisabled] = useState(false);
+  // const fileInputRef = useRef<HTMLInputElement>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [filteredFeesStructures, setFilteredFeesStructures] = useState<FeesStructureDto[]>(mockFeesStructures);
   const [activeTab, setActiveTab] = useState<"fees" | "slabs">("fees");
+  const [currentFeesStructure, setCurrentFeesStructure] = useState<FeesStructureDto | null>(null);
 
   useEffect(() => {
     getAllCourses().then((res) => {
@@ -678,7 +622,7 @@ const FeesStructure: React.FC = () => {
         (fs) => fs.academicYear?.id === selectedAcademicYear.id
       );
     }
-    
+
     if (selectedCourse) {
       filtered = filtered.filter(
         (fs) => fs.course?.id === selectedCourse.id
@@ -688,189 +632,198 @@ const FeesStructure: React.FC = () => {
     setFilteredFeesStructures(filtered);
   }, [selectedAcademicYear, selectedCourse]);
 
-  const handleFileUpload = (file: File) => {
-    console.log("Uploading file:", file.name);
-    setTimeout(() => {
-      alert("File uploaded successfully!");
-    }, 1000);
-  };
+  // const handleFileUpload = (file: File) => {
+  //   console.log("Uploading file:", file.name);
+  //   setTimeout(() => {
+  //     alert("File uploaded successfully!");
+  //   }, 1000);
+  // };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
+  // const handleDragEnter = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   setIsDragging(true);
+  // };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
+  // const handleDragLeave = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   setIsDragging(false);
+  // };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+  // const handleDragOver = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  // };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
+  // const handleDrop = (e: React.DragEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
+  //   setIsDragging(false);
 
-    const files = Array.from(e.dataTransfer.files);
-    if (files[0]) {
-      handleFileUpload(files[0]);
-    }
-  };
+  //   const files = Array.from(e.dataTransfer.files);
+  //   if (files[0]) {
+  //     handleFileUpload(files[0]);
+  //   }
+  // };
 
-  const handleExport = () => {
-    const csvContent = [
-      ["ID", "Name", "Amount", "Category", "Applied To", "Due Date", "Status", "Description"],
-      ...filteredFeesStructures.map((fee) => [
-        fee.id,
-        fee.course?.name || "",
-        fee.components.reduce((sum, comp) => sum + comp.amount, 0).toLocaleString(),
-        fee.course?.stream.degree.name || "",
-        fee.course?.stream.degreeProgramme || "",
-        fee.startDate?.toLocaleDateString() || "",
-        fee.shift || "N/A",
-        fee.components.map(comp => comp.remarks).join(", ")
-      ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+  // const handleExport = () => {
+  //   const csvContent = [
+  //     ["ID", "Name", "Amount", "Category", "Applied To", "Due Date", "Status", "Description"],
+  //     ...filteredFeesStructures.map((fee) => [
+  //       fee.id,
+  //       fee.course?.name || "",
+  //       fee.components.reduce((sum, comp) => sum + comp.amount, 0).toLocaleString(),
+  //       fee.course?.stream.degree.name || "",
+  //       fee.course?.stream.degreeProgramme || "",
+  //       fee.startDate?.toLocaleDateString() || "",
+  //       fee.shift || "N/A",
+  //       fee.components.map(comp => comp.remarks).join(", ")
+  //     ]),
+  //   ]
+  //     .map((row) => row.join(","))
+  //     .join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "fees_structure.csv";
-    a.click();
-  };
+  //   const blob = new Blob([csvContent], { type: "text/csv" });
+  //   const url = window.URL.createObjectURL(blob);
+  //   const a = document.createElement("a");
+  //   a.href = url;
+  //   a.download = "fees_structure.csv";
+  //   a.click();
+  // };
 
   const handleFeeStructureSubmit = (formData: unknown) => {
     console.log("Fee Structure Form Data:", formData);
     setShowFeeStructureForm(false);
   };
 
+  const handleAdd = () => {
+    setModalFieldsDisabled(true);
+    setCurrentFeesStructure({
+      id: undefined, // or null or 0
+      academicYear: selectedAcademicYear!,
+      course: selectedCourse!,
+      closingDate: new Date(),
+      semester: 1,
+      advanceForSemester: 1,
+      shift: 'MORNING',
+      startDate: new Date(),
+      endDate: new Date(),
+      onlineStartDate: new Date(),
+      onlineEndDate: new Date(),
+      numberOfInstalments: 1,
+      instalmentStartDate: new Date(),
+      instalmentEndDate: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      advanceForCourse: null,
+      components: [],
+    });
+    setShowFeeStructureForm(true);
+  };
+
+  const handleEdit = (fs: FeesStructureDto) => {
+    setModalFieldsDisabled(true);
+    setCurrentFeesStructure(fs);
+    setShowFeeStructureForm(true);
+  };
+
+  const handleCreate = () => {
+    setModalFieldsDisabled(false);
+    setCurrentFeesStructure(null);
+    setShowFeeStructureForm(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-3 lg:p-4">
+    <div className="">
       <div className="mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-purple-600 text-white rounded-lg">
-            <Banknote className="h-5 w-5" />
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-purple-600 text-white rounded-lg">
+              <Banknote className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Fees Structure</h1>
+              <p className="text-sm text-gray-600">Manage and organize fee structures</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Fees Structure</h1>
-            <p className="text-sm text-gray-600">Manage and organize fee structures</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center mb-6 bg-white rounded-lg shadow-sm p-3 border border-gray-200">
-        <div className="flex items-center gap-4">
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
-          <select
-            value={selectedAcademicYear?.id || ""}
-            onChange={e => {
-              const year = academicYears.find(y => y.id === Number(e.target.value));
-              setSelectedAcademicYear(year || null);
-            }}
-            className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">Select Academic Year</option>
-            {academicYears.map(year => (
-              <option key={year.id} value={year.id}>
-                {year.startYear.getFullYear()} - {year.endYear.getFullYear()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
-          <select
-            value={selectedCourse?.id || ""}
-            onChange={e => {
-              const course = courses.find(c => c.id === Number(e.target.value));
-              setSelectedCourse(course || null);
-            }}
-            className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-          >
-            <option value="">Select Course</option>
-            {courses.map(course => (
-              <option key={course.id} value={course.id}>{course.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="self-end">
-          <button
-            onClick={() => setShowFeeStructureForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-          >
-            <PlusCircle className="h-3.5 w-3.5" />
-            Create Fee Structure
-          </button>
-        </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            Export
-          </button>
-
-          <div
-            className={`relative border-2 border-dashed rounded-md transition-all ${isDragging ? "border-purple-500 bg-purple-50" : "border-gray-300 hover:border-gray-400"
-              }`}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.xlsx"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              Upload
-            </button>
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
+              <select
+                value={selectedAcademicYear?.id || ""}
+                onChange={e => {
+                  const year = academicYears.find(y => y.id === Number(e.target.value));
+                  setSelectedAcademicYear(year || null);
+                }}
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select Academic Year</option>
+                {academicYears.map(year => (
+                  <option key={year.id} value={year.id}>
+                    {year.startYear.getFullYear()} - {year.endYear.getFullYear()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
+              <select
+                value={selectedCourse?.id || ""}
+                onChange={e => {
+                  const course = courses.find(c => c.id === Number(e.target.value));
+                  setSelectedCourse(course || null);
+                }}
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Select Course</option>
+                {courses.map(course => (
+                  <option key={course.id} value={course.id}>{course.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="self-end">
+              <button
+                onClick={handleAdd}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${(!selectedAcademicYear || !selectedCourse) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!selectedAcademicYear || !selectedCourse}
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                {activeTab === "fees" ? "Add Fees Structure" : "Add Slab"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="border-b border-gray-200">
+      <div className="border-b border-gray-200 flex items-center justify-between">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <button
             onClick={() => setActiveTab("fees")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'fees'
+            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'fees'
                 ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Fees Structure
           </button>
           <button
             onClick={() => setActiveTab("slabs")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'slabs'
+            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'slabs'
                 ? 'border-purple-500 text-purple-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+              }`}
           >
             Slabs
           </button>
         </nav>
+        <button
+          onClick={handleCreate}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+        >
+          <PlusCircle className="h-3.5 w-3.5" />
+          Create
+        </button>
       </div>
 
       <div className="mt-6">
@@ -896,8 +849,9 @@ const FeesStructure: React.FC = () => {
                         <td className="px-4 py-3 whitespace-nowrap">₹{fs.components.reduce((sum, comp) => sum + comp.amount, 0).toLocaleString()}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{fs.shift || 'N/A'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <button className="text-purple-600 hover:text-purple-800 mr-2">Edit</button>
-                          <button className="text-red-600 hover:text-red-800">Delete</button>
+                          <button className="text-purple-600 hover:text-purple-800 mr-2" onClick={() => handleEdit(fs)}>
+                            Edit
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -912,7 +866,7 @@ const FeesStructure: React.FC = () => {
             )}
           </div>
         ) : (
-          <SlabManagement />
+          <SlabManagement showModal={showSlabModal} setShowModal={setShowSlabModal} />
         )}
       </div>
 
@@ -1006,7 +960,14 @@ const FeesStructure: React.FC = () => {
 
       {showFeeStructureForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <FeeStructureForm onClose={() => setShowFeeStructureForm(false)} onSubmit={handleFeeStructureSubmit} />
+          <FeeStructureForm
+            onClose={() => setShowFeeStructureForm(false)}
+            onSubmit={handleFeeStructureSubmit}
+            fieldsDisabled={modalFieldsDisabled}
+            disabledSteps={[1,2,3]}
+            feesStructure={currentFeesStructure}
+            initialStep={modalFieldsDisabled ? 3 : 1}
+          />
         </div>
       )}
     </div>
