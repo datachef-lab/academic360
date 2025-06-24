@@ -70,7 +70,7 @@ export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
 ]);
 
 export const marksheetSourceEnum = pgEnum("marksheet_source", [
-    "FILE_UPLOAD", 
+    "FILE_UPLOAD",
     "ADDED"
 ]);
 
@@ -86,4 +86,23 @@ export const paperModeTypeEnum = pgEnum("paper_mode_type", [
     "ASSIGNMENT",
     "PROJECT",
     "MCQ",
+]);
+
+export const paymentStatusEnum = pgEnum("payment_status", [
+    "PENDING",
+    "COMPLETED",
+    "FAILED",
+    "REFUNDED",
+    "CANCELLED"
+])
+
+export const paymentModeEnum = pgEnum("payment_mode", [
+    "CASH",
+    "CHEQUE",
+    "ONLINE",
+]);
+
+export const studentFeesMappingEnum = pgEnum("student_fees_mapping_type", [
+    "FULL",
+    "INSTALMENT"
 ]);
