@@ -194,17 +194,31 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({ data, onChan
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <input
-                      type="number"
+                      type="text"
                       value={component.amount}
-                      onChange={(e) => handleComponentChange(component.id, "amount", Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^\d*\.?\d*$/.test(val)) {
+                          handleComponentChange(
+                          component.id,
+                          "amount",
+                          val === "" || val.endsWith(".") ? val : parseFloat(val),
+                        );
+                        }
+                      }}
                       className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
                     />
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">
                     <input
-                      type="number"
+                      type="text"
                       value={component.sequence}
-                      onChange={(e) => handleComponentChange(component.id, "sequence", Number(e.target.value))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^\d*$/.test(val)) {
+                          handleComponentChange(component.id, "sequence", val === "" ? 0 : parseInt(val, 10));
+                        }
+                      }}
                       className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
                     />
                   </td>

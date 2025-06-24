@@ -95,7 +95,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({ onClose, onSubmit }
   ];
 
   return (
-    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-auto">
+    <div className="bg-white rounded-lg shadow-xl max-w-7xl w-full mx-auto">
       <div className="border-b border-gray-200">
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">

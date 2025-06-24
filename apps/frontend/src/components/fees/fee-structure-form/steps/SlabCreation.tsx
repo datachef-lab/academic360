@@ -32,7 +32,7 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({ data, onChange }) =>
         slab.id === id
           ? {
               ...slab,
-              [field]: field === "concessionPercentage" ? Number(value) : value,
+              [field]: value,
             }
           : slab,
       ),
@@ -84,11 +84,18 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({ data, onChange }) =>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
-                      type="number"
-                      min="0"
-                      max="100"
+                      type="text"
                       value={slab.concessionPercentage}
-                      onChange={(e) => handleSlabChange(slab.id, "concessionPercentage", e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (/^\d*\.?\d*$/.test(val)) {
+                          handleSlabChange(
+                          slab.id,
+                          "concessionPercentage",
+                          val === "" || val.endsWith(".") ? val : parseFloat(val),
+                        );
+                        }
+                      }}
                       className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                     />
                   </td>
