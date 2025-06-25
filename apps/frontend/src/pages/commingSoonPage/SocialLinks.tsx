@@ -86,7 +86,7 @@ const SocialLinks: React.FC = () => {
         className="flex items-center justify-center gap-4 sm:gap-6"
       >
        
-        {socialLinks.map((social, index) => (
+        {socialLinks.map((social) => (
           <motion.a
             key={social.name}
             variants={itemVariants}
