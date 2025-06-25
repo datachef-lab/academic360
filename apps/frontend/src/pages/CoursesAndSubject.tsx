@@ -32,10 +32,11 @@ import {
   deleteSubject,
   updateSubject 
 } from '@/services/subject-metadata';
+import { Course } from '@/types/academics/course';
 
 // Import services for courses
 import {
-  Course,
+  // Course,
   NewCourse,
   getAllCourses,
   addCourse,
@@ -426,10 +427,10 @@ export const CoursesAndSubject: React.FC = () => {
   const handleEditCourse = useCallback((course: Course) => {
     setNewCourse({
       name: course.name,
-      shortName: course.shortName,
-      codePrefix: course.codePrefix,
-      universityCode: course.universityCode,
-      streamId: course.streamId
+      shortName: course.shortName || "",
+      codePrefix: course.codePrefix || "",
+      universityCode: course.universityCode || "",
+      streamId: course.stream?.id || 0
     });
     
     // Set the degree ID for filtering programmes
@@ -437,7 +438,7 @@ export const CoursesAndSubject: React.FC = () => {
       setSelectedCoursesDegreeId(course.stream.degree.id);
     }
     
-    setEditingCourseId(course.id);
+    setEditingCourseId(course.id ?? null);
     setIsEditMode(true);
     setIsAddCourseDialogOpen(true);
   }, []);
@@ -605,11 +606,11 @@ export const CoursesAndSubject: React.FC = () => {
 
   // Confirm delete course
   const confirmDeleteCourse = useCallback(async () => {
-    if (!courseToDelete) return;
+    if (!courseToDelete || courseToDelete.id === undefined) return;
 
     setIsDeletingCourse(true);
     try {
-      const response = await deleteCourse(courseToDelete.id);
+      const response = await deleteCourse(courseToDelete.id!);
 
       if (response) {
         toast({
@@ -665,7 +666,7 @@ export const CoursesAndSubject: React.FC = () => {
 
     const programmes = courses
       .map((course) => course.stream?.degreeProgramme)
-      .filter((name): name is string => name !== undefined && name !== null);
+      .filter((name) => typeof name === 'string');
     return [...new Set(programmes)].sort() as string[];
   }, [courses]);
   

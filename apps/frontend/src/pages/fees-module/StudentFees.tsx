@@ -66,7 +66,7 @@ const StudentFees: React.FC = () => {
         await updateStudentFeesMappingById(editingId, form);
         setEditingId(null);
       } else {
-        await addStudentFeesMapping(form);
+        await addStudentFeesMapping(form as StudentFeesMapping);
       }
       setForm({
         studentId: 0,
@@ -183,7 +183,7 @@ const StudentFees: React.FC = () => {
               <option value="">Select Fees Structure</option>
               {feesStructures.map(structure => (
                 <option key={structure.id} value={structure.id}>
-                  {structure.course?.name} - {structure.academicYear?.startYear?.getFullYear()}
+                  {structure.course?.name} - {structure.academicYear?.startYear}
                 </option>
               ))}
             </select>

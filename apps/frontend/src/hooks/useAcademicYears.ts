@@ -4,6 +4,7 @@ import { AcademicYear } from '@/types/fees';
 import { toast } from 'sonner';
 import { getAllShifts } from '../services/academic';
 import { useState, useEffect } from 'react';
+import { Shift } from '@/types/resources/shift';
 
 // Hook for fetching all academic years
 export const useAcademicYears = () => {
@@ -90,14 +91,14 @@ export const useDeleteAcademicYear = () => {
 };
 
 export function useShifts() {
-  const [shifts, setShifts] = useState([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     getAllShifts()
       .then(data => {
-        setShifts(data);
+        setShifts(data as Shift[]);
         setLoading(false);
       })
       .catch(err => {

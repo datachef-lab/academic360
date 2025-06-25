@@ -277,11 +277,11 @@ existingCourses,
               slabs={slabs}
               // setSlabs={setSlabs}
               academicYearId={formFeesStructure.academicYear?.id}
-              slabYearMappings={feesSlabYears.map((year) => ({
-                feesSlabId: year.feesSlabId,
-                academicYearId: year.academicYearId,
-                feeConcessionRate: year.feeConcessionRate,
-              }))}
+              // slabYearMappings={feesSlabYears.map((year) => ({
+              //   feesSlabId: year.feesSlabId,
+              //   academicYearId: year.academicYearId,
+              //   feeConcessionRate: year.feeConcessionRate,
+              // }))}
             />
           )}
           {currentStep === 3 && (
