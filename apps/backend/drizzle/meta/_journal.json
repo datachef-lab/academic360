@@ -120,6 +120,55 @@
       "when": 1750499101088,
       "tag": "0016_smooth_raza",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1750830346115,
+      "tag": "0017_complex_crusher_hogan",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1750830419146,
+      "tag": "0018_typical_leper_queen",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1750831475387,
+      "tag": "0019_tough_ricochet",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1750841914629,
+      "tag": "0020_moaning_ultimo",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1750842081662,
+      "tag": "0021_lyrical_inertia",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1750842353532,
+      "tag": "0022_rainy_gorgon",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1750858057770,
+      "tag": "0023_stale_sumo",
+      "breakpoints": true
     }
   ]
 }

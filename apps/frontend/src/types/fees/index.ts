@@ -1,9 +1,10 @@
 import { Course } from "../academics/course";
+import { Shift } from "../resources/shift";
 
 export interface AcademicYear {
     readonly id?: number;
-    startYear: Date;
-    endYear: Date;
+    startYear: number;
+    sessionId: number | null;
     isCurrentYear: boolean;
     createdAt?: Date;
     updatedAt?: Date;
@@ -72,7 +73,7 @@ export interface FeesComponent {
 }
 
 export interface FeesStructureDto {
-    readonly id?: number;
+    readonly id?: number; 
     closingDate: Date | null;
     semester: number | null;
     advanceForSemester: number | null;
@@ -83,8 +84,8 @@ export interface FeesStructureDto {
     numberOfInstalments: number | null;
     instalmentStartDate: Date | null;
     instalmentEndDate: Date | null;
-    feesReceiptTypeId?: number | null;
-    shift?: 'MORNING' | 'EVENING' | null;
+    feesReceiptTypeId: number | null;
+    shift?: Shift | null;
     createdAt?: Date;
     updatedAt?: Date;
     academicYear?: AcademicYear;

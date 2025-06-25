@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { feesSlabYearModel, FeesSlabYear } from "../models/fees-slab-year-mapping.model";
 // import { FeesSlabYear } from "../types/fees-slab-year-mapping";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export const getFeesSlabYears = async () => {
     try {
@@ -23,6 +23,17 @@ export const getFeesSlabYearById = async (id: number) => {
 
 export const createFeesSlabYear = async (mapping: FeesSlabYear) => {
     try {
+        const [existing] = await db
+            .select()
+            .from(feesSlabYearModel)
+            .where(
+                and(
+                    eq(feesSlabYearModel.feesSlabId, mapping.feesSlabId),
+                    eq(feesSlabYearModel.academicYearId, mapping.academicYearId),
+                )
+            );
+
+        if (existing) return null;
         const newMapping = await db.insert(feesSlabYearModel).values(mapping).returning();
         return newMapping[0];
     } catch (error) {
@@ -45,5 +56,18 @@ export const deleteFeesSlabYear = async (id: number) => {
         return deletedMapping[0];
     } catch (error) {
         return null;
+    }
+};
+
+export const checkSlabsExistForAcademicYear = async (academicYearId: number) => {
+    try {
+        const mappings = await db
+            .select()
+            .from(feesSlabYearModel)
+            .where(eq(feesSlabYearModel.academicYearId, academicYearId));
+        return { exists: mappings.length > 0 };
+    } catch (error) {
+        console.error("Error checking slabs existence:", error);
+        return { exists: false };
     }
 };

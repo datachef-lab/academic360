@@ -51,12 +51,13 @@ class SocketService {
     // Check if we're already connected
     if (this.socket && this.connected) return;
 
-    const serverUrl = import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:5000';
+    const serverUrl = import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8080';
     
     try {
       this.socket = io(serverUrl, {
         withCredentials: true,
         transports: ['websocket', 'polling'],
+        path: '/socket.io/'
       });
 
       // Set up event listeners

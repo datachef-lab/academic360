@@ -1,0 +1,1 @@
+ALTER TABLE "fees_components" DROP CONSTRAINT "fees_components_sequence_unique";

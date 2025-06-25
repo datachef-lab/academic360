@@ -1,9 +1,10 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType } from "@/types/fees";
 import { DatePicker, Select, InputNumber } from "antd";
 import dayjs from "dayjs";
 import { Course } from "@/types/academics/course";
+import { Shift } from "@/types/resources/shift";
 
 interface FeeConfigurationProps {
   feesStructure: FeesStructureDto;
@@ -11,6 +12,8 @@ interface FeeConfigurationProps {
   feeHeads: FeesHead[];
   courses: Course[];
   feesReceiptTypes: FeesReceiptType[];
+  shifts: Shift[];
+  existingFeeStructures?: FeesStructureDto[];
 }
 
 export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
@@ -19,6 +22,8 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   feeHeads,
   courses,
   feesReceiptTypes,
+  shifts,
+  existingFeeStructures = [],
 }) => {
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
   const setEmptyRows = useState(0)[1];
@@ -28,14 +33,13 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   useEffect(() => {
     // Add 1 default fee component if the list is empty
     if (feesStructure.components.length === 0) {
-      const defaultComponents = Array.from({ length: 1 }, (_, i) => ({
+      const defaultComponents: FeesComponent[] = Array.from({ length: 1 }, (_, i) => ({
         feesHeadId: 0,
         amount: 0,
         sequence: i + 1,
         isConcessionApplicable: false,
         feesStructureId: feesStructure.id || 0,
         remarks: "",
-        severity: "low",
       }));
       setFeesStructure(prev => ({ ...prev, components: defaultComponents as FeesComponent[] }));
     }
@@ -54,20 +58,48 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     setFeesStructure(prev => ({ ...prev, [field]: value }));
   };
 
-  // const handleDateChange = (
-  //   field: keyof FeesStructureDto,
-  //   value: string
-  // ) => {
-  //   setFeesStructure((prev: FeesStructureDto) => ({
-  //     ...prev,
-  //     [field]: new Date(value),
-  //   }));
-  // };
+  const existingCombinations = useMemo(() => existingFeeStructures
+    .filter(fs => 
+      fs.id !== feesStructure.id &&
+      fs.academicYear?.id === feesStructure.academicYear?.id &&
+      fs.course?.id === feesStructure.course?.id
+    )
+    .map(fs => ({ semester: fs.semester, shiftId: fs.shift?.id })), 
+    [existingFeeStructures, feesStructure.academicYear, feesStructure.course, feesStructure.id]
+  );
 
-  // const formatDateForInput = (date: Date | null | undefined) => {
-  //   if (!date) return "";
-  //   return new Date(date).toISOString().split("T")[0];
-  // };
+  const allSemesters = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
+
+  const availableSemesters = useMemo(() => allSemesters.filter(sem => {
+      const shiftsForSemester = existingCombinations
+        .filter(c => c.semester === sem)
+        .map(c => c.shiftId);
+      return shiftsForSemester.length < shifts.length;
+  }), [allSemesters, existingCombinations, shifts.length]);
+
+  const availableShifts = useMemo(() => {
+      if (!feesStructure.semester) {
+          return shifts;
+      }
+      const takenShiftIds = existingCombinations
+          .filter(c => c.semester === feesStructure.semester)
+          .map(c => c.shiftId);
+      return shifts.filter(shift => !takenShiftIds.includes(shift.id));
+  }, [feesStructure.semester, shifts, existingCombinations]);
+
+  const handleSemesterChange = (value: number | null) => {
+    const takenShiftIdsForNewSemester = existingCombinations
+      .filter(c => c.semester === value)
+      .map(c => c.shiftId);
+    
+    const isCurrentShiftAvailableInNewSemester = !takenShiftIdsForNewSemester.includes(feesStructure.shift?.id);
+
+    setFeesStructure(prev => ({
+      ...prev,
+      semester: value,
+      shift: isCurrentShiftAvailableInNewSemester ? prev.shift : null,
+    }));
+  };
 
   const handleAddComponent = () => {
     const newComponent: FeesComponent = {
@@ -149,9 +181,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-32"
                 placeholder="Select"
                 value={feesStructure.semester}
-                onChange={(value) => handleInputChange('semester', value)}
+                onChange={handleSemesterChange}
               >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                {availableSemesters.map(sem => (
                   <Select.Option key={sem} value={sem}>
                     Sem {sem}
                   </Select.Option>
@@ -161,13 +193,15 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
               <Select
-                className="w-48"
-                placeholder="Select"
-                value={feesStructure.shift}
-                onChange={(value) => handleInputChange('shift', value)}
+                value={feesStructure.shift?.id}
+                onChange={(value) => handleInputChange('shift', shifts.find(s => s.id === value) || null)}
+                placeholder="Select Shift"
+                className="w-full"
+                disabled={!feesStructure.semester}
               >
-                <Select.Option key={"MORNING"} value={"MORNING"}>MORNING</Select.Option>
-                <Select.Option key={"EVENING"} value={"EVENING"}>EVENING</Select.Option>
+                {availableShifts.map(shift => (
+                  <Select.Option key={shift.id} value={shift.id!}>{shift.name}</Select.Option>
+                ))}
               </Select>
             </div>
           </div>
@@ -180,7 +214,8 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                   className="w-32"
                   placeholder="Adv. Course"
                   value={feesStructure.advanceForCourse?.id}
-                  onChange={(value) => handleInputChange('advanceForCourse', courses.find(c => c.id === value))}
+                  onChange={(value) => handleInputChange('advanceForCourse', value ? courses.find(c => c.id === value) : null)}
+                  allowClear
                 >
                   {courses.map(course => (
                     <Select.Option key={course.id} value={course.id!}>
@@ -193,6 +228,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                   placeholder="Adv. Semester"
                   value={feesStructure.advanceForSemester}
                   onChange={(value) => handleInputChange('advanceForSemester', value)}
+                  allowClear
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
                     <Select.Option key={sem} value={sem}>
@@ -229,10 +265,6 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
             </div>
           </div>
 
-
-
-
-
           <div className="flex justify-center gap-2 items-center">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Installments</label>
@@ -242,6 +274,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 max={12}
                 value={feesStructure.numberOfInstalments}
                 onChange={(value) => handleInputChange('numberOfInstalments', value)}
+                controls={false}
               />
             </div>
             <div>
@@ -250,6 +283,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.instalmentStartDate ? dayjs(feesStructure.instalmentStartDate) : null}
                 onChange={(date) => handleInputChange('instalmentStartDate', date ? date.toDate() : null)}
+                disabled={!feesStructure.numberOfInstalments}
               />
             </div>
             <div>
@@ -258,11 +292,10 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.instalmentEndDate ? dayjs(feesStructure.instalmentEndDate) : null}
                 onChange={(date) => handleInputChange('instalmentEndDate', date ? date.toDate() : null)}
+                disabled={!feesStructure.numberOfInstalments}
               />
             </div>
           </div>
-
-
 
           <div className="flex items-center gap-2">
             <div>
@@ -289,14 +322,23 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
       <div className="flex-grow flex flex-col min-h-0">
         <div className="flex justify-between items-center mb-2 flex-shrink-0">
           {/* <h4 className="font-medium text-gray-900">Fee Components</h4> */}
-          <div className="flex items-baseline gap-2">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap">Fees Receipt Type</label>
-            <Select className="w-40" placeholder="Select Type">
-              {feesReceiptTypes.map(rt => <Select.Option key={rt.id} value={rt.id}>{rt.name}</Select.Option>)}
-            </Select>
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fees Receipt Type</label>
+              <Select
+                className="w-48"
+                placeholder="Select"
+                value={feesStructure.feesReceiptTypeId}
+                onChange={(value) => handleInputChange('feesReceiptTypeId', value)}
+              >
+                {feesReceiptTypes.map(type => (
+                  <Select.Option key={type.id} value={type.id!}>
+                    {type.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </div>
-
-
 
           <div className="flex items-center gap-4">
             <button onClick={handleAddComponent} className="flex border border-gray-400 items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100">
@@ -322,10 +364,21 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 <tr key={component.sequence || index} className="flex h-[35px]">
                   <td className="w-16 px-4 py-2 border-r border-gray-400 text-sm text-black flex items-center justify-center">{index + 1}.</td>
                   <td className="flex-1 px-4 py-2 border-r border-gray-400">
-                    <select value={component.feesHeadId} onChange={(e) => handleComponentChange(index, "feesHeadId", Number(e.target.value))} className="w-full bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black">
-                      <option value={0}>Select Fee Head</option>
-                      {feeHeads.map((head) => (<option key={head.id} value={head.id}>{head.name}</option>))}
-                    </select>
+                    <Select
+                      value={component.feesHeadId || null}
+                      onChange={(value) => handleComponentChange(index, "feesHeadId", value)}
+                      placeholder="Select Fee Head"
+                      className="w-full"
+                      showSearch
+                      optionFilterProp="children"
+                      bordered={false}
+                    >
+                      {feeHeads.map((head) => (
+                        <Select.Option key={head.id} value={head.id!}>
+                          {head.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </td>
                   <td className="w-24 px-4 py-2 border-r border-gray-400 flex items-center justify-center">
                     <input type="number" value={component.sequence} onChange={(e) => handleComponentChange(index, "sequence", Number(e.target.value))} className="w-20 text-center bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black" />

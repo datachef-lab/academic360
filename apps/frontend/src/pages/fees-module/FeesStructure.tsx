@@ -3,729 +3,346 @@ import {
   Banknote,
   PlusCircle,
   // Upload,
-  FileDown,
   X,
   AlertCircle,
   // Layers3,
   // CheckCircle,
   // XCircle,
   // Search,
-  Filter,
+
 } from "lucide-react";
+import { toast } from "sonner";
 import FeeStructureForm from "../../components/fees/fee-structure-form/FeeStructureForm";
-import { getAllCourses } from "../../services/course-api";
+// import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/academics/course";
-import { FeesStructureDto, AcademicYear } from "../../types/fees";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-// import { Card, CardContent } from "@/components/ui/card";
-// import { api } from "@/utils/api";
-
-// Hardcoded academic years
-const academicYears: AcademicYear[] = [
-  { id: 1, startYear: new Date("2023-07-01"), endYear: new Date("2024-06-30"), isCurrentYear: false },
-  { id: 2, startYear: new Date("2024-07-01"), endYear: new Date("2025-06-30"), isCurrentYear: true },
-  { id: 3, startYear: new Date("2025-07-01"), endYear: new Date("2026-06-30"), isCurrentYear: false },
-];
-
-// Mock FeesStructureDto data
-const mockFeesStructures: FeesStructureDto[] = [
-  {
-    id: 1,
-    closingDate: new Date("2024-06-30"),
-    semester: 2,
-    advanceForSemester: 1,
-    shift: 'MORNING',
-    startDate: new Date("2023-07-01"),
-    endDate: new Date("2024-06-30"),
-    onlineStartDate: new Date("2023-07-10"),
-    onlineEndDate: new Date("2024-06-20"),
-    numberOfInstalments: 2,
-    instalmentStartDate: new Date("2023-08-01"),
-    instalmentEndDate: new Date("2024-03-01"),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    academicYear: academicYears[0], // 2023-2024
-    course: {
-      id: 3,
-      name: "B.COM (H)",
-      stream: {
-        id: 3,
-        name: "B.COM Stream",
-        level: "UNDER_GRADUATE",
-        framework: "CCF",
-        degree: {
-          id: 3,
-          name: "B.COM",
-          level: "UNDER_GRADUATE",
-          sequence: 3,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        degreeProgramme: "HONOURS",
-        duration: 3,
-        numberOfSemesters: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      shortName: "B.COM (H)",
-      codePrefix: "BCOM",
-      universityCode: "U003"
-    },
-    advanceForCourse: null,
-    components: [
-      { id: 5, feesStructureId: 3, feesHeadId: 301, isConcessionApplicable: true, amount: 45000, sequence: 1, remarks: "Tuition Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 6, feesStructureId: 3, feesHeadId: 302, isConcessionApplicable: false, amount: 2000, sequence: 2, remarks: "Library Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 7, feesStructureId: 3, feesHeadId: 303, isConcessionApplicable: true, amount: 3000, sequence: 3, remarks: "Sports Fee", createdAt: new Date(), updatedAt: new Date() },
-    ],
-  },
-  {
-    id: 2,
-    closingDate: new Date("2025-06-30"),
-    semester: 2,
-    advanceForSemester: 1,
-    shift: 'MORNING',
-    startDate: new Date("2024-07-01"),
-    endDate: new Date("2025-06-30"),
-    onlineStartDate: new Date("2024-07-10"),
-    onlineEndDate: new Date("2025-06-20"),
-    numberOfInstalments: 2,
-    instalmentStartDate: new Date("2024-08-01"),
-    instalmentEndDate: new Date("2025-03-01"),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    academicYear: academicYears[1], // 2024-2025
-    course: {
-      id: 1,
-      name: "BCA",
-      stream: {
-        id: 1,
-        name: "BCA Stream",
-        level: "UNDER_GRADUATE",
-        framework: "CCF",
-        degree: {
-          id: 1,
-          name: "BCA",
-          level: "UNDER_GRADUATE",
-          sequence: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        degreeProgramme: "HONOURS",
-        duration: 3,
-        numberOfSemesters: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      shortName: "BCA",
-      codePrefix: "BCA",
-      universityCode: "U001"
-    },
-    advanceForCourse: null,
-    components: [
-      { id: 1, feesStructureId: 1, feesHeadId: 101, isConcessionApplicable: true, amount: 50000, sequence: 1, remarks: "Tuition Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 2, feesStructureId: 1, feesHeadId: 102, isConcessionApplicable: false, amount: 2500, sequence: 2, remarks: "Library Fee", createdAt: new Date(), updatedAt: new Date() },
-    ],
-  },
-  {
-    id: 3,
-    closingDate: new Date("2025-06-30"),
-    semester: 2,
-    advanceForSemester: 1,
-    shift: 'EVENING',
-    startDate: new Date("2024-07-01"),
-    endDate: new Date("2025-06-30"),
-    onlineStartDate: new Date("2024-07-10"),
-    onlineEndDate: new Date("2025-06-20"),
-    numberOfInstalments: 2,
-    instalmentStartDate: new Date("2024-08-01"),
-    instalmentEndDate: new Date("2025-03-01"),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    academicYear: academicYears[1], // 2024-2025
-    course: {
-      id: 2,
-      name: "BBA",
-      stream: {
-        id: 2,
-        name: "BBA Stream",
-        level: "UNDER_GRADUATE",
-        framework: "CCF",
-        degree: {
-          id: 2,
-          name: "BBA",
-          level: "UNDER_GRADUATE",
-          sequence: 2,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        degreeProgramme: "GENERAL",
-        duration: 3,
-        numberOfSemesters: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      shortName: "BBA",
-      codePrefix: "BBA",
-      universityCode: "U002"
-    },
-    advanceForCourse: null,
-    components: [
-      { id: 3, feesStructureId: 2, feesHeadId: 201, isConcessionApplicable: true, amount: 60000, sequence: 1, remarks: "Tuition Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 4, feesStructureId: 2, feesHeadId: 202, isConcessionApplicable: false, amount: 3000, sequence: 2, remarks: "Sports Fee", createdAt: new Date(), updatedAt: new Date() },
-    ],
-  },
-  {
-    id: 4,
-    closingDate: new Date("2025-06-30"),
-    semester: 4,
-    advanceForSemester: 1,
-    shift: 'MORNING',
-    startDate: new Date("2024-07-01"),
-    endDate: new Date("2025-06-30"),
-    onlineStartDate: new Date("2024-07-10"),
-    onlineEndDate: new Date("2025-06-20"),
-    numberOfInstalments: 2,
-    instalmentStartDate: new Date("2024-08-01"),
-    instalmentEndDate: new Date("2025-03-01"),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    academicYear: academicYears[1], // 2024-2025
-    course: {
-      id: 1,
-      name: "BCA",
-      stream: {
-        id: 1,
-        name: "BCA Stream",
-        level: "UNDER_GRADUATE",
-        framework: "CCF",
-        degree: {
-          id: 1,
-          name: "BCA",
-          level: "UNDER_GRADUATE",
-          sequence: 1,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        degreeProgramme: "HONOURS",
-        duration: 3,
-        numberOfSemesters: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      shortName: "BCA",
-      codePrefix: "BCA",
-      universityCode: "U001"
-    },
-    advanceForCourse: null,
-    components: [
-      { id: 8, feesStructureId: 4, feesHeadId: 101, isConcessionApplicable: true, amount: 52000, sequence: 1, remarks: "Tuition Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 9, feesStructureId: 4, feesHeadId: 102, isConcessionApplicable: false, amount: 2500, sequence: 2, remarks: "Library Fee", createdAt: new Date(), updatedAt: new Date() },
-    ],
-  },
-  {
-    id: 5,
-    closingDate: new Date("2025-06-30"),
-    semester: 4,
-    advanceForSemester: 1,
-    shift: 'EVENING',
-    startDate: new Date("2024-07-01"),
-    endDate: new Date("2025-06-30"),
-    onlineStartDate: new Date("2024-07-10"),
-    onlineEndDate: new Date("2025-06-20"),
-    numberOfInstalments: 2,
-    instalmentStartDate: new Date("2024-08-01"),
-    instalmentEndDate: new Date("2025-03-01"),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    academicYear: academicYears[1], // 2024-2025
-    course: {
-      id: 2,
-      name: "BBA",
-      stream: {
-        id: 2,
-        name: "BBA Stream",
-        level: "UNDER_GRADUATE",
-        framework: "CCF",
-        degree: {
-          id: 2,
-          name: "BBA",
-          level: "UNDER_GRADUATE",
-          sequence: 2,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        degreeProgramme: "GENERAL",
-        duration: 3,
-        numberOfSemesters: 6,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      shortName: "BBA",
-      codePrefix: "BBA",
-      universityCode: "U002"
-    },
-    advanceForCourse: null,
-    components: [
-      { id: 10, feesStructureId: 5, feesHeadId: 201, isConcessionApplicable: true, amount: 62000, sequence: 1, remarks: "Tuition Fee", createdAt: new Date(), updatedAt: new Date() },
-      { id: 11, feesStructureId: 5, feesHeadId: 202, isConcessionApplicable: false, amount: 3000, sequence: 2, remarks: "Sports Fee", createdAt: new Date(), updatedAt: new Date() },
-    ],
-  },
-];
-
-// const steps = ["Academic Setup", "Slab Creation", "Fee Configuration", "Preview & Simulation"];
-
-// const initialFeesStructure: FeesStructureDto = {
-//   id: 0,
-//   academicYear: {
-//     endYear: new Date(),
-//     startYear: new Date(),
-//     isCurrentYear: true,
-//   },
-//   course: {
-//     codePrefix: null,
-//     name: "BCOM",
-//     shortName: "",
-//     stream: {
-//       degree: {
-//         level: "UNDER_GRADUATE",
-//         name: "",
-//         sequence: 1,
-//         createdAt: new Date(),
-//         updatedAt: new Date(),
-//       },
-//       degreeProgramme: "HONOURS",
-//       duration: 2,
-//       framework: "CBCS",
-//       level: "UNDER_GRADUATE",
-//       name: "BCOM",
-//       numberOfSemesters: 6,
-//       createdAt: new Date(),
-//       updatedAt: new Date(),
-
-//     },
-//     universityCode: null,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   semester: null,
-//   closingDate: new Date(),
-//   startDate: new Date(),
-//   endDate: new Date(),
-//   onlineStartDate: new Date(),
-//   onlineEndDate: new Date(),
-//   feesReceiptTypeId: 0,
-//   advanceForCourse: null,
-//   advanceForSemester: null,
-//   numberOfInstalments: 1,
-//   instalmentStartDate: new Date(),
-//   instalmentEndDate: new Date(),
-//   components: [],
-// };
-
-// Slab Management Component
-interface SlabType {
-  id: number;
-  name: string;
-  code: string;
-  disabled: boolean;
-}
+import { FeesStructureDto, AcademicYear, FeesSlabYear, FeesSlab } from "../../types/fees";
+import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
+import { useFeesSlabYears, useFeesReceiptTypes } from "@/hooks/useFees";
+import { checkSlabsExistForAcademicYear } from "@/services/fees-api";
+import axiosInstance from "@/utils/api";
+// import { SlabCreation } from "../../components/fees/fee-structure-form/steps/SlabCreation";
 
 interface SlabManagementProps {
   showModal: boolean;
   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
+  feesSlabYears: FeesSlabYear[];
+  setFeesSlabYears: React.Dispatch<React.SetStateAction<FeesSlabYear[]>>;
+  allSlabs: FeesSlab[];
 }
 
-const initialSlabData: SlabType[] = [
-  { id: 1, name: "Merit Scholarship", code: "MERIT", disabled: false },
-  { id: 2, name: "EWS Concession", code: "EWS", disabled: false },
-  { id: 3, name: "Sports Quota", code: "SPORTS", disabled: false },
-  { id: 4, name: "Staff Ward", code: "STAFF", disabled: true },
-];
+const SlabManagement: React.FC<SlabManagementProps & { onEdit: (slabYear: FeesSlabYear) => void }> = ({  feesSlabYears, allSlabs, onEdit }) => {
+  // No local data state, use props
 
-const SlabManagement: React.FC<SlabManagementProps> = ({ showModal, setShowModal }) => {
-  const [data, setData] = useState<SlabType[]>(initialSlabData);
-  const [editingItem, setEditingItem] = useState<SlabType | null>(null);
-  const [form, setForm] = useState<SlabType>({
-    id: 0,
-    name: "",
-    code: "",
-    disabled: false,
-  });
+  // Helper to get slab details
+  const getSlabDetails = (feesSlabId: number) => allSlabs.find(slab => slab.id === feesSlabId);
 
-  const [searchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [showFilters, setShowFilters] = useState(false);
-  const [filteredData, setFilteredData] = useState<SlabType[]>(initialSlabData);
-
-  useEffect(() => {
-    let updated = data;
-    if (searchTerm) {
-      updated = updated.filter(
-        (s) =>
-          s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          s.code.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-    if (statusFilter !== "all") {
-      updated = updated.filter((s) => (statusFilter === "enabled" ? !s.disabled : s.disabled));
-    }
-    setFilteredData(updated);
-  }, [searchTerm, statusFilter, data]);
-
-  const handleExport = () => {
-    const csvContent = [
-      ["ID", "Name", "Code", "Status"],
-      ...filteredData.map((s) => [s.id, s.name, s.code, s.disabled ? "disabled" : "enabled"]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "slab_types.csv";
-    a.click();
-  };
-
-  const handleSubmit = () => {
-    if (!form.name.trim() || !form.code.trim()) return;
-
-    if (editingItem) {
-      setData(data.map((item) => (item.id === editingItem.id ? { ...form, id: item.id } : item)));
-    } else {
-      setData([...data, { ...form, id: Date.now() }]);
-    }
-
-    handleClose();
-  };
-
-  const handleClose = () => {
-    setShowModal(false);
-    setEditingItem(null);
-    setForm({ id: 0, name: "", code: "", disabled: false });
-  };
-
-  const handleEdit = (item: SlabType) => {
-    setEditingItem(item);
-    setForm(item);
-    setShowModal(true);
-  };
-
-  const handleDelete = (id: number) => {
-    setData(data.filter((item) => item.id !== id));
-  };
-
-  // const totalSlabs = data.length;
-  // const enabledSlabs = data.filter((s) => !s.disabled).length;
-  // const disabledSlabs = data.filter((s) => s.disabled).length;
-
+  // Table rendering
   return (
     <div>
-      {/* Removed Add button from here, now controlled by parent */}
       <div className="bg-white rounded-lg shadow-sm p-3 mb-4 border border-gray-200">
         <div className="flex flex-col gap-3">
-          {/* ...existing filter and export buttons... */}
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md border transition-all ${showFilters
-                  ? "bg-purple-50 border-purple-300 text-purple-700"
-                  : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-            >
-              <Filter className="h-3.5 w-3.5" />
-              Filters
-              {statusFilter !== "all" && (
-                <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full">1</span>
-              )}
-            </button>
-            <button
-              onClick={handleExport}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              <FileDown className="h-3.5 w-3.5" />
-              Export
-            </button>
+            {/* ...filters and export buttons if needed... */}
           </div>
-          {showFilters && (
-            <div className="pt-3 border-t border-gray-200">
-              <div className="flex flex-wrap gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="enabled">Enabled</option>
-                    <option value="disabled">Disabled</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={() => {
-                      setStatusFilter("all");
-                    }}
-                    className="px-2 py-1 text-xs text-purple-600 hover:text-purple-700 transition-colors"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-
       <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-        <Table>
-          <TableHeader className="bg-gray-50 border-b border-gray-200">
-            <TableRow className="hover:bg-gray-50">
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                #
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Name
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Code
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Status
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="bg-white divide-y divide-gray-200">
-            {filteredData.length > 0 ? (
-              filteredData.map((item, index) => (
-                <TableRow key={item.id}>
-                  <TableCell className="px-4 py-3">{index + 1}</TableCell>
-                  <TableCell className="px-4 py-3">{item.name}</TableCell>
-                  <TableCell className="px-4 py-3">{item.code}</TableCell>
-                  <TableCell className="px-4 py-3">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.disabled
-                          ? "bg-gray-100 text-gray-700"
-                          : "bg-green-100 text-green-700"
-                        }`}
-                    >
-                      {item.disabled ? "Disabled" : "Enabled"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3">
-                    <Button variant="link" size="sm" onClick={() => handleEdit(item)}>
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Concession Rate (%)</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {feesSlabYears.map((mapping, idx) => {
+              const slab = getSlabDetails(mapping.feesSlabId);
+              return (
+                <tr key={mapping.id || mapping.feesSlabId}>
+                  <td className="px-4 py-3">{idx + 1}</td>
+                  <td className="px-4 py-3">{slab?.name || '-'}</td>
+                  <td className="px-4 py-3">{slab && 'disabled' in slab && typeof (slab as Record<string, unknown>).disabled === 'boolean' ? ((slab as Record<string, boolean>).disabled ? 'Disabled' : 'Enabled') : 'Enabled'}</td>
+                  <td className="px-4 py-3">{mapping.feeConcessionRate}%</td>
+                  <td className="px-4 py-3">
+                    <button className="text-purple-600 hover:text-purple-800 mr-2" onClick={() => onEdit(mapping)}>
                       Edit
-                    </Button>
-                    <Button variant="link" size="sm" className="text-red-600" onClick={() => handleDelete(item.id)}>
-                      Delete
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="px-4 py-3 text-center">
-                  No data found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-
-      <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>{editingItem ? "Edit Slab" : "Add Slab"}</DialogTitle>
-            <DialogDescription>
-              Make changes to the slab here. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Name
-              </Label>
-              <input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="col-span-3 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
-                placeholder="e.g., Merit Scholarship"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="code" className="text-right">
-                Code
-              </Label>
-              <input
-                id="code"
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                className="col-span-3 px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500 text-black"
-                placeholder="e.g., MERIT"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
+  );
+};
+
+interface SlabFormProps {
+  allSlabs: FeesSlab[];
+  initialData: FeesSlabYear | null;
+  academicYearId: number | undefined;
+  onSubmit: (slabYear: FeesSlabYear) => Promise<void>;
+  onClose: () => void;
+  editMode: boolean;
+}
+
+const SlabForm: React.FC<SlabFormProps> = ({ allSlabs, initialData, academicYearId, onSubmit, onClose, editMode }) => {
+  const [feesSlabId, setFeesSlabId] = useState<number | ''>(initialData?.feesSlabId || '');
+  const [feeConcessionRate, setFeeConcessionRate] = useState<number>(initialData?.feeConcessionRate || 0);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!feesSlabId || !academicYearId) return;
+    setLoading(true);
+    await onSubmit({
+      ...(initialData?.id ? { id: initialData.id } : {}),
+      feesSlabId: Number(feesSlabId),
+      academicYearId,
+      feeConcessionRate: Number(feeConcessionRate),
+    } as FeesSlabYear);
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Slab Name</label>
+        <select
+          value={feesSlabId}
+          onChange={e => setFeesSlabId(Number(e.target.value))}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+          disabled={editMode}
+        >
+          <option value="">Select Slab</option>
+          {allSlabs.map((slab: FeesSlab) => (
+            <option key={slab.id} value={slab.id}>{slab.name}</option>
+          ))}
+        </select>
+            </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Fee Concession Rate (%)</label>
+              <input
+          type="number"
+          min={0}
+          max={100}
+          value={feeConcessionRate}
+          onChange={e => setFeeConcessionRate(Number(e.target.value))}
+          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+            </div>
+      <div className="flex gap-2 mt-4">
+        <button
+          type="submit"
+          disabled={loading || !feesSlabId}
+          className="flex-1 py-2 px-3 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-medium disabled:opacity-50"
+        >
+          {editMode ? 'Update Slab' : 'Create Slab'}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors font-medium"
+        >
+              Cancel
+        </button>
+    </div>
+    </form>
   );
 };
 
 const FeesStructure: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
-  // const setIsDragging = useState(false)[1];
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [showSlabModal, setShowSlabModal] = useState(false);
   const [modalFieldsDisabled, setModalFieldsDisabled] = useState(false);
-  // const fileInputRef = useRef<HTMLInputElement>(null);
-  const [courses, setCourses] = useState<Course[]>([]);
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<AcademicYear | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [filteredFeesStructures, setFilteredFeesStructures] = useState<FeesStructureDto[]>(mockFeesStructures);
   const [activeTab, setActiveTab] = useState<"fees" | "slabs">("fees");
   const [currentFeesStructure, setCurrentFeesStructure] = useState<FeesStructureDto | null>(null);
+  const [initialStep, setInitialStep] = useState(1);
+  const [slabYearMappings, setSlabYearMappings] = useState<FeesSlabYear[]>([]);
+  const [slabsExistForYear, setSlabsExistForYear] = useState(false);
+  const [allSlabs, setAllSlabs] = useState<FeesSlab[]>([]);
+  const [filteredFeesStructures, setFilteredFeesStructures] = useState<FeesStructureDto[]>([]);
+  const [slabEditMode, setSlabEditMode] = useState(false);
+  const [editingSlabYear, setEditingSlabYear] = useState<FeesSlabYear | null>(null);
+
+  // Use the fees API hook
+  const { 
+    
+    loading: feesLoading, 
+    addFeesStructure, 
+    updateFeesStructureById, 
+  } = useFeesStructures();
+  const { addFeesSlabYears } = useFeesSlabYears();
+  const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
+
+  // Use the new hooks
+  const { academicYears, loading: academicYearsLoading } = useAcademicYearsFromFeesStructures();
+  const { courses: coursesForSelectedYear, loading: coursesLoading } = useCoursesFromFeesStructures(selectedAcademicYear?.id ?? null);
+
+  // Select most recent academic year and first course by default
+  useEffect(() => {
+    if (academicYears.length > 0 && !selectedAcademicYear) {
+      setSelectedAcademicYear(academicYears[0]);
+    }
+  }, [academicYears, selectedAcademicYear]);
 
   useEffect(() => {
-    getAllCourses().then((res) => {
-      if (res && res.payload) setCourses(res.payload);
-    });
-  }, []);
+    if (coursesForSelectedYear.length > 0 && !selectedCourse) {
+      setSelectedCourse(coursesForSelectedYear[0]);
+    } else if (coursesForSelectedYear.length === 0) {
+      setSelectedCourse(null);
+    }
+  }, [coursesForSelectedYear, selectedCourse]);
 
   useEffect(() => {
-    let filtered = mockFeesStructures;
+    const checkSlabsExist = async () => {
+      if (selectedAcademicYear?.id) {
+        try {
+          const result = await checkSlabsExistForAcademicYear(selectedAcademicYear.id);
+          setSlabsExistForYear(result.exists);
+          console.log("Slabs exist for year:", result.exists);
+        } catch {
+          // Error handled
+          setSlabsExistForYear(false);
+        }
+    } else {
+        setSlabsExistForYear(false);
+      }
+    };
 
-    if (selectedAcademicYear) {
-      filtered = filtered.filter(
-        (fs) => fs.academicYear?.id === selectedAcademicYear.id
-      );
+    checkSlabsExist();
+  }, [selectedAcademicYear]);
+
+  const fetchSlabs = async () => {
+    try {
+      const res = await axiosInstance.get<FeesSlab[]>('/api/v1/fees/slabs');
+      setAllSlabs(res.data);
+
+    } catch (error) {
+      console.log(error);
+      setAllSlabs([]);
     }
+  }
 
-    if (selectedCourse) {
-      filtered = filtered.filter(
-        (fs) => fs.course?.id === selectedCourse.id
-      );
+  const fetchSlabsYear = async () => {
+    try {
+      console.log("fetching fees slabs")
+      const res = await axiosInstance.get<FeesSlabYear[]>(`/api/v1/fees/slab-year-mappings?academicYearId=${selectedAcademicYear!.id}`);
+      setSlabYearMappings(res.data);
+
+    } catch (error) {
+      console.log(error);
+      setSlabYearMappings([]);
     }
+  }
 
-    setFilteredFeesStructures(filtered);
-  }, [selectedAcademicYear, selectedCourse]);
 
-  // const handleFileUpload = (file: File) => {
-  //   console.log("Uploading file:", file.name);
-  //   setTimeout(() => {
-  //     alert("File uploaded successfully!");
-  //   }, 1000);
+  useEffect(() => {
+    if (selectedAcademicYear?.id) {
+      console.log("in fetching slabs, selectedAcademicYear", selectedAcademicYear);
+      fetchSlabs();
+
+      fetchSlabsYear();
+    } else {
+      setAllSlabs([]);
+      setSlabYearMappings([]);
+    }
+  }, [selectedAcademicYear]);
+
+  // const slabsForYear = slabYearMappings.map(mapping => {
+  //   const slab = allSlabs.find(s => s.id === mapping.feesSlabId);
+  //   return {
+  //     ...slab,
+  //     feeConcessionRate: mapping.feeConcessionRate,
+  //     mappingId: mapping.id,
+  //     status: slab && typeof (slab as any).disabled !== 'undefined' ? ((slab as any).disabled ? 'Disabled' : 'Enabled') : 'Enabled',
+  //   };
+  // });
+
+  // // Helper to get concession rate for a slab
+  // const getConcessionRate = (slabId: number): number => {
+  //   const mapping = slabYearMappings.find(
+  //     m => m.feesSlabId === slabId && m.academicYearId === selectedAcademicYear?.id
+  //   );
+  //   return mapping ? mapping.feeConcessionRate : 0;
   // };
 
-  // const handleDragEnter = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  //   setIsDragging(true);
-  // };
-
-  // const handleDragLeave = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  //   setIsDragging(false);
-  // };
-
-  // const handleDragOver = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  // };
-
-  // const handleDrop = (e: React.DragEvent) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-  //   setIsDragging(false);
-
-  //   const files = Array.from(e.dataTransfer.files);
-  //   if (files[0]) {
-  //     handleFileUpload(files[0]);
-  //   }
-  // };
-
-  // const handleExport = () => {
-  //   const csvContent = [
-  //     ["ID", "Name", "Amount", "Category", "Applied To", "Due Date", "Status", "Description"],
-  //     ...filteredFeesStructures.map((fee) => [
-  //       fee.id,
-  //       fee.course?.name || "",
-  //       fee.components.reduce((sum, comp) => sum + comp.amount, 0).toLocaleString(),
-  //       fee.course?.stream.degree.name || "",
-  //       fee.course?.stream.degreeProgramme || "",
-  //       fee.startDate?.toLocaleDateString() || "",
-  //       fee.shift || "N/A",
-  //       fee.components.map(comp => comp.remarks).join(", ")
-  //     ]),
-  //   ]
-  //     .map((row) => row.join(","))
-  //     .join("\n");
-
-  //   const blob = new Blob([csvContent], { type: "text/csv" });
-  //   const url = window.URL.createObjectURL(blob);
-  //   const a = document.createElement("a");
-  //   a.href = url;
-  //   a.download = "fees_structure.csv";
-  //   a.click();
-  // };
-
-  const handleFeeStructureSubmit = (formData: unknown) => {
+  const handleFeeStructureSubmit = async (formData: { feesStructure: FeesStructureDto, feesSlabYears: FeesSlabYear[] }) => {
     console.log("Fee Structure Form Data:", formData);
-    setShowFeeStructureForm(false);
+    try {
+      if (formData.feesSlabYears.length > 0) {
+        await addFeesSlabYears(formData.feesSlabYears);
+      }
+      
+      const { feesStructure } = formData;
+      const apiData = feesStructure;
+
+      if (currentFeesStructure?.id) {
+        await updateFeesStructureById(currentFeesStructure.id, apiData);
+      } else {
+        await addFeesStructure(apiData);
+      }
+      setShowFeeStructureForm(false);
+    } catch {
+      // Error handled
+    } finally {
+      await fetchFeesStructures();
+    }
   };
 
   const handleAdd = () => {
+    if (!selectedAcademicYear || !selectedCourse) {
+      toast.error("Please select both Academic Year and Course before adding a fee structure.");
+      return;
+    }
+
+    if (!slabsExistForYear) {
+      toast.error("Please create fee slabs for this academic year first", {
+        description: "Navigate to the Slabs tab to create fee slabs.",
+        duration: 5000,
+      });
+      setActiveTab("slabs"); // Switch to slabs tab
+      return;
+    }
+
     setModalFieldsDisabled(true);
     setCurrentFeesStructure({
-      id: undefined, // or null or 0
-      academicYear: selectedAcademicYear!,
-      course: selectedCourse!,
+      id: undefined,
+      academicYear: selectedAcademicYear,
+      course: selectedCourse,
       closingDate: new Date(),
       semester: 1,
-      advanceForSemester: 1,
-      shift: 'MORNING',
+      advanceForSemester: null,
+      shift: null,
+      feesReceiptTypeId: null,
       startDate: new Date(),
       endDate: new Date(),
       onlineStartDate: new Date(),
       onlineEndDate: new Date(),
-      numberOfInstalments: 1,
-      instalmentStartDate: new Date(),
-      instalmentEndDate: new Date(),
+      numberOfInstalments: null,
+      instalmentStartDate: null,
+      instalmentEndDate: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       advanceForCourse: null,
       components: [],
     });
     setShowFeeStructureForm(true);
+    setInitialStep(3); // Skip to fee configuration since slabs exist
   };
 
   const handleEdit = (fs: FeesStructureDto) => {
     setModalFieldsDisabled(true);
     setCurrentFeesStructure(fs);
     setShowFeeStructureForm(true);
+    setInitialStep(3);
   };
 
   const handleCreate = () => {
@@ -733,6 +350,80 @@ const FeesStructure: React.FC = () => {
     setCurrentFeesStructure(null);
     setShowFeeStructureForm(true);
   };
+
+  // const handleDelete = async (id: number) => {
+  //   if (window.confirm("Are you sure you want to delete this fees structure?")) {
+  //     await deleteFeesStructureById(id);
+  //   }
+  // };
+
+    const fetchFeesStructures = async () => {
+    try {
+      console.log("fetching fees structures: -")
+      const res = await axiosInstance.get<FeesStructureDto[]>(`/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear!.id}/${selectedCourse!.id}`);
+      setFilteredFeesStructures(res.data || [])
+
+    } catch (error) {
+      console.log(error);
+      setFilteredFeesStructures([]);
+    }
+  }
+
+  useEffect(() => {
+    if (selectedAcademicYear?.id && selectedCourse?.id) {
+     fetchFeesStructures();
+    } else {
+      setFilteredFeesStructures([]);
+    }
+  }, [selectedAcademicYear, selectedCourse]);
+
+  // Slab modal handlers
+  // const openCreateSlabModal = () => {
+  //   setEditingSlabYear(null);
+  //   setSlabEditMode(false);
+  //   setShowSlabModal(true);
+  // };
+  const openEditSlabModal = (slabYear: FeesSlabYear) => {
+    setEditingSlabYear(slabYear);
+    setSlabEditMode(true);
+    setShowSlabModal(true);
+  };
+  const handleSlabModalClose = () => {
+    setShowSlabModal(false);
+    setEditingSlabYear(null);
+    setSlabEditMode(false);
+  };
+  // Slab create/update submit
+  const handleSlabSubmit = async (slabYear: FeesSlabYear) => {
+    try {
+      if (slabEditMode && slabYear.id) {
+        // Update
+        await axiosInstance.put(`/api/v1/fees/slab-year-mappings/${slabYear.id}`, slabYear);
+        toast.success("Slab updated successfully");
+      } else {
+        // Create
+        await axiosInstance.post(`/api/v1/fees/slab-year-mappings`, slabYear);
+        toast.success("Slab created successfully");
+      }
+      await fetchSlabsYear();
+      handleSlabModalClose();
+    } catch  {
+      toast.error("Error saving slab");
+    }
+  };
+
+  const availableSlabsToCreate = allSlabs.filter(
+    slab => !slabYearMappings.some(mapping => mapping.feesSlabId === slab.id)
+  );
+  const isCreateSlabDisabled = availableSlabsToCreate.length === 0;
+
+  if (academicYearsLoading || coursesLoading || feesLoading || receiptTypesLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg">Loading fees structures...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="">
@@ -761,7 +452,7 @@ const FeesStructure: React.FC = () => {
                 <option value="">Select Academic Year</option>
                 {academicYears.map(year => (
                   <option key={year.id} value={year.id}>
-                    {year.startYear.getFullYear()} - {year.endYear.getFullYear()}
+                    {year.startYear}
                   </option>
                 ))}
               </select>
@@ -771,13 +462,14 @@ const FeesStructure: React.FC = () => {
               <select
                 value={selectedCourse?.id || ""}
                 onChange={e => {
-                  const course = courses.find(c => c.id === Number(e.target.value));
+                  const course = coursesForSelectedYear.find(c => c.id === Number(e.target.value));
                   setSelectedCourse(course || null);
                 }}
                 className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
+                disabled={!selectedAcademicYear}
               >
                 <option value="">Select Course</option>
-                {courses.map(course => (
+                {coursesForSelectedYear.map(course => (
                   <option key={course.id} value={course.id}>{course.name}</option>
                 ))}
               </select>
@@ -788,8 +480,8 @@ const FeesStructure: React.FC = () => {
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${(!selectedAcademicYear || !selectedCourse) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={!selectedAcademicYear || !selectedCourse}
               >
-                <PlusCircle className="h-3.5 w-3.5" />
-                {activeTab === "fees" ? "Add Fees Structure" : "Add Slab"}
+                <PlusCircle className="h-4 w-4" />
+                Add Structure
               </button>
             </div>
           </div>
@@ -818,11 +510,18 @@ const FeesStructure: React.FC = () => {
           </button>
         </nav>
         <button
-          onClick={handleCreate}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+          onClick={() => {
+            if (activeTab === 'slabs') {
+              setShowSlabModal(true);
+            } else {
+              handleCreate();
+            }
+          }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${activeTab === 'slabs' && isCreateSlabDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={activeTab === 'slabs' && isCreateSlabDisabled}
         >
           <PlusCircle className="h-3.5 w-3.5" />
-          Create
+          {activeTab === 'slabs' ? 'Create Slab' : 'Create Structure'}
         </button>
       </div>
 
@@ -836,25 +535,30 @@ const FeesStructure: React.FC = () => {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Sr. No.</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Semester</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Receipt Type</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Base Amount</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Shift</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredFeesStructures.map((fs, index) => (
+                    {filteredFeesStructures.map((fs, index) => {
+                      const receiptTypeName = feesReceiptTypes.find(rt => rt.id === fs.feesReceiptTypeId)?.name || '-';
+                      return (
                       <tr key={fs.id}>
                         <td className="px-4 py-3 whitespace-nowrap">{index + 1}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{fs.semester}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">{receiptTypeName}</td>
                         <td className="px-4 py-3 whitespace-nowrap">₹{fs.components.reduce((sum, comp) => sum + comp.amount, 0).toLocaleString()}</td>
-                        <td className="px-4 py-3 whitespace-nowrap">{fs.shift || 'N/A'}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{fs.shift?.name || 'N/A'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <button className="text-purple-600 hover:text-purple-800 mr-2" onClick={() => handleEdit(fs)}>
                             Edit
                           </button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -866,7 +570,7 @@ const FeesStructure: React.FC = () => {
             )}
           </div>
         ) : (
-          <SlabManagement showModal={showSlabModal} setShowModal={setShowSlabModal} />
+          <SlabManagement showModal={showSlabModal} setShowModal={setShowSlabModal} feesSlabYears={slabYearMappings} setFeesSlabYears={setSlabYearMappings} allSlabs={allSlabs} onEdit={openEditSlabModal} />
         )}
       </div>
 
@@ -961,13 +665,41 @@ const FeesStructure: React.FC = () => {
       {showFeeStructureForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <FeeStructureForm
+            existingCourses={coursesForSelectedYear}
+          feesSlabYears={slabYearMappings}
+          slabs={allSlabs}
             onClose={() => setShowFeeStructureForm(false)}
             onSubmit={handleFeeStructureSubmit}
             fieldsDisabled={modalFieldsDisabled}
-            disabledSteps={[1,2,3]}
+            disabledSteps={[1, 2, 3]}
             feesStructure={currentFeesStructure}
-            initialStep={modalFieldsDisabled ? 3 : 1}
+            initialStep={initialStep}
+            existingFeeStructures={filteredFeesStructures}
           />
+        </div>
+      )}
+
+      {showSlabModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">{slabEditMode ? 'Edit Slab' : 'Create Slab'}</h2>
+              <button
+                onClick={handleSlabModalClose}
+                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <SlabForm
+              allSlabs={allSlabs}
+              initialData={editingSlabYear}
+              academicYearId={selectedAcademicYear?.id}
+              onSubmit={handleSlabSubmit}
+              onClose={handleSlabModalClose}
+              editMode={slabEditMode}
+            />
+          </div>
         </div>
       )}
     </div>

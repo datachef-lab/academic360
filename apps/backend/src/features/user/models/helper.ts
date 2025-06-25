@@ -106,3 +106,4 @@ export const studentFeesMappingEnum = pgEnum("student_fees_mapping_type", [
     "FULL",
     "INSTALMENT"
 ]);
+

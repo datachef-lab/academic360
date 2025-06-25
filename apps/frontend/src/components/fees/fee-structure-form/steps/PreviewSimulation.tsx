@@ -129,8 +129,6 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                     {feesStructure.academicYear?.startYear
                       ? `${new Date(
                           feesStructure.academicYear.startYear
-                        ).getFullYear()}-${new Date(
-                          feesStructure.academicYear.endYear
                         ).getFullYear()}`
                       : "N/A"}
                   </p>
@@ -151,7 +149,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Shift</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {feesStructure.shift || "N/A"}
+                    {feesStructure.shift?.name || "N/A"}
                   </p>
                 </div>
               </div>

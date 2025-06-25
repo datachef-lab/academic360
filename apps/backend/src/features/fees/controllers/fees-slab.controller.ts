@@ -1,83 +1,89 @@
 import { Request, Response } from "express";
-import { getFeesSlabs, getFeesSlabById, createFeesSlab, updateFeesSlab, deleteFeesSlab } from "../services/fees-slab.service";
+import * as feesSlabService from "../services/fees-slab.service";
 import { handleError } from "@/utils";
 
-export const getFeesSlabsHandler = async (req: Request, res: Response) => {
-    try {
-        const feesSlabs = await getFeesSlabs();
-        if (feesSlabs === null) {
-            handleError(new Error("Error fetching fees slabs"), res);
-            return;
-        }
-        res.status(200).json(feesSlabs);
-    } catch (error) {
-        handleError(error, res);
+export const getAllFeesSlabs = async (req: Request, res: Response) => {
+    const slabs = await feesSlabService.getAllFeesSlabs();
+    if (slabs === null) {
+        handleError(new Error("Error fetching fees slabs"), res);
+        return;
     }
+    res.status(200).json(slabs);
 };
 
-export const getFeesSlabByIdHandler = async (req: Request, res: Response) => {
+export const getFeesSlabById = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const feesSlab = await getFeesSlabById(id);
-        if (feesSlab === null) {
+        const slab = await feesSlabService.getFeesSlabById(id);
+        if (slab === null) {
             handleError(new Error("Error fetching fees slab"), res);
             return;
         }
-        if (!feesSlab) {
+        if (!slab) {
             res.status(404).json({ message: "Fees slab not found" });
             return;
         }
-        res.status(200).json(feesSlab);
+        res.status(200).json(slab);
     } catch (error) {
         handleError(error, res);
     }
 };
 
-export const createFeesSlabHandler = async (req: Request, res: Response) => {
+export const createFeesSlab = async (req: Request, res: Response) => {
     try {
-        const newFeesSlab = await createFeesSlab(req.body);
-        if (newFeesSlab === null) {
+        const newSlab = await feesSlabService.createFeesSlab(req.body);
+        if (newSlab === null) {
             handleError(new Error("Error creating fees slab"), res);
             return;
         }
-        res.status(201).json(newFeesSlab);
+        res.status(201).json(newSlab);
     } catch (error) {
         handleError(error, res);
     }
 };
 
-export const updateFeesSlabHandler = async (req: Request, res: Response) => {
+export const updateFeesSlab = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const updatedFeesSlab = await updateFeesSlab(id, req.body);
-        if (updatedFeesSlab === null) {
+        const updated = await feesSlabService.updateFeesSlab(id, req.body);
+        if (updated === null) {
             handleError(new Error("Error updating fees slab"), res);
             return;
         }
-        if (!updatedFeesSlab) {
+        if (!updated) {
             res.status(404).json({ message: "Fees slab not found" });
             return;
         }
-        res.status(200).json(updatedFeesSlab);
+        res.status(200).json(updated);
     } catch (error) {
         handleError(error, res);
     }
 };
 
-export const deleteFeesSlabHandler = async (req: Request, res: Response) => {
+export const deleteFeesSlab = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const deletedFeesSlab = await deleteFeesSlab(id);
-        if (deletedFeesSlab === null) {
+        const deleted = await feesSlabService.deleteFeesSlab(id);
+        if (deleted === null) {
             handleError(new Error("Error deleting fees slab"), res);
             return;
         }
-        if (!deletedFeesSlab) {
+        if (!deleted) {
             res.status(404).json({ message: "Fees slab not found" });
             return;
         }
-        res.status(200).json(deletedFeesSlab);
+        res.status(204).send();
     } catch (error) {
         handleError(error, res);
+    }
+};
+
+export const checkSlabsExistForAcademicYear = async (academicYearId: number) => {
+    try {
+        const slabs = await feesSlabService.getFeesSlabsByAcademicYear(academicYearId);
+        return { exists: Array.isArray(slabs) && slabs.length > 0 };
+    } catch (error) {
+        console.error("Error checking slabs existence:", error);
+        return { exists: false };
     }
 };

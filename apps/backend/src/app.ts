@@ -18,7 +18,7 @@ import { socketService } from "./services/socketService.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 
 import { generateToken } from "./utils/index.js";
-
+import {academicYearRouter} from "@/features/academics/routes";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
@@ -62,14 +62,18 @@ import {
     addonRouter,
     feesHeadRouter,
     feesReceiptTypeRouter,
-    feesSlabRouter,
-    feesStructureRouter,
-    studentFeesMappingRouter,
     feesSlabYearMappingRouter,
     feesDesignAbstractLevelRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
-import { courseRouter } from "@/features/academics/routes/index.js";
+import courseRouter from "./features/academics/routes/course.route.js";
+import { shiftRouter } from "@/features/academics/routes";
+import feesSlabRouter from "@/features/fees/routes";
+import feesStructureRouter from './features/fees/routes/fees-structure.route';
+import studentFeesMappingRouter from './features/fees/routes/student-fees-mapping.route';
+import feesRouter from "./features/fees/routes";
+// import { courseRouter } from "@/features/academics/routes/index.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -249,17 +253,17 @@ app.use("/api/health", healthRouter);
 
 app.use("/api/reports", reportRouter);
 
-app.use("/api/courses", courseRouter);
-
+app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+app.use("/api/v1/shifts", shiftRouter);
+app.use("/api/v1/academics", academicYearRouter);
+app.use("/api/v1/fees/structure", feesStructureRouter);
+app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+app.use("/api/v1/fees", feesRouter);
+app.use("/api/v1/courses", courseRouter);
 app.use("/api/v1/fees/components", feesComponentRouter);
 app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/heads", feesHeadRouter);
 app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
-app.use("/api/v1/fees/slabs", feesSlabRouter);
-app.use("/api/v1/fees/structures", feesStructureRouter);
-app.use("/api/v1/fees/student-fees-mappings", studentFeesMappingRouter);
-app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
-app.use("/api/v1/fees", feesDesignAbstractLevelRouter);
 
 app.use(errorHandler);
 
