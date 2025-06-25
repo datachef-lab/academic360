@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { studentFeesMappingModel, StudentFeesMapping } from "../models/student-fees-mapping.model";
+import { db } from "@/db/index.js";
+import { studentFeesMappingModel, StudentFeesMapping } from "../models/student-fees-mapping.model.js";
 
 import { eq } from "drizzle-orm";
 

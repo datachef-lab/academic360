@@ -1,7 +1,7 @@
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { sessionModel } from "./session.model";
+import { sessionModel } from "./session.model.js";
 
 export const academicYearModel = pgTable("academic_years", {
     id: serial().primaryKey(),

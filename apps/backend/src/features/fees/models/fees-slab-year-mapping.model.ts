@@ -1,6 +1,6 @@
 import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { feesSlabModel } from "./fees-slab.model";
-import { academicYearModel } from "@/features/academics/models/academic-year.model";
+import { feesSlabModel } from "./fees-slab.model.js";
+import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

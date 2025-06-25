@@ -1,15 +1,15 @@
-import { db } from "@/db";
-import { feesStructureModel, FeesStructure } from "../models/fees-structure.model";
+import { db } from "@/db/index.js";
+import { feesStructureModel, FeesStructure } from "../models/fees-structure.model.js";
 import { and, countDistinct, desc, eq, inArray, sql } from "drizzle-orm";
-import { FeesStructureDto } from "@/types/fees";
-import { academicYearModel, AcademicYear } from "@/features/academics/models/academic-year.model";
-import { Course, courseModel } from "@/features/academics/models/course.model";
-import { feesComponentModel, type FeesComponent } from "../models/fees-component.model";
+import { FeesStructureDto } from "@/types/fees/index.js";
+import { academicYearModel, AcademicYear } from "@/features/academics/models/academic-year.model.js";
+import { Course, courseModel } from "@/features/academics/models/course.model.js";
+import { feesComponentModel, type FeesComponent } from "../models/fees-component.model.js";
 import { alias } from "drizzle-orm/pg-core";
-import { FeesDesignAbstractLevel } from "@/types/fees";
-import { batchModel } from "@/features/academics/models/batch.model";
-import { shiftModel } from "@/features/academics/models/shift.model";
-import type { Shift } from "@/features/academics/models/shift.model";
+import { FeesDesignAbstractLevel } from "@/types/fees/index.js";
+import { batchModel } from "@/features/academics/models/batch.model.js";
+import { shiftModel } from "@/features/academics/models/shift.model.js";
+import type { Shift } from "@/features/academics/models/shift.model.js";
 
 export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> => {
     try {

@@ -6,7 +6,7 @@ import {
   updateFeesSlab,
   deleteFeesSlab,
   checkSlabsExistForAcademicYear
-} from '../controllers/fees-slab.controller';
+} from '../controllers/fees-slab.controller.js';
 
 const router = Router();
 

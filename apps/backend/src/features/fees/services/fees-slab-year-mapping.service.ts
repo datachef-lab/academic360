@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { feesSlabYearModel, FeesSlabYear } from "../models/fees-slab-year-mapping.model";
+import { db } from "@/db/index.js";
+import { feesSlabYearModel, FeesSlabYear } from "../models/fees-slab-year-mapping.model.js";
 // import { FeesSlabYear } from "../types/fees-slab-year-mapping";
 import { and, eq } from "drizzle-orm";
 

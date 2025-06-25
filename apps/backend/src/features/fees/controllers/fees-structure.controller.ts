@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, getFeesDesignAbstractLevel } from "../services/fees-structure.service";
-import { handleError } from "@/utils";
+import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, getFeesDesignAbstractLevel } from "../services/fees-structure.service.js";
+import { handleError } from "@/utils/index.js";
 
 function toDate(val: any): Date | null {
     if (!val) return null;

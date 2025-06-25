@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesDesignAbstractLevel } from "../services/fees-structure.service";
-import { handleError } from "@/utils";
+import { getFeesDesignAbstractLevel } from "../services/fees-structure.service.js";
+import { handleError } from "@/utils/handleError.js";
 
 export const getFeesDesignAbstractLevelHandler = async (req: Request, res: Response) => {
     try {

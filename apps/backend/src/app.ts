@@ -18,7 +18,7 @@ import { socketService } from "./services/socketService.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 
 import { generateToken } from "./utils/index.js";
-import {academicYearRouter} from "@/features/academics/routes";
+import {academicYearRouter} from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
@@ -67,11 +67,11 @@ import {
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "./features/academics/routes/course.route.js";
-import { shiftRouter } from "@/features/academics/routes";
-import feesSlabRouter from "@/features/fees/routes";
-import feesStructureRouter from './features/fees/routes/fees-structure.route';
-import studentFeesMappingRouter from './features/fees/routes/student-fees-mapping.route';
-import feesRouter from "./features/fees/routes";
+import { shiftRouter } from "@/features/academics/routes/index.js";
+import feesSlabRouter from "@/features/fees/routes/index.js";
+import feesStructureRouter from './features/fees/routes/fees-structure.route.js';
+import studentFeesMappingRouter from './features/fees/routes/student-fees-mapping.route.js';
+import feesRouter from "./features/fees/routes/index.js";
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 

@@ -1,8 +1,8 @@
 import { boolean, doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { feesStructureModel } from "./fees-structure.model";
-import { feesHeadModel } from "./fees-head.model";
+import { feesStructureModel } from "./fees-structure.model.js";
+import { feesHeadModel } from "./fees-head.model.js";
 
 export const feesComponentModel = pgTable("fees_components", {
     id: serial().primaryKey(),

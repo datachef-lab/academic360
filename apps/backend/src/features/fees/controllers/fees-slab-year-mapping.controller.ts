@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesSlabYears, getFeesSlabYearById, createFeesSlabYear, updateFeesSlabYear, deleteFeesSlabYear, checkSlabsExistForAcademicYear } from "../services/fees-slab-year-mapping.service";
-import { handleError } from "@/utils";
+import { getFeesSlabYears, getFeesSlabYearById, createFeesSlabYear, updateFeesSlabYear, deleteFeesSlabYear, checkSlabsExistForAcademicYear } from "../services/fees-slab-year-mapping.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesSlabYearMappingsHandler = async (req: Request, res: Response) => {
     try {

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getFeesDesignAbstractLevelHandler } from "../controllers/fees-design-abstract-level.controller";
+import { getFeesDesignAbstractLevelHandler } from "../controllers/fees-design-abstract-level.controller.js";
 
 const router = Router();
 

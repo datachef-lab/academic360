@@ -1,8 +1,8 @@
-import { db } from "@/db";
-import { feesComponentModel, FeesComponent } from "../models/fees-component.model";
+import { db } from "@/db/index.js";
+import { feesComponentModel, FeesComponent } from "../models/fees-component.model.js";
 // import { FeesComponent } from "../types/fees-component";
 import { eq } from "drizzle-orm";
-import { handleError } from "@/utils";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesComponents = async () => {
     try {

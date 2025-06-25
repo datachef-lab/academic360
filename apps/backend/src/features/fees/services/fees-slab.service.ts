@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import { FeesSlab, feesSlabModel } from "../models/fees-slab.model.js";
 // import { FeesSlab } from "../types/fees-slab";
 import { eq } from "drizzle-orm";
-import { feesSlabYearModel } from "../models/fees-slab-year-mapping.model";
+import { feesSlabYearModel } from "../models/fees-slab-year-mapping.model.js";
 
 export async function getAllFeesSlabs(): Promise<FeesSlab[]> {
     return db.select().from(feesSlabModel);

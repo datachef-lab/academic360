@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { addonModel, AddOn } from "../models/addon.model";
+import { db } from "@/db/index.js";
+import { addonModel, AddOn } from "../models/addon.model.js";
 // import { AddOn } from "../types/addon";
 import { eq } from "drizzle-orm";
 

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import * as shiftService from '../services/shift.service';
+import * as shiftService from '../services/shift.service.js';
 
 export const getAllShifts = async (req: Request, res: Response) => {
   const shifts = await shiftService.getAllShifts();

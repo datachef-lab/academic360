@@ -1,10 +1,10 @@
-import { academicYearModel } from "@/features/academics/models/academic-year.model";
-import { courseModel } from "@/features/academics/models/course.model";
-import { shiftModel } from "@/features/academics/models/shift.model";
+import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
+import { courseModel } from "@/features/academics/models/course.model.js";
+import { shiftModel } from "@/features/academics/models/shift.model.js";
 import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { feesReceiptTypeModel } from "./fees-receipt-type.model";
+import { feesReceiptTypeModel } from "./fees-receipt-type.model.js";
 
 export const feesStructureModel = pgTable("fees_structures", {
     id: serial().primaryKey(),

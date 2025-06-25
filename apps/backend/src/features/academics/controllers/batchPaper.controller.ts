@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse, handleError } from "@/utils/index.js";
-import { loadBatchPapers } from "../services/batchPaper.service";
+import { loadBatchPapers } from "../services/batchPaper.service.js";
 
 // import { loadPaperSubjects } from "../services/batchPaper.service.js";
 

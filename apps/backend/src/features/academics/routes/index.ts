@@ -7,8 +7,8 @@ import batchRouter from "@/features/academics/routes/batch.route.js"
 import batchPaperRouter from "@/features/academics/routes/batchPaper.route.js"
 import studentPaperRouter from "@/features/academics/routes/studentPaper.route.js"
 import courseRouter from "@/features/academics/routes/course.route.js"
-import academicYearRouter from "@/features/academics/routes/academic-year.route";
-import shiftRouter from "@/features/academics/routes/shift.route";
+import academicYearRouter from "@/features/academics/routes/academic-year.route.js";
+import shiftRouter from "@/features/academics/routes/shift.route.js";
 
 export {
     streamRouter,

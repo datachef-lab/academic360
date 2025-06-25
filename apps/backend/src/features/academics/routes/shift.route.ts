@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import * as shiftController from '../controllers/shift.controller';
+import * as shiftController from '../controllers/shift.controller.js';
 
 const router = Router();
 

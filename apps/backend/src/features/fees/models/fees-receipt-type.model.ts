@@ -1,7 +1,7 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { addonModel } from "./addon.model";
+import { addonModel } from "./addon.model.js";
 
 export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
     id: serial().primaryKey(),

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import * as feesSlabService from "../services/fees-slab.service";
-import { handleError } from "@/utils";
+import * as feesSlabService from "../services/fees-slab.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getAllFeesSlabs = async (req: Request, res: Response) => {
     const slabs = await feesSlabService.getAllFeesSlabs();
