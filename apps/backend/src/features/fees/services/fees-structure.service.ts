@@ -10,6 +10,8 @@ import { FeesDesignAbstractLevel } from "@/types/fees/index.js";
 import { batchModel } from "@/features/academics/models/batch.model.js";
 import { shiftModel } from "@/features/academics/models/shift.model.js";
 import type { Shift } from "@/features/academics/models/shift.model.js";
+import { createFeesSlabMapping, getFeesSlabMappingsByFeesStructureId } from "./fees-slab-mapping.service.js";
+import { feesSlabMappingModel } from "../models/fees-slab-mapping.model.js";
 
 export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> => {
     try {
@@ -49,8 +51,10 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
                 shift = foundShift;
             }
             if (feesStructure.academicYear && feesStructure.course) {
+                const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(feesStructure.id!);
                 feesStructureDtos.push({
                     ...feesStructure,
+                    feesSlabMappings,
                     academicYear: feesStructure.academicYear,
                     course: feesStructure.course,
                     advanceForCourse: feesStructure.advanceForCourse,
@@ -110,8 +114,11 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             const [foundShift] = await db.select().from(shiftModel).where(eq(shiftModel.id, feesStructure.shiftId));
             shift = foundShift;
         }
+        const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(feesStructure.id!);
+        
         return {
             ...feesStructure,
+            feesSlabMappings,
             academicYear: feesStructure.academicYear,
             course: feesStructure.course,
             advanceForCourse: feesStructure.advanceForCourse,
@@ -172,7 +179,7 @@ export const getFeesStructuresByAcademicYearIdAndCourseId = async (academicYearI
 export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
     try {
         console.log(feesStructure);
-        const { id, components, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
+        const { id, components, feesSlabMappings, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
 
         if (!academicYear?.id || !course?.id) {
             throw new Error("Academic Year and Course are required to create a fee structure.");
@@ -187,6 +194,7 @@ export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
                     eq(feesStructureModel.courseId, course.id!),
                     eq(feesStructureModel.semester, rest.semester!),
                     eq(feesStructureModel.shiftId, shift?.id!),
+                    eq(feesStructureModel.feesReceiptTypeId, feesStructure?.feesReceiptTypeId!),
                 )
             );
 
@@ -214,6 +222,13 @@ export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
                 return { ...compRest, feesStructureId: newFeesStructure.id }
             });
             await db.insert(feesComponentModel).values(newComponents);
+        }
+
+        for (const feesSlabMapping of feesSlabMappings) {
+            feesSlabMapping.feesStructureId = newFeesStructure.id;
+            console.log("newFeesStructure.id:", newFeesStructure.id)
+            const {id, ...rest } = feesSlabMapping;
+            await createFeesSlabMapping({...rest, feesStructureId: newFeesStructure.id});
         }
 
         return getFeesStructureById(newFeesStructure.id);
@@ -246,14 +261,67 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
         
         if (!updatedFeesStructure) return null;
 
+        // Handle feesComponent update logic
         if (components) {
-            await db.delete(feesComponentModel).where(eq(feesComponentModel.feesStructureId, id));
-            if (components.length > 0) {
-                const newComponents = components.map(comp => {
+            // Fetch all existing component ids for this structure
+            const existingComponents = await db.select().from(feesComponentModel).where(eq(feesComponentModel.feesStructureId, id));
+            const existingComponentIds = existingComponents.map(c => c.id);
+            const requestComponentIds = components.filter(c => c.id).map(c => c.id);
+
+            // Update or create
+            for (const comp of components) {
+                if (!comp.id || comp.id === 0) {
+                    // Create new
                     const { id: compId, ...compRest } = comp;
-                    return { ...compRest, feesStructureId: updatedFeesStructure.id }
-                });
-                await db.insert(feesComponentModel).values(newComponents);
+                    await db.insert(feesComponentModel).values({ ...compRest, feesStructureId: updatedFeesStructure.id });
+                } else {
+                    // Update existing
+                    let {createdAt, updatedAt, ...tmpComp } = comp;
+                    await db.update(feesComponentModel).set(tmpComp).where(eq(feesComponentModel.id, comp.id));
+                }
+            }
+            // Delete components not present in request
+            const toDeleteComponentIds = existingComponentIds.filter(id => !requestComponentIds.includes(id));
+            if (toDeleteComponentIds.length > 0) {
+                await db.delete(feesComponentModel).where(
+                    and(
+                        eq(feesComponentModel.feesStructureId, id),
+                        inArray(feesComponentModel.id, toDeleteComponentIds)
+                    )
+                );
+            }
+        }
+
+        // Handle feesSlabMappings update logic
+        if (feesStructure.feesSlabMappings) {
+            // Fetch all existing mapping ids for this structure
+            const existingMappings = await db.select().from(feesSlabMappingModel).where(eq(feesSlabMappingModel.feesStructureId, id));
+            const existingMappingIds = existingMappings.map(m => m.id);
+            const requestMappingIds = feesStructure.feesSlabMappings.filter(m => m.id).map(m => m.id);
+
+            // Update or create
+            for (const mapping of feesStructure.feesSlabMappings) {
+                if (!mapping.id || mapping.id === 0) {
+                    await createFeesSlabMapping({ ...mapping, feesStructureId: updatedFeesStructure.id });
+                } else {
+                    let { createdAt, updatedAt, ...tmpMapping} = mapping;
+                    await db
+                        .update(feesSlabMappingModel)
+                        .set(tmpMapping)
+                        .where(
+                            eq(feesSlabMappingModel.id, mapping.id)
+                        );
+                }
+            }
+            // Delete mappings not present in request
+            const toDeleteMappingIds = existingMappingIds.filter(id => !requestMappingIds.includes(id));
+            if (toDeleteMappingIds.length > 0) {
+                await db.delete(feesSlabMappingModel).where(
+                    and(
+                        eq(feesSlabMappingModel.feesStructureId, id),
+                        inArray(feesSlabMappingModel.id, toDeleteMappingIds)
+                    )
+                );
             }
         }
 
@@ -312,14 +380,15 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
         }
 
         if (!academicYear || !course) return null;
-
+        const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(model.id!);
         return {
             ...model,
             academicYear,
             course,
             advanceForCourse,
             components,
-            shift
+            shift,
+            feesSlabMappings
         };
     } catch (error) {
         console.error("Error in modelToDto:", error);
@@ -399,4 +468,26 @@ export const getFeesDesignAbstractLevel = async (academicYearId?: number, course
         console.error(error);
         return [];
     }
+};
+
+export const checkFeesStructureExists = async (
+  academicYearId: number,
+  courseId: number,
+  semester: number,
+  shiftId: number,
+  feesReceiptTypeId: number
+): Promise<boolean> => {
+  const [existing] = await db
+    .select()
+    .from(feesStructureModel)
+    .where(
+      and(
+        eq(feesStructureModel.academicYearId, academicYearId),
+        eq(feesStructureModel.courseId, courseId),
+        eq(feesStructureModel.semester, semester),
+        eq(feesStructureModel.shiftId, shiftId),
+        eq(feesStructureModel.feesReceiptTypeId, feesReceiptTypeId),
+      )
+    );
+  return !!existing;
 };

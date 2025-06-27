@@ -8,7 +8,8 @@ import {
     getAcademicYearsFromFeesStructuresHandler,
     getCoursesFromFeesStructuresHandler,
     getFeesStructuresByAcademicYearIdAndCourseIdHandler,
-    getFeesDesignAbstractLevelHandler
+    getFeesDesignAbstractLevelHandler,
+    checkFeesStructureExistsHandler
 } from "../controllers/fees-structure.controller.js";
 
 const feesStructureRouter = Router();
@@ -25,5 +26,6 @@ feesStructureRouter.get("/academic-years/all", getAcademicYearsFromFeesStructure
 feesStructureRouter.get("/courses/:academicYearId", getCoursesFromFeesStructuresHandler);
 feesStructureRouter.get("/by-academic-year-and-course/:academicYearId/:courseId", getFeesStructuresByAcademicYearIdAndCourseIdHandler);
 feesStructureRouter.get("/design-abstract-level", getFeesDesignAbstractLevelHandler);
+feesStructureRouter.post("/exists", checkFeesStructureExistsHandler);
 
 export default feesStructureRouter;

@@ -41,10 +41,10 @@ export interface FeesReceiptType {
     updatedAt?: Date;
 }
 
-export interface FeesSlabYear {
+export interface FeesSlabMapping {
     readonly id?: number;
+    feesStructureId: number;
     feesSlabId: number;
-    academicYearId: number;
     feeConcessionRate: number;
     createdAt?: Date;
     updatedAt?: Date;
@@ -92,6 +92,7 @@ export interface FeesStructureDto {
     course?: Course;
     advanceForCourse?: Course | null;
     components: FeesComponent[];
+    feesSlabMappings: FeesSlabMapping[];
 }
 
 export interface FeesDesignAbstractLevel {
@@ -127,5 +128,5 @@ export interface StudentFeesMapping {
 
 export interface FeesStructureForm {
     feesStructure: FeesStructureDto;
-    feesSlabYears: FeesSlabYear[];
+    feesSlabYears: FeesSlabMapping[];
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Select } from 'antd';
 import { FeesStructureDto } from '@/types/fees';
 import { Course } from '@/types/academics/course';
@@ -23,6 +23,15 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = ({
       [field]: value,
     }));
   };
+
+  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState<AcademicYear | null>(null);
+
+  useEffect(() => {
+    if (academicYears.length > 0 && !selectedAcademicYear) {
+      setSelectedAcademicYear(academicYears[0]);
+      handleInputChange('academicYear', academicYears[0])
+    }
+  }, [academicYears, selectedAcademicYear, setSelectedAcademicYear]);
 
   return (
     <div className="flex items-center justify-center h-full">

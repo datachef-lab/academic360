@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import { FeesSlab, feesSlabModel } from "../models/fees-slab.model.js";
 // import { FeesSlab } from "../types/fees-slab";
 import { eq } from "drizzle-orm";
-import { feesSlabYearModel } from "../models/fees-slab-year-mapping.model.js";
+import { feesSlabMappingModel } from "../models/fees-slab-mapping.model.js";
 
 export async function getAllFeesSlabs(): Promise<FeesSlab[]> {
     return db.select().from(feesSlabModel);
@@ -28,15 +28,15 @@ export async function deleteFeesSlab(id: number): Promise<boolean> {
     return deleted.length > 0;
 }
 
-export const getFeesSlabsByAcademicYear = async (academicYearId: number) => {
+export const getFeesSlabsByAcademicYear = async (feesStructureId: number) => {
     try {
         const slabs = await db
             .select()
-            .from(feesSlabYearModel)
-            .where(eq(feesSlabYearModel.academicYearId, academicYearId));
+            .from(feesSlabMappingModel)
+            .where(eq(feesSlabMappingModel.feesStructureId, feesStructureId));
         return slabs;
     } catch (error) {
-        console.error("Error getting slabs by academic year:", error);
+        console.error("Error getting slabs by fees structure:", error);
         return null;
     }
 };

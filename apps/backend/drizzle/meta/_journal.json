@@ -169,6 +169,20 @@
       "when": 1750858057770,
       "tag": "0023_stale_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1750999878112,
+      "tag": "0024_thick_rocket_racer",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1751009614442,
+      "tag": "0025_tidy_amphibian",
+      "breakpoints": true
     }
   ]
 }

@@ -52,6 +52,18 @@ export async function createFeesStructure(newFeesStructure: FeesStructureDto): P
   return response.data;
 }
 
+// Check if a fees structure exists (duplicate prevention)
+export async function checkFeesStructureExists(payload: {
+  academicYearId?: number;
+  courseId?: number;
+  semester?: number | null;
+  shiftId?: number | null;
+  feesReceiptTypeId?: number | null;
+}): Promise<{ exists: boolean }> {
+  const response = await axiosInstance.post(`${BASE_PATH}/structure/exists`, payload);
+  return response.data;
+}
+
 // Update a fees structure
 export async function updateFeesStructure(feesStructureId: number, feesStructure: Partial<FeesStructureDto>): Promise<ApiResonse<FeesStructureDto>> {
   const response = await axiosInstance.put(`${BASE_PATH}/structure/${feesStructureId}`, feesStructure);

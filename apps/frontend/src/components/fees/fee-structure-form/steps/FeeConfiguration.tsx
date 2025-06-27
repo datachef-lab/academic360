@@ -146,17 +146,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     }
   }, [feesStructure.components.length]);
 
-  // const generateEmptyRows = (count: number) => {
-  //   return Array.from({ length: count }, (_, i) => ({
-  //     id: `empty-${i}`,
-  //     feesHead: { id: '', name: '' },
-  //     amount: 0,
-  //     sequence: feesStructure.components.length + i + 1,
-  //     isConcessionApplicable: false,
-  //     feesStructureId: feesStructure.id || 0,
-  //     remarks: "",
-  //   }));
-  // };
+  const disablePastDates = (current: dayjs.Dayjs) => current && current < dayjs().startOf('day');
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -169,6 +159,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <DatePicker
                 value={feesStructure.closingDate ? dayjs(feesStructure.closingDate) : null}
                 onChange={(date) => handleInputChange('closingDate', date ? date.toDate() : null)}
+                disabledDate={disablePastDates}
               />
             </div>
             <div>
@@ -250,6 +241,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.startDate ? dayjs(feesStructure.startDate) : null}
                 onChange={(date) => handleInputChange('startDate', date ? date.toDate() : null)}
+                disabledDate={disablePastDates}
               />
             </div>
             <div>
@@ -258,6 +250,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.endDate ? dayjs(feesStructure.endDate) : null}
                 onChange={(date) => handleInputChange('endDate', date ? date.toDate() : null)}
+                disabledDate={disablePastDates}
               />
             </div>
             <div>
@@ -284,6 +277,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 value={feesStructure.instalmentStartDate ? dayjs(feesStructure.instalmentStartDate) : null}
                 onChange={(date) => handleInputChange('instalmentStartDate', date ? date.toDate() : null)}
                 disabled={!feesStructure.numberOfInstalments}
+                disabledDate={disablePastDates}
               />
             </div>
             <div>
@@ -293,6 +287,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 value={feesStructure.instalmentEndDate ? dayjs(feesStructure.instalmentEndDate) : null}
                 onChange={(date) => handleInputChange('instalmentEndDate', date ? date.toDate() : null)}
                 disabled={!feesStructure.numberOfInstalments}
+                disabledDate={disablePastDates}
               />
             </div>
           </div>
@@ -304,6 +299,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.onlineStartDate ? dayjs(feesStructure.onlineStartDate) : null}
                 onChange={(date) => handleInputChange('onlineStartDate', date ? date.toDate() : null)}
+                disabledDate={disablePastDates}
               />
             </div>
             <div>
@@ -312,6 +308,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-full"
                 value={feesStructure.onlineEndDate ? dayjs(feesStructure.onlineEndDate) : null}
                 onChange={(date) => handleInputChange('onlineEndDate', date ? date.toDate() : null)}
+                disabledDate={disablePastDates}
               />
             </div>
           </div>

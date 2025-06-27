@@ -4,25 +4,25 @@ import { SlabCreation } from "./steps/SlabCreation";
 import { FeeConfiguration } from "./steps/FeeConfiguration";
 import { PreviewSimulation } from "./steps/PreviewSimulation";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import { FeesStructureDto, FeesSlabYear, AcademicYear, FeesSlab } from "../../../types/fees";
+import { FeesStructureDto, AcademicYear } from "../../../types/fees";
 import { Course } from "../../../types/academics/course";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useFeesSlabs, useFeesHeads, useFeesReceiptTypes } from "@/hooks/useFees";
 import { useShifts } from "@/hooks/useShifts";
 import { getAllCourses } from "@/services/course-api";
-import axiosInstance from "@/utils/api";
+import { checkFeesStructureExists } from '@/services/fees-api';
+// import axiosInstance from "@/utils/api";
 // import { Shift } from "@/types/resources/shift";
 
 interface FeeStructureFormProps {
   onClose: () => void;
-  onSubmit: (data: { feesStructure: FeesStructureDto; feesSlabYears: FeesSlabYear[] }) => void;
+  onSubmit: (data: FeesStructureDto) => void;
   fieldsDisabled?: boolean;
   disabledSteps?: number[];
   selectedAcademicYear?: AcademicYear | null;
   selectedCourse?: Course | null;
   initialStep?: number;
-  slabs: FeesSlab[];
-  feesSlabYears: FeesSlabYear[];
+  // feesSlabMappings: FeesSlabMapping[];
   feesStructure?: FeesStructureDto | null;
   existingFeeStructures?: FeesStructureDto[];
   existingCourses: Course[];
@@ -64,12 +64,13 @@ const steps = [
 
 const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   onClose,
-  slabs,
-existingCourses,
+  // existingCourses,
   onSubmit,
   initialStep = 1,
   feesStructure,
   existingFeeStructures = [],
+  // feesSlabMappings: initialFeesSlabMappings,
+  // ...props
 }) => {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [formFeesStructure, setFormFeesStructure] = useState<FeesStructureDto>(
@@ -90,12 +91,14 @@ existingCourses,
       advanceForCourse: null,
       components: [],
       shift: null,
+      feesSlabMappings: [],
     },
   );
-  const [feesSlabYears, setFeesSlabYears] = useState<FeesSlabYear[]>([]);
+  // const [feesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>(feesStructure?.feesSlabMappings!);
   const [courses, setCourses] = useState<Course[]>([]);
   const [error, setError] = useState<string | null>(null);
   // const [slabs, setSlabs] = useState<FeesSlab[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   // Fetch data from hooks/services
   const { data: academicYears = [], isLoading: academicYearsLoading } = useAcademicYears();
@@ -104,16 +107,7 @@ existingCourses,
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
   const { shifts, loading: shiftsLoading } = useShifts();
 
-  const fetchSlabsYear = async () => {
-    try {
-      const res = await axiosInstance.get<FeesSlabYear[]>(`/api/v1/fees/slab-year-mappings?academicYearId=${formFeesStructure.academicYear!.id}`);
-      setFeesSlabYears(res.data);
-
-    } catch (error) {
-      console.log(error);
-      setFeesSlabYears([]);
-    }
-  }
+ 
 
   useEffect(() => {
     setCurrentStep(initialStep);
@@ -123,29 +117,27 @@ existingCourses,
   useEffect(() => {
     getAllCourses().then((res) => {
       if (res && res.payload) {
-        const tmpCourses = res.payload.filter(crs => !existingCourses.find(ele => ele.id == crs.id));
-        setCourses(tmpCourses);
+        setCourses(res.payload);
       }
     });
-    fetchSlabsYear();
   }, []);
 
   useEffect(() => {
-    // setSlabs(feesSlabs);
-    // If both slabs and feesSlabYears are empty, initialize them with one row per fees slab
-    // if (feesSlabs.length > 0 && slabs.length === 0 && feesSlabYears.length === 0) {
-    // setSlabs(feesSlabs);
-    if (formFeesStructure.academicYear && formFeesStructure.academicYear.id && feesSlabYears.length === 0) {
-      setFeesSlabYears(
-        feesSlabs.map((slab) => ({
+    if (
+      currentStep === 2 &&
+      feesSlabs.length > 0 &&
+      formFeesStructure.feesSlabMappings.length === 0
+    ) {
+      setFormFeesStructure(prev => ({...prev, 
+        feesSlabMappings: feesSlabs.map((slab) => ({
+          id: slab.id!,
           feesSlabId: slab.id!,
-          academicYearId: Number(formFeesStructure.academicYear!.id),
+          feesStructureId: 0, // Placeholder, update as needed
           feeConcessionRate: 0,
-        })),
-      );
+        }))
+      }));
     }
-    // }
-  }, [feesSlabs]);
+  }, [currentStep, feesSlabs, formFeesStructure.feesSlabMappings.length, setFormFeesStructure]);
 
   // Validation logic for each step
   const validateStep = () => {
@@ -160,7 +152,7 @@ existingCourses,
       }
     }
     if (currentStep === 2) {
-      if (!feesSlabYears.length) {
+      if (!formFeesStructure.feesSlabMappings.length) {
         setError("Please add at least one slab.");
         return false;
       }
@@ -201,9 +193,39 @@ existingCourses,
     setCurrentStep((prev) => Math.max(prev - 1, 1));
   };
 
-  const handleSubmit = () => {
-    if (validateStep()) {
-      onSubmit({ feesStructure: formFeesStructure, feesSlabYears });
+  const handleSubmit = async () => {
+    if (!validateStep()) return;
+    setSubmitting(true);
+    try {
+      if (!formFeesStructure.id) {
+        // Remove 'id' from each feesSlabMapping before submit
+        const cleanedFeesSlabMappings = formFeesStructure.feesSlabMappings.map(({ id, ...rest }) => { console.log(id); return rest});
+        // const payload = {
+        //   ...formFeesStructure,
+        //   feesSlabMappings: cleanedFeesSlabMappings,
+        // };
+        // Duplicate check
+        const checkPayload = {
+          academicYearId: formFeesStructure.academicYear?.id,
+          courseId: formFeesStructure.course?.id,
+          semester: formFeesStructure.semester,
+          shiftId: formFeesStructure.shift?.id,
+          feesReceiptTypeId: formFeesStructure.feesReceiptTypeId,
+        };
+        const res = await checkFeesStructureExists(checkPayload);
+        if (res.exists) {
+          setError('A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.');
+          setSubmitting(false);
+          return;
+        }
+        onSubmit({ ...formFeesStructure, feesSlabMappings: cleanedFeesSlabMappings });
+      } else {
+        onSubmit(formFeesStructure);
+      }
+    } catch {
+      setError('Error checking for duplicate fee structure.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -272,16 +294,10 @@ existingCourses,
           )}
           {currentStep === 2 && (
             <SlabCreation
-              feesSlabYears={feesSlabYears}
-              setFeesSlabYears={setFeesSlabYears}
-              slabs={slabs}
-              // setSlabs={setSlabs}
+              feesSlabMappings={formFeesStructure.feesSlabMappings}
+              setFormFeesStructure={setFormFeesStructure}
+              slabs={feesSlabs}
               academicYearId={formFeesStructure.academicYear?.id}
-              // slabYearMappings={feesSlabYears.map((year) => ({
-              //   feesSlabId: year.feesSlabId,
-              //   academicYearId: year.academicYearId,
-              //   feeConcessionRate: year.feeConcessionRate,
-              // }))}
             />
           )}
           {currentStep === 3 && (
@@ -300,7 +316,7 @@ existingCourses,
               feesStructure={formFeesStructure}
               feeHeads={feesHeads}
               slabs={feesSlabs}
-              feesSlabYears={feesSlabYears}
+              feesSlabMappings={formFeesStructure.feesSlabMappings}
               feesReceiptTypes={feesReceiptTypes}
             />
           )}
@@ -309,7 +325,7 @@ existingCourses,
           <div className="flex justify-between">
             <button
               onClick={handlePrevious}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || !!(formFeesStructure.id && formFeesStructure.id > 0)}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                 currentStep === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -330,8 +346,9 @@ existingCourses,
                 <button
                   onClick={handleSubmit}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
+                  disabled={submitting}
                 >
-                  Submit
+                  {submitting ? 'Submitting...' : 'Submit'}
                 </button>
               ) : (
                 <button

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import {
   FeesStructureDto,
-  FeesSlabYear,
+  FeesSlabMapping,
   FeesSlab,
   FeesHead,
   FeesComponent,
@@ -19,26 +19,21 @@ import {
 
 interface PreviewSimulationProps {
   feesStructure: FeesStructureDto & { feesReceiptTypeId?: number | null };
-  feesSlabYears: FeesSlabYear[];
+  feesSlabMappings: FeesSlabMapping[];
   slabs: FeesSlab[];
   feeHeads: FeesHead[];
   feesReceiptTypes: FeesReceiptType[];
 }
 
-interface CalculatedFee extends FeesComponent {
-  feeHeadName: string;
-  adjustedAmount?: number;
-}
-
 export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
   feesStructure,
-  feesSlabYears,
+  feesSlabMappings,
   slabs,
   feeHeads,
   feesReceiptTypes,
 }) => {
   const MIN_ROWS = 8;
-  const [selectedSlabId, setSelectedSlabId] = useState<number | null>(feesSlabYears[0].feesSlabId!);
+  const [selectedSlabId, setSelectedSlabId] = useState<number | null>(feesSlabMappings[0]?.feesSlabId ?? null);
 
   const getFeeHeadName = (id: number) =>
     feeHeads.find((h) => h.id === id)?.name || "N/A";
@@ -59,7 +54,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
     });
   };
 
-  const calculatedFees = useMemo((): CalculatedFee[] => {
+  const calculatedFees = useMemo((): (FeesComponent & { feeHeadName: string; adjustedAmount?: number })[] => {
     const components = feesStructure.components.map((component) => ({
       ...component,
       feeHeadName: getFeeHeadName(component.feesHeadId),
@@ -69,7 +64,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
       return components.map((c) => ({ ...c, adjustedAmount: c.amount }));
     }
 
-    const selectedSlabData = feesSlabYears.find(
+    const selectedSlabData = feesSlabMappings.find(
       (slab) => slab.feesSlabId === selectedSlabId
     );
 
@@ -84,7 +79,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
           (component.amount * selectedSlabData.feeConcessionRate) / 100
         : component.amount,
     }));
-  }, [feesStructure.components, feesSlabYears, selectedSlabId, feeHeads]);
+  }, [feesStructure.components, feesSlabMappings, selectedSlabId, feeHeads]);
 
   const totalAmount = useMemo(
     () => calculatedFees.reduce((sum, fee) => sum + fee.amount, 0),
@@ -213,31 +208,31 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-4 py-3">
             <div className="flex flex-wrap gap-2">
-              {feesSlabYears.map((slabYear) => (
+              {feesSlabMappings.map((slabMapping) => (
                 <button
-                  key={slabYear.feesSlabId}
+                  key={slabMapping.feesSlabId}
                   onClick={() =>
                     setSelectedSlabId(
-                      selectedSlabId === slabYear.feesSlabId
+                      selectedSlabId === slabMapping.feesSlabId
                         ? null
-                        : slabYear.feesSlabId
+                        : slabMapping.feesSlabId
                     )
                   }
                   className={`px-4 py-2 text-sm rounded-md transition-colors ${
-                    selectedSlabId === slabYear.feesSlabId
+                    selectedSlabId === slabMapping.feesSlabId
                       ? "bg-purple-100 text-purple-700 border-purple-200"
                       : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
                   } border`}
                 >
-                  <span>{getSlabName(slabYear.feesSlabId)}</span>
+                  <span>{getSlabName(slabMapping.feesSlabId)}</span>
                   <span
                     className={`ml-2 font-medium ${
-                      selectedSlabId === slabYear.feesSlabId
+                      selectedSlabId === slabMapping.feesSlabId
                         ? "text-purple-700"
                         : "text-gray-900"
                     }`}
                   >
-                    ({slabYear.feeConcessionRate}%)
+                    ({slabMapping.feeConcessionRate}%)
                   </span>
                 </button>
               ))}

@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, getFeesDesignAbstractLevel } from "../services/fees-structure.service.js";
+import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, getFeesDesignAbstractLevel, checkFeesStructureExists } from "../services/fees-structure.service.js";
 import { handleError } from "@/utils/index.js";
 
 function toDate(val: any): Date | null {
@@ -154,6 +154,32 @@ export const getFeesDesignAbstractLevelHandler = async (req: Request, res: Respo
         const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
         const abstractLevel = await getFeesDesignAbstractLevel(academicYearId, courseId);
         res.status(200).json(abstractLevel);
+    } catch (error) {
+        handleError(error, res);
+    }
+};
+
+export const checkFeesStructureExistsHandler = async (req: Request, res: Response) => {
+    try {
+        const { academicYearId, courseId, semester, shiftId, feesReceiptTypeId } = req.body;
+        if (
+            academicYearId == null ||
+            courseId == null ||
+            semester == null ||
+            shiftId == null ||
+            feesReceiptTypeId == null
+        ) {
+            res.status(400).json({ error: "Missing required fields" });
+            return;
+        }
+        const exists = await checkFeesStructureExists(
+            Number(academicYearId),
+            Number(courseId),
+            Number(semester),
+            Number(shiftId),
+            Number(feesReceiptTypeId)
+        );
+        res.status(200).json({ exists });
     } catch (error) {
         handleError(error, res);
     }

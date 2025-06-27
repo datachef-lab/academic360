@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { getFeesSlabYears, getFeesSlabYearById, createFeesSlabYear, updateFeesSlabYear, deleteFeesSlabYear, checkSlabsExistForAcademicYear } from "../services/fees-slab-year-mapping.service.js";
+import { checkSlabsExistForMapping, createFeesSlabMapping, deleteFeesSlabMapping, getFeesSlabMapping, getFeesSlabMappingById, getFeesSlabMappingsByFeesStructureId, updateFeesSlabMapping } from "../services/fees-slab-mapping.service.js";
 import { handleError } from "@/utils/index.js";
 
 export const getFeesSlabYearMappingsHandler = async (req: Request, res: Response) => {
     try {
-        const mappings = await getFeesSlabYears();
+        const mappings = await getFeesSlabMapping();
         if (mappings === null) {
             handleError(new Error("Error fetching fees slab year mappings"), res);
             return;
@@ -18,7 +18,7 @@ export const getFeesSlabYearMappingsHandler = async (req: Request, res: Response
 export const getFeesSlabYearMappingByIdHandler = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const mapping = await getFeesSlabYearById(id);
+        const mapping = await getFeesSlabMappingById(id);
         if (mapping === null) {
             handleError(new Error("Error fetching fees slab year mapping"), res);
             return;
@@ -35,7 +35,7 @@ export const getFeesSlabYearMappingByIdHandler = async (req: Request, res: Respo
 
 export const createFeesSlabYearMappingHandler = async (req: Request, res: Response) => {
     try {
-        const newMapping = await createFeesSlabYear(req.body);
+        const newMapping = await createFeesSlabMapping(req.body);
         if (newMapping === null) {
             // handleError(new Error("Error creating fees slab year mapping"), res);
             res.status(200).json({ message: "Fees slab year mapping exist" });
@@ -50,7 +50,7 @@ export const createFeesSlabYearMappingHandler = async (req: Request, res: Respon
 export const updateFeesSlabYearMappingHandler = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const updatedMapping = await updateFeesSlabYear(id, req.body);
+        const updatedMapping = await updateFeesSlabMapping(id, req.body);
         if (updatedMapping === null) {
             handleError(new Error("Error updating fees slab year mapping"), res);
             return;
@@ -68,7 +68,7 @@ export const updateFeesSlabYearMappingHandler = async (req: Request, res: Respon
 export const deleteFeesSlabYearMappingHandler = async (req: Request, res: Response) => {
     try {
         const id = parseInt(req.params.id);
-        const deletedMapping = await deleteFeesSlabYear(id);
+        const deletedMapping = await deleteFeesSlabMapping(id);
         if (deletedMapping === null) {
             handleError(new Error("Error deleting fees slab year mapping"), res);
             return;
@@ -85,12 +85,12 @@ export const deleteFeesSlabYearMappingHandler = async (req: Request, res: Respon
 
 export const checkSlabsExistForAcademicYearHandler = async (req: Request, res: Response) => {
     try {
-        const academicYearId = parseInt(req.params.academicYearId);
-        if (isNaN(academicYearId)) {
-            res.status(400).json({ message: "Invalid academic year ID" });
+        const feesStructureId = parseInt(req.params.feesStructureId);
+        if (isNaN(feesStructureId)) {
+            res.status(400).json({ message: "Invalid fees structure ID" });
             return;
         }
-        const result = await checkSlabsExistForAcademicYear(academicYearId);
+        const result = await checkSlabsExistForMapping(feesStructureId);
         res.status(200).json(result);
     } catch (error) {
         handleError(error, res);
