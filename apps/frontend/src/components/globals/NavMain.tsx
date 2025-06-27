@@ -1,18 +1,14 @@
-
-
 import { type LucideIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import {
   SidebarGroup,
-
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
-  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 
 export function NavMain({
@@ -59,14 +55,11 @@ export function NavMain({
 
   return (
     <SidebarGroup className="px-0 pl-[0.5px]">
-     
-      
-     <SidebarMenu>
+      <SidebarMenu>
         {items.map((item, index) => {
           if (!item.title || !item.url) return null;
 
-          const hasSubItems =
-            Array.isArray(item.items) && item.items.length > 0;
+          const hasSubItems = Array.isArray(item.items) && item.items.length > 0;
 
           return (
             <motion.div
@@ -92,7 +85,6 @@ export function NavMain({
                     <span
                       className="absolute left-0 top-0 h-full w-1 
                        bg-gradient-to-b from-pink-600 to-violet-500
-
                         scale-y-0 group-hover/menu-item:scale-y-100 
                         origin-top transition-transform duration-300"
                     ></span>
@@ -111,7 +103,7 @@ export function NavMain({
                         transition={{ type: "spring", stiffness: 300 }}
                         className="shrink-0 relative z-10"
                       >
-                        <item.icon className="h-5 w-5 " />
+                        <item.icon className="h-5 w-5" />
                       </motion.div>
                     )}
 
@@ -137,22 +129,21 @@ export function NavMain({
                           animate="visible"
                           variants={subMenuItemVariants}
                           key={subItem.title}
+                          className="my-1"
                         >
-                          <SidebarMenuSubItem className="my-1">
-                            <SidebarMenuSubButton asChild >
-                              <Link
-                                to={subItem.url}
-                                className="group/subitem relative flex items-center rounded-md px-3 py-2 text-sm 
-                                  text-sidebar-foreground/80 hover:text-white active:text-white    transition-all duration-50"
-                              >
-                                <span
-                                  className="absolute inset-0 bg-gradient-to-r from-blue-500/50  to-blue-500/80 opacity-0
-                                  group-hover/subitem:opacity-100 transition-opacity duration-300 rounded-md"
-                                ></span>
-                                <span className="relative z-10 ">{subItem.title}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
+                          <SidebarMenuSubButton asChild>
+                            <Link
+                              to={subItem.url}
+                              className="group/subitem relative flex items-center rounded-md px-3 py-2 text-sm 
+                                text-sidebar-foreground/80 hover:text-white active:text-white transition-all duration-50"
+                            >
+                              <span
+                                className="absolute inset-0 bg-gradient-to-r from-blue-500/50 to-blue-500/80 opacity-0
+                                group-hover/subitem:opacity-100 transition-opacity duration-300 rounded-md"
+                              ></span>
+                              <span className="relative z-10">{subItem.title}</span>
+                            </Link>
+                          </SidebarMenuSubButton>
                         </motion.div>
                       );
                     })}

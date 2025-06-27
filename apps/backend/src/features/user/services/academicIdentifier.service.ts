@@ -4,7 +4,7 @@ import { findStreamById } from "@/features/academics/services/stream.service.js"
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { Shift } from "@/features/academics/models/shift.model.js";
-import { findShiftById } from "@/features/academics/services/shift.service.js";
+import { getShiftById } from "@/features/academics/services/shift.service.js";
 import { StreamType } from "@/types/academics/stream.js";
 import { Section } from "@/features/academics/models/section.model.js";
 import { findSectionById } from "@/features/academics/services/section.service.js";
@@ -98,7 +98,7 @@ export async function academicIdentifierResponseFormat(academicIdentifier: Acade
 
     let shift: Shift | null = null;
     if (shiftId) {
-        shift = await findShiftById(shiftId as number);
+        shift = await getShiftById(shiftId as number);
     }
 
     let section: Section | null = null;

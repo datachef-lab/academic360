@@ -1,7 +1,8 @@
 import axiosInstance from "@/utils/api";
 import axios from "axios";
-
-
+import { ApiResonse } from "@/types/api-response";
+import { Course } from "@/types/academics/course";
+import { Shift } from "@/types/resources/shift";
 
 export const getAcademicIdentifier = async (studentId: number) => {
   try {
@@ -166,3 +167,13 @@ export const getAllSpecialization = async () => {
   console.log("res data test*****", response.data?.payload?.name);
   return response.data.payload;
 };
+
+export async function getAllCourses(): Promise<ApiResonse<Course[]>> {
+  const response = await axiosInstance.get(`/api/v1/academics/streams`);
+  return response.data;
+}
+
+export async function getAllShifts(): Promise<Shift[]> {
+  const response = await axiosInstance.get(`/api/v1/shifts`);
+  return response.data;
+}

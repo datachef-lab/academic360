@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesComponents, getFeesComponentById, createFeesComponent, updateFeesComponent, deleteFeesComponent } from "../services/feesComponent.service";
-import { handleError } from "@/utils";
+import { getFeesComponents, getFeesComponentById, createFeesComponent, updateFeesComponent, deleteFeesComponent } from "../services/feesComponent.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesComponentsHandler = async (req: Request, res: Response) => {
     try {

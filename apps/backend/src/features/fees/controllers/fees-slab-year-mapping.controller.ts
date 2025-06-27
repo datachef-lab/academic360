@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesSlabYears, getFeesSlabYearById, createFeesSlabYear, updateFeesSlabYear, deleteFeesSlabYear } from "../services/fees-slab-year-mapping.service";
-import { handleError } from "@/utils";
+import { getFeesSlabYears, getFeesSlabYearById, createFeesSlabYear, updateFeesSlabYear, deleteFeesSlabYear, checkSlabsExistForAcademicYear } from "../services/fees-slab-year-mapping.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesSlabYearMappingsHandler = async (req: Request, res: Response) => {
     try {
@@ -37,7 +37,8 @@ export const createFeesSlabYearMappingHandler = async (req: Request, res: Respon
     try {
         const newMapping = await createFeesSlabYear(req.body);
         if (newMapping === null) {
-            handleError(new Error("Error creating fees slab year mapping"), res);
+            // handleError(new Error("Error creating fees slab year mapping"), res);
+            res.status(200).json({ message: "Fees slab year mapping exist" });
             return;
         }
         res.status(201).json(newMapping);
@@ -77,6 +78,20 @@ export const deleteFeesSlabYearMappingHandler = async (req: Request, res: Respon
             return;
         }
         res.status(200).json(deletedMapping);
+    } catch (error) {
+        handleError(error, res);
+    }
+};
+
+export const checkSlabsExistForAcademicYearHandler = async (req: Request, res: Response) => {
+    try {
+        const academicYearId = parseInt(req.params.academicYearId);
+        if (isNaN(academicYearId)) {
+            res.status(400).json({ message: "Invalid academic year ID" });
+            return;
+        }
+        const result = await checkSlabsExistForAcademicYear(academicYearId);
+        res.status(200).json(result);
     } catch (error) {
         handleError(error, res);
     }

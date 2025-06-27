@@ -1,293 +1,430 @@
-import React from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType } from "@/types/fees";
+import { DatePicker, Select, InputNumber } from "antd";
+import dayjs from "dayjs";
+import { Course } from "@/types/academics/course";
+import { Shift } from "@/types/resources/shift";
 
 interface FeeConfigurationProps {
-  data: {
-    course: string;
-    semester: string;
-    shift: string;
-    advanceFor?: {
-      course: string;
-      semester: string;
-      session: string;
-    };
-    components: Array<{
-      id: number;
-      feeHead: string;
-      amount: number;
-      sequence: number;
-      concessionEligible: boolean;
-      refundType: "Full" | "Forfeit";
-      specialType: "Excess" | "Casual" | "Re-admission" | null;
-      lateFeeType: string;
-    }>;
-  };
-  onChange: (data: FeeConfigurationProps["data"]) => void;
+  feesStructure: FeesStructureDto;
+  setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
+  feeHeads: FeesHead[];
+  courses: Course[];
+  feesReceiptTypes: FeesReceiptType[];
+  shifts: Shift[];
+  existingFeeStructures?: FeesStructureDto[];
 }
 
-export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({ data, onChange }) => {
-  const handleInputChange = (field: string, value: unknown) => {
-    if (field.includes(".")) {
-      const [parent, child] = field.split(".");
-      onChange({
-        ...data,
-        [parent]: {
-          ...data[parent as keyof typeof data],
-          [child]: value,
-        },
-      });
-    } else {
-      onChange({
-        ...data,
-        [field]: value,
-      });
+export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
+  feesStructure,
+  setFeesStructure,
+  feeHeads,
+  courses,
+  feesReceiptTypes,
+  shifts,
+  existingFeeStructures = [],
+}) => {
+  const tbodyRef = useRef<HTMLTableSectionElement>(null);
+  const setEmptyRows = useState(0)[1];
+  const ROW_HEIGHT = 53; // Approximate height of a row in pixels
+  // const MIN_ROWS = 8; // Set a minimum number of rows to display
+
+  useEffect(() => {
+    // Add 1 default fee component if the list is empty
+    if (feesStructure.components.length === 0) {
+      const defaultComponents: FeesComponent[] = Array.from({ length: 1 }, (_, i) => ({
+        feesHeadId: 0,
+        amount: 0,
+        sequence: i + 1,
+        isConcessionApplicable: false,
+        feesStructureId: feesStructure.id || 0,
+        remarks: "",
+      }));
+      setFeesStructure(prev => ({ ...prev, components: defaultComponents as FeesComponent[] }));
     }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (tbodyRef.current) {
+      const tbodyHeight = tbodyRef.current.offsetHeight;
+      const numVisibleRows = Math.floor(tbodyHeight / ROW_HEIGHT);
+      const newEmptyRows = Math.max(0, numVisibleRows - feesStructure.components.length);
+      setEmptyRows(newEmptyRows);
+    }
+  }, [feesStructure.components.length]);
+
+  const handleInputChange = (field: keyof FeesStructureDto, value: unknown) => {
+    setFeesStructure(prev => ({ ...prev, [field]: value }));
+  };
+
+  const existingCombinations = useMemo(() => existingFeeStructures
+    .filter(fs => 
+      fs.id !== feesStructure.id &&
+      fs.academicYear?.id === feesStructure.academicYear?.id &&
+      fs.course?.id === feesStructure.course?.id
+    )
+    .map(fs => ({ semester: fs.semester, shiftId: fs.shift?.id })), 
+    [existingFeeStructures, feesStructure.academicYear, feesStructure.course, feesStructure.id]
+  );
+
+  const allSemesters = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
+
+  const availableSemesters = useMemo(() => allSemesters.filter(sem => {
+      const shiftsForSemester = existingCombinations
+        .filter(c => c.semester === sem)
+        .map(c => c.shiftId);
+      return shiftsForSemester.length < shifts.length;
+  }), [allSemesters, existingCombinations, shifts.length]);
+
+  const availableShifts = useMemo(() => {
+      if (!feesStructure.semester) {
+          return shifts;
+      }
+      const takenShiftIds = existingCombinations
+          .filter(c => c.semester === feesStructure.semester)
+          .map(c => c.shiftId);
+      return shifts.filter(shift => !takenShiftIds.includes(shift.id));
+  }, [feesStructure.semester, shifts, existingCombinations]);
+
+  const handleSemesterChange = (value: number | null) => {
+    const takenShiftIdsForNewSemester = existingCombinations
+      .filter(c => c.semester === value)
+      .map(c => c.shiftId);
+    
+    const isCurrentShiftAvailableInNewSemester = !takenShiftIdsForNewSemester.includes(feesStructure.shift?.id);
+
+    setFeesStructure(prev => ({
+      ...prev,
+      semester: value,
+      shift: isCurrentShiftAvailableInNewSemester ? prev.shift : null,
+    }));
   };
 
   const handleAddComponent = () => {
-    onChange({
-      ...data,
-      components: [
-        ...data.components,
-        {
-          id: data.components.length + 1,
-          feeHead: "",
-          amount: 0,
-          sequence: data.components.length + 1,
-          concessionEligible: false,
-          refundType: "Full" as const,
-          specialType: null,
-          lateFeeType: "",
-        },
-      ],
-    });
+    const newComponent: FeesComponent = {
+      sequence: feesStructure.components.length + 1,
+      isConcessionApplicable: false,
+      feesHeadId: 0,
+      amount: 0,
+      remarks: "",
+      feesStructureId: feesStructure.id || 0,
+    };
+    setFeesStructure((prev: FeesStructureDto) => ({
+      ...prev,
+      components: [...prev.components, newComponent],
+    }));
   };
 
-  const handleRemoveComponent = (id: number) => {
-    onChange({
-      ...data,
-      components: data.components.filter((component) => component.id !== id),
-    });
+  const handleRemoveComponent = (index: number) => {
+    setFeesStructure((prev: FeesStructureDto) => ({
+      ...prev,
+      components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+    }));
   };
 
-  const handleComponentChange = (
-    id: number,
-    field: keyof FeeConfigurationProps["data"]["components"][0],
-    value: unknown,
+  const handleComponentChange = <K extends keyof Omit<FeesComponent, "id">>(
+    index: number,
+    field: K,
+    value: FeesComponent[K],
   ) => {
-    onChange({
-      ...data,
-      components: data.components.map((component) =>
-        component.id === id
-          ? {
-              ...component,
-              [field]: value,
-            }
-          : component,
-      ),
-    });
+    const newComponents = [...feesStructure.components];
+    newComponents[index][field] = value;
+    setFeesStructure({ ...feesStructure, components: newComponents });
   };
+
+  const MIN_ROWS = 8;
+  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.amount || 0), 0);
+
+  useEffect(() => {
+    const tableBody = document.querySelector('.table-body-fee-config');
+    if (tableBody) {
+      // const visibleRows = Math.floor(tableBody.clientHeight / ROW_HEIGHT);
+      const dataRows = feesStructure.components.length;
+      const calculatedEmptyRows = Math.max(0, MIN_ROWS - dataRows);
+      setEmptyRows(calculatedEmptyRows);
+    }
+  }, [feesStructure.components.length]);
+
+  // const generateEmptyRows = (count: number) => {
+  //   return Array.from({ length: count }, (_, i) => ({
+  //     id: `empty-${i}`,
+  //     feesHead: { id: '', name: '' },
+  //     amount: 0,
+  //     sequence: feesStructure.components.length + i + 1,
+  //     isConcessionApplicable: false,
+  //     feesStructureId: feesStructure.id || 0,
+  //     remarks: "",
+  //   }));
+  // };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Fee Structure Configuration</h3>
-        <p className="text-sm text-gray-600 mb-6">Configure fee components and academic parameters</p>
+    <div className="h-full flex flex-col space-y-4">
+      <div className="space-y-6">
+        {/* Top Row */}
+        <div className="flex items-end justify-between gap-4">
+          <div className="flex items-end gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Closing Date</label>
+              <DatePicker
+                value={feesStructure.closingDate ? dayjs(feesStructure.closingDate) : null}
+                onChange={(date) => handleInputChange('closingDate', date ? date.toDate() : null)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
+              <p className="w-48 px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">{feesStructure.course?.name || 'Not Selected'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <Select
+                className="w-32"
+                placeholder="Select"
+                value={feesStructure.semester}
+                onChange={handleSemesterChange}
+              >
+                {availableSemesters.map(sem => (
+                  <Select.Option key={sem} value={sem}>
+                    Sem {sem}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+              <Select
+                value={feesStructure.shift?.id}
+                onChange={(value) => handleInputChange('shift', shifts.find(s => s.id === value) || null)}
+                placeholder="Select Shift"
+                className="w-full"
+                disabled={!feesStructure.semester}
+              >
+                {availableShifts.map(shift => (
+                  <Select.Option key={shift.id} value={shift.id!}>{shift.name}</Select.Option>
+                ))}
+              </Select>
+            </div>
+          </div>
+          
+          <div className="flex items-end gap-4">
+            <div className="pl-4">
+              <p className="text-sm font-medium text-gray-700 mb-1">To be treated as advance for:</p>
+              <div className="flex items-center gap-4">
+                <Select
+                  className="w-32"
+                  placeholder="Adv. Course"
+                  value={feesStructure.advanceForCourse?.id}
+                  onChange={(value) => handleInputChange('advanceForCourse', value ? courses.find(c => c.id === value) : null)}
+                  allowClear
+                >
+                  {courses.map(course => (
+                    <Select.Option key={course.id} value={course.id!}>
+                      {course.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Select
+                  className="w-32"
+                  placeholder="Adv. Semester"
+                  value={feesStructure.advanceForSemester}
+                  onChange={(value) => handleInputChange('advanceForSemester', value)}
+                  allowClear
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                    <Select.Option key={sem} value={sem}>
+                      Sem {sem}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Row */}
+        <div className="flex items-end gap-9 justify-between">
+          <div className="flex items-center gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fee Collection Start</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.startDate ? dayjs(feesStructure.startDate) : null}
+                onChange={(date) => handleInputChange('startDate', date ? date.toDate() : null)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fee Collection End</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.endDate ? dayjs(feesStructure.endDate) : null}
+                onChange={(date) => handleInputChange('endDate', date ? date.toDate() : null)}
+              />
+            </div>
+            <div>
+
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2 items-center">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Installments</label>
+              <InputNumber
+                className="w-[100px]"
+                min={1}
+                max={12}
+                value={feesStructure.numberOfInstalments}
+                onChange={(value) => handleInputChange('numberOfInstalments', value)}
+                controls={false}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Installments Start</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.instalmentStartDate ? dayjs(feesStructure.instalmentStartDate) : null}
+                onChange={(date) => handleInputChange('instalmentStartDate', date ? date.toDate() : null)}
+                disabled={!feesStructure.numberOfInstalments}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Installments End</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.instalmentEndDate ? dayjs(feesStructure.instalmentEndDate) : null}
+                onChange={(date) => handleInputChange('instalmentEndDate', date ? date.toDate() : null)}
+                disabled={!feesStructure.numberOfInstalments}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Online Start</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.onlineStartDate ? dayjs(feesStructure.onlineStartDate) : null}
+                onChange={(date) => handleInputChange('onlineStartDate', date ? date.toDate() : null)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Online End</label>
+              <DatePicker
+                className="w-full"
+                value={feesStructure.onlineEndDate ? dayjs(feesStructure.onlineEndDate) : null}
+                onChange={(date) => handleInputChange('onlineEndDate', date ? date.toDate() : null)}
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-          <select
-            value={data.course}
-            onChange={(e) => handleInputChange("course", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-          >
-            <option value="">Select Course</option>
-            <option value="bca">BCA</option>
-            <option value="bba">BBA</option>
-            <option value="bcom">B.Com</option>
-          </select>
-        </div>
+      {/* Fee Components Section */}
+      <div className="flex-grow flex flex-col min-h-0">
+        <div className="flex justify-between items-center mb-2 flex-shrink-0">
+          {/* <h4 className="font-medium text-gray-900">Fee Components</h4> */}
+          <div className="flex items-center gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Fees Receipt Type</label>
+              <Select
+                className="w-48"
+                placeholder="Select"
+                value={feesStructure.feesReceiptTypeId}
+                onChange={(value) => handleInputChange('feesReceiptTypeId', value)}
+              >
+                {feesReceiptTypes.map(type => (
+                  <Select.Option key={type.id} value={type.id!}>
+                    {type.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-          <select
-            value={data.semester}
-            onChange={(e) => handleInputChange("semester", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-          >
-            <option value="">Select Semester</option>
-            {[1, 2, 3, 4, 5, 6].map((sem) => (
-              <option key={sem} value={sem}>
-                Semester {sem}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-4">
+            <button onClick={handleAddComponent} className="flex border border-gray-400 items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Component
+            </button>
+          </div>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
-          <select
-            value={data.shift}
-            onChange={(e) => handleInputChange("shift", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm text-black focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-          >
-            <option value="">Select Shift</option>
-            <option value="morning">Morning</option>
-            <option value="afternoon">Afternoon</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h4 className="font-medium text-gray-900">Fee Components</h4>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sr. No.
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fee Head
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sequence
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Concession
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Refund Type
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Special Type
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Late Fee
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+        <div className="flex-grow overflow-hidden border border-gray-400 rounded-lg flex flex-col">
+          <table className="min-w-full h-full flex flex-col">
+            <thead className="flex-shrink-0">
+              <tr className="flex">
+                <th className="w-16 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Sr. No.</th>
+                <th className="flex-1 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Fee Head</th>
+                <th className="w-24 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Sequence</th>
+                <th className="w-28 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Apply Concession?</th>
+                <th className="w-32 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Amount</th>
+                <th className="w-20 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-400">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data.components.map((component, index) => (
-                <tr key={component.id}>
-                  <td className="px-4 py-2 whitespace-nowrap text-sm text-black">{index + 1}</td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <select
-                      value={component.feeHead}
-                      onChange={(e) => handleComponentChange(component.id, "feeHead", e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
+            <tbody className={`flex-grow overflow-y-auto bg-white`}>
+              {feesStructure.components.map((component, index) => (
+                <tr key={component.sequence || index} className="flex h-[35px]">
+                  <td className="w-16 px-4 py-2 border-r border-gray-400 text-sm text-black flex items-center justify-center">{index + 1}.</td>
+                  <td className="flex-1 px-4 py-2 border-r border-gray-400">
+                    <Select
+                      value={component.feesHeadId || null}
+                      onChange={(value) => handleComponentChange(index, "feesHeadId", value)}
+                      placeholder="Select Fee Head"
+                      className="w-full"
+                      showSearch
+                      optionFilterProp="children"
+                      bordered={false}
                     >
-                      <option value="">Select Fee Head</option>
-                      <option value="tuition">Tuition Fee</option>
-                      <option value="development">Development Fee</option>
-                      <option value="library">Library Fee</option>
-                      <option value="sports">Sports Fee</option>
-                    </select>
+                      {feeHeads.map((head) => (
+                        <Select.Option key={head.id} value={head.id!}>
+                          {head.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <input
-                      type="text"
-                      value={component.amount}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^\d*\.?\d*$/.test(val)) {
-                          handleComponentChange(
-                          component.id,
-                          "amount",
-                          val === "" || val.endsWith(".") ? val : parseFloat(val),
-                        );
-                        }
-                      }}
-                      className="w-24 px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
-                    />
+                  <td className="w-24 px-4 py-2 border-r border-gray-400 flex items-center justify-center">
+                    <input type="number" value={component.sequence} onChange={(e) => handleComponentChange(index, "sequence", Number(e.target.value))} className="w-20 text-center bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black" />
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <input
-                      type="text"
-                      value={component.sequence}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (/^\d*$/.test(val)) {
-                          handleComponentChange(component.id, "sequence", val === "" ? 0 : parseInt(val, 10));
-                        }
-                      }}
-                      className="w-16 px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
-                    />
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
+                  <td className="w-28 px-4 py-2 border-r border-gray-400 text-center flex items-center justify-center">
                     <input
                       type="checkbox"
-                      checked={component.concessionEligible}
-                      onChange={(e) => handleComponentChange(component.id, "concessionEligible", e.target.checked)}
+                      checked={component.isConcessionApplicable}
+                      onChange={(e) => handleComponentChange(index, "isConcessionApplicable", e.target.checked)}
                       className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
                     />
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <select
-                      value={component.refundType}
-                      onChange={(e) => handleComponentChange(component.id, "refundType", e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
-                    >
-                      <option value="Full">Full</option>
-                      <option value="Forfeit">Forfeit</option>
-                    </select>
+                  <td className="w-32 px-4 py-2 border-r border-gray-400 flex items-center">
+                    <span className="text-gray-900">₹</span>
+                    <input type="number" value={component.amount} onChange={(e) => handleComponentChange(index, "amount", Number(e.target.value))} className="w-24 ml-1 bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black" />
                   </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <select
-                      value={component.specialType || ""}
-                      onChange={(e) => handleComponentChange(component.id, "specialType", e.target.value || null)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
-                    >
-                      <option value="">None</option>
-                      <option value="Excess">Excess</option>
-                      <option value="Casual">Casual</option>
-                      <option value="Re-admission">Re-admission</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <select
-                      value={component.lateFeeType}
-                      onChange={(e) => handleComponentChange(component.id, "lateFeeType", e.target.value)}
-                      className="w-full px-2 py-1 border border-gray-300 rounded-md text-sm text-black"
-                    >
-                      <option value="">Select Type</option>
-                      <option value="daily">Daily</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="fixed">Fixed</option>
-                    </select>
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap">
-                    <button
-                      onClick={() => handleRemoveComponent(component.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
+                  <td className="w-20 px-4 py-2 text-center border-gray-400 flex items-center justify-center">
+                    <button onClick={() => handleRemoveComponent(index)} className="text-red-600 hover:text-red-900"><Trash2 className="h-5 w-5" /></button>
                   </td>
                 </tr>
               ))}
+              {Array.from({ length: Math.max(0, MIN_ROWS - feesStructure.components.length) }).map((_, index) => (
+                <tr key={`empty-${index}`} className="flex h-[53px]">
+                  <td className="w-16 border-r border-gray-400"></td>
+                  <td className="flex-1 border-r border-gray-400"></td>
+                  <td className="w-24 border-r border-gray-400"></td>
+                  <td className="w-28 border-r border-gray-400"></td>
+                  <td className="w-32 border-r border-gray-400"></td>
+                  <td className="w-20"></td>
+                </tr>
+              ))}
             </tbody>
+            <tfoot className="flex-shrink-0">
+              <tr className="flex bg-gray-50">
+                <td className="flex-1 px-4 py-2 border-t border-r border-gray-400 text-right font-bold text-gray-900">Total</td>
+                <td className="w-32 px-4 py-2 border-t border-r border-gray-400 font-bold text-gray-900">
+                  ₹ {totalAmount.toLocaleString()}
+                </td>
+                <td className="w-20 px-4 py-2 border-t border-gray-400"></td>
+              </tr>
+            </tfoot>
           </table>
-        </div>
-
-        <div className="flex justify-center">
-          <button
-            onClick={handleAddComponent}
-            className="flex items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Component
-          </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default FeeConfiguration;

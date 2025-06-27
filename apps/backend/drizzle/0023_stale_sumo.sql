@@ -1,0 +1,2 @@
+ALTER TABLE "fees_structures" ADD COLUMN "fees_receipt_type_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "fees_structures" ADD CONSTRAINT "fees_structures_fees_receipt_type_id_fk_fees_receipt_types_id_fk" FOREIGN KEY ("fees_receipt_type_id_fk") REFERENCES "public"."fees_receipt_types"("id") ON DELETE no action ON UPDATE no action;

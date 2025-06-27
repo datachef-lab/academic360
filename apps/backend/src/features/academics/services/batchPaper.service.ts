@@ -29,24 +29,24 @@
 // import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 // import { number } from "zod";
 
-import { db, mysqlConnection } from "@/db/index";
-import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata.model";
-import { SubjectType } from "@/types/academics/subject";
+import { db, mysqlConnection } from "@/db/index.js";
+import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata.model.js";
+import { SubjectType } from "@/types/academics/subject.js";
 
-import { SubjectTypeModel, subjectTypeModel } from "../models/subjectType.model";
+import { SubjectTypeModel, subjectTypeModel } from "../models/subjectType.model.js";
 import { and, eq, ilike, inArray } from "drizzle-orm";
-import { SubjectMetadataType } from "@/types/academics/subject-metadata";
-import { OldSubjectType } from "@/types/old-data/old-subject-type";
-import { OldSubject } from "@/types/old-data/old-subject";
-import { processBatch } from "./batch.service";
-import { OldBatch } from "@/types/old-data/old-batch";
-import { OldStudentPaper } from "@/types/old-data/old-student-paper";
-import { OldStudent } from "@/types/old-student";
-import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model";
-import { studentModel } from "@/features/user/models/student.model";
-import { BatchPaper, batchPaperModel } from "../models/batchPaper.model";
-import { Batch } from "../models/batch.model";
-import { studentPaperModel } from "../models/studentPaper.model";
+import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
+import { OldSubjectType } from "@/types/old-data/old-subject-type.js";
+import { OldSubject } from "@/types/old-data/old-subject.js";
+import { processBatch } from "./batch.service.js";
+import { OldBatch } from "@/types/old-data/old-batch.js";
+import { OldStudentPaper } from "@/types/old-data/old-student-paper.js";
+import { OldStudent } from "@/types/old-student.js";
+import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
+import { studentModel } from "@/features/user/models/student.model.js";
+import { BatchPaper, batchPaperModel } from "../models/batchPaper.model.js";
+import { Batch } from "../models/batch.model.js";
+import { studentPaperModel } from "../models/studentPaper.model.js";
 
 const BATCH_SIZE = 500;
 

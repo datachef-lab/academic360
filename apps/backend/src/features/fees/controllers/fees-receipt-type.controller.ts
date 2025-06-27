@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesReceiptTypes, getFeesReceiptTypeById, createFeesReceiptType, updateFeesReceiptType, deleteFeesReceiptType } from "../services/fees-receipt-type.service";
-import { handleError } from "@/utils";
+import { getFeesReceiptTypes, getFeesReceiptTypeById, createFeesReceiptType, updateFeesReceiptType, deleteFeesReceiptType } from "../services/fees-receipt-type.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesReceiptTypesHandler = async (req: Request, res: Response) => {
     try {

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getFeesHeads, getFeesHeadById, createFeesHead, updateFeesHead, deleteFeesHead } from "../services/fees-head.service";
-import { handleError } from "@/utils";
+import { getFeesHeads, getFeesHeadById, createFeesHead, updateFeesHead, deleteFeesHead } from "../services/fees-head.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getFeesHeadsHandler = async (req: Request, res: Response) => {
     try {

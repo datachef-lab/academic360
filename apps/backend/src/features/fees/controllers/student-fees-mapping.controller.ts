@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getStudentFeesMappings, getStudentFeesMappingById, createStudentFeesMapping, updateStudentFeesMapping, deleteStudentFeesMapping } from "../services/student-fees-mapping.service";
-import { handleError } from "@/utils";
+import { getStudentFeesMappings, getStudentFeesMappingById, createStudentFeesMapping, updateStudentFeesMapping, deleteStudentFeesMapping } from "../services/student-fees-mapping.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getStudentFeesMappingsHandler = async (req: Request, res: Response) => {
     try {

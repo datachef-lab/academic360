@@ -1,0 +1,2 @@
+ALTER TABLE "academic_years" ADD COLUMN "session_id_fk" integer;--> statement-breakpoint
+ALTER TABLE "academic_years" ADD CONSTRAINT "academic_years_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;

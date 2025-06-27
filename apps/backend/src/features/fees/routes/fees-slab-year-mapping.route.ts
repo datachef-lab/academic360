@@ -1,7 +1,10 @@
 import { Router } from "express";
-import { getFeesSlabYearMappingsHandler, getFeesSlabYearMappingByIdHandler, createFeesSlabYearMappingHandler, updateFeesSlabYearMappingHandler, deleteFeesSlabYearMappingHandler } from "../controllers/fees-slab-year-mapping.controller.js";
+import { getFeesSlabYearMappingsHandler, getFeesSlabYearMappingByIdHandler, createFeesSlabYearMappingHandler, updateFeesSlabYearMappingHandler, deleteFeesSlabYearMappingHandler, checkSlabsExistForAcademicYearHandler } from "../controllers/fees-slab-year-mapping.controller.js";
 
 const feesSlabYearMappingRouter = Router();
+
+// Add the check-exist route (removed the extra 's')
+feesSlabYearMappingRouter.get("/check-exist/:academicYearId", checkSlabsExistForAcademicYearHandler);
 
 feesSlabYearMappingRouter.get("/", getFeesSlabYearMappingsHandler);
 feesSlabYearMappingRouter.get("/:id", getFeesSlabYearMappingByIdHandler);

@@ -21,7 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 
 // Import Course type from service
-import { Course } from '@/services/course-api';
+// import { Course } from '@/services/course-api';
+import { Course } from '@/types/academics/course';
 
 interface CoursesTableProps {
   courses: Course[];
@@ -104,7 +105,7 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => onDelete && onDelete(row.original.id)}
+                  onClick={() => onDelete && onDelete(row.original.id!)}
                   className="text-red-500 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />

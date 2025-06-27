@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { feesHeadModel, FeesHead } from "../models/fees-head.model";
+import { db } from "@/db/index.js";
+import { feesHeadModel, FeesHead } from "../models/fees-head.model.js";
 // import { FeesHead } from "../types/fees-head";
 import { eq } from "drizzle-orm";
 

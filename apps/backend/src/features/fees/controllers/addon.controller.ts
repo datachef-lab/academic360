@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-import { getAddons, getAddonById, createAddon, updateAddon, deleteAddon } from "../services/addon.service";
-import { handleError } from "@/utils";
+import { getAddons, getAddonById, createAddon, updateAddon, deleteAddon } from "../services/addon.service.js";
+import { handleError } from "@/utils/index.js";
 
 export const getAddonsHandler = async (req: Request, res: Response) => {
     try {

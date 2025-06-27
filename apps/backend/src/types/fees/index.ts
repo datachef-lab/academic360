@@ -1,9 +1,11 @@
 import { AcademicYear } from "@/features/academics/models/academic-year.model";
 import { Course } from "@/features/academics/models/course.model";
+import { Shift } from "@/features/academics/models/shift.model";
 import { FeesComponent } from "@/features/fees/models/fees-component.model";
 import { FeesStructure } from "@/features/fees/models/fees-structure.model";
 
-export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "courseId" | "advanceForCourseId"> {
+export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "courseId" | "shiftId" | "advanceForCourseId"> {
+    shift?: Shift;
     academicYear: AcademicYear;
     course: Course;
     advanceForCourse: Course | null;
