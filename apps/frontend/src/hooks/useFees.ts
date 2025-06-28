@@ -48,7 +48,7 @@ import {
   FeesReceiptType,
   AddOn,
   StudentFeesMapping,
-  FeesSlabYear,
+  FeesSlabMapping,
   AcademicYear,
 } from '@/types/fees';
 import { Course } from '@/types/academics/course';
@@ -532,16 +532,16 @@ export const useStudentFeesMappings = () => {
   };
 };
 
-export const useFeesSlabYears = () => {
-  const [feesSlabYears, setFeesSlabYears] = useState<FeesSlabYear[]>([]);
+export const useFeesSlabMappings = () => {
+  const [FeesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>([]);
   const [loading, setLoading] = useState(true);
   const { showError } = useError();
 
-  const fetchFeesSlabYears = useCallback(async () => {
+  const fetchFeesSlabMappings = useCallback(async () => {
     try {
       setLoading(true);
       const response = await getAllFeesSlabYears();
-      setFeesSlabYears(response.payload || []);
+      setFeesSlabMappings(response.payload || []);
     } catch {
       showError({ message: 'Failed to fetch fees slab years' });
     } finally {
@@ -549,27 +549,27 @@ export const useFeesSlabYears = () => {
     }
   }, [showError]);
 
-  const addFeesSlabYears = useCallback(async (newFeesSlabYears: FeesSlabYear[]) => {
+  const addFeesSlabMappings = useCallback(async (newFeesSlabMappings: FeesSlabMapping[]) => {
     try {
       const createdSlabYears = await Promise.all(
-        newFeesSlabYears.map(slabYear => createFeesSlabYear(slabYear))
+        newFeesSlabMappings.map(slabYear => createFeesSlabYear(slabYear))
       );
-      await fetchFeesSlabYears();
+      await fetchFeesSlabMappings();
       return createdSlabYears.map(res => res.payload);
     } catch {
       showError({ message: 'Failed to create fees slab years' });
       return null;
     }
-  }, [fetchFeesSlabYears, showError]);
+  }, [fetchFeesSlabMappings, showError]);
 
   useEffect(() => {
-    fetchFeesSlabYears();
-  }, [fetchFeesSlabYears]);
+    fetchFeesSlabMappings();
+  }, [fetchFeesSlabMappings]);
 
   return {
-    feesSlabYears,
+    FeesSlabMappings,
     loading,
-    fetchFeesSlabYears,
-    addFeesSlabYears,
+    fetchFeesSlabMappings,
+    addFeesSlabMappings,
   };
 }; 

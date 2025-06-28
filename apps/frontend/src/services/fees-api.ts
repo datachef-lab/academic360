@@ -323,13 +323,6 @@ export async function deleteStudentFeesMapping(studentFeesMappingId: number): Pr
 }
 
 // ==================== FEES SLAB YEAR MAPPING APIs ====================
-
-export interface NewFeesSlabYear {
-  feesSlabId: number;
-  academicYearId: number;
-  feeConcessionRate: number;
-}
-
 // Get all fees slab years
 export async function getAllFeesSlabYears(): Promise<ApiResonse<FeesSlabMapping[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings`);
@@ -343,13 +336,13 @@ export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResons
 }
 
 // Create a new fees slab year
-export async function createFeesSlabYear(newFeesSlabYear: NewFeesSlabYear): Promise<ApiResonse<FeesSlabMapping>> {
-  const response = await axiosInstance.post(`${BASE_PATH}/slab-year-mappings`, newFeesSlabYear);
+export async function createFeesSlabYear(FeesSlabMapping: FeesSlabMapping): Promise<ApiResonse<FeesSlabMapping>> {
+  const response = await axiosInstance.post(`${BASE_PATH}/slab-year-mappings`, FeesSlabMapping);
   return response.data;
 }
 
 // Update a fees slab year
-export async function updateFeesSlabYear(feesSlabYearId: number, feesSlabYear: Partial<NewFeesSlabYear>): Promise<ApiResonse<FeesSlabMapping>> {
+export async function updateFeesSlabYear(feesSlabYearId: number, feesSlabYear: Partial<FeesSlabMapping>): Promise<ApiResonse<FeesSlabMapping>> {
   const response = await axiosInstance.put(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`, feesSlabYear);
   return response.data;
 }

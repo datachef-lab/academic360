@@ -17,7 +17,7 @@ import FeeStructureForm from "../../components/fees/fee-structure-form/FeeStruct
 import { Course } from "@/types/academics/course";
 import { FeesStructureDto, AcademicYear, FeesSlabMapping, FeesSlab } from "../../types/fees";
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
-import { useFeesSlabYears, useFeesReceiptTypes } from "@/hooks/useFees";
+import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
 import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
 import axiosInstance from "@/utils/api";
 import { useShifts } from "@/hooks/useShifts";
@@ -189,7 +189,7 @@ const FeesStructure: React.FC = () => {
     addFeesStructure,
     updateFeesStructureById,
   } = useFeesStructures();
-  const { addFeesSlabYears } = useFeesSlabYears();
+  const { addFeesSlabMappings } = useFeesSlabMappings();
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
 
   // Use the new hooks
@@ -339,7 +339,7 @@ const FeesStructure: React.FC = () => {
         }
       }
       if (givenFeesStructure.feesSlabMappings.length > 0) {
-        await addFeesSlabYears(givenFeesStructure.feesSlabMappings);
+        await addFeesSlabMappings(givenFeesStructure.feesSlabMappings);
       }
       if (currentFeesStructure?.id) {
         await updateFeesStructureById(currentFeesStructure.id, givenFeesStructure);
