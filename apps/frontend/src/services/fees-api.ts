@@ -8,7 +8,6 @@ import {
   AddOn,
   FeesComponent,
   StudentFeesMapping,
-  FeesSlabYear
 } from "@/types/fees";
 
 const BASE_PATH = "/api/v1/fees";
