@@ -8,6 +8,7 @@ import {
   AddOn,
   FeesComponent,
   StudentFeesMapping,
+  FeesSlabMapping,
 } from "@/types/fees";
 
 const BASE_PATH = "/api/v1/fees";
@@ -330,25 +331,25 @@ export interface NewFeesSlabYear {
 }
 
 // Get all fees slab years
-export async function getAllFeesSlabYears(): Promise<ApiResonse<FeesSlabYear[]>> {
+export async function getAllFeesSlabYears(): Promise<ApiResonse<FeesSlabMapping[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings`);
   return response.data;
 }
 
 // Get a single fees slab year
-export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResonse<FeesSlabYear>> {
+export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResonse<FeesSlabMapping>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`);
   return response.data;
 }
 
 // Create a new fees slab year
-export async function createFeesSlabYear(newFeesSlabYear: NewFeesSlabYear): Promise<ApiResonse<FeesSlabYear>> {
+export async function createFeesSlabYear(newFeesSlabYear: NewFeesSlabYear): Promise<ApiResonse<FeesSlabMapping>> {
   const response = await axiosInstance.post(`${BASE_PATH}/slab-year-mappings`, newFeesSlabYear);
   return response.data;
 }
 
 // Update a fees slab year
-export async function updateFeesSlabYear(feesSlabYearId: number, feesSlabYear: Partial<NewFeesSlabYear>): Promise<ApiResonse<FeesSlabYear>> {
+export async function updateFeesSlabYear(feesSlabYearId: number, feesSlabYear: Partial<NewFeesSlabYear>): Promise<ApiResonse<FeesSlabMapping>> {
   const response = await axiosInstance.put(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`, feesSlabYear);
   return response.data;
 }
