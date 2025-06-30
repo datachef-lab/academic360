@@ -1,22 +1,27 @@
 import MasterLayout from "@/components/layouts/MasterLayout";
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, UserCheck, IndianRupee, BarChart } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 const subLinks = [
   {
     title: "Home",
     url: "/dashboard/admissions-fees",
-    icon: LayoutDashboard, // new icon
+    icon: LayoutDashboard, // dashboard/home
   },
   {
     title: "Admissions",
     url: "/dashboard/admissions-fees/admissions",
-    icon: LayoutDashboard, // new icon
+    icon: UserCheck, // represents student admission
   },
   {
     title: "Fees",
     url: "/dashboard/admissions-fees/fees",
-    icon: LayoutDashboard, // new icon
+    icon: IndianRupee, // fee/payment
+  },
+  {
+    title: "Reports",
+    url: "/dashboard/admissions-fees/reports",
+    icon: BarChart, // analytics
   },
 ];
 

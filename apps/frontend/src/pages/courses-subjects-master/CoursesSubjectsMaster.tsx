@@ -1,4 +1,4 @@
-import { LayoutDashboard } from "lucide-react";
+import { LayoutDashboard, BookOpen, FileText, BarChart } from "lucide-react";
 import MasterLayout from "@/components/layouts/MasterLayout";
 import { Outlet } from "react-router-dom";
 
@@ -6,22 +6,22 @@ const subLinks = [
   {
     title: "Home",
     url: "/dashboard/courses-subjects",
-    icon: LayoutDashboard, // new icon
+    icon: LayoutDashboard, // dashboard/home
   },
   {
     title: "Courses",
     url: "/dashboard/courses-subjects/courses",
-    icon: LayoutDashboard, // new icon
+    icon: BookOpen, // represents courses, education
   },
   {
     title: "Materials",
     url: "/dashboard/courses-subjects/materials",
-    icon: LayoutDashboard, // new icon
+    icon: FileText, // documents/materials
   },
   {
-    title: "Student Mapping",
-    url: "/dashboard/courses-subjects/student-mappings",
-    icon: LayoutDashboard, // new icon
+    title: "Reports",
+    url: "/dashboard/batches/reports",
+    icon: BarChart, // Reports/Analytics
   },
 ];
 

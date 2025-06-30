@@ -73,11 +73,11 @@ const data = {
     { title: "Courses & Subject", url: "/dashboard/courses-subjects", icon: LayoutList },
     { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
+    { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: ClipboardList },
     { title: "Students", url: "/dashboard/students", icon: Users },
-    { title: "Library", url: "/dashboard/lib", icon: Library },
-    { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
-    { title: "Events", url: "/dashboard/event", icon: PartyPopper },
+    { title: "Library", url: "/dashboard/library", icon: Library },
+    { title: "Events", url: "/dashboard/events", icon: PartyPopper },
   ],
 
   navAdministration: [
@@ -88,7 +88,7 @@ const data = {
     },
     {
       title: "Notice Management",
-      url: "/dashboard/notice-management",
+      url: "/dashboard/notices",
       icon: Megaphone, // already imported
     },
     {
@@ -187,30 +187,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   const url = item.url ?? "";
                   const isActive = !isSearchActive && currentPath.startsWith(url);
 
-                  if (item.isModal) {
-                    return (
-                      <div
-                        key={item.title}
-                        onClick={() => {
-                          setIsSearchModalOpen(true);
-                          setIsSearchActive(true);
-                        }}
-                        className={cn(
-                          "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                          isSearchActive
-                            ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                            : "text-white hover:text-white",
-                        )}
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                            {item.icon && <item.icon className="h-5 w-5" />}
-                          </span>
-                          <span className="text-base">{item.title}</span>
-                        </div>
-                      </div>
-                    );
-                  }
+                //   if (item.isModal) {
+                //     return (
+                //       <div
+                //         key={item.title}
+                //         onClick={() => {
+                //           setIsSearchModalOpen(true);
+                //           setIsSearchActive(true);
+                //         }}
+                //         className={cn(
+                //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                //           isSearchActive
+                //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                //             : "text-white hover:text-white",
+                //         )}
+                //       >
+                //         <div className="flex items-center gap-3">
+                //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                //             {item.icon && <item.icon className="h-5 w-5" />}
+                //           </span>
+                //           <span className="text-base">{item.title}</span>
+                //         </div>
+                //       </div>
+                //     );
+                //   }
 
                   return (
                     <NavItem

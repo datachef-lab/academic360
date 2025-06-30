@@ -1,11 +1,11 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
-  AddStudentPage,
-  GetReportsPage,
+//   AddStudentPage,
+//   GetReportsPage,
   HomePage,
   LoginPage,
-  MyWorkspacePage,
+//   MyWorkspacePage,
   NotFoundPage,
   SettingsPage,
   UserProfilePage,
@@ -13,16 +13,16 @@ import {
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
-import StudentPage from "./pages/students/StudentPage";
+// import StudentPage from "./pages/students/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
 import LibFineManagement from "./components/LibManagement/LibFines";
 import LibReport from "./components/LibManagement/LibReport";
 
 import ManageMarksheetPage from "./pages/students/ManageMarksheetPage";
-import StudentMarksheetsPage from "./pages/students/StudentMarksheetsPage";
+// import StudentMarksheetsPage from "./pages/students/StudentMarksheetsPage";
 import FrameworkActivitiesTab from "./components/manage-marksheet/FrameworkActivitiesTab";
-import MarksheetPage from "./pages/students/MarksheetPage";
+// import MarksheetPage from "./pages/students/MarksheetPage";
 // import Downloads from "./pages/Downloads";
 import Event from "./pages/events/EventPage";
 import LibraryDashboard from "./pages/library/LibraryDashboard";
@@ -43,6 +43,14 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 import * as courseSubjectModule from "@/pages/courses-subjects-master";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as batchModule from "@/pages/batches";
+import * as studentModule from "@/pages/students";
+import * as examModule from "@/pages/exam-management";
+import * as attendanceModule from "@/pages/attendance-timetable";
+import * as libraryModule from "@/pages/library";
+import * as appModule from "./pages/apps";
+import * as facultiesStaffsModule from "./pages/faculties-staffs";
+import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
+import { NoticeMaster } from "./pages/notices";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -107,35 +115,45 @@ const router = createBrowserRouter([
 
       {
         path: "exam-management",
-        element: <Outlet />,
+        element: <examModule.ExamMaster />,
         children: [
-          { path: "", element: <MyWorkspacePage /> },
-          { path: ":examId", element: <div>Exam Id</div> },
-          { path: "create", element: <div>Create Exams</div> },
-          { path: "reports", element: <div>Exam Reports</div> },
+          { path: "", element: <examModule.MyWorkspacePage /> },
+          { path: ":examId", element: <examModule.ExamPage /> },
+          { path: "create", element: <examModule.CreateExamPage /> },
+          { path: "reports", element: <examModule.ReportsPage /> },
+        ],
+      },
+
+      {
+        path: "attendance-timetable",
+        element: <attendanceModule.AttendanceTimeTableMaster />,
+        children: [
+          { path: "", element: <div>TODO: Attendance & Time-Tabel Home</div> },
+          { path: "timetable", element: <div>TODO: Time-table</div> },
         ],
       },
 
       {
         path: "students",
-        element: <Outlet />,
+        element: <studentModule.StudentMaster />,
         children: [
           { path: "", element: <HomePage /> },
-          {
-            path: "search",
-            element: <Outlet />,
-            children: [
-              { path: ":studentId", element: <StudentPage /> },
-              {
-                path: ":studentId",
-                element: <Outlet />,
-                children: [{ path: ":marksheetId", element: <GradeCard /> }],
-              },
-            ],
-          },
-          { path: "create", element: <AddStudentPage /> },
+
+          //   {
+          //     path: "search",
+          //     element: <studentModule.SearchStudent />,
+          //     children: [
+          //       { path: ":studentId", element: <studentModule.StudentPage /> },
+          //       {
+          //         path: ":studentId",
+          //         element: <Outlet />,
+          //         children: [{ path: ":marksheetId", element: <GradeCard /> }],
+          //       },
+          //     ],
+          //   },
+          { path: "create", element: <studentModule.AddStudentPage /> },
           { path: "downloads", element: <Downloads /> },
-          { path: "reports", element: <GetReportsPage /> },
+          { path: "reports", element: <studentModule.GetReportsPage /> },
           {
             path: "add-marksheet",
             element: <Outlet />,
@@ -150,8 +168,8 @@ const router = createBrowserRouter([
                     path: ":rollNumber",
                     element: <Outlet />,
                     children: [
-                      { path: "", element: <StudentMarksheetsPage /> },
-                      { path: ":marksheetId", element: <MarksheetPage /> },
+                      { path: "", element: <studentModule.StudentMarksheetsPage /> },
+                      { path: ":marksheetId", element: <studentModule.MarksheetPage /> },
                     ],
                   },
                 ],
@@ -161,18 +179,34 @@ const router = createBrowserRouter([
         ],
       },
 
+      {
+        path: "students/:studentId",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <studentModule.StudentPage /> },
+          { path: ":marksheetId", element: <GradeCard /> },
+        ],
+      },
+
       //   { path: "student-View", element: <StudentViewPage /> },
       //   { path: "add-student", element: <AddStudentPage /> },
-      { path: "event", element: <Event /> },
+      { path: "events", element: <Event /> },
 
       //   { path: "academics-reports", element: <GetReportsPage /> },
       //   { path: "student-reports", element: <GetReportsPage /> },
-      { path: "lib", element: <LibraryDashboard /> },
+      {
+        path: "library",
+        element: <libraryModule.LibraryMaster />,
+        children: [
+          { path: "", element: <LibraryDashboard /> },
+          { path: "archived", element: <div>TODO: Archived Books</div> },
+          { path: "catalog", element: <BookCatalog /> },
+          { path: "issued", element: <IssueRetun /> },
+          { path: "fine-management", element: <LibFineManagement /> },
+          { path: "lib-report", element: <LibReport /> },
+        ],
+      },
 
-      { path: "catalog", element: <BookCatalog /> },
-      { path: "issued-book", element: <IssueRetun /> },
-      { path: "fine-management", element: <LibFineManagement /> },
-      { path: "lib-report", element: <LibReport /> },
       //   {
       //     path: "search-students",
       //     element: <Outlet />,
@@ -185,6 +219,21 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
+      { path: "apps", element: <appModule.AppMaster /> },
+      {
+        path: "faculty-staff",
+        element: <facultiesStaffsModule.FacultyStaffMaster />,
+        children: [
+          { path: "", element: <div>TODO: Faculty/Staff Home</div> },
+          { path: "faculties", element: <div>TODO: Faculty List</div> },
+          { path: "create", element: <div>TODO: Create Page</div> },
+          { path: "departments", element: <div>TODO: Departments Page</div> },
+          { path: "roles", element: <div>TODO: Roles & Permission Page</div> },
+          { path: "reports", element: <div>TODO: Roles & Reports Page</div> },
+        ],
+      },
+      { path: "notices", element: <NoticeMaster /> },
+      { path: "settings", element: <SettingsMasterPage /> },
 
       { path: "profile", element: <UserProfilePage /> },
     ],

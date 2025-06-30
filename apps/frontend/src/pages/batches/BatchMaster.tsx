@@ -1,27 +1,22 @@
 import MasterLayout from "@/components/layouts/MasterLayout";
-import { LayoutDashboard } from "lucide-react";
+import { BarChart, LayoutDashboard, PlusCircle } from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 const subLinks = [
   {
     title: "Home",
     url: "/dashboard/batches",
-    icon: LayoutDashboard, // new icon
+    icon: LayoutDashboard, // represents dashboard/home
   },
   {
-    title: "Admissions",
+    title: "Create Batch",
     url: "/dashboard/batches/create",
-    icon: LayoutDashboard, // new icon
+    icon: PlusCircle, // represents creating something new
   },
   {
-    title: "Fees",
-    url: "/dashboard/batches/fees",
-    icon: LayoutDashboard, // new icon
-  },
-  {
-    title: "Student Mapping",
-    url: "/dashboard/batches/student-mapping",
-    icon: LayoutDashboard, // new icon
+    title: "Reports",
+    url: "/dashboard/batches/reports",
+    icon: BarChart, // Reports/Analytics
   },
 ];
 
