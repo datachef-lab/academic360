@@ -7,7 +7,7 @@ import { studentSearchColumns, StudentSearchType } from "@/components/tables/use
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
 
-export default function SearchStudent() {
+export default function SearchStudentPage() {
   const [searchText, setSearchText] = useState("");
   const {setStudentData,StudentData}=useReportStore();
 

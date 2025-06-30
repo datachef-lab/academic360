@@ -3,7 +3,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import MarksheetCCF from "../components/marksheet/ccf";
+import MarksheetCCF from "../../components/marksheet/ccf";
 import { getFile, getScanMarksheets } from "@/services/document-apis";
 
 export default function MarksheetPage() {

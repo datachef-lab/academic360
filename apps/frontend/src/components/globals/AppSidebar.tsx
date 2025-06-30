@@ -12,19 +12,24 @@ import {
 import {
   User,
   Settings,
-  BookCheck,
-  BookOpen,
+  
   ChevronDown,
-  ClipboardPenLine,
-  DownloadCloud,
-  FileUser,
+
   Home,
   LogOut,
-  MapPinned,
-  Notebook,
-  UserPlus,
-  UserRoundPlus,
-  UserRoundSearch,
+  Boxes,
+  LayoutList,
+  BadgeIndianRupee,
+  ClipboardList,
+  Layers3,
+  Users,
+  Library,
+  CalendarClock,
+  PartyPopper,
+
+  LayoutDashboard,
+  Megaphone,
+  UserCog,
 } from "lucide-react";
 import { toast } from "sonner";
 import { GalleryVerticalEnd } from "lucide-react";
@@ -59,68 +64,42 @@ const data = {
   navDash: [
     {
       title: "Dashboard",
-      url: "/home",
+      url: "/dashboard",
       icon: Home,
     },
   ],
   navMain: [
-    {
-      title: "Fees Module",
-      url: "/home/fees-module",
-      icon: UserPlus,
-    },
-    {
-      title: "Courses & Subject",
-      url: "/home/courses-subjects",
-      icon: Notebook,
-    },
+    { title: "Resources", url: "/dashboard/resources", icon: Boxes },
+    { title: "Courses & Subject", url: "/dashboard/courses-subjects", icon: LayoutList },
+    { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
+    { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
+    { title: "Exam Management", url: "/dashboard/exam-management", icon: ClipboardList },
+    { title: "Students", url: "/dashboard/students", icon: Users },
+    { title: "Library", url: "/dashboard/lib", icon: Library },
+    { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
+    { title: "Events", url: "/dashboard/event", icon: PartyPopper },
+  ],
 
+  navAdministration: [
     {
-      title: "Exam Management",
-      url: "/home/exam-management",
-      icon: BookCheck,
+      title: "Apps",
+      url: "/dashboard/apps",
+      icon: LayoutDashboard, // new icon
     },
     {
-      title: "Library",
-      url: "/home/lib",
-      icon: BookOpen,
+      title: "Notice Management",
+      url: "/dashboard/notice-management",
+      icon: Megaphone, // already imported
     },
     {
-      title: "Event",
-      url: "/home/event",
-      icon: MapPinned,
+      title: "Faculty & Staff",
+      url: "/dashboard/faculty-staff",
+      icon: UserCog, // new icon
     },
     {
       title: "Settings",
-      url: "/home/settings",
+      url: "/dashboard/settings",
       icon: Settings,
-    },
-  ],
-  navStudent: [
-    {
-      title: "Add Student",
-      url: "/home/add-student",
-      icon: UserRoundPlus,
-    },
-    {
-      title: "Add Marksheet",
-      url: "/home/add-marksheet",
-      icon: ClipboardPenLine,
-    },
-    {
-      title: "Search Student",
-      icon: UserRoundSearch,
-      isModal: true,
-    },
-    {
-      title: "Get Reports",
-      url: "/home/student-reports",
-      icon: FileUser,
-    },
-    {
-      title: "Downloads",
-      url: "/home/downloads",
-      icon: DownloadCloud,
     },
   ],
 };
@@ -154,7 +133,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
         <SidebarHeader className="p-6 border-none border-purple-500 bg-purple-800/95">
-          <Link to="/home" className="flex items-center gap-3">
+          <Link to="/dashboard" className="flex items-center gap-3">
             <div className="flex items-center justify-center p-3 drop-shadow-lg rounded-lg bg-purple-500">
               <GalleryVerticalEnd className="h-6 w-6 text-white" />
             </div>
@@ -166,42 +145,45 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
 
         <SidebarContent className="p-0 border-none bg-purple-800/95">
-          <div className="mt-2">
-            {/* Dashboard Link */}
-            <div className="mb-4 pl-5">
-              {data.navDash.map((item) => (
-                <NavItem
-                  key={item.title}
-                  icon={item.icon && <item.icon className="h-5 w-5" />}
-                  href={item.url}
-                  isActive={!isSearchActive && currentPath.startsWith(item.url)}
-                >
-                  <span className="text-lg">{item.title}</span>
-                </NavItem>
-              ))}
-            </div>
-
-            {/* Administration Section */}
-            <div className="mb-4">
-              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Administration</h3>
-              <div className="pl-6">
-                {data.navMain.map((item) => (
+          <div className="mt-2 flex flex-col justify-between h-full">
+            <div>
+              {/* Dashboard Link */}
+              <div className="mb-4">
+                {data.navDash.map((item) => (
                   <NavItem
                     key={item.title}
                     icon={item.icon && <item.icon className="h-5 w-5" />}
                     href={item.url}
                     isActive={!isSearchActive && currentPath.startsWith(item.url)}
                   >
-                    <span className="text-base">{item.title}</span>
+                    <span className="text-lg">{item.title}</span>
                   </NavItem>
                 ))}
               </div>
+              {/* Masters Section */}
+              <div className="mb-4">
+                <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">Masters</h3>
+                <div>
+                  {data.navMain.map((item) => (
+                    <NavItem
+                      key={item.title}
+                      icon={item.icon && <item.icon className="h-5 w-5" />}
+                      href={item.url}
+                      isActive={!isSearchActive && currentPath.startsWith(item.url)}
+                    >
+                      <span className="text-base">{item.title}</span>
+                    </NavItem>
+                  ))}
+                </div>
+              </div>
             </div>
-
-            <div className="mb-4">
-              <h3 className="mb-2 px-7 text-xs font-medium text-purple-200 uppercase tracking-wider">Student</h3>
-              <div className="pl-6">
-                {data.navStudent.map((item) => {
+            {/* Administration */}
+            <div className="my-14">
+              <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                Administration
+              </h3>
+              <div className="p">
+                {data.navAdministration.map((item) => {
                   const url = item.url ?? "";
                   const isActive = !isSearchActive && currentPath.startsWith(url);
 
@@ -299,21 +281,24 @@ interface NavItemProps {
   isActive?: boolean;
 }
 
-function NavItem({ href, icon, children, isActive }: NavItemProps) {
+export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <Link
       to={href}
       className={cn(
-        "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative",
+        " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
         isActive
-          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-          : "text-white hover:text-white",
+          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 shadow-lg"
+          : "text-white hover:bg-purple-700/80 hover:text-white"
       )}
     >
-      <div className="flex items-center gap-3">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white")}>{icon}</span>
-        <span className="text-inherit">{children}</span>
+      <div className="flex items-center gap-3 w-full">
+        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white group-hover:text-white")}>
+          {icon}
+        </span>
+        <span className="text-inherit truncate">{children}</span>
       </div>
     </Link>
   );
 }
+

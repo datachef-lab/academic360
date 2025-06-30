@@ -1,32 +1,26 @@
 import React, { useState } from "react";
 import { Layers, Edit, Trash2 } from "lucide-react";
-import Header from "../../components/common/PageHeader";
+import Header from "@/components/common/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useFeesHeads } from "@/hooks/useFees";
 import { FeesHead } from "@/types/fees";
 
-const FeeHeads: React.FC = () => {
+const FeeHeadsPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [form, setForm] = useState<{ name: string; sequence: number; remarks: string }>({ 
-    name: "", 
-    sequence: 1, 
-    remarks: "" 
+  const [form, setForm] = useState<{ name: string; sequence: number; remarks: string }>({
+    name: "",
+    sequence: 1,
+    remarks: "",
   });
 
-  const { 
-    feesHeads, 
-    loading, 
-    addFeesHead, 
-    updateFeesHeadById, 
-    deleteFeesHeadById 
-  } = useFeesHeads();
+  const { feesHeads, loading, addFeesHead, updateFeesHeadById, deleteFeesHeadById } = useFeesHeads();
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return;
-    
+
     try {
       if (editingId) {
         await updateFeesHeadById(editingId, form);
@@ -46,7 +40,7 @@ const FeeHeads: React.FC = () => {
     setForm({
       name: feesHead.name,
       sequence: feesHead.sequence,
-      remarks: feesHead.remarks || ""
+      remarks: feesHead.remarks || "",
     });
     setShowForm(true);
   };
@@ -79,9 +73,7 @@ const FeeHeads: React.FC = () => {
       <Header title="Fee Heads / Components" subtitle="Define fee head types" icon={Layers} />
 
       <div className="flex justify-end my-4">
-        <Button onClick={() => setShowForm(true)}>
-          + Add New
-        </Button>
+        <Button onClick={() => setShowForm(true)}>+ Add New</Button>
       </div>
 
       {showForm && (
@@ -106,9 +98,7 @@ const FeeHeads: React.FC = () => {
             <Button variant="secondary" onClick={handleCancel}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              {editingId ? 'Update' : 'Save'}
-            </Button>
+            <Button onClick={handleSubmit}>{editingId ? "Update" : "Save"}</Button>
           </div>
         </div>
       )}
@@ -131,21 +121,13 @@ const FeeHeads: React.FC = () => {
                   <TableCell className="text-center font-medium">{idx + 1}</TableCell>
                   <TableCell className="text-center">{row.name}</TableCell>
                   <TableCell className="text-center">{row.sequence}</TableCell>
-                  <TableCell className="text-center">{row.remarks || '-'}</TableCell>
+                  <TableCell className="text-center">{row.remarks || "-"}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(row)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(row)}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(row.id!)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id!)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -166,4 +148,4 @@ const FeeHeads: React.FC = () => {
   );
 };
 
-export default FeeHeads;
+export default FeeHeadsPage;

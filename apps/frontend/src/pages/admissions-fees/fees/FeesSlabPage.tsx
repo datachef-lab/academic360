@@ -16,7 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useFeesSlabs } from "@/hooks/useFees";
 import { FeesSlab as FeesSlabType } from "@/types/fees";
 
-const FeesSlab: React.FC = () => {
+const FeesSlabPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<FeesSlabType | null>(null);
   const [form, setForm] = useState<{ name: string; description: string; sequence: number }>({
@@ -300,4 +300,4 @@ const FeesSlab: React.FC = () => {
   );
 };
 
-export default FeesSlab;
+export default FeesSlabPage;

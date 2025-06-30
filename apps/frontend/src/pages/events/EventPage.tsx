@@ -50,7 +50,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CalendarDays } from 'lucide-react';
 
-const Event: React.FC = () => {
+const EventPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
       <motion.div
@@ -89,4 +89,4 @@ const Event: React.FC = () => {
   );
 };
 
-export default Event;
+export default EventPage;
