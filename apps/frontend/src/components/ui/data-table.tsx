@@ -41,6 +41,7 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   setSearchText: React.Dispatch<React.SetStateAction<string>>;
   setDataLength: React.Dispatch<React.SetStateAction<number>>;
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
+  onRowClick?: (row: any) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -53,6 +54,7 @@ export function DataTable<TData, TValue>({
   setSearchText,
 //   setDataLength,
   refetch,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -98,19 +100,19 @@ export function DataTable<TData, TValue>({
   //   }, [table.getRowModel().rows.length]);
 
   return (
-    <div className="space-y-3 p-1  rounded-2xl my-3">
-        <div className="px-6 py-1   rounded-lg ">
+    <div className="space-y-3">
+        <div>
         {location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
         </div>
-          <div className=" p-2  drop-shadow-md overflow-hidden">
-            <Table className="border-separate px-2 border-spacing-y-4 w-full">
-              <TableHeader >
+          <div className="overflow-x-auto">
+            <Table className="min-w-full text-sm">
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="bg-white hover:bg-white  ">
+                  <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <TableHead 
-                        key={header.id} 
-                        className="py-6 px-4 first:pl-6 text-center   font-semibold text-base"
+                      <TableHead
+                        key={header.id}
+                        className="px-4 py-2 text-left font-semibold text-gray-700"
                         style={{ width: header.getSize() }}
                       >
                         {flexRender(header.column.columnDef.header, header.getContext())}
@@ -122,11 +124,11 @@ export function DataTable<TData, TValue>({
               <TableBody>
                 {isLoading ? (
                   Array(pagination.pageSize).fill(null).map((_, index) => (
-                    <TableRow key={index} className="bg-gray-50 rounded-lg">
+                    <TableRow key={index}>
                       {columns.map((_, colIndex) => (
-                        <TableCell 
-                          key={colIndex} 
-                          className="px-4 py-3  first:rounded-l-lg last:rounded-r-lg"
+                        <TableCell
+                          key={colIndex}
+                          className="px-4 py-2"
                         >
                           <Skeleton className="h-8 w-full rounded-full" />
                         </TableCell>
@@ -135,14 +137,15 @@ export function DataTable<TData, TValue>({
                   ))
                 ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
-                    <TableRow 
-                      key={row.id} 
-                       className="  my-24 drop-shadow-sm  bg-gray-50  rounded-full hover:bg-gray-50 "
+                    <TableRow
+                      key={row.id}
+                      className="hover:bg-muted cursor-pointer"
+                      onClick={onRowClick ? () => onRowClick(row) : undefined}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id} 
-                          className="px-4 py-3 first:pl-8  text-center first:rounded-l-lg last:rounded-r-lg"
+                        <TableCell
+                          key={cell.id}
+                          className="px-4 py-2 text-left"
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>
@@ -150,7 +153,7 @@ export function DataTable<TData, TValue>({
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow className="hover:bg-transparent">
+                  <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center">
                     <div className="flex items-center justify-center gap-2 text-gray-700">
                       <SearchX className="h-5 w-5 text-red-600" />
