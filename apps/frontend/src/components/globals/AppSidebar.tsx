@@ -145,7 +145,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
 
         <SidebarContent className="p-0 border-none bg-purple-800/95">
-          <div className="mt-2 flex flex-col justify-between h-full">
+          <div className="mt-2 mb-4 flex flex-col justify-between ">
             <div>
               {/* Dashboard Link */}
               <div className="mb-4">

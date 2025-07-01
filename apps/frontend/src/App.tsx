@@ -79,7 +79,7 @@ const router = createBrowserRouter([
         path: "admissions-fees",
         element: <admissionFeesModule.AdmissionsFeesMaster />,
         children: [
-          { path: "", element: <div>Admissions & Fees Home (Default) </div> },
+          { path: "", element: <admissionFeesModule.HomePage /> },
           {
             path: "admissions",
             element: <Outlet />,

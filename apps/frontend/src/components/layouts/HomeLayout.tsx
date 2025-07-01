@@ -54,7 +54,7 @@ export default function HomeLayout() {
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
 
   return (
-    <ThemeProvider>
+    <ThemeProvider defaultTheme="light">
       <SidebarProvider className="w-screen overflow-x-hidden">
         <AppSidebar />
         <SidebarInset className="w-[100%] ">
