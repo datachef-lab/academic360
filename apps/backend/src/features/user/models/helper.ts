@@ -107,3 +107,77 @@ export const studentFeesMappingEnum = pgEnum("student_fees_mapping_type", [
     "INSTALMENT"
 ]);
 
+
+export const boardResultType = pgEnum("board_result_type", ['FAIL', 'PASS']);
+
+export const admissionFormStatus = pgEnum("admission_form_status", [
+    'DRAFT',
+    'PAYMENT_DUE',
+    'PAYMENT_SUCCESS',
+    'PAYMENT_FAILED',
+    'SUBMITTED',
+    'APPROVED',
+    'REJECTED',
+    'CANCELLED',
+    'WAITING_FOR_APPROVAL',
+    'WAITING_FOR_PAYMENT',
+    'WAITING_FOR_DOCUMENTS',
+    'DOCUMENTS_VERIFIED',
+    'DOCUMENTS_PENDING',
+    'DOCUMENTS_REJECTED',
+])
+
+export const admissionSteps = pgEnum("admission_steps", [
+    "GENERAL_INFORMATION",
+    "ACADEMIC_INFORMATION",
+    "COURSE_APPLICATION",
+    "ADDITIONAL_INFORMATION",
+    "DOCUMENTS",
+    "PAYMENT",
+    "REVIEW",
+    "SUBMITTED",
+]);
+
+export const paymentStatus = pgEnum("payment_status", [
+    "PENDING", "SUCCESS", "FAILED", "REFUNDED"
+]);
+
+export const personTitleType = pgEnum("person_title_type", [
+    "MR", "MRS", "MS", "DR", "PROF", "REV", "OTHER"
+]);
+
+export const paymentMode = pgEnum("payment_mode", [
+    "UPI", "WALLET", "NET_BANKING", "CREDIT_CARD", "DEBIT_CARD", "PAYTM_BALANCE"
+]);
+
+export const boardResultStatusType = pgEnum("board_result_status_type", [
+    'PASS',
+    'FAIL',
+    "COMPARTMENTAL",
+]);
+
+export const subjectResultStatusType = pgEnum("board_result_status_type", [
+    'PASS',
+    'FAIL IN THEORY',
+    'FAIL IN PRACTICAL',
+    "FAIL",
+]);
+
+export const sportsLevelType = pgEnum("sports_level", [
+    "NATIONAL",
+    "STATE",
+    "DISTRICT",
+    "OTHERS",
+]);
+
+export const streamType = pgEnum("stream_type", [
+    'SCIENCE',
+    'COMMERCE',
+    "HUMANITIES",
+    "ARTS",
+]);
+
+export const otpType = pgEnum("otp_type", [
+    'FOR_PHONE',
+    'FOR_EMAIL',
+]);
