@@ -1,11 +1,11 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
 import {
-//   AddStudentPage,
-//   GetReportsPage,
+  //   AddStudentPage,
+  //   GetReportsPage,
   HomePage,
   LoginPage,
-//   MyWorkspacePage,
+  //   MyWorkspacePage,
   NotFoundPage,
   SettingsPage,
   UserProfilePage,
@@ -220,6 +220,7 @@ const router = createBrowserRouter([
       //     ],
       //   },
       { path: "apps", element: <appModule.AppMaster /> },
+      { path: "apps/besc-student-console", element: <appModule.BescStudentConsoleSettings /> },
       {
         path: "faculty-staff",
         element: <facultiesStaffsModule.FacultyStaffMaster />,
