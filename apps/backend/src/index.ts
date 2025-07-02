@@ -42,7 +42,7 @@ function checkRequiredEnvs() {
 
 (async () => {
   console.log("\nInitializing academic360...\n");
-  checkRequiredEnvs();
+  // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
     await connectToMySQL();
