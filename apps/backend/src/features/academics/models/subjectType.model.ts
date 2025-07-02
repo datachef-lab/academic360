@@ -1,4 +1,4 @@
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -8,6 +8,8 @@ export const subjectTypeModel = pgTable("subject_types", {
     irpShortName: varchar({ length: 500 }),
     marksheetName: varchar({ length: 500 }),
     marksheetShortName: varchar({ length: 500 }),
+    sequene: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

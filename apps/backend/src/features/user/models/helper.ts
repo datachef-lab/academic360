@@ -18,7 +18,7 @@ export const localityTypeEnum = pgEnum("locality_type", [
     "URBAN",
 ]);
 
-export const degreeProgrammeTypeEnum = pgEnum("degree_programme_type", [
+export const programmeTypeEnum = pgEnum("programme_type", [
     "HONOURS",
     "GENERAL",
 ]);

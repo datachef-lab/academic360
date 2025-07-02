@@ -7,7 +7,7 @@ import { findAll } from "@/utils/helper.js";
 import { removeAcademicHistory } from "./academicHistory.service.js";
 import { addAcademicIdentifier, findAcademicIdentifierByStudentId, removeAcademicIdentifier, saveAcademicIdentifier } from "./academicIdentifier.service.js";
 import { removeAccommodationByStudentId } from "./accommodation.service.js";
-import { removeAdmissionByStudentId } from "./admission.service.js";
+// import { removeAdmissionByStudentId } from "./admission.service.js";
 import { removeFamilysByStudentId } from "./family.service.js";
 import { removeHealthByStudentId } from "./health.service.js";
 import { removeEmergencyContactByStudentId } from "./emergencyContact.service.js";
@@ -17,7 +17,7 @@ import { removeMarksheetByStudentId } from "@/features/academics/services/marksh
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { findUserById } from "./user.service.js";
 import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
-import { streamModel } from "@/features/academics/models/stream.model.js";
+// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { marksheetModel } from "@/features/academics/models/marksheet.model.js";
 import { userModel } from "@/features/user/models/user.model.js";
@@ -119,9 +119,9 @@ export async function removeStudent(id: number): Promise<boolean | null> {
     isDeleted = await removeAccommodationByStudentId(id);
     if (isDeleted !== null && !isDeleted) return false;
 
-    // Step 4: Delete the admission
-    isDeleted = await removeAdmissionByStudentId(id);
-    if (isDeleted !== null && !isDeleted) return false;
+    // // Step 4: Delete the admission
+    // isDeleted = await removeAdmissionByStudentId(id);
+    // if (isDeleted !== null && !isDeleted) return false;
 
     // Step 5: Delete the parent-details
     isDeleted = await removeFamilysByStudentId(id);
@@ -166,6 +166,7 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
             userId: studentModel.userId,
             specializationId: studentModel.specializationId,
             name: userModel.name,
+            applicationId: studentModel.applicationId,
             registrationNumber: academicIdentifierModel.registrationNumber,
             rollNumber: academicIdentifierModel.rollNumber,
             uid: academicIdentifierModel.uid
@@ -210,7 +211,8 @@ export async function searchStudent(searchText: string, page: number = 1, pageSi
             const formattedStudent = await studentResponseFormat({
                 id: student.id,
                 userId: student.userId,
-                specializationId: student.specializationId
+                specializationId: student.specializationId,
+                applicationId: student.applicationId // Add this line
             });
             return formattedStudent;
         })
@@ -350,7 +352,7 @@ export async function findFilteredStudents({
         stream ? eq(degreeModel.name, stream) : undefined,
         year ? eq(marksheetModel.year, year) : undefined,
         semester ? eq(marksheetModel.semester, semester) : undefined,
-        framework ? eq(streamModel.framework, framework) : undefined,
+        // framework ? eq(streamModel.framework, framework) : undefined,
     ].filter(Boolean);
 
     const query = db
@@ -358,8 +360,8 @@ export async function findFilteredStudents({
         .from(studentModel)
         .leftJoin(userModel, eq(studentModel.userId, userModel.id))
         .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
-        .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
-        .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+        // .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
+        // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
         .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
         .where(and(...filters));
 
@@ -367,8 +369,8 @@ export async function findFilteredStudents({
         .select({ count: count() })
         .from(studentModel)
         .leftJoin(academicIdentifierModel, eq(studentModel.id, academicIdentifierModel.studentId))
-        .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
-        .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+        // .leftJoin(de, eq(academicIdentifierModel.de, streamModel.id))
+        // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
         .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
         .where(and(...filters));
 

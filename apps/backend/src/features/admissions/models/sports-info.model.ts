@@ -5,7 +5,7 @@ import { sportsLevelType } from "@/features/user/models/helper.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const sportsInfo = pgTable("sports_info", {
+export const sportsInfoModel = pgTable("sports_info", {
     id: serial().primaryKey(),
     additionalInfoId: integer("additional_info_id_fk")
         .references(() => admissionAdditionalInfoModel.id)
@@ -18,6 +18,6 @@ export const sportsInfo = pgTable("sports_info", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createSportsInfoSchema = createInsertSchema(sportsInfo);
+export const createSportsInfoSchema = createInsertSchema(sportsInfoModel);
 
 export type SportsInfo = z.infer<typeof createSportsInfoSchema>;

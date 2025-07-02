@@ -1,10 +1,14 @@
-import { boolean, date, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { academicYearModel } from "@/features/academics/models/academic-year.model";
+import { boolean, date, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const admissionModel = pgTable("admissions", {
     id: serial().primaryKey().notNull(),
-    year: integer("year").notNull(),
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id)
+        .notNull(),
+    admissionCode: varchar({ length: 255 }),
     isClosed: boolean("is_closed").default(false).notNull(),
     startDate: date("start_date"),
     lastDate: date("last_date"),

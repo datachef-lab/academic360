@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
 import { admissionFormStatus, admissionSteps } from "@/features/user/models/helper.js";
 import { createInsertSchema } from "drizzle-zod";
@@ -9,6 +9,7 @@ export const applicationFormModel = pgTable("application_forms", {
     admissionId: integer("admission_id_fk")
         .references(() => admissionModel.id)
         .notNull(),
+    applicationNumber: varchar({ length: 255 }),
     formStatus: admissionFormStatus("form_status").notNull(),
     admissionStep: admissionSteps("admission_step").notNull(),
     createdAt: timestamp("created_at").defaultNow(),

@@ -7,11 +7,16 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { shiftModel } from "./shift.model.js";
 import { sessionModel } from "./session.model.js";
-import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
+import { academicYearModel } from "./academic-year.model.js";
 
 export const batchModel = pgTable('batches', {
     id: serial().primaryKey(),
-    admissionCourseId: integer("admission_course_id_fk").notNull().references(() => admissionCourseModel.id),
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id)
+        .notNull(),
+    courseId: integer("course_id_fk")
+        .notNull()
+        .references(() => courseModel.id),
     classId: integer("class_id_fk").notNull().references(() => classModel.id),
     sectionId: integer("section_id_fk").references(() => sectionModel.id),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id),
@@ -22,7 +27,7 @@ export const batchModel = pgTable('batches', {
 
 export const batchRelations = relations(batchModel, ({ one }) => ({
     course: one(courseModel, {
-        fields: [batchModel.admissionCourseId],
+        fields: [batchModel.courseId],
         references: [courseModel.id],
     }),
     selectedClass: one(classModel, {

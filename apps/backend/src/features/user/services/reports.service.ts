@@ -5,7 +5,7 @@ import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
 import { userModel } from "../models/user.model.js";
 import { subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
 import { subjectModel } from "@/features/academics/models/subject.model.js";
-import { streamModel } from "@/features/academics/models/stream.model.js";
+// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { studentModel } from "../models/student.model.js";
 
@@ -33,9 +33,9 @@ export const getReports = async ({
 }: ReportQueryParams) => {
   const filters = [
     year !== undefined ? eq(marksheetModel.year, year) : undefined,
-    framework
-      ? eq(streamModel.framework, framework as "CCF" | "CBCS")
-      : undefined,
+    // framework
+    //   ? eq(streamModel.framework, framework as "CCF" | "CBCS")
+    //   : undefined,
     stream ? eq(degreeModel.name, stream) : undefined,
     semester !== undefined ? eq(marksheetModel.semester, semester) : undefined,
   ];
@@ -47,7 +47,7 @@ export const getReports = async ({
       uid: academicIdentifierModel.uid,
       name: userModel.name,
       stream: degreeModel.name,
-      framework: streamModel.framework,
+      framework: academicIdentifierModel.framework,
       semester: marksheetModel.semester,
       year: marksheetModel.year,
       subjectName: subjectMetadataModel.name,
@@ -66,8 +66,8 @@ export const getReports = async ({
     )
     .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-    .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
-    .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+    // .leftJoin(streamModel, eq(academicIdentifierModel.framework, framework))
+    // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
     .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
     .leftJoin(
       subjectMetadataModel,

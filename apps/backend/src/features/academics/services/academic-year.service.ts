@@ -8,7 +8,7 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
 }
 
 export async function findAllAcademicYears(): Promise<AcademicYear[]> {
-    const academicYears = await db.select().from(academicYearModel).orderBy(desc(academicYearModel.startYear));
+    const academicYears = await db.select().from(academicYearModel).orderBy(desc(academicYearModel.year));
     return academicYears;
 }
 
@@ -54,11 +54,11 @@ export async function setCurrentAcademicYear(id: number): Promise<AcademicYear |
     return currentAcademicYear || null;
 }
 
-export async function findAcademicYearByYearRange(startYear: string, endYear: string): Promise<AcademicYear | null> {
+export async function findAcademicYearByYearRange(year: string, endYear: string): Promise<AcademicYear | null> {
     const [academicYear] = await db.select()
         .from(academicYearModel)
         .where(and(
-            eq(academicYearModel.startYear, startYear),
+            eq(academicYearModel.year, year),
             // eq(academicYearModel.endYear, endYear)
         ));
     

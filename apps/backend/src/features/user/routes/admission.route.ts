@@ -1,9 +1,9 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
-import express from "express";
+// import { verifyJWT } from "@/middlewares/verifyJWT.js";
+// import express from "express";
 
-const router = express.Router();
+// const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 
-export default router;
+// export default router;

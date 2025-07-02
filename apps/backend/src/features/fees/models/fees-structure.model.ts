@@ -5,6 +5,7 @@ import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { feesReceiptTypeModel } from "./fees-receipt-type.model.js";
+import { classModel } from "@/features/academics/models/class.model.js";
 
 export const feesStructureModel = pgTable("fees_structures", {
     id: serial().primaryKey(),
@@ -17,7 +18,7 @@ export const feesStructureModel = pgTable("fees_structures", {
     courseId: integer("course_id_fk").notNull()
         .references(() => courseModel.id)
         .notNull(),
-    semester: integer().notNull(),
+        classId: integer("class_id_fk").notNull().references(() => classModel.id),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id).notNull(),
     advanceForCourseId: integer("advance_for_course_id_fk")
         .references(() => courseModel.id),

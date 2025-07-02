@@ -10,8 +10,8 @@ import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
 import { eq } from "drizzle-orm";
-import { createServer } from 'http';
-import { Server } from 'socket.io';
+import { createServer } from "http";
+import { Server } from "socket.io";
 import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
 
@@ -22,58 +22,68 @@ import { academicYearRouter } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
-    documentRouter,
-    marksheetRouter,
-    streamRouter,
-    subjectMetadataRouter,
-    subjectRouter,
-    countryRouter,
-    userRouter,
-    authRouter,
-    bloodGroupRouter,
-    categoryRouter,
-    cityRouter,
-    languageMediumRouter,
-    boardUniversityRouter,
-    institutionRouter,
-    qualificationRouter,
-    transportRouter,
-    studentRouter,
-    nationalityRouter,
-    religionRouter,
-
-    academicHistoryRouter,
-    academicIdentifierRouter,
-    accommodationRouter,
-    stateRouter,
-    degreeRouter,
-    occupationRouter,
-    batchRouter,
-    batchPaperRouter,
-    studentPaperRouter,
-    emergencyContactRouter,
-    addressRouter,
-    reportRouter,
-    specializationRouter,
-    familyRouter,
-    healthRouter,
-    personalDetailsRouter,
-    feesComponentRouter,
-    addonRouter,
-    feesHeadRouter,
-    feesReceiptTypeRouter,
-    feesSlabYearMappingRouter,
-    feesDesignAbstractLevelRouter,
+  documentRouter,
+  marksheetRouter,
+  subjectMetadataRouter,
+  subjectRouter,
+  countryRouter,
+  userRouter,
+  authRouter,
+  bloodGroupRouter,
+  categoryRouter,
+  cityRouter,
+  languageMediumRouter,
+  boardUniversityRouter,
+  institutionRouter,
+  qualificationRouter,
+  transportRouter,
+  studentRouter,
+  nationalityRouter,
+  religionRouter,
+  academicHistoryRouter,
+  academicIdentifierRouter,
+  accommodationRouter,
+  stateRouter,
+  degreeRouter,
+  occupationRouter,
+  batchRouter,
+  batchPaperRouter,
+  studentPaperRouter,
+  emergencyContactRouter,
+  addressRouter,
+  reportRouter,
+  specializationRouter,
+  familyRouter,
+  healthRouter,
+  personalDetailsRouter,
+  feesComponentRouter,
+  addonRouter,
+  feesHeadRouter,
+  feesReceiptTypeRouter,
+  feesSlabYearMappingRouter,
+  feesDesignAbstractLevelRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "./features/academics/routes/course.route.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
-import feesStructureRouter from './features/fees/routes/fees-structure.route.js';
-import studentFeesMappingRouter from './features/fees/routes/student-fees-mapping.route.js';
+import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
+import studentFeesMappingRouter from "./features/fees/routes/student-fees-mapping.route.js";
 import feesRouter from "./features/fees/routes/index.js";
+import {
+  admissionRouter,
+  applicationFormRouter,
+  admissionGeneralInfoRouter,
+  admissionAcademicInfoRouter,
+  admissionAdditionalInfoRouter,
+  admissionCourseRouter,
+  admissionCourseApplicationRouter,
+  sportsCategoryRouter,
+  sportsInfoRouter,
+  studentAcademicSubjectRouter,
+  academicSubjectRouter,
+} from "@/features/admissions";
 // import { courseRouter } from "@/features/academics/routes/index.js";
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,23 +104,23 @@ app.use(cookieParser());
 
 // Setup Socket.IO with CORS
 export const io = new Server(httpServer, {
-    cors: {
-        origin: process.env.CORS_ORIGIN! || 'http://localhost:5173',
-        methods: ['GET', 'POST'],
-        credentials: true,
-    },
+  cors: {
+    origin: process.env.CORS_ORIGIN! || "http://localhost:5173",
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
 });
 
 // Initialize the socket service with our io instance
 socketService.initialize(io);
 
 app.use(
-    expressSession({
-        secret: process.env.ACCESS_TOKEN_SECRET || "secret", // Add a secret key here
-        resave: false,
-        saveUninitialized: false,
-        cookie: { secure: false }, // set to true if using HTTPS
-    }),
+  expressSession({
+    secret: process.env.ACCESS_TOKEN_SECRET || "secret", // Add a secret key here
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }, // set to true if using HTTPS
+  }),
 );
 
 app.use(passport.initialize());
@@ -120,54 +130,62 @@ app.use(passport.session());
 app.use("/", express.static(path.join(__dirname, "..", "public")));
 
 app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, "..", "views", "index.html"));
+  res.sendFile(path.join(__dirname, "..", "views", "index.html"));
 });
 
 passport.use(
-    new Strategy(
-        {
-            clientID: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-            callbackURL: "http://localhost:8080/auth/google/callback",
-        },
-        async (accessToken, refreshToken, profile, done) => {
-            console.log("in passport.use, req.url", profile);
-            try {
-                // Here, check if the user exists in the database using the email from the profile
-                if (!profile.emails || profile.emails.length === 0) {
-                    return done(null, false, { message: "No email found in profile!" });
-                }
-                console.log(profile);
-                const [foundUser] = await db
-                    .select()
-                    .from(userModel)
-                    .where(eq(userModel.email, profile.emails[0].value as string));
-                const savedUser = await db
-                    .update(userModel)
-                    .set({
-                        image: profile.photos ? profile.photos[0].value : "",
-                    })
-                    .where(eq(userModel.id, foundUser.id))
-                    .returning();
+  new Strategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      callbackURL: "http://localhost:8080/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      console.log("in passport.use, req.url", profile);
+      try {
+        // Here, check if the user exists in the database using the email from the profile
+        if (!profile.emails || profile.emails.length === 0) {
+          return done(null, false, { message: "No email found in profile!" });
+        }
+        console.log(profile);
+        const [foundUser] = await db
+          .select()
+          .from(userModel)
+          .where(eq(userModel.email, profile.emails[0].value as string));
+        const savedUser = await db
+          .update(userModel)
+          .set({
+            image: profile.photos ? profile.photos[0].value : "",
+          })
+          .where(eq(userModel.id, foundUser.id))
+          .returning();
 
-                // console.log("Saved user: ", savedUser);
+        // console.log("Saved user: ", savedUser);
 
-                if (!foundUser) {
-                    // If user doesn't exist, return failure
-                    return done(null, false, { message: "User not found!" });
-                }
+        if (!foundUser) {
+          // If user doesn't exist, return failure
+          return done(null, false, { message: "User not found!" });
+        }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
+        const accessToken = generateToken(
+          { id: foundUser.id, type: foundUser.type as User["type"] },
+          process.env.ACCESS_TOKEN_SECRET!,
+          process.env.ACCESS_TOKEN_EXPIRY! as StringValue,
+        );
 
-                const refreshToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
+        const refreshToken = generateToken(
+          { id: foundUser.id, type: foundUser.type as User["type"] },
+          process.env.REFRESH_TOKEN_SECRET!,
+          process.env.REFRESH_TOKEN_EXPIRY! as StringValue,
+        );
 
-                // Redirect to the success URL with tokens
-                return done(null, foundUser, { accessToken, refreshToken });
-            } catch (error) {
-                return done(error);
-            }
-        },
-    ),
+        // Redirect to the success URL with tokens
+        return done(null, foundUser, { accessToken, refreshToken });
+      } catch (error) {
+        return done(error);
+      }
+    },
+  ),
 );
 
 // Serialize and deserialize user for session handling
@@ -186,8 +204,6 @@ app.use("/api/users", userRouter);
 app.use("/api/personal-details", personalDetailsRouter);
 
 app.use("/api/students", studentRouter);
-
-app.use("/api/streams", streamRouter);
 
 app.use("/api/subject-metadatas", subjectMetadataRouter);
 
@@ -265,17 +281,30 @@ app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/heads", feesHeadRouter);
 app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 
+// Admissions routes
+app.use("/admissions", admissionRouter);
+app.use("/admissions/application-forms", applicationFormRouter);
+app.use("/admissions/general-info", admissionGeneralInfoRouter);
+app.use("/admissions/academic-info", admissionAcademicInfoRouter);
+app.use("/admissions/additional-info", admissionAdditionalInfoRouter);
+app.use("/admissions/courses", admissionCourseRouter);
+app.use("/admissions/course-applications", admissionCourseApplicationRouter);
+app.use("/admissions/sports-category", sportsCategoryRouter);
+app.use("/admissions/sports-info", sportsInfoRouter);
+app.use("/admissions/student-academic-subject", studentAcademicSubjectRouter);
+app.use("/admissions/academic-subject", academicSubjectRouter);
+
 app.use(errorHandler);
 
 app.all("*", (req: Request, res: Response) => {
-    res.status(404);
-    if (req.accepts("html")) {
-        res.sendFile(path.join(__dirname, "..", "views", "404.html"));
-    } else if (req.accepts("json")) {
-        res.json({ message: "404 Not Found" });
-    } else {
-        res.type("txt").send("404 Not Found");
-    }
+  res.status(404);
+  if (req.accepts("html")) {
+    res.sendFile(path.join(__dirname, "..", "views", "404.html"));
+  } else if (req.accepts("json")) {
+    res.json({ message: "404 Not Found" });
+  } else {
+    res.type("txt").send("404 Not Found");
+  }
 });
 
 export { app, httpServer };

@@ -1,26 +1,26 @@
-import { relations } from "drizzle-orm";
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { streamModel } from "./stream.model.js";
+// import { streamModel } from "./stream.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { programmeTypeEnum } from "@/features/user/models/helper.js";
 
 export const courseModel = pgTable('courses', {
     id: serial().primaryKey(),
-    streamId: integer("stream_id_fk").references(() => streamModel.id),
+    // streamId: integer("stream_id_fk").references(() => streamModel.id),
+    degreeId: integer("degree_id_fk").references(() => degreeModel.id),
     name: varchar({ length: 500 }).notNull(),
+    programmeType: programmeTypeEnum(),
     shortName: varchar({ length: 500 }),
     codePrefix: varchar({ length: 10 }),
     universityCode: varchar({ length: 10 }),
+    numberOfSemesters: integer(),
+    duration: varchar({length: 255}),
+    sequene: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
-
-export const courseRelations = relations(courseModel, ({ one }) => ({
-    stream: one(streamModel, {
-        fields: [courseModel.streamId],
-        references: [streamModel.id],
-    })
-}));
 
 export const createCourseModel = createInsertSchema(courseModel);
 

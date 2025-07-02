@@ -1,9 +1,10 @@
-import { SubjectMetadataType } from "./subject-metadata";
+import { Class } from "@/features/academics/models/class.model.js";
+import { SubjectMetadataType } from "./subject-metadata.js";
 
 export interface MarksheetSummary {
     id: number;
     uid: string;
-    semester: number;
+    class: Class;
     year1: number; // Year of appearance
     year2: number | null; // Year of passing
     sgpa: string | null;

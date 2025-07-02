@@ -1,9 +1,9 @@
 import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
 import { SubjectMetadata, subjectMetadataModel } from "../models/subjectMetadata.model.js";
-import { addStream, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
+// import { addStream, findStreamById, findStreamByNameAndProgrammee } from "./stream.service.js";
 import { addSpecialization, findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { Specialization, specializationModel } from "@/features/user/models/specialization.model.js";
-import { Stream, streamModel } from "../models/stream.model.js";
+// import { Stream, streamModel } from "../models/stream.model.js";
 import { db } from "@/db/index.js";
 import { and, eq, isNull, SQLWrapper } from "drizzle-orm";
 import path from "path";
@@ -12,7 +12,7 @@ import { readExcelFile } from "@/utils/readExcel.js";
 import { SubjectRow } from "@/types/academics/subject-row.js";
 import { subjectTypeModel, SubjectTypeModel } from "../models/subjectType.model.js";
 import { addDegree, findDegreeById, findDegreeByName } from "@/features/resources/services/degree.service.js";
-import { StreamType } from "@/types/academics/stream.js";
+// import { StreamType } from "@/types/academics/stream.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
@@ -47,29 +47,29 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
             degrees = await db.select().from(degreeModel);
         }
 
-        let [foundStream] = await db.select().from(streamModel).where(and(
-            eq(streamModel.degreeId, foundDegree.id),
-            eq(streamModel.framework, subjectArr[i].Framework),
-            eq(streamModel.degreeProgramme, subjectArr[i].Course!),
-        ));
+        // let [foundStream] = await db.select().from(streamModel).where(and(
+        //     eq(streamModel.degreeId, foundDegree.id),
+        //     eq(streamModel.framework, subjectArr[i].Framework),
+        //     eq(streamModel.degreeProgramme, subjectArr[i].Course!),
+        // ));
 
-        if (!foundStream) {
-            const [newStream] = await db.insert(streamModel).values({
-                degreeId: foundDegree.id as number,
-                degreeProgramme: subjectArr[i].Course,
-                framework: subjectArr[i].Framework,
-            } as Stream).returning();
+        // if (!foundStream) {
+        //     const [newStream] = await db.insert(streamModel).values({
+        //         degreeId: foundDegree.id as number,
+        //         degreeProgramme: subjectArr[i].Course,
+        //         framework: subjectArr[i].Framework,
+        //     } as Stream).returning();
 
-            if (!newStream) {
-                throw Error("Unable to create new stream...!");
-            }
+        //     if (!newStream) {
+        //         throw Error("Unable to create new stream...!");
+        //     }
 
-            foundStream = newStream;
+        //     foundStream = newStream;
 
-            if (!foundStream) {
-                throw Error("Unable to create new stream...!");
-            }
-        }
+        //     if (!foundStream) {
+        //         throw Error("Unable to create new stream...!");
+        //     }
+        // }
 
         let specialization: Specialization | null = null;
         if (subjectArr[i].Specialization) {
@@ -137,8 +137,8 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
         const irpCode = subjectArr[i]["Subject Code as per Marksheet"].substring(0, dashIndex);
 
         await db.insert(subjectMetadataModel).values({
-            streamId: foundStream.id as number,
-
+            // degreeId: foundDegree.id as number,
+            framework: subjectArr[i].Framework,
             fullMarks: subjectArr[i]["Full Marks"] ? formatMarks(String(subjectArr[i]["Full Marks"])) : null,
             fullMarksInternal: subjectArr[i]["Full Marks Internal"] ? formatMarks(String(subjectArr[i]["Full Marks Internal"])) : null,
             fullMarksTheory: subjectArr[i]["Full Marks Theory"] ? formatMarks(String(subjectArr[i]["Full Marks Theory"])) : null,
@@ -156,7 +156,7 @@ export async function uploadSubjects(fileName: string): Promise<boolean> {
             name: subjectArr[i]["Subject Name as per Marksheet (also in IRP)"],
             semester: subjectArr[i].Semester,
             course: subjectArr[i].Course,
-
+            degreeId: foundDegree.id,
             credit: subjectArr[i]["Total Credit"],
             internalCredit: subjectArr[i]["Internal Credit"],
             practicalCredit: subjectArr[i]["Practical Credit"],
@@ -191,29 +191,29 @@ export async function refactorSubejectsWithSubjectMetadata(fileName: string): Pr
             degrees = await db.select().from(degreeModel);
         }
 
-        let [foundStream] = await db.select().from(streamModel).where(and(
-            eq(streamModel.degreeId, foundDegree.id),
-            eq(streamModel.framework, subjectArr[i].Framework),
-            eq(streamModel.degreeProgramme, subjectArr[i].Course!),
-        ));
+        // let [foundStream] = await db.select().from(streamModel).where(and(
+        //     eq(streamModel.degreeId, foundDegree.id),
+        //     eq(streamModel.framework, subjectArr[i].Framework),
+        //     eq(streamModel.degreeProgramme, subjectArr[i].Course!),
+        // ));
 
-        if (!foundStream) {
-            const [newStream] = await db.insert(streamModel).values({
-                degreeId: foundDegree.id as number,
-                degreeProgramme: subjectArr[i].Course,
-                framework: subjectArr[i].Framework,
-            } as Stream).returning();
+        // if (!foundStream) {
+        //     const [newStream] = await db.insert(streamModel).values({
+        //         degreeId: foundDegree.id as number,
+        //         degreeProgramme: subjectArr[i].Course,
+        //         framework: subjectArr[i].Framework,
+        //     } as Stream).returning();
 
-            if (!newStream) {
-                throw Error("Unable to create new stream...!");
-            }
+        //     if (!newStream) {
+        //         throw Error("Unable to create new stream...!");
+        //     }
 
-            foundStream = newStream;
+        //     foundStream = newStream;
 
-            if (!foundStream) {
-                throw Error("Unable to create new stream...!");
-            }
-        }
+        //     if (!foundStream) {
+        //         throw Error("Unable to create new stream...!");
+        //     }
+        // }
 
         let specialization: Specialization | null = null;
         if (subjectArr[i].Specialization) {
@@ -281,9 +281,10 @@ export async function refactorSubejectsWithSubjectMetadata(fileName: string): Pr
             .where(
                 and(
                     eq(subjectMetadataModel.marksheetCode, subjectArr[i]["Subject Code as per Marksheet"]),
-                    eq(subjectMetadataModel.streamId, foundStream.id),
+                    eq(subjectMetadataModel.degreeId, foundDegree.id),
+                    eq(subjectMetadataModel.programmeType, subjectArr[i].Course!),
+                    eq(subjectMetadataModel.framework, subjectArr[i].Framework!),
                     eq(subjectMetadataModel.semester, subjectArr[i].Semester),
-
                 )
             )
 
@@ -339,13 +340,13 @@ export async function findSubjectMetdataById(id: number): Promise<SubjectMetadat
 }
 
 interface FindSubjectMetdataByFiltersProps {
-    streamId: number;
+    degreeId: number;
     semester: number;
 }
 
-export async function findSubjectMetdataByFilters({ streamId, semester }: FindSubjectMetdataByFiltersProps): Promise<SubjectMetadataType[]> {
+export async function findSubjectMetdataByFilters({ degreeId, semester }: FindSubjectMetdataByFiltersProps): Promise<SubjectMetadataType[]> {
     const foundSubjectMetadatas = await db.select().from(subjectMetadataModel).where(and(
-        eq(subjectMetadataModel.streamId, streamId),
+        eq(subjectMetadataModel.degreeId, degreeId),
         eq(subjectMetadataModel.semester, semester),
     ));
 
@@ -356,8 +357,8 @@ export async function findSubjectMetdataByFilters({ streamId, semester }: FindSu
     return formattedSubjectMetadatas;
 }
 
-export async function findSubjectMetdataByStreamId(streamId: number) {
-    const foundSubjectMetadatas = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.streamId, streamId));
+export async function findSubjectMetdataByDegreeId(degreeId: number) {
+    const foundSubjectMetadatas = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.degreeId, degreeId));
 
     const formattedSubjectMetadatas = (await Promise.all(foundSubjectMetadatas.map(async (sbj) => {
         return await subjectMetadataResponseFormat(sbj);
@@ -371,9 +372,9 @@ async function subjectMetadataResponseFormat(subjectMetadata: SubjectMetadata | 
         return null;
     }
 
-    const { streamId, specializationId, subjectTypeId, ...props } = subjectMetadata;
+    const { degreeId, specializationId, subjectTypeId, ...props } = subjectMetadata;
 
-    const stream = await findStreamById(streamId);
+    const degree = await findDegreeById(degreeId);
 
     let specialization: Specialization | null = null;
     if (specializationId) {
@@ -389,7 +390,7 @@ async function subjectMetadataResponseFormat(subjectMetadata: SubjectMetadata | 
     const formattedSubjectMetadata = {
         ...props,
         specialization,
-        stream,
+        degree,
         subjectType
     } as SubjectMetadataType
 

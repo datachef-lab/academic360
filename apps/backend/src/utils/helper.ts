@@ -4,12 +4,13 @@ import { PgTable } from "drizzle-orm/pg-core";
 import { PaginatedResponse } from "./PaginatedResponse.js";
 import { Marksheet } from "@/features/academics/models/marksheet.model.js";
 import { findMarksheetsByStudentId } from "@/features/academics/services/marksheet.service.js";
-import { Stream } from "@/features/academics/models/stream.model.js";
+// import { Stream } from "@/features/academics/models/stream.model.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { SubjectType } from "@/types/academics/subject.js";
 import { Subject } from "@/features/academics/models/subject.model.js";
 import { findSubjectMetdataById } from "@/features/academics/services/subjectMetadata.service.js";
-import { StreamType } from "@/types/academics/stream.js";
+import { Degree } from "@/features/resources/models/degree.model.js";
+// import { StreamType } from "@/types/academics/stream.js";
 
 export async function findAll<T>(model: PgTable, page: number = 1, pageSize: number = 10, orderByColumn: string = "id", whereCondition?: SQL): Promise<PaginatedResponse<T>> {
     const offset = (page - 1) * pageSize;
@@ -179,7 +180,7 @@ export async function getClassification(cgpa: number, studentId: number) {
     }
 }
 
-export function getRemarks(marksheetPercent: number, stream: StreamType, course: "HONOURS" | "GENERAL", semester: number, subjects: SubjectType[]) {
+export function getRemarks(marksheetPercent: number, degree: Degree, course: "HONOURS" | "GENERAL", semester: number, subjects: SubjectType[]) {
     // Firstly check if all the subjects are got cleared, if not then return "Semester not cleared."
     for (let i = 0; i < subjects.length; i++) {
         const subject = subjects[i];
@@ -218,7 +219,7 @@ export function getRemarks(marksheetPercent: number, stream: StreamType, course:
             return "Semester Cleared.";
         }
         else { // For semester: 6
-            if (stream.degree.name.toUpperCase() !== "BCOM") { // For BA & BSC
+            if (degree.name.toUpperCase() !== "BCOM") { // For BA & BSC
                 return "Qualified with Honours.";
             }
             else { // For BCOM

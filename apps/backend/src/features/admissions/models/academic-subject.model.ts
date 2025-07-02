@@ -15,4 +15,4 @@ export const academicSubjectModel = pgTable("academic_subjects", {
 
 export const createAcademicSubjects = createInsertSchema(academicSubjectModel);
 
-export type AcademicSubjects = z.infer<typeof createAcademicSubjects>;
+export type AcademicSubject = z.infer<typeof createAcademicSubjects>;
