@@ -7,7 +7,7 @@ import {
   getSportsInfoByAdditionalInfoId,
   updateSportsInfo,
   deleteSportsInfo
-} from "../services/sports-info.service";
+} from "../services/sports-info.service.js";
 
 export const createSportsInfoHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

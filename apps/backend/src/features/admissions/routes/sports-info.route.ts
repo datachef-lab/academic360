@@ -6,7 +6,7 @@ import {
   getSportsInfoByAdditionalInfoIdHandler,
   updateSportsInfoHandler,
   deleteSportsInfoHandler
-} from "../controllers/sports-info.controller";
+} from "../controllers/sports-info.controller.js";
 
 const router = express.Router();
 

@@ -1,7 +1,9 @@
-import { db } from "@/db/index";
-import { classModel } from "../models/class.model";
+import { db } from "@/db/index.js";
+import { classModel } from "../models/class.model.js";
 import { and, eq } from "drizzle-orm";
 // import { classTypeEnum } from "@/features/user/models/helper";
+
+import type { Class } from "../models/class.model.js";
 
 export async function processClassBySemesterNumber(semester: number) {
   let className: string | undefined;
@@ -54,6 +56,63 @@ export async function processClassBySemesterNumber(semester: number) {
   )[0];
 }
 
+export async function findSemesterNumberbyClassId(id: number) {
+  let foundClass = await findClassById(id);
+  
+  if (foundClass.type !== "SEMESTER") throw Error("Invalid Semester!");
+
+  switch (foundClass.name) {
+    case "SEMESTER I":
+      return 1;
+    case "SEMESTER II":
+      return 2;
+    case "SEMESTER III":
+      return 3
+    case "SEMESTER IV":
+      return 4;
+    case "SEMESTER V":
+      return 5
+    case "SEMESTER VI":
+      return 6;
+    case "SEMESTER VII":
+      return 7;
+    case "SEMESTER VIII":
+      return 8;
+  }
+}
+
 export async function findClassById(id: number) {
   return (await db.select().from(classModel).where(eq(classModel.id, id)))[0];
+}
+
+// --- CRUD Service Functions ---
+
+// Create a new class
+export async function createClass(data: Omit<Class, "id" | "createdAt" | "updatedAt">) {
+  const [newClass] = await db
+    .insert(classModel)
+    .values(data)
+    .returning();
+  return newClass;
+}
+
+// Get all classes
+export async function getAllClasses() {
+  return await db.select().from(classModel);
+}
+
+// Update a class by ID
+export async function updateClass(id: number, data: Partial<Omit<Class, "id" | "createdAt" | "updatedAt">>) {
+  const [updatedClass] = await db
+    .update(classModel)
+    .set(data)
+    .where(eq(classModel.id, id))
+    .returning();
+  return updatedClass || null;
+}
+
+// Delete a class by ID
+export async function deleteClass(id: number) {
+  const result = await db.delete(classModel).where(eq(classModel.id, id)).returning();
+  return result.length > 0;
 }

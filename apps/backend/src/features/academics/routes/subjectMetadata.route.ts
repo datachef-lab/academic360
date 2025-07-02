@@ -1,5 +1,5 @@
 import express from "express";
-import { createMultipleSubjects, createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getFilteredSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataBySemester, getSubjectMetadataByDegreeId, getSubjectMetadataByDegreeIdAndSemester, refactorSubjectIrp, refactorSubjectTypes, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
+import { createMultipleSubjects, createSubjectMetadata, deleteSubjectMetadata, getAllSubjectMetadatas, getFilteredSubjectMetadatas, getSubjectMetadataById, getSubjectMetadataByClass, getSubjectMetadataByDegreeId, getSubjectMetadataByDegreeIdAndClassId, refactorSubjectIrp, refactorSubjectTypes, updateSubjectMetadata } from "../controllers/subjectMetadata.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 import { deleteTempFile } from "@/middlewares/deleteTempFile.middleware.js";
@@ -21,10 +21,10 @@ router.post("/filters", getFilteredSubjectMetadatas);
 router.post("/upload", uploadExcelMiddleware, createMultipleSubjects);
 
 router.get("/query", (req, res, next) => {
-    const { id, degreeId, semester } = req.query;
-    console.log(id, degreeId, semester);
-    if (semester && degreeId) {
-        getSubjectMetadataByDegreeIdAndSemester(req, res, next);
+    const { id, degreeId, classId } = req.query;
+    console.log(id, degreeId, classId);
+    if (classId && degreeId) {
+        getSubjectMetadataByDegreeIdAndClassId(req, res, next);
     }
     else if (id) {
         getSubjectMetadataById(req, res, next);
@@ -32,8 +32,8 @@ router.get("/query", (req, res, next) => {
     else if (degreeId) {
         getSubjectMetadataByDegreeId(req, res, next)
     }
-    else if (semester) {
-        getSubjectMetadataBySemester(req, res, next)
+    else if (classId) {
+        getSubjectMetadataByClass(req, res, next)
     }
     else {
         getAllSubjectMetadatas(req, res, next);

@@ -7,7 +7,7 @@ import {
   getAllSportCategories,
   updateSportCategory,
   deleteSportCategory
-} from "../services/sports-category.service";
+} from "../services/sports-category.service.js";
 
 export const createSportsCategoryHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

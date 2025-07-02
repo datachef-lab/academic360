@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { admissionAcademicInfoModel, AdmissionAcademicInfo } from "../models/admission-academic-info.model.js";
-import { AdmissionAcademicInfoDto } from "@/types/admissions";
+import { AdmissionAcademicInfoDto } from "@/types/admissions/index.js";
 import { and, eq, ilike } from "drizzle-orm";
 // import { createSubject, getAllSubjects, getSubjectById } from "./academic-subject.service.js";
 

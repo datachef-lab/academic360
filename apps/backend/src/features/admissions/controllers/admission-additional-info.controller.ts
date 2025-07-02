@@ -7,7 +7,7 @@ import {
   findAdditionalInfoByApplicationFormId,
   updateAdmissionAdditionalInfo,
   deleteAdmissionAdditionalInfo
-} from "../services/admission-additional-info.service";
+} from "../services/admission-additional-info.service.js";
 
 export const createAdmissionAdditionalInfoHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

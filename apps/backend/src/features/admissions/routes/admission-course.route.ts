@@ -6,7 +6,7 @@ import {
   getAdmissionCoursesByAdmissionIdHandler,
   updateAdmissionCourseHandler,
   deleteAdmissionCourseHandler
-} from "../controllers/admission-course.controller";
+} from "../controllers/admission-course.controller.js";
 
 const router = express.Router();
 

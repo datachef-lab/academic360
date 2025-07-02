@@ -1,4 +1,4 @@
-import { academicYearModel } from "@/features/academics/models/academic-year.model";
+import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
 import { boolean, date, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

@@ -7,7 +7,7 @@ import {
   findSubjectsByAcademicInfoId,
   updateSubject,
   deleteSubject
-} from "../services/student-academic-subject.service";
+} from "../services/student-academic-subject.service.js";
 
 export const createStudentAcademicSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

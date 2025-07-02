@@ -10,7 +10,7 @@ import { Section, sectionModel } from "../models/section.model.js";
 import { OldShift } from "@/types/old-data/old-shift.js";
 import { Shift, shiftModel } from "../models/shift.model.js";
 import { Batch, batchModel } from "../models/batch.model.js";
-import { BatchType } from "@/types/academics/batch.js";
+import { BatchDetails, BatchStudentRow, BatchSummary, BatchType, StudentBatchEntry } from "@/types/academics/batch.js";
 import { CourseType } from "@/types/academics/course.js";
 import { findCourseById } from "./course.service.js";
 import { OldSession } from "@/types/academics/session.js";
@@ -33,6 +33,10 @@ import { findStudentById } from "@/features/user/services/student.service.js";
 import { findAcademicIdentifierByStudentId } from "@/features/user/services/academicIdentifier.service.js";
 import { OldAcademicYear } from "@/types/old-data/old-academic-year.js";
 import { academicYearModel } from "../models/academic-year.model.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { specializationModel } from "@/features/user/models/specialization.model.js";
+import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
+import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 
 const BATCH_SIZE = 500;
 
@@ -807,4 +811,314 @@ export async function batchFormatResponse(
   };
 
   return formattedBatch;
+}
+
+// --- CRUD Service Functions ---
+
+// Create a new batch
+export async function createBatch(data: Omit<Batch, "id" | "createdAt" | "updatedAt">): Promise<BatchType | null> {
+  const [newBatch] = await db
+    .insert(batchModel)
+    .values(data)
+    .returning();
+  return batchFormatResponse(newBatch);
+}
+
+// Get all batches
+export async function getAllBatches(): Promise<BatchType[]> {
+  const batches = await db.select().from(batchModel);
+  const formatted = await Promise.all(batches.map(batch => batchFormatResponse(batch)));
+  return formatted.filter(Boolean) as BatchType[];
+}
+
+// Update a batch by ID
+export async function updateBatch(id: number, data: Partial<Omit<Batch, "id" | "createdAt" | "updatedAt">>): Promise<BatchType | null> {
+  const [updatedBatch] = await db
+    .update(batchModel)
+    .set(data)
+    .where(eq(batchModel.id, id))
+    .returning();
+  return batchFormatResponse(updatedBatch);
+}
+
+// Delete a batch by ID
+export async function deleteBatch(id: number): Promise<boolean> {
+  const result = await db.delete(batchModel).where(eq(batchModel.id, id)).returning();
+  return result.length > 0;
+}
+
+export async function findBatchSummariesByFilters({ academicYearId }: { academicYearId?: number }): Promise<BatchSummary[]> {
+  // Build the query in one go to avoid Drizzle type issues
+  const batches = await db
+    .select()
+    .from(batchModel)
+    .where(academicYearId ? eq(batchModel.academicYearId, academicYearId) : undefined);
+
+  const summaries: BatchSummary[] = [];
+  for (const batch of batches) {
+    // Get related names
+    const [course] = await db.select().from(courseModel).where(eq(courseModel.id, batch.courseId));
+    const [cls] = await db.select().from(classModel).where(eq(classModel.id, batch.classId));
+    const [section] = batch.sectionId ? await db.select().from(sectionModel).where(eq(sectionModel.id, batch.sectionId)) : [null];
+    const [shift] = batch.shiftId ? await db.select().from(shiftModel).where(eq(shiftModel.id, batch.shiftId)) : [null];
+    const [session] = batch.sessionId ? await db.select().from(sessionModel).where(eq(sessionModel.id, batch.sessionId)) : [null];
+
+    // Count students
+    const [{ totalStudents }] = await db.select({ totalStudents: count() }).from(studentPaperModel).where(eq(studentPaperModel.batchId, batch.id));
+    // Count subjects
+    const [{ totalSubjects }] = await db.select({ totalSubjects: count() }).from(batchPaperModel).where(eq(batchPaperModel.batchId, batch.id));
+
+    summaries.push({
+      ...batch,
+      courseName: course?.name || '',
+      className: cls?.name || '',
+      sectionName: section?.name || '',
+      shift: shift?.name || '',
+      session: session?.name || '',
+      totalStudents: totalStudents || 0,
+      totalSubjects: totalSubjects || 0,
+    });
+  }
+  return summaries;
+}
+
+export async function findBatchDetailsById(id: number): Promise<BatchDetails | null> {
+  const batch = await findBatchById(id);
+  if (!batch) return null;
+
+  // Get all students in the batch
+  const studentPapers = await db.select().from(studentPaperModel).where(eq(studentPaperModel.batchId, id));
+  const studentIds = [...new Set(studentPapers.map(sp => sp.studentId))];
+
+  // For each student, get UID and subjects
+  const studentEntries: StudentBatchEntry[] = [];
+  for (const studentId of studentIds) {
+    // Get UID
+    const academicIdentifier = await findAcademicIdentifierByStudentId(studentId);
+    // Get subjects for this student in this batch
+    const papers = studentPapers.filter(sp => sp.studentId === studentId);
+    const subjectMetadatas: SubjectMetadataType[] = [];
+    for (const paper of papers) {
+      // Get batchPaper
+      const [batchPaper] = await db.select().from(batchPaperModel).where(eq(batchPaperModel.id, paper.batchPaperId));
+      if (!batchPaper) continue;
+      // Get subjectMetadata
+      const [subjectMetadata] = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.id, batchPaper.subjectMetadataId));
+      if (subjectMetadata) {
+        // Fetch related entities for SubjectMetadataType
+        const [degree] = await db.select().from(degreeModel).where(eq(degreeModel.id, subjectMetadata.degreeId));
+        const [cls] = await db.select().from(classModel).where(eq(classModel.id, subjectMetadata.classId));
+        const [specialization] = subjectMetadata.specializationId ? await db.select().from(specializationModel).where(eq(specializationModel.id, subjectMetadata.specializationId)) : [null];
+        const [subjectType] = subjectMetadata.subjectTypeId ? await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.id, subjectMetadata.subjectTypeId)) : [null];
+        subjectMetadatas.push({
+          ...subjectMetadata,
+          degree: degree || { name: '' },
+          class: cls || { name: '' },
+          specialization: specialization || null,
+          subjectType: subjectType || { id: 0, irpName: '', irpShortName: '', marksheetName: '', marksheetShortName: '', sequene: null, disabled: null, createdAt: new Date(), updatedAt: new Date() },
+        });
+      }
+    }
+    const [foundStudent] = await db
+      .select()
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId));
+
+    let status = '';
+
+    if (foundStudent.isSuspended) {
+      status = "SUSPENDED";
+    } else if (!foundStudent.active && !foundStudent.alumni) {
+      status = "DROPPED_OUT";
+    } else if (foundStudent.active && !foundStudent.alumni) {
+      status = "ACTIVE";
+    } else if (foundStudent.active && foundStudent.alumni) {
+      status = "PENDING_CLEARANCE";
+    }
+
+    if (!foundStudent.active && foundStudent.alumni && foundStudent.leavingDate) {
+      status = "ALUMNI";
+    }
+
+    studentEntries.push({
+      studentId,
+      uid: academicIdentifier?.uid || '',
+      subjects: subjectMetadatas,
+      status
+    });
+  }
+
+
+  // Paginate (for now, return all in one page)
+  const paginatedStudentEntry = {
+    content: studentEntries,
+    page: 1,
+    pageSize: studentEntries.length,
+    totalPages: 1,
+    totalElements: studentEntries.length,
+  };
+
+  const b: any = batch;
+  return {
+    id: b.id,
+    academicYearId: b.academicYearId,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+    course: b.course,
+    academicClass: b.academicClass,
+    section: b.section,
+    shift: b.shift,
+    session: b.session,
+    paginatedStudentEntry,
+  };
+}
+
+export async function uploadBatch(batchRows: BatchStudentRow[]): Promise<{success: boolean, exceptions: BatchStudentRow[] }> {
+  const exceptions: BatchStudentRow[] = [];
+  const validRows: BatchStudentRow[] = [];
+  const processedGroups = new Set<string>();
+
+  for (const row of batchRows) {
+    // Build group key (case-insensitive, trimmed)
+    const groupKey = [
+      row.academicYear?.trim().toLowerCase() || '',
+      row.course?.trim().toLowerCase() || '',
+      row.class?.trim().toLowerCase() || '',
+      row.framework?.toString().trim().toLowerCase() || '',
+      row.programmeType?.toString().trim().toLowerCase() || '',
+      row.section?.trim().toLowerCase() || '',
+      row.session?.trim().toLowerCase() || '',
+      row.shift?.trim().toLowerCase() || '',
+      row.uid?.trim().toLowerCase() || ''
+    ].join('|');
+    if (processedGroups.has(groupKey)) continue;
+    processedGroups.add(groupKey);
+
+    // Filter all rows in this group
+    const arr = batchRows.filter(ele =>
+      (ele.academicYear?.trim().toLowerCase() || '') === (row.academicYear?.trim().toLowerCase() || '') &&
+      (ele.course?.trim().toLowerCase() || '') === (row.course?.trim().toLowerCase() || '') &&
+      (ele.class?.trim().toLowerCase() || '') === (row.class?.trim().toLowerCase() || '') &&
+      (ele.framework?.toString().trim().toLowerCase() || '') === (row.framework?.toString().trim().toLowerCase() || '') &&
+      (ele.programmeType?.toString().trim().toLowerCase() || '') === (row.programmeType?.toString().trim().toLowerCase() || '') &&
+      (ele.section?.trim().toLowerCase() || '') === (row.section?.trim().toLowerCase() || '') &&
+      (ele.session?.trim().toLowerCase() || '') === (row.session?.trim().toLowerCase() || '') &&
+      (ele.shift?.trim().toLowerCase() || '') === (row.shift?.trim().toLowerCase() || '') &&
+      (ele.uid?.trim().toLowerCase() || '') === (row.uid?.trim().toLowerCase() || '')
+    );
+
+    // Validate batch-level entities once per group
+    const [course] = await db.select().from(courseModel).where(eq(courseModel.name, row.course.trim()));
+    const [cls] = await db.select().from(classModel).where(eq(classModel.name, row.class.trim()));
+    const [section] = await db.select().from(sectionModel).where(eq(sectionModel.name, row.section.trim()));
+    const [shift] = await db.select().from(shiftModel).where(eq(shiftModel.name, row.shift.trim()));
+    const [session] = await db.select().from(sessionModel).where(eq(sessionModel.name, row.session.trim()));
+    const [academicYear] = await db.select().from(academicYearModel).where(eq(academicYearModel.year, row.academicYear.trim()));
+    const [academicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.uid, row.uid.trim()));
+
+    // For each row in arr (i.e., each paperCode for this group), validate subject metadata
+    for (const r of arr) {
+      let error = '';
+      if (!course) error += 'Invalid course; ';
+      if (!cls) error += 'Invalid class; ';
+      if (!section) error += 'Invalid section; ';
+      if (!shift) error += 'Invalid shift; ';
+      if (!session) error += 'Invalid session; ';
+      if (!academicYear) error += 'Invalid academic year; ';
+      if (!academicIdentifier) error += 'Invalid UID; ';
+      // Validate subject metadata for this paperCode
+      let subjectMetadataExists = false;
+      if (cls && course) {
+        const [subjectMetadata] = await db.select().from(subjectMetadataModel).where(
+          and(
+            eq(subjectMetadataModel.marksheetCode, r.paperCode.trim()),
+            eq(subjectMetadataModel.classId, cls.id),
+            eq(subjectMetadataModel.framework, r.framework!),
+            eq(subjectMetadataModel.programmeType, course.programmeType!)
+          )
+        );
+        if (subjectMetadata) subjectMetadataExists = true;
+      }
+      if (!subjectMetadataExists) error += 'Invalid subject metadata; ';
+      if (error) {
+        r.error = error.trim();
+        exceptions.push(r);
+      } else {
+        r.error = undefined;
+        validRows.push(r);
+      }
+    }
+  }
+
+  // If there are exceptions, return them at the top, valid rows below
+  if (exceptions.length > 0) {
+    return { success: false, exceptions: [...exceptions, ...validRows] };
+  }
+
+  // Proceed with original logic for validRows only
+  for (const row of validRows) {
+    // 1. Find or create batch
+    const [course] = await db.select().from(courseModel).where(eq(courseModel.name, row.course.trim()));
+    const [cls] = await db.select().from(classModel).where(eq(classModel.name, row.class.trim()));
+    const [section] = await db.select().from(sectionModel).where(eq(sectionModel.name, row.section.trim()));
+    const [shift] = await db.select().from(shiftModel).where(eq(shiftModel.name, row.shift.trim()));
+    const [session] = await db.select().from(sessionModel).where(eq(sessionModel.name, row.session.trim()));
+    const [academicYear] = await db.select().from(academicYearModel).where(eq(academicYearModel.year, row.academicYear.trim()));
+    if (!course || !cls || !session || !academicYear) continue;
+    const batchConditions = [
+      eq(batchModel.academicYearId, academicYear.id),
+      eq(batchModel.courseId, course.id),
+      eq(batchModel.classId, cls.id),
+      eq(batchModel.sessionId, session.id)
+    ];
+    if (section) batchConditions.push(eq(batchModel.sectionId, section.id));
+    if (shift) batchConditions.push(eq(batchModel.shiftId, shift.id));
+    let [batch] = await db.select().from(batchModel).where(and(...batchConditions));
+    if (!batch) {
+      [batch] = await db.insert(batchModel).values({
+        academicYearId: academicYear.id,
+        courseId: course.id,
+        classId: cls.id,
+        sectionId: section ? section.id : null,
+        shiftId: shift ? shift.id : null,
+        sessionId: session.id
+      }).returning();
+    }
+    // 2. Find subject metadata by marksheetCode (paperCode)
+    const [subjectMetadata] = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.marksheetCode, row.paperCode.trim()));
+    if (!subjectMetadata) continue;
+    // 3. Find or create batch paper
+    let [batchPaper] = await db.select().from(batchPaperModel).where(
+      and(
+        eq(batchPaperModel.batchId, batch.id),
+        eq(batchPaperModel.subjectMetadataId, subjectMetadata.id)
+      )
+    );
+    if (!batchPaper) {
+      [batchPaper] = await db.insert(batchPaperModel).values({
+        batchId: batch.id,
+        subjectMetadataId: subjectMetadata.id
+      }).returning();
+    }
+    // 4. Find student by uid
+    const [academicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.uid, row.uid.trim()));
+    if (!academicIdentifier) continue;
+    const studentId = academicIdentifier.studentId;
+    // 5. Create student paper entry if not exists
+    const [existingStudentPaper] = await db.select().from(studentPaperModel).where(
+      and(
+        eq(studentPaperModel.studentId, studentId),
+        eq(studentPaperModel.batchPaperId, batchPaper.id),
+        eq(studentPaperModel.batchId, batch.id)
+      )
+    );
+    if (!existingStudentPaper) {
+      await db.insert(studentPaperModel).values({
+        studentId,
+        batchPaperId: batchPaper.id,
+        batchId: batch.id
+      });
+    }
+  }
+  return { success: true, exceptions: [] };
 }

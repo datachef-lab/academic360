@@ -7,7 +7,7 @@ import {
   findAdmissionCoursesByAdmissionId,
   updateAdmissionCourse,
   deleteAdmissionCourse
-} from "../services/admission-course.service";
+} from "../services/admission-course.service.js";
 
 export const createAdmissionCourseHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

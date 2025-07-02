@@ -7,7 +7,7 @@ import {
   getAllSubjects,
   updateSubject,
   toggleSubjectStatus
-} from "../services/academic-subject.service";
+} from "../services/academic-subject.service.js";
 
 export const createAcademicSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

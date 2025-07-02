@@ -8,6 +8,8 @@ import { subjectModel } from "@/features/academics/models/subject.model.js";
 // import { streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { studentModel } from "../models/student.model.js";
+import { classModel } from "@/features/academics/models/class.model.js";
+import { processClassBySemesterNumber } from "@/features/academics/services/class.service.js";
 
 type ReportQueryParams = {
   page: number;
@@ -37,8 +39,13 @@ export const getReports = async ({
     //   ? eq(streamModel.framework, framework as "CCF" | "CBCS")
     //   : undefined,
     stream ? eq(degreeModel.name, stream) : undefined,
-    semester !== undefined ? eq(marksheetModel.semester, semester) : undefined,
   ];
+
+  if (semester) {
+    const foundClass = await processClassBySemesterNumber(semester);
+    filters.push(eq(marksheetModel.classId, foundClass.id));
+  }
+
   const query = db
     .select({
       id: marksheetModel.studentId,
@@ -48,7 +55,7 @@ export const getReports = async ({
       name: userModel.name,
       stream: degreeModel.name,
       framework: academicIdentifierModel.framework,
-      semester: marksheetModel.semester,
+      semester: classModel.name,
       year: marksheetModel.year,
       subjectName: subjectMetadataModel.name,
       fullMarks: subjectMetadataModel.fullMarks,
@@ -67,7 +74,7 @@ export const getReports = async ({
     .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
     // .leftJoin(streamModel, eq(academicIdentifierModel.framework, framework))
-    // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
+    .leftJoin(classModel, eq(marksheetModel.classId, classModel.id))
     .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
     .leftJoin(
       subjectMetadataModel,

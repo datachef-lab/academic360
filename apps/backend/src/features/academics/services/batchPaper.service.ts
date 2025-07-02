@@ -449,3 +449,41 @@ async function getMappedSubjectMetadata({ subjectTypeId, subjectId }: { subjectT
     console.log('found subjectMetadata (in new db), irp:', foundSubjectMetadata?.irpName);
     return foundSubjectMetadata;
 }
+
+// --- CRUD Service Functions ---
+// import type { BatchPaper } from "../models/batchPaper.model.js";
+
+// Create a new batch paper
+export async function createBatchPaper(data: Omit<import("../models/batchPaper.model.js").BatchPaper, "id" | "createdAt" | "updatedAt">) {
+  const [newBatchPaper] = await db
+    .insert(batchPaperModel)
+    .values(data)
+    .returning();
+  return newBatchPaper;
+}
+
+// Get all batch papers
+export async function getAllBatchPapers() {
+  return await db.select().from(batchPaperModel);
+}
+
+// Get a batch paper by ID
+export async function findBatchPaperById(id: number) {
+  return (await db.select().from(batchPaperModel).where(eq(batchPaperModel.id, id)))[0];
+}
+
+// Update a batch paper by ID
+export async function updateBatchPaper(id: number, data: Partial<Omit<import("../models/batchPaper.model.js").BatchPaper, "id" | "createdAt" | "updatedAt">>) {
+  const [updatedBatchPaper] = await db
+    .update(batchPaperModel)
+    .set(data)
+    .where(eq(batchPaperModel.id, id))
+    .returning();
+  return updatedBatchPaper || null;
+}
+
+// Delete a batch paper by ID
+export async function deleteBatchPaper(id: number) {
+  const result = await db.delete(batchPaperModel).where(eq(batchPaperModel.id, id)).returning();
+  return result.length > 0;
+}

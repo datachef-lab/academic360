@@ -61,7 +61,7 @@ import {
   feesHeadRouter,
   feesReceiptTypeRouter,
   feesSlabYearMappingRouter,
-  feesDesignAbstractLevelRouter,
+
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "./features/academics/routes/course.route.js";
@@ -82,7 +82,7 @@ import {
   sportsInfoRouter,
   studentAcademicSubjectRouter,
   academicSubjectRouter,
-} from "@/features/admissions";
+} from "@/features/admissions/index.js";
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);

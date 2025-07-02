@@ -6,7 +6,7 @@ import {
   getStudentAcademicSubjectsByAcademicInfoIdHandler,
   updateStudentAcademicSubjectHandler,
   deleteStudentAcademicSubjectHandler
-} from "../controllers/student-academic-subject.controller";
+} from "../controllers/student-academic-subject.controller.js";
 
 const router = express.Router();
 

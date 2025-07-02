@@ -6,7 +6,7 @@ import {
   getAllSportsCategoriesHandler,
   updateSportsCategoryHandler,
   deleteSportsCategoryHandler
-} from "../controllers/sports-category.controller";
+} from "../controllers/sports-category.controller.js";
 
 const router = express.Router();
 

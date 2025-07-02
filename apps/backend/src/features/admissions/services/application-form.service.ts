@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { ApplicationForm, applicationFormModel } from "../models/application-form.model.js";
-import { ApplicationFormDto } from "@/types/admissions";
+import { ApplicationFormDto } from "@/types/admissions/index.js";
 import { eq } from "drizzle-orm";
 import { checkExistingEntry, createGeneralInfo, deleteGeneralInfo, findGeneralInfoByApplicationFormId } from "./admission-general-info.service.js";
 import { deleteAcademicInfo, findAcademicInfoByApplicationFormId } from "./admission-academic-info.service.js";

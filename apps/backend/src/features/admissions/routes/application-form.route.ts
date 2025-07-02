@@ -6,7 +6,7 @@ import {
   getApplicationFormsByAdmissionIdHandler,
   updateApplicationFormHandler,
   deleteApplicationFormHandler
-} from "../controllers/application-form.controller";
+} from "../controllers/application-form.controller.js";
 
 const router = express.Router();
 

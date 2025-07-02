@@ -7,7 +7,7 @@ import {
   findGeneralInfoByApplicationFormId,
   updateGeneralInfo,
   deleteGeneralInfo
-} from "../services/admission-general-info.service";
+} from "../services/admission-general-info.service.js";
 
 export const createAdmissionGeneralInfoHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

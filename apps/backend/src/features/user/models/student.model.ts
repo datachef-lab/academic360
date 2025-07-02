@@ -20,6 +20,7 @@ export const studentModel = pgTable("students", {
     notes: text(),
     active: boolean(),
     alumni: boolean(),
+    isSuspended: boolean().default(false),
     leavingDate: timestamp(),
     leavingReason: text(),
     createdAt: timestamp().notNull().defaultNow(),

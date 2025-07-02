@@ -12,6 +12,8 @@ import { shiftModel } from "@/features/academics/models/shift.model.js";
 import type { Shift } from "@/features/academics/models/shift.model.js";
 import { createFeesSlabMapping, getFeesSlabMappingsByFeesStructureId } from "./fees-slab-mapping.service.js";
 import { feesSlabMappingModel } from "../models/fees-slab-mapping.model.js";
+import { classModel } from "@/features/academics/models/class.model.js";
+import { findClassById } from "@/features/academics/services/class.service.js";
 
 export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> => {
     try {
@@ -21,7 +23,7 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
             closingDate: feesStructureModel.closingDate,
             academicYearId: feesStructureModel.academicYearId,
             courseId: feesStructureModel.courseId,
-            semester: feesStructureModel.semester,
+            semester: classModel.name,
             advanceForCourseId: feesStructureModel.advanceForCourseId,
             advanceForSemester: feesStructureModel.advanceForSemester,
             startDate: feesStructureModel.startDate,
@@ -39,6 +41,7 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
             shiftId: feesStructureModel.shiftId,
         }).from(feesStructureModel)
             .leftJoin(academicYearModel, eq(feesStructureModel.academicYearId, academicYearModel.id))
+            .leftJoin(classModel, eq(classModel.id, feesStructureModel.classId))
             .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id))
             .leftJoin(advanceCourse, eq(feesStructureModel.advanceForCourseId, advanceCourse.id));
 
@@ -50,10 +53,16 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
                 const [foundShift] = await db.select().from(shiftModel).where(eq(shiftModel.id, feesStructure.shiftId));
                 shift = foundShift;
             }
+            const [foundClass] = await db
+            .select()
+            .from(classModel)
+            .where(eq(classModel.name, feesStructure.semester!));
+
             if (feesStructure.academicYear && feesStructure.course) {
                 const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(feesStructure.id!);
                 feesStructureDtos.push({
                     ...feesStructure,
+                    class: foundClass,
                     feesSlabMappings,
                     academicYear: feesStructure.academicYear,
                     course: feesStructure.course,
@@ -77,7 +86,7 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             closingDate: feesStructureModel.closingDate,
             academicYearId: feesStructureModel.academicYearId,
             courseId: feesStructureModel.courseId,
-            semester: feesStructureModel.semester,
+            semester: classModel.name,
             advanceForCourseId: feesStructureModel.advanceForCourseId,
             advanceForSemester: feesStructureModel.advanceForSemester,
             startDate: feesStructureModel.startDate,
@@ -95,6 +104,7 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             shiftId: feesStructureModel.shiftId,
         }).from(feesStructureModel)
             .leftJoin(academicYearModel, eq(feesStructureModel.academicYearId, academicYearModel.id))
+            .leftJoin(classModel, eq(classModel.id, feesStructureModel.classId))
             .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id))
             .leftJoin(advanceCourse, eq(feesStructureModel.advanceForCourseId, advanceCourse.id))
             .where(eq(feesStructureModel.id, id));
@@ -115,10 +125,15 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             shift = foundShift;
         }
         const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(feesStructure.id!);
-        
+        const [fooundClass] = await db
+            .select()
+            .from(classModel)
+            .where(eq(classModel.name, feesStructure.semester!));
+
         return {
             ...feesStructure,
             feesSlabMappings,
+            class: fooundClass,
             academicYear: feesStructure.academicYear,
             course: feesStructure.course,
             advanceForCourse: feesStructure.advanceForCourse,
@@ -179,7 +194,7 @@ export const getFeesStructuresByAcademicYearIdAndCourseId = async (academicYearI
 export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
     try {
         console.log(feesStructure);
-        const { id, components, feesSlabMappings, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
+        const { id, components, class: feesClassSem, feesSlabMappings, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
 
         if (!academicYear?.id || !course?.id) {
             throw new Error("Academic Year and Course are required to create a fee structure.");
@@ -192,7 +207,7 @@ export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
                 and(
                     eq(feesStructureModel.academicYearId, academicYear.id!),
                     eq(feesStructureModel.courseId, course.id!),
-                    eq(feesStructureModel.semester, rest.semester!),
+                    eq(feesStructureModel.classId, feesClassSem.id!),
                     eq(feesStructureModel.shiftId, shift?.id!),
                     eq(feesStructureModel.feesReceiptTypeId, feesStructure?.feesReceiptTypeId!),
                 )
@@ -204,6 +219,7 @@ export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
         
         const dataToInsert: FeesStructure = {
             ...rest,
+            classId: feesClassSem.id!,
             academicYearId: academicYear.id,
             courseId: course.id,
             advanceForCourseId: advanceForCourse?.id ?? null,
@@ -240,14 +256,15 @@ export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
 
 export const updateFeesStructure = async (id: number, feesStructure: FeesStructureDto) => {
     try {
-        const { components, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
+        const { components, academicYear, course, advanceForCourse, class: feesClassSem, shift, createdAt, updatedAt, ...rest } = feesStructure;
 
         if (!academicYear?.id || !course?.id) {
             throw new Error("Academic Year and Course are required.");
         }
-
+        
         const dataToUpdate: FeesStructure = {
             ...rest,
+            classId: feesClassSem.id!,
             academicYearId: academicYear.id,
             courseId: course.id,
             advanceForCourseId: advanceForCourse?.id ?? null,
@@ -381,8 +398,12 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
 
         if (!academicYear || !course) return null;
         const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(model.id!);
+        const {classId, ...rest} = model;
+        const foundClass = await findClassById(classId)
+
         return {
-            ...model,
+            ...rest,
+            class: foundClass,
             academicYear,
             course,
             advanceForCourse,
@@ -396,84 +417,85 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
     }
 }
 
-export const getFeesDesignAbstractLevel = async (academicYearId?: number, courseId?: number): Promise<FeesDesignAbstractLevel[]> => {
-    try {
-        const conditions = [];
-        if (academicYearId) {
-            conditions.push(eq(feesStructureModel.academicYearId, academicYearId));
-        }
-        if (courseId) {
-            conditions.push(eq(feesStructureModel.courseId, courseId));
-        }
+// export const getFeesDesignAbstractLevel = async (academicYearId?: number, courseId?: number): Promise<FeesDesignAbstractLevel[]> => {
+//     try {
+//         const conditions = [];
+//         if (academicYearId) {
+//             conditions.push(eq(feesStructureModel.academicYearId, academicYearId));
+//         }
+//         if (courseId) {
+//             conditions.push(eq(feesStructureModel.courseId, courseId));
+//         }
 
-        const query = db.select({
-            academicYear: academicYearModel,
-            course: courseModel,
-            semester: feesStructureModel.semester,
-            startDate: feesStructureModel.startDate,
-            endDate: feesStructureModel.endDate,
-        })
-        .from(feesStructureModel)
-        .leftJoin(academicYearModel, eq(feesStructureModel.academicYearId, academicYearModel.id))
-        .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id));
+//         const query = db.select({
+//             academicYear: academicYearModel,
+//             course: courseModel,
+//             semester: classModel.name,
+//             startDate: feesStructureModel.startDate,
+//             endDate: feesStructureModel.endDate,
+//         })
+//         .from(feesStructureModel)
+//         .leftJoin(academicYearModel, eq(feesStructureModel.academicYearId, academicYearModel.id))
+//         .leftJoin(classModel, eq(classModel.id, feesStructureModel.classId))
+//         .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id));
 
-        if (conditions.length > 0) {
-            // @ts-ignore
-            query.where(and(...conditions));
-        }
+//         if (conditions.length > 0) {
+//             // @ts-ignore
+//             query.where(and(...conditions));
+//         }
 
-        const feesStructures = await query;
+//         const feesStructures = await query;
 
-        const academicYearsMap = new Map<number, FeesDesignAbstractLevel>();
+//         const academicYearsMap = new Map<number, FeesDesignAbstractLevel>();
 
-        for (const { academicYear, course, semester, startDate, endDate } of feesStructures) {
-            if (!academicYear || !course) continue;
+//         for (const { academicYear, course, semester, startDate, endDate } of feesStructures) {
+//             if (!academicYear || !course) continue;
 
-            if (!academicYearsMap.has(academicYear.id)) {
-                academicYearsMap.set(academicYear.id, {
-                    academicYear,
-                    courses: [],
-                });
-            }
+//             if (!academicYearsMap.has(academicYear.id)) {
+//                 academicYearsMap.set(academicYear.id, {
+//                     academicYear,
+//                     courses: [],
+//                 });
+//             }
 
-            const academicYearData = academicYearsMap.get(academicYear.id)!;
-            let courseData = academicYearData.courses.find(c => c.id === course.id);
+//             const academicYearData = academicYearsMap.get(academicYear.id)!;
+//             let courseData = academicYearData.courses.find(c => c.id === course.id);
 
-            if (!courseData) {
-                const batches = await db.select({
-                    shift: shiftModel.name,
-                })
-                .from(batchModel)
-                .leftJoin(shiftModel, eq(batchModel.shiftId, shiftModel.id))
-                .where(eq(batchModel.courseId, course.id));
+//             if (!courseData) {
+//                 const batches = await db.select({
+//                     shift: shiftModel.name,
+//                 })
+//                 .from(batchModel)
+//                 .leftJoin(shiftModel, eq(batchModel.shiftId, shiftModel.id))
+//                 .where(eq(batchModel.courseId, course.id));
 
-                courseData = {
-                    id: course.id,
-                    name: course.name,
-                    semesters: [],
-                    shifts: batches.map(b => b.shift).filter((s): s is string => s !== null),
-                    startDate: new Date(startDate),
-                    endDate: new Date(endDate),
-                };
-                academicYearData.courses.push(courseData);
-            }
+//                 courseData = {
+//                     id: course.id,
+//                     name: course.name,
+//                     semesters: [],
+//                     shifts: batches.map(b => b.shift).filter((s): s is string => s !== null),
+//                     startDate: new Date(startDate),
+//                     endDate: new Date(endDate),
+//                 };
+//                 academicYearData.courses.push(courseData);
+//             }
 
-            if (courseData && !courseData.semesters.includes(semester)) {
-                courseData.semesters.push(semester);
-            }
-        }
+//             if (courseData && !courseData.semesters.includes(semester)) {
+//                 courseData.semesters.push(semester);
+//             }
+//         }
 
-        return Array.from(academicYearsMap.values());
-    } catch (error) {
-        console.error(error);
-        return [];
-    }
-};
+//         return Array.from(academicYearsMap.values());
+//     } catch (error) {
+//         console.error(error);
+//         return [];
+//     }
+// };
 
 export const checkFeesStructureExists = async (
   academicYearId: number,
   courseId: number,
-  semester: number,
+  classId: number,
   shiftId: number,
   feesReceiptTypeId: number
 ): Promise<boolean> => {
@@ -484,7 +506,7 @@ export const checkFeesStructureExists = async (
       and(
         eq(feesStructureModel.academicYearId, academicYearId),
         eq(feesStructureModel.courseId, courseId),
-        eq(feesStructureModel.semester, semester),
+        eq(feesStructureModel.classId, classId),
         eq(feesStructureModel.shiftId, shiftId),
         eq(feesStructureModel.feesReceiptTypeId, feesReceiptTypeId),
       )

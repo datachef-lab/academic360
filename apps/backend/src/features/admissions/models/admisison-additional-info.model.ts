@@ -4,7 +4,7 @@ import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js
 import { categoryModel } from "@/features/resources/models/category.model.js";
 import { religionModel } from "@/features/resources/models/religion.model.js";
 import { departmentModel } from "@/features/user/models/department.model.js";
-import { disabilityTypeEnum, personTitleType } from "@/features/user/models/helper";
+import { disabilityTypeEnum, personTitleType } from "@/features/user/models/helper.js";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

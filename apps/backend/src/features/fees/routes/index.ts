@@ -1,7 +1,6 @@
 import { Router } from "express";
 import feesStructureRouter from "./fees-structure.route.js";
 import feesSlabYearMappingRouter from "./fees-slab-mapping.route.js";
-import feesDesignAbstractLevelRouter from "./fees-design-abstract-level.route.js";
 import feesComponentRouter from "./feesComponent.route.js";
 import feesSlabRouter from "./fees-slab.route.js";
 
@@ -9,7 +8,6 @@ const router = Router();
 
 router.use("/structure", feesStructureRouter);
 router.use("/slab-year-mappings", feesSlabYearMappingRouter);
-router.use("/design-abstract-level", feesDesignAbstractLevelRouter);
 router.use("/components", feesComponentRouter);
 router.use("/slabs", feesSlabRouter);
 

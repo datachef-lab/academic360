@@ -6,7 +6,7 @@ import {
   getAdmissionGeneralInfoByApplicationFormIdHandler,
   updateAdmissionGeneralInfoHandler,
   deleteAdmissionGeneralInfoHandler
-} from "../controllers/admission-general-info.controller";
+} from "../controllers/admission-general-info.controller.js";
 
 const router = express.Router();
 

@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
-import * as admissionService from "../services/admission.service";
-import * as additionalInfoService from "../services/admission-additional-info.service";
+import * as admissionService from "../services/admission.service.js";
+import * as additionalInfoService from "../services/admission-additional-info.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 

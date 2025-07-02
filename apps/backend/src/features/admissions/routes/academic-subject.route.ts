@@ -6,7 +6,7 @@ import {
   getAllAcademicSubjectsHandler,
   updateAcademicSubjectHandler,
   deleteAcademicSubjectHandler
-} from "../controllers/academic-subject.controller";
+} from "../controllers/academic-subject.controller.js";
 
 const router = express.Router();
 

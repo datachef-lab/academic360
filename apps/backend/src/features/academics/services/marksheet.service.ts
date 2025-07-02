@@ -187,7 +187,7 @@ export async function addMarksheet(
     .insert(marksheetModel)
     .values({
       studentId: student.id as number,
-      classId: marksheet.classId,
+      classId: marksheet.class.id!,
       year: marksheet.year,
       source: "ADDED",
       createdByUserId: user.id as number,
@@ -890,8 +890,11 @@ async function marksheetResponseFormat(
     .from(userModel)
     .where(eq(userModel.id, student.userId as number));
 
+  const { classId, ...rest } = marksheet;
+  const foundClass = await findClassById(classId);
   const formattedMarksheet: MarksheetType = {
-    ...marksheet,
+    ...rest,
+    class: foundClass,
     name: user.name as string,
     subjects,
     academicIdentifier: academicIdentifier as AcademicIdentifierType,
@@ -1316,8 +1319,8 @@ async function postMarksheetOperation(marksheet: MarksheetType) {
     // Updated the last passed year
     foundStudent.lastPassedYear = marksheet.year;
     // Update the student's status
-    const foundClass = await findClassById(marksheet.classId);
-    if (foundClass.name.trim().toUpperCase() === "SEMESTER VI") {
+    // const foundClass = await findClassById(marksheet.classId);
+    if (marksheet.class.name.trim().toUpperCase() === "SEMESTER VI") {
       // foundStudent.active = true;
       // foundStudent.alumni = true;
     }
@@ -1667,7 +1670,9 @@ export async function marksheetSummary(
   const marksheetSummary: MarksheetSummary[] = [];
   for (let sem = 1; sem <= 8; sem++) {
     const foundClass = await processClassBySemesterNumber(sem);
-    const filterMarksheets = marksheets.filter((mks) => mks.classId === foundClass.id);
+    const filterMarksheets = marksheets.filter(
+      (mks) => mks.classId === foundClass.id,
+    );
 
     if (filterMarksheets.length === 0) continue;
 

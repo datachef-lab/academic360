@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
-import { admissionAdditionalInfoModel, AdmissionAdditionalInfo } from "../models/admisison-additional-info.model";
-import { AdmissionAdditionalInfoDto } from "@/types/admissions";
+import { admissionAdditionalInfoModel, AdmissionAdditionalInfo } from "../models/admisison-additional-info.model.js";
+import { AdmissionAdditionalInfoDto } from "@/types/admissions/index.js";
 import { and, eq } from "drizzle-orm";
 import { createSportsInfo, getSportsInfoByAdditionalInfoId } from "./sports-info.service.js";
 

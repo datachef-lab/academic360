@@ -7,7 +7,7 @@ import {
   findAdmissionCoursesByApplicationFormId,
   updateAdmissionCourse,
   deleteAdmissionCourse
-} from "../services/admission-course-application.service";
+} from "../services/admission-course-application.service.js";
 
 export const createAdmissionCourseApplicationHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

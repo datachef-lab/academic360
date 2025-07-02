@@ -13,10 +13,10 @@ import { admissionAcademicInfoModel } from "../models/admission-academic-info.mo
 import { admissionCourseApplication } from "../models/admission-course-application.model.js";
 import { count, desc, eq, and, sql, ilike, or, SQL } from "drizzle-orm";
 import { createAdmissionCourse, findAdmissionCoursesByAdmissionId } from "./admission-course.service.js";
-import { AdmissionDto } from "@/types/admissions";
+import { AdmissionDto } from "@/types/admissions/index.js";
 import { categoryModel } from "@/features/resources/models/category.model.js";
 // import { admissionAdditionalInfoModel } from "../models/admission-additional-info.model.js";
-import { admissionAdditionalInfoModel } from "@/features/admissions/models/admisison-additional-info.model";
+import { admissionAdditionalInfoModel } from "@/features/admissions/models/admisison-additional-info.model.js";
 import { annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
 import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
 import { religionModel } from "@/features/resources/models/religion.model.js";

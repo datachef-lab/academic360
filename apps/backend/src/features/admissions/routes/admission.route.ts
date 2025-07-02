@@ -1,2 +1,2 @@
-import router from "../controllers/admission.controller";
+import router from "../controllers/admission.controller.js";
 export default router; 

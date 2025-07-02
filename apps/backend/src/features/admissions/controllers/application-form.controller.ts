@@ -7,7 +7,7 @@ import {
   findApplicationFormsByAdmissionId,
   updateApplicationForm,
   deleteApplicationForm
-} from "../services/application-form.service";
+} from "../services/application-form.service.js";
 
 export const createApplicationFormHandler = async (req: Request, res: Response, next: NextFunction) => {
   try {

@@ -5,7 +5,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { userModel } from "@/features/user/models/user.model.js";
 import { marksheetSourceEnum } from "@/features/user/models/helper.js";
-import { classModel } from "./class.model";
+import { classModel } from "./class.model.js";
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
