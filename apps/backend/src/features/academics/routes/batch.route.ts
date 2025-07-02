@@ -7,10 +7,10 @@ import {
   getAllBatchesController,
   getBatchByIdController,
   updateBatchController,
-  deleteBatchController
+  deleteBatchController,
+  batchUploadController
 } from "../controllers/batch.controller.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
-import { batchUploadController } from "../controllers/batch.controller.js";
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ router.get("/:id", getBatchByIdController);
 router.put("/:id", updateBatchController);
 router.delete("/:id", deleteBatchController);
 
-// Excel upload route
+// Excel upload routeclear
 router.post("/upload-excel", uploadExcelMiddleware, batchUploadController);
 
 // Migration/refactor routes

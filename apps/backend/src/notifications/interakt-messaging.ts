@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 const INTERAKT_API_KEY = process.env.INTERAKT_API_KEY!;
 const INTERAKT_BASE_URL = process.env.INTERAKT_BASE_URL!;
 const DEVELOPER_PHONE = process.env.DEVELOPER_PHONE;
-const NODE_ENV = process.env.NODE_ENV;
+const NODE_ENV = process.env.NODE_ENV ?? "development";
 
 export const sendWhatsAppMessage = async (to: string, messageArr: string[] = [], templateName: string = "logincode") => {
     console.log("messageArr:", messageArr);

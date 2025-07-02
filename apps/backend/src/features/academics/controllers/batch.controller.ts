@@ -60,7 +60,8 @@ export const getBatchByIdController = async (req: Request, res: Response, next: 
         const id = Number(req.params.id);
         const batch = await findBatchById(id);
         if (!batch) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", batch, "Batch fetched successfully"));
     } catch (error) {
@@ -73,7 +74,8 @@ export const updateBatchController = async (req: Request, res: Response, next: N
         const id = Number(req.params.id);
         const batch = await updateBatch(id, req.body);
         if (!batch) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", batch, "Batch updated successfully"));
     } catch (error) {
@@ -86,7 +88,8 @@ export const deleteBatchController = async (req: Request, res: Response, next: N
         const id = Number(req.params.id);
         const deleted = await deleteBatch(id);
         if (!deleted) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Batch deleted successfully"));
     } catch (error) {
@@ -97,7 +100,8 @@ export const deleteBatchController = async (req: Request, res: Response, next: N
 export const batchUploadController = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) {
-            return res.status(400).json(new ApiResponse(400, "FAIL", null, "No file uploaded"));
+            res.status(400).json(new ApiResponse(400, "FAIL", null, "No file uploaded"));
+            return;
         }
         // Parse Excel file to BatchStudentRow[]
         const rows = await readExcelFile<unknown>(req.file.path); // You may need to cast/validate to BatchStudentRow[]

@@ -83,6 +83,7 @@ import {
   studentAcademicSubjectRouter,
   academicSubjectRouter,
 } from "@/features/admissions/index.js";
+import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -293,6 +294,8 @@ app.use("/admissions/sports-category", sportsCategoryRouter);
 app.use("/admissions/sports-info", sportsInfoRouter);
 app.use("/admissions/student-academic-subject", studentAcademicSubjectRouter);
 app.use("/admissions/academic-subject", academicSubjectRouter);
+
+app.use("/api/study-materials", studyMaterialRouter);
 
 app.use(errorHandler);
 

@@ -31,7 +31,8 @@ export const getClassByIdController = async (req: Request, res: Response, next: 
         const id = Number(req.params.id);
         const foundClass = await findClassById(id);
         if (!foundClass) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", foundClass, "Class fetched successfully"));
     } catch (error) {
@@ -44,7 +45,8 @@ export const updateClassController = async (req: Request, res: Response, next: N
         const id = Number(req.params.id);
         const updatedClass = await updateClass(id, req.body);
         if (!updatedClass) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", updatedClass, "Class updated successfully"));
     } catch (error) {
@@ -57,7 +59,8 @@ export const deleteClassController = async (req: Request, res: Response, next: N
         const id = Number(req.params.id);
         const deleted = await deleteClass(id);
         if (!deleted) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Class not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Class deleted successfully"));
     } catch (error) {

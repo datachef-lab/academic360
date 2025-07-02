@@ -3,7 +3,7 @@ import { SendMailClient } from "zeptomail";
 const ZEPTO_URL = process.env.ZEPTO_URL!;
 const ZEPTO_FROM = process.env.ZEPTO_FROM!;
 const ZEPTO_TOKEN = process.env.ZEPTO_TOKEN!;
-const NODE_ENV = process.env.NODE_ENV!;
+const NODE_ENV = process.env.NODE_ENV ?? "development";
 const DEVELOPER_EMAIL = process.env.DEVELOPER_EMAIL!;
 
 console.log("ZeptoMail URL:", ZEPTO_URL);

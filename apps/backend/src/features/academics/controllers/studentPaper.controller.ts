@@ -52,7 +52,8 @@ export const getStudentPaperByIdController = async (req: Request, res: Response,
         const id = Number(req.params.id);
         const studentPaper = await findStudentPaperById(id);
         if (!studentPaper) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", studentPaper, "Student paper fetched successfully"));
     } catch (error) {
@@ -65,7 +66,8 @@ export const updateStudentPaperController = async (req: Request, res: Response, 
         const id = Number(req.params.id);
         const studentPaper = await updateStudentPaper(id, req.body);
         if (!studentPaper) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", studentPaper, "Student paper updated successfully"));
     } catch (error) {
@@ -78,7 +80,8 @@ export const deleteStudentPaperController = async (req: Request, res: Response, 
         const id = Number(req.params.id);
         const deleted = await deleteStudentPaper(id);
         if (!deleted) {
-            return res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Student paper not found"));
+            return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Student paper deleted successfully"));
     } catch (error) {

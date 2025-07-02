@@ -181,3 +181,16 @@ export const otpType = pgEnum("otp_type", [
     'FOR_PHONE',
     'FOR_EMAIL',
 ]);
+
+
+export const studyMaterialTypeEnum = pgEnum("study_material_type", [
+    "FILE",
+    "LINK",
+]);
+
+export const studyMetaTypeEnum = pgEnum("study_meta_type", [
+    "RESOURCE",
+    "WORKSHEET",
+    "ASSIGNMENT",
+    "PROJECT",
+]);
