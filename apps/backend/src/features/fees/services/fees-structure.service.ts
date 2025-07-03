@@ -14,6 +14,7 @@ import { createFeesSlabMapping, getFeesSlabMappingsByFeesStructureId } from "./f
 import { feesSlabMappingModel } from "../models/fees-slab-mapping.model.js";
 import { classModel } from "@/features/academics/models/class.model.js";
 import { findClassById } from "@/features/academics/services/class.service.js";
+import { instalmentModel, Instalment } from "../models/instalment.model.js";
 
 export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> => {
     try {
@@ -31,8 +32,8 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
             onlineStartDate: feesStructureModel.onlineStartDate,
             onlineEndDate: feesStructureModel.onlineEndDate,
             numberOfInstalments: feesStructureModel.numberOfInstalments,
-            instalmentStartDate: feesStructureModel.instalmentStartDate,
-            instalmentEndDate: feesStructureModel.instalmentEndDate,
+            // instalmentStartDate: feesStructureModel.instalmentStartDate,
+            // instalmentEndDate: feesStructureModel.instalmentEndDate,
             createdAt: feesStructureModel.createdAt,
             updatedAt: feesStructureModel.updatedAt,
             academicYear: academicYearModel,
@@ -58,6 +59,9 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
             .from(classModel)
             .where(eq(classModel.name, feesStructure.semester!));
 
+            // Fetch instalments for this feesStructure
+            const instalments: Instalment[] = await db.select().from(instalmentModel).where(eq(instalmentModel.feesStructureId, feesStructure.id));
+
             if (feesStructure.academicYear && feesStructure.course) {
                 const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(feesStructure.id!);
                 feesStructureDtos.push({
@@ -69,6 +73,7 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
                     advanceForCourse: feesStructure.advanceForCourse,
                     components,
                     shift,
+                    instalments,
                 });
             }
         }
@@ -94,8 +99,8 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             onlineStartDate: feesStructureModel.onlineStartDate,
             onlineEndDate: feesStructureModel.onlineEndDate,
             numberOfInstalments: feesStructureModel.numberOfInstalments,
-            instalmentStartDate: feesStructureModel.instalmentStartDate,
-            instalmentEndDate: feesStructureModel.instalmentEndDate,
+            // instalmentStartDate: feesStructureModel.instalmentStartDate,
+            // instalmentEndDate: feesStructureModel.instalmentEndDate,
             createdAt: feesStructureModel.createdAt,
             updatedAt: feesStructureModel.updatedAt,
             academicYear: academicYearModel,
@@ -130,6 +135,9 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             .from(classModel)
             .where(eq(classModel.name, feesStructure.semester!));
 
+        // Fetch instalments for this feesStructure
+        const instalments: Instalment[] = await db.select().from(instalmentModel).where(eq(instalmentModel.feesStructureId, feesStructure.id));
+
         return {
             ...feesStructure,
             feesSlabMappings,
@@ -139,6 +147,7 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             advanceForCourse: feesStructure.advanceForCourse,
             components,
             shift,
+            instalments,
         };
     } catch (error) {
         return null;
@@ -245,6 +254,22 @@ export const createFeesStructure = async (createFeesStructureDto: CreateFeesStru
                 await db.insert(feesComponentModel).values(newComponents);
             }
     
+            // Handle instalments creation
+            if (createFeesStructureDto.instalments && createFeesStructureDto.instalments.length > 0) {
+                const newInstalments = createFeesStructureDto.instalments.map(inst => {
+                    const { id: instId, ...instRest } = inst;
+                    // Convert all date fields to Date objects if needed
+                    const dateFields = ["startDate", "endDate", "onlineStartDate", "onlineEndDate", "createdAt", "updatedAt"];
+                    for (const field of dateFields) {
+                        if ((instRest as any)[field] && !((instRest as any)[field] instanceof Date)) {
+                            (instRest as any)[field] = new Date((instRest as any)[field]);
+                        }
+                    }
+                    return { ...instRest, feesStructureId: newFeesStructure.id };
+                });
+                await db.insert(instalmentModel).values(newInstalments);
+            }
+    
             for (const feesSlabMapping of feesSlabMappings) {
                 feesSlabMapping.feesStructureId = newFeesStructure.id;
                 console.log("newFeesStructure.id:", newFeesStructure.id)
@@ -349,6 +374,44 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
             }
         }
 
+        // Handle instalments update logic
+        if (feesStructure.instalments) {
+            // Fetch all existing instalment ids for this structure
+            const existingInstalments = await db.select().from(instalmentModel).where(eq(instalmentModel.feesStructureId, id));
+            const existingInstalmentIds = existingInstalments.map(i => i.id);
+            const requestInstalmentIds = feesStructure.instalments.filter(i => i.id).map(i => i.id);
+
+            // Update or create
+            for (const inst of feesStructure.instalments) {
+                // Convert all date fields to Date objects if needed
+                const dateFields = ["startDate", "endDate", "onlineStartDate", "onlineEndDate", "createdAt", "updatedAt"];
+                for (const field of dateFields) {
+                    if ((inst as any)[field] && !((inst as any)[field] instanceof Date)) {
+                        (inst as any)[field] = new Date((inst as any)[field]);
+                    }
+                }
+                if (!inst.id || inst.id === 0) {
+                    // Create new
+                    const { id: instId, ...instRest } = inst;
+                    await db.insert(instalmentModel).values({ ...instRest, feesStructureId: updatedFeesStructure.id });
+                } else {
+                    // Update existing
+                    let { createdAt, updatedAt, ...tmpInst } = inst;
+                    await db.update(instalmentModel).set(tmpInst).where(eq(instalmentModel.id, inst.id));
+                }
+            }
+            // Delete instalments not present in request
+            const toDeleteInstalmentIds = existingInstalmentIds.filter(id => !requestInstalmentIds.includes(id));
+            if (toDeleteInstalmentIds.length > 0) {
+                await db.delete(instalmentModel).where(
+                    and(
+                        eq(instalmentModel.feesStructureId, id),
+                        inArray(instalmentModel.id, toDeleteInstalmentIds)
+                    )
+                );
+            }
+        }
+
         return getFeesStructureById(updatedFeesStructure.id);
     } catch (error) {
         console.error("Error updating fees structure:", error);
@@ -403,6 +466,12 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
                 .where(eq(feesComponentModel.feesStructureId, model.id));
         }
 
+        // Fetch instalments for this feesStructure
+        let instalments: Instalment[] = [];
+        if (model.id) {
+            instalments = await db.select().from(instalmentModel).where(eq(instalmentModel.feesStructureId, model.id));
+        }
+
         if (!academicYear || !course) return null;
         const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(model.id!);
         const {classId, ...rest} = model;
@@ -416,7 +485,8 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
             advanceForCourse,
             components,
             shift,
-            feesSlabMappings
+            feesSlabMappings,
+            instalments,
         };
     } catch (error) {
         console.error("Error in modelToDto:", error);

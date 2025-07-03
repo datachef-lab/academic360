@@ -5,6 +5,7 @@ import { Shift } from "@/features/academics/models/shift.model.js";
 import { FeesComponent } from "@/features/fees/models/fees-component.model.js";
 import { FeesSlabMapping } from "@/features/fees/models/fees-slab-mapping.model.js";
 import { FeesStructure } from "@/features/fees/models/fees-structure.model.js";
+import { Instalment } from "@/features/fees/models/instalment.model.js";
 
 export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {
     shift?: Shift;
@@ -14,6 +15,7 @@ export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" |
     advanceForCourse: Course | null;
     components: FeesComponent[];
     feesSlabMappings: FeesSlabMapping[];
+    instalments: Instalment[];
 }
 
 export interface CreateFeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {
@@ -24,6 +26,7 @@ export interface CreateFeesStructureDto extends Omit<FeesStructure, "academicYea
     advanceForCourse: Course | null;
     components: FeesComponent[];
     feesSlabMappings: FeesSlabMapping[];
+    instalments: Instalment[];
 }
 
 export interface FeesDesignAbstractLevel {

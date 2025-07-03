@@ -9,9 +9,10 @@ import studentPaperRouter from "@/features/academics/routes/studentPaper.route.j
 import courseRouter from "@/features/academics/routes/course.route.js";
 import academicYearRouter from "@/features/academics/routes/academic-year.route.js";
 import shiftRouter from "@/features/academics/routes/shift.route.js";
-
+import classRouter from "@/features/academics/routes/class.route.js";
 export {
   // streamRouter,
+  classRouter,
   subjectMetadataRouter,
   subjectRouter,
   documentRouter,

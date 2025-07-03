@@ -28,8 +28,7 @@ export const feesStructureModel = pgTable("fees_structures", {
     onlineStartDate: date().notNull(),
     onlineEndDate: date().notNull(),
     numberOfInstalments: integer(),
-    instalmentStartDate: date(),
-    instalmentEndDate: date(),
+    
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

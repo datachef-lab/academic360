@@ -4,6 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { feesStructureModel } from "./fees-structure.model.js";
 import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/features/user/models/helper.js";
+import { instalmentModel } from "./instalment.model.js";
 
 export const studentFeesMappingModel = pgTable("student_fees_mappings", {
     id: serial().primaryKey(),
@@ -14,8 +15,9 @@ export const studentFeesMappingModel = pgTable("student_fees_mappings", {
         .references(() => feesStructureModel.id)
         .notNull(),
     type: studentFeesMappingEnum().notNull().default("FULL"),
-    instalmentNumber: integer(),
-    baseAmount: integer().notNull(),
+    instalmentId: integer("instalment_id_fk")
+        .references(() => instalmentModel.id),
+    baseAmount: integer().notNull().default(0),
     lateFee: integer().notNull().default(0),
     totalPayable: integer().notNull().default(0),
     amountPaid: integer(),
