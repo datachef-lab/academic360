@@ -41,6 +41,8 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   setSearchText: React.Dispatch<React.SetStateAction<string>>;
   setDataLength: React.Dispatch<React.SetStateAction<number>>;
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
+  hideSearch?: boolean;
+  hidePagination?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -53,6 +55,8 @@ export function DataTable<TData, TValue>({
   setSearchText,
 //   setDataLength,
   refetch,
+  hideSearch = false,
+  hidePagination = false,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -100,7 +104,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-3 p-1  rounded-2xl my-3">
         <div className="px-6 py-1   rounded-lg ">
-        {location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
+        {!hideSearch && location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
         </div>
           <div className=" p-2  drop-shadow-md overflow-hidden">
             <Table className="border-separate px-2 border-spacing-y-4 w-full">
@@ -162,9 +166,11 @@ export function DataTable<TData, TValue>({
               </TableBody>
             </Table>
           </div>
-          <div className="my-3">
-            <DataTablePagination table={table} />
-          </div>
+          {!hidePagination && (
+            <div className="my-3">
+              <DataTablePagination table={table} />
+            </div>
+          )}
         </div>
   );
 }
