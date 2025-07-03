@@ -1,14 +1,7 @@
+import { AcademicYear } from "../academics/academic-year";
+import { Class } from "../academics/class";
 import { Course } from "../academics/course";
-import { Shift } from "../resources/shift";
-
-export interface AcademicYear {
-    readonly id?: number;
-    startYear: number;
-    sessionId: number | null;
-    isCurrentYear: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
+import { Shift } from "../academics/shift";
 
 export interface AddOn {
     readonly id?: number;
@@ -67,15 +60,15 @@ export interface FeesComponent {
     amount: number,
     // concessionAmount: doublePrecision().notNull().default(0),
     sequence: number,
-    remarks: string |  null;
+    remarks: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
 export interface FeesStructureDto {
-    readonly id?: number; 
+    readonly id?: number;
     closingDate: Date | null;
-    semester: number | null;
+    class: Class;
     advanceForSemester: number | null;
     startDate: Date | null;
     endDate: Date | null;

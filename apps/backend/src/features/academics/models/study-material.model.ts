@@ -1,19 +1,30 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { batchPaperModel } from "./batchPaper.model.js";
-import { studyMaterialTypeEnum, studyMetaTypeEnum } from "@/features/user/models/helper.js";
+import { studyMaterialAvailabilityTypeEnum, studyMaterialTypeEnum, studyMetaTypeEnum } from "@/features/user/models/helper.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { sessionModel } from "./session.model.js";
+import { courseModel } from "./course.model.js";
+import { batchModel } from "./batch.model.js";
+import { subjectMetadataModel } from "./subjectMetadata.model.js";
 
 export const studyMaterialModel = pgTable("study_materials", {
     id: serial().primaryKey(),
-    batchPaperId: integer("batch_paper_id_fk")
-        .references(() => batchPaperModel.id)
+    availability: studyMaterialAvailabilityTypeEnum().notNull(),
+    subjectMetadataId: integer("subject_metadata_id_fk")
+        .references(() => subjectMetadataModel.id)
         .notNull(),
+    sessionId: integer("session_di_fk")
+        .references(() => sessionModel.id),
+    courseId: integer("course_id_fk")
+        .references(() => courseModel.id),
+    batchId: integer("batch_id_fk")
+        .references(() => batchModel.id),
     type: studyMaterialTypeEnum().notNull(),
-    meta: studyMetaTypeEnum().notNull(),
-    name: varchar({length: 700}).notNull(),
-    url: varchar({length: 2000}).notNull(),
-    filePath: varchar({length: 700}),
+    variant: studyMetaTypeEnum().notNull(),
+    name: varchar({ length: 700 }).notNull(),
+    url: varchar({ length: 2000 }).notNull(),
+    filePath: varchar({ length: 700 }),
     dueDate: timestamp(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

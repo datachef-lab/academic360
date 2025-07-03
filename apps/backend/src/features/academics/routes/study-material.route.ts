@@ -4,7 +4,7 @@ import * as controller from "../controllers/study-material.controller.js";
 const router = Router();
 
 router.post("/", controller.createStudyMaterial);
-router.get("/batch-paper/:batchPaperId", controller.getStudyMaterialByBatchPaperId);
+// router.get("/batch-paper/:batchPaperId", controller.getStudyMaterialByBatchPaperId);
 router.get("/", controller.getAllStudyMaterials);
 router.get("/:id", controller.getStudyMaterialById);
 router.put("/:id", controller.updateStudyMaterial);

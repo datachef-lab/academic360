@@ -22,7 +22,7 @@ import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCours
 import axiosInstance from "@/utils/api";
 import { useShifts } from "@/hooks/useShifts";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Shift } from "@/types/resources/shift";
+import { Shift } from "@/types/academics/shift";
 import { FeesReceiptType } from "@/types/fees";
 // import { SlabCreation } from "../../components/fees/fee-structure-form/steps/SlabCreation";
 

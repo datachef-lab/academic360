@@ -1,8 +1,8 @@
-import { Stream } from "./stream";
+import { Degree } from "../resources/degree";
 
 export interface Course {
     readonly id?: number;
-    stream: Stream;
+    degree: Degree;
     name: string;
     shortName: string | null;
     codePrefix: string | null;

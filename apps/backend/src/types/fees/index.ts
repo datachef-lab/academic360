@@ -16,6 +16,16 @@ export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" |
     feesSlabMappings: FeesSlabMapping[];
 }
 
+export interface CreateFeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {
+    shift?: Shift;
+    academicYear: AcademicYear;
+    courses: Course[];
+    class: Class;
+    advanceForCourse: Course | null;
+    components: FeesComponent[];
+    feesSlabMappings: FeesSlabMapping[];
+}
+
 export interface FeesDesignAbstractLevel {
     academicYear: AcademicYear;
     courses: {

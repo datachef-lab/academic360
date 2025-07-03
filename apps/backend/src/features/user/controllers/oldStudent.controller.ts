@@ -245,20 +245,20 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student)
 }
 
 // export async function addAdmission(oldStudent: OldStudent, student: Student) {
-    // const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
-    // if (existingAdmission) {
-    //     return existingAdmission;
-    // }
+// const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
+// if (existingAdmission) {
+//     return existingAdmission;
+// }
 
-    // const [newAdmission] = await db.insert(admissionModel).values({
-    //     studentId: student.id as number,
-    //     admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
-    //     applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
-    //     yearOfAdmission: oldStudent.admissionYear,
-    //     admissionDate: oldStudent.admissiondate?.toISOString()
-    // }).returning();
+// const [newAdmission] = await db.insert(admissionModel).values({
+//     studentId: student.id as number,
+//     admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
+//     applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
+//     yearOfAdmission: oldStudent.admissionYear,
+//     admissionDate: oldStudent.admissiondate?.toISOString()
+// }).returning();
 
-    // return newAdmission;
+// return newAdmission;
 // }
 
 async function categorizeIncome(income: string | null | undefined) {
@@ -647,6 +647,12 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
     };
 
     const [existingAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, student.id as number));
+
+    let framework: "CCF" | "CBCS" | undefined;
+    if (oldStudent.coursetype && oldStudent.coursetype?.toUpperCase().trim() === "CBCS" || oldStudent.coursetype?.toUpperCase().trim() === "CCF") {
+        framework = oldStudent.coursetype?.toUpperCase().trim() === "CBCS" ? "CBCS" : "CCF";
+    }
+
     if (existingAcademicIdentifier) {
         const updatedValues: Record<string, any> = {};
 
@@ -673,7 +679,8 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
             .update(academicIdentifierModel)
             .set({
                 registrationNumber: updatedValues?.registrationNumber ? updatedValues?.registrationNumber : null,
-                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null
+                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null,
+                framework,
             })
             .where(eq(academicIdentifierModel.id, existingAcademicIdentifier.id))
             .returning();
@@ -692,6 +699,7 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
         classRollNumber: oldStudent.rollNumber ? oldStudent.rollNumber?.toString()?.trim()?.toUpperCase() : null,
         cuFormNumber: cleanString(oldStudent.cuformno)?.toUpperCase(),
         // frameworkType
+        framework,
         oldUid: cleanString(oldStudent.oldcodeNumber)?.toUpperCase(),
         uid: cleanString(oldStudent.codeNumber)?.toUpperCase(),
         registrationNumber: oldStudent.univregno ? addHyphen(oldStudent.univregno, "reg_no") : (oldStudent.universityRegNo ? addHyphen(oldStudent.universityRegNo, "reg_no") : null),

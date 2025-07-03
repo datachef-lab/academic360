@@ -1,8 +1,8 @@
-export interface Religion {
+export interface Section {
     readonly id?: number;
     name: string;
     sequence: number;
     disabled: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
 }

@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { feesStructureModel, FeesStructure } from "../models/fees-structure.model.js";
 import { and, countDistinct, desc, eq, inArray, sql } from "drizzle-orm";
-import { FeesStructureDto } from "@/types/fees/index.js";
+import { CreateFeesStructureDto, FeesStructureDto } from "@/types/fees/index.js";
 import { academicYearModel, AcademicYear } from "@/features/academics/models/academic-year.model.js";
 import { Course, courseModel } from "@/features/academics/models/course.model.js";
 import { feesComponentModel, type FeesComponent } from "../models/fees-component.model.js";
@@ -191,63 +191,70 @@ export const getFeesStructuresByAcademicYearIdAndCourseId = async (academicYearI
     return results.filter((result): result is FeesStructureDto => result !== null);
 };
 
-export const createFeesStructure = async (feesStructure: FeesStructureDto) => {
+export const createFeesStructure = async (createFeesStructureDto: CreateFeesStructureDto) => {
     try {
-        console.log(feesStructure);
-        const { id, components, class: feesClassSem, feesSlabMappings, academicYear, course, advanceForCourse, shift, createdAt, updatedAt, ...rest } = feesStructure;
+        console.log(createFeesStructureDto);
+        const { id, components, class: feesClassSem, feesSlabMappings, academicYear, advanceForCourse, shift, createdAt, updatedAt, ...rest } = createFeesStructureDto;
 
-        if (!academicYear?.id || !course?.id) {
+        if (!academicYear?.id) {
             throw new Error("Academic Year and Course are required to create a fee structure.");
         }
 
-        const [existing] = await db
-            .select()
-            .from(feesStructureModel)
-            .where(
-                and(
-                    eq(feesStructureModel.academicYearId, academicYear.id!),
-                    eq(feesStructureModel.courseId, course.id!),
-                    eq(feesStructureModel.classId, feesClassSem.id!),
-                    eq(feesStructureModel.shiftId, shift?.id!),
-                    eq(feesStructureModel.feesReceiptTypeId, feesStructure?.feesReceiptTypeId!),
-                )
-            );
-
-        if (existing) {
-            return null;
+        for (let i = 0; i < createFeesStructureDto.courses.length; i++) {
+            const course = createFeesStructureDto.courses[i];
+            if (!course.id) {
+                throw new Error(`Course ID is required for course at index ${i}.`);
+            }
+            const [existing] = await db
+                .select()
+                .from(feesStructureModel)
+                .where(
+                    and(
+                        eq(feesStructureModel.academicYearId, academicYear.id!),
+                        eq(feesStructureModel.courseId, course.id!),
+                        eq(feesStructureModel.classId, feesClassSem.id!),
+                        eq(feesStructureModel.shiftId, shift?.id!),
+                        eq(feesStructureModel.feesReceiptTypeId, createFeesStructureDto?.feesReceiptTypeId!),
+                    )
+                );
+    
+            if (existing) {
+                return null;
+            }
+            
+            const dataToInsert: FeesStructure = {
+                ...rest,
+                classId: feesClassSem.id!,
+                academicYearId: academicYear.id,
+                courseId: course.id,
+                advanceForCourseId: advanceForCourse?.id ?? null,
+                shiftId: shift?.id!,
+            };
+            
+            const [newFeesStructure] = await db.insert(feesStructureModel).values(dataToInsert).returning();
+            
+            if (!newFeesStructure) {
+                return null;
+            }
+    
+            if (components && components.length > 0) {
+                const newComponents = createFeesStructureDto.components.map(comp => {
+                    const { id: compId, ...compRest } = comp;
+                    return { ...compRest, feesStructureId: newFeesStructure.id }
+                });
+                await db.insert(feesComponentModel).values(newComponents);
+            }
+    
+            for (const feesSlabMapping of feesSlabMappings) {
+                feesSlabMapping.feesStructureId = newFeesStructure.id;
+                console.log("newFeesStructure.id:", newFeesStructure.id)
+                const {id, ...rest } = feesSlabMapping;
+                await createFeesSlabMapping({...rest, feesStructureId: newFeesStructure.id});
+            }
         }
-        
-        const dataToInsert: FeesStructure = {
-            ...rest,
-            classId: feesClassSem.id!,
-            academicYearId: academicYear.id,
-            courseId: course.id,
-            advanceForCourseId: advanceForCourse?.id ?? null,
-            shiftId: shift?.id!,
-        };
-        
-        const [newFeesStructure] = await db.insert(feesStructureModel).values(dataToInsert).returning();
-        
-        if (!newFeesStructure) {
-            return null;
-        }
 
-        if (components && components.length > 0) {
-            const newComponents = components.map(comp => {
-                const { id: compId, ...compRest } = comp;
-                return { ...compRest, feesStructureId: newFeesStructure.id }
-            });
-            await db.insert(feesComponentModel).values(newComponents);
-        }
 
-        for (const feesSlabMapping of feesSlabMappings) {
-            feesSlabMapping.feesStructureId = newFeesStructure.id;
-            console.log("newFeesStructure.id:", newFeesStructure.id)
-            const {id, ...rest } = feesSlabMapping;
-            await createFeesSlabMapping({...rest, feesStructureId: newFeesStructure.id});
-        }
-
-        return getFeesStructureById(newFeesStructure.id);
+        return true;
     } catch (error) {
         console.error("Error creating fees structure:", error);
         return null;

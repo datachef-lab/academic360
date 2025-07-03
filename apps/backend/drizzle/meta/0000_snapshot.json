@@ -1,5 +1,5 @@
 {
-  "id": "05604237-3226-487e-8fe0-3425d69e919b",
+  "id": "bd5e02d2-1d08-45fe-8bf9-8112c7eee3a4",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -401,6 +401,12 @@
         "university_code": {
           "name": "university_code",
           "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
@@ -1129,11 +1135,36 @@
           "primaryKey": true,
           "notNull": true
         },
-        "batch_paper_id_fk": {
-          "name": "batch_paper_id_fk",
+        "availability": {
+          "name": "availability",
+          "type": "study_material_availability_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subject_metadata_id_fk": {
+          "name": "subject_metadata_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "session_di_fk": {
+          "name": "session_di_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "course_id_fk": {
+          "name": "course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "batch_id_fk": {
+          "name": "batch_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "type": {
           "name": "type",
@@ -1142,8 +1173,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "meta": {
-          "name": "meta",
+        "variant": {
+          "name": "variant",
           "type": "study_meta_type",
           "typeSchema": "public",
           "primaryKey": false,
@@ -1190,12 +1221,51 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "study_materials_batch_paper_id_fk_batch_papers_id_fk": {
-          "name": "study_materials_batch_paper_id_fk_batch_papers_id_fk",
+        "study_materials_subject_metadata_id_fk_subject_metadatas_id_fk": {
+          "name": "study_materials_subject_metadata_id_fk_subject_metadatas_id_fk",
           "tableFrom": "study_materials",
-          "tableTo": "batch_papers",
+          "tableTo": "subject_metadatas",
           "columnsFrom": [
-            "batch_paper_id_fk"
+            "subject_metadata_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "study_materials_session_di_fk_sessions_id_fk": {
+          "name": "study_materials_session_di_fk_sessions_id_fk",
+          "tableFrom": "study_materials",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_di_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "study_materials_course_id_fk_courses_id_fk": {
+          "name": "study_materials_course_id_fk_courses_id_fk",
+          "tableFrom": "study_materials",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "study_materials_batch_id_fk_batches_id_fk": {
+          "name": "study_materials_batch_id_fk_batches_id_fk",
+          "tableFrom": "study_materials",
+          "tableTo": "batches",
+          "columnsFrom": [
+            "batch_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3016,6 +3086,70 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.apps": {
+      "name": "apps",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(700)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -7185,7 +7319,7 @@
       "values": [
         "MALE",
         "FEMALE",
-        "TRANSGENDER"
+        "OTHER"
       ]
     },
     "public.locality_type": {
@@ -7311,6 +7445,16 @@
       "values": [
         "FULL",
         "INSTALMENT"
+      ]
+    },
+    "public.study_material_availability_type": {
+      "name": "study_material_availability_type",
+      "schema": "public",
+      "values": [
+        "ALWAYS",
+        "CURRENT_SESSION_ONLY",
+        "COURSE_LEVEL",
+        "BATCH_LEVEL"
       ]
     },
     "public.study_material_type": {

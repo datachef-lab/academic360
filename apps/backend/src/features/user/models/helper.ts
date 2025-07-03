@@ -39,7 +39,7 @@ export const parentTypeEnum = pgEnum("parent_type", [
 export const genderTypeEnum = pgEnum('gender_type', [
     "MALE",
     "FEMALE",
-    "TRANSGENDER"
+    "OTHER"
 ]);
 
 export const disabilityTypeEnum = pgEnum('disability_type', [
@@ -193,4 +193,11 @@ export const studyMetaTypeEnum = pgEnum("study_meta_type", [
     "WORKSHEET",
     "ASSIGNMENT",
     "PROJECT",
+]);
+
+export const studyMaterialAvailabilityTypeEnum = pgEnum("study_material_availability_type", [
+    "ALWAYS",
+    "CURRENT_SESSION_ONLY",
+    "COURSE_LEVEL",
+    "BATCH_LEVEL",
 ]);

@@ -9,7 +9,7 @@ CREATE TYPE "public"."community_type" AS ENUM('GUJARATI', 'NON-GUJARATI');--> st
 CREATE TYPE "public"."degree_level_type" AS ENUM('SECONDARY', 'HIGHER_SECONDARY', 'UNDER_GRADUATE', 'POST_GRADUATE');--> statement-breakpoint
 CREATE TYPE "public"."disability_type" AS ENUM('VISUAL', 'HEARING_IMPAIRMENT', 'VISUAL_IMPAIRMENT', 'ORTHOPEDIC', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."framework_type" AS ENUM('CCF', 'CBCS');--> statement-breakpoint
-CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'TRANSGENDER');--> statement-breakpoint
+CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
 CREATE TYPE "public"."marksheet_source" AS ENUM('FILE_UPLOAD', 'ADDED');--> statement-breakpoint
 CREATE TYPE "public"."otp_type" AS ENUM('FOR_PHONE', 'FOR_EMAIL');--> statement-breakpoint
@@ -23,6 +23,7 @@ CREATE TYPE "public"."programme_type" AS ENUM('HONOURS', 'GENERAL');--> statemen
 CREATE TYPE "public"."sports_level" AS ENUM('NATIONAL', 'STATE', 'DISTRICT', 'OTHERS');--> statement-breakpoint
 CREATE TYPE "public"."stream_type" AS ENUM('SCIENCE', 'COMMERCE', 'HUMANITIES', 'ARTS');--> statement-breakpoint
 CREATE TYPE "public"."student_fees_mapping_type" AS ENUM('FULL', 'INSTALMENT');--> statement-breakpoint
+CREATE TYPE "public"."study_material_availability_type" AS ENUM('ALWAYS', 'CURRENT_SESSION_ONLY', 'COURSE_LEVEL', 'BATCH_LEVEL');--> statement-breakpoint
 CREATE TYPE "public"."study_material_type" AS ENUM('FILE', 'LINK');--> statement-breakpoint
 CREATE TYPE "public"."study_meta_type" AS ENUM('RESOURCE', 'WORKSHEET', 'ASSIGNMENT', 'PROJECT');--> statement-breakpoint
 CREATE TYPE "public"."subject_category_type" AS ENUM('SPECIAL', 'COMMON', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
@@ -75,6 +76,7 @@ CREATE TABLE "courses" (
 	"short_name" varchar(500),
 	"code_prefix" varchar(10),
 	"university_code" varchar(10),
+	"amount" integer,
 	"number_of_semesters" integer,
 	"duration" varchar(255),
 	"sequene" integer,
@@ -175,9 +177,13 @@ CREATE TABLE "student_papers" (
 --> statement-breakpoint
 CREATE TABLE "study_materials" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"batch_paper_id_fk" integer NOT NULL,
+	"availability" "study_material_availability_type" NOT NULL,
+	"subject_metadata_id_fk" integer NOT NULL,
+	"session_di_fk" integer,
+	"course_id_fk" integer,
+	"batch_id_fk" integer,
 	"type" "study_material_type" NOT NULL,
-	"meta" "study_meta_type" NOT NULL,
+	"variant" "study_meta_type" NOT NULL,
 	"name" varchar(700) NOT NULL,
 	"url" varchar(2000) NOT NULL,
 	"file_path" varchar(700),
@@ -413,6 +419,17 @@ CREATE TABLE "student_academic_subjects" (
 	"result_status" "board_result_status_type" NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "apps" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" varchar(700) NOT NULL,
+	"description" varchar(1000),
+	"icon" varchar(500),
+	"url" varchar(1000) NOT NULL,
+	"is_active" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "otps" (
@@ -975,7 +992,10 @@ ALTER TABLE "papers" ADD CONSTRAINT "papers_offered_subject_id_offered_subjects_
 ALTER TABLE "student_papers" ADD CONSTRAINT "student_papers_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_papers" ADD CONSTRAINT "student_papers_batch_paper_id_fk_batch_papers_id_fk" FOREIGN KEY ("batch_paper_id_fk") REFERENCES "public"."batch_papers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_papers" ADD CONSTRAINT "student_papers_batch_id_fk_batches_id_fk" FOREIGN KEY ("batch_id_fk") REFERENCES "public"."batches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_batch_paper_id_fk_batch_papers_id_fk" FOREIGN KEY ("batch_paper_id_fk") REFERENCES "public"."batch_papers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_subject_metadata_id_fk_subject_metadatas_id_fk" FOREIGN KEY ("subject_metadata_id_fk") REFERENCES "public"."subject_metadatas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_session_di_fk_sessions_id_fk" FOREIGN KEY ("session_di_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "study_materials" ADD CONSTRAINT "study_materials_batch_id_fk_batches_id_fk" FOREIGN KEY ("batch_id_fk") REFERENCES "public"."batches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_marksheet_id_fk_marksheets_id_fk" FOREIGN KEY ("marksheet_id_fk") REFERENCES "public"."marksheets"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subjects" ADD CONSTRAINT "subjects_subject_metadata_id_fk_subject_metadatas_id_fk" FOREIGN KEY ("subject_metadata_id_fk") REFERENCES "public"."subject_metadatas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_metadatas" ADD CONSTRAINT "subject_metadatas_degree_id_fk_degree_id_fk" FOREIGN KEY ("degree_id_fk") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

@@ -35,20 +35,6 @@ export const getStudyMaterialById: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const getStudyMaterialByBatchPaperId: RequestHandler = async (req, res, next) => {
-  try {
-    const batchPaperId = Number(req.params.batchPaperId);
-    const materials = await studyMaterialService.getStudyMaterialByBatchPaperId(batchPaperId);
-    if (!materials) {
-      res.status(404).json(new ApiResponse(404, "FAIL", null, "Study material not found"));
-      return;
-    }
-    res.status(200).json(new ApiResponse(200, "SUCCESS", materials, "Study material fetched successfully"));
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
-
 export const updateStudyMaterial: RequestHandler = async (req, res, next) => {
   try {
     const id = Number(req.params.id);

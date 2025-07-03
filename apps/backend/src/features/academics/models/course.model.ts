@@ -14,6 +14,7 @@ export const courseModel = pgTable('courses', {
     shortName: varchar({ length: 500 }),
     codePrefix: varchar({ length: 10 }),
     universityCode: varchar({ length: 10 }),
+    amount: integer("amount"),
     numberOfSemesters: integer(),
     duration: varchar({length: 255}),
     sequene: integer().unique(),

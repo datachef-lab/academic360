@@ -37,8 +37,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         const { email, password } = req.body;
         console.log(email, password);
         const foundUser = await findUserByEmail(email);
-        if (!foundUser || foundUser.disabled) {
+        if (!foundUser) {
             res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
+            return;
+        }
+
+        if (foundUser.disabled) {
+            res.status(403).json(new ApiError(403, "Your account is disabled. Please contact support."));
             return;
         }
 
