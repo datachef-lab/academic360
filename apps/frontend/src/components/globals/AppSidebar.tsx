@@ -148,21 +148,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <div className="mt-2 mb-4 flex flex-col justify-between ">
             <div>
               {/* Dashboard Link */}
-              <div className="mb-4">
+              <div className="mb-2 ml-6">
                 {data.navDash.map((item) => (
                   <NavItem
                     key={item.title}
                     icon={item.icon && <item.icon className="h-5 w-5" />}
                     href={item.url}
-                    isActive={!isSearchActive && currentPath.startsWith(item.url)}
+                    isActive={!isSearchActive && currentPath === item.url}
                   >
                     <span className="text-lg">{item.title}</span>
                   </NavItem>
                 ))}
               </div>
               {/* Masters Section */}
-              <div className="mb-4">
-                <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">Masters</h3>
+              <div className=" ml-6">
+                <h3 className="mb-2 px-0 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">Masters</h3>
                 <div>
                   {data.navMain.map((item) => (
                     <NavItem
@@ -178,8 +178,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               </div>
             </div>
             {/* Administration */}
-            <div className="my-14">
-              <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+            <div className="my-4 ml-6 ">
+              <h3 className="mb-2 px-0 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
                 Administration
               </h3>
               <div className="p">
@@ -284,21 +284,21 @@ interface NavItemProps {
 export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <Link
-      to={href}
-      className={cn(
-        " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
-        isActive
-          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 shadow-lg"
-          : "text-white hover:bg-purple-700/80 hover:text-white"
-      )}
-    >
-      <div className="flex items-center gap-3 w-full">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white group-hover:text-white")}>
-          {icon}
-        </span>
-        <span className="text-inherit truncate">{children}</span>
-      </div>
-    </Link>
+    to={href}
+    className={cn(
+      "group flex items-center transition-all duration-100 pl-4 py-3 text-sm font-medium relative",
+      isActive
+        ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+        : "text-white hover:text-white",
+    )}
+  >
+    <div className="flex items-center gap-3">
+      <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white")}>{icon}</span>
+      <span className="text-inherit">{children}</span>
+    </div>
+  </Link>
   );
 }
+
+
 
