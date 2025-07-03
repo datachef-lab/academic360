@@ -1,0 +1,1 @@
+DROP TABLE "fees_slab_academic_year_mapping" CASCADE;

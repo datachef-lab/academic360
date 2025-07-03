@@ -18,7 +18,7 @@ import { socketService } from "./services/socketService.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 
 import { generateToken } from "./utils/index.js";
-import {academicYearRouter} from "@/features/academics/routes/index.js";
+import { academicYearRouter } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
@@ -41,7 +41,7 @@ import {
     studentRouter,
     nationalityRouter,
     religionRouter,
-    
+
     academicHistoryRouter,
     academicIdentifierRouter,
     accommodationRouter,
@@ -219,7 +219,7 @@ app.use("/api/blood-groups", bloodGroupRouter);
 
 app.use("/api/categories", categoryRouter);
 
-app.use("/api/specialization",specializationRouter);
+app.use("/api/specialization", specializationRouter);
 
 app.use("/api/languages", languageMediumRouter);
 
@@ -231,7 +231,7 @@ app.use("/api/institutions", institutionRouter);
 
 app.use("/api/qualifications", qualificationRouter);
 
-app.use("/api/address",addressRouter);
+app.use("/api/address", addressRouter);
 
 app.use("/api/transports", transportRouter);
 

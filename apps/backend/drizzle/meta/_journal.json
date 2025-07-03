@@ -183,6 +183,13 @@
       "when": 1751009614442,
       "tag": "0025_tidy_amphibian",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1751518015872,
+      "tag": "0026_hot_frog_thor",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect,  } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Banknote,
   PlusCircle,
@@ -12,18 +12,18 @@ import {
   Pencil,
 } from "lucide-react";
 // import { toast } from "sonner";
-import FeeStructureForm from "../../components/fees/fee-structure-form/FeeStructureForm";
+import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 // import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/academics/course";
-import { FeesStructureDto, AcademicYear, FeesSlabMapping, FeesSlab } from "../../types/fees";
+import { FeesStructureDto, AcademicYear, FeesSlabMapping, FeesSlab } from "@/types/fees";
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
 import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
 import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
 import axiosInstance from "@/utils/api";
 import { useShifts } from "@/hooks/useShifts";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Shift } from '@/types/resources/shift';
-import { FeesReceiptType } from '@/types/fees';
+import { Shift } from "@/types/resources/shift";
+import { FeesReceiptType } from "@/types/fees";
 // import { SlabCreation } from "../../components/fees/fee-structure-form/steps/SlabCreation";
 
 // interface SlabManagementProps {
@@ -159,7 +159,7 @@ import { FeesReceiptType } from '@/types/fees';
 //   );
 // };
 
-const FeesStructure: React.FC = () => {
+const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [showSlabModal, setShowSlabModal] = useState(false);
@@ -182,13 +182,8 @@ const FeesStructure: React.FC = () => {
   const [selectedReceiptType, setSelectedReceiptType] = useState<FeesReceiptType | null>(null);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 
-
   // Use the fees API hook
-  const {
-    loading: feesLoading,
-    addFeesStructure,
-    updateFeesStructureById,
-  } = useFeesStructures();
+  const { loading: feesLoading, addFeesStructure, updateFeesStructureById } = useFeesStructures();
   const { addFeesSlabMappings } = useFeesSlabMappings();
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
 
@@ -232,14 +227,13 @@ const FeesStructure: React.FC = () => {
 
   const fetchSlabs = async () => {
     try {
-      const res = await axiosInstance.get<FeesSlab[]>('/api/v1/fees/slabs');
+      const res = await axiosInstance.get<FeesSlab[]>("/api/v1/fees/slabs");
       setAllSlabs(res.data);
-
     } catch (error) {
       console.log(error);
       setAllSlabs([]);
     }
-  }
+  };
 
   useEffect(() => {
     if (selectedAcademicYear?.id) {
@@ -268,15 +262,12 @@ const FeesStructure: React.FC = () => {
   //   return mapping ? mapping.feeConcessionRate : 0;
   // };
 
-
   const handleReceiptTypeChange = (value: string) => {
     const id = Number(value);
-    const tmpSelectedFeesReceiptType = feesReceiptTypes.find(ele => ele.id === id);
+    const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id === id);
 
     // Filter by the newly selected receipt type
-    const tmpFilteredFeesStructures = feesStructures.filter(ele => (
-      ele.feesReceiptTypeId === id
-    ));
+    const tmpFilteredFeesStructures = feesStructures.filter((ele) => ele.feesReceiptTypeId === id);
 
     setSelectedReceiptType(tmpSelectedFeesReceiptType ?? null);
     setFilteredFeesStructures(tmpFilteredFeesStructures);
@@ -285,13 +276,12 @@ const FeesStructure: React.FC = () => {
 
   const handleShiftChange = (value: string) => {
     const id = Number(value);
-    const tmpSelectedShift = shifts.find(ele => ele.id === id);
+    const tmpSelectedShift = shifts.find((ele) => ele.id === id);
 
     // Filter by both the selected receipt type and the newly selected shift
-    const tmpFilteredFeesStructures = feesStructures.filter(ele => (
-      ele.feesReceiptTypeId === (selectedReceiptType?.id ?? 0) &&
-      ele.shift?.id === id
-    ));
+    const tmpFilteredFeesStructures = feesStructures.filter(
+      (ele) => ele.feesReceiptTypeId === (selectedReceiptType?.id ?? 0) && ele.shift?.id === id,
+    );
 
     setSelectedShift(tmpSelectedShift ?? null);
     setFilteredFeesStructures(tmpFilteredFeesStructures);
@@ -300,16 +290,16 @@ const FeesStructure: React.FC = () => {
   const fetchAvailableCourses = async (
     academicYearId: number | undefined,
     allCourses: Course[],
-    setAvailableCourses: React.Dispatch<React.SetStateAction<Course[]>>
+    setAvailableCourses: React.Dispatch<React.SetStateAction<Course[]>>,
   ) => {
-    if (typeof academicYearId !== 'number') {
+    if (typeof academicYearId !== "number") {
       setAvailableCourses([]);
       return;
     }
     const filtered: Course[] = [];
     for (const course of allCourses) {
-      if (typeof course.id !== 'number') continue;
-      if (typeof academicYearId !== 'number') continue;
+      if (typeof course.id !== "number") continue;
+      if (typeof academicYearId !== "number") continue;
       const structures = await getFeesStructuresByAcademicYearAndCourse(academicYearId, course.id);
       if (!structures || structures.length === 0) {
         filtered.push(course);
@@ -320,21 +310,23 @@ const FeesStructure: React.FC = () => {
     setAvailableCourses(filtered);
   };
 
-
   const handleFeeStructureSubmit = async (givenFeesStructure: FeesStructureDto) => {
     console.log("Fee Structure Form Data:", givenFeesStructure);
     try {
       // Duplicate check (for create only)
       if (!currentFeesStructure?.id) {
-        const duplicate = filteredFeesStructures.find(fs =>
-          fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
-          fs.course?.id === givenFeesStructure.course?.id &&
-          fs.semester === givenFeesStructure.semester &&
-          fs.shift?.id === givenFeesStructure.shift?.id &&
-          fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId
+        const duplicate = filteredFeesStructures.find(
+          (fs) =>
+            fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
+            fs.course?.id === givenFeesStructure.course?.id &&
+            fs.semester === givenFeesStructure.semester &&
+            fs.shift?.id === givenFeesStructure.shift?.id &&
+            fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId,
         );
         if (duplicate) {
-          alert("A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.");
+          alert(
+            "A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.",
+          );
           return;
         }
       }
@@ -349,14 +341,13 @@ const FeesStructure: React.FC = () => {
           setSelectedAcademicYear(created.academicYear ?? null);
           setSelectedCourse(created.course ?? null);
 
-          const tmpSelectedFeesReceiptType = feesReceiptTypes.find(ele => ele.id == created.feesReceiptTypeId!)!
+          const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == created.feesReceiptTypeId!)!;
           setSelectedReceiptType(tmpSelectedFeesReceiptType);
           setSelectedShift(created.shift!);
 
-          const tmpFilteredFeesStructures =  feesStructures.filter(ele => (
-            ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id &&
-            ele.shift?.id === created.shift?.id
-          ));
+          const tmpFilteredFeesStructures = feesStructures.filter(
+            (ele) => ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id && ele.shift?.id === created.shift?.id,
+          );
 
           setFilteredFeesStructures(tmpFilteredFeesStructures);
         }
@@ -439,35 +430,33 @@ const FeesStructure: React.FC = () => {
 
   const fetchFeesStructures = async () => {
     try {
-      console.log("fetching fees structures: -")
-      const res = await axiosInstance.get<FeesStructureDto[]>(`/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear!.id}/${selectedCourse!.id}`);
+      console.log("fetching fees structures: -");
+      const res = await axiosInstance.get<FeesStructureDto[]>(
+        `/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear!.id}/${selectedCourse!.id}`,
+      );
       setFeesStructures(res.data || []);
-      console.log("fetching fees structures, res.data: -", res.data)
+      console.log("fetching fees structures, res.data: -", res.data);
 
-      if (res.data.length > 0) {      
-        const tmpSelectedFeesReceiptType = feesReceiptTypes.find(ele => ele.id == res.data[0].feesReceiptTypeId);
+      if (res.data.length > 0) {
+        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == res.data[0].feesReceiptTypeId);
         console.log("tmpSelectedFeesReceiptType:", tmpSelectedFeesReceiptType);
-        const tmpArr = res.data.filter(ele => ele.feesReceiptTypeId == tmpSelectedFeesReceiptType?.id);
+        const tmpArr = res.data.filter((ele) => ele.feesReceiptTypeId == tmpSelectedFeesReceiptType?.id);
         console.log("tmpArr:", tmpArr);
-        const tmpSelectedShift =  tmpArr[0].shift;
-        console.log("tmpSelectedShift:", tmpSelectedShift)
-        const tmpFilteredFeesStructures =  tmpArr.filter(ele => (
-          ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id &&
-          ele.shift?.id === tmpSelectedShift?.id
-        ));
+        const tmpSelectedShift = tmpArr[0].shift;
+        console.log("tmpSelectedShift:", tmpSelectedShift);
+        const tmpFilteredFeesStructures = tmpArr.filter(
+          (ele) => ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id && ele.shift?.id === tmpSelectedShift?.id,
+        );
         console.log("tmpFilteredFeesStructures:", tmpFilteredFeesStructures);
         setSelectedReceiptType(tmpSelectedFeesReceiptType!);
         setSelectedShift(tmpSelectedShift!);
         setFilteredFeesStructures(tmpFilteredFeesStructures);
-
-
       }
-
     } catch (error) {
       console.log(error);
       setFilteredFeesStructures([]);
     }
-  }
+  };
 
   useEffect(() => {
     if (selectedAcademicYear?.id && selectedCourse?.id) {
@@ -513,13 +502,13 @@ const FeesStructure: React.FC = () => {
   // };
 
   const availableSlabsToCreate = allSlabs.filter(
-    slab => !slabYearMappings.some(mapping => mapping.feesSlabId === slab.id)
+    (slab) => !slabYearMappings.some((mapping) => mapping.feesSlabId === slab.id),
   );
   const isCreateSlabDisabled = availableSlabsToCreate.length === 0;
 
   const toRoman = (num: number | null | undefined) => {
-    if (!num) return '';
-    const romans = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+    if (!num) return "";
+    const romans = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
     return romans[num - 1] || num;
   };
 
@@ -551,32 +540,42 @@ const FeesStructure: React.FC = () => {
           <div className="flex items-center gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
-              <Select value={selectedAcademicYear?.id ? String(selectedAcademicYear.id) : "all"} onValueChange={val => {
-                const year = academicYears.find(y => String(y.id) === val);
-                setSelectedAcademicYear(year || null);
-              }}>
+              <Select
+                value={selectedAcademicYear?.id ? String(selectedAcademicYear.id) : "all"}
+                onValueChange={(val) => {
+                  const year = academicYears.find((y) => String(y.id) === val);
+                  setSelectedAcademicYear(year || null);
+                }}
+              >
                 <SelectTrigger className="w-40">
                   <SelectValue placeholder="Select Academic Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={String(year.id)}>{year.startYear}</SelectItem>
+                  {academicYears.map((year) => (
+                    <SelectItem key={year.id} value={String(year.id)}>
+                      {year.startYear}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
-              <Select value={selectedCourse?.id ? String(selectedCourse.id) : "all"} onValueChange={val => {
-                const course = coursesForSelectedYear.find(c => String(c.id) === val);
-                setSelectedCourse(course || null);
-              }}>
+              <Select
+                value={selectedCourse?.id ? String(selectedCourse.id) : "all"}
+                onValueChange={(val) => {
+                  const course = coursesForSelectedYear.find((c) => String(c.id) === val);
+                  setSelectedCourse(course || null);
+                }}
+              >
                 <SelectTrigger className="w-40" disabled={!selectedAcademicYear}>
                   <SelectValue placeholder="Select Course" />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCourses.map(course => (
-                    <SelectItem key={course.id} value={String(course.id)}>{course.name}</SelectItem>
+                  {availableCourses.map((course) => (
+                    <SelectItem key={course.id} value={String(course.id)}>
+                      {course.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -682,16 +681,18 @@ const FeesStructure: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {feesReceiptTypes
-                    .filter(rt => feesStructures.some(fs => fs.feesReceiptTypeId === rt.id))
-                    .map(rt => (
-                      <SelectItem key={rt.id} value={String(rt.id)}>{rt.name}</SelectItem>
+                    .filter((rt) => feesStructures.some((fs) => fs.feesReceiptTypeId === rt.id))
+                    .map((rt) => (
+                      <SelectItem key={rt.id} value={String(rt.id)}>
+                        {rt.name}
+                      </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Shift</label>
-              <Select 
+              <Select
                 value={selectedShift ? String(selectedShift.id) : ""}
                 onValueChange={handleShiftChange}
                 disabled={!selectedReceiptType} // Only disable if no receipt type is selected
@@ -701,9 +702,15 @@ const FeesStructure: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {shifts
-                    .filter(shft => feesStructures.some(fs => fs.feesReceiptTypeId === selectedReceiptType?.id && fs.shift?.id === shft.id))
-                    .map(shft => (
-                      <SelectItem key={shft.id} value={String(shft.id)}>{shft.name}</SelectItem>
+                    .filter((shft) =>
+                      feesStructures.some(
+                        (fs) => fs.feesReceiptTypeId === selectedReceiptType?.id && fs.shift?.id === shft.id,
+                      ),
+                    )
+                    .map((shft) => (
+                      <SelectItem key={shft.id} value={String(shft.id)}>
+                        {shft.name}
+                      </SelectItem>
                     ))}
                 </SelectContent>
               </Select>
@@ -712,17 +719,17 @@ const FeesStructure: React.FC = () => {
         </nav>
         <button
           onClick={() => {
-            if (activeTab === 'slabs') {
+            if (activeTab === "slabs") {
               setShowSlabModal(true);
             } else {
               handleCreate();
             }
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${activeTab === 'slabs' && isCreateSlabDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-          disabled={activeTab === 'slabs' && isCreateSlabDisabled}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors ${activeTab === "slabs" && isCreateSlabDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={activeTab === "slabs" && isCreateSlabDisabled}
         >
           <PlusCircle className="h-3.5 w-3.5" />
-          {activeTab === 'slabs' ? 'Create Slab' : 'Create Structure'}
+          {activeTab === "slabs" ? "Create Slab" : "Create Structure"}
         </button>
       </div>
 
@@ -732,79 +739,136 @@ const FeesStructure: React.FC = () => {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">Semester</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border bg-yellow-100">Base Amount</th>
-                  {allSlabs.map(slab => (
-                    <th key={slab.id} className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">{slab.name}</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
+                    Semester
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border bg-yellow-100">
+                    Base Amount
+                  </th>
+                  {allSlabs.map((slab) => (
+                    <th
+                      key={slab.id}
+                      className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border"
+                    >
+                      {slab.name}
+                    </th>
                   ))}
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">Installment 1</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">Installment 2</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
+                    Installment 1
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
+                    Installment 2
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredFeesStructures.sort((a, b) => (a.semester ?? 0) - (b.semester ?? 0)).map(fs => {
-                  const sem = fs.semester;
-                  const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.amount || 0), 0);
-                  const numInstalments = fs.numberOfInstalments || 0;
-                  return (
-                    <tr key={sem}>
-                      <td className="px-4 py-3 whitespace-nowrap border">Semester {toRoman(sem)}</td>
-                      <td className="px-4 py-3 whitespace-nowrap border font-bold bg-yellow-50 text-yellow-800">₹ {baseAmount.toLocaleString()}</td>
-                      {allSlabs.map(slab => {
-                        const mapping = fs.feesSlabMappings?.find(m => m.feesSlabId === slab.id);
-                        let adjusted = baseAmount;
-                        if (mapping) {
-                          const concessionable = fs.components.filter(c => c.isConcessionApplicable);
-                          const concession = concessionable.reduce((sum, c) => sum + (c.amount * (mapping.feeConcessionRate / 100)), 0);
-                          adjusted = baseAmount - concession;
-                        }
-                        return (
-                          <td key={slab.id} className="px-4 py-3 whitespace-nowrap border">
-                            <div>₹ {adjusted.toLocaleString()}</div>
-                            {mapping && mapping.feeConcessionRate > 0 && (
-                              <div className="text-xs font-bold text-green-700 bg-green-100 rounded px-1 mt-1 inline-block">{mapping.feeConcessionRate}%</div>
-                            )}
-                          </td>
-                        );
-                      })}
-                      <td className="px-4 py-3 whitespace-nowrap border">{numInstalments >= 1 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap border">{numInstalments >= 2 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : '-'}</td>
-                      <td className="px-4 py-3 whitespace-nowrap border">
-                        <button className="text-purple-600 hover:text-purple-800 mr-2" onClick={() => handleEdit(fs)} title="Edit">
-                          <Pencil className="h-5 w-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {filteredFeesStructures
+                  .sort((a, b) => (a.semester ?? 0) - (b.semester ?? 0))
+                  .map((fs) => {
+                    const sem = fs.semester;
+                    const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+                    const numInstalments = fs.numberOfInstalments || 0;
+                    return (
+                      <tr key={sem}>
+                        <td className="px-4 py-3 whitespace-nowrap border">Semester {toRoman(sem)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap border font-bold bg-yellow-50 text-yellow-800">
+                          ₹ {baseAmount.toLocaleString()}
+                        </td>
+                        {allSlabs.map((slab) => {
+                          const mapping = fs.feesSlabMappings?.find((m) => m.feesSlabId === slab.id);
+                          let adjusted = baseAmount;
+                          if (mapping) {
+                            const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
+                            const concession = concessionable.reduce(
+                              (sum, c) => sum + c.amount * (mapping.feeConcessionRate / 100),
+                              0,
+                            );
+                            adjusted = baseAmount - concession;
+                          }
+                          return (
+                            <td key={slab.id} className="px-4 py-3 whitespace-nowrap border">
+                              <div>₹ {adjusted.toLocaleString()}</div>
+                              {mapping && mapping.feeConcessionRate > 0 && (
+                                <div className="text-xs font-bold text-green-700 bg-green-100 rounded px-1 mt-1 inline-block">
+                                  {mapping.feeConcessionRate}%
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-3 whitespace-nowrap border">
+                          {numInstalments >= 1 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : "-"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap border">
+                          {numInstalments >= 2 ? `₹ ${(baseAmount / numInstalments).toLocaleString()}` : "-"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap border">
+                          <button
+                            className="text-purple-600 hover:text-purple-800 mr-2"
+                            onClick={() => handleEdit(fs)}
+                            title="Edit"
+                          >
+                            <Pencil className="h-5 w-5" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 <tr className="bg-gray-50 font-bold">
                   <td className="px-4 py-3 whitespace-nowrap border">Total</td>
-                  <td className="px-4 py-3 whitespace-nowrap border bg-yellow-200 text-yellow-900 text-lg">₹ {filteredFeesStructures.reduce((sum, fs) => sum + fs.components.reduce((s, c) => s + (c.amount || 0), 0), 0).toLocaleString()}</td>
-                  {allSlabs.map(slab => {
+                  <td className="px-4 py-3 whitespace-nowrap border bg-yellow-200 text-yellow-900 text-lg">
+                    ₹{" "}
+                    {filteredFeesStructures
+                      .reduce((sum, fs) => sum + fs.components.reduce((s, c) => s + (c.amount || 0), 0), 0)
+                      .toLocaleString()}
+                  </td>
+                  {allSlabs.map((slab) => {
                     const total = filteredFeesStructures.reduce((sum, fs) => {
                       const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
-                      const mapping = fs.feesSlabMappings?.find(m => m.feesSlabId === slab.id);
+                      const mapping = fs.feesSlabMappings?.find((m) => m.feesSlabId === slab.id);
                       let adjusted = baseAmount;
                       if (mapping) {
-                        const concessionable = fs.components.filter(c => c.isConcessionApplicable);
-                        const concession = concessionable.reduce((s, c) => s + (c.amount * (mapping.feeConcessionRate / 100)), 0);
+                        const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
+                        const concession = concessionable.reduce(
+                          (s, c) => s + c.amount * (mapping.feeConcessionRate / 100),
+                          0,
+                        );
                         adjusted = baseAmount - concession;
                       }
                       return sum + adjusted;
                     }, 0);
-                    return <td key={slab.id} className="px-4 py-3 whitespace-nowrap border bg-green-100 text-green-900 text-lg">₹ {total.toLocaleString()}</td>;
+                    return (
+                      <td
+                        key={slab.id}
+                        className="px-4 py-3 whitespace-nowrap border bg-green-100 text-green-900 text-lg"
+                      >
+                        ₹ {total.toLocaleString()}
+                      </td>
+                    );
                   })}
-                  <td className="px-4 py-3 whitespace-nowrap border">₹ {filteredFeesStructures.reduce((sum, fs) => {
-                    const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
-                    const numInstalments = fs.numberOfInstalments || 0;
-                    return sum + (numInstalments >= 1 ? baseAmount / numInstalments : 0);
-                  }, 0).toLocaleString()}</td>
-                  <td className="px-4 py-3 whitespace-nowrap border">₹ {filteredFeesStructures.reduce((sum, fs) => {
-                    const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
-                    const numInstalments = fs.numberOfInstalments || 0;
-                    return sum + (numInstalments >= 2 ? baseAmount / numInstalments : 0);
-                  }, 0).toLocaleString()}</td>
+                  <td className="px-4 py-3 whitespace-nowrap border">
+                    ₹{" "}
+                    {filteredFeesStructures
+                      .reduce((sum, fs) => {
+                        const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
+                        const numInstalments = fs.numberOfInstalments || 0;
+                        return sum + (numInstalments >= 1 ? baseAmount / numInstalments : 0);
+                      }, 0)
+                      .toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap border">
+                    ₹{" "}
+                    {filteredFeesStructures
+                      .reduce((sum, fs) => {
+                        const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
+                        const numInstalments = fs.numberOfInstalments || 0;
+                        return sum + (numInstalments >= 2 ? baseAmount / numInstalments : 0);
+                      }, 0)
+                      .toLocaleString()}
+                  </td>
                   <td className="px-4 py-3 whitespace-nowrap border"></td>
                 </tr>
               </tbody>
@@ -848,9 +912,7 @@ const FeesStructure: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <select
-                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
+                  <select className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500">
                     <option value="Mandatory">Mandatory</option>
                     <option value="Optional">Optional</option>
                   </select>
@@ -884,9 +946,7 @@ const FeesStructure: React.FC = () => {
               </div>
 
               <div className="flex gap-2 mt-4">
-                <button
-                  className="flex-1 py-1.5 px-3 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-medium"
-                >
+                <button className="flex-1 py-1.5 px-3 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-medium">
                   Add Fee
                 </button>
                 <button
@@ -923,11 +983,8 @@ const FeesStructure: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">{slabEditMode ? 'Edit Slab' : 'Create Slab'}</h2>
-              <button
-                onClick={handleSlabModalClose}
-                className="p-1.5 hover:bg-gray-100 rounded transition-colors"
-              >
+              <h2 className="text-lg font-bold text-gray-900">{slabEditMode ? "Edit Slab" : "Create Slab"}</h2>
+              <button onClick={handleSlabModalClose} className="p-1.5 hover:bg-gray-100 rounded transition-colors">
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
@@ -946,4 +1003,4 @@ const FeesStructure: React.FC = () => {
   );
 };
 
-export default FeesStructure;
+export default FeesStructurePage;

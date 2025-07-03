@@ -40,7 +40,7 @@ const initialData: AcademicYearItem[] = [
   },
 ];
 
-const AcademicYear: React.FC = () => {
+const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYearItem[]>(initialData);
   const [filteredData, setFilteredData] = useState<AcademicYearItem[]>(initialData);
   const [showModal, setShowModal] = useState(false);
@@ -374,4 +374,4 @@ const AcademicYear: React.FC = () => {
   );
 };
 
-export default AcademicYear;
+export default AcademicYearPage;

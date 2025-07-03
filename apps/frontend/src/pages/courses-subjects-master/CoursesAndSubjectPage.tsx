@@ -61,7 +61,7 @@ interface ProgrammeOption {
   degreeId: number;
 }
 
-export const CoursesAndSubject: React.FC = () => {
+export const CoursesAndSubjectPage: React.FC = () => {
   // Active tab state
   const [activeTab, setActiveTab] = useState<string>("subjects");
 
@@ -1062,4 +1062,4 @@ export const CoursesAndSubject: React.FC = () => {
   );
 };
 
-export default CoursesAndSubject;
+export default CoursesAndSubjectPage;

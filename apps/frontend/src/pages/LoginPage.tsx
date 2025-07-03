@@ -19,7 +19,7 @@ const LoginPage = () => {
     onSuccess: (data) => {
       console.log("Login successful:", data.payload);
       localStorage.setItem("token", data.payload.accessToken);
-      navigate("/home", { replace: true });
+      navigate("/dashboard", { replace: true });
     },
   });
 

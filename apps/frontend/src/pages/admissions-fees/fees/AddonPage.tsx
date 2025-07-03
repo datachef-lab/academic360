@@ -1,13 +1,13 @@
 import React, { useState, } from "react";
 import { PlusCircle, Edit, Trash2 } from "lucide-react";
-import Header from "../../components/common/PageHeader";
+import Header from "@/components/common/PageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAddons } from "@/hooks/useFees";
 import { AddOn } from "@/types/fees";
 
-const Addon: React.FC = () => {
+const AddonPage: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<{ name: string }>({ name: "" });
@@ -145,4 +145,4 @@ const Addon: React.FC = () => {
   );
 };
 
-export default Addon;
+export default AddonPage;

@@ -1,15 +1,15 @@
 import React from "react";
 import { motion, Variants } from "framer-motion";
 import { Bookmark } from "lucide-react";
-import { Component } from "../components/student-view/AttendaceChart";
-import Fees from "../components/student-view/Fees";
-import NoticeBoard from "../components/student-view/NoticeBoard";
-import ChipTabs from "../components/student-view/ChipTabs";
-import ImageSlider from "../components/student-view/ImageSlider";
-import Courses from "../components/student-view/Courses";
+import { Component } from "../../components/student-view/AttendaceChart";
+import Fees from "../../components/student-view/Fees";
+import NoticeBoard from "../../components/student-view/NoticeBoard";
+import ChipTabs from "../../components/student-view/ChipTabs";
+import ImageSlider from "../../components/student-view/ImageSlider";
+import Courses from "../../components/student-view/Courses";
 import "@/styles/Scrollbar.css";
-import SemesterAccordion from "../components/student-view/StudentMarks";
-import { CalendarCheck, Wallet,Percent,Timer,ClipboardPenLine } from 'lucide-react';
+import SemesterAccordion from "../../components/student-view/StudentMarks";
+import { CalendarCheck, Wallet, Percent, Timer, ClipboardPenLine } from "lucide-react";
 
 const StudentViewPage: React.FC = () => {
   const fieldsetVariants: Variants = {
@@ -51,7 +51,7 @@ const StudentViewPage: React.FC = () => {
         >
           <legend>
             <div className="flex items-center justify-center gap-2  text-white border border-gray-400 bg-blue-500 shadow-sm px-8 py-[6px] rounded-full border-b-2">
-            <CalendarCheck size={21}/> Attendance
+              <CalendarCheck size={21} /> Attendance
             </div>
           </legend>
           <Component />
@@ -124,15 +124,15 @@ const StudentViewPage: React.FC = () => {
             </div>
           </legend>
           <div>
-          <div className="flex-col gap-3 items-center justify-start  ">
-            <div>
-              <ChipTabs></ChipTabs>
-              <div className="border-b-[1px] border-gray-400 w-full "></div>
+            <div className="flex-col gap-3 items-center justify-start  ">
+              <div>
+                <ChipTabs></ChipTabs>
+                <div className="border-b-[1px] border-gray-400 w-full "></div>
+              </div>
+              <div className=" overflow-y-auto custom-scrollbar mt-3 max-h-[500px]">
+                <NoticeBoard />
+              </div>
             </div>
-            <div className=" overflow-y-auto custom-scrollbar mt-3 max-h-[500px]">
-              <NoticeBoard />
-            </div>
-          </div>
           </div>
         </motion.fieldset>
       </div>

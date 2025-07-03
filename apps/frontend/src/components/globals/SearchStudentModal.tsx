@@ -77,7 +77,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
     isNavigatingRef.current = true;
     onOpenChange(false);
     setTimeout(() => {
-      navigate(`/home/search-students/${studentId}`);
+      navigate(`/dashboard/students/${studentId}`);
       isNavigatingRef.current = false;
     }, 100); 
   }, [navigate, onOpenChange]);
