@@ -36,30 +36,13 @@ import { Course } from '@/types/academics/course';
 
 // Import services for courses
 import {
-  // Course,
-  NewCourse,
   getAllCourses,
   addCourse,
   updateCourse,
   deleteCourse
 } from '@/services/course-api';
-
-// Define interfaces for type safety
-interface SubjectTypeOption {
-  id: number;
-  marksheetName: string;
-}
-
-interface DegreeOption {
-  id: number;
-  name: string;
-}
-
-interface ProgrammeOption {
-  id: number;
-  degreeProgramme: string;
-  degreeId: number;
-}
+// import { Degree } from '@/types/resources/degree';
+import { ProgrammeOption, DegreeOption } from '@/components/types/subject-types';
 
 export const CoursesAndSubjectPage: React.FC = () => {
   // Active tab state
@@ -107,15 +90,16 @@ export const CoursesAndSubjectPage: React.FC = () => {
   });
 
   // New course form state
-  const [newCourse, setNewCourse] = useState<NewCourse>({
+  const [newCourse, setNewCourse] = useState<Course>({
     name: "",
     shortName: "",
     codePrefix: "",
     universityCode: "",
-    streamId: undefined,
+    degree: null,
   });
 
   // Options for dropdowns
+  type SubjectTypeOption = { id: number; marksheetName: string };
   const [subjectTypeOptions, setSubjectTypeOptions] = useState<SubjectTypeOption[]>([]);
   const [degreeOptions, setDegreeOptions] = useState<DegreeOption[]>([]);
   const [programmeOptions, setProgrammeOptions] = useState<ProgrammeOption[]>([]);
@@ -176,7 +160,12 @@ export const CoursesAndSubjectPage: React.FC = () => {
     try {
       const response = await getAllCourses();
       if (response && Array.isArray(response.payload)) {
-        setCourses(response.payload);
+        setCourses(response.payload.map(course => ({
+          ...course,
+          shortName: course.shortName || '',
+          codePrefix: course.codePrefix || '',
+          universityCode: course.universityCode || '',
+        }) as Course));
         setCourseError(""); // Clear any previous error when successful
       } else {
         console.error("Invalid response format:", response);
@@ -190,49 +179,40 @@ export const CoursesAndSubjectPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch subjects, courses, and dropdown options on component mount
+  // Fetch subjects, courses, and dropdown options on component mount or when activeTab changes
   useEffect(() => {
-    // Fetch data based on active tab
     if (activeTab === "subjects") {
       fetchSubjects();
     } else if (activeTab === "courses") {
       fetchCourses();
     }
 
-    // Define fetchDropdownOptions directly inside the useEffect
+    // Fetch dropdown options (subject types, degrees, programmes)
     const fetchDropdownOptions = async () => {
       try {
-        // Fetch subjects data to extract options
         const response = await getAllSubjects();
-
         if (response && Array.isArray(response.payload)) {
           const subjectData = response.payload;
-
-          // Extract unique subject types
-          const uniqueSubjectTypes = new Map<number, SubjectTypeOption>();
+          const uniqueSubjectTypes = new Map<number, { id: number; marksheetName: string }>();
           subjectData.forEach((subject) => {
             if (subject.subjectType && !uniqueSubjectTypes.has(subject.subjectType.id)) {
               uniqueSubjectTypes.set(subject.subjectType.id, {
                 id: subject.subjectType.id,
-                marksheetName: subject.subjectType.marksheetName,
+                marksheetName: subject.subjectType.marksheetName || '',
               });
             }
           });
           setSubjectTypeOptions(Array.from(uniqueSubjectTypes.values()));
-
-          // Extract unique degrees
-          const uniqueDegrees = new Map<number, DegreeOption>();
+          const uniqueDegrees = new Map<number, { id: number; name: string }>();
           subjectData.forEach((subject) => {
-            if (subject.stream?.degree && !uniqueDegrees.has(subject.stream.degree.id)) {
+            if (subject.stream?.degree && typeof subject.stream.degree.id === 'number' && !uniqueDegrees.has(subject.stream.degree.id)) {
               uniqueDegrees.set(subject.stream.degree.id, {
-                id: subject.stream.degree.id,
-                name: subject.stream.degree.name,
+                id: subject.stream.degree.id!,
+                name: subject.stream.degree.name || '',
               });
             }
           });
-          setDegreeOptions(Array.from(uniqueDegrees.values()));
-
-          // Extract unique programmes/streams
+          setDegreeOptions(Array.from(uniqueDegrees.values()).filter(d => typeof d.id === 'number' && d.id !== undefined));
           const uniqueProgrammes = new Map<number, ProgrammeOption>();
           subjectData.forEach((subject) => {
             if (subject.stream && !uniqueProgrammes.has(subject.stream.id)) {
@@ -260,23 +240,13 @@ export const CoursesAndSubjectPage: React.FC = () => {
         });
       }
     };
-
     fetchDropdownOptions();
   }, [activeTab, fetchSubjects, fetchCourses, toast]);
 
-  // Effect to load data when tab changes
-  useEffect(() => {
-    if (activeTab === "subjects" && subjects.length === 0 && !isSubjectsLoading) {
-      fetchSubjects();
-    } else if (activeTab === "courses" && courses.length === 0 && !isCoursesLoading) {
-      fetchCourses();
-    }
-  }, [activeTab, subjects.length, courses.length, isSubjectsLoading, isCoursesLoading, fetchSubjects, fetchCourses]);
-
   // Filter programmes based on selected degree
   const filteredProgrammes = useMemo(() => {
-    if (!selectedCoursesDegreeId) return programmeOptions;
-    return programmeOptions.filter((programme) => programme.degreeId === selectedCoursesDegreeId);
+    if (!selectedCoursesDegreeId) return programmeOptions || [];
+    return (programmeOptions || []).filter((programme) => programme.degreeId === selectedCoursesDegreeId);
   }, [programmeOptions, selectedCoursesDegreeId]);
 
   // Safe access to subjects array with fallback to empty array
@@ -361,12 +331,12 @@ export const CoursesAndSubjectPage: React.FC = () => {
 
     // Handle numeric values
     if (["credit", "fullMarks", "semester"].includes(name)) {
-      setNewSubject((prev) => ({
+      setNewSubject((prev: NewSubject) => ({
         ...prev,
         [name]: value === "" ? 0 : parseFloat(value),
       }));
     } else {
-      setNewSubject((prev) => ({
+      setNewSubject((prev: NewSubject) => ({
         ...prev,
         [name]: value,
       }));
@@ -381,12 +351,12 @@ export const CoursesAndSubjectPage: React.FC = () => {
       setSelectedDegreeId(numValue);
 
       // Reset streamId when degree changes
-      setNewSubject((prev) => ({
+      setNewSubject((prev: NewSubject) => ({
         ...prev,
         streamId: 0,
       }));
-    } else if (["subjectTypeId", "streamId", "semester"].includes(name)) {
-      setNewSubject((prev) => ({
+    } else if (["subjectTypeId", "semester"].includes(name)) {
+      setNewSubject((prev: NewSubject) => ({
         ...prev,
         [name]: parseInt(value),
       }));
@@ -394,7 +364,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
   }, []);
 
   const handleSubjectCheckboxChange = useCallback((checked: boolean) => {
-    setNewSubject((prev) => ({
+    setNewSubject((prev: NewSubject) => ({
       ...prev,
       isOptional: checked,
     }));
@@ -403,7 +373,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
   // Course form handlers
   const handleCourseInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setNewCourse((prev) => ({
+    setNewCourse((prev: Course) => ({
       ...prev,
       [name]: value,
     }));
@@ -415,11 +385,6 @@ export const CoursesAndSubjectPage: React.FC = () => {
     if (name === "degreeId") {
       const numValue = parseInt(value);
       setSelectedCoursesDegreeId(numValue);
-    } else if (name === "streamId") {
-      setNewCourse((prev) => ({
-        ...prev,
-        streamId: parseInt(value),
-      }));
     }
   }, []);
 
@@ -427,15 +392,15 @@ export const CoursesAndSubjectPage: React.FC = () => {
   const handleEditCourse = useCallback((course: Course) => {
     setNewCourse({
       name: course.name,
-      shortName: course.shortName || "",
-      codePrefix: course.codePrefix || "",
-      universityCode: course.universityCode || "",
-      streamId: course.stream?.id || 0
+      shortName: course.shortName || '',
+      codePrefix: course.codePrefix || '',
+      universityCode: course.universityCode || '',
+      degree: (course.degree && 'level' in course.degree) ? course.degree : { id: 0, name: '', level: null, sequence: null, disabled: false, createdAt: new Date(), updatedAt: new Date() },
     });
     
     // Set the degree ID for filtering programmes
-    if (course.stream?.degree?.id) {
-      setSelectedCoursesDegreeId(course.stream.degree.id);
+    if (course.degree && 'id' in course.degree && course.degree.id) {
+      setSelectedCoursesDegreeId(course.degree.id);
     }
     
     setEditingCourseId(course.id ?? null);
@@ -451,14 +416,11 @@ export const CoursesAndSubjectPage: React.FC = () => {
       // Validation checks
       const requiredFields = [
         { field: "name", label: "Course Name" },
-        { field: "streamId", label: "Programme" },
+        { field: "degreeId", label: "Degree" },
       ];
 
       const missingFields = requiredFields.filter(({ field }) => {
-        if (field === "streamId") {
-          return !newCourse.streamId;
-        }
-        return !newCourse[field as keyof NewCourse];
+        return !newCourse[field as keyof typeof newCourse];
       });
 
       if (missingFields.length > 0) {
@@ -484,7 +446,13 @@ export const CoursesAndSubjectPage: React.FC = () => {
         }
       } else {
         // Add new course
-        response = await addCourse(newCourse);
+        response = await addCourse({
+          name: newCourse.name,
+          shortName: newCourse.shortName || null,
+          codePrefix: newCourse.codePrefix || null,
+          universityCode: newCourse.universityCode || null,
+          degree: newCourse.degree || null,
+        });
         
         if (response) {
           toast({
@@ -497,7 +465,12 @@ export const CoursesAndSubjectPage: React.FC = () => {
       // Refresh the courses list and close the dialog
       const refreshResponse = await getAllCourses();
       if (refreshResponse && Array.isArray(refreshResponse.payload)) {
-        setCourses(refreshResponse.payload);
+        setCourses(refreshResponse.payload.map(course => ({
+          ...course,
+          shortName: course.shortName || '',
+          codePrefix: course.codePrefix || '',
+          universityCode: course.universityCode || '',
+        }) as Course));
       }
 
       // Reset form and close dialog
@@ -506,7 +479,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
         shortName: "",
         codePrefix: "",
         universityCode: "",
-        streamId: undefined,
+        degree: null,
       });
       setIsAddCourseDialogOpen(false);
       setIsEditMode(false);
@@ -543,7 +516,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
       shortName: "",
       codePrefix: "",
       universityCode: "",
-      streamId: undefined,
+      degree: null,
     });
   }, []);
 
@@ -653,21 +626,16 @@ export const CoursesAndSubjectPage: React.FC = () => {
   // Get unique degrees for courses
   const uniqueCourseDegreesNames = useMemo(() => {
     if (!courses || !courses.length) return [] as string[];
-
     const degrees = courses
-      .map((course) => course.stream?.degree?.name)
+      .map((course) => course.degree?.name)
       .filter((name): name is string => name !== undefined && name !== null);
     return [...new Set(degrees)].sort() as string[];
   }, [courses]);
   
   // Get unique programmes for courses
   const uniqueCourseProgrammes = useMemo(() => {
-    if (!courses || !courses.length) return [] as string[];
-
-    const programmes = courses
-      .map((course) => course.stream?.degreeProgramme)
-      .filter((name) => typeof name === 'string');
-    return [...new Set(programmes)].sort() as string[];
+    // No direct property for programme, so return empty array or implement if available
+    return [] as string[];
   }, [courses]);
   
   // Filter courses based on filter criteria
@@ -682,25 +650,18 @@ export const CoursesAndSubjectPage: React.FC = () => {
         const shortNameMatch = (course.shortName || '').toLowerCase().includes(searchTermLower);
         const codePrefixMatch = (course.codePrefix || '').toLowerCase().includes(searchTermLower);
         const universityCodeMatch = (course.universityCode || '').toLowerCase().includes(searchTermLower);
-        
         if (!nameMatch && !shortNameMatch && !codePrefixMatch && !universityCodeMatch) {
           return false;
         }
       }
-
       // Filter by degree
-      if (courseDegreeFilter !== "all" && course.stream?.degree?.name !== courseDegreeFilter) {
+      if (courseDegreeFilter !== "all" && course.degree?.name !== courseDegreeFilter) {
         return false;
       }
-
-      // Filter by programme
-      if (courseProgrammeFilter !== "all" && course.stream?.degreeProgramme !== courseProgrammeFilter) {
-        return false;
-      }
-
+      // No programme filter (no property)
       return true;
     });
-  }, [courses, courseSearchQuery, courseDegreeFilter, courseProgrammeFilter]);
+  }, [courses, courseSearchQuery, courseDegreeFilter]);
   
   // Reset course filters
   const resetCourseFilters = useCallback(() => {
@@ -762,16 +723,12 @@ export const CoursesAndSubjectPage: React.FC = () => {
         { field: "irpCode", label: "Subject Code" },
         { field: "subjectTypeId", label: "Subject Type" },
         { field: "credit", label: "Credit" },
-        { field: "streamId", label: "Programme" },
         { field: "semester", label: "Semester" },
         { field: "fullMarks", label: "Full Marks" },
       ];
 
       const missingFields = requiredFields.filter(({ field }) => {
-        if (field === "streamId") {
-          return !newSubject.streamId;
-        }
-        return !newSubject[field as keyof NewSubject];
+        return !newSubject[field as keyof typeof newSubject];
       });
 
       if (missingFields.length > 0) {
@@ -984,7 +941,13 @@ export const CoursesAndSubjectPage: React.FC = () => {
             <CourseHeader 
               isAddDialogOpen={isAddCourseDialogOpen}
               setIsAddDialogOpen={setIsAddCourseDialogOpen}
-              newCourse={newCourse}
+              newCourse={{
+                ...newCourse,
+                shortName: newCourse.shortName || '',
+                codePrefix: newCourse.codePrefix || '',
+                universityCode: newCourse.universityCode || '',
+                degree: (newCourse.degree && 'level' in newCourse.degree) ? newCourse.degree : { id: 0, name: '', level: null, sequence: null, disabled: false, createdAt: new Date(), updatedAt: new Date() }
+              }}
               degreeOptions={degreeOptions}
               programmeOptions={programmeOptions}
               selectedDegreeId={selectedCoursesDegreeId}

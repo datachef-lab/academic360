@@ -67,24 +67,6 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
           </Badge>
         ),
       }),
-      columnHelper.accessor(row => row.stream?.degree?.name, {
-        id: 'degree',
-        header: 'Degree',
-        cell: info => (
-          <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-            {info.getValue() || 'N/A'}
-          </Badge>
-        ),
-      }),
-      columnHelper.accessor(row => row.stream?.degreeProgramme, {
-        id: 'programme',
-        header: 'Programme',
-        cell: info => (
-          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
-            {info.getValue() || 'N/A'}
-          </Badge>
-        ),
-      }),
       ...(canEdit || canDelete ? [
         columnHelper.display({
           id: 'actions',

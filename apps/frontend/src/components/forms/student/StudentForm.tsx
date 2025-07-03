@@ -90,8 +90,9 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
 
   const createNationality = (name: string): Nationality => ({
     name,
-    sequence: null,
     code: null,
+    sequence: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -99,6 +100,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
   const createReligion = (name: string): Religion => ({
     name,
     sequence: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -107,12 +109,16 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
     name,
     code: null,
     documentRequired: false,
+    sequence: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
 
   const createLanguageMedium = (name: string): LanguageMedium => ({
     name,
+    sequence: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -155,7 +161,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.community || undefined}
-                onValueChange={(value: Community) => setStudentData({ ...studentData, community: value })}
+                onValueChange={(value) => setStudentData({ ...studentData, community: value as Community })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select community" />
@@ -178,7 +184,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.level || undefined}
-                onValueChange={(value: Level) => setStudentData({ ...studentData, level: value })}
+                onValueChange={(value) => setStudentData({ ...studentData, level: value as Level })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select level" />
@@ -201,7 +207,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.framework || undefined}
-                onValueChange={(value: Framework) => setStudentData({ ...studentData, framework: value })}
+                onValueChange={(value) => setStudentData({ ...studentData, framework: value as Framework })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select framework" />
@@ -224,7 +230,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={studentData.shift || undefined}
-                onValueChange={(value: Shift) => setStudentData({ ...studentData, shift: value })}
+                onValueChange={(value) => setStudentData({ ...studentData, shift: value as Shift })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select shift" />
@@ -340,7 +346,7 @@ export default function StudentForm({ onSubmit, initialData = {} }: StudentFormP
             <div className="relative">
               <Select
                 value={personalDetails.gender || undefined}
-                onValueChange={(value: Gender) => setPersonalDetails({ ...personalDetails, gender: value })}
+                onValueChange={(value) => setPersonalDetails({ ...personalDetails, gender: value as Gender })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select gender" />

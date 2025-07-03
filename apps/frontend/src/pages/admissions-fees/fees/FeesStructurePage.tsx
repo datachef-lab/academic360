@@ -15,7 +15,8 @@ import {
 import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 // import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/academics/course";
-import { FeesStructureDto, AcademicYear, FeesSlabMapping, FeesSlab } from "@/types/fees";
+import { FeesStructureDto, FeesSlabMapping, FeesSlab } from "@/types/fees";
+import {AcademicYear} from "@/types/academics/academic-year"
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
 import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
 import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
@@ -24,143 +25,12 @@ import { useShifts } from "@/hooks/useShifts";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Shift } from "@/types/academics/shift";
 import { FeesReceiptType } from "@/types/fees";
-// import { SlabCreation } from "../../components/fees/fee-structure-form/steps/SlabCreation";
-
-// interface SlabManagementProps {
-//   showModal: boolean;
-//   setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
-//   feesSlabMappings: FeesSlabMapping[];
-//   setFeesSlabMappings: React.Dispatch<React.SetStateAction<FeesSlabMapping[]>>;
-//   allSlabs: FeesSlab[];
-// }
-
-// const SlabManagement: React.FC<SlabManagementProps & { onEdit: (slabMapping: FeesSlabMapping) => void }> = ({  feesSlabMappings, allSlabs, onEdit }) => {
-//   // No local data state, use props
-
-//   // Helper to get slab details
-//   const getSlabDetails = (feesSlabId: number) => allSlabs.find(slab => slab.id === feesSlabId);
-
-//   // Table rendering
-//   return (
-//     <div>
-//       <div className="bg-white rounded-lg shadow-sm p-3 mb-4 border border-gray-200">
-//         <div className="flex flex-col gap-3">
-//           <div className="flex flex-wrap gap-2">
-//             {/* ...filters and export buttons if needed... */}
-//           </div>
-//         </div>
-//       </div>
-//       <div className="bg-white rounded-lg shadow-sm overflow-hidden border border-gray-200">
-//         <table className="min-w-full divide-y divide-gray-200">
-//           <thead className="bg-gray-50">
-//             <tr>
-//               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</th>
-//               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Name</th>
-//               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
-//               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Concession Rate (%)</th>
-//               <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</th>
-//             </tr>
-//           </thead>
-//           <tbody className="bg-white divide-y divide-gray-200">
-//             {feesSlabMappings.map((mapping, idx) => {
-//               const slab = getSlabDetails(mapping.feesSlabId);
-//               return (
-//                 <tr key={mapping.id || mapping.feesSlabId}>
-//                   <td className="px-4 py-3">{idx + 1}</td>
-//                   <td className="px-4 py-3">{slab?.name || '-'}</td>
-//                   <td className="px-4 py-3">{slab && 'disabled' in slab && typeof (slab as Record<string, unknown>).disabled === 'boolean' ? ((slab as Record<string, boolean>).disabled ? 'Disabled' : 'Enabled') : 'Enabled'}</td>
-//                   <td className="px-4 py-3">{mapping.feeConcessionRate}%</td>
-//                   <td className="px-4 py-3">
-//                     <button className="text-purple-600 hover:text-purple-800 mr-2" onClick={() => onEdit(mapping)}>
-//                       Edit
-//                     </button>
-//                   </td>
-//                 </tr>
-//               );
-//             })}
-//           </tbody>
-//         </table>
-//       </div>
-//     </div>
-//   );
-// };
-
-// interface SlabFormProps {
-//   allSlabs: FeesSlab[];
-//   initialData: FeesSlabMapping | null;
-//   academicYearId: number | undefined;
-//   onSubmit: (slabMapping: FeesSlabMapping) => Promise<void>;
-//   onClose: () => void;
-//   editMode: boolean;
-// }
-
-// const SlabForm: React.FC<SlabFormProps> = ({ allSlabs, initialData, academicYearId, onSubmit, onClose, editMode }) => {
-//   const [feesSlabId, setFeesSlabId] = useState<number | ''>(initialData?.feesSlabId || '');
-//   const [feeConcessionRate, setFeeConcessionRate] = useState<number>(initialData?.feeConcessionRate || 0);
-//   const [loading, setLoading] = useState(false);
-
-//   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-//     e.preventDefault();
-//     if (!feesSlabId || !academicYearId) return;
-//     setLoading(true);
-//     await onSubmit({
-//       ...(initialData?.id ? { id: initialData.id } : {}),
-//       feesSlabId: Number(feesSlabId),
-//       feesStructureId: 0, // Placeholder, update as needed
-//       feeConcessionRate: Number(feeConcessionRate),
-//     } as FeesSlabMapping);
-//     setLoading(false);
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit} className="space-y-4">
-//       <div>
-//         <label className="block text-sm font-medium text-gray-700 mb-1">Slab Name</label>
-//         <select
-//           value={feesSlabId}
-//           onChange={e => setFeesSlabId(Number(e.target.value))}
-//           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-//           disabled={editMode}
-//         >
-//           <option value="">Select Slab</option>
-//           {allSlabs.map((slab: FeesSlab) => (
-//             <option key={slab.id} value={slab.id}>{slab.name}</option>
-//           ))}
-//         </select>
-//             </div>
-//       <div>
-//         <label className="block text-sm font-medium text-gray-700 mb-1">Fee Concession Rate (%)</label>
-//               <input
-//           type="number"
-//           min={0}
-//           max={100}
-//           value={feeConcessionRate}
-//           onChange={e => setFeeConcessionRate(Number(e.target.value))}
-//           className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-//               />
-//             </div>
-//       <div className="flex gap-2 mt-4">
-//         <button
-//           type="submit"
-//           disabled={loading || !feesSlabId}
-//           className="flex-1 py-2 px-3 bg-purple-600 text-white text-sm rounded hover:bg-purple-700 transition-colors font-medium disabled:opacity-50"
-//         >
-//           {editMode ? 'Update Slab' : 'Create Slab'}
-//         </button>
-//         <button
-//           type="button"
-//           onClick={onClose}
-//           className="flex-1 py-2 px-3 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200 transition-colors font-medium"
-//         >
-//               Cancel
-//         </button>
-//     </div>
-//     </form>
-//   );
-// };
+import { Class } from "@/types/academics/class";
+import { getAllClasses } from "@/services/classes.service";
 
 const FeesStructurePage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
+  const setClasses = useState<Class[]>([])[1];
   const [showFeeStructureForm, setShowFeeStructureForm] = useState(false);
   const [showSlabModal, setShowSlabModal] = useState(false);
   const [modalFieldsDisabled, setModalFieldsDisabled] = useState(false);
@@ -191,20 +61,21 @@ const FeesStructurePage: React.FC = () => {
   const { academicYears, loading: academicYearsLoading } = useAcademicYearsFromFeesStructures();
   const { courses: coursesForSelectedYear } = useCoursesFromFeesStructures(selectedAcademicYear?.id ?? null);
 
-  // Select most recent academic year and first course by default
+  // Add state for selected class
+  const setSelectedClass = useState<Class | null>(null)[1];
+
+  // When academic year or course changes, reset selected class
   useEffect(() => {
-    if (academicYears.length > 0 && !selectedAcademicYear) {
-      setSelectedAcademicYear(academicYears[0]);
-    }
-  }, [academicYears, selectedAcademicYear]);
+    setSelectedClass(null);
+  }, [selectedAcademicYear, selectedCourse]);
+
+  // Optionally, filter classes by course/academic year if needed
+  // For now, use all classes
 
   useEffect(() => {
-    if (coursesForSelectedYear.length > 0 && !selectedCourse) {
-      setSelectedCourse(coursesForSelectedYear[0]);
-    } else if (coursesForSelectedYear.length === 0) {
-      setSelectedCourse(null);
-    }
-  }, [coursesForSelectedYear, selectedCourse]);
+    getAllClasses()
+      .then(data => setClasses(data));
+  }, [])
 
   useEffect(() => {
     const checkSlabsExist = async () => {
@@ -319,7 +190,7 @@ const FeesStructurePage: React.FC = () => {
           (fs) =>
             fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
             fs.course?.id === givenFeesStructure.course?.id &&
-            fs.semester === givenFeesStructure.semester &&
+            fs.class.id === givenFeesStructure.class.id &&
             fs.shift?.id === givenFeesStructure.shift?.id &&
             fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId,
         );
@@ -466,51 +337,22 @@ const FeesStructurePage: React.FC = () => {
     }
   }, [selectedAcademicYear, selectedCourse]);
 
-  // Slab modal handlers
-  // const openCreateSlabModal = () => {
-  //   setEditingSlabMapping(null);
-  //   setSlabEditMode(false);
-  //   setShowSlabModal(true);
-  // };
-  // const openEditSlabModal = (slabMapping: FeesSlabMapping) => {
-  //   setEditingSlabMapping(slabMapping);
-  //   setSlabEditMode(true);
-  //   setShowSlabModal(true);
-  // };
   const handleSlabModalClose = () => {
     setShowSlabModal(false);
     setEditingSlabMapping(null);
     setSlabEditMode(false);
   };
-  // Slab create/update submit
-  // const handleSlabSubmit = async (slabMapping: FeesSlabMapping) => {
-  //   try {
-  //     if (slabEditMode && slabMapping.id) {
-  //       // Update
-  //       await axiosInstance.put(`/api/v1/fees/slab-year-mappings/${slabMapping.id}`, slabMapping);
-  //       toast.success("Slab updated successfully");
-  //     } else {
-  //       // Create
-  //       await axiosInstance.post(`/api/v1/fees/slab-year-mappings`, slabMapping);
-  //       toast.success("Slab created successfully");
-  //     }
-  //     await fetchSlabsYear();
-  //     handleSlabModalClose();
-  //   } catch  {
-  //     toast.error("Error saving slab");
-  //   }
-  // };
 
   const availableSlabsToCreate = allSlabs.filter(
     (slab) => !slabYearMappings.some((mapping) => mapping.feesSlabId === slab.id),
   );
   const isCreateSlabDisabled = availableSlabsToCreate.length === 0;
 
-  const toRoman = (num: number | null | undefined) => {
-    if (!num) return "";
-    const romans = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-    return romans[num - 1] || num;
-  };
+  // const toRoman = (num: number | null | undefined) => {
+  //   if (!num) return "";
+  //   const romans = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
+  //   return romans[num - 1] || num;
+  // };
 
   useEffect(() => {
     fetchAvailableCourses(selectedAcademicYear?.id, coursesForSelectedYear || [], setAvailableCourses);
@@ -553,7 +395,7 @@ const FeesStructurePage: React.FC = () => {
                 <SelectContent>
                   {academicYears.map((year) => (
                     <SelectItem key={year.id} value={String(year.id)}>
-                      {year.startYear}
+                      {year.year}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -580,95 +422,13 @@ const FeesStructurePage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-            {/* <button
-              onClick={handleCreate}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            >
-              <PlusCircle className="h-3.5 w-3.5" />
-              Create Structure
-            </button> */}
           </div>
         </div>
-        {/* <div className="flex gap-4 py-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Receipt Type</label>
-            <Select value={selectedReceiptType != null ? String(selectedReceiptType) : "all"} onValueChange={val => setSelectedReceiptType(val === "all" ? null : Number(val))}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {Array.from(new Set(filteredFeesStructures.map(fs => fs.feesReceiptTypeId)))
-                  .filter(id => id != null)
-                  .map(id => {
-                    const rt = feesReceiptTypes.find(rt => rt.id === id);
-                    return rt ? (
-                      <SelectItem key={rt.id} value={String(rt.id)}>{rt.name}</SelectItem>
-                    ) : null;
-                  })}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Shift</label>
-            <Select value={selectedShift != null ? String(selectedShift) : "all"} onValueChange={val => setSelectedShift(val === "all" ? null : Number(val))}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {Array.from(new Set(filteredFeesStructures.map(fs => fs.shift?.id)))
-                  .filter(id => id != null)
-                  .map(id => {
-                    const shift = shifts.find(s => s.id === id);
-                    return shift ? (
-                      <SelectItem key={shift.id} value={String(shift.id)}>{shift.name}</SelectItem>
-                    ) : null;
-                  })}
-              </SelectContent>
-            </Select>
-          </div>
-        </div> */}
       </div>
 
       <div className="border-b border-gray-200 flex items-center justify-between">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
           <div className="flex items-center gap-4 py-2">
-            {/* <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
-              <select
-                value={selectedAcademicYear?.id || ""}
-                onChange={e => {
-                  const year = academicYears.find(y => y.id === Number(e.target.value));
-                  setSelectedAcademicYear(year || null);
-                }}
-                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-              >
-                <option value="">Select Academic Year</option>
-                {academicYears.map(year => (
-                  <option key={year.id} value={year.id}>
-                    {year.startYear}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Course</label>
-              <select
-                value={selectedCourse?.id || ""}
-                onChange={e => {
-                  const course = coursesForSelectedYear.find(c => c.id === Number(e.target.value));
-                  setSelectedCourse(course || null);
-                }}
-                className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-purple-500"
-                disabled={!selectedAcademicYear}
-              >
-                <option value="">Select Course</option>
-                {coursesForSelectedYear.map(course => (
-                  <option key={course.id} value={course.id}>{course.name}</option>
-                ))}
-              </select>
-            </div> */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Receipt Type</label>
               <Select
@@ -766,14 +526,18 @@ const FeesStructurePage: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredFeesStructures
-                  .sort((a, b) => (a.semester ?? 0) - (b.semester ?? 0))
+                  .sort((a, b) => {
+                    if (!a.class?.name || !b.class?.name) return 0;
+                    const getNum = (name: string) => parseInt(name.replace(/[^0-9]/g, ''), 10) || 0;
+                    return getNum(a.class.name) - getNum(b.class.name);
+                  })
                   .map((fs) => {
-                    const sem = fs.semester;
-                    const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.amount || 0), 0);
+                    const className = fs.class?.name || '-';
+                    const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.baseAmount ?? 0), 0);
                     const numInstalments = fs.numberOfInstalments || 0;
                     return (
-                      <tr key={sem}>
-                        <td className="px-4 py-3 whitespace-nowrap border">Semester {toRoman(sem)}</td>
+                      <tr key={fs.class?.id || Math.random()}>
+                        <td className="px-4 py-3 whitespace-nowrap border">{className}</td>
                         <td className="px-4 py-3 whitespace-nowrap border font-bold bg-yellow-50 text-yellow-800">
                           ₹ {baseAmount.toLocaleString()}
                         </td>
@@ -783,7 +547,7 @@ const FeesStructurePage: React.FC = () => {
                           if (mapping) {
                             const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
                             const concession = concessionable.reduce(
-                              (sum, c) => sum + c.amount * (mapping.feeConcessionRate / 100),
+                              (sum, c) => sum + (c.baseAmount ?? 0) * (mapping.feeConcessionRate / 100),
                               0,
                             );
                             adjusted = baseAmount - concession;
@@ -822,18 +586,18 @@ const FeesStructurePage: React.FC = () => {
                   <td className="px-4 py-3 whitespace-nowrap border bg-yellow-200 text-yellow-900 text-lg">
                     ₹{" "}
                     {filteredFeesStructures
-                      .reduce((sum, fs) => sum + fs.components.reduce((s, c) => s + (c.amount || 0), 0), 0)
+                      .reduce((sum, fs) => sum + fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0), 0)
                       .toLocaleString()}
                   </td>
                   {allSlabs.map((slab) => {
                     const total = filteredFeesStructures.reduce((sum, fs) => {
-                      const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
+                      const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
                       const mapping = fs.feesSlabMappings?.find((m) => m.feesSlabId === slab.id);
                       let adjusted = baseAmount;
                       if (mapping) {
                         const concessionable = fs.components.filter((c) => c.isConcessionApplicable);
                         const concession = concessionable.reduce(
-                          (s, c) => s + c.amount * (mapping.feeConcessionRate / 100),
+                          (s, c) => s + (c.baseAmount ?? 0) * (mapping.feeConcessionRate / 100),
                           0,
                         );
                         adjusted = baseAmount - concession;
@@ -853,7 +617,7 @@ const FeesStructurePage: React.FC = () => {
                     ₹{" "}
                     {filteredFeesStructures
                       .reduce((sum, fs) => {
-                        const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
+                        const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
                         const numInstalments = fs.numberOfInstalments || 0;
                         return sum + (numInstalments >= 1 ? baseAmount / numInstalments : 0);
                       }, 0)
@@ -863,7 +627,7 @@ const FeesStructurePage: React.FC = () => {
                     ₹{" "}
                     {filteredFeesStructures
                       .reduce((sum, fs) => {
-                        const baseAmount = fs.components.reduce((s, c) => s + (c.amount || 0), 0);
+                        const baseAmount = fs.components.reduce((s, c) => s + (c.baseAmount ?? 0), 0);
                         const numInstalments = fs.numberOfInstalments || 0;
                         return sum + (numInstalments >= 2 ? baseAmount / numInstalments : 0);
                       }, 0)

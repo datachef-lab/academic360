@@ -5,6 +5,7 @@ import { DatePicker, Select, InputNumber } from "antd";
 import dayjs from "dayjs";
 import { Course } from "@/types/academics/course";
 import { Shift } from "@/types/academics/shift";
+import { Class as ClassType } from "@/types/academics/class";
 
 interface FeeConfigurationProps {
   feesStructure: FeesStructureDto;
@@ -14,6 +15,7 @@ interface FeeConfigurationProps {
   feesReceiptTypes: FeesReceiptType[];
   shifts: Shift[];
   existingFeeStructures?: FeesStructureDto[];
+  classes: ClassType[];
 }
 
 export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
@@ -24,6 +26,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   feesReceiptTypes,
   shifts,
   existingFeeStructures = [],
+  classes,
 }) => {
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
   const setEmptyRows = useState(0)[1];
@@ -35,7 +38,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     if (feesStructure.components.length === 0) {
       const defaultComponents: FeesComponent[] = Array.from({ length: 1 }, (_, i) => ({
         feesHeadId: 0,
-        amount: 0,
+        baseAmount: 0,
         sequence: i + 1,
         isConcessionApplicable: false,
         feesStructureId: feesStructure.id || 0,
@@ -67,41 +70,30 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
             fs.academicYear?.id === feesStructure.academicYear?.id &&
             fs.course?.id === feesStructure.course?.id,
         )
-        .map((fs) => ({ semester: fs.semester, shiftId: fs.shift?.id })),
+        .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id })),
     [existingFeeStructures, feesStructure.academicYear, feesStructure.course, feesStructure.id],
   );
 
-  const allSemesters = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
-
-  const availableSemesters = useMemo(
-    () =>
-      allSemesters.filter((sem) => {
-        const shiftsForSemester = existingCombinations.filter((c) => c.semester === sem).map((c) => c.shiftId);
-        return shiftsForSemester.length < shifts.length;
-      }),
-    [allSemesters, existingCombinations, shifts.length],
-  );
-
   const availableShifts = useMemo(() => {
-    if (!feesStructure.semester) {
+    if (!feesStructure.class?.id) {
       return shifts;
     }
     const takenShiftIds = existingCombinations
-      .filter((c) => c.semester === feesStructure.semester)
+      .filter((c) => c.classId === feesStructure.class.id)
       .map((c) => c.shiftId);
     return shifts.filter((shift) => !takenShiftIds.includes(shift.id));
-  }, [feesStructure.semester, shifts, existingCombinations]);
+  }, [feesStructure.class, shifts, existingCombinations]);
 
-  const handleSemesterChange = (value: number | null) => {
-    const takenShiftIdsForNewSemester = existingCombinations.filter((c) => c.semester === value).map((c) => c.shiftId);
-
-    const isCurrentShiftAvailableInNewSemester = !takenShiftIdsForNewSemester.includes(feesStructure.shift?.id);
-
-    setFeesStructure((prev) => ({
-      ...prev,
-      semester: value,
-      shift: isCurrentShiftAvailableInNewSemester ? prev.shift : null,
-    }));
+  const handleClassChange = (classId: number | null) => {
+    const takenShiftIdsForNewClass = existingCombinations.filter((c) => c.classId === classId).map((c) => c.shiftId);
+    const isCurrentShiftAvailableInNewClass = !takenShiftIdsForNewClass.includes(feesStructure.shift?.id);
+    if (classId) {
+      setFeesStructure((prev) => ({
+        ...prev,
+        class: classes.find((cls) => cls.id === classId)!,
+        shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
+      }));
+    }
   };
 
   const handleAddComponent = () => {
@@ -109,7 +101,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
       sequence: feesStructure.components.length + 1,
       isConcessionApplicable: false,
       feesHeadId: 0,
-      amount: 0,
+      baseAmount: 0,
       remarks: "",
       feesStructureId: feesStructure.id || 0,
     };
@@ -137,7 +129,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   };
 
   const MIN_ROWS = 8;
-  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.amount || 0), 0);
+  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.baseAmount || 0), 0);
 
   useEffect(() => {
     const tableBody = document.querySelector(".table-body-fee-config");
@@ -172,16 +164,16 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
               <Select
                 className="w-32"
-                placeholder="Select"
-                value={feesStructure.semester}
-                onChange={handleSemesterChange}
+                placeholder="Select Class"
+                value={feesStructure.class?.id}
+                onChange={handleClassChange}
               >
-                {availableSemesters.map((sem) => (
-                  <Select.Option key={sem} value={sem}>
-                    Sem {sem}
+                {classes.map((cls) => (
+                  <Select.Option key={cls.id} value={cls.id}>
+                    {cls.name}
                   </Select.Option>
                 ))}
               </Select>
@@ -193,7 +185,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 onChange={(value) => handleInputChange("shift", shifts.find((s) => s.id === value) || null)}
                 placeholder="Select Shift"
                 className="w-full"
-                disabled={!feesStructure.semester}
+                disabled={!feesStructure.class}
               >
                 {availableShifts.map((shift) => (
                   <Select.Option key={shift.id} value={shift.id!}>
@@ -275,26 +267,6 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 value={feesStructure.numberOfInstalments}
                 onChange={(value) => handleInputChange("numberOfInstalments", value)}
                 controls={false}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Installments Start</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.instalmentStartDate ? dayjs(feesStructure.instalmentStartDate) : null}
-                onChange={(date) => handleInputChange("instalmentStartDate", date ? date.toDate() : null)}
-                disabled={!feesStructure.numberOfInstalments}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Installments End</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.instalmentEndDate ? dayjs(feesStructure.instalmentEndDate) : null}
-                onChange={(date) => handleInputChange("instalmentEndDate", date ? date.toDate() : null)}
-                disabled={!feesStructure.numberOfInstalments}
-                disabledDate={disablePastDates}
               />
             </div>
           </div>
@@ -421,8 +393,8 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                     <span className="text-gray-900">₹</span>
                     <input
                       type="number"
-                      value={component.amount}
-                      onChange={(e) => handleComponentChange(index, "amount", Number(e.target.value))}
+                      value={component.baseAmount}
+                      onChange={(e) => handleComponentChange(index, "baseAmount", Number(e.target.value))}
                       className="w-24 ml-1 bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black"
                     />
                   </td>

@@ -6,12 +6,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { NewCourse } from '@/services/course-api';
-
-interface DegreeOption {
-  id: number;
-  name: string;
-}
+import { Degree } from '@/types/resources/degree';
+// import { Degree } from '@/types/resources/degree';
 
 interface ProgrammeOption {
   id: number;
@@ -22,8 +18,15 @@ interface ProgrammeOption {
 interface CourseHeaderProps {
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: (open: boolean) => void;
-  newCourse: NewCourse;
-  degreeOptions: DegreeOption[];
+  newCourse: {
+    name: string;
+    shortName: string;
+    codePrefix: string;
+    universityCode: string;
+    degree: Degree; // Not used directly, but kept for compatibility
+    streamId?: number;
+  };
+  degreeOptions: { id: number; name: string }[];
   programmeOptions: ProgrammeOption[];
   selectedDegreeId: number;
   isSubmitting: boolean;
@@ -139,8 +142,8 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                   <SelectValue placeholder="Select degree" />
                 </SelectTrigger>
                 <SelectContent>
-                  {degreeOptions.map((degree) => (
-                    <SelectItem key={degree.id} value={degree.id.toString()}>
+                  {degreeOptions.filter((degree) => degree.id !== undefined).map((degree) => (
+                    <SelectItem key={degree.id} value={degree.id?.toString()}>
                       {degree.name}
                     </SelectItem>
                   ))}

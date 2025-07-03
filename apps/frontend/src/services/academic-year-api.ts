@@ -1,5 +1,5 @@
 import axiosInstance from "@/utils/api";
-import { AcademicYear } from "@/types/fees";
+import { AcademicYear } from "@/types/academics/academic-year";
 import { ApiResonse } from "@/types/api-response";
 
 // Get all academic years

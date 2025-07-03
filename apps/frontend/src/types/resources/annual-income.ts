@@ -1,8 +1,8 @@
 export interface AnnualIncome {
     readonly id?: number;
     range: string;
-    sequence: number;
-    disabled: boolean;
+    sequence: number  | null;
+    disabled?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

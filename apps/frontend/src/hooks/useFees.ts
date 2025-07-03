@@ -49,8 +49,9 @@ import {
   AddOn,
   StudentFeesMapping,
   FeesSlabMapping,
-  AcademicYear,
+  
 } from '@/types/fees';
+import {AcademicYear } from "@/types/academics/academic-year"
 import { Course } from '@/types/academics/course';
 import {
   getFeesStructures,

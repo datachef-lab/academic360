@@ -4,13 +4,18 @@ import { SlabCreation } from "./steps/SlabCreation";
 import { FeeConfiguration } from "./steps/FeeConfiguration";
 import { PreviewSimulation } from "./steps/PreviewSimulation";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import { FeesStructureDto, AcademicYear } from "../../../types/fees";
+import { 
+  // CreateFeesStructureDto,
+   FeesStructureDto,  } from "../../../types/fees";
+import {AcademicYear} from "@/types/academics/academic-year"
 import { Course } from "../../../types/academics/course";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useFeesSlabs, useFeesHeads, useFeesReceiptTypes } from "@/hooks/useFees";
 import { useShifts } from "@/hooks/useShifts";
 import { getAllCourses } from "@/services/course-api";
 import { checkFeesStructureExists } from '@/services/fees-api';
+import { getAllClasses } from "@/services/classes.service";
+import { Class } from "@/types/academics/class";
 // import axiosInstance from "@/utils/api";
 // import { Shift } from "@/types/resources/shift";
 
@@ -76,18 +81,17 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const [formFeesStructure, setFormFeesStructure] = useState<FeesStructureDto>(
     feesStructure || {
       closingDate: new Date(),
-      class: null,
+      class: { id: 0, name: '', type: 'SEMESTER', sequence: 1, disabled: false }, // fallback minimal Class
       advanceForSemester: null,
       startDate: new Date(),
       endDate: new Date(),
       onlineStartDate: new Date(),
       onlineEndDate: new Date(),
       numberOfInstalments: null,
-      instalmentStartDate: null,
-      instalmentEndDate: null,
+      instalments: [],
       feesReceiptTypeId: null,
       academicYear: undefined,
-      course: undefined,
+      course: { id: 0, degree: null, name: '', shortName: '', codePrefix: '', universityCode: '' }, // fallback minimal Course
       advanceForCourse: null,
       components: [],
       shift: null,
@@ -96,6 +100,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   );
   // const [feesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>(feesStructure?.feesSlabMappings!);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [error, setError] = useState<string | null>(null);
   // const [slabs, setSlabs] = useState<FeesSlab[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -120,6 +125,10 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         setCourses(res.payload);
       }
     });
+  }, []);
+
+  useEffect(() => {
+    getAllClasses().then((data) => setClasses(data));
   }, []);
 
   useEffect(() => {
@@ -159,7 +168,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
     }
     if (currentStep === 3) {
       if (!formFeesStructure.class) {
-        setError("Please select a semester.");
+        setError("Please select a class.");
         return false;
       }
       if (!formFeesStructure.shift) {
@@ -174,7 +183,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         setError("Please add at least one fee component.");
         return false;
       }
-      if (formFeesStructure.components.some((c) => !c.feesHeadId || c.amount === undefined)) {
+      if (formFeesStructure.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)) {
         setError("All fee components must have a fee head and amount.");
         return false;
       }
@@ -208,7 +217,6 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         const checkPayload = {
           academicYearId: formFeesStructure.academicYear?.id,
           courseId: formFeesStructure.course?.id,
-          semester: formFeesStructure.semester,
           shiftId: formFeesStructure.shift?.id,
           feesReceiptTypeId: formFeesStructure.feesReceiptTypeId,
         };
@@ -232,7 +240,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const currentStepData = steps.find((s) => s.number === currentStep)!;
 
   const isFeeConfigNextDisabled = currentStep === 3 && (
-    !formFeesStructure.semester ||
+    !formFeesStructure.class ||
     !formFeesStructure.shift ||
     !formFeesStructure.feesReceiptTypeId ||
     !formFeesStructure.components.length ||
@@ -309,6 +317,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
               feesReceiptTypes={feesReceiptTypes}
               shifts={shifts}
               existingFeeStructures={existingFeeStructures}
+              classes={classes}
             />
           )}
           {currentStep === 4 && (

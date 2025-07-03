@@ -6,7 +6,7 @@ export interface Institution {
     name: string;
     degree: Degree | null;
     address: Address | null;
-    sequence: number;
+    sequence: number | null;
     disabled: boolean;
     createdAt: Date;
     updatedAt: Date;

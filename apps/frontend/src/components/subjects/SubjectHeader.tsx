@@ -4,7 +4,17 @@ import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SubjectForm from './SubjectForm';
-import { SubjectTypeOption, DegreeOption, ProgrammeOption, NewSubject } from '../types/subject-types';
+import { NewSubject, ProgrammeOption } from '../types/subject-types';
+
+interface SubjectTypeOption {
+  id: number;
+  marksheetName: string;
+}
+
+interface DegreeOption {
+  id: number;
+  name: string;
+}
 
 interface SubjectHeaderProps {
   isAddDialogOpen: boolean;

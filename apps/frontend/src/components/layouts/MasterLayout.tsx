@@ -3,6 +3,7 @@ import { LucideProps } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { SearchStudentModal } from "../globals/SearchStudentModal";
+import styles from "./MasterLayout.module.css";
 
 type MasterLayoutProps = {
   children: React.ReactNode;
@@ -24,8 +25,8 @@ export default function MasterLayout({ children, subLinks }: MasterLayoutProps) 
 
   return (
     <>
-      <div className="h-full w-full flex">
-        <div className="w-[80%] h-full">{children}</div>
+      <div className={`h-full w-full flex `}>
+        <div className={`w-[80%] h-full ${styles["shared-area"]}`}>{children}</div>
         <div className="w-[20%] border-l h-full ">
           <ul className="space-y-2">
             {subLinks.map((link) => {

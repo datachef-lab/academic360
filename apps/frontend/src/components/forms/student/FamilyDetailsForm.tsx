@@ -29,6 +29,8 @@ const createPerson = (data: Partial<Person>): Person => ({
 
 const createAnnualIncome = (range: string): AnnualIncome => ({
   range,
+  disabled: false,
+  sequence: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 });
@@ -58,6 +60,8 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
 
   const createOccupation = (name: string): Occupation => ({
     name,
+    disabled: false,
+    sequence: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

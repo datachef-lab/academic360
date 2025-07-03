@@ -2,13 +2,7 @@ import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import { Course } from '@/types/academics/course';
 
-export interface NewCourse {
-    name: string;
-    streamId?: number;
-    shortName?: string;
-    codePrefix?: string;
-    universityCode?: string;
-}
+
 
 // Get all courses
 export async function getAllCourses(): Promise<ApiResonse<Course[]>> {
@@ -23,7 +17,7 @@ export async function getCourse(courseId: number): Promise<ApiResonse<Course>> {
 }
 
 // Add a new course
-export async function addCourse(newCourse: NewCourse): Promise<ApiResonse<Course>> {
+export async function addCourse(newCourse: Course): Promise<ApiResonse<Course>> {
     const response = await axiosInstance.post(`/api/v1/courses`, newCourse);
     return response.data;
 }
@@ -35,7 +29,7 @@ export async function deleteCourse(courseId: number): Promise<ApiResonse<void>> 
 }
 
 // Update a course
-export async function updateCourse(courseId: number, course: Partial<NewCourse>): Promise<ApiResonse<Course>> {
+export async function updateCourse(courseId: number, course: Partial<Course>): Promise<ApiResonse<Course>> {
     const response = await axiosInstance.put(`/api/v1/courses/${courseId}`, course);
     return response.data;
 } 

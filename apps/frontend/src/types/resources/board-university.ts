@@ -8,7 +8,7 @@ export interface BoardUniversity {
     code: string | null;
     address: Address | null;
     sequence: number;
-    disabled: boolean;
+    disabled?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

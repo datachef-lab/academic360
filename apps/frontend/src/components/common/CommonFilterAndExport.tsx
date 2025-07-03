@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,7 +13,7 @@ import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download } from
 
 // import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
-import { getAllStreams } from "@/services/stream";
+
 import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
 
 import { motion } from "framer-motion";
@@ -22,6 +22,9 @@ import { useMarksheetStore } from "@/components/globals/useMarksheetStore";
 
 import { getAllMarksheet } from "@/services/student-apis";
 import { toast } from "sonner";
+import { getAllClasses } from "@/services/classes.service";
+import { Degree } from "@/types/resources/degree";
+import { findAllDegrees } from "@/services/degree.service";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 // type Framework = "CCF" | "CBCS";
@@ -32,8 +35,13 @@ const FilterAndExportComponent: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ["streams"],
-    queryFn: getAllStreams,
+    queryKey: ["classes"],
+    queryFn: getAllClasses,
+  });
+
+  const { data: degrees } = useQuery({
+    queryKey: ["degrees"],
+    queryFn: findAllDegrees,
   });
 
   const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
@@ -48,17 +56,6 @@ const FilterAndExportComponent: React.FC = () => {
       }),
     enabled: false, // Do not auto-fetch
   });
-
-  const streamMemo = useMemo(() => {
-    if (!data) return [];
-    const streamMap = new Map();
-    data.forEach((item: Stream) => {
-      if (item.degree) {
-        streamMap.set(item.degree.id, { id: item.degree.id, name: item.degree.name });
-      }
-    });
-    return [...streamMap.values()];
-  }, [data]);
 
   const handleApplyFilters = () => {
     setFilters({
@@ -165,10 +162,10 @@ const FilterAndExportComponent: React.FC = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
-              {streamMemo.map((option) => (
+              {degrees && degrees.map((option) => (
                 <DropdownMenuItem
                   key={option.id}
-                  onClick={() => handleStreamSelect(option as Stream)}
+                  onClick={() => handleStreamSelect(option as Degree)}
                   className="hover:bg-slate-100"
                 >
                   {option.name}

@@ -1,3 +1,4 @@
+import { Course } from "../academics/course";
 import { Framework } from "../enums";
 
 export interface AcademicIdentifier {
@@ -5,6 +6,7 @@ export interface AcademicIdentifier {
     studentId: number,
     frameworkType: Framework | null,
     rfid: string | null,
+    course: Course | null;
     // stream: Stream | null,
     // programmeType: ProgrammeType | null,
     cuFormNumber: string | null,
