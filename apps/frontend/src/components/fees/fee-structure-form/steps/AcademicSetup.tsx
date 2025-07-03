@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Select } from 'antd';
 import { FeesStructureDto } from '@/types/fees';
 import { Course } from '@/types/academics/course';
-import { AcademicYear } from '@/types/fees/index';
+import  { AcademicYear} from '@/types/academics/academic-year';
 
 interface AcademicSetupProps {
   feesStructure: FeesStructureDto;
@@ -47,7 +47,7 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = ({
           >
             {academicYears.map(ay => (
               <Select.Option key={ay.id} value={ay.id!}>
-                {`${new Date(ay.startYear).getFullYear()}`}
+                {`${new Date(ay.year).getFullYear()}`}
               </Select.Option>
             ))}
           </Select>

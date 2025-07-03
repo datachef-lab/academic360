@@ -57,13 +57,28 @@ export interface FeesComponent {
     feesStructureId: number;
     feesHeadId: number;
     isConcessionApplicable: boolean;
-    amount: number,
+    baseAmount: number,
     // concessionAmount: doublePrecision().notNull().default(0),
     sequence: number,
     remarks: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
+
+export interface Instalment {
+    readonly id?: number;
+    feesStructureId: number;
+    instalmentNumber: number;
+    baseAmount: number;
+    startDate: Date;
+    endDate: Date;
+    onlineStartDate: Date;
+    onlineEndDate: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export type CreateFeesStructureDto = Omit<FeesStructureDto, 'course'> & { courses: Course[] };
 
 export interface FeesStructureDto {
     readonly id?: number;
@@ -75,17 +90,18 @@ export interface FeesStructureDto {
     onlineStartDate: Date | null;
     onlineEndDate: Date | null;
     numberOfInstalments: number | null;
-    instalmentStartDate: Date | null;
-    instalmentEndDate: Date | null;
+    
+    
     feesReceiptTypeId: number | null;
     shift?: Shift | null;
     createdAt?: Date;
     updatedAt?: Date;
     academicYear?: AcademicYear;
-    course?: Course;
+    course: Course;
     advanceForCourse?: Course | null;
     components: FeesComponent[];
     feesSlabMappings: FeesSlabMapping[];
+    instalments: Instalment[];
 }
 
 export interface FeesDesignAbstractLevel {

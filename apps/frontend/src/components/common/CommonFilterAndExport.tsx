@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 
 import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download } from "lucide-react";
 
-import { Stream } from "@/types/academics/stream";
+// import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
 import { getAllStreams } from "@/services/stream";
 import { MarksheetTableType } from "@/types/tableTypes/MarksheetTableType";
