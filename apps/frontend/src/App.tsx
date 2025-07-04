@@ -1,15 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import {
-//   AddStudentPage,
-//   GetReportsPage,
-  HomePage,
-  LoginPage,
-//   MyWorkspacePage,
-  NotFoundPage,
-  SettingsPage,
-  UserProfilePage,
-} from "@/pages";
+import { HomePage, LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -84,8 +75,8 @@ const router = createBrowserRouter([
             path: "admissions",
             element: <Outlet />,
             children: [
-              { path: "", element: <div>Admissions</div> },
-              { path: "admissionId", element: <div>Admission Details</div> },
+              { path: "", element: <admissionFeesModule.AdmissionsPage /> },
+              { path: ":year", element: <admissionFeesModule.AdmissionDetailsPage /> },
             ],
           },
           {
