@@ -9,7 +9,7 @@ export const boardResultStatusModel = pgTable("board_result_status", {
     name: varchar({ length: 255 }).notNull(),
     spclType: varchar({ length: 255 }).notNull(),
     result: boardResultTypeEnum(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

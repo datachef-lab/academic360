@@ -5,7 +5,7 @@ import { z } from "zod";
 export const qualificationModel = pgTable("qualifications", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

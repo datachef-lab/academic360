@@ -9,6 +9,7 @@ import {
   FeesComponent,
   StudentFeesMapping,
   FeesSlabMapping,
+  CreateFeesStructureDto,
 } from "@/types/fees";
 
 const BASE_PATH = "/api/v1/fees";
@@ -47,7 +48,7 @@ export async function getFeesStructure(feesStructureId: number): Promise<ApiReso
 }
 
 // Create a new fees structure
-export async function createFeesStructure(newFeesStructure: FeesStructureDto): Promise<ApiResonse<FeesStructureDto>> {
+export async function createFeesStructure(newFeesStructure: CreateFeesStructureDto): Promise<ApiResonse<FeesStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
   return response.data;
 }

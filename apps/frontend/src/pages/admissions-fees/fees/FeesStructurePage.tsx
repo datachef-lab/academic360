@@ -15,7 +15,7 @@ import {
 import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 // import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/academics/course";
-import { FeesStructureDto, FeesSlabMapping, FeesSlab } from "@/types/fees";
+import { FeesStructureDto, FeesSlabMapping, FeesSlab, CreateFeesStructureDto } from "@/types/fees";
 import {AcademicYear} from "@/types/academics/academic-year"
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
 import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
@@ -181,7 +181,7 @@ const FeesStructurePage: React.FC = () => {
     setAvailableCourses(filtered);
   };
 
-  const handleFeeStructureSubmit = async (givenFeesStructure: FeesStructureDto) => {
+  const handleFeeStructureSubmit = async (givenFeesStructure: FeesStructureDto | CreateFeesStructureDto, formType: "ADD" | "EDIT") => {
     console.log("Fee Structure Form Data:", givenFeesStructure);
     try {
       // Duplicate check (for create only)

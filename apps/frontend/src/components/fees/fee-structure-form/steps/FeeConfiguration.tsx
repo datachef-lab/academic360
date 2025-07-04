@@ -1,37 +1,54 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType } from "@/types/fees";
+import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType, CreateFeesStructureDto } from "@/types/fees";
 import { DatePicker, Select, InputNumber } from "antd";
 import dayjs from "dayjs";
 import { Course } from "@/types/academics/course";
 import { Shift } from "@/types/academics/shift";
 import { Class as ClassType } from "@/types/academics/class";
 
-interface FeeConfigurationProps {
-  feesStructure: FeesStructureDto;
-  setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
-  feeHeads: FeesHead[];
-  courses: Course[];
-  feesReceiptTypes: FeesReceiptType[];
-  shifts: Shift[];
-  existingFeeStructures?: FeesStructureDto[];
-  classes: ClassType[];
-}
+type FeeConfigurationProps =
+  | {
+      formType: "add";
+      feesStructure: CreateFeesStructureDto;
+      setFeesStructure: React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>;
+      feeHeads: FeesHead[];
+      courses: Course[];
+      feesReceiptTypes: FeesReceiptType[];
+      shifts: Shift[];
+      existingFeeStructures?: FeesStructureDto[];
+      classes: ClassType[];
+    }
+  | {
+      formType: "edit";
+      feesStructure: FeesStructureDto;
+      setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
+      feeHeads: FeesHead[];
+      courses: Course[];
+      feesReceiptTypes: FeesReceiptType[];
+      shifts: Shift[];
+      existingFeeStructures?: FeesStructureDto[];
+      classes: ClassType[];
+    };
 
-export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
-  feesStructure,
-  setFeesStructure,
-  feeHeads,
-  courses,
-  feesReceiptTypes,
-  shifts,
-  existingFeeStructures = [],
-  classes,
-}) => {
+export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
+  const { formType, feesStructure, setFeesStructure, feeHeads, courses, feesReceiptTypes, shifts, existingFeeStructures = [], classes } = props;
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
   const setEmptyRows = useState(0)[1];
   const ROW_HEIGHT = 53; // Approximate height of a row in pixels
   // const MIN_ROWS = 8; // Set a minimum number of rows to display
+
+  // Helper type guards
+  const isAdd = formType === 'add';
+  const isEdit = formType === 'edit';
+
+  // Separate handlers for add/edit mode
+  const handleInputChangeAdd = (field: keyof CreateFeesStructureDto, value: unknown) => {
+    (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+  };
+  const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+  };
 
   useEffect(() => {
     // Add 1 default fee component if the list is empty
@@ -57,10 +74,6 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     }
   }, [feesStructure.components.length]);
 
-  const handleInputChange = (field: keyof FeesStructureDto, value: unknown) => {
-    setFeesStructure((prev) => ({ ...prev, [field]: value }));
-  };
-
   const existingCombinations = useMemo(
     () =>
       existingFeeStructures
@@ -84,18 +97,28 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     return shifts.filter((shift) => !takenShiftIds.includes(shift.id));
   }, [feesStructure.class, shifts, existingCombinations]);
 
+  // Use correct type for handleClassChange
   const handleClassChange = (classId: number | null) => {
-    const takenShiftIdsForNewClass = existingCombinations.filter((c) => c.classId === classId).map((c) => c.shiftId);
+    const takenShiftIdsForNewClass = existingFeeStructures.filter((c) => c.class?.id === classId).map((c) => c.shift?.id);
     const isCurrentShiftAvailableInNewClass = !takenShiftIdsForNewClass.includes(feesStructure.shift?.id);
     if (classId) {
-      setFeesStructure((prev) => ({
-        ...prev,
-        class: classes.find((cls) => cls.id === classId)!,
-        shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
-      }));
+      if (isAdd) {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
+          ...prev,
+          class: classes.find((cls) => cls.id === classId)!,
+          shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
+        }));
+      } else {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
+          ...prev,
+          class: classes.find((cls) => cls.id === classId)!,
+          shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
+        }));
+      }
     }
   };
 
+  // Use correct type for handleAddComponent
   const handleAddComponent = () => {
     const newComponent: FeesComponent = {
       sequence: feesStructure.components.length + 1,
@@ -105,19 +128,35 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
       remarks: "",
       feesStructureId: feesStructure.id || 0,
     };
-    setFeesStructure((prev: FeesStructureDto) => ({
-      ...prev,
-      components: [...prev.components, newComponent],
-    }));
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
+        ...prev,
+        components: [...prev.components, newComponent],
+      }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
+        ...prev,
+        components: [...prev.components, newComponent],
+      }));
+    }
   };
 
+  // Use correct type for handleRemoveComponent
   const handleRemoveComponent = (index: number) => {
-    setFeesStructure((prev: FeesStructureDto) => ({
-      ...prev,
-      components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
-    }));
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({
+        ...prev,
+        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+      }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
+        ...prev,
+        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+      }));
+    }
   };
 
+  // Use correct type for handleComponentChange
   const handleComponentChange = <K extends keyof Omit<FeesComponent, "id">>(
     index: number,
     field: K,
@@ -125,7 +164,11 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   ) => {
     const newComponents = [...feesStructure.components];
     newComponents[index][field] = value;
-    setFeesStructure({ ...feesStructure, components: newComponents });
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: newComponents }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: newComponents }));
+    }
   };
 
   const MIN_ROWS = 8;
@@ -153,15 +196,32 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">Closing Date</label>
               <DatePicker
                 value={feesStructure.closingDate ? dayjs(feesStructure.closingDate) : null}
-                onChange={(date) => handleInputChange("closingDate", date ? date.toDate() : null)}
+                onChange={(date) => isAdd ? handleInputChangeAdd('closingDate', date ? date.toDate() : null) : handleInputChangeEdit('closingDate', date ? date.toDate() : null)}
                 disabledDate={disablePastDates}
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-              <p className="w-48 px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">
-                {feesStructure.course?.name || "Not Selected"}
-              </p>
+              {isEdit && (
+                <p className="w-48 px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">
+                  {(feesStructure as FeesStructureDto).course?.name || "Not Selected"}
+                </p>
+              )}
+              {isAdd && (
+                <Select
+                  mode="multiple"
+                  className="w-48"
+                  placeholder="Select Courses"
+                  value={feesStructure.courses.map((c) => c.id)}
+                  onChange={(ids) => handleInputChangeAdd("courses", courses.filter((c) => ids.includes(c.id)))}
+                >
+                  {courses.map((course) => (
+                    <Select.Option key={course.id} value={course.id!}>
+                      {course.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
@@ -182,7 +242,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
               <Select
                 value={feesStructure.shift?.id}
-                onChange={(value) => handleInputChange("shift", shifts.find((s) => s.id === value) || null)}
+                onChange={(value) => handleInputChangeEdit("shift", shifts.find((s) => s.id === value) || null)}
                 placeholder="Select Shift"
                 className="w-full"
                 disabled={!feesStructure.class}
@@ -205,7 +265,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                   placeholder="Adv. Course"
                   value={feesStructure.advanceForCourse?.id}
                   onChange={(value) =>
-                    handleInputChange("advanceForCourse", value ? courses.find((c) => c.id === value) : null)
+                    handleInputChangeAdd("advanceForCourse", value ? courses.find((c) => c.id === value) : null)
                   }
                   allowClear
                 >
@@ -219,7 +279,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                   className="w-32"
                   placeholder="Adv. Semester"
                   value={feesStructure.advanceForSemester}
-                  onChange={(value) => handleInputChange("advanceForSemester", value)}
+                  onChange={(value) => handleInputChangeAdd("advanceForSemester", value)}
                   allowClear
                 >
                   {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
@@ -241,7 +301,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <DatePicker
                 className="w-full"
                 value={feesStructure.startDate ? dayjs(feesStructure.startDate) : null}
-                onChange={(date) => handleInputChange("startDate", date ? date.toDate() : null)}
+                onChange={(date) => handleInputChangeAdd("startDate", date ? date.toDate() : null)}
                 disabledDate={disablePastDates}
               />
             </div>
@@ -250,7 +310,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <DatePicker
                 className="w-full"
                 value={feesStructure.endDate ? dayjs(feesStructure.endDate) : null}
-                onChange={(date) => handleInputChange("endDate", date ? date.toDate() : null)}
+                onChange={(date) => handleInputChangeAdd("endDate", date ? date.toDate() : null)}
                 disabledDate={disablePastDates}
               />
             </div>
@@ -265,7 +325,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 min={1}
                 max={12}
                 value={feesStructure.numberOfInstalments}
-                onChange={(value) => handleInputChange("numberOfInstalments", value)}
+                onChange={(value) => handleInputChangeAdd("numberOfInstalments", value)}
                 controls={false}
               />
             </div>
@@ -277,7 +337,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <DatePicker
                 className="w-full"
                 value={feesStructure.onlineStartDate ? dayjs(feesStructure.onlineStartDate) : null}
-                onChange={(date) => handleInputChange("onlineStartDate", date ? date.toDate() : null)}
+                onChange={(date) => handleInputChangeAdd("onlineStartDate", date ? date.toDate() : null)}
                 disabledDate={disablePastDates}
               />
             </div>
@@ -286,7 +346,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
               <DatePicker
                 className="w-full"
                 value={feesStructure.onlineEndDate ? dayjs(feesStructure.onlineEndDate) : null}
-                onChange={(date) => handleInputChange("onlineEndDate", date ? date.toDate() : null)}
+                onChange={(date) => handleInputChangeAdd("onlineEndDate", date ? date.toDate() : null)}
                 disabledDate={disablePastDates}
               />
             </div>
@@ -305,7 +365,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-48"
                 placeholder="Select"
                 value={feesStructure.feesReceiptTypeId}
-                onChange={(value) => handleInputChange("feesReceiptTypeId", value)}
+                onChange={(value) => handleInputChangeEdit("feesReceiptTypeId", value)}
               >
                 {feesReceiptTypes.map((type) => (
                   <Select.Option key={type.id} value={type.id!}>

@@ -915,7 +915,7 @@ export async function findBatchDetailsById(id: number): Promise<BatchDetails | n
                     degree: degree || { name: '' },
                     class: cls || { name: '' },
                     specialization: specialization || null,
-                    subjectType: subjectType || { id: 0, irpName: '', irpShortName: '', marksheetName: '', marksheetShortName: '', sequene: null, disabled: null, createdAt: new Date(), updatedAt: new Date() },
+                    subjectType: subjectType || { id: 0, irpName: '', irpShortName: '', marksheetName: '', marksheetShortName: '', sequence: null, disabled: null, createdAt: new Date(), updatedAt: new Date() },
                 });
             }
         }

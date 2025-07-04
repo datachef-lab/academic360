@@ -7,7 +7,7 @@ export const degreeModel = pgTable("degree", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     level: degreeLevelTypeEnum(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

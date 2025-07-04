@@ -6,7 +6,7 @@ import { z } from "zod";
 export const annualIncomeModel = pgTable("annual_incomes", {
     id: serial().primaryKey(),
     range: varchar({ length: 255 }).notNull(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
