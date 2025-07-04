@@ -17,11 +17,16 @@ export interface BatchType extends Omit<Batch, "courseId" | "classId" | "section
     session: Session | null;
 }
 
+export type StudentStatus = "ACTIVE" | "DROPPED_OUT" | "SUSPENDED"  | "PENDING_CLEARANCE" | "ALUMNI";
+
 export interface StudentBatchEntry {
     studentId: number;
+    studentName: string;
+    roll: string | null;
+    registrationNumber: string | null;
     uid: string;
     subjects: SubjectMetadataType[];
-    status: string;
+    status: StudentStatus;
 }
 
 export interface BatchDetails extends BatchType  {

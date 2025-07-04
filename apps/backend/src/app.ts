@@ -84,6 +84,7 @@ import {
   academicSubjectRouter,
 } from "@/features/admissions/index.js";
 import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
+import { sectionRoutes } from "@/features/academics/routes/index.js";
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -196,7 +197,7 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 
 app.use("/auth", authRouter);
 
-app.use("/api/batches/old-data", batchRouter);
+app.use("/api/batches", batchRouter);
 
 app.use("/api/batch-papers/old-data", batchPaperRouter);
 
@@ -297,6 +298,8 @@ app.use("/admissions/student-academic-subject", studentAcademicSubjectRouter);
 app.use("/admissions/academic-subject", academicSubjectRouter);
 
 app.use("/api/study-materials", studyMaterialRouter);
+
+app.use("/api/v1/sections", sectionRoutes);
 
 app.use(errorHandler);
 

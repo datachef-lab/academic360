@@ -10,74 +10,70 @@ import { motion } from "framer-motion";
 import { CalendarDays } from "lucide-react";
 import type { Row } from "@tanstack/react-table";
 import type { QueryObserverResult } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { getAllBatches } from "@/services/batch";
+import { BatchSummary } from "@/types/academics/batch";
+import { getAllAcademicYears } from "@/services/academic-year-api";
+import { getAllCourses } from "@/services/course-api";
+import { getAllShifts, getAllSections } from "@/services/academic";
+import { AcademicYear } from "@/types/academics/academic-year";
+import { Course } from "@/types/academics/course";
+import { Shift } from "@/types/academics/shift";
+import { Section } from "@/types/academics/section";
 
-type Batch = {
-  id: string;
-  name: string;
-  course: string;
-  section: string;
-  session: string;
-  shift: string;
-  totalStudents: number;
-};
-
-const mockBatches: Batch[] = [
-  { id: "batch-1", name: "Batch A", course: "BSc", section: "A", session: "2023-24", shift: "Morning", totalStudents: 32 },
-  { id: "batch-2", name: "Batch B", course: "BCom", section: "B", session: "2023-24", shift: "Evening", totalStudents: 28 },
-  { id: "batch-3", name: "Batch C", course: "BA", section: "A", session: "2022-23", shift: "Morning", totalStudents: 30 },
-  { id: "batch-4", name: "Batch D", course: "BSc", section: "B", session: "2022-23", shift: "Evening", totalStudents: 27 },
-  { id: "batch-5", name: "Batch E", course: "BBA", section: "A", session: "2023-24", shift: "Morning", totalStudents: 35 },
-  { id: "batch-6", name: "Batch F", course: "BCA", section: "B", session: "2023-24", shift: "Evening", totalStudents: 29 },
-  { id: "batch-7", name: "Batch G", course: "BCom", section: "A", session: "2022-23", shift: "Morning", totalStudents: 31 },
-  { id: "batch-8", name: "Batch H", course: "BA", section: "B", session: "2022-23", shift: "Evening", totalStudents: 26 },
-  { id: "batch-9", name: "Batch I", course: "BSc", section: "C", session: "2023-24", shift: "Morning", totalStudents: 34 },
-  { id: "batch-10", name: "Batch J", course: "BBA", section: "C", session: "2023-24", shift: "Evening", totalStudents: 30 },
-  { id: "batch-11", name: "Batch K", course: "BCom", section: "C", session: "2022-23", shift: "Morning", totalStudents: 33 },
-  { id: "batch-12", name: "Batch L", course: "BCA", section: "A", session: "2022-23", shift: "Evening", totalStudents: 28 },
-  { id: "batch-13", name: "Batch M", course: "BA", section: "C", session: "2023-24", shift: "Morning", totalStudents: 32 },
-  { id: "batch-14", name: "Batch N", course: "BBA", section: "B", session: "2022-23", shift: "Evening", totalStudents: 29 },
-  { id: "batch-15", name: "Batch O", course: "BCA", section: "C", session: "2023-24", shift: "Morning", totalStudents: 30 },
-  { id: "batch-16", name: "Batch P", course: "BSc", section: "D", session: "2023-24", shift: "Evening", totalStudents: 31 },
-  { id: "batch-17", name: "Batch Q", course: "BCom", section: "D", session: "2022-23", shift: "Morning", totalStudents: 27 },
-  { id: "batch-18", name: "Batch R", course: "BBA", section: "D", session: "2022-23", shift: "Evening", totalStudents: 33 },
-  { id: "batch-19", name: "Batch S", course: "BA", section: "D", session: "2023-24", shift: "Morning", totalStudents: 29 },
-  { id: "batch-20", name: "Batch T", course: "BCA", section: "D", session: "2023-24", shift: "Evening", totalStudents: 34 },
-];
-
-
-const courses = ["BSc", "BCom", "BA"];
-const sessions = ["2023-24", "2022-23"];
-const shifts = ["Morning", "Evening"];
-const sections = ["A", "B"];
-
-const columns: ColumnDef<Batch, unknown>[] = [
-  { accessorKey: "name", header: "Batch Name / ID" },
-  { accessorKey: "course", header: "Course" },
-  { accessorKey: "section", header: "Section" },
-  { accessorKey: "session", header: "Session" },
+const columns: ColumnDef<BatchSummary, unknown>[] = [
+  { accessorKey: "id", header: "Batch ID" },
+  { accessorKey: "courseName", header: "Course" },
+  { accessorKey: "className", header: "Class" },
+  { accessorKey: "sectionName", header: "Section" },
   { accessorKey: "shift", header: "Shift" },
+  { accessorKey: "session", header: "Session" },
   { accessorKey: "totalStudents", header: "Total Students" },
+  { accessorKey: "totalSubjects", header: "Total Subjects" },
 ];
 
 export default function HomePage() {
   const [course, setCourse] = useState("");
-  const [session, setSession] = useState("");
   const [shift, setShift] = useState("");
   const [section, setSection] = useState("");
+  const [academicYearId, setAcademicYearId] = useState<number | undefined>(undefined);
   const [pagination, setPagination] = useState<CustomPaginationState>({
     pageIndex: 0,
     pageSize: 10,
     totalPages: 1,
-    totalElements: mockBatches.length,
+    totalElements: 0,
   });
   const navigate = useNavigate();
 
-  // Filter logic
-  const filteredBatches = mockBatches.filter(batch =>
-    (!course || batch.course === course) &&
-    (!session || batch.session === session) &&
-    (!shift || batch.shift === shift) &&
-    (!section || batch.section === section)
+  // Fetch filter options from backend
+  const { data: academicYears = [] } = useQuery<AcademicYear[]>({
+    queryKey: ["academicYears"],
+    queryFn: async () => (await getAllAcademicYears()).payload,
+  });
+  const { data: courses = [] } = useQuery<Course[]>({
+    queryKey: ["courses"],
+    queryFn: async () => (await getAllCourses()).payload,
+  });
+  const { data: shifts = [] } = useQuery<Shift[]>({
+    queryKey: ["shifts"],
+    queryFn: getAllShifts,
+  });
+  const { data: sections = [] } = useQuery<Section[]>({
+    queryKey: ["sections"],
+    queryFn: getAllSections,
+  });
+
+  // Fetch batches from backend with academicYearId filter
+  const { data: batches = [], isLoading, error } = useQuery<BatchSummary[]>({
+    queryKey: ["batches", academicYearId],
+    queryFn: () => getAllBatches(academicYearId),
+  });
+
+  // Filter logic (frontend filters for course, shift, section)
+  const filteredBatches = batches.filter(batch =>
+    (!course || batch.courseName === course) &&
+    (!shift || (typeof batch.shift === 'string' ? batch.shift : batch.shift?.name) === shift) &&
+    (!section || batch.sectionName === section)
   );
 
   // Pagination logic
@@ -132,26 +128,26 @@ export default function HomePage() {
         {/* Filters Card */}
         <div className="w-full bg-white rounded-xl shadow-md px-8 py-6 mb-8 flex flex-wrap gap-4 items-center border border-gray-100">
           <span className="font-medium text-gray-700 mr-2">Filters:</span>
+          <Select value={academicYearId ? academicYearId.toString() : ""} onValueChange={v => setAcademicYearId(v ? Number(v) : undefined)}>
+            <SelectTrigger className="w-36"><SelectValue placeholder="Academic Year" /></SelectTrigger>
+            <SelectContent>{academicYears.map(y => <SelectItem key={y.id} value={y.id?.toString() || ""}>{y.year}</SelectItem>)}</SelectContent>
+          </Select>
           <Select value={course} onValueChange={setCourse}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Course" /></SelectTrigger>
-            <SelectContent>{courses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-          </Select>
-          <Select value={session} onValueChange={setSession}>
-            <SelectTrigger className="w-36"><SelectValue placeholder="Session" /></SelectTrigger>
-            <SelectContent>{sessions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            <SelectContent>{courses.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={shift} onValueChange={setShift}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Shift" /></SelectTrigger>
-            <SelectContent>{shifts.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            <SelectContent>{shifts.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={section} onValueChange={setSection}>
             <SelectTrigger className="w-36"><SelectValue placeholder="Section" /></SelectTrigger>
-            <SelectContent>{sections.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+            <SelectContent>{sections.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}</SelectContent>
           </Select>
           <Button
             variant="outline"
             className="ml-auto"
-            onClick={() => { setCourse(""); setSession(""); setShift(""); setSection(""); }}
+            onClick={() => { setAcademicYearId(undefined); setCourse(""); setShift(""); setSection(""); }}
           >
             Reset
           </Button>
@@ -159,17 +155,18 @@ export default function HomePage() {
         {/* Table Card */}
         <div className="w-full bg-white rounded-xl shadow-md px-2 py-4">
           <DataTable
-            columns={columns as ColumnDef<unknown, unknown>[]}
+            columns={columns}
             data={paginatedBatches}
             pagination={pagination}
-            isLoading={false}
+            isLoading={isLoading}
             setPagination={setPagination}
             searchText={""}
             setSearchText={() => {}}
             setDataLength={() => {}}
-            onRowClick={(row: Row<Batch>) => navigate(`/dashboard/batches/${row.original.id}`)}
-            refetch={async () => Promise.resolve({} as QueryObserverResult<unknown[] | undefined, Error>)}
+            onRowClick={(row: Row<BatchSummary>) => navigate(`/dashboard/batches/${row.original.id}`)}
+            refetch={async () => Promise.resolve({} as QueryObserverResult<BatchSummary[] | undefined, Error>)}
           />
+          {error ? <div className="text-red-500 p-4">Failed to load batches.</div> : null}
         </div>
       </div>
     </div>

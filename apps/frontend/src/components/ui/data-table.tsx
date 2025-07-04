@@ -1,14 +1,4 @@
 import * as React from "react";
-
-// import { Button } from "@/components/ui/button";
-// import {
-//   DropdownMenu,
-//   DropdownMenuCheckboxItem,
-//   DropdownMenuContent,
-//   DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu";
-// import { Input } from "@/components/ui/input";
-
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -43,6 +33,7 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   setDataLength: React.Dispatch<React.SetStateAction<number>>;
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
   onRowClick?: (row: Row<TData>) => void;
+  viewDataToolbar?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -53,6 +44,7 @@ export function DataTable<TData, TValue>({
   setPagination,
   searchText,
   setSearchText,
+  viewDataToolbar = true,
 //   setDataLength,
   refetch,
   onRowClick,
@@ -103,7 +95,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-3">
         <div>
-        {location.pathname !== '/home/downloads' &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
+        {location.pathname !== '/home/downloads' && viewDataToolbar &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
         </div>
           <div className="overflow-x-auto">
             <Table className="min-w-full text-sm">

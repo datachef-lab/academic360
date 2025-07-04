@@ -5,7 +5,7 @@ import { Shift } from "./shift";
 import { Session } from "./session";
 import { SubjectMetadata } from "./subject-metadata";
 import { PaginatedResponse } from "../pagination";
-import { Framework, ProgrammeType } from "../enums";
+import { Framework, ProgrammeType, StudentStatus } from "../enums";
 
 export interface Batch {
     readonly id?: number;
@@ -15,15 +15,28 @@ export interface Batch {
     section: Section | null;
     shift: Shift | null;
     session: Session | null;
-    creaytedAt?: Date;
+    createdAt?: Date;
     updatedAt?: Date;
 }
 
 export interface StudentBatchEntry {
     studentId: number;
+    studentName: string;
+    roll: string | null;
+    registrationNumber: string | null;
     uid: string;
     subjects: SubjectMetadata[];
-    status: string;
+    status: StudentStatus;
+}
+
+export interface StudentBatchSubjectEntry {
+    studentId: number;
+    studentName: string;
+    roll: string | null;
+    registrationNumber: string | null;
+    uid: string;
+    subject: SubjectMetadata;
+    status: StudentStatus;
 }
 
 export interface BatchDetails extends Batch  {

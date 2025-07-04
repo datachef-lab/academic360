@@ -43,23 +43,10 @@ import {
   updateCourse,
   deleteCourse
 } from '@/services/course-api';
+import { SubjectType } from '@/types/academics/subject-metadata';
+import { Degree } from '@/types/resources/degree';
+import { ProgrammeOption } from '@/components/types/subject-types';
 
-// Define interfaces for type safety
-interface SubjectTypeOption {
-  id: number;
-  marksheetName: string;
-}
-
-interface DegreeOption {
-  id: number;
-  name: string;
-}
-
-interface ProgrammeOption {
-  id: number;
-  degreeProgramme: string;
-  degreeId: number;
-}
 
 export const CoursesAndSubjectPage: React.FC = () => {
   // Active tab state
@@ -116,8 +103,8 @@ export const CoursesAndSubjectPage: React.FC = () => {
   });
 
   // Options for dropdowns
-  const [subjectTypeOptions, setSubjectTypeOptions] = useState<SubjectTypeOption[]>([]);
-  const [degreeOptions, setDegreeOptions] = useState<DegreeOption[]>([]);
+  const [subjectTypeOptions, setSubjectTypeOptions] = useState<SubjectType[]>([]);
+  const [degreeOptions, setDegreeOptions] = useState<Degree[]>([]);
   const [programmeOptions, setProgrammeOptions] = useState<ProgrammeOption[]>([]);
   
   // Separate subject and course selection states
