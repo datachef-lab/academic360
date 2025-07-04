@@ -21,6 +21,7 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  Row,
 } from "@tanstack/react-table";
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -41,7 +42,7 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   setSearchText: React.Dispatch<React.SetStateAction<string>>;
   setDataLength: React.Dispatch<React.SetStateAction<number>>;
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
-  onRowClick?: (row: any) => void;
+  onRowClick?: (row: Row<TData>) => void;
 }
 
 export function DataTable<TData, TValue>({
