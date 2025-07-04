@@ -49,6 +49,7 @@ import {
   AddOn,
   StudentFeesMapping,
   FeesSlabMapping,
+  CreateFeesStructureDto,
   
 } from '@/types/fees';
 import {AcademicYear } from "@/types/academics/academic-year"
@@ -80,7 +81,7 @@ export const useFeesStructures = () => {
     }
   };
 
-  const addFeesStructure = useCallback(async (newFeesStructure: FeesStructureDto) => {
+  const addFeesStructure = useCallback(async (newFeesStructure: CreateFeesStructureDto) => {
     try {
       const response = await createFeesStructure(newFeesStructure);
       await fetchFeesStructures();

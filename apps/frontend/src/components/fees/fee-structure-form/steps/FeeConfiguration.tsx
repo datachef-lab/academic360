@@ -9,7 +9,7 @@ import { Class as ClassType } from "@/types/academics/class";
 
 type FeeConfigurationProps =
   | {
-      formType: "add";
+      formType: "ADD";
       feesStructure: CreateFeesStructureDto;
       setFeesStructure: React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>;
       feeHeads: FeesHead[];
@@ -20,7 +20,7 @@ type FeeConfigurationProps =
       classes: ClassType[];
     }
   | {
-      formType: "edit";
+      formType: "EDIT";
       feesStructure: FeesStructureDto;
       setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
       feeHeads: FeesHead[];
@@ -39,15 +39,15 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
   // const MIN_ROWS = 8; // Set a minimum number of rows to display
 
   // Helper type guards
-  const isAdd = formType === 'add';
-  const isEdit = formType === 'edit';
+  const isAdd = formType === 'ADD';
+  const isEdit = formType === 'EDIT';
 
   // Separate handlers for add/edit mode
   const handleInputChangeAdd = (field: keyof CreateFeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, [field]: value }));
   };
   const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, [field]: value }));
   };
 
   useEffect(() => {
@@ -61,7 +61,11 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
         feesStructureId: feesStructure.id || 0,
         remarks: "",
       }));
-      setFeesStructure((prev) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      if (isAdd) {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      } else {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      }
     }
   }, []);
 
@@ -74,18 +78,27 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
     }
   }, [feesStructure.components.length]);
 
-  const existingCombinations = useMemo(
-    () =>
-      existingFeeStructures
+  // Fix: Only use 'course' for EDIT mode, and 'courses' for ADD mode
+  const existingCombinations = useMemo(() => {
+    if (isEdit) {
+      return existingFeeStructures
         .filter(
           (fs) =>
-            fs.id !== feesStructure.id &&
-            fs.academicYear?.id === feesStructure.academicYear?.id &&
-            fs.course?.id === feesStructure.course?.id,
+            fs.id !== (feesStructure as FeesStructureDto).id &&
+            fs.academicYear?.id === (feesStructure as FeesStructureDto).academicYear?.id &&
+            fs.course?.id === (feesStructure as FeesStructureDto).course?.id,
         )
-        .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id })),
-    [existingFeeStructures, feesStructure.academicYear, feesStructure.course, feesStructure.id],
-  );
+        .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id }));
+    } else {
+      // For ADD, we can't filter by course, so just filter by academicYear
+      return existingFeeStructures
+        .filter(
+          (fs) =>
+            fs.academicYear?.id === (feesStructure as CreateFeesStructureDto).academicYear?.id
+        )
+        .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id }));
+    }
+  }, [existingFeeStructures, feesStructure, isEdit]);
 
   const availableShifts = useMemo(() => {
     if (!feesStructure.class?.id) {

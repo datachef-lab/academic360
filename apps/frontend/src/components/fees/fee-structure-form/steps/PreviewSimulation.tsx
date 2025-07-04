@@ -6,6 +6,7 @@ import {
   FeesHead,
   FeesComponent,
   FeesReceiptType,
+  CreateFeesStructureDto,
 } from "@/types/fees";
 import {
   CalendarDays,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 
 interface PreviewSimulationProps {
-  feesStructure: FeesStructureDto & { feesReceiptTypeId?: number | null };
+  feesStructure: FeesStructureDto & { feesReceiptTypeId?: number | null } | CreateFeesStructureDto;
   feesSlabMappings: FeesSlabMapping[];
   slabs: FeesSlab[];
   feeHeads: FeesHead[];
@@ -134,7 +135,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Course</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {feesStructure.course?.name || "N/A"} (Semester{" "}
+                    {"feesStructure.course?.name"} (Semester{" "}
                     {feesStructure.class.name})
                   </p>
                 </div>

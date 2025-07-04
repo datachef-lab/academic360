@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Select } from 'antd';
 import { FeesStructureDto, CreateFeesStructureDto } from '@/types/fees';
 import { Course } from '@/types/academics/course';
@@ -9,7 +9,7 @@ interface AcademicSetupPropsAdd {
   setFeesStructure: React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>;
   courses: Course[];
   academicYears: AcademicYear[];
-  formType: 'add';
+  formType: 'ADD';
 }
 
 interface AcademicSetupPropsEdit {
@@ -17,25 +17,24 @@ interface AcademicSetupPropsEdit {
   setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
   courses: Course[];
   academicYears: AcademicYear[];
-  formType: 'edit';
+  formType: 'EDIT';
 }
 
 type AcademicSetupProps = AcademicSetupPropsAdd | AcademicSetupPropsEdit;
 
 export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
   const { courses, academicYears, formType } = props;
-  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState<AcademicYear | null>(null);
 
   React.useEffect(() => {
-    if (academicYears.length > 0 && !selectedAcademicYear) {
-      setSelectedAcademicYear(academicYears[0]);
-      if (formType === 'add') {
-        props.setFeesStructure(prev => ({ ...prev, academicYear: academicYears[0] }));
+    // Set default academic year if not set
+    if (academicYears.length > 0 && !props.feesStructure.academicYear) {
+      if (formType === 'ADD') {
+        (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, academicYear: academicYears[0] }));
       } else {
-        props.setFeesStructure(prev => ({ ...prev, academicYear: academicYears[0] }));
+        (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, academicYear: academicYears[0] }));
       }
     }
-  }, [academicYears, selectedAcademicYear, setSelectedAcademicYear, formType, props]);
+  }, [academicYears, props.feesStructure.academicYear, formType, props.setFeesStructure]);
 
   return (
     <div className="flex items-center justify-center h-full">
@@ -46,12 +45,14 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
             className="w-full"
             size="large"
             placeholder="Select Academic Year"
-            value={formType === 'add' ? props.feesStructure.academicYear?.id : props.feesStructure.academicYear?.id}
+            value={props.feesStructure.academicYear?.id}
             onChange={(value) => {
-              if (formType === 'add') {
-                props.setFeesStructure(prev => ({ ...prev, academicYear: academicYears.find(ay => ay.id === value) }));
+              const selectedYear = academicYears.find(ay => ay.id === value);
+              if (!selectedYear) return;
+              if (formType === 'ADD') {
+                (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, academicYear: selectedYear }));
               } else {
-                props.setFeesStructure(prev => ({ ...prev, academicYear: academicYears.find(ay => ay.id === value) }));
+                (props.setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)(prev => ({ ...prev, academicYear: selectedYear }));
               }
             }}
           >
@@ -64,7 +65,7 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Course</label>
-          {formType === 'add' ? (
+          {formType === 'ADD' ? (
             <div className="flex flex-col gap-2">
               {courses.map(course => (
                 <label key={course.id} className="flex items-center gap-2">
@@ -74,12 +75,14 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
                     onChange={e => {
                       const selected = [...props.feesStructure.courses];
                       if (e.target.checked) {
-                        selected.push(course);
+                        if (!selected.some((c: Course) => c.id === course.id)) {
+                          selected.push(course);
+                        }
                       } else {
                         const idx = selected.findIndex((c: Course) => c.id === course.id);
                         if (idx > -1) selected.splice(idx, 1);
                       }
-                      props.setFeesStructure(prev => ({ ...prev, courses: selected }));
+                      (props.setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(prev => ({ ...prev, courses: selected }));
                     }}
                   />
                   {course.name}
@@ -87,27 +90,14 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
               ))}
             </div>
           ) : (
-            <Select
-              className="w-full"
-              size="large"
-              placeholder="Select Course"
-              value={props.feesStructure.course?.id}
-              onChange={(value) => {
-                const found = courses.find(c => c.id === value);
-                if (found) {
-                  props.setFeesStructure(prev => ({ ...prev, course: found }));
-                }
-              }}
-            >
-              {courses.map(course => (
-                <Select.Option key={course.id} value={course.id!}>
-                  {course.name}
-                </Select.Option>
-              ))}
-            </Select>
+            <p className="w-full px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">
+              {props.feesStructure.course?.name || "Not Selected"}
+            </p>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default AcademicSetup;

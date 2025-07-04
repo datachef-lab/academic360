@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+  import React, { useState, useEffect } from "react";
 import {
   Banknote,
   PlusCircle,
@@ -187,12 +187,19 @@ const FeesStructurePage: React.FC = () => {
       // Duplicate check (for create only)
       if (!currentFeesStructure?.id) {
         const duplicate = filteredFeesStructures.find(
-          (fs) =>
-            fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
-            fs.course?.id === givenFeesStructure.course?.id &&
-            fs.class.id === givenFeesStructure.class.id &&
-            fs.shift?.id === givenFeesStructure.shift?.id &&
-            fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId,
+          (fs) => {
+            // Type guard for course/courses
+            const givenCourseId = 'course' in givenFeesStructure
+              ? givenFeesStructure.course?.id
+              : givenFeesStructure.courses[0]?.id;
+            return (
+              fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
+              fs.course?.id === givenCourseId &&
+              fs.class.id === givenFeesStructure.class.id &&
+              fs.shift?.id === givenFeesStructure.shift?.id &&
+              fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId
+            );
+          }
         );
         if (duplicate) {
           alert(
@@ -204,10 +211,10 @@ const FeesStructurePage: React.FC = () => {
       if (givenFeesStructure.feesSlabMappings.length > 0) {
         await addFeesSlabMappings(givenFeesStructure.feesSlabMappings);
       }
-      if (currentFeesStructure?.id) {
-        await updateFeesStructureById(currentFeesStructure.id, givenFeesStructure);
+      if (formType === "EDIT") {
+        await updateFeesStructureById(currentFeesStructure!.id!, givenFeesStructure);
       } else {
-        const created = await addFeesStructure(givenFeesStructure);
+        const created = await addFeesStructure(givenFeesStructure as CreateFeesStructureDto);
         if (created) {
           setSelectedAcademicYear(created.academicYear ?? null);
           setSelectedCourse(created.course ?? null);
@@ -732,6 +739,7 @@ const FeesStructurePage: React.FC = () => {
             onSubmit={handleFeeStructureSubmit}
             fieldsDisabled={modalFieldsDisabled}
             disabledSteps={[1, 2, 3]}
+            formType={currentFeesStructure ? 'EDIT' : 'ADD'}
             selectedAcademicYear={selectedAcademicYear}
             selectedCourse={selectedCourse}
             initialStep={initialStep}

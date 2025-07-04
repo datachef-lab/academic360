@@ -1,25 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { InputNumber, Select } from "antd";
-import { FeesSlab, FeesSlabMapping, FeesStructureDto } from "@/types/fees";
+import { FeesSlab, FeesSlabMapping, FeesStructureDto, CreateFeesStructureDto } from "@/types/fees";
 import { Plus, Trash2 } from "lucide-react";
 
-interface SlabCreationProps {
-  feesSlabMappings: FeesSlabMapping[];
-  setFormFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>
-  slabs: FeesSlab[];
-  // setSlabs: React.Dispatch<React.SetStateAction<FeesSlab[]>>;
-  academicYearId: number | undefined;
-  // slabYearMappings?: FeesSlabYear[];
+// Type predicate to distinguish CreateFeesStructureDto
+function isCreateFeesStructureDto(obj: CreateFeesStructureDto | FeesStructureDto): obj is CreateFeesStructureDto {
+  return "courses" in obj && Array.isArray((obj as CreateFeesStructureDto).courses);
 }
 
-export const SlabCreation: React.FC<SlabCreationProps> = ({
+type SlabCreationProps<T extends CreateFeesStructureDto | FeesStructureDto> = {
+  feesSlabMappings: FeesSlabMapping[];
+  setFormFeesStructure: React.Dispatch<React.SetStateAction<T>>;
+  slabs: FeesSlab[];
+};
+
+export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto>({
   feesSlabMappings,
   setFormFeesStructure,
   slabs,
-  // setSlabs,
-  // academicYearId,
-  // slabYearMappings = [],
-}) => {
+}: SlabCreationProps<T>) {
   const [slabOptions, setSlabOptions] = useState<FeesSlab[]>([]);
 
   // DEBUG: Log slabs and mappings on every render
@@ -52,35 +51,25 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({
   // }, [slabYearMappings, slabs, academicYearId, setFeesSlabMappings]);
 
   const handleSlabChange = (index: number, selectedSlabId: number) => {
-    // const selectedSlab = slabOptions.find(option => option.id === selectedSlabId);
-    // if (!selectedSlab) return;
-
-    // const updatedSlabs = [...slabs];
-    // const oldSlabId = updatedSlabs[index].id;
-    // updatedSlabs[index] = { ...selectedSlab };
-    // setSlabs(updatedSlabs);
-
-    // if (oldSlabId) {
-    //     const updatedFeesSlabMappings = [...feesSlabMappings];
-    //     const slabMappingIndex = updatedFeesSlabMappings.findIndex(sy => sy.feesSlabId === oldSlabId);
-    //     if (slabMappingIndex > -1) {
-    //       updatedFeesSlabMappings[slabMappingIndex] = { ...updatedFeesSlabMappings[slabMappingIndex], feesSlabId: selectedSlab.id! };
-    //       setFeesSlabMappings(updatedFeesSlabMappings);
-    //     }
-    // }
-
     const updatedFeesSlabMappings = feesSlabMappings.map((ele, idx) => {
       if (idx === index) {
         return { ...ele, feesSlabId: selectedSlabId };
       }
       return ele;
     });
-
-    setFormFeesStructure(prev => ({
-        ...prev,
-         feesSlabMappings: updatedFeesSlabMappings,
-      }));
-
+    setFormFeesStructure((prev: T) => {
+      if (isCreateFeesStructureDto(prev)) {
+        return {
+          ...prev,
+          feesSlabMappings: updatedFeesSlabMappings,
+        } as T;
+      } else {
+        return {
+          ...prev,
+          feesSlabMappings: updatedFeesSlabMappings,
+        } as T;
+      }
+    });
     const tmpSlabOptions = slabs.filter((slb) => !feesSlabMappings.find((ele) => ele.feesSlabId != slb.id));
     setSlabOptions(tmpSlabOptions);
   };
@@ -90,10 +79,19 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({
     const slabMappingIndex = updatedSlabMappings.findIndex((sy) => sy.feesSlabId === slabId);
     if (slabMappingIndex > -1) {
       updatedSlabMappings[slabMappingIndex] = { ...updatedSlabMappings[slabMappingIndex], feeConcessionRate: concessionRate };
-      setFormFeesStructure(prev => ({
-        ...prev,
-         feesSlabMappings: updatedSlabMappings,
-      }));
+      setFormFeesStructure((prev: T) => {
+        if (isCreateFeesStructureDto(prev)) {
+          return {
+            ...prev,
+            feesSlabMappings: updatedSlabMappings,
+          } as T;
+        } else {
+          return {
+            ...prev,
+            feesSlabMappings: updatedSlabMappings,
+          } as T;
+        }
+      });
     }
   };
 
@@ -109,10 +107,19 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({
       feesStructureId: 0, // Placeholder, update as needed
       feeConcessionRate: 0,
     };
-    setFormFeesStructure(prev => ({
-      ...prev,
-       feesSlabMappings: [...feesSlabMappings, newSlabMapping],
-    }));
+    setFormFeesStructure((prev: T) => {
+      if (isCreateFeesStructureDto(prev)) {
+        return {
+          ...prev,
+          feesSlabMappings: [...feesSlabMappings, newSlabMapping],
+        } as T;
+      } else {
+        return {
+          ...prev,
+          feesSlabMappings: [...feesSlabMappings, newSlabMapping],
+        } as T;
+      }
+    });
   };
 
   const handleRemoveSlab = (slabIdToRemove: number) => {
@@ -123,10 +130,19 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({
 
     const updatedSlabOptions = slabOptions.filter(ele => !updatedFeesSlabMappings.find(x => x.feesSlabId == ele.id));
 
-    setFormFeesStructure(prev => ({
-      ...prev,
-       feesSlabMappings: updatedFeesSlabMappings
-    }));
+    setFormFeesStructure((prev: T) => {
+      if (isCreateFeesStructureDto(prev)) {
+        return {
+          ...prev,
+          feesSlabMappings: updatedFeesSlabMappings
+        } as T;
+      } else {
+        return {
+          ...prev,
+          feesSlabMappings: updatedFeesSlabMappings
+        } as T;
+      }
+    });
 
     setSlabOptions(updatedSlabOptions);
   };
@@ -216,4 +232,4 @@ export const SlabCreation: React.FC<SlabCreationProps> = ({
       </div>
     </div>
   );
-};
+}
