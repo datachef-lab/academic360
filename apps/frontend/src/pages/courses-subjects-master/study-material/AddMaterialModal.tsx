@@ -72,12 +72,12 @@ const AddMaterialModal: React.FC<AddMaterialModalProps> = ({ open, onClose, onSa
           <DialogTitle>Add Material</DialogTitle>
         </DialogHeader>
         <div className="flex gap-2 mb-4">
-          <Badge variant="outline" className="font-semibold">{subject.subject}</Badge>
+          <Badge variant="outline" className="font-semibold border-primary text-primary">{subject.subject}</Badge>
           <Badge variant="default">{subject.type}</Badge>
-          <span className="text-gray-500">{subject.paper}</span>
+          <span className="text-muted-foreground">{subject.paper}</span>
         </div>
         <div className="mb-4">
-          <div className="font-medium mb-2">Material Type <span className="text-red-500">*</span></div>
+          <div className="font-medium mb-2">Material Type <span className="text-destructive">*</span></div>
           <RadioGroup
             className="flex gap-6"
             value={materialType}
@@ -92,31 +92,31 @@ const AddMaterialModal: React.FC<AddMaterialModalProps> = ({ open, onClose, onSa
           </RadioGroup>
         </div>
         <div className="mb-4">
-          <div className="font-medium mb-2">Material Title <span className="text-red-500">*</span></div>
+          <div className="font-medium mb-2">Material Title <span className="text-destructive">*</span></div>
           <Input
             placeholder="Enter material title"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className={touched && !isTitleValid ? "border-red-500" : ""}
+            className={touched && !isTitleValid ? "border-destructive focus-visible:ring-destructive" : ""}
           />
-          {touched && !isTitleValid && <div className="text-xs text-red-500 mt-1">Title is required</div>}
+          {touched && !isTitleValid && <div className="text-xs text-destructive mt-1">Title is required</div>}
         </div>
         {isLink && (
           <div className="mb-4">
-            <div className="font-medium mb-2">URL <span className="text-red-500">*</span></div>
+            <div className="font-medium mb-2">URL <span className="text-destructive">*</span></div>
             <Input
               placeholder="https://example.com/resource"
               value={url}
               onChange={e => setUrl(e.target.value)}
-              className={touched && !isUrlValid ? "border-red-500" : ""}
+              className={touched && !isUrlValid ? "border-destructive focus-visible:ring-destructive" : ""}
             />
-            {touched && !isUrlValid && <div className="text-xs text-red-500 mt-1">Enter a valid URL</div>}
+            {touched && !isUrlValid && <div className="text-xs text-destructive mt-1">Enter a valid URL</div>}
           </div>
         )}
         {isFile && (
           <div className="mb-4">
-            <div className="font-medium mb-2">File Upload <span className="text-red-500">*</span></div>
-            <label className="block border-2 border-dashed border-violet-300 rounded-xl p-8 text-center cursor-pointer hover:bg-violet-50 transition">
+            <div className="font-medium mb-2">File Upload <span className="text-destructive">*</span></div>
+            <label className="block border-2 border-dashed border-primary rounded-lg p-8 text-center cursor-pointer hover:bg-primary/10 transition">
               <input
                 type="file"
                 accept=".pdf,.docx,.ppt,.xlsx"
@@ -124,20 +124,20 @@ const AddMaterialModal: React.FC<AddMaterialModalProps> = ({ open, onClose, onSa
                 onChange={handleFileChange}
               />
               <div className="flex flex-col items-center gap-2">
-                <span className="text-4xl text-violet-400">📄</span>
+                <span className="text-4xl text-primary">📄</span>
                 <span className="font-medium">Drag and drop or click to upload</span>
-                <span className="text-xs text-gray-500">PDF, DOCX, PPT, XLSX files up to 10MB</span>
+                <span className="text-xs text-muted-foreground">PDF, DOCX, PPT, XLSX files up to 10MB</span>
                 {file && <span className="text-xs text-green-600 mt-2">{file.name}</span>}
               </div>
             </label>
-            {touched && !isFileValid && <div className="text-xs text-red-500 mt-1">File is required</div>}
+            {touched && !isFileValid && <div className="text-xs text-destructive mt-1">File is required</div>}
           </div>
         )}
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" type="button">Cancel</Button>
           </DialogClose>
-          <Button onClick={handleSave} disabled={!isFormValid} className="bg-violet-400 text-white hover:bg-violet-500" type="button">
+          <Button onClick={handleSave} disabled={!isFormValid} type="button">
             Save
           </Button>
         </DialogFooter>

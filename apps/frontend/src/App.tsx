@@ -72,7 +72,7 @@ const router = createBrowserRouter([
         children: [
           { path: "", element: <courseSubjectModule.HomePage /> },
           { path: "courses", element: <courseSubjectModule.CoursesAndSubjectPage /> },
-          { path: "materials", element: <courseSubjectModule.CourseMaterialPage /> },
+          { path: "materials", element: <courseSubjectModule.StudyMaterialPage /> },
         ],
       },
       {

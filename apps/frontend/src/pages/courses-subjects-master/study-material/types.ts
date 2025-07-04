@@ -1,7 +1,12 @@
-export interface CourseMaterialRow {
+export interface StudyMaterialRow {
+  [key: string]: unknown;
   id: number;
-  subject: string;
+  name: string;
   type: string;
+  availability: string;
+  variant: string;
+  url: string;
+  subject: string;
   paper: string;
   materials?: string;
 }
@@ -14,4 +19,8 @@ export interface Subject {
   type: string;
   paper: string;
   materials?: string;
+  name: string;
+  availability: string;
+  variant: string;
+  url: string;
 } 

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { CourseMaterialRow } from "./types";
+import { StudyMaterialRow } from "./types";
 import { Button } from "@/components/ui/button";
 import AddMaterialModal from "./AddMaterialModal";
-import { BookOpen, Tag, FileText, Layers, FileIcon, PlusCircle, Plus } from "lucide-react";
+import { BookOpen, Tag, Layers, Link, ListChecks, FileIcon, PlusCircle, Plus, Globe, CheckCircle } from "lucide-react";
 
-const AddMaterialActionCell = ({ row }: { row: { original: CourseMaterialRow } }) => {
+const AddMaterialActionCell = ({ row }: { row: { original: StudyMaterialRow } }) => {
   const [open, setOpen] = useState(false);
   return (
     <div className="flex justify-center">
@@ -30,9 +30,9 @@ const AddMaterialActionCell = ({ row }: { row: { original: CourseMaterialRow } }
   );
 };
 
-export const getCourseMaterialColumns = (): ColumnDef<CourseMaterialRow>[] => [
+export const getStudyMaterialColumns = (): ColumnDef<StudyMaterialRow>[] => [
   {
-    id: "serial", 
+    id: "serial",
     header: () => (
       <span className="flex items-center justify-center gap-2">
         <Layers className="w-4 h-4 text-purple-600" />
@@ -45,11 +45,11 @@ export const getCourseMaterialColumns = (): ColumnDef<CourseMaterialRow>[] => [
     size: 60,
   },
   {
-    accessorKey: "subject",
+    accessorKey: "name",
     header: () => (
       <span className="flex items-center gap-2">
         <BookOpen className="w-4 h-4 text-purple-600" />
-        Subject
+        Name
       </span>
     ),
     cell: info => <span className="font-semibold">{info.getValue() as string}</span>,
@@ -64,23 +64,32 @@ export const getCourseMaterialColumns = (): ColumnDef<CourseMaterialRow>[] => [
     ),
   },
   {
-    accessorKey: "paper",
+    accessorKey: "availability",
     header: () => (
       <span className="flex items-center gap-2">
-        <FileText className="w-4 h-4 text-purple-600" />
-        Paper
+        <CheckCircle className="w-4 h-4 text-purple-600" />
+        Availability
       </span>
     ),
   },
   {
-    accessorKey: "materials",
+    accessorKey: "variant",
     header: () => (
       <span className="flex items-center gap-2">
-        <FileIcon className="w-4 h-4 text-purple-600" />
-        Materials
+        <ListChecks className="w-4 h-4 text-purple-600" />
+        Variant
       </span>
     ),
-    cell: info => info.getValue() ? info.getValue() : <span className="text-gray-500">No materials</span>,
+  },
+  {
+    accessorKey: "url",
+    header: () => (
+      <span className="flex items-center gap-2">
+        <Globe className="w-4 h-4 text-purple-600" />
+        URL
+      </span>
+    ),
+    cell: info => info.getValue() ? <a href={info.getValue() as string} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Open</a> : <span className="text-gray-500">No URL</span>,
   },
   {
     id: "actions",

@@ -14,21 +14,21 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { CourseMaterialRow } from "./types";
-import { getCourseMaterialColumns } from "./columns";
+import { StudyMaterialRow } from "./types";
+import { getStudyMaterialColumns } from "./columns";
 
-interface CourseMaterialTableProps {
-  data: CourseMaterialRow[];
+interface StudyMaterialTableProps {
+  data: StudyMaterialRow[];
   isLoading?: boolean;
 }
 
-const CourseMaterialTable: React.FC<CourseMaterialTableProps> = ({
+const StudyMaterialTable: React.FC<StudyMaterialTableProps> = ({
   data,
   isLoading = false,
 }) => {
   const table = useReactTable({
     data,
-    columns: getCourseMaterialColumns(),
+    columns: getStudyMaterialColumns(),
     getCoreRowModel: getCoreRowModel(),
   });
 
@@ -99,4 +99,4 @@ const CourseMaterialTable: React.FC<CourseMaterialTableProps> = ({
   );
 };
 
-export default CourseMaterialTable; 
+export default StudyMaterialTable; 

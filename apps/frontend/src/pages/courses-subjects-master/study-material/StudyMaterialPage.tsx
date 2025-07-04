@@ -1,6 +1,7 @@
 import  { useMemo, useState } from "react";
 import { courses, semesters, subjects } from "./mockData";
 import { motion } from "framer-motion";
+import { exportToExcel } from "./exportUtils";
 
 export interface Course {
   id: string;
@@ -23,28 +24,37 @@ export interface Subject {
 }
 
 // Columns moved to separate file
-import CourseMaterialTable from "./CourseMaterialTable";
-import { CourseMaterialRow, Subject as SubjectType } from "./types";
+import StudyMaterialTable from "./CourseMaterialTable";
+import { StudyMaterialRow, Subject as SubjectType } from "./types";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import Header from "@/components/common/PageHeader";
 
-import { FileIcon, Download, GraduationCap, Calendar, Filter } from "lucide-react";
+import { FileIcon, Download, GraduationCap, Calendar, Filter, BookOpen } from "lucide-react";
 
-const CourseMaterialPage = () => {
+const StudyMaterialPage = () => {
   const [selectedCourse, setSelectedCourse] = useState<Course["id"]>(courses[0].id);
   const [selectedSemester, setSelectedSemester] = useState<Semester["id"]>(semesters[0].id);
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
 
-  const filteredSubjects: CourseMaterialRow[] = useMemo(() =>
+  const filteredSubjects: StudyMaterialRow[] = useMemo(() =>
     (subjects as SubjectType[])
-      .filter((s) => s.courseId === selectedCourse && s.semesterId === selectedSemester)
+      .filter((s) =>
+        s.courseId === selectedCourse &&
+        s.semesterId === selectedSemester &&
+        (selectedSubject ? s.subject === selectedSubject : true)
+      )
       .map((s) => ({
         id: s.id,
-        subject: s.subject,
+        name: s.name,
         type: s.type,
+        availability: s.availability,
+        variant: s.variant,
+        url: s.url,
+        subject: s.subject,
         paper: s.paper,
         materials: s.materials ?? undefined,
       })),
-    [selectedCourse, selectedSemester]
+    [selectedCourse, selectedSemester, selectedSubject]
   );
 
   const isLoading = false;
@@ -59,7 +69,7 @@ const CourseMaterialPage = () => {
 
       <Header 
           className="" 
-          icon={FileIcon} title="Course Materials" 
+          icon={FileIcon} title="Study Materials" 
           subtitle="Manage course material links for students across all courses"
       />
     
@@ -76,7 +86,10 @@ const CourseMaterialPage = () => {
             </h2>
           </div>
           <motion.div whileHover={{ scale: 1.05 }}>
-            <button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all">
+            <button
+              className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all"
+              onClick={() => exportToExcel(filteredSubjects, "StudyMaterials")}
+            >
               <Download className="h-4 w-4" /> Export
             </button>
           </motion.div>
@@ -112,11 +125,28 @@ const CourseMaterialPage = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+            {/* Subject Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2 min-w-[120px]">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                  {selectedSubject || "Subject"}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
+                {subjects
+                  .filter(s => s.courseId === selectedCourse && s.semesterId === selectedSemester)
+                  .map((s) => (
+                    <DropdownMenuItem key={s.subject} onClick={() => setSelectedSubject(s.subject)} className="hover:bg-slate-100">{s.subject}</DropdownMenuItem>
+                  ))}
+                <DropdownMenuItem onClick={() => setSelectedSubject("")} className="hover:bg-slate-100 text-gray-500">Clear</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </motion.div>
         </div>
       </div>
       
-      <CourseMaterialTable
+      <StudyMaterialTable
         data={filteredSubjects}
         isLoading={isLoading}
       />
@@ -127,4 +157,4 @@ const CourseMaterialPage = () => {
   );
 };
 
-export default CourseMaterialPage;
+export default StudyMaterialPage;
