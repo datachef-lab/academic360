@@ -3,7 +3,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { StudyMaterialRow } from "./types";
 import { Button } from "@/components/ui/button";
 import AddMaterialModal from "./AddMaterialModal";
-import { BookOpen, Tag, Layers, Link, ListChecks, FileIcon, PlusCircle, Plus, Globe, CheckCircle } from "lucide-react";
+import { BookOpen, Tag, Layers, ListChecks, PlusCircle, Plus, Globe, CheckCircle } from "lucide-react";
 
 const AddMaterialActionCell = ({ row }: { row: { original: StudyMaterialRow } }) => {
   const [open, setOpen] = useState(false);

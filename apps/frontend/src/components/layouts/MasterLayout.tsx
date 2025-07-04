@@ -24,9 +24,11 @@ export default function MasterLayout({ children, subLinks }: MasterLayoutProps) 
 
   return (
     <>
-      <div className="h-full w-full flex">
-        <div className="w-[80%] h-full">{children}</div>
-        <div className="w-[20%] border-l h-full ">
+      <div className="h-screen w-full flex overflow-hidden">
+        <div className="w-[80%] h-full overflow-y-auto">
+          {children}
+        </div>
+        <div className="w-[20%] border-l h-full overflow-hidden">
           <ul className="space-y-2">
             {subLinks.map((link) => {
               if (link.isModal) {

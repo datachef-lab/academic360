@@ -35,7 +35,7 @@ export function MyLineChart() {
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <LineChart
-          width={600}
+          width={400}
           height={300}
           data={chartData}
           margin={{ top: 10, right: 30, left: 0, bottom: 0 }}

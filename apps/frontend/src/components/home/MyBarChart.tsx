@@ -106,27 +106,29 @@ export function MyBarChart() {
         <CardDescription>January - December 2025</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="w-full h-[300px]">
-          <ResponsiveContainer>
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              {Object.keys(chartColors).map((stream) => (
-                <Bar
-                  key={stream}
-                  dataKey={stream}
-                  fill={chartColors[stream as keyof typeof chartColors]}
-                  radius={[4, 4, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="col-span-1 sm:col-span-2 h-[250px] md:h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="year" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                {Object.keys(chartColors).map((stream) => (
+                  <Bar
+                    key={stream}
+                    dataKey={stream}
+                    fill={chartColors[stream as keyof typeof chartColors]}
+                    radius={[4, 4, 0, 0]}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
