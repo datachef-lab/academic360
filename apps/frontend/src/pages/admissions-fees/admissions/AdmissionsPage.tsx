@@ -56,7 +56,7 @@ export default function AdmissionsPage() {
       ],
       stats: { admissionYearCount: 2, totalApplications: 270, totalPayments: 230, totalDrafts: 40 },
     };
-    const processedAdmissions = result.admissions.map((admission: any) => ({
+    const processedAdmissions = result.admissions.map((admission: unknown) => ({
       ...admission,
       isClosed: admission.isClosed === true,
       totalApplications: Number(admission.totalApplications) || 0,
