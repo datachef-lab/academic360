@@ -1,1 +1,0 @@
-ALTER TABLE "fees_structures" ALTER COLUMN "advance_for_course_id_fk" DROP NOT NULL;

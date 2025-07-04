@@ -1,5 +1,5 @@
 import { degreeLevelTypeEnum } from "@/features/user/models/helper.js";
-import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -7,7 +7,8 @@ export const degreeModel = pgTable("degree", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     level: degreeLevelTypeEnum(),
-    sequence: integer().unique(),
+    sequene: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

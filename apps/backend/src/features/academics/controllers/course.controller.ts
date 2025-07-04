@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { createCourse, deleteCourse, findAllCourses, findCourseById, findCoursesByStreamId, searchCourses, updateCourse } from "../services/course.service.js";
+import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse } from "../services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
 const courseSchema = z.object({
@@ -116,20 +116,5 @@ export async function searchCoursesHandler(req: Request, res: Response) {
     } catch (error) {
         console.error(`Error searching courses with query ${req.query.q}:`, error);
         return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to search courses"));
-    }
-}
-
-export async function getCoursesByStreamIdHandler(req: Request, res: Response) {
-    try {
-        const streamId = parseInt(req.params.streamId);
-        if (isNaN(streamId)) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid stream ID"));
-        }
-
-        const courses = await findCoursesByStreamId(streamId);
-        return res.status(200).json(new ApiResponse(200, "SUCCESS", courses, "Courses fetched successfully"));
-    } catch (error) {
-        console.error(`Error fetching courses for stream ID ${req.params.streamId}:`, error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to fetch courses for stream"));
     }
 }

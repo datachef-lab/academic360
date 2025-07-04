@@ -76,7 +76,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const [formFeesStructure, setFormFeesStructure] = useState<FeesStructureDto>(
     feesStructure || {
       closingDate: new Date(),
-      semester: null,
+      class: null,
       advanceForSemester: null,
       startDate: new Date(),
       endDate: new Date(),
@@ -158,7 +158,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
       }
     }
     if (currentStep === 3) {
-      if (!formFeesStructure.semester) {
+      if (!formFeesStructure.class) {
         setError("Please select a semester.");
         return false;
       }

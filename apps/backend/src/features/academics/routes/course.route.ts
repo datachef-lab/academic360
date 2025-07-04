@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { createCourseHandler, deleteCourseHandler, getAllCoursesHandler, getCourseByIdHandler, getCoursesByStreamIdHandler, searchCoursesHandler, updateCourseHandler } from "../controllers/course.controller.js";
+import { createCourseHandler, deleteCourseHandler, getAllCoursesHandler, getCourseByIdHandler, searchCoursesHandler, updateCourseHandler } from "../controllers/course.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const courseRouter = Router();
@@ -13,9 +13,6 @@ courseRouter.get("/search", (req: Request, res: Response): void => {
 });
 courseRouter.get("/:id", (req: Request, res: Response): void => {
   getCourseByIdHandler(req, res);
-});
-courseRouter.get("/stream/:streamId", (req: Request, res: Response): void => {
-  getCoursesByStreamIdHandler(req, res);
 });
 
 // Protected routes (require authentication)

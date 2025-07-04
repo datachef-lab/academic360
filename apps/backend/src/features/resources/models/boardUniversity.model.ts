@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { addressModel } from "@/features/user/models/address.model.js";
@@ -12,7 +12,8 @@ export const boardUniversityModel = pgTable("board_universities", {
     passingMarks: integer(),
     code: varchar({ length: 255 }),
     addressId: integer().references(() => addressModel.id),
-    sequence: integer().unique(),
+    sequene: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

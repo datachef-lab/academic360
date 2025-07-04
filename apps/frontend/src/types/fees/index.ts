@@ -1,14 +1,7 @@
+import { AcademicYear } from "../academics/academic-year";
+import { Class } from "../academics/class";
 import { Course } from "../academics/course";
-import { Shift } from "../resources/shift";
-
-export interface AcademicYear {
-    readonly id?: number;
-    startYear: number;
-    sessionId: number | null;
-    isCurrentYear: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
+import { Shift } from "../academics/shift";
 
 export interface AddOn {
     readonly id?: number;
@@ -64,35 +57,51 @@ export interface FeesComponent {
     feesStructureId: number;
     feesHeadId: number;
     isConcessionApplicable: boolean;
-    amount: number,
+    baseAmount: number,
     // concessionAmount: doublePrecision().notNull().default(0),
     sequence: number,
-    remarks: string |  null;
+    remarks: string | null;
     createdAt?: Date;
     updatedAt?: Date;
 }
 
+export interface Instalment {
+    readonly id?: number;
+    feesStructureId: number;
+    instalmentNumber: number;
+    baseAmount: number;
+    startDate: Date;
+    endDate: Date;
+    onlineStartDate: Date;
+    onlineEndDate: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+export type CreateFeesStructureDto = Omit<FeesStructureDto, 'course'> & { courses: Course[] };
+
 export interface FeesStructureDto {
-    readonly id?: number; 
+    readonly id?: number;
     closingDate: Date | null;
-    semester: number | null;
+    class: Class;
     advanceForSemester: number | null;
     startDate: Date | null;
     endDate: Date | null;
     onlineStartDate: Date | null;
     onlineEndDate: Date | null;
     numberOfInstalments: number | null;
-    instalmentStartDate: Date | null;
-    instalmentEndDate: Date | null;
+    
+    
     feesReceiptTypeId: number | null;
     shift?: Shift | null;
     createdAt?: Date;
     updatedAt?: Date;
     academicYear?: AcademicYear;
-    course?: Course;
+    course: Course;
     advanceForCourse?: Course | null;
     components: FeesComponent[];
     feesSlabMappings: FeesSlabMapping[];
+    instalments: Instalment[];
 }
 
 export interface FeesDesignAbstractLevel {

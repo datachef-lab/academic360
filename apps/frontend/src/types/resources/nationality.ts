@@ -1,8 +1,9 @@
 export interface Nationality {
     readonly id?: number;
     name: string;
-    sequence: number | null;
     code: number | null;
+    sequence: number;
+    disabled: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

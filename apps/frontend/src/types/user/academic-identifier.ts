@@ -1,13 +1,12 @@
-import { Stream } from "../academics/stream";
-import { DegreeProgramme, Framework } from "../enums";
+import { Framework } from "../enums";
 
 export interface AcademicIdentifier {
     readonly id?: number,
     studentId: number,
     frameworkType: Framework | null,
     rfid: string | null,
-    stream: Stream | null,
-    degreeProgramme: DegreeProgramme | null,
+    // stream: Stream | null,
+    // programmeType: ProgrammeType | null,
     cuFormNumber: string | null,
     uid: string | null,
     oldUid: string | null,

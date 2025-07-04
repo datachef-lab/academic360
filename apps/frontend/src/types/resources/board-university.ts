@@ -7,7 +7,8 @@ export interface BoardUniversity {
     passingMarks: number | null;
     code: string | null;
     address: Address | null;
-    sequence: number | null;
+    sequence: number;
+    disabled: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

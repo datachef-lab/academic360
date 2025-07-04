@@ -1,1 +1,0 @@
-ALTER TABLE "academic_years" DROP COLUMN "end_year";

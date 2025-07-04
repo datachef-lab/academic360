@@ -1,18 +1,24 @@
-import { relations } from "drizzle-orm";
-import { boolean, integer, pgEnum, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
-import { streamModel } from "@/features/academics/models/stream.model.js";
+import { boolean, integer, pgTable, serial, timestamp, unique, varchar } from "drizzle-orm/pg-core";
+// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
 import { specializationModel } from "@/features/user/models/specialization.model.js";
 
 import { subjectTypeModel } from "./subjectType.model.js";
-import { subjectCategoryTypeEnum } from "@/features/user/models/helper.js";
+import { programmeTypeEnum, frameworkTypeEnum, subjectCategoryTypeEnum } from "@/features/user/models/helper.js";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { classModel } from "./class.model.js";
 
 export const subjectMetadataModel = pgTable("subject_metadatas", {
     id: serial().primaryKey(),
-    streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
-    semester: integer().notNull(),
+    // streamId: integer("stream_id_fk").notNull().references(() => streamModel.id),
+    degreeId: integer("degree_id_fk")
+        .references(() => degreeModel.id)
+        .notNull(),
+    programmeType: programmeTypeEnum().notNull().default("HONOURS"),
+    framework: frameworkTypeEnum().default("CCF").notNull(),
+    classId: integer("class_id_fk").notNull().references(() => classModel.id),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
     category: subjectCategoryTypeEnum(),
     subjectTypeId: integer("subject_type_id_fk").references(() => subjectTypeModel.id),
@@ -36,21 +42,6 @@ export const subjectMetadataModel = pgTable("subject_metadatas", {
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
-
-export const subjectMetadataRelations = relations(subjectMetadataModel, ({ one }) => ({
-    stream: one(streamModel, {
-        fields: [subjectMetadataModel.id],
-        references: [streamModel.id]
-    }),
-    subjectType: one(subjectTypeModel, {
-        fields: [subjectMetadataModel.subjectTypeId],
-        references: [subjectTypeModel.id]
-    }),
-    specialization: one(specializationModel, {
-        fields: [subjectMetadataModel.specializationId],
-        references: [specializationModel.id]
-    }),
-}));
 
 export const createSubjectMetadataSchema = createInsertSchema(subjectMetadataModel);
 

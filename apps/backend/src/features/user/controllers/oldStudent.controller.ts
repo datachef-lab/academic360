@@ -9,7 +9,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { Student, studentModel } from "../models/student.model.js";
 import { accommodationModel } from "../models/accommodation.model.js";
 import { Address, addressModel } from "../models/address.model.js";
-import { admissionModel } from "../models/admission.model.js";
+// import { admissionModel } from "../models/admission.model.js";
 import { familyModel } from "../models/family.model.js";
 import { personModel } from "../models/person.model.js";
 import { Health, healthModel } from "../models/health.model.js";
@@ -40,12 +40,12 @@ import { Specialization, specializationModel } from "../models/specialization.mo
 import { spec } from "node:test/reporters";
 import { fileURLToPath } from "node:url";
 import { readExcelFile } from "@/utils/readExcel.js";
-import { streamModel } from "@/features/academics/models/stream.model.js";
+// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { SubjectMetadata, subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
 import { SubjectRow } from "@/types/academics/subject-row.js";
 import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/subjectType.model.js";
 import { findDegreeByName } from "@/features/resources/services/degree.service.js";
-import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
+// import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
 import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
 // import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
 
@@ -194,6 +194,7 @@ export async function addStudent(oldStudent: OldStudent, user: User, db: DbType)
 
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
+        applicationId: null,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         handicapped: !!oldStudent.handicapped,
     }).returning();
@@ -243,22 +244,22 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student)
     return newAccommodation;
 }
 
-export async function addAdmission(oldStudent: OldStudent, student: Student) {
-    const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
-    if (existingAdmission) {
-        return existingAdmission;
-    }
+// export async function addAdmission(oldStudent: OldStudent, student: Student) {
+// const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
+// if (existingAdmission) {
+//     return existingAdmission;
+// }
 
-    const [newAdmission] = await db.insert(admissionModel).values({
-        studentId: student.id as number,
-        admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
-        applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
-        yearOfAdmission: oldStudent.admissionYear,
-        admissionDate: oldStudent.admissiondate?.toISOString()
-    }).returning();
+// const [newAdmission] = await db.insert(admissionModel).values({
+//     studentId: student.id as number,
+//     admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
+//     applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
+//     yearOfAdmission: oldStudent.admissionYear,
+//     admissionDate: oldStudent.admissiondate?.toISOString()
+// }).returning();
 
-    return newAdmission;
-}
+// return newAdmission;
+// }
 
 async function categorizeIncome(income: string | null | undefined) {
     if (!income || income.trim() === "" || income === "0") {
@@ -646,6 +647,12 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
     };
 
     const [existingAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, student.id as number));
+
+    let framework: "CCF" | "CBCS" | undefined;
+    if (oldStudent.coursetype && oldStudent.coursetype?.toUpperCase().trim() === "CBCS" || oldStudent.coursetype?.toUpperCase().trim() === "CCF") {
+        framework = oldStudent.coursetype?.toUpperCase().trim() === "CBCS" ? "CBCS" : "CCF";
+    }
+
     if (existingAcademicIdentifier) {
         const updatedValues: Record<string, any> = {};
 
@@ -672,7 +679,8 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
             .update(academicIdentifierModel)
             .set({
                 registrationNumber: updatedValues?.registrationNumber ? updatedValues?.registrationNumber : null,
-                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null
+                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null,
+                framework,
             })
             .where(eq(academicIdentifierModel.id, existingAcademicIdentifier.id))
             .returning();
@@ -691,6 +699,7 @@ export async function addAcademicIdentifier(oldStudent: OldStudent, student: Stu
         classRollNumber: oldStudent.rollNumber ? oldStudent.rollNumber?.toString()?.trim()?.toUpperCase() : null,
         cuFormNumber: cleanString(oldStudent.cuformno)?.toUpperCase(),
         // frameworkType
+        framework,
         oldUid: cleanString(oldStudent.oldcodeNumber)?.toUpperCase(),
         uid: cleanString(oldStudent.codeNumber)?.toUpperCase(),
         registrationNumber: oldStudent.univregno ? addHyphen(oldStudent.univregno, "reg_no") : (oldStudent.universityRegNo ? addHyphen(oldStudent.universityRegNo, "reg_no") : null),
@@ -728,7 +737,7 @@ export async function processStudent(oldStudent: OldStudent) {
     await addAccommodation(oldStudent, student);
 
     // Step 4: Check for the admission
-    await addAdmission(oldStudent, student);
+    // await addAdmission(oldStudent, student);
 
     // Step 5: Check for the Familys
     await addFamily(oldStudent, student);
@@ -754,33 +763,33 @@ export async function processStudent(oldStudent: OldStudent) {
     return student;
 }
 
-export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENERAL", framework: "CCF" | "CBCS") {
-    name = name.trim();
-    if (name.endsWith(" (H)") || name.endsWith(" (G)")) {
-        name = name.split(' ')[0];
-    }
+// export async function addStream(name: string, degreeProgramme: "HONOURS" | "GENERAL", framework: "CCF" | "CBCS") {
+//     name = name.trim();
+//     if (name.endsWith(" (H)") || name.endsWith(" (G)")) {
+//         name = name.split(' ')[0];
+//     }
 
-    const existingStream = await findStreamByNameAndProgrammee(name, degreeProgramme);
-    if (existingStream) {
-        return existingStream;
-    }
+//     const existingStream = await findStreamByNameAndProgrammee(name, degreeProgramme);
+//     if (existingStream) {
+//         return existingStream;
+//     }
 
-    let foundDegree = await findDegreeByName(name);
-    if (!foundDegree) {
-        const [newDegree] = await db.insert(degreeModel).values({ name }).returning();
-        foundDegree = newDegree;
-    }
+//     let foundDegree = await findDegreeByName(name);
+//     if (!foundDegree) {
+//         const [newDegree] = await db.insert(degreeModel).values({ name }).returning();
+//         foundDegree = newDegree;
+//     }
 
-    const [newStream] = await db.insert(streamModel).values({
-        degreeId: foundDegree.id as number,
-        degreeProgramme,
-        framework,
-        duration: 3,
-        numberOfSemesters: 6,
-    }).returning();
+//     const [newStream] = await db.insert(streamModel).values({
+//         degreeId: foundDegree.id as number,
+//         degreeProgramme,
+//         framework,
+//         duration: 3,
+//         numberOfSemesters: 6,
+//     }).returning();
 
-    return newStream;
-}
+//     return newStream;
+// }
 
 export async function loadStudents() {
     // STEP 1: Count the total numbers of students

@@ -1,14 +1,15 @@
-// import { db } from "@/db/index.js";
+import { db } from "@/db/index.js";
+import { eq } from "drizzle-orm";
+import { studentPaperModel } from "../models/studentPaper.model.js";
 // import { findSubjectMetdataByStreamId } from "./subjectMetadata.service.js";
 // import { offeredSubjectModel } from "../models/offeredSubject.model.js";
-// import { eq, inArray, or } from "drizzle-orm";
+// import { inArray, or } from "drizzle-orm";
 // import { paperModel } from "../models/paper.model.js";
 // import { batchModel } from "../models/batch.model.js";
 // import { batchPaperModel } from "../models/batchPaper.model.js";
 // import { BatchType } from "@/types/academics/batch.js";
 // import { BatchPaperType } from "@/types/academics/batch-paper.js";
 // import { batchFormatResponse, findBatchById } from "./batch.service.js";
-// import { studentPaperModel } from "../models/studentPaper.model.js";
 // // import { batchPaperFormatResponse } from "./batchPaper.service.js";
 // import { count } from 'drizzle-orm';
 // import { AcademicIdentifier, academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
@@ -174,3 +175,41 @@
 // export async function studentFormatResponse() {
 
 // }
+
+// --- CRUD Service Functions ---
+import type { StudentPaper } from "../models/studentPaper.model.js";
+
+// Create a new student paper
+export async function createStudentPaper(data: Omit<StudentPaper, "id" | "createdAt" | "updatedAt">) {
+  const [newStudentPaper] = await db
+    .insert(studentPaperModel)
+    .values(data)
+    .returning();
+  return newStudentPaper;
+}
+
+// Get all student papers
+export async function getAllStudentPapers() {
+  return await db.select().from(studentPaperModel);
+}
+
+// Get a student paper by ID
+export async function findStudentPaperById(id: number) {
+  return (await db.select().from(studentPaperModel).where(eq(studentPaperModel.id, id)))[0];
+}
+
+// Update a student paper by ID
+export async function updateStudentPaper(id: number, data: Partial<Omit<StudentPaper, "id" | "createdAt" | "updatedAt">>) {
+  const [updatedStudentPaper] = await db
+    .update(studentPaperModel)
+    .set(data)
+    .where(eq(studentPaperModel.id, id))
+    .returning();
+  return updatedStudentPaper || null;
+}
+
+// Delete a student paper by ID
+export async function deleteStudentPaper(id: number) {
+  const result = await db.delete(studentPaperModel).where(eq(studentPaperModel.id, id)).returning();
+  return result.length > 0;
+}

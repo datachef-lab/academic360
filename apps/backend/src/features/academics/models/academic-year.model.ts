@@ -5,7 +5,7 @@ import { sessionModel } from "./session.model.js";
 
 export const academicYearModel = pgTable("academic_years", {
     id: serial().primaryKey(),
-    startYear: varchar({ length: 4 }).notNull(),
+    year: varchar({ length: 4 }).notNull(),
     isCurrentYear: boolean("is_current_year").notNull().default(false),
     sessionId: integer("session_id_fk")
         .references(() => sessionModel.id),
