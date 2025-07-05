@@ -1,13 +1,13 @@
-import { Stream } from "@/types/academics/stream";
+// import { Stream } from "@/types/academics/stream";
 // import { ApiResonse } from "@/types/api-response";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import axiosInstance from "@/utils/api";
 
-export async function getAllStreams(): Promise<Stream[]> {
-    const response = await axiosInstance.get(`/api/streams`);
-    return response.data.payload;
-}
+// export async function getAllStreams(): Promise<Stream[]> {
+//     const response = await axiosInstance.get(`/api/streams`);
+//     return response.data.payload;
+// }
 export const saveAcademicIdentifier = async (formData:AcademicIdentifier) => {
     const response = await axiosInstance.post(`/api/academicIdentifiers`,formData);
     return response.data;

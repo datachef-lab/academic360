@@ -205,6 +205,8 @@ export default function HealthDetails({ studentId }: HealthDetailsProps) {
       ...prev,
       bloodGroup: {
         id: prev.bloodGroup?.id || 0,
+        sequence: null,
+        disabled: false,
         type: value,
         createdAt: prev.bloodGroup?.createdAt || new Date(),
         updatedAt: prev.bloodGroup?.updatedAt || new Date()

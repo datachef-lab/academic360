@@ -8,7 +8,7 @@ export const stateModel = pgTable("states", {
     id: serial().primaryKey(),
     countryId: integer().notNull().references(() => countryModel.id),
     name: varchar({ length: 255 }).notNull().unique(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

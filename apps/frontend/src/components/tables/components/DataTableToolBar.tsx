@@ -178,7 +178,7 @@ export function DataTableToolbar<TData>({ table, searchText, setSearchText, refe
               placeholder="Search..."
               value={searchText}
               onChange={handleSearchChange}
-              className="pl-10 border drop-shadow-md rounded-full focus:ring-0 focus:ring-offset-0"
+              className="pl-10 border drop-shadow-md rounded-md focus:ring-0 focus:ring-offset-0"
             />
           </div>
 

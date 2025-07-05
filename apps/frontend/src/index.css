@@ -109,3 +109,43 @@ html {
   }
 }
 
+.table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.custom-scroll-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.custom-scroll-table thead {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  z-index: 2;
+  position: relative;
+}
+
+.custom-scroll-table tbody {
+  display: block;
+  max-height: 400px;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.custom-scroll-table tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.custom-scroll-table th,
+.custom-scroll-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

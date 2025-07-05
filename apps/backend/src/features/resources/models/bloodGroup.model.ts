@@ -5,7 +5,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 export const bloodGroupModel = pgTable("blood_group", {
     id: serial().primaryKey(),
     type: varchar({ length: 255 }).notNull().unique(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

@@ -10,7 +10,7 @@ export const institutionModel = pgTable("institutions", {
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().notNull().references(() => degreeModel.id),
     addressId: integer().references(() => addressModel.id),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

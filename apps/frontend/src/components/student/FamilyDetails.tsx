@@ -72,6 +72,8 @@ const defaultFamilyDetails: Parent = {
   },
   annualIncome: {
     range: "",
+    disabled: false,
+    sequence: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   },

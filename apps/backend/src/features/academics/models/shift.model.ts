@@ -6,7 +6,7 @@ export const shiftModel = pgTable('shifts', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull(),
     codePrefix: varchar({ length: 10 }).notNull(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

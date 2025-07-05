@@ -58,13 +58,14 @@ const SubjectFilters: React.FC<SubjectFiltersProps> = ({
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-purple-900">Semester</label>
+          {JSON.stringify(uniqueSemesters)}
           <Select value={currentSemester} onValueChange={setCurrentSemester}>
             <SelectTrigger className="border-purple-300 focus:ring-purple-700">
               <SelectValue placeholder="All Semesters" />
             </SelectTrigger>
             <SelectContent className="bg-white border-purple-300">
               <SelectItem value="all">All Semesters</SelectItem>
-              {uniqueSemesters.map((semester) => (
+              {uniqueSemesters.filter((semester) => semester !== undefined && semester !== null).map((semester) => (
                 <SelectItem key={semester} value={semester.toString()}>
                   Semester {semester}
                 </SelectItem>

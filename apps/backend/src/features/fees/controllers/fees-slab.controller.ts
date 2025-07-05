@@ -4,6 +4,7 @@ import { handleError } from "@/utils/index.js";
 
 export const getAllFeesSlabs = async (req: Request, res: Response) => {
     const slabs = await feesSlabService.getAllFeesSlabs();
+    console.log("fees slabs:", slabs)
     if (slabs === null) {
         handleError(new Error("Error fetching fees slabs"), res);
         return;

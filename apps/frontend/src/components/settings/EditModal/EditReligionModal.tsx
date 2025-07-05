@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -27,11 +25,11 @@ const EditReligionModal: React.FC<EditReligion> = ({ type,data, onClose }) => {
     const queryClient = useQueryClient(); 
   const [formData, setFormData] = useState<Religion>({
     name: data.name || "",
-    sequence: data.sequence || 0,
-    createdAt: data.createdAt || new Date(),
-    updatedAt: data.updatedAt || new Date(),
-    
-    });
+    sequence: data.sequence,
+    disabled: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
     const updateData=useMutation({
       mutationFn:(formData:Religion)=>{

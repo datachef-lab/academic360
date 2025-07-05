@@ -7,7 +7,7 @@ export const classModel = pgTable('classes', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull(),
     type: classTypeEnum().notNull(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

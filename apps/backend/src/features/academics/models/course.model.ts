@@ -17,7 +17,7 @@ export const courseModel = pgTable('courses', {
     amount: integer("amount"),
     numberOfSemesters: integer(),
     duration: varchar({length: 255}),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

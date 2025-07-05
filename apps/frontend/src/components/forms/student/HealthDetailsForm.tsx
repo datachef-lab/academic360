@@ -71,6 +71,8 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
                 ...formData, 
                 bloodGroup: value ? { 
                   type: value,
+                  disabled: false,
+                  sequence: null,
                   createdAt: new Date(),
                   updatedAt: new Date()
                 } : null 

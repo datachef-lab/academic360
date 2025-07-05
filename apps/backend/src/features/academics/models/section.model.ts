@@ -5,7 +5,7 @@ import { z } from "zod";
 export const sectionModel =  pgTable('sections', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull().unique(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

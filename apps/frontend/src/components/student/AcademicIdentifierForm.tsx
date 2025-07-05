@@ -1,27 +1,25 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState,useEffect, useMemo } from "react";
+import { useState,useEffect,  } from "react";
+// import {
+//   DropdownMenu,
+//   DropdownMenuTrigger,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+// } from "@/components/ui/dropdown-menu";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Settings, Barcode, Layers, ClipboardCheck, FileText, Fingerprint, 
+  Settings, Barcode, FileText, Fingerprint, 
   Hash, IdCard, ListOrdered, LayoutGrid, Landmark, BadgeCheck, ShieldCheck,
-  ChevronDown, 
+  
 
 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getAllStreams, saveAcademicIdentifier } from "@/services/stream";
+import { saveAcademicIdentifier } from "@/services/stream";
 import { getAcademicIdentifier } from "@/services/academic";
 import { createAcademicIdentifier } from "@/services/student-apis";
 import axios from "axios";
-import { Stream } from "@/types/academics/stream";
-// import { useQuery } from "@tanstack/react-query";
 
 
 
@@ -30,7 +28,6 @@ const formElement = [
   { name: "frameworkType", label: "Framework Type", type: "text", icon: <Settings className="w-5 h-5 text-gray-500" /> },
   { name: "rfid", label: "RFID", type: "text", icon: <Barcode className="w-5 h-5 text-gray-500" /> },
  
-  { name: "degreeProgramme", label: "Degree Programme", type: "text", icon: <ClipboardCheck className="w-5 h-5 text-gray-500" /> },
   { name: "cuFormNumber", label: "CU Form Number", type: "text", icon: <FileText className="w-5 h-5 text-gray-500" /> },
   { name: "uid", label: "UID", type: "text", icon: <Fingerprint className="w-5 h-5 text-gray-500" /> },
   { name: "oldUid", label: "Old UID", type: "text", icon: <Hash className="w-5 h-5 text-gray-500" /> },
@@ -45,40 +42,17 @@ const formElement = [
 ];
 
 const AcademicIdentifierForm = () => {
-  const [selectedStream, setSelectedStream] = useState<{ id: number; name: string } | null>(null);
-
   const location = useLocation();
   const studentId  = location.pathname.split("/").pop();
 
 const id=Number(studentId);
- const { data:streamData } = useQuery({
-    queryKey: ["streams"],
-    queryFn: getAllStreams,
-  });
-  const streamMemo = useMemo(() => {
-    if (!streamData) {
-      //console.warn("No streamData received from API");
-      return [];
-    }
-
-    const streamMap = new Map();
-    streamData.forEach((item: Stream) => {
-      if (item.degree) {
-        streamMap.set(item.degree.id, { id: item.degree.id, name: item.degree.name });
-      }
-    });
-    const degreeNames = [...streamMap.values()];
-    // console.log("Distinct Degree Names:", degreeNames);
-    return degreeNames;
-  }, [streamData]);
 
 const [isNew,setIsNew]=useState(false);
 const [formData, setFormData] = useState<AcademicIdentifier>({
   studentId: 0,
   frameworkType: null,
   rfid: "",
-  stream: null,
-  degreeProgramme: null,
+  course: null,
   cuFormNumber: "",
   uid: "",
   oldUid: "",
@@ -114,8 +88,7 @@ const { data ,isError,error} = useQuery({
         studentId: 0,
         frameworkType: null,
         rfid: "",
-        stream: null,
-        degreeProgramme: null,
+        course: null,
         cuFormNumber: "",
         uid: "",
         oldUid: "",
@@ -127,7 +100,6 @@ const { data ,isError,error} = useQuery({
         abcId: "",
         apprid: "",
         checkRepeat: false,
-       
       });
      
     }
@@ -177,17 +149,6 @@ const { data ,isError,error} = useQuery({
   
   };
 
-  const handleStreamSelect = (option: { id: number; name: string }) => {
-    // console.log("option selected",option);
-    setSelectedStream(option);
-    setFormData(prev => ({
-      ...prev,
-      stream: { ...(prev.stream || {}), id: option.id, name: option.name } as Stream, // Explicitly cast to Stream
-    }));
-
-    
-    
-  };
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
    
@@ -231,33 +192,6 @@ const { data ,isError,error} = useQuery({
             </div>
           </div>
         ))}
-      <div className=" flex pr-8 w-full flex-col">
-      <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Streams</label>
-         
-      <DropdownMenu>
-            <DropdownMenuTrigger className="relative" >
-               <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                              <Layers className="text-gray-500 dark:text-gray-300 w-5 h-5" />
-                                </span>
-              <Button className="border border-gray-400 w-full pl-10 flex items-center justify-between " variant="outline">
-              {selectedStream ? selectedStream.name : "Select Stream"} <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {streamMemo.map((option) => (
-                <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => {
-                    //console.log("Selected Stream:", option.name);
-                    handleStreamSelect(option);
-                  }}
-                >
-                  {option.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-      </div>
       
         <div className="col-span-2">
           <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">

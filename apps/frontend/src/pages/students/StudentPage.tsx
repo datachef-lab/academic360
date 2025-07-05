@@ -146,10 +146,10 @@ export default function StudentPage() {
                     
                     <div className="flex flex-wrap gap-2 mt-2">
                       <Badge className="bg-purple-100 drop-shadow-sm hover:bg-purple-200 text-purple-800 border-0 rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                        {data?.academicIdentifier?.stream?.degree.name ?? ""}
+                        {data?.academicIdentifier?.course?.degree?.name ?? ""}
                       </Badge>
                       <Badge className="bg-indigo-100 drop-shadow-sm hover:bg-indigo-200 text-indigo-800 border-0 rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm">
-                        {data?.academicIdentifier?.stream?.framework}
+                        {data?.academicIdentifier?.frameworkType}
                       </Badge>
                       {data?.community && (
                         <Badge className="bg-pink-100 drop-shadow-sm hover:bg-pink-200 text-pink-800 border-0 rounded-full px-2 sm:px-3 py-1 text-xs sm:text-sm">

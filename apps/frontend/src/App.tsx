@@ -61,8 +61,9 @@ const router = createBrowserRouter([
         path: "courses-subjects",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
         children: [
-          { path: "", element: <courseSubjectModule.HomePage /> },
-          { path: "courses", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          // { path: "", element: <courseSubjectModule.HomePage /> },
+          { path: "", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          { path: ":courseId", element: <courseSubjectModule.CoursePage /> },
           { path: "materials", element: <courseSubjectModule.CourseMaterialPage /> },
         ],
       },
@@ -85,9 +86,10 @@ const router = createBrowserRouter([
             children: [
               { path: "", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
               { path: "academic-year", element: <admissionFeesModule.feesModule.AcademicYearPage /> },
-              { path: "fees-slab", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
-              { path: "fees-receipttype", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
-              { path: "addon", element: <admissionFeesModule.feesModule.AddonPage /> },
+              { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
+              { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+              { path: "receipt-types", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+              { path: "addons", element: <admissionFeesModule.feesModule.AddonPage /> },
               { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
             ],
           },
@@ -98,12 +100,12 @@ const router = createBrowserRouter([
         element: <batchModule.BatchMaster />,
         children: [
           { path: "", element: <batchModule.HomePage /> },
-          { path: ":batchId", element: <batchModule.BatchDetailsPage /> },
+
           { path: "create", element: <batchModule.CreateBatchPage /> },
           { path: "reports", element: <batchModule.ReportsPage /> },
         ],
       },
-
+      { path: "batches/:batchId", element: <batchModule.BatchDetailsPage /> },
       {
         path: "exam-management",
         element: <examModule.ExamMaster />,

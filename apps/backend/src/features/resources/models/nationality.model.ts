@@ -6,7 +6,7 @@ export const nationalityModel = pgTable("nationality", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull(),
     code: integer(),
-    sequene: integer().unique(),
+    sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

@@ -61,11 +61,11 @@ CREATE TABLE "classes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
 	"type" "class_type" NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "classes_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "classes_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "courses" (
@@ -79,23 +79,23 @@ CREATE TABLE "courses" (
 	"amount" integer,
 	"number_of_semesters" integer,
 	"duration" varchar(255),
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "courses_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "courses_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "documents" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"description" varchar(255),
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "documents_name_unique" UNIQUE("name"),
-	CONSTRAINT "documents_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "documents_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "marksheets" (
@@ -136,12 +136,12 @@ CREATE TABLE "papers" (
 CREATE TABLE "sections" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "sections_name_unique" UNIQUE("name"),
-	CONSTRAINT "sections_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "sections_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "sessions" (
@@ -159,11 +159,11 @@ CREATE TABLE "shifts" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
 	"code_prefix" varchar(10) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "shifts_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "shifts_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "student_papers" (
@@ -259,11 +259,11 @@ CREATE TABLE "subject_types" (
 	"irp_short_name" varchar(500),
 	"marksheet_name" varchar(500),
 	"marksheet_short_name" varchar(500),
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "subject_types_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "subject_types_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "academic_subjects" (
@@ -454,7 +454,7 @@ CREATE TABLE "fees_components" (
 	"fees_structure_id_fk" integer NOT NULL,
 	"fees_head_id_fk" integer NOT NULL,
 	"is_concession_applicable" boolean DEFAULT false NOT NULL,
-	"amount" double precision NOT NULL,
+	"base_amount" double precision NOT NULL,
 	"sequence" integer NOT NULL,
 	"remarks" varchar(500),
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -520,8 +520,19 @@ CREATE TABLE "fees_structures" (
 	"online_start_date" date NOT NULL,
 	"online_end_date" date NOT NULL,
 	"number_of_instalments" integer,
-	"instalment_start_date" date,
-	"instalment_end_date" date,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "instalments" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"fees_structure_id_fk" integer NOT NULL,
+	"instalment_number" integer NOT NULL,
+	"base_amount" double precision DEFAULT 0 NOT NULL,
+	"start_date" date NOT NULL,
+	"end_date" date NOT NULL,
+	"online_start_date" date NOT NULL,
+	"online_end_date" date NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -531,8 +542,8 @@ CREATE TABLE "student_fees_mappings" (
 	"student_id_fk" integer NOT NULL,
 	"fees_structure_id_fk" integer NOT NULL,
 	"type" "student_fees_mapping_type" DEFAULT 'FULL' NOT NULL,
-	"instalment_number" integer,
-	"base_amount" integer NOT NULL,
+	"instalment_id_fk" integer,
+	"base_amount" integer DEFAULT 0 NOT NULL,
 	"late_fee" integer DEFAULT 0 NOT NULL,
 	"total_payable" integer DEFAULT 0 NOT NULL,
 	"amount_paid" integer,
@@ -564,22 +575,22 @@ CREATE TABLE "payments" (
 CREATE TABLE "annual_incomes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"range" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "annual_incomes_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "annual_incomes_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "blood_group" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"type" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "blood_group_type_unique" UNIQUE("type"),
-	CONSTRAINT "blood_group_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "blood_group_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "board_result_status" (
@@ -587,11 +598,11 @@ CREATE TABLE "board_result_status" (
 	"name" varchar(255) NOT NULL,
 	"spcl_type" varchar(255) NOT NULL,
 	"result" "board_result_type",
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "board_result_status_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "board_result_status_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "board_universities" (
@@ -601,12 +612,12 @@ CREATE TABLE "board_universities" (
 	"passing_marks" integer,
 	"code" varchar(255),
 	"address_id" integer,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "board_universities_name_unique" UNIQUE("name"),
-	CONSTRAINT "board_universities_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "board_universities_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "categories" (
@@ -614,13 +625,13 @@ CREATE TABLE "categories" (
 	"name" varchar(255) NOT NULL,
 	"document_required" boolean,
 	"code" varchar(10) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "categories_name_unique" UNIQUE("name"),
 	CONSTRAINT "categories_code_unique" UNIQUE("code"),
-	CONSTRAINT "categories_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "categories_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "cities" (
@@ -629,36 +640,36 @@ CREATE TABLE "cities" (
 	"name" varchar(255) NOT NULL,
 	"document_required" boolean DEFAULT false NOT NULL,
 	"code" varchar(10) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "cities_name_unique" UNIQUE("name"),
 	CONSTRAINT "cities_code_unique" UNIQUE("code"),
-	CONSTRAINT "cities_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "cities_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "countries" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "countries_name_unique" UNIQUE("name"),
-	CONSTRAINT "countries_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "countries_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "degree" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"level" "degree_level_type",
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "degree_name_unique" UNIQUE("name"),
-	CONSTRAINT "degree_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "degree_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "institutions" (
@@ -666,45 +677,45 @@ CREATE TABLE "institutions" (
 	"name" varchar(700) NOT NULL,
 	"degree_id" integer NOT NULL,
 	"address_id" integer,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "institutions_name_unique" UNIQUE("name"),
-	CONSTRAINT "institutions_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "institutions_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "language_medium" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "language_medium_name_unique" UNIQUE("name"),
-	CONSTRAINT "language_medium_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "language_medium_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "nationality" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"code" integer,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "nationality_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "nationality_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "occupations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "occupations_name_unique" UNIQUE("name"),
-	CONSTRAINT "occupations_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "occupations_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "pickup_point" (
@@ -717,35 +728,35 @@ CREATE TABLE "pickup_point" (
 CREATE TABLE "qualifications" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "qualifications_name_unique" UNIQUE("name"),
-	CONSTRAINT "qualifications_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "qualifications_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "religion" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "religion_name_unique" UNIQUE("name"),
-	CONSTRAINT "religion_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "religion_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "states" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"country_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"sequene" integer,
+	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "states_name_unique" UNIQUE("name"),
-	CONSTRAINT "states_sequene_unique" UNIQUE("sequene")
+	CONSTRAINT "states_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "transport" (
@@ -1040,8 +1051,10 @@ ALTER TABLE "fees_structures" ADD CONSTRAINT "fees_structures_course_id_fk_cours
 ALTER TABLE "fees_structures" ADD CONSTRAINT "fees_structures_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fees_structures" ADD CONSTRAINT "fees_structures_shift_id_fk_shifts_id_fk" FOREIGN KEY ("shift_id_fk") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "fees_structures" ADD CONSTRAINT "fees_structures_advance_for_course_id_fk_courses_id_fk" FOREIGN KEY ("advance_for_course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "instalments" ADD CONSTRAINT "instalments_fees_structure_id_fk_fees_structures_id_fk" FOREIGN KEY ("fees_structure_id_fk") REFERENCES "public"."fees_structures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_fees_mappings" ADD CONSTRAINT "student_fees_mappings_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "student_fees_mappings" ADD CONSTRAINT "student_fees_mappings_fees_structure_id_fk_fees_structures_id_fk" FOREIGN KEY ("fees_structure_id_fk") REFERENCES "public"."fees_structures"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_fees_mappings" ADD CONSTRAINT "student_fees_mappings_instalment_id_fk_instalments_id_fk" FOREIGN KEY ("instalment_id_fk") REFERENCES "public"."instalments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

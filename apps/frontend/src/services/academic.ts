@@ -3,6 +3,7 @@ import axios from "axios";
 import { ApiResonse } from "@/types/api-response";
 import { Course } from "@/types/academics/course";
 import { Shift } from "@/types/academics/shift";
+import { Section } from "@/types/academics/section";
 
 export const getAcademicIdentifier = async (studentId: number) => {
     try {
@@ -175,5 +176,13 @@ export async function getAllCourses(): Promise<ApiResonse<Course[]>> {
 
 export async function getAllShifts(): Promise<Shift[]> {
     const response = await axiosInstance.get(`/api/v1/shifts`);
+    return response.data;
+}
+
+// Get all sections
+export async function getAllSections(): Promise<Section[]> {
+    const response = await axiosInstance.get(`/api/v1/sections`);
+    // If the backend returns { payload: Section[] }, extract it
+    if (response.data && response.data.payload) return response.data.payload;
     return response.data;
 }

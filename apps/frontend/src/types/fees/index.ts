@@ -78,7 +78,7 @@ export interface Instalment {
     updatedAt?: Date;
 }
 
-export type CreateFeesStructureDto = Omit<FeesStructureDto, 'course'> & { courses: Course[] };
+export type CreateFeesStructureDto = Omit<FeesStructureDto, 'course'> & { courses: Course[]; semester?: number | null };
 
 export interface FeesStructureDto {
     readonly id?: number;
@@ -102,6 +102,7 @@ export interface FeesStructureDto {
     components: FeesComponent[];
     feesSlabMappings: FeesSlabMapping[];
     instalments: Instalment[];
+    semester?: number | null;
 }
 
 export interface FeesDesignAbstractLevel {

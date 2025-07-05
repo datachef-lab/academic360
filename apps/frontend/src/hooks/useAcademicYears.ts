@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAllAcademicYears, getAcademicYearById, createAcademicYear, updateAcademicYearById, deleteAcademicYearById } from '@/services/academic-year-api';
-import { AcademicYear } from '@/types/fees';
+import { AcademicYear } from '@/types/academics/academic-year';
 import { toast } from 'sonner';
 import { getAllShifts } from '../services/academic';
 import { useState, useEffect } from 'react';

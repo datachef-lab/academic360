@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -28,13 +26,13 @@ const EditDegreeModal: React.FC<EditDegree> = ({type, data, onClose }) => {
 
     const [formData, setFormData] = useState<Degree>({
     name: data.name || "",
-    id:data.id,
-    level: data.level || null,
-    sequence: data.sequence || 0,
-    createdAt: data.createdAt || new Date(),
-    updatedAt: data.updatedAt || new Date(),
-    
-    });
+    id: data.id,
+    level: data.level,
+    sequence: data.sequence,
+    disabled: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
 
 const updateData = useMutation({
   mutationFn: (formData:Degree) => {

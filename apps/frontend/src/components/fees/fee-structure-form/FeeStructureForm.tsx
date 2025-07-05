@@ -3,37 +3,34 @@ import { AcademicSetup } from "./steps/AcademicSetup";
 import { SlabCreation } from "./steps/SlabCreation";
 import { FeeConfiguration } from "./steps/FeeConfiguration";
 import { PreviewSimulation } from "./steps/PreviewSimulation";
+import { DatesStep } from "./steps/DatesStep";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import { FeesStructureDto, AcademicYear } from "../../../types/fees";
+import { 
+  FeesStructureDto,  CreateFeesStructureDto } from "../../../types/fees";
+import {AcademicYear} from "@/types/academics/academic-year"
 import { Course } from "../../../types/academics/course";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useFeesSlabs, useFeesHeads, useFeesReceiptTypes } from "@/hooks/useFees";
 import { useShifts } from "@/hooks/useShifts";
 import { getAllCourses } from "@/services/course-api";
-import { checkFeesStructureExists } from '@/services/fees-api';
-// import axiosInstance from "@/utils/api";
-// import { Shift } from "@/types/resources/shift";
+import { getAllClasses } from "@/services/classes.service";
+import { Class } from "@/types/academics/class";
+// import { PlusOutlined, DeleteOutlined, CloseCircleTwoTone, CheckCircleTwoTone } from "@ant-design/icons";
+import { FeesComponent, Instalment } from '@/types/fees';
 
 interface FeeStructureFormProps {
   onClose: () => void;
-  onSubmit: (data: FeesStructureDto) => void;
+  onSubmit: (givenFeesStructure: FeesStructureDto | CreateFeesStructureDto, formType: "ADD" | "EDIT") => Promise<void>
   fieldsDisabled?: boolean;
   disabledSteps?: number[];
   selectedAcademicYear?: AcademicYear | null;
   selectedCourse?: Course | null;
   initialStep?: number;
-  // feesSlabMappings: FeesSlabMapping[];
-  feesStructure?: FeesStructureDto | null;
+  feesStructure?: FeesStructureDto | CreateFeesStructureDto | null;
   existingFeeStructures?: FeesStructureDto[];
   existingCourses: Course[];
+  formType: 'ADD' | 'EDIT';
 }
-
-// const stepImages = [
-//   '/academic-year.png',        // Step 1: Academic Setup (public folder)
-//   '/fees-slab-year.png',      // Step 2: Slab Creation (public folder)
-//   '/fees-structure.png',      // Step 3: Fee Configuration (public folder)
-//   '/preview.png',             // Step 4: Preview & Simulation (public folder)
-// ];
 
 const steps = [
   {
@@ -56,48 +53,75 @@ const steps = [
   },
   {
     number: 4,
+    title: "Dates",
+    description: "Set up all important fee-related dates.",
+    image: "/fees-dates.png",
+  },
+  {
+    number: 5,
     title: "Preview & Simulation",
     description: "Review and simulate the generated fee structure.",
     image: "/preview.png",
   },
 ];
 
+// Utility to get total base amount from components
+const getTotalBaseAmount = (components: FeesComponent[] = []) => (components || []).reduce((sum: number, c: FeesComponent) => sum + (c.baseAmount || 0), 0);
+// Utility to get total base amount from installments
+const getTotalInstalmentAmount = (instalments: Instalment[] = []) => (instalments || []).reduce((sum: number, i: Instalment) => sum + (i.baseAmount || 0), 0);
+
 const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   onClose,
-  // existingCourses,
   onSubmit,
   initialStep = 1,
   feesStructure,
   existingFeeStructures = [],
-  // feesSlabMappings: initialFeesSlabMappings,
-  // ...props
+  formType,
 }) => {
   const [currentStep, setCurrentStep] = useState(initialStep);
-  const [formFeesStructure, setFormFeesStructure] = useState<FeesStructureDto>(
-    feesStructure || {
+  const [formFeesStructureAdd, setFormFeesStructureAdd] = useState<CreateFeesStructureDto>(
+    (feesStructure as CreateFeesStructureDto) || {
       closingDate: new Date(),
-      class: null,
+      class: { id: 0, name: '', type: 'SEMESTER', sequence: 1, disabled: false },
       advanceForSemester: null,
       startDate: new Date(),
       endDate: new Date(),
       onlineStartDate: new Date(),
       onlineEndDate: new Date(),
       numberOfInstalments: null,
-      instalmentStartDate: null,
-      instalmentEndDate: null,
+      instalments: [],
       feesReceiptTypeId: null,
       academicYear: undefined,
-      course: undefined,
+      courses: [],
       advanceForCourse: null,
       components: [],
       shift: null,
       feesSlabMappings: [],
-    },
+    }
   );
-  // const [feesSlabMappings, setFeesSlabMappings] = useState<FeesSlabMapping[]>(feesStructure?.feesSlabMappings!);
+  const [formFeesStructureEdit, setFormFeesStructureEdit] = useState<FeesStructureDto>(
+    (feesStructure as FeesStructureDto) || {
+      closingDate: new Date(),
+      class: { id: 0, name: '', type: 'SEMESTER', sequence: 1, disabled: false },
+      advanceForSemester: null,
+      startDate: new Date(),
+      endDate: new Date(),
+      onlineStartDate: new Date(),
+      onlineEndDate: new Date(),
+      numberOfInstalments: null,
+      instalments: [],
+      feesReceiptTypeId: null,
+      academicYear: undefined,
+      course: { id: 0, degree: null, name: '', shortName: '', codePrefix: '', universityCode: '' },
+      advanceForCourse: null,
+      components: [],
+      shift: null,
+      feesSlabMappings: [],
+    }
+  );
   const [courses, setCourses] = useState<Course[]>([]);
+  const [classes, setClasses] = useState<Class[]>([]);
   const [error, setError] = useState<string | null>(null);
-  // const [slabs, setSlabs] = useState<FeesSlab[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch data from hooks/services
@@ -107,12 +131,16 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   const { feesReceiptTypes, loading: receiptTypesLoading } = useFeesReceiptTypes();
   const { shifts, loading: shiftsLoading } = useShifts();
 
- 
-
   useEffect(() => {
     setCurrentStep(initialStep);
-    if (feesStructure) setFormFeesStructure(feesStructure);
-  }, [initialStep, feesStructure]);
+    if (feesStructure) {
+      if (formType === 'ADD') {
+        setFormFeesStructureAdd(feesStructure as CreateFeesStructureDto);
+      } else {
+        setFormFeesStructureEdit(feesStructure as FeesStructureDto);
+      }
+    }
+  }, [initialStep, feesStructure, formType]);
 
   useEffect(() => {
     getAllCourses().then((res) => {
@@ -123,12 +151,19 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   }, []);
 
   useEffect(() => {
+    getAllClasses().then((data) => {
+      console.log("classes response data:", data);
+      setClasses(data.payload)
+    });
+  }, []);
+
+  useEffect(() => {
     if (
       currentStep === 2 &&
       feesSlabs.length > 0 &&
-      formFeesStructure.feesSlabMappings.length === 0
+      (formFeesStructureAdd as CreateFeesStructureDto).feesSlabMappings.length === 0
     ) {
-      setFormFeesStructure(prev => ({...prev, 
+      setFormFeesStructureAdd(prev => ({...prev, 
         feesSlabMappings: feesSlabs.map((slab) => ({
           id: slab.id!,
           feesSlabId: slab.id!,
@@ -137,46 +172,87 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         }))
       }));
     }
-  }, [currentStep, feesSlabs, formFeesStructure.feesSlabMappings.length, setFormFeesStructure]);
+  }, [currentStep, feesSlabs, (formFeesStructureAdd as CreateFeesStructureDto).feesSlabMappings.length, setFormFeesStructureAdd]);
 
   // Validation logic for each step
   const validateStep = () => {
     if (currentStep === 1) {
-      if (!formFeesStructure.academicYear?.id) {
-        setError("Please select an academic year.");
-        return false;
-      }
-      if (!formFeesStructure.course?.id) {
-        setError("Please select a course.");
-        return false;
+      if (formType === 'ADD') {
+        if (!formFeesStructureAdd.academicYear?.id) {
+          setError("Please select an academic year.");
+          return false;
+        }
+        if (!formFeesStructureAdd.courses.length) {
+          setError("Please select at least one course.");
+          return false;
+        }
+      } else {
+        if (!formFeesStructureEdit.academicYear?.id) {
+          setError("Please select an academic year.");
+          return false;
+        }
+        if (!formFeesStructureEdit.course?.id) {
+          setError("Please select a course.");
+          return false;
+        }
       }
     }
     if (currentStep === 2) {
-      if (!formFeesStructure.feesSlabMappings.length) {
-        setError("Please add at least one slab.");
-        return false;
+      if (formType === 'ADD') {
+        if (!formFeesStructureAdd.feesSlabMappings.length) {
+          setError("Please add at least one slab.");
+          return false;
+        }
+      } else {
+        if (!formFeesStructureEdit.feesSlabMappings.length) {
+          setError("Please add at least one slab.");
+          return false;
+        }
       }
     }
     if (currentStep === 3) {
-      if (!formFeesStructure.class) {
-        setError("Please select a semester.");
-        return false;
-      }
-      if (!formFeesStructure.shift) {
-        setError("Please select a shift.");
-        return false;
-      }
-      if (!formFeesStructure.feesReceiptTypeId) {
-        setError("Please select a fees receipt type.");
-        return false;
-      }
-      if (!formFeesStructure.components.length) {
-        setError("Please add at least one fee component.");
-        return false;
-      }
-      if (formFeesStructure.components.some((c) => !c.feesHeadId || c.amount === undefined)) {
-        setError("All fee components must have a fee head and amount.");
-        return false;
+      if (formType === 'ADD') {
+        if (!formFeesStructureAdd.class) {
+          setError("Please select a class.");
+          return false;
+        }
+        if (!formFeesStructureAdd.shift) {
+          setError("Please select a shift.");
+          return false;
+        }
+        if (!formFeesStructureAdd.feesReceiptTypeId) {
+          setError("Please select a fees receipt type.");
+          return false;
+        }
+        if (!formFeesStructureAdd.components.length) {
+          setError("Please add at least one fee component.");
+          return false;
+        }
+        if (formFeesStructureAdd.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)) {
+          setError("All fee components must have a fee head and amount.");
+          return false;
+        }
+      } else {
+        if (!formFeesStructureEdit.class) {
+          setError("Please select a class.");
+          return false;
+        }
+        if (!formFeesStructureEdit.shift) {
+          setError("Please select a shift.");
+          return false;
+        }
+        if (!formFeesStructureEdit.feesReceiptTypeId) {
+          setError("Please select a fees receipt type.");
+          return false;
+        }
+        if (!formFeesStructureEdit.components.length) {
+          setError("Please add at least one fee component.");
+          return false;
+        }
+        if (formFeesStructureEdit.components.some((c) => !c.feesHeadId || c.baseAmount === undefined)) {
+          setError("All fee components must have a fee head and amount.");
+          return false;
+        }
       }
     }
     setError(null);
@@ -185,7 +261,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
 
   const handleNext = () => {
     if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4));
+      setCurrentStep((prev) => Math.min(prev + 1, 5));
     }
   };
 
@@ -197,33 +273,14 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
     if (!validateStep()) return;
     setSubmitting(true);
     try {
-      if (!formFeesStructure.id) {
-        // Remove 'id' from each feesSlabMapping before submit
-        const cleanedFeesSlabMappings = formFeesStructure.feesSlabMappings.map(({ id, ...rest }) => { console.log(id); return rest});
-        // const payload = {
-        //   ...formFeesStructure,
-        //   feesSlabMappings: cleanedFeesSlabMappings,
-        // };
-        // Duplicate check
-        const checkPayload = {
-          academicYearId: formFeesStructure.academicYear?.id,
-          courseId: formFeesStructure.course?.id,
-          semester: formFeesStructure.semester,
-          shiftId: formFeesStructure.shift?.id,
-          feesReceiptTypeId: formFeesStructure.feesReceiptTypeId,
-        };
-        const res = await checkFeesStructureExists(checkPayload);
-        if (res.exists) {
-          setError('A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.');
-          setSubmitting(false);
-          return;
-        }
-        onSubmit({ ...formFeesStructure, feesSlabMappings: cleanedFeesSlabMappings });
+      if (formType === 'ADD') {
+        const cleanedFeesSlabMappings = formFeesStructureAdd.feesSlabMappings.map(({ id, ...rest }) => {console.log(id); return rest});
+        onSubmit({ ...formFeesStructureAdd, feesSlabMappings: cleanedFeesSlabMappings }, formType);
       } else {
-        onSubmit(formFeesStructure);
+        onSubmit(formFeesStructureEdit, formType);
       }
     } catch {
-      setError('Error checking for duplicate fee structure.');
+      setError('Error submitting fee structure.');
     } finally {
       setSubmitting(false);
     }
@@ -231,12 +288,23 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
 
   const currentStepData = steps.find((s) => s.number === currentStep)!;
 
-  const isFeeConfigNextDisabled = currentStep === 3 && (
-    !formFeesStructure.semester ||
-    !formFeesStructure.shift ||
-    !formFeesStructure.feesReceiptTypeId ||
-    !formFeesStructure.components.length ||
-    formFeesStructure.components.some((c) => !c.feesHeadId)
+  const isFeeConfigNextDisabled = (
+    (currentStep === 3 && (
+      !formFeesStructureAdd.class ||
+      !formFeesStructureAdd.shift ||
+      !formFeesStructureAdd.feesReceiptTypeId ||
+      !formFeesStructureAdd.components.length ||
+      formFeesStructureAdd.components.some((c) => !c.feesHeadId)
+    )) ||
+    (currentStep === 4 && (() => {
+      // Only apply for ADD mode
+      if (formType !== 'ADD') return false;
+      const hasInstallments = formFeesStructureAdd.numberOfInstalments === 2;
+      if (!hasInstallments) return false;
+      const totalBaseAmount = getTotalBaseAmount(formFeesStructureAdd.components);
+      const totalInstalmentAmount = getTotalInstalmentAmount(formFeesStructureAdd.instalments);
+      return totalBaseAmount !== totalInstalmentAmount;
+    })())
   );
 
   if (academicYearsLoading || slabsLoading || headsLoading || receiptTypesLoading || shiftsLoading) {
@@ -251,7 +319,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentStepData.title}</h2>
           <p className="text-sm text-gray-600">{currentStepData.description}</p>
         </div>
-        <div className="relative flex justify-between items-center mb-12 w-full">
+        <div className="relative flex justify-between items-center mb-4 w-full">
           <div className="absolute top-4 left-0 w-full h-1 bg-gray-200" />
           <div
             className="absolute top-4 left-0 h-1 bg-purple-600 transition-all duration-300"
@@ -267,7 +335,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                 {step.number}
               </div>
               <p
-                className={`mt-2 text-xs text-center font-semibold ${
+                className={`mt-1 text-xs text-center font-semibold ${
                   currentStep >= step.number ? "text-gray-900" : "text-gray-600"
                 }`}
               >
@@ -285,47 +353,110 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         <div className="flex-1 flex flex-col min-h-0">
           {error && <div className="mb-4 text-red-600 font-medium">{error}</div>}
           {currentStep === 1 && (
-            <AcademicSetup
-              feesStructure={formFeesStructure}
-              setFeesStructure={setFormFeesStructure}
-              courses={courses}
-              academicYears={academicYears}
-            />
+            formType === 'ADD' ? (
+              <AcademicSetup
+                feesStructure={formFeesStructureAdd}
+                setFeesStructure={setFormFeesStructureAdd}
+                courses={courses}
+                academicYears={academicYears}
+                classes={classes}
+                shifts={shifts}
+                formType={formType}
+              />
+            ) : (
+              <AcademicSetup
+                feesStructure={formFeesStructureEdit}
+                setFeesStructure={setFormFeesStructureEdit}
+                courses={courses}
+                academicYears={academicYears}
+                classes={classes}
+                shifts={shifts}
+                formType={formType}
+              />
+            )
           )}
           {currentStep === 2 && (
-            <SlabCreation
-              feesSlabMappings={formFeesStructure.feesSlabMappings}
-              setFormFeesStructure={setFormFeesStructure}
-              slabs={feesSlabs}
-              academicYearId={formFeesStructure.academicYear?.id}
-            />
+            formType === 'ADD' ? (
+              <SlabCreation<CreateFeesStructureDto>
+                feesSlabMappings={formFeesStructureAdd.feesSlabMappings}
+                setFormFeesStructure={setFormFeesStructureAdd}
+                slabs={feesSlabs}
+              />
+            ) : (
+              <SlabCreation<FeesStructureDto>
+                feesSlabMappings={formFeesStructureEdit.feesSlabMappings}
+                setFormFeesStructure={setFormFeesStructureEdit}
+                slabs={feesSlabs}
+              />
+            )
           )}
           {currentStep === 3 && (
-            <FeeConfiguration
-              courses={courses}
-              feesStructure={formFeesStructure}
-              setFeesStructure={setFormFeesStructure}
-              feeHeads={feesHeads}
-              feesReceiptTypes={feesReceiptTypes}
-              shifts={shifts}
-              existingFeeStructures={existingFeeStructures}
-            />
+            formType === 'ADD' ? (
+              <FeeConfiguration
+                formType="ADD"
+                courses={courses}
+                feesStructure={formFeesStructureAdd}
+                setFeesStructure={setFormFeesStructureAdd}
+                feeHeads={feesHeads}
+                feesReceiptTypes={feesReceiptTypes}
+                shifts={shifts}
+                existingFeeStructures={existingFeeStructures}
+                classes={classes}
+              />
+            ) : (
+              <FeeConfiguration
+                formType="EDIT"
+                courses={courses}
+                feesStructure={formFeesStructureEdit}
+                setFeesStructure={setFormFeesStructureEdit}
+                feeHeads={feesHeads}
+                feesReceiptTypes={feesReceiptTypes}
+                shifts={shifts}
+                existingFeeStructures={existingFeeStructures}
+                classes={classes}
+              />
+            )
           )}
           {currentStep === 4 && (
-            <PreviewSimulation
-              feesStructure={formFeesStructure}
-              feeHeads={feesHeads}
-              slabs={feesSlabs}
-              feesSlabMappings={formFeesStructure.feesSlabMappings}
-              feesReceiptTypes={feesReceiptTypes}
-            />
+            formType === 'ADD' ? (
+              <DatesStep
+                formType="ADD"
+                feesStructure={formFeesStructureAdd}
+                setFeesStructure={setFormFeesStructureAdd}
+              />
+            ) : (
+              <DatesStep
+                formType="EDIT"
+                feesStructure={formFeesStructureEdit}
+                setFeesStructure={setFormFeesStructureEdit}
+              />
+            )
+          )}
+          {currentStep === 5 && (
+            formType === 'ADD' ? (
+              <PreviewSimulation
+                feesStructure={formFeesStructureAdd}
+                feeHeads={feesHeads}
+                slabs={feesSlabs}
+                feesSlabMappings={formFeesStructureAdd.feesSlabMappings}
+                feesReceiptTypes={feesReceiptTypes}
+              />
+            ) : (
+              <PreviewSimulation
+                feesStructure={formFeesStructureEdit}
+                feeHeads={feesHeads}
+                slabs={feesSlabs}
+                feesSlabMappings={formFeesStructureEdit.feesSlabMappings}
+                feesReceiptTypes={feesReceiptTypes}
+              />
+            )
           )}
         </div>
         <div className="border-t border-gray-200 pt-4 mt-4">
           <div className="flex justify-between">
             <button
               onClick={handlePrevious}
-              disabled={currentStep === 1 || !!(formFeesStructure.id && formFeesStructure.id > 0)}
+              disabled={currentStep === 1 || !!(formFeesStructureAdd.id && formFeesStructureAdd.id > 0)}
               className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${
                 currentStep === 1
                   ? "bg-gray-100 text-gray-400 cursor-not-allowed"
@@ -342,7 +473,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
               >
                 Cancel
               </button>
-              {currentStep === 4 ? (
+              {currentStep === 5 ? (
                 <button
                   onClick={handleSubmit}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"

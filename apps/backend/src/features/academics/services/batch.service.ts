@@ -10,7 +10,7 @@ import { Section, sectionModel } from "../models/section.model.js";
 import { OldShift } from "@/types/old-data/old-shift.js";
 import { Shift, shiftModel } from "../models/shift.model.js";
 import { Batch, batchModel } from "../models/batch.model.js";
-import { BatchDetails, BatchStudentRow, BatchSummary, BatchType, StudentBatchEntry } from "@/types/academics/batch.js";
+import { BatchDetails, BatchStudentRow, BatchSummary, BatchType, StudentBatchEntry, StudentStatus } from "@/types/academics/batch.js";
 import { CourseType } from "@/types/academics/course.js";
 import { findCourseById } from "./course.service.js";
 import { OldSession } from "@/types/academics/session.js";
@@ -37,6 +37,7 @@ import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { specializationModel } from "@/features/user/models/specialization.model.js";
 import { SubjectMetadataType } from "@/types/academics/subject-metadata.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
+import { findUserById } from "@/features/user/services/user.service.js";
 
 const BATCH_SIZE = 500;
 
@@ -789,7 +790,7 @@ export async function batchFormatResponse(
             .select()
             .from(shiftModel)
             .where(eq(shiftModel.id, shiftId));
-        section = foundShift;
+        shift = foundShift;
     }
 
     let session: Session | null = null;
@@ -915,7 +916,7 @@ export async function findBatchDetailsById(id: number): Promise<BatchDetails | n
                     degree: degree || { name: '' },
                     class: cls || { name: '' },
                     specialization: specialization || null,
-                    subjectType: subjectType || { id: 0, irpName: '', irpShortName: '', marksheetName: '', marksheetShortName: '', sequene: null, disabled: null, createdAt: new Date(), updatedAt: new Date() },
+                    subjectType: subjectType || { id: 0, irpName: '', irpShortName: '', marksheetName: '', marksheetShortName: '', sequence: null, disabled: null, createdAt: new Date(), updatedAt: new Date() },
                 });
             }
         }
@@ -924,7 +925,7 @@ export async function findBatchDetailsById(id: number): Promise<BatchDetails | n
             .from(studentModel)
             .where(eq(studentModel.id, studentId));
 
-        let status = '';
+        let status: StudentStatus = 'ACTIVE';
 
         if (foundStudent.isSuspended) {
             status = "SUSPENDED";
@@ -940,8 +941,14 @@ export async function findBatchDetailsById(id: number): Promise<BatchDetails | n
             status = "ALUMNI";
         }
 
+        const user = await findUserById(foundStudent.userId);
+        // const academicIdentifier = await findAcademicIdentifierByStudentId(studentId);
+
         studentEntries.push({
             studentId,
+            studentName: user?.name!,
+            registrationNumber: academicIdentifier?.registrationNumber ?? null,
+            roll: academicIdentifier?.rollNumber ?? null,
             uid: academicIdentifier?.uid || '',
             subjects: subjectMetadatas,
             status
@@ -958,17 +965,10 @@ export async function findBatchDetailsById(id: number): Promise<BatchDetails | n
         totalElements: studentEntries.length,
     };
 
-    const b: any = batch;
+    // const b: BatchType = batch;
+    console.log(batch);
     return {
-        id: b.id,
-        academicYearId: b.academicYearId,
-        createdAt: b.createdAt,
-        updatedAt: b.updatedAt,
-        course: b.course,
-        academicClass: b.academicClass,
-        section: b.section,
-        shift: b.shift,
-        session: b.session,
+        ...batch,
         paginatedStudentEntry,
     };
 }
