@@ -74,7 +74,7 @@ const FeesStructurePage: React.FC = () => {
 
   useEffect(() => {
     getAllClasses()
-      .then(data => setClasses(data));
+      .then(data => setClasses(data.payload));
   }, [])
 
   useEffect(() => {
@@ -142,7 +142,18 @@ const FeesStructurePage: React.FC = () => {
 
     setSelectedReceiptType(tmpSelectedFeesReceiptType ?? null);
     setFilteredFeesStructures(tmpFilteredFeesStructures);
-    setSelectedShift(null); // Reset shift when receipt type changes
+
+    // Find all unique shifts for this receipt type
+    const availableShifts = feesStructures
+      .filter((fs) => fs.feesReceiptTypeId === id && fs.shift)
+      .map((fs) => fs.shift)
+      .filter((shift, idx, arr) => shift && arr.findIndex(s => s?.id === shift?.id) === idx);
+
+    if (availableShifts.length > 0) {
+      setSelectedShift(availableShifts[0] ?? null);
+    } else {
+      setSelectedShift(null);
+    }
   };
 
   const handleShiftChange = (value: string) => {
@@ -234,7 +245,11 @@ const FeesStructurePage: React.FC = () => {
     } catch {
       // Error handled
     } finally {
-      await fetchFeesStructures();
+      if (selectedAcademicYear?.id && selectedCourse?.id) {
+        await fetchFeesStructures();
+      } else {
+        setFilteredFeesStructures([]);
+      }
     }
   };
 
@@ -307,11 +322,16 @@ const FeesStructurePage: React.FC = () => {
   // };
 
   const fetchFeesStructures = async () => {
+    if (!selectedAcademicYear?.id || !selectedCourse?.id) {
+      setFilteredFeesStructures([]);
+      return;
+    }
     try {
       console.log("fetching fees structures: -");
       const res = await axiosInstance.get<FeesStructureDto[]>(
-        `/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear!.id}/${selectedCourse!.id}`,
+        `/api/v1/fees/structure/by-academic-year-and-course/${selectedAcademicYear.id}/${selectedCourse.id}`,
       );
+      // console.log(first)
       setFeesStructures(res.data || []);
       console.log("fetching fees structures, res.data: -", res.data);
 
@@ -365,6 +385,20 @@ const FeesStructurePage: React.FC = () => {
     fetchAvailableCourses(selectedAcademicYear?.id, coursesForSelectedYear || [], setAvailableCourses);
   }, [selectedAcademicYear, coursesForSelectedYear]);
 
+  // Auto-select first academic year if not set
+  useEffect(() => {
+    if (!selectedAcademicYear && academicYears.length > 0) {
+      setSelectedAcademicYear(academicYears[0]);
+    }
+  }, [academicYears, selectedAcademicYear]);
+
+  // Auto-select first course for the selected year if not set
+  useEffect(() => {
+    if (!selectedCourse && coursesForSelectedYear.length > 0) {
+      setSelectedCourse(coursesForSelectedYear[0]);
+    }
+  }, [coursesForSelectedYear, selectedCourse]);
+
   if (academicYearsLoading || feesLoading || receiptTypesLoading || shiftsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -374,7 +408,7 @@ const FeesStructurePage: React.FC = () => {
   }
 
   return (
-    <div className="">
+    <div className="p-4">
       <div className="mb-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">

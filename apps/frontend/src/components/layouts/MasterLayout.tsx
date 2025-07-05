@@ -5,20 +5,24 @@ import { cn } from "@/lib/utils";
 import { SearchStudentModal } from "../globals/SearchStudentModal";
 import styles from "./MaterLayout.module.css";
 
+export type LinkType =  {
+  title: string;
+  url: string;
+  icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
+  isModal?: boolean;
+  nestedLinks?: LinkType[];
+}
+
 type MasterLayoutProps = {
   children: React.ReactNode;
-  subLinks: {
-    title: string;
-    url: string;
-    icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
-    isModal?: boolean;
-  }[];
+  subLinks: LinkType[];
   rightBarHeader?: React.ReactNode;
   rightBarFooter?: React.ReactNode;
   rightBarContent?: React.ReactNode;
 };
 
 export default function MasterLayout({ children, subLinks, rightBarHeader, rightBarFooter, rightBarContent }: MasterLayoutProps) {
+
   const location = useLocation();
   const currentPath = location.pathname;
   const [isSearchActive, setIsSearchActive] = React.useState(false);
@@ -72,14 +76,38 @@ export default function MasterLayout({ children, subLinks, rightBarHeader, right
                     );
                   }
                   return (
-                    <NavItem
-                      key={link.title}
-                      icon={<link.icon className="h-5 w-5" />}
-                      href={link.url}
-                      isActive={currentPath.endsWith(link.url)}
-                    >
-                      {link.title}
-                    </NavItem>
+                    <>
+                      <NavItem
+                        key={link.title}
+                        icon={<link.icon className="h-5 w-5" />}
+                        href={link.url}
+                        isActive={currentPath.endsWith(link.url)}
+                      >
+                        {link.title}
+                      </NavItem>
+                      {/* Render nested links if present */}
+                      {link.nestedLinks && link.nestedLinks.length > 0 && (
+                        <ul className="ml-6 mt-1 space-y-1 border-l-2 border-purple-200 pl-3 bg-purple-50/40 rounded-md">
+                          {link.nestedLinks.map((nested) => (
+                            <NavItem
+                              key={nested.title}
+                              icon={<nested.icon className="h-4 w-4" />}
+                              href={nested.url}
+                              isActive={currentPath.endsWith(nested.url)}
+                            >
+                              <span className={cn(
+                                "pl-2 block rounded transition-colors",
+                                currentPath.endsWith(nested.url)
+                                  ? "bg-purple-100 text-purple-700 font-semibold"
+                                  : "text-gray-700 hover:bg-purple-50"
+                              )}>
+                                {nested.title}
+                              </span>
+                            </NavItem>
+                          ))}
+                        </ul>
+                      )}
+                    </>
                   );
                 })}
               </ul>

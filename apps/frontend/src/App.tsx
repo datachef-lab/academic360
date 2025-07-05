@@ -95,9 +95,10 @@ const router = createBrowserRouter([
             children: [
               { path: "", element: <admissionFeesModule.feesModule.FeesStructurePage /> },
               { path: "academic-year", element: <admissionFeesModule.feesModule.AcademicYearPage /> },
-              { path: "fees-slab", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
-              { path: "fees-receipttype", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
-              { path: "addon", element: <admissionFeesModule.feesModule.AddonPage /> },
+              { path: "slabs", element: <admissionFeesModule.feesModule.FeesSlabPage /> },
+              { path: "heads", element: <admissionFeesModule.feesModule.FeeHeadsPage /> },
+              { path: "receipt-types", element: <admissionFeesModule.feesModule.FeesReceiptTypePage /> },
+              { path: "addons", element: <admissionFeesModule.feesModule.AddonPage /> },
               { path: "student-fees", element: <admissionFeesModule.feesModule.StudentFees /> },
             ],
           },

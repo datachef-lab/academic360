@@ -3,6 +3,7 @@ import { AcademicSetup } from "./steps/AcademicSetup";
 import { SlabCreation } from "./steps/SlabCreation";
 import { FeeConfiguration } from "./steps/FeeConfiguration";
 import { PreviewSimulation } from "./steps/PreviewSimulation";
+import { DatesStep } from "./steps/DatesStep";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { 
   FeesStructureDto,  CreateFeesStructureDto } from "../../../types/fees";
@@ -14,6 +15,8 @@ import { useShifts } from "@/hooks/useShifts";
 import { getAllCourses } from "@/services/course-api";
 import { getAllClasses } from "@/services/classes.service";
 import { Class } from "@/types/academics/class";
+// import { PlusOutlined, DeleteOutlined, CloseCircleTwoTone, CheckCircleTwoTone } from "@ant-design/icons";
+import { FeesComponent, Instalment } from '@/types/fees';
 
 interface FeeStructureFormProps {
   onClose: () => void;
@@ -50,11 +53,22 @@ const steps = [
   },
   {
     number: 4,
+    title: "Dates",
+    description: "Set up all important fee-related dates.",
+    image: "/fees-dates.png",
+  },
+  {
+    number: 5,
     title: "Preview & Simulation",
     description: "Review and simulate the generated fee structure.",
     image: "/preview.png",
   },
 ];
+
+// Utility to get total base amount from components
+const getTotalBaseAmount = (components: FeesComponent[] = []) => (components || []).reduce((sum: number, c: FeesComponent) => sum + (c.baseAmount || 0), 0);
+// Utility to get total base amount from installments
+const getTotalInstalmentAmount = (instalments: Instalment[] = []) => (instalments || []).reduce((sum: number, i: Instalment) => sum + (i.baseAmount || 0), 0);
 
 const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   onClose,
@@ -137,7 +151,10 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   }, []);
 
   useEffect(() => {
-    getAllClasses().then((data) => setClasses(data));
+    getAllClasses().then((data) => {
+      console.log("classes response data:", data);
+      setClasses(data.payload)
+    });
   }, []);
 
   useEffect(() => {
@@ -244,7 +261,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
 
   const handleNext = () => {
     if (validateStep()) {
-      setCurrentStep((prev) => Math.min(prev + 1, 4));
+      setCurrentStep((prev) => Math.min(prev + 1, 5));
     }
   };
 
@@ -271,12 +288,23 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
 
   const currentStepData = steps.find((s) => s.number === currentStep)!;
 
-  const isFeeConfigNextDisabled = currentStep === 3 && (
-    !formFeesStructureAdd.class ||
-    !formFeesStructureAdd.shift ||
-    !formFeesStructureAdd.feesReceiptTypeId ||
-    !formFeesStructureAdd.components.length ||
-    formFeesStructureAdd.components.some((c) => !c.feesHeadId)
+  const isFeeConfigNextDisabled = (
+    (currentStep === 3 && (
+      !formFeesStructureAdd.class ||
+      !formFeesStructureAdd.shift ||
+      !formFeesStructureAdd.feesReceiptTypeId ||
+      !formFeesStructureAdd.components.length ||
+      formFeesStructureAdd.components.some((c) => !c.feesHeadId)
+    )) ||
+    (currentStep === 4 && (() => {
+      // Only apply for ADD mode
+      if (formType !== 'ADD') return false;
+      const hasInstallments = formFeesStructureAdd.numberOfInstalments === 2;
+      if (!hasInstallments) return false;
+      const totalBaseAmount = getTotalBaseAmount(formFeesStructureAdd.components);
+      const totalInstalmentAmount = getTotalInstalmentAmount(formFeesStructureAdd.instalments);
+      return totalBaseAmount !== totalInstalmentAmount;
+    })())
   );
 
   if (academicYearsLoading || slabsLoading || headsLoading || receiptTypesLoading || shiftsLoading) {
@@ -291,7 +319,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{currentStepData.title}</h2>
           <p className="text-sm text-gray-600">{currentStepData.description}</p>
         </div>
-        <div className="relative flex justify-between items-center mb-12 w-full">
+        <div className="relative flex justify-between items-center mb-4 w-full">
           <div className="absolute top-4 left-0 w-full h-1 bg-gray-200" />
           <div
             className="absolute top-4 left-0 h-1 bg-purple-600 transition-all duration-300"
@@ -307,7 +335,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                 {step.number}
               </div>
               <p
-                className={`mt-2 text-xs text-center font-semibold ${
+                className={`mt-1 text-xs text-center font-semibold ${
                   currentStep >= step.number ? "text-gray-900" : "text-gray-600"
                 }`}
               >
@@ -331,6 +359,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                 setFeesStructure={setFormFeesStructureAdd}
                 courses={courses}
                 academicYears={academicYears}
+                classes={classes}
+                shifts={shifts}
                 formType={formType}
               />
             ) : (
@@ -339,6 +369,8 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
                 setFeesStructure={setFormFeesStructureEdit}
                 courses={courses}
                 academicYears={academicYears}
+                classes={classes}
+                shifts={shifts}
                 formType={formType}
               />
             )
@@ -387,6 +419,21 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
           )}
           {currentStep === 4 && (
             formType === 'ADD' ? (
+              <DatesStep
+                formType="ADD"
+                feesStructure={formFeesStructureAdd}
+                setFeesStructure={setFormFeesStructureAdd}
+              />
+            ) : (
+              <DatesStep
+                formType="EDIT"
+                feesStructure={formFeesStructureEdit}
+                setFeesStructure={setFormFeesStructureEdit}
+              />
+            )
+          )}
+          {currentStep === 5 && (
+            formType === 'ADD' ? (
               <PreviewSimulation
                 feesStructure={formFeesStructureAdd}
                 feeHeads={feesHeads}
@@ -426,7 +473,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
               >
                 Cancel
               </button>
-              {currentStep === 4 ? (
+              {currentStep === 5 ? (
                 <button
                   onClick={handleSubmit}
                   className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700"
