@@ -9,7 +9,7 @@ import React from "react";
 // import { motion } from "framer-motion";
 import { BookOpenIcon, CalendarDays, CalendarDaysIcon, HomeIcon } from "lucide-react";
 import type { QueryObserverResult } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useParams, } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getBatchDetailsById } from "@/services/batch";
 import { BatchDetails, StudentBatchEntry, StudentBatchSubjectEntry } from "@/types/academics/batch";
@@ -37,6 +37,7 @@ const subLinks = [
 
 export default function BatchDetailsPage() {
   const { batchId } = useParams<{ batchId: string }>();
+  // const location = useLocation();
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editBatch, setEditBatch] = useState<BatchDetails | null>(null);
   const [searchText, setSearchText] = useState("");
@@ -115,6 +116,36 @@ export default function BatchDetailsPage() {
       pageIndex: Math.min(prev.pageIndex, totalPages - 1),
     }));
   }, [totalElements, totalPages]);
+
+  // Show image only if batchId is present in the URL
+  const showBatchImage = Boolean(batchId);
+  const rightBarContent = showBatchImage ? (
+    <div className="flex flex-col h-full">
+      {/* Sublinks (Quick Links) */}
+      <ul className="space-y-2 mb-4">
+        {subLinks.map((link) => (
+          <li key={link.title}>
+            <a
+              href={link.url}
+              className="flex items-center gap-2 px-4 py-2 rounded hover:bg-gray-100 transition"
+            >
+              <link.icon className="h-5 w-5" />
+              <span>{link.title}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+      {/* Illustration Image */}
+      {/* <div className="flex-1 flex flex-col items-center justify-end p-4">
+        <img
+          src="/batch-details-illustration.png"
+          alt="Batch Details Illustration"
+          className="max-w-full h-auto rounded-xl shadow"
+          style={{ maxHeight: 300 }}
+        />
+      </div> */}
+    </div>
+  ) : undefined;
 
   // Only now, after all hooks, do early returns:
   if (isLoading) return <div>Loading...</div>;
@@ -203,7 +234,7 @@ export default function BatchDetailsPage() {
   };
 
   return (
-    <MasterLayout subLinks={subLinks}>
+    <MasterLayout subLinks={subLinks} rightBarContent={rightBarContent}>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
         {/* Main Content */}
         <div className="max-w-full mx-auto space-y-10">

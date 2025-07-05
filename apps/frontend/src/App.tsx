@@ -70,8 +70,9 @@ const router = createBrowserRouter([
         path: "courses-subjects",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
         children: [
-          { path: "", element: <courseSubjectModule.HomePage /> },
-          { path: "courses", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          // { path: "", element: <courseSubjectModule.HomePage /> },
+          { path: "", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          { path: ":courseId", element: <courseSubjectModule.CoursePage /> },
           { path: "materials", element: <courseSubjectModule.CourseMaterialPage /> },
         ],
       },

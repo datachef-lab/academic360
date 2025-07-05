@@ -51,10 +51,11 @@ export async function createCourse(course: Omit<Course, 'id' | 'createdAt' | 'up
     return formattedCourse;
 }
 
-export async function updateCourse(id: number, course: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt'>>): Promise<CourseType | null> {
+export async function updateCourse(id: number, course: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>): Promise<CourseType | null> {
+    console.log("in update course in service, course:", course, "id:", id);
     const [updatedCourse] = await db
         .update(courseModel)
-        .set(course)
+        .set({...course, degreeId: course.degree?.id })
         .where(eq(courseModel.id, id))
         .returning();
 

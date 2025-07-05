@@ -9,43 +9,10 @@ interface FiltersProps {
     framework: "CCF" | "CBCS";
 }
 
-export interface Subject {
-    id: number;
-    name: string;
-    irpCode: string;
-    marksheetCode: string;
-    credit: number;
-    fullMarks: number;
-    semester: number;
-    isOptional: boolean;
-    subjectType?: {
-        id: number;
-        marksheetName: string;
-    };
-    stream?: {
-        id: number;
-        degreeProgramme: string;
-        degree?: {
-            id: number;
-            name: string;
-        };
-    };
-}
 
-export interface NewSubject {
-    name: string;
-    irpCode: string;
-    marksheetCode: string;
-    subjectTypeId: number;
-    credit: number;
-    fullMarks: number;
-    semester: number;
-    streamId: number;
-    isOptional: boolean;
-}
 
 // Get all subjects
-export async function getAllSubjects(): Promise<ApiResonse<Subject[]>> {
+export async function getAllSubjects(): Promise<ApiResonse<SubjectMetadata[]>> {
     const response = await axiosInstance.get(`/api/subject-metadatas`);
     return response.data;
 }
@@ -58,7 +25,7 @@ export async function getSubjectMetadataByFilters(filters: FiltersProps): Promis
 }
 
 // Add a new subject
-export async function addSubject(newSubject: NewSubject): Promise<ApiResonse<Subject>> {
+export async function addSubject(newSubject: SubjectMetadata): Promise<ApiResonse<SubjectMetadata>> {
     const response = await axiosInstance.post(`/api/subject-metadatas`, newSubject);
     return response.data;
 }
@@ -70,7 +37,7 @@ export async function deleteSubject(subjectId: number): Promise<ApiResonse<void>
 }
 
 // Update a subject
-export async function updateSubject(subjectId: number, subject: Partial<NewSubject>): Promise<ApiResonse<Subject>> {
+export async function updateSubject(subjectId: number, subject: Partial<SubjectMetadata>): Promise<ApiResonse<SubjectMetadata>> {
     const response = await axiosInstance.put(`/api/subject-metadatas/${subjectId}`, subject);
     return response.data;
 }
