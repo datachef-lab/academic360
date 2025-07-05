@@ -7,41 +7,16 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
+import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
+import { Degree } from '@/types/resources/degree';
 
-interface SubjectTypeOption {
-  id: number;
-  marksheetName: string;
-}
-
-interface DegreeOption {
-  id: number;
-  name: string;
-}
-
-interface ProgrammeOption {
-  id: number;
-  degreeProgramme: string;
-  degreeId: number;
-}
-
-interface NewSubject {
-  name: string;
-  irpCode: string;
-  marksheetCode: string;
-  subjectTypeId: number;
-  credit: number;
-  fullMarks: number;
-  semester: number;
-  streamId: number;
-  isOptional: boolean;
-}
 
 interface SubjectFormProps {
-  newSubject: NewSubject;
+  newSubject: SubjectMetadata;
   selectedDegreeId: number;
-  subjectTypeOptions: SubjectTypeOption[];
-  degreeOptions: DegreeOption[];
-  filteredProgrammes: ProgrammeOption[];
+  subjectTypeOptions: SubjectType[];
+  degreeOptions: Degree[];
+  filteredProgrammes: string[];
   isSubmitting: boolean;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSelectChange: (name: string, value: string) => void;
@@ -88,7 +63,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
           <Input
             id="irpCode"
             name="irpCode"
-            value={newSubject.irpCode}
+            value={newSubject.irpCode ?? ""}
             onChange={handleInputChange}
             placeholder="Enter subject code"
             className="border-purple-300 focus:border-purple-700 focus:ring-purple-700"
@@ -102,7 +77,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             Subject Type <span className="text-red-500">*</span>
           </Label>
           <Select
-            value={newSubject.subjectTypeId ? newSubject.subjectTypeId.toString() : ""}
+            value={newSubject.subjectType ? newSubject.subjectType.id!.toString() : ""}
             onValueChange={(value) => handleSelectChange("subjectTypeId", value)}
           >
             <SelectTrigger id="subjectTypeId" className="border-purple-300 focus:ring-purple-700">
@@ -111,8 +86,8 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             <SelectContent className="bg-white border-purple-300">
               {subjectTypeOptions.length > 0 ? (
                 subjectTypeOptions.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.marksheetName}
+                  <SelectItem key={type.id} value={type.id!.toString()}>
+                    {type.name}
                   </SelectItem>
                 ))
               ) : (
@@ -157,7 +132,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             <SelectContent className="bg-white border-purple-300">
               {degreeOptions.length > 0 ? (
                 degreeOptions.map((degree) => (
-                  <SelectItem key={degree.id} value={degree.id.toString()}>
+                  <SelectItem key={degree.id} value={degree.id!.toString()}>
                     {degree.name}
                   </SelectItem>
                 ))
@@ -174,7 +149,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             Programme <span className="text-red-500">*</span>
           </Label>
           <Select
-            value={newSubject.streamId ? newSubject.streamId.toString() : ""}
+            value={newSubject.degree ? newSubject.degree.id!.toString() : ""}
             onValueChange={(value) => handleSelectChange("streamId", value)}
             disabled={!selectedDegreeId || filteredProgrammes.length === 0}
           >
@@ -190,17 +165,13 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
               />
             </SelectTrigger>
             <SelectContent className="bg-white border-purple-300">
-              {filteredProgrammes.length > 0 ? (
-                filteredProgrammes.map((programme) => (
-                  <SelectItem key={programme.id} value={programme.id.toString()}>
-                    {programme.degreeProgramme}
+              {
+                ["HONOURS", "GENERAL"].map((programme) => (
+                  <SelectItem key={programme} value={programme}>
+                    {programme}
                   </SelectItem>
                 ))
-              ) : (
-                <SelectItem value="no-options" disabled>
-                  {!selectedDegreeId ? "Select a degree first" : "No programmes available"}
-                </SelectItem>
-              )}
+               }
             </SelectContent>
           </Select>
         </div>
@@ -212,7 +183,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
             Semester <span className="text-red-500">*</span>
           </Label>
           <Select
-            value={newSubject.semester.toString()}
+            value={newSubject.class ? newSubject.class.id!.toString() : ''}
             onValueChange={(value) => handleSelectChange("semester", value)}
           >
             <SelectTrigger id="semester" className="border-purple-300 focus:ring-purple-700">
@@ -249,7 +220,7 @@ const SubjectForm: React.FC<SubjectFormProps> = ({
         <Input
           id="marksheetCode"
           name="marksheetCode"
-          value={newSubject.marksheetCode}
+          value={newSubject.marksheetCode ?? ''}
           onChange={handleInputChange}
           placeholder="Enter marksheet code"
           className="border-purple-300 focus:border-purple-700 focus:ring-purple-700"

@@ -4,26 +4,18 @@ import { CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SubjectForm from './SubjectForm';
-import { NewSubject, ProgrammeOption } from '../types/subject-types';
+import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
+import { Degree } from '@/types/resources/degree';
 
-interface SubjectTypeOption {
-  id: number;
-  marksheetName: string;
-}
-
-interface DegreeOption {
-  id: number;
-  name: string;
-}
 
 interface SubjectHeaderProps {
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: (isOpen: boolean) => void;
-  newSubject: NewSubject;
+  newSubject: SubjectMetadata;
   selectedDegreeId: number;
-  subjectTypeOptions: SubjectTypeOption[];
-  degreeOptions: DegreeOption[];
-  filteredProgrammes: ProgrammeOption[];
+  subjectTypeOptions: SubjectType[];
+  degreeOptions: Degree[];
+  filteredProgrammes: string[];
   isSubmitting: boolean;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSelectChange: (name: string, value: string) => void;

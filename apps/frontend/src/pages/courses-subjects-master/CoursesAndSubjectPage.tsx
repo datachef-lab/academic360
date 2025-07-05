@@ -275,11 +275,6 @@ export const CoursesAndSubjectPage: React.FC = () => {
     fetchDropdownOptions();
   }, [activeTab, fetchSubjects, fetchCourses, toast]);
 
-  // Filter programmes based on selected degree
-  const filteredProgrammes = useMemo(() => {
-    if (!selectedCoursesDegreeId) return programmeOptions || [];
-    return (programmeOptions || []).filter((programme) => programme.degreeId === selectedCoursesDegreeId);
-  }, [programmeOptions, selectedCoursesDegreeId]);
 
   // Safe access to subjects array with fallback to empty array
   const uniqueSemesters = useMemo(() => {
@@ -914,7 +909,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
                 selectedDegreeId={selectedDegreeId}
                 subjectTypeOptions={subjectTypeOptionList}
                 degreeOptions={degreeOptionList}
-                filteredProgrammes={filteredProgrammes}
+                filteredProgrammes={["HONOURS", "GENERAL"]}
                 isSubmitting={isSubmittingSubject}
                 handleInputChange={handleSubjectInputChange}
                 handleSelectChange={handleSubjectSelectChange}
