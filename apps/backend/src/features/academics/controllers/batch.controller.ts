@@ -9,7 +9,9 @@ import {
     findBatchById,
     updateBatch,
     deleteBatch,
-    uploadBatch
+    uploadBatch,
+    findBatchSummariesByFilters,
+    findBatchDetailsById
 } from "../services/batch.service.js";
 import { readExcelFile } from "@/utils/readExcel.js";
 import { writeExcelFile } from "@/utils/writeExcel.js";
@@ -123,6 +125,30 @@ export const batchUploadController = async (req: Request, res: Response, next: N
             return;
         }
         res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Batch upload processed"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const getBatchSummariesController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const academicYearId = req.query.academicYearId ? Number(req.query.academicYearId) : undefined;
+        const summaries = await findBatchSummariesByFilters({ academicYearId });
+        res.status(200).json(new ApiResponse(200, "SUCCESS", summaries, "Batch summaries fetched successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const getBatchDetailsByIdController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.params.id);
+        const batchDetails = await findBatchDetailsById(id);
+        if (!batchDetails) {
+            res.status(404).json(new ApiResponse(404, "FAIL", null, "Batch details not found"));
+            return;
+        }
+        res.status(200).json(new ApiResponse(200, "SUCCESS", batchDetails, "Batch details fetched successfully"));
     } catch (error) {
         handleError(error, res, next);
     }

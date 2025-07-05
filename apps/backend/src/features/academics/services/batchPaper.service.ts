@@ -42,7 +42,7 @@ import { processBatch } from "./batch.service.js";
 import { OldBatch } from "@/types/old-data/old-batch.js";
 import { OldStudentPaper } from "@/types/old-data/old-student-paper.js";
 import { OldStudent } from "@/types/old-student.js";
-import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
+import { AcademicIdentifier, academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 import { studentModel } from "@/features/user/models/student.model.js";
 import { BatchPaper, batchPaperModel } from "../models/batchPaper.model.js";
 import { Batch } from "../models/batch.model.js";
@@ -187,8 +187,10 @@ async function processEachBatchPaperAssociation(oldBatchPaper: {
             const [savedAcademicIdentifier] = await db
                 .update(academicIdentifierModel)
                 .set({
-                    courseId: batch.courseId
-                })
+                    courseId: batch.courseId,
+                    shiftId: batch.shiftId,
+                    sectionId: batch.sectionId,
+                } as Partial<AcademicIdentifier>)
                 .where(
                     eq(academicIdentifierModel.studentId, foundStudent.id)
                 )

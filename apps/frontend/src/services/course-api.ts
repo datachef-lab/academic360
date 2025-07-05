@@ -2,8 +2,6 @@ import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import { Course } from '@/types/academics/course';
 
-
-
 // Get all courses
 export async function getAllCourses(): Promise<ApiResonse<Course[]>> {
     const response = await axiosInstance.get(`/api/v1/courses`);
@@ -30,6 +28,7 @@ export async function deleteCourse(courseId: number): Promise<ApiResonse<void>> 
 
 // Update a course
 export async function updateCourse(courseId: number, course: Partial<Course>): Promise<ApiResonse<Course>> {
+    console.log("in fe, course:", course);
     const response = await axiosInstance.put(`/api/v1/courses/${courseId}`, course);
     return response.data;
 } 

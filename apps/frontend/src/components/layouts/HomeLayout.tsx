@@ -57,7 +57,7 @@ export default function HomeLayout() {
     <ThemeProvider defaultTheme="light">
       <SidebarProvider className="w-screen overflow-x-hidden">
         <AppSidebar />
-        <SidebarInset className="w-[100%] ">
+        <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
           <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
             <div className="flex items-center gap-2 px-4">
               {/* <SidebarTrigger className="-ml-1" /> */}

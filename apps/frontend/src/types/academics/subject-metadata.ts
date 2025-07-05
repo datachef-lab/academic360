@@ -12,10 +12,10 @@ export interface SubjectType {
 
 export interface SubjectMetadata {
     readonly id?: number;
-    degree: Degree;
+    degree: Degree | null;
     programmeType: ProgrammeType;
     framework: Framework;
-    class: Class;
+    class: Class | null;
     specialization: Specialization | null;
     category: SubjectCategory;
     subjectType: SubjectType | null;

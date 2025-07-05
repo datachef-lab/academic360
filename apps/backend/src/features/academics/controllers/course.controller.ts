@@ -3,16 +3,6 @@ import { z } from "zod";
 import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse } from "../services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
-const courseSchema = z.object({
-    name: z.string(),
-    streamId: z.number().optional(),
-    shortName: z.string().optional(),
-    codePrefix: z.string().optional(),
-    universityCode: z.string().optional(),
-});
-
-const updateCourseSchema = courseSchema.partial();
-
 export async function getAllCoursesHandler(req: Request, res: Response) {
     try {
         const courses = await findAllCourses();
@@ -44,13 +34,8 @@ export async function getCourseByIdHandler(req: Request, res: Response) {
 
 export async function createCourseHandler(req: Request, res: Response) {
     try {
-        const validationResult = courseSchema.safeParse(req.body);
-        if (!validationResult.success) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", validationResult.error.format(), "Invalid course data"));
-        }
-
-        const courseData = validationResult.data;
-        const newCourse = await createCourse(courseData);
+        
+        const newCourse = await createCourse(req.body);
         return res.status(201).json(new ApiResponse(201, "CREATED", newCourse, "Course created successfully"));
     } catch (error) {
         console.error("Error creating course:", error);
@@ -65,13 +50,13 @@ export async function updateCourseHandler(req: Request, res: Response) {
             return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
         }
 
-        const validationResult = updateCourseSchema.safeParse(req.body);
-        if (!validationResult.success) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", validationResult.error.format(), "Invalid course data"));
-        }
+        // const validationResult = updateCourseSchema.safeParse();
+        // if (!validationResult.success) {
+        //     return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", validationResult.error.format(), "Invalid course data"));
+        // }
 
-        const courseData = validationResult.data;
-        const updatedCourse = await updateCourse(id, courseData);
+        // const courseData = validationResult.data;
+        const updatedCourse = await updateCourse(id, req.body);
         
         if (!updatedCourse) {
             return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));

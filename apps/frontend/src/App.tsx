@@ -70,8 +70,9 @@ const router = createBrowserRouter([
         path: "courses-subjects",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
         children: [
-          { path: "", element: <courseSubjectModule.HomePage /> },
-          { path: "courses", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          // { path: "", element: <courseSubjectModule.HomePage /> },
+          { path: "", element: <courseSubjectModule.CoursesAndSubjectPage /> },
+          { path: ":courseId", element: <courseSubjectModule.CoursePage /> },
           { path: "materials", element: <courseSubjectModule.CourseMaterialPage /> },
         ],
       },
@@ -107,12 +108,12 @@ const router = createBrowserRouter([
         element: <batchModule.BatchMaster />,
         children: [
           { path: "", element: <batchModule.HomePage /> },
-          { path: ":batchId", element: <batchModule.BatchDetailsPage /> },
+
           { path: "create", element: <batchModule.CreateBatchPage /> },
           { path: "reports", element: <batchModule.ReportsPage /> },
         ],
       },
-
+      { path: "batches/:batchId", element: <batchModule.BatchDetailsPage /> },
       {
         path: "exam-management",
         element: <examModule.ExamMaster />,
