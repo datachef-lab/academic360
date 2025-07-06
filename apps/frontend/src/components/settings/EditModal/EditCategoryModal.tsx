@@ -34,6 +34,8 @@ const EditCategoryModal: React.FC<EditUserBoardUniversity> = ({ type, data, onCl
     name: data.name || "",
     code: data.code || "",
     documentRequired: data.documentRequired,
+    sequence: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

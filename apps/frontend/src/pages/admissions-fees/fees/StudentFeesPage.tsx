@@ -183,7 +183,7 @@ const StudentFees: React.FC = () => {
               <option value="">Select Fees Structure</option>
               {feesStructures.map(structure => (
                 <option key={structure.id} value={structure.id}>
-                  {structure.course?.name} - {structure.academicYear?.startYear}
+                  {structure.course?.name} - {structure.academicYear?.year}
                 </option>
               ))}
             </select>

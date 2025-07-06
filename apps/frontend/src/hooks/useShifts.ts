@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { getAllShifts } from '@/services/academic';
-import { Shift } from '@/types/resources/shift';
+import { Shift } from '@/types/academics/shift';
 
 const fetcher = async (): Promise<Shift[]> => {
     const res = await getAllShifts();
@@ -9,14 +9,14 @@ const fetcher = async (): Promise<Shift[]> => {
 };
 
 export function useShifts() {
-  const { data, error, isLoading } = useSWR<Shift[]>('api/v1/academics/shifts', fetcher);
+    const { data, error, isLoading } = useSWR<Shift[]>('api/v1/academics/shifts', fetcher);
 
-  console.log("Shifts data:", data);
-  console.log("Shifts error:", error);
+    console.log("Shifts data:", data);
+    console.log("Shifts error:", error);
 
-  return {
-    shifts: data || [],
-    loading: isLoading,
-    error: error,
-  };
+    return {
+        shifts: data || [],
+        loading: isLoading,
+        error: error,
+    };
 } 

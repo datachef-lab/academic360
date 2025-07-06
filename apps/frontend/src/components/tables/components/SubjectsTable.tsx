@@ -21,18 +21,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 
 // Import Subject type from service
-import { Subject } from '@/services/subject-metadata';
+// import { SubjectMe } from '@/services/subject-metadata';
+import {SubjectMetadata} from "@/types/academics/subject-metadata";
 
 // Remove unused interfaces
 interface SubjectsTableProps {
-  subjects: Subject[];
+  subjects: SubjectMetadata[];
   onDelete?: (subjectId: number) => void;
-  onEdit?: (subject: Subject) => void;
+  onEdit?: (subject: SubjectMetadata) => void;
   canDelete?: boolean;
   canEdit?: boolean;
 }
 
-const columnHelper = createColumnHelper<Subject>();
+const columnHelper = createColumnHelper<SubjectMetadata>();
 
 const SubjectsTable: React.FC<SubjectsTableProps> = ({ 
   subjects, 
@@ -51,7 +52,7 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
         header: 'Code',
         cell: info => info.getValue(),
       }),
-      columnHelper.accessor(row => row.subjectType?.marksheetName, {
+      columnHelper.accessor(row => row.subjectType?.name, {
         id: 'subjectType',
         header: 'Subject Type',
         cell: info => (
@@ -64,12 +65,12 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
         header: 'Credit',
         cell: info => info.getValue(),
       }),
-      columnHelper.accessor(row => row.stream?.degree?.name, {
+      columnHelper.accessor(row => row?.degree?.name, {
         id: 'degree',
         header: 'Degree',
         cell: info => info.getValue() || 'N/A',
       }),
-      columnHelper.accessor(row => row.stream?.degreeProgramme, {
+      columnHelper.accessor(row => row?.programmeType, {
         id: 'programme',
         header: 'Programme',
         cell: info => (
@@ -110,7 +111,7 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => onDelete && onDelete(row.original.id)}
+                  onClick={() => onDelete && onDelete(row.original.id!)}
                   className="text-red-500 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -139,41 +140,43 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
   return (
     <div className="space-y-4">
       <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map(headerGroup => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
-                  <TableHead key={header.id}>
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length > 0 ? (
-              table.getRowModel().rows.map(row => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map(cell => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+        <div className="max-h-[400px] overflow-y-auto overflow-x-auto custom-scrollbar">
+          <Table className="min-w-full border">
+            <TableHeader>
+              {table.getHeaderGroups().map(headerGroup => (
+                <TableRow key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <TableHead key={header.id} className="sticky top-0 z-10 bg-white border-b p-4">
+                      {flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results found.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map(row => (
+                  <TableRow key={row.id}>
+                    {row.getVisibleCells().map(cell => (
+                      <TableCell key={cell.id} className="border-b p-4">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={columns.length} className="h-24 text-center">
+                    No results found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <div className="flex items-center justify-between px-2">

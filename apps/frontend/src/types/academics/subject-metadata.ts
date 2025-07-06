@@ -1,6 +1,7 @@
-import { DegreeProgramme, Framework, SubjectCategory } from "../enums";
+import { Framework, ProgrammeType, SubjectCategory } from "../enums";
+import { Degree } from "../resources/degree";
 import { Specialization } from "../resources/specialization";
-import { Stream } from "./stream";
+import { Class } from "./class";
 
 export interface SubjectType {
     readonly id?: number;
@@ -11,26 +12,32 @@ export interface SubjectType {
 
 export interface SubjectMetadata {
     readonly id?: number;
-    stream: Stream;
-    marksheetCode:string;
-    degreeProgramme: DegreeProgramme;
-    semester: number;
+    degree: Degree | null;
+    programmeType: ProgrammeType;
     framework: Framework;
+    class: Class | null;
     specialization: Specialization | null;
     category: SubjectCategory;
     subjectType: SubjectType | null;
+    irpName: string | null;
     name: string;
+    irpCode: string | null;
+    marksheetCode: string | null;
     isOptional: boolean;
     credit: number;
-    fullMarksTheory: number;
-    fullMarksTutorial: number;
-    fullMarksInternal: number;
-    fullMarksPractical: number;
-    practicalCredit:number;
     theoryCredit:number;
-    fullMarksProject: number;
-    fullMarksViva: number;
-    fullMarks: number;
+    fullMarksTheory: number;
+    practicalCredit:number;
+    fullMarksPractical: number;
+
+    internalCredit: number | null,
+    fullMarksInternal: number | null,
+    projectCredit: number | null,
+    fullMarksProject: number | null,
+    vivalCredit: number | null,
+    fullMarksViva: number | null,
+    fullMarks: number | null,
+
     createdAt?: Date;
     updatedAt?: Date;
 }

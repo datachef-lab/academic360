@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +25,7 @@ const EditIncomeModal: React.FC<EditAnnualIncome> = ({type, data, onClose }) => 
     const queryClient = useQueryClient();
   const [formData, setFormData] = useState<AnnualIncome>({
     range: data.range || "",
+    sequence: null,
     createdAt: data.createdAt || new Date(),
     updatedAt: data.updatedAt || new Date()
   });

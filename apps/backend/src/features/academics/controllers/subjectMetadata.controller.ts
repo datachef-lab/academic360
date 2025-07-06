@@ -115,36 +115,36 @@ export const getSubjectMetadataById = async (req: Request, res: Response, next: 
     }
 };
 
-export const getSubjectMetadataByStreamId = async (req: Request, res: Response, next: NextFunction) => {
+export const getSubjectMetadataByDegreeId = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { streamId } = req.query;
-        const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.streamId, Number(streamId)));
+        const { degreeId } = req.query;
+        const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.degreeId, Number(degreeId)));
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Subject-metadata fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-export const getSubjectMetadataBySemester = async (req: Request, res: Response, next: NextFunction) => {
+export const getSubjectMetadataByClass = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { semester } = req.query;
-        const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.semester, Number(semester)));
+        const { classId } = req.query;
+        const records = await db.select().from(subjectMetadataModel).where(eq(subjectMetadataModel.classId, Number(classId)));
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Subject-metadata fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-export const getSubjectMetadataByStreamIdAndSemester = async (req: Request, res: Response, next: NextFunction) => {
+export const getSubjectMetadataByDegreeIdAndClassId = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { streamId, semester } = req.query;
+        const { streamId, classId } = req.query;
         const records = await db
             .select()
             .from(subjectMetadataModel)
             .where(
                 and(
-                    eq(subjectMetadataModel.streamId, Number(streamId)),
-                    eq(subjectMetadataModel.semester, Number(semester))
+                    eq(subjectMetadataModel.degreeId, Number(streamId)),
+                    eq(subjectMetadataModel.classId, Number(classId)),
                 )
             );
         res.status(200).json(new ApiResponse(200, "SUCCESS", records, "Subject-metadata fetched successfully!"));

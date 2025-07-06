@@ -1,4 +1,4 @@
-import React, {  useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,12 +18,9 @@ import {
   Download,
 
   ChevronDown,
-  GraduationCap,
 } from "lucide-react";
 
-import { Stream } from "@/types/academics/stream";
 import { useQuery } from "@tanstack/react-query";
-import { getAllStreams } from "@/services/stream";
 import { useReportStore } from "../globals/useReportStore";
 import { motion } from "framer-motion";
 // import { useLocation } from "react-router-dom";
@@ -42,12 +39,7 @@ const FilterAndExportComponent: React.FC = () => {
   
 
 
-  const { data } = useQuery({
-    queryKey: ["streams"],
-    queryFn: getAllStreams,
-  });
-
-const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
+  const { data, isFetching } = useQuery({
     queryKey: ["exportReport"],
     queryFn: () =>
       getAllReports({
@@ -62,28 +54,13 @@ const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
   });
   
 
-  const streamMemo = useMemo(() => {
-    if (!data) return [];
-    const streamMap = new Map();
-    data.forEach((item: Stream) => {
-      if (item.degree) {
-        streamMap.set(item.degree.id, { id: item.degree.id, name: item.degree.name });
-      }
-    });
-    return [...streamMap.values()];
-  }, [data]);
-
   const handleApplyFilters = () => {
     setFilters({
-      stream: uiFilters.selectedStream?.name || null,
+      stream: null,
       year: uiFilters.selectedYear,
       framework: uiFilters.selectedFramework,
       semester: uiFilters.selectedSemester,
     });
-  };
-
-  const handleStreamSelect = (option: { name: string }) => {
-    setUiFilters({ selectedStream: option });
   };
 
   const handleYearSelect = (year: Year) => {
@@ -103,7 +80,7 @@ const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
 
   const handleExportExcel = async () => {
     setIsExporting(true);
-    const { data: reportData } = await getExportData();
+    const { data: reportData } = await data();
     const exportingData = reportData.payload.content;
     
     try {
@@ -207,10 +184,10 @@ const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
              <Button
                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-xl px-4 py-2 rounded-full flex items-center gap-2 transition-all"
                onClick={handleExportExcel}
-               disabled={isExporting || isFetchingExport}
+               disabled={isExporting || isFetching}
              >
                <Download className="h-4 w-4" />
-               {isExporting || isFetchingExport ? "Exporting..." : "Export"}
+               {isExporting || isFetching ? "Exporting..." : "Export"}
              </Button>
            </motion.div>
   </div>
@@ -218,28 +195,6 @@ const { refetch: getExportData, isFetching: isFetchingExport } = useQuery({
   {/* Filter Body */}
   <div className="flex flex-col lg:flex-row gap-4 w-full items-start lg:items-center justify-between">
     <motion.div className="flex flex-wrap gap-3 w-full">
-      {/* Stream Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button className="flex items-center gap-2 bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 rounded-xl shadow-sm px-4 py-2">
-            <GraduationCap className="w-4 h-4 text-purple-600" />
-            {uiFilters.selectedStream ? uiFilters.selectedStream.name : "Stream"}
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
-          {streamMemo.map((option) => (
-            <DropdownMenuItem
-              key={option.id}
-              onClick={() => handleStreamSelect(option as Stream)}
-              className="hover:bg-slate-100"
-            >
-              {option.name}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       {/* Year Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

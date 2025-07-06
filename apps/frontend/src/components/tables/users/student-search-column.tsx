@@ -241,7 +241,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { Button } from "@/components/ui/button";
-import { Stream } from "@/types/academics/stream";
+
 import { Gender, StudentStatus } from "@/types/enums";
 import { Category } from "@/types/resources/category";
 import { Nationality } from "@/types/resources/nationality";
@@ -270,7 +270,7 @@ export interface StudentSearchType {
   religion: Religion | null;
   category: Category | null;
   handicapped: boolean;
-  stream: Stream | null;
+  // stream: Stream | null;
   specialization: Specialization | null;
   active: boolean;
   alumni: boolean;
@@ -470,9 +470,9 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
         <span>Stream</span>
       </div>
     ),
-    cell: ({ row }) => {
-      const student = row.original;
-      return student.stream ? <p>{student.stream.name}</p> : <p>-</p>;
+    cell: () => {
+      // const student = row.original;
+      return <p>{"student.stream.name"}</p>
     },
   },
   {
@@ -488,7 +488,7 @@ export const studentSearchColumns: ColumnDef<StudentSearchType>[] = [
       let status: StudentStatus | null = null;
 
       if (student.leavingDate || (!student.active && student.alumni)) {
-        status = "GRADUATED";
+        status = "ALUMNI";
       } else if (student.active == null || student.alumni == null) {
         status = null;
       } else if (!student.active && !student.alumni) {

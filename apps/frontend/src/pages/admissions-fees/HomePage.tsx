@@ -163,7 +163,7 @@ export default function HomePage() {
                 {academicYears.map((year) =>
                   year.id !== undefined ? (
                     <SelectItem key={year.id} value={year.id.toString()}>
-                      {getAcademicYearLabel(year.startYear)}
+                      {getAcademicYearLabel(+year.year)}
                     </SelectItem>
                   ) : null
                 )}

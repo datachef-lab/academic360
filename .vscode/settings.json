@@ -1,5 +1,4 @@
 {
-    "cSpell.words": [
-        "marksheet"
-    ]
+  "cSpell.words": ["marksheet"],
+  "postman.settings.dotenv-detection-notification-visibility": false
 }

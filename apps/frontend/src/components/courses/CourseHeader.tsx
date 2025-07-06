@@ -6,24 +6,17 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { NewCourse } from '@/services/course-api';
+import { Course } from '@/types/academics/course';
+import { Degree } from '@/types/resources/degree';
 
-interface DegreeOption {
-  id: number;
-  name: string;
-}
-
-interface ProgrammeOption {
-  id: number;
-  degreeProgramme: string;
-  degreeId: number;
-}
+// Define ProgrammeOption locally
+type ProgrammeOption = { id: number; degreeProgramme: string; degreeId: number };
 
 interface CourseHeaderProps {
   isAddDialogOpen: boolean;
   setIsAddDialogOpen: (open: boolean) => void;
-  newCourse: NewCourse;
-  degreeOptions: DegreeOption[];
+  newCourse: Course;
+  degreeOptions: Degree[];
   programmeOptions: ProgrammeOption[];
   selectedDegreeId: number;
   isSubmitting: boolean;
@@ -39,7 +32,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
   setIsAddDialogOpen,
   newCourse,
   degreeOptions,
-  programmeOptions,
+  // programmeOptions,
   selectedDegreeId,
   isSubmitting,
   handleInputChange,
@@ -49,9 +42,9 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
   onCancel,
 }) => {
   // Filter programmes based on selected degree
-  const filteredProgrammes = programmeOptions.filter(
-    (programme) => selectedDegreeId === 0 || programme.degreeId === selectedDegreeId
-  );
+  // const filteredProgrammes = programmeOptions.filter(
+  //   (programme) => selectedDegreeId === 0 || programme.degreeId === selectedDegreeId
+  // );
 
   return (
     <CardHeader className="bg-white border-b border-purple-100">
@@ -132,15 +125,15 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                 Degree*
               </Label>
               <Select 
-                onValueChange={(value) => handleSelectChange('degreeId', value)}
-                value={selectedDegreeId ? selectedDegreeId.toString() : ''}
+                onValueChange={(value) => handleSelectChange('degree', value)}
+                value={newCourse.degree && newCourse.degree.id ? newCourse.degree.id.toString() : ''}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Select degree" />
                 </SelectTrigger>
                 <SelectContent>
                   {degreeOptions.map((degree) => (
-                    <SelectItem key={degree.id} value={degree.id.toString()}>
+                    <SelectItem key={degree.id} value={degree.id!.toString()}>
                       {degree.name}
                     </SelectItem>
                   ))}
@@ -152,17 +145,16 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                 Programme*
               </Label>
               <Select 
-                onValueChange={(value) => handleSelectChange('streamId', value)}
-                value={newCourse.streamId ? newCourse.streamId.toString() : ''}
-                disabled={selectedDegreeId === 0}
+                onValueChange={(value) => handleSelectChange('programmeType', value)}
+                value={newCourse.programmeType || ''}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder={selectedDegreeId === 0 ? "Select degree first" : "Select programme"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredProgrammes.map((programme) => (
-                    <SelectItem key={programme.id} value={programme.id.toString()}>
-                      {programme.degreeProgramme}
+                  {["HONOURS", "GENERAL"].map((programme) => (
+                    <SelectItem key={programme} value={programme}>
+                      {programme}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -179,8 +171,11 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
               Cancel
             </Button>
             <Button 
-              type="submit" 
-              onClick={handleAddCourse}
+              type="button"
+              onClick={() => { 
+                console.log('handleAddCourse called from dialog');
+                handleAddCourse();
+              }}
               disabled={isSubmitting}
               className="bg-purple-700 text-white hover:bg-purple-800"
             >

@@ -5,6 +5,7 @@ export interface Degree {
     name: string;
     level: Level | null,
     sequence: number | null;
+    disabled: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

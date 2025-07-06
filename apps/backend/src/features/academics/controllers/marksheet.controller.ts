@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { addMarksheet, findMarksheetById, findMarksheetLogs, findMarksheetsByStudentId, getAllMarks, marksheetSummary, refactorSubjectName, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
+import { addMarksheet, findMarksheetById,  findMarksheetsByStudentId, getAllMarks, marksheetSummary, saveMarksheet, uploadFile } from "../services/marksheet.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { MarksheetType } from "@/types/academics/marksheet.js";
 import { User } from "@/features/user/models/user.model.js";
@@ -46,47 +46,6 @@ export const addMultipleMarksheet = async (req: Request, res: Response, next: Ne
 
     } catch (error) {
         socket.emit('progress', { stage: 'error', message: 'Error processing file' });
-        handleError(error, res, next);
-    }
-};
-
-export const refactorSubjectNameC = async (req: Request, res: Response, next: NextFunction) => {
-    // const socketId = req.body.socketId;
-    // const socket = io.sockets.sockets.get(socketId as string);
-    if (!req.file) {
-        res.status(400).json({ message: "No file uploaded or invalid socket" });
-        return;
-    }
-
-    try {
-        const fileName = req.file.filename;
-
-        // Process file and get logs in real-time
-        const isUploaded = await refactorSubjectName(fileName);
-
-        // socket.emit('progress', {
-        //     stage: 'completed',
-        //     message: 'File processed successfully!',
-        // });
-
-        // Send real-time notification to all users
-        // sendFileUploadNotification(req, fileName);
-
-        res.status(200).json(new ApiResponse(200, "SUCCESS", isUploaded, "Marksheets uploaded successfully!"));
-
-        const filePath = path.join(directoryName, "../../../../public/temp", req.file.filename);
-
-        // Wait for the response to be sent, then delete the file
-        res.on("finish", () => {
-            fs.unlink(filePath, (err) => {
-                if (err) {
-                    console.error(`Error deleting file: ${filePath}`, err);
-                }
-            });
-        });
-
-    } catch (error) {
-        // socket.emit('progress', { stage: 'error', message: 'Error processing file' });
         handleError(error, res, next);
     }
 };
@@ -179,20 +138,6 @@ export const getMarksheetByStudentId = async (req: Request, res: Response, next:
         }
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", foundMarksheet, "Marksheet fetched successfully!"));
-    } catch (error) {
-        handleError(error, res, next);
-    }
-}
-
-export const getMarksheetsLogs = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { page, pageSize, searchText } = req.query;
-
-        console.log("\n\n", page, pageSize, searchText, "\n\n")
-
-        const marksheetLogs = await findMarksheetLogs(Number(page), Number(pageSize), searchText as string);
-
-        res.status(200).json(new ApiResponse(200, "SUCCESS", marksheetLogs, "Marksheet Logs fetched successfully!"));
     } catch (error) {
         handleError(error, res, next);
     }

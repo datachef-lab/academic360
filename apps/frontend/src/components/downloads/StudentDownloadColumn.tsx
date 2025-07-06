@@ -250,18 +250,16 @@ export const studentDownloadColumns: ColumnDef<Student>[] = [
         <span>Stream</span>
       </div>
     ),
-    cell: ({ row }) => {
-      const student = row.original.academicIdentifier?.stream?.degree;
-      return student ? (
+    cell: () => {
+      // const student = row.original.academicIdentifier?.stream?.degree;
+      return(
         <Badge 
           variant="outline" 
           className="bg-indigo-50 text-indigo-700 drop-shadow-md border-none"
         >
-          {student.name}
+          {"degree name"}
         </Badge>
-      ) : (
-        <p>-</p>
-      );
+      )
     },
   },
   {
@@ -272,14 +270,14 @@ export const studentDownloadColumns: ColumnDef<Student>[] = [
         <span>Status</span>
       </div>
     ),
-    cell: ({ row }) => {
-      const student = row.original.academicIdentifier?.stream?.degree;
+    cell: () => {
+      // const student = row.original.academicIdentifier?.stream?.degree;
       return (
         <Badge 
           variant="outline" 
           className="gap-1.5 px-2.5 py-1 text-xs font-mono bg-violet-50 text-violet-700 drop-shadow-md border-none"
         >
-          {student?.level}
+          {"degree?.level"}
         </Badge>
       );
     },

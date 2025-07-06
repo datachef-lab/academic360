@@ -1,47 +1,71 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType } from "@/types/fees";
-import { DatePicker, Select, InputNumber } from "antd";
-import dayjs from "dayjs";
+import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType, CreateFeesStructureDto } from "@/types/fees";
+import { Select,  } from "antd";
+// import dayjs from "dayjs";
 import { Course } from "@/types/academics/course";
-import { Shift } from "@/types/resources/shift";
+import { Shift } from "@/types/academics/shift";
+import { Class as ClassType } from "@/types/academics/class";
 
-interface FeeConfigurationProps {
-  feesStructure: FeesStructureDto;
-  setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
-  feeHeads: FeesHead[];
-  courses: Course[];
-  feesReceiptTypes: FeesReceiptType[];
-  shifts: Shift[];
-  existingFeeStructures?: FeesStructureDto[];
-}
+type FeeConfigurationProps =
+  | {
+      formType: "ADD";
+      feesStructure: CreateFeesStructureDto;
+      setFeesStructure: React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>;
+      feeHeads: FeesHead[];
+      courses: Course[];
+      feesReceiptTypes: FeesReceiptType[];
+      shifts: Shift[];
+      existingFeeStructures?: FeesStructureDto[];
+      classes: ClassType[];
+    }
+  | {
+      formType: "EDIT";
+      feesStructure: FeesStructureDto;
+      setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
+      feeHeads: FeesHead[];
+      courses: Course[];
+      feesReceiptTypes: FeesReceiptType[];
+      shifts: Shift[];
+      existingFeeStructures?: FeesStructureDto[];
+      classes: ClassType[];
+    };
 
-export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
-  feesStructure,
-  setFeesStructure,
-  feeHeads,
-  courses,
-  feesReceiptTypes,
-  shifts,
-  existingFeeStructures = [],
-}) => {
+export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
+  const { formType, feesStructure, setFeesStructure, feeHeads, feesReceiptTypes = [] } = props;
   const tbodyRef = useRef<HTMLTableSectionElement>(null);
   const setEmptyRows = useState(0)[1];
   const ROW_HEIGHT = 53; // Approximate height of a row in pixels
   // const MIN_ROWS = 8; // Set a minimum number of rows to display
+
+  // Helper type guards
+  const isAdd = formType === 'ADD';
+  const isEdit = formType === 'EDIT';
+
+  // Separate handlers for add/edit mode
+  // const handleInputChangeAdd = (field: keyof CreateFeesStructureDto, value: unknown) => {
+  //   (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, [field]: value }));
+  // };
+  const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, [field]: value }));
+  };
 
   useEffect(() => {
     // Add 1 default fee component if the list is empty
     if (feesStructure.components.length === 0) {
       const defaultComponents: FeesComponent[] = Array.from({ length: 1 }, (_, i) => ({
         feesHeadId: 0,
-        amount: 0,
+        baseAmount: 0,
         sequence: i + 1,
         isConcessionApplicable: false,
         feesStructureId: feesStructure.id || 0,
         remarks: "",
       }));
-      setFeesStructure(prev => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      if (isAdd) {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      } else {
+        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+      }
     }
   }, []);
 
@@ -54,75 +78,98 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     }
   }, [feesStructure.components.length]);
 
-  const handleInputChange = (field: keyof FeesStructureDto, value: unknown) => {
-    setFeesStructure(prev => ({ ...prev, [field]: value }));
-  };
+  // Fix: Only use 'course' for EDIT mode, and 'courses' for ADD mode
+  // const existingCombinations = useMemo(() => {
+  //   if (isEdit) {
+  //     return existingFeeStructures
+  //       .filter(
+  //         (fs) =>
+  //           fs.id !== (feesStructure as FeesStructureDto).id &&
+  //           fs.academicYear?.id === (feesStructure as FeesStructureDto).academicYear?.id &&
+  //           fs.course?.id === (feesStructure as FeesStructureDto).course?.id,
+  //       )
+  //       .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id }));
+  //   } else {
+  //     // For ADD, we can't filter by course, so just filter by academicYear
+  //     return existingFeeStructures
+  //       .filter(
+  //         (fs) =>
+  //           fs.academicYear?.id === (feesStructure as CreateFeesStructureDto).academicYear?.id
+  //       )
+  //       .map((fs) => ({ classId: fs.class?.id, shiftId: fs.shift?.id }));
+  //   }
+  // }, [existingFeeStructures, feesStructure, isEdit]);
 
-  const existingCombinations = useMemo(() => existingFeeStructures
-    .filter(fs => 
-      fs.id !== feesStructure.id &&
-      fs.academicYear?.id === feesStructure.academicYear?.id &&
-      fs.course?.id === feesStructure.course?.id
-    )
-    .map(fs => ({ semester: fs.semester, shiftId: fs.shift?.id })), 
-    [existingFeeStructures, feesStructure.academicYear, feesStructure.course, feesStructure.id]
-  );
+  // const availableShifts = useMemo(() => {
+  //   if (!feesStructure.class?.id) {
+  //     return shifts;
+  //   }
+  //   const takenShiftIds = existingCombinations
+  //     .filter((c) => c.classId === feesStructure.class.id)
+  //     .map((c) => c.shiftId);
+  //   return shifts.filter((shift) => !takenShiftIds.includes(shift.id));
+  // }, [feesStructure.class, shifts, existingCombinations]);
 
-  const allSemesters = useMemo(() => [1, 2, 3, 4, 5, 6, 7, 8], []);
+  // Use correct type for handleClassChange
+  // const handleClassChange = (classId: number | null) => {
+  //   const takenShiftIdsForNewClass = existingFeeStructures.filter((c) => c.class?.id === classId).map((c) => c.shift?.id);
+  //   const isCurrentShiftAvailableInNewClass = !takenShiftIdsForNewClass.includes(feesStructure.shift?.id);
+  //   if (classId) {
+  //     if (isAdd) {
+  //       (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
+  //         ...prev,
+  //         class: classes.find((cls) => cls.id === classId)!,
+  //         shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
+  //       }));
+  //     } else {
+  //       (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
+  //         ...prev,
+  //         class: classes.find((cls) => cls.id === classId)!,
+  //         shift: isCurrentShiftAvailableInNewClass ? prev.shift : null,
+  //       }));
+  //     }
+  //   }
+  // };
 
-  const availableSemesters = useMemo(() => allSemesters.filter(sem => {
-      const shiftsForSemester = existingCombinations
-        .filter(c => c.semester === sem)
-        .map(c => c.shiftId);
-      return shiftsForSemester.length < shifts.length;
-  }), [allSemesters, existingCombinations, shifts.length]);
-
-  const availableShifts = useMemo(() => {
-      if (!feesStructure.semester) {
-          return shifts;
-      }
-      const takenShiftIds = existingCombinations
-          .filter(c => c.semester === feesStructure.semester)
-          .map(c => c.shiftId);
-      return shifts.filter(shift => !takenShiftIds.includes(shift.id));
-  }, [feesStructure.semester, shifts, existingCombinations]);
-
-  const handleSemesterChange = (value: number | null) => {
-    const takenShiftIdsForNewSemester = existingCombinations
-      .filter(c => c.semester === value)
-      .map(c => c.shiftId);
-    
-    const isCurrentShiftAvailableInNewSemester = !takenShiftIdsForNewSemester.includes(feesStructure.shift?.id);
-
-    setFeesStructure(prev => ({
-      ...prev,
-      semester: value,
-      shift: isCurrentShiftAvailableInNewSemester ? prev.shift : null,
-    }));
-  };
-
+  // Use correct type for handleAddComponent
   const handleAddComponent = () => {
     const newComponent: FeesComponent = {
       sequence: feesStructure.components.length + 1,
       isConcessionApplicable: false,
       feesHeadId: 0,
-      amount: 0,
+      baseAmount: 0,
       remarks: "",
       feesStructureId: feesStructure.id || 0,
     };
-    setFeesStructure((prev: FeesStructureDto) => ({
-      ...prev,
-      components: [...prev.components, newComponent],
-    }));
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
+        ...prev,
+        components: [...prev.components, newComponent],
+      }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
+        ...prev,
+        components: [...prev.components, newComponent],
+      }));
+    }
   };
 
+  // Use correct type for handleRemoveComponent
   const handleRemoveComponent = (index: number) => {
-    setFeesStructure((prev: FeesStructureDto) => ({
-      ...prev,
-      components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
-    }));
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({
+        ...prev,
+        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+      }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
+        ...prev,
+        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+      }));
+    }
   };
 
+  // Use correct type for handleComponentChange
   const handleComponentChange = <K extends keyof Omit<FeesComponent, "id">>(
     index: number,
     field: K,
@@ -130,14 +177,18 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
   ) => {
     const newComponents = [...feesStructure.components];
     newComponents[index][field] = value;
-    setFeesStructure({ ...feesStructure, components: newComponents });
+    if (isAdd) {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: newComponents }));
+    } else {
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: newComponents }));
+    }
   };
 
   const MIN_ROWS = 8;
-  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.amount || 0), 0);
+  const totalAmount = feesStructure.components.reduce((sum, component) => sum + (component.baseAmount || 0), 0);
 
   useEffect(() => {
-    const tableBody = document.querySelector('.table-body-fee-config');
+    const tableBody = document.querySelector(".table-body-fee-config");
     if (tableBody) {
       // const visibleRows = Math.floor(tableBody.clientHeight / ROW_HEIGHT);
       const dataRows = feesStructure.components.length;
@@ -146,7 +197,7 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
     }
   }, [feesStructure.components.length]);
 
-  const disablePastDates = (current: dayjs.Dayjs) => current && current < dayjs().startOf('day');
+  // const disablePastDates = (current: dayjs.Dayjs) => current && current < dayjs().startOf("day");
 
   return (
     <div className="h-full flex flex-col space-y-4">
@@ -155,162 +206,75 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
         <div className="flex items-end justify-between gap-4">
           <div className="flex items-end gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Closing Date</label>
-              <DatePicker
-                value={feesStructure.closingDate ? dayjs(feesStructure.closingDate) : null}
-                onChange={(date) => handleInputChange('closingDate', date ? date.toDate() : null)}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Course</label>
-              <p className="w-48 px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">{feesStructure.course?.name || 'Not Selected'}</p>
+              {isEdit && (
+                <p className="w-48 px-3 py-1.5 border border-gray-300 rounded-md bg-gray-50 text-sm h-[38px] flex items-center">
+                  {(feesStructure as FeesStructureDto).course?.name || "Not Selected"}
+                </p>
+              )}
+              {isAdd && (
+                <div className="flex flex-row flex-wrap gap-2 items-center">
+                  {feesStructure.courses.map((c) => (
+                    <span
+                      key={c.id}
+                      className="px-3 py-1 bg-purple-50 border border-purple-200 rounded-full text-sm font-medium text-purple-800 shadow-sm flex items-center gap-1"
+                    >
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+            {/* <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
               <Select
                 className="w-32"
-                placeholder="Select"
-                value={feesStructure.semester}
-                onChange={handleSemesterChange}
+                placeholder="Select Class"
+                value={feesStructure.class?.id}
+                onChange={handleClassChange}
               >
-                {availableSemesters.map(sem => (
-                  <Select.Option key={sem} value={sem}>
-                    Sem {sem}
+                {classes.map((cls) => (
+                  <Select.Option key={cls.id} value={cls.id}>
+                    {cls.name}
                   </Select.Option>
                 ))}
               </Select>
-            </div>
-            <div>
+            </div> */}
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
               <Select
                 value={feesStructure.shift?.id}
-                onChange={(value) => handleInputChange('shift', shifts.find(s => s.id === value) || null)}
+                onChange={(value) => handleInputChangeEdit("shift", shifts.find((s) => s.id === value) || null)}
                 placeholder="Select Shift"
                 className="w-full"
-                disabled={!feesStructure.semester}
+                disabled={!feesStructure.class}
               >
-                {availableShifts.map(shift => (
-                  <Select.Option key={shift.id} value={shift.id!}>{shift.name}</Select.Option>
+                {availableShifts.map((shift) => (
+                  <Select.Option key={shift.id} value={shift.id!}>
+                    {shift.name}
+                  </Select.Option>
                 ))}
               </Select>
-            </div>
+            </div> */}
           </div>
-          
+
           <div className="flex items-end gap-4">
-            <div className="pl-4">
-              <p className="text-sm font-medium text-gray-700 mb-1">To be treated as advance for:</p>
-              <div className="flex items-center gap-4">
-                <Select
-                  className="w-32"
-                  placeholder="Adv. Course"
-                  value={feesStructure.advanceForCourse?.id}
-                  onChange={(value) => handleInputChange('advanceForCourse', value ? courses.find(c => c.id === value) : null)}
-                  allowClear
-                >
-                  {courses.map(course => (
-                    <Select.Option key={course.id} value={course.id!}>
-                      {course.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-                <Select
-                  className="w-32"
-                  placeholder="Adv. Semester"
-                  value={feesStructure.advanceForSemester}
-                  onChange={(value) => handleInputChange('advanceForSemester', value)}
-                  allowClear
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
-                    <Select.Option key={sem} value={sem}>
-                      Sem {sem}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            </div>
+            {/* Removed advance for fields */}
           </div>
         </div>
 
         {/* Bottom Row */}
         <div className="flex items-end gap-9 justify-between">
           <div className="flex items-center gap-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fee Collection Start</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.startDate ? dayjs(feesStructure.startDate) : null}
-                onChange={(date) => handleInputChange('startDate', date ? date.toDate() : null)}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fee Collection End</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.endDate ? dayjs(feesStructure.endDate) : null}
-                onChange={(date) => handleInputChange('endDate', date ? date.toDate() : null)}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
-
-            </div>
+            {/* Removed Fee Collection Start/End */}
           </div>
 
           <div className="flex justify-center gap-2 items-center">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Installments</label>
-              <InputNumber
-                className="w-[100px]"
-                min={1}
-                max={12}
-                value={feesStructure.numberOfInstalments}
-                onChange={(value) => handleInputChange('numberOfInstalments', value)}
-                controls={false}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Installments Start</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.instalmentStartDate ? dayjs(feesStructure.instalmentStartDate) : null}
-                onChange={(date) => handleInputChange('instalmentStartDate', date ? date.toDate() : null)}
-                disabled={!feesStructure.numberOfInstalments}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Installments End</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.instalmentEndDate ? dayjs(feesStructure.instalmentEndDate) : null}
-                onChange={(date) => handleInputChange('instalmentEndDate', date ? date.toDate() : null)}
-                disabled={!feesStructure.numberOfInstalments}
-                disabledDate={disablePastDates}
-              />
-            </div>
+            {/* Removed Installments */}
           </div>
 
           <div className="flex items-center gap-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Online Start</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.onlineStartDate ? dayjs(feesStructure.onlineStartDate) : null}
-                onChange={(date) => handleInputChange('onlineStartDate', date ? date.toDate() : null)}
-                disabledDate={disablePastDates}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Online End</label>
-              <DatePicker
-                className="w-full"
-                value={feesStructure.onlineEndDate ? dayjs(feesStructure.onlineEndDate) : null}
-                onChange={(date) => handleInputChange('onlineEndDate', date ? date.toDate() : null)}
-                disabledDate={disablePastDates}
-              />
-            </div>
+            {/* Removed Online Start/End */}
           </div>
         </div>
       </div>
@@ -326,9 +290,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                 className="w-48"
                 placeholder="Select"
                 value={feesStructure.feesReceiptTypeId}
-                onChange={(value) => handleInputChange('feesReceiptTypeId', value)}
+                onChange={(value) => handleInputChangeEdit("feesReceiptTypeId", value)}
               >
-                {feesReceiptTypes.map(type => (
+                {feesReceiptTypes.map((type) => (
                   <Select.Option key={type.id} value={type.id!}>
                     {type.name}
                   </Select.Option>
@@ -338,7 +302,11 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={handleAddComponent} className="flex border border-gray-400 items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100">
+            <button
+              onClick={handleAddComponent}
+              className="flex border border-gray-400 items-center px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 rounded-md hover:bg-purple-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={feesStructure.components.length >= feeHeads.length}
+            >
               <Plus className="h-4 w-4 mr-1" />
               Add Component
             </button>
@@ -348,18 +316,32 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
           <table className="min-w-full h-full flex flex-col">
             <thead className="flex-shrink-0">
               <tr className="flex">
-                <th className="w-16 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Sr. No.</th>
-                <th className="flex-1 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Fee Head</th>
-                <th className="w-24 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Sequence</th>
-                <th className="w-28 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Apply Concession?</th>
-                <th className="w-32 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">Amount</th>
-                <th className="w-20 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-400">Actions</th>
+                <th className="w-16 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">
+                  Sr. No.
+                </th>
+                <th className="flex-1 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">
+                  Fee Head
+                </th>
+                <th className="w-24 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">
+                  Sequence
+                </th>
+                <th className="w-28 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">
+                  Apply Concession?
+                </th>
+                <th className="w-32 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-r border-gray-400">
+                  Amount
+                </th>
+                <th className="w-20 px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-400">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className={`flex-grow overflow-y-auto bg-white`}>
               {feesStructure.components.map((component, index) => (
                 <tr key={component.sequence || index} className="flex h-[35px]">
-                  <td className="w-16 px-4 py-2 border-r border-gray-400 text-sm text-black flex items-center justify-center">{index + 1}.</td>
+                  <td className="w-16 px-4 py-2 border-r border-gray-400 text-sm text-black flex items-center justify-center">
+                    {index + 1}.
+                  </td>
                   <td className="flex-1 px-4 py-2 border-r border-gray-400">
                     <Select
                       value={component.feesHeadId || null}
@@ -370,15 +352,25 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                       optionFilterProp="children"
                       bordered={false}
                     >
-                      {feeHeads.map((head) => (
-                        <Select.Option key={head.id} value={head.id!}>
-                          {head.name}
-                        </Select.Option>
-                      ))}
+                      {feeHeads
+                        .filter((head) =>
+                          // Show this head if it's not selected in any other component, or if it's the current value for this row
+                          !feesStructure.components.some((c, i) => i !== index && c.feesHeadId === head.id)
+                        )
+                        .map((head) => (
+                          <Select.Option key={head.id} value={head.id!}>
+                            {head.name}
+                          </Select.Option>
+                        ))}
                     </Select>
                   </td>
                   <td className="w-24 px-4 py-2 border-r border-gray-400 flex items-center justify-center">
-                    <input type="number" value={component.sequence} onChange={(e) => handleComponentChange(index, "sequence", Number(e.target.value))} className="w-20 text-center bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black" />
+                    <input
+                      type="number"
+                      value={component.sequence}
+                      onChange={(e) => handleComponentChange(index, "sequence", Number(e.target.value))}
+                      className="w-20 text-center bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black"
+                    />
                   </td>
                   <td className="w-28 px-4 py-2 border-r border-gray-400 text-center flex items-center justify-center">
                     <input
@@ -390,10 +382,17 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
                   </td>
                   <td className="w-32 px-4 py-2 border-r border-gray-400 flex items-center">
                     <span className="text-gray-900">₹</span>
-                    <input type="number" value={component.amount} onChange={(e) => handleComponentChange(index, "amount", Number(e.target.value))} className="w-24 ml-1 bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black" />
+                    <input
+                      type="number"
+                      value={component.baseAmount}
+                      onChange={(e) => handleComponentChange(index, "baseAmount", Number(e.target.value))}
+                      className="w-24 ml-1 bg-transparent px-2 py-1 border border-transparent hover:border-gray-400 focus:border-purple-500 focus:ring-0 focus:outline-none rounded-md text-sm text-black"
+                    />
                   </td>
                   <td className="w-20 px-4 py-2 text-center border-gray-400 flex items-center justify-center">
-                    <button onClick={() => handleRemoveComponent(index)} className="text-red-600 hover:text-red-900"><Trash2 className="h-5 w-5" /></button>
+                    <button onClick={() => handleRemoveComponent(index)} className="text-red-600 hover:text-red-900">
+                      <Trash2 className="h-5 w-5" />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -410,7 +409,9 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = ({
             </tbody>
             <tfoot className="flex-shrink-0">
               <tr className="flex bg-gray-50">
-                <td className="flex-1 px-4 py-2 border-t border-r border-gray-400 text-right font-bold text-gray-900">Total</td>
+                <td className="flex-1 px-4 py-2 border-t border-r border-gray-400 text-right font-bold text-gray-900">
+                  Total
+                </td>
                 <td className="w-32 px-4 py-2 border-t border-r border-gray-400 font-bold text-gray-900">
                   ₹ {totalAmount.toLocaleString()}
                 </td>

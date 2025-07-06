@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, getFeesDesignAbstractLevel, checkFeesStructureExists } from "../services/fees-structure.service.js";
+import { getFeesStructures, getFeesStructureById, createFeesStructure, updateFeesStructure, deleteFeesStructure, getAcademicYearsFromFeesStructures, getCoursesFromFeesStructures, getFeesStructuresByAcademicYearIdAndCourseId, checkFeesStructureExists } from "../services/fees-structure.service.js";
 import { handleError } from "@/utils/index.js";
 
 function toDate(val: any): Date | null {
@@ -148,16 +148,16 @@ export const getFeesStructuresByAcademicYearIdAndCourseIdHandler = async (req: R
     }
 };
 
-export const getFeesDesignAbstractLevelHandler = async (req: Request, res: Response) => {
-    try {
-        const academicYearId = req.query.academicYearId ? parseInt(req.query.academicYearId as string) : undefined;
-        const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
-        const abstractLevel = await getFeesDesignAbstractLevel(academicYearId, courseId);
-        res.status(200).json(abstractLevel);
-    } catch (error) {
-        handleError(error, res);
-    }
-};
+// export const getFeesDesignAbstractLevelHandler = async (req: Request, res: Response) => {
+//     try {
+//         const academicYearId = req.query.academicYearId ? parseInt(req.query.academicYearId as string) : undefined;
+//         const courseId = req.query.courseId ? parseInt(req.query.courseId as string) : undefined;
+//         const abstractLevel = await getFeesDesignAbstractLevel(academicYearId, courseId);
+//         res.status(200).json(abstractLevel);
+//     } catch (error) {
+//         handleError(error, res);
+//     }
+// };
 
 export const checkFeesStructureExistsHandler = async (req: Request, res: Response) => {
     try {

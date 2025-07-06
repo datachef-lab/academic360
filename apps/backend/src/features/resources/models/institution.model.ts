@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { degreeModel } from "@/features/resources/models/degree.model.js";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
@@ -11,6 +11,7 @@ export const institutionModel = pgTable("institutions", {
     degreeId: integer().notNull().references(() => degreeModel.id),
     addressId: integer().references(() => addressModel.id),
     sequence: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
