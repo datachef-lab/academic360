@@ -43,6 +43,7 @@ import * as facultiesStaffsModule from "./pages/faculties-staffs";
 import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
 import { AcademicYearPage } from "./pages/admissions-fees/fees";
+import Dashboard from "./pages/dashboard/Dashboard";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -56,7 +57,7 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
     children: [
-      { path: "", element: <div>Dashboard Home (College Dashboard)</div> },
+      { path: "", element: <Dashboard /> },
       { path: "resources", element: <SettingsPage /> },
       {
         path: "courses-subjects",
