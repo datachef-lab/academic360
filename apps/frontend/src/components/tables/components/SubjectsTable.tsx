@@ -52,7 +52,7 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
         header: 'Code',
         cell: info => info.getValue(),
       }),
-      columnHelper.accessor(row => row.subjectType?.marksheetName, {
+      columnHelper.accessor(row => row.subjectType?.name, {
         id: 'subjectType',
         header: 'Subject Type',
         cell: info => (
@@ -65,12 +65,12 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
         header: 'Credit',
         cell: info => info.getValue(),
       }),
-      columnHelper.accessor(row => row.stream?.degree?.name, {
+      columnHelper.accessor(row => row?.degree?.name, {
         id: 'degree',
         header: 'Degree',
         cell: info => info.getValue() || 'N/A',
       }),
-      columnHelper.accessor(row => row.stream?.degreeProgramme, {
+      columnHelper.accessor(row => row?.programmeType, {
         id: 'programme',
         header: 'Programme',
         cell: info => (
@@ -111,7 +111,7 @@ const SubjectsTable: React.FC<SubjectsTableProps> = ({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => onDelete && onDelete(row.original.id)}
+                  onClick={() => onDelete && onDelete(row.original.id!)}
                   className="text-red-500 hover:text-red-700 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />

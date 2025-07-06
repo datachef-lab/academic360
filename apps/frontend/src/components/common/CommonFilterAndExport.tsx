@@ -90,7 +90,7 @@ const FilterAndExportComponent: React.FC = () => {
     try {
       const { data: exportData } = await fetchExportData();
 
-      if (!data || data.length === 0) {
+      if (!data || data.payload.length === 0) {
         toast.error("No data available for export.");
         return;
       }
