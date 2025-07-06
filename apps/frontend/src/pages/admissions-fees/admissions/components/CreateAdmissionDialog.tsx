@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+// import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2 } from "lucide-react";
-import { Course } from "../types";
+import { Course } from '@/types/academics/course';
 import DatePicker from "react-datepicker";
-import { format } from "date-fns";
+// import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";
+import { fetchAcademicYears, fetchAdmissionSummaries } from "@/services/admissions.service";
+import { getAllCourses } from '@/services/course-api';
+import { AcademicYear } from "@/types/academics/academic-year";
+import { Admission } from "@/types/admissions";
 
 type CreateAdmissionDialogProps = {
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  onCreate: (courseIds: number[], startDate: string, endDate: string) => Promise<void>;
-  year: number;
-  onYearChange: (year: number) => void;
+  onCreate: (admission: Admission) => Promise<void>;
 };
 
 const isBeforeToday = (date: Date | null) => {
@@ -27,44 +29,44 @@ const isBeforeToday = (date: Date | null) => {
   return d < today;
 };
 
-async function getCourses(): Promise<{ courses: Course[]; totalCount: number }> {
-  // This is a placeholder. In a real application, you would fetch this from your API.
-  const courses = [
-    { id: 1, name: "B.Tech", disabled: false },
-    { id: 2, name: "M.Tech", disabled: false },
-    { id: 3, name: "MBA", disabled: false },
-    { id: 4, name: "MCA", disabled: true },
-  ];
-  return Promise.resolve({ courses, totalCount: courses.length });
-}
-
 export default function CreateAdmissionDialog({
   open,
   setOpen,
   onCreate,
-  year,
-  onYearChange,
 }: CreateAdmissionDialogProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [newAdmission, setNewAdmission] = useState<{
+    academicYear: AcademicYear | null;
+    startDate: Date | null;
+    lastDate: Date | null;
+  }>({
+    academicYear: null,
+    startDate: null,
+    lastDate: null,
+  });
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [admissions, setAdmissions] = useState<Admission[]>([]);
 
   useEffect(() => {
     if (open) {
       fetchCourses();
+      fetchAcademicYears().then((data) => {
+        setAcademicYears(Array.isArray(data) ? data : data?.payload ?? []);
+      });
+      fetchAdmissionSummaries().then(setAdmissions);
     }
   }, [open]);
 
   const fetchCourses = async () => {
     try {
       setIsLoading(true);
-      const { courses: tmpCourses } = await getCourses();
-      const activeCourses = tmpCourses.filter((course: Course) => !course.disabled);
-      setCourses(activeCourses);
-      const allCourseIds = activeCourses.map((course) => course.id!).filter((id) => id !== undefined);
+      const res = await getAllCourses();
+      const tmpCourses: Course[] = res.payload || [];
+      setCourses(tmpCourses);
+      const allCourseIds = tmpCourses.map((course) => course.id!).filter((id) => id !== undefined);
       setSelectedCourses(allCourseIds);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -85,28 +87,47 @@ export default function CreateAdmissionDialog({
       alert("Please select at least one course");
       return;
     }
-    if (!startDate) {
+    if (!newAdmission.startDate) {
       alert("Start date is required");
       return;
     }
-    if (isBeforeToday(startDate)) {
+    if (isBeforeToday(newAdmission.startDate)) {
       alert("Start date cannot be before today");
       return;
     }
-    if (!endDate) {
+    if (!newAdmission.lastDate) {
       alert("End date is required");
       return;
     }
-    if (isBeforeToday(endDate)) {
+    if (isBeforeToday(newAdmission.lastDate)) {
       alert("End date cannot be before today");
+      return;
+    }
+    if (!newAdmission.academicYear) {
+      alert("Please select an academic year");
       return;
     }
     try {
       setIsCreating(true);
-      await onCreate(selectedCourses, format(startDate, "yyyy-MM-dd"), format(endDate, "yyyy-MM-dd"));
+      const admissionData: Admission = {
+        academicYear: newAdmission.academicYear,
+        startDate: newAdmission.startDate.toISOString(),
+        lastDate: newAdmission.lastDate.toISOString(),
+        courses: selectedCourses.map(courseId => ({
+          admissionId: 0,
+          courseId,
+          disabled: false,
+          isClosed: false,
+          remarks: null,
+        })),
+      };
+      await onCreate(admissionData);
       setSelectedCourses([]);
-      setStartDate(null);
-      setEndDate(null);
+      setNewAdmission({
+        academicYear: null,
+        startDate: null,
+        lastDate: null,
+      });
       setOpen(false);
     } catch (error) {
       console.error("Error creating admission:", error);
@@ -117,13 +138,16 @@ export default function CreateAdmissionDialog({
 
   const handleCancel = () => {
     setSelectedCourses([]);
+    setNewAdmission({
+      academicYear: null,
+      startDate: null,
+      lastDate: null,
+    });
     setOpen(false);
   };
 
-  const handleYearChange = (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, "");
-    onYearChange(Number(numericValue) || new Date().getFullYear());
-  };
+  const usedAcademicYearIds = new Set((admissions ?? []).map(a => a.academicYear.id!));
+  const availableAcademicYears = (academicYears ?? []).filter(y => !usedAcademicYearIds.has(y.id!));
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -140,20 +164,30 @@ export default function CreateAdmissionDialog({
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="year">Admission Year</Label>
-            <Input
+            <select
               id="year"
-              type="text"
-              placeholder="Enter year (e.g., 2024)"
-              value={year}
-              onChange={(e) => handleYearChange(e.target.value)}
-            />
+              value={newAdmission.academicYear?.id ?? ""}
+              onChange={e => setNewAdmission(prev => ({
+                ...prev,
+                academicYear: Number(e.target.value) ? academicYears.find(y => y.id === Number(e.target.value)) || null : null
+              }))}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="">Select Academic Year</option>
+              {(availableAcademicYears ?? []).map((y) => (
+                <option key={y.id} value={y.id}>{y.year}</option>
+              ))}
+            </select>
           </div>
           <div className="flex gap-4">
             <div className="grid gap-2 w-1/2">
               <Label htmlFor="start-date">Start Date</Label>
               <DatePicker
-                selected={startDate}
-                onChange={(date) => setStartDate(date)}
+                selected={newAdmission.startDate}
+                onChange={(date) => setNewAdmission(prev => ({
+                  ...prev,
+                  startDate: date
+                }))}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="dd/mm/yyyy"
                 minDate={new Date()}
@@ -163,8 +197,11 @@ export default function CreateAdmissionDialog({
             <div className="grid gap-2 w-1/2">
               <Label htmlFor="end-date">End Date</Label>
               <DatePicker
-                selected={endDate}
-                onChange={(date) => setEndDate(date)}
+                selected={newAdmission.lastDate}
+                onChange={(date) => setNewAdmission(prev => ({
+                  ...prev,
+                  lastDate: date
+                }))}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="dd/mm/yyyy"
                 minDate={new Date()}
@@ -185,7 +222,7 @@ export default function CreateAdmissionDialog({
                 <div className="text-center py-8 text-gray-500">No courses available</div>
               ) : (
                 <div className="space-y-3">
-                  {courses.map((course) => (
+                  {(courses ?? []).map((course) => (
                     <div key={course.id} className="flex items-center space-x-3">
                       <Checkbox
                         id={`course-${course.id}`}

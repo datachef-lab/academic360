@@ -29,8 +29,14 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationFormProvider } from "../components/ApplicationFormProvider";
-import { Admission } from "../types";
+import type { Admission, ApplicationFormDto } from "@/types/admissions";
+import type { AdmissionSummary } from "../types";
 import AdmissionForm from "../components/AdmissionForm";
+import {
+  fetchAdmissionSummaries,
+  findAdmissionById,
+} from "@/services/admissions.service";
+import axios from "axios";
 
 interface ApplicationFormStats {
   totalApplications: number;
@@ -45,9 +51,18 @@ interface ApplicationFormStats {
 export default function AdmissionDetailsPage() {
   const { year } = useParams<{ year: string }>();
   const [admission, setAdmission] = useState<Admission | null>(null);
-  const [stats, setStats] = useState<ApplicationFormStats | null>(null);
-  const [applications, setApplications] = useState<unknown[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const defaultStats: ApplicationFormStats = {
+    totalApplications: 0,
+    paymentsDone: 0,
+    drafts: 0,
+    submitted: 0,
+    approved: 0,
+    rejected: 0,
+    paymentDue: 0,
+  };
+  const [stats, setStats] = useState<ApplicationFormStats>(defaultStats);
+  const [applications, setApplications] = useState<ApplicationFormDto[]>([]);
+  const [isLoading, setIsLoading] = useState(true); 
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -72,52 +87,57 @@ export default function AdmissionDetailsPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
-    // Mock data fetching
-    const result = {
-      admission: { id: 1, year: 2025, isClosed: false, startDate: "2025-07-01", lastDate: "2025-08-31", courses: [] },
-      stats: {
-        totalApplications: 120,
-        paymentsDone: 100,
-        drafts: 20,
-        submitted: 110,
-        approved: 90,
-        rejected: 10,
-        paymentDue: 10,
-      },
-      applications: [
-        {
-          id: 1,
-          name: "John Doe",
-          formStatus: "APPROVED",
-          submittedAt: "2025-07-15",
-          category: "General",
-          religion: "Christian",
-          annualIncome: "5-10 LPA",
-          gender: "MALE",
-          isGujarati: true,
-          course: "B.Tech",
-          boardUniversity: "CBSE",
-        },
-        {
-          id: 2,
-          name: "Jane Smith",
-          formStatus: "SUBMITTED",
-          submittedAt: "2025-07-16",
-          category: "OBC",
-          religion: "Hinduism",
-          annualIncome: "2-5 LPA",
-          gender: "FEMALE",
-          isGujarati: false,
-          course: "M.Tech",
-          boardUniversity: "State Board",
-        },
-      ],
-      totalItems: 2,
-    };
-    setAdmission(result.admission);
-    setStats(result.stats);
-    setApplications(result.applications);
-    setTotalItems(result.totalItems);
+    try {
+      let admissionData = null;
+      if (year) {
+        const summaries: AdmissionSummary[] = await fetchAdmissionSummaries();
+        const found = summaries.find(
+          (a) => String(a.admissionYear) === String(year)
+        );
+        if (found && found.id) {
+          const admissionId = Number(found.id);
+          admissionData = await findAdmissionById(admissionId);
+          setAdmission(admissionData.payload);
+          // Build query params for pagination, search, and filters
+          const params = {
+            page: currentPage,
+            size: itemsPerPage,
+            search: searchTerm,
+            ...filters,
+          };
+          const res = await axios.get(`/api/admissions/${year}/applications`, { params });
+          const data = res.data;
+          if (data && data.status === 'SUCCESS' && data.data) {
+            setApplications(data.data.applications || []);
+            setStats({
+              totalApplications: data.data.totalItems ?? 0,
+              paymentsDone: data.data.stats?.paymentsDone ?? 0,
+              drafts: data.data.stats?.drafts ?? 0,
+              submitted: data.data.stats?.submitted ?? 0,
+              approved: data.data.stats?.approved ?? 0,
+              rejected: data.data.stats?.rejected ?? 0,
+              paymentDue: data.data.stats?.paymentDue ?? 0,
+            });
+            setTotalItems(data.data.totalItems ?? 0);
+          } else {
+            setApplications([]);
+            setStats(defaultStats);
+            setTotalItems(0);
+          }
+        } else {
+          setAdmission(null);
+          setApplications([]);
+          setStats(defaultStats);
+          setTotalItems(0);
+        }
+      }
+    } catch (err) {
+      setAdmission(null);
+      setApplications([]);
+      setStats(defaultStats);
+      setTotalItems(0);
+      console.error(err);
+    }
     setIsLoading(false);
   };
 
@@ -184,7 +204,8 @@ export default function AdmissionDetailsPage() {
     return pages;
   };
 
-  const handleRowSelect = (id: number) => {
+  const handleRowSelect = (id: number | undefined) => {
+    if (typeof id !== 'number') return;
     setSelectedRows((prev) => (prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]));
   };
 
@@ -192,7 +213,7 @@ export default function AdmissionDetailsPage() {
     if (selectAll) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(applications.map((app) => app.id));
+      setSelectedRows(applications.map((app) => (app as ApplicationFormDto).id).filter((id): id is number => typeof id === 'number'));
     }
     setSelectAll(!selectAll);
   };
@@ -242,7 +263,7 @@ export default function AdmissionDetailsPage() {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission.year}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission.academicYear?.year ?? ''}</h1>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => alert("Downloading report...")}>
               <FileText className="w-4 h-4 mr-2" />
@@ -250,7 +271,7 @@ export default function AdmissionDetailsPage() {
             </Button>
             <Dialog open={isAddApplicationOpen} onOpenChange={setIsAddApplicationOpen}>
               <DialogTrigger asChild>
-                <Button disabled={new Date().getFullYear() != Number(year)}>Add Application</Button>
+                {/* <Button disabled={new Date().getFullYear() != Number(year)}>Add Application</Button> */}
               </DialogTrigger>
               <DialogContent className="w-screen h-screen max-w-none p-0">
                 <div className="flex flex-col h-full">
@@ -302,59 +323,57 @@ export default function AdmissionDetailsPage() {
           </div>
         )}
 
-        {stats && (
-          <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-            <StatCard
-              label="Total Forms"
-              value={stats.totalApplications}
-              icon={<Users className="w-8 h-8 text-blue-500 opacity-60" />}
-              bgColor="bg-blue-50"
-              textColor="text-blue-700"
-            />
-            <StatCard
-              label="Submitted"
-              value={stats.submitted}
-              icon={<CheckCircle className="w-8 h-8 text-green-500 opacity-60" />}
-              bgColor="bg-green-50"
-              textColor="text-green-700"
-            />
-            <StatCard
-              label="Approved"
-              value={stats.approved}
-              icon={<CheckCircle className="w-8 h-8 text-purple-500 opacity-60" />}
-              bgColor="bg-purple-50"
-              textColor="text-purple-700"
-            />
-            <StatCard
-              label="Rejected"
-              value={stats.rejected}
-              icon={<XCircle className="w-8 h-8 text-red-500 opacity-60" />}
-              bgColor="bg-red-50"
-              textColor="text-red-700"
-            />
-            <StatCard
-              label="Payments Done"
-              value={stats.paymentsDone}
-              icon={<IndianRupee className="w-8 h-8 text-teal-500 opacity-60" />}
-              bgColor="bg-teal-50"
-              textColor="text-teal-700"
-            />
-            <StatCard
-              label="Payment Due"
-              value={stats.paymentDue}
-              icon={<CreditCard className="w-8 h-8 text-orange-500 opacity-60" />}
-              bgColor="bg-orange-50"
-              textColor="text-orange-700"
-            />
-            <StatCard
-              label="Drafts"
-              value={stats.drafts}
-              icon={<FileText className="w-8 h-8 text-yellow-500 opacity-60" />}
-              bgColor="bg-yellow-50"
-              textColor="text-yellow-700"
-            />
-          </div>
-        )}
+        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+          <StatCard
+            label="Total Forms"
+            value={stats.totalApplications}
+            icon={<Users className="w-8 h-8 text-blue-500 opacity-60" />}
+            bgColor="bg-blue-50"
+            textColor="text-blue-700"
+          />
+          <StatCard
+            label="Submitted"
+            value={stats.submitted}
+            icon={<CheckCircle className="w-8 h-8 text-green-500 opacity-60" />}
+            bgColor="bg-green-50"
+            textColor="text-green-700"
+          />
+          <StatCard
+            label="Approved"
+            value={stats.approved}
+            icon={<CheckCircle className="w-8 h-8 text-purple-500 opacity-60" />}
+            bgColor="bg-purple-50"
+            textColor="text-purple-700"
+          />
+          <StatCard
+            label="Rejected"
+            value={stats.rejected}
+            icon={<XCircle className="w-8 h-8 text-red-500 opacity-60" />}
+            bgColor="bg-red-50"
+            textColor="text-red-700"
+          />
+          <StatCard
+            label="Payments Done"
+            value={stats.paymentsDone}
+            icon={<IndianRupee className="w-8 h-8 text-teal-500 opacity-60" />}
+            bgColor="bg-teal-50"
+            textColor="text-teal-700"
+          />
+          <StatCard
+            label="Payment Due"
+            value={stats.paymentDue}
+            icon={<CreditCard className="w-8 h-8 text-orange-500 opacity-60" />}
+            bgColor="bg-orange-50"
+            textColor="text-orange-700"
+          />
+          <StatCard
+            label="Drafts"
+            value={stats.drafts}
+            icon={<FileText className="w-8 h-8 text-yellow-500 opacity-60" />}
+            bgColor="bg-yellow-50"
+            textColor="text-yellow-700"
+          />
+        </div>
 
         <div className="mb-8 flex justify-between items-center">
           <div className="relative w-full max-w-sm flex items-center gap-2">
@@ -522,54 +541,49 @@ export default function AdmissionDetailsPage() {
               </TableHeader>
               <TableBody className="bg-white divide-y divide-gray-200">
                 {applications.length > 0 ? (
-                  applications.map((app) => (
-                    <TableRow
-                      key={app.id}
-                      className={`hover:bg-gray-50 transition-colors duration-150 ${selectedRows.includes(app.id) ? "bg-blue-50" : ""}`}
-                    >
-                      <TableCell className="w-12 px-6 py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(app.id)}
-                          onChange={() => handleRowSelect(app.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.id}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.name}</TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        <span
-                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS" ? "bg-green-100 text-green-800" : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
-                        >
-                          {app.formStatus}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.submittedAt ? new Date(app.submittedAt).toLocaleDateString() : "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.category || "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.religion || "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.annualIncome || "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.gender || "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.isGujarati ? "Yes" : "No"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.course || "-"}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.boardUniversity || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  applications.map((app) => {
+                    const appId = typeof app.id === 'number' ? app.id : undefined;
+                    const name = app.generalInfo ? `${app.generalInfo.firstName} ${app.generalInfo.middleName ?? ''} ${app.generalInfo.lastName}`.trim() : '-';
+                    const gender = app.generalInfo?.gender ?? '-';
+                    const category = app.generalInfo?.categoryId ?? '-';
+                    const religion = app.generalInfo?.religionId ?? '-';
+                    const isGujarati = app.generalInfo?.isGujarati ? 'Yes' : 'No';
+                    const submittedAt = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '-';
+                    return (
+                      <TableRow
+                        key={appId}
+                        className={`hover:bg-gray-50 transition-colors duration-150 ${typeof appId === 'number' && selectedRows.includes(appId) ? "bg-blue-50" : ""}`}
+                      >
+                        <TableCell className="w-12 px-6 py-4">
+                          <input
+                            type="checkbox"
+                            checked={typeof appId === 'number' && selectedRows.includes(appId)}
+                            onChange={() => handleRowSelect(appId)}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{typeof appId === 'number' ? appId : ''}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{name}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS" ? "bg-green-100 text-green-800" : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
+                          >
+                            {app.formStatus}
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {submittedAt}
+                        </TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{category}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{religion}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{gender}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{isGujarati}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
+                      </TableRow>
+                    );
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={12} className="h-24 text-center text-gray-500">
@@ -644,13 +658,15 @@ export default function AdmissionDetailsPage() {
                             ...
                           </span>
                         ) : (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(+page)}
-                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
-                          >
-                            {page}
-                          </button>
+                          typeof page === 'number' ? (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+                            >
+                              {page}
+                            </button>
+                          ) : null
                         ),
                       )}
                       <button

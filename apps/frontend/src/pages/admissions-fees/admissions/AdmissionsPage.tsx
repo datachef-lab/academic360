@@ -6,17 +6,11 @@ import { useNavigate } from "react-router-dom";
 import CreateAdmissionDialog from "./components/CreateAdmissionDialog";
 import AdmissionsStats from "./components/AdmissionsStats";
 import AdmissionConfigureDialog from "./components/AdmissionConfigureDialog";
-import { Course, AdmissionSummary, Stats } from "./types";
-
-async function getCourses(): Promise<{ courses: Course[]; totalCount: number }> {
-  const courses = [
-    { id: 1, name: "B.Tech", disabled: false },
-    { id: 2, name: "M.Tech", disabled: false },
-    { id: 3, name: "MBA", disabled: false },
-    { id: 4, name: "MCA", disabled: true },
-  ];
-  return Promise.resolve({ courses, totalCount: courses.length });
-}
+import {  AdmissionSummary, Stats } from "./types";
+import { fetchStatsSummary, fetchAdmissionSummaries, createAdmission } from "@/services/admissions.service";
+import { getAllCourses } from "@/services/course-api";
+import { Course } from "@/types/academics/course";
+import { Admission } from "@/types/admissions";
 
 export default function AdmissionsPage() {
   useEffect(() => {
@@ -41,32 +35,27 @@ export default function AdmissionsPage() {
   const [totalItems, setTotalItems] = useState(0);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newAdmissionYear, setNewAdmissionYear] = useState<number>(new Date().getFullYear());
-
+  // const [newAdmissionYear, setNewAdmissionYear] = useState<number>(new Date().getFullYear());
+  
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
   const [selectedAdmission, setSelectedAdmission] = useState<AdmissionSummary | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
 
   const fetchData = async () => {
     setIsLoading(true);
-    const result = {
-      admissions: [
-        { id: 1, admissionYear: 2025, isClosed: false, totalApplications: 120, totalPayments: 100, totalDrafts: 20 },
-        { id: 2, admissionYear: 2024, isClosed: true, totalApplications: 150, totalPayments: 130, totalDrafts: 20 },
-      ],
-      stats: { admissionYearCount: 2, totalApplications: 270, totalPayments: 230, totalDrafts: 40 },
-    };
-    const processedAdmissions = result.admissions.map((admission: unknown) => ({
-      ...admission,
-      isClosed: admission.isClosed === true,
-      totalApplications: Number(admission.totalApplications) || 0,
-      totalPayments: Number(admission.totalPayments) || 0,
-      totalDrafts: Number(admission.totalDrafts) || 0,
-    }));
-    setData(processedAdmissions);
-    setStats(result.stats);
-    setTotalItems(result.stats.admissionYearCount);
-    setIsLoading(false);
+    try {
+      const [admissions, stats] = await Promise.all([
+        fetchAdmissionSummaries(),
+        fetchStatsSummary(),
+      ]);
+      setData(admissions);
+      setStats(stats);
+      setTotalItems(admissions.length);
+    } catch (error) {
+      console.error("Error fetching admissions data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -151,25 +140,32 @@ export default function AdmissionsPage() {
 
   const confirmCloseAdmission = async () => {
     setToggleAdmLoading(true);
-    console.log("Closing admission for year:", selectedYear);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setToggleAdmLoading(false);
-    setIsDialogOpen(false);
-    fetchData();
+    // TODO: Call backend API to close/open admission
+    // Example: await fetch(`/api/admissions/${selectedYear}`, { method: 'PUT', body: JSON.stringify({ isClosed: ... }) })
+    setTimeout(() => {
+      setToggleAdmLoading(false);
+      setIsDialogOpen(false);
+      fetchData();
+    }, 1000);
   };
 
-  const handleCreateAdmission = async (courseIds: number[], startDate: string, endDate: string) => {
-    console.log("Creating admission:", { year: newAdmissionYear, courseIds, startDate, endDate });
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsCreateDialogOpen(false);
-    fetchData();
+  const handleCreateAdmission = async (newAdmission: Admission) => {
+    try {
+      // if (!academicYearId) throw new Error('No academic year selected');
+      await createAdmission(newAdmission);
+      setIsCreateDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      alert("Failed to create admission");
+      console.error("Error creating admission:", error);
+    }
   };
 
   const handleConfigureAdmission = async (admission: AdmissionSummary) => {
     setSelectedAdmission(admission);
     try {
-      const allCoursesRes = await getCourses();
-      setAllCourses(allCoursesRes.courses);
+      const allCoursesRes = await getAllCourses();
+      setAllCourses(allCoursesRes.payload);
       setIsConfigDialogOpen(true);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -214,8 +210,6 @@ export default function AdmissionsPage() {
             open={isCreateDialogOpen}
             setOpen={setIsCreateDialogOpen}
             onCreate={handleCreateAdmission}
-            onYearChange={(year) => setNewAdmissionYear(year)}
-            year={newAdmissionYear}
           />
         </div>
 
@@ -291,15 +285,15 @@ export default function AdmissionsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap space-x-2">
-                      <Button size="sm" onClick={() => handleView(item.admissionYear)}>
+                      <Button size="sm" variant="secondary" onClick={() => handleView(item.admissionYear)}>
                         View Details
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => handleConfigureAdmission(item)}>
+                      <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => handleConfigureAdmission(item)}>
                         Configure
                       </Button>
                       <Button
                         size="sm"
-                        variant={item.isClosed ? "default" : "destructive"}
+                        className={item.isClosed ? "bg-green-600 text-white hover:bg-green-700" : "bg-red-600 text-white hover:bg-red-700"}
                         onClick={() => {
                           setSelectedYear(item.admissionYear);
                           setIsDialogOpen(true);
@@ -426,6 +420,7 @@ export default function AdmissionsPage() {
 
       {selectedAdmission && (
         <AdmissionConfigureDialog
+        
           open={isConfigDialogOpen}
           setOpen={setIsConfigDialogOpen}
           admissionId={selectedAdmission.id}

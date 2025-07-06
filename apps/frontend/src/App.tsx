@@ -42,6 +42,7 @@ import * as appModule from "./pages/apps";
 import * as facultiesStaffsModule from "./pages/faculties-staffs";
 import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
+import { AcademicYearPage } from "./pages/admissions-fees/fees";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -72,6 +73,7 @@ const router = createBrowserRouter([
         element: <admissionFeesModule.AdmissionsFeesMaster />,
         children: [
           { path: "", element: <admissionFeesModule.HomePage /> },
+          { path: "academic-years", element: <AcademicYearPage /> },
           {
             path: "admissions",
             element: <Outlet />,

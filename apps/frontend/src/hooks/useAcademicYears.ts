@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllAcademicYears, getAcademicYearById, createAcademicYear, updateAcademicYearById, deleteAcademicYearById } from '@/services/academic-year-api';
+import { getAllAcademicYears, createAcademicYear, updateAcademicYearById, deleteAcademicYearById } from '@/services/academic-year-api';
 import { AcademicYear } from '@/types/academics/academic-year';
 import { toast } from 'sonner';
 import { getAllShifts } from '../services/academic';
 import { useState, useEffect } from 'react';
 import { Shift } from '@/types/academics/shift';
+import { Session } from '@/types/academics/session';
 
 // Hook for fetching all academic years
 export const useAcademicYears = () => {
@@ -17,32 +18,20 @@ export const useAcademicYears = () => {
     });
 };
 
-// Hook for fetching a single academic year by ID
-export const useAcademicYearById = (id: number) => {
-    return useQuery({
-        queryKey: ['academic-year', id],
-        queryFn: async () => {
-            const response = await getAcademicYearById(id);
-            return response.payload;
-        },
-        enabled: !!id,
-    });
-};
-
 // Hook for creating academic year
 export const useCreateAcademicYear = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async (academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>) => {
-            const response = await createAcademicYear(academicYear);
+        mutationFn: async ({ academicYear, session }: { academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>; session: Session }) => {
+            const response = await createAcademicYear(academicYear, session);
             return response.payload;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['academic-years'] });
             toast.success('Academic year created successfully');
         },
-        onError: (error) => {
+        onError: (error: unknown) => {
             console.error('Error creating academic year:', error);
             toast.error('Failed to create academic year');
         },
@@ -58,9 +47,8 @@ export const useUpdateAcademicYear = () => {
             const response = await updateAcademicYearById(id, academicYear);
             return response.payload;
         },
-        onSuccess: (_, { id }) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-            queryClient.invalidateQueries({ queryKey: ['academic-year', id] });
             toast.success('Academic year updated successfully');
         },
         onError: (error) => {
