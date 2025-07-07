@@ -23,8 +23,8 @@ import { useMarksheetStore } from "@/components/globals/useMarksheetStore";
 import { getAllMarksheet } from "@/services/student-apis";
 import { toast } from "sonner";
 import { getAllClasses } from "@/services/classes.service";
-import { Degree } from "@/types/resources/degree";
-import { findAllDegrees } from "@/services/degree.service";
+import { getAllDegrees } from "@/services/degree.service";
+import { Degree } from "@/types/resources/degree.types";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
 // type Framework = "CCF" | "CBCS";
@@ -41,7 +41,7 @@ const FilterAndExportComponent: React.FC = () => {
 
   const { data: degrees } = useQuery({
     queryKey: ["degrees"],
-    queryFn: findAllDegrees,
+    queryFn: getAllDegrees,
   });
 
   const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
@@ -90,21 +90,21 @@ const FilterAndExportComponent: React.FC = () => {
     try {
       const { data: exportData } = await fetchExportData();
 
-      if (!data || data.length === 0) {
+      if (!data?.payload || data.payload.length === 0) {
         toast.error("No data available for export.");
         return;
       }
       const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(exportData.data);
+      const worksheet = XLSX.utils.json_to_sheet(exportData.payload);
 
       // Set dynamic column widths with padding and a minimum width
-      if (exportData.data.length > 0) {
-        const headers = Object.keys(exportData.data[0]);
+      if (exportData.payload.length > 0) {
+        const headers = Object.keys(exportData.payload[0]);
 
         worksheet["!cols"] = headers.map((key) => {
           const maxLength = Math.max(
             key.length,
-            ...exportData.data.map(
+            ...exportData.payload.map(
               (row: MarksheetTableType) => String(row[key as keyof MarksheetTableType] ?? "").length,
             ),
           );

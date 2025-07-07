@@ -1,5 +1,4 @@
 import { User } from '@/types/user/user';
-import React, { useState } from 'react';
 import { MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,15 +11,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import EditUserModal from "../../settings/EditModal/EditUserModal";
-
 interface Props {
   // Define your props here
   user:User,
 }
 
 const ComponentName: React.FC<Props> = ({  user}) => {
-    const [isEditOpen, setIsEditOpen] = useState<boolean>(false);
   return (
      <div>
          <DropdownMenu>
@@ -37,12 +33,10 @@ const ComponentName: React.FC<Props> = ({  user}) => {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>View customer</DropdownMenuItem>
-                    <DropdownMenuItem onClick={()=>setIsEditOpen(true)} >Edit</DropdownMenuItem>
+                    {/* <DropdownMenuItem onClick={()=>setIsEditOpen(true)} >Edit</DropdownMenuItem> */}
                     <DropdownMenuItem>View payment details</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-
-                {isEditOpen && <EditUserModal user={user} onClose={() => setIsEditOpen(false)} />}
  </div>
   );
 };

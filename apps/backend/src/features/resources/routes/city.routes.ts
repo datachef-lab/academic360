@@ -10,19 +10,19 @@ import {
 
 const router = express.Router();
 
-// Create a new city Route
+// Create a new city
 router.post("/", createNewCity);
 
-// Get all city Route
+// Get all cities
 router.get("/", getAllCity);
 
-// Get by cities ID Route
+// Get a specific city by ID
 router.get("/:id", getCitiesById);
 
-// Update the city Route
+// Update a city
 router.put("/:id", updateCity);
 
-//Delete the category Route
+// Delete a city
 router.delete("/:id", deleteCity);
 
 export default router;

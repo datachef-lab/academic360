@@ -1,176 +1,251 @@
-import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { transportModel } from "@/features/resources/models/transport.model.js";
-import { findAll } from "@/utils/helper.js";
+import { Transport, transportTypeEnum } from "@/features/resources/models/transport.model.js";
+import { 
+    findAllTransports,
+    findTransportById, 
+    createTransport as createTransportService,
+    updateTransport as updateTransportService,
+    deleteTransport as deleteTransportService,
+    findTransportsByMode,
+    findTransportByVehicleNumber
+} from "@/features/resources/services/transport.service.js";
 
-
-// Create a new Transport
+// Create a new transport
 export const createNewTransport = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        console.log(req.body);
-        const newTransport = await db
-            .insert(transportModel)
-            .values(req.body);
-        console.log("New Transport added", newTransport);
-        res
-            .status(201)
-            .json(
-                new ApiResponse(
-                    201,
-                    "SUCCESS",
-                    null,
-                    "New Transport is added to db!",
-                ),
-            );
+        const { routeName, mode, vehicleNumber, driverName, providerDetails } = req.body;
+
+        // Basic validation
+        if (!mode || !transportTypeEnum.enumValues.includes(mode)) {
+            res.status(400).json(new ApiError(400, "Valid mode is required (BUS, TRAIN, METRO, AUTO, TAXI, CYCLE, WALKING, OTHER)"));
+            return;
+        }
+
+        // Check if vehicle number already exists (if provided)
+        if (vehicleNumber) {
+            const existingVehicle = await findTransportByVehicleNumber(vehicleNumber);
+            if (existingVehicle) {
+                res.status(409).json(new ApiError(409, "Vehicle number already exists"));
+                return;
+            }
+        }
+
+        const transportData = {
+            routeName: routeName || null,
+            mode: mode as "BUS" | "TRAIN" | "METRO" | "AUTO" | "TAXI" | "CYCLE" | "WALKING" | "OTHER",
+            vehicleNumber: vehicleNumber || null,
+            driverName: driverName || null,
+            providerDetails: providerDetails || null
+        };
+
+        const newTransport = await createTransportService(transportData);
+
+        res.status(201).json(
+            new ApiResponse(
+                201,
+                "SUCCESS",
+                newTransport,
+                "Transport created successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get all Transport
+// Get all transports
 export const getAllTransport = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        const transport = await findAll(transportModel);
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    transport,
-                    "Fetched all transport!",
-                ),
-            );
+        const transports = await findAllTransports();
+        
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                transports,
+                "All transports fetched successfully."
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get Transport By ID
+// Get transports by mode
+export const getTransportsByMode = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+): Promise<void> => {
+    try {
+        const { mode } = req.params;
+        
+        if (!mode || !transportTypeEnum.enumValues.includes(mode as any)) {
+            res.status(400).json(new ApiError(400, "Valid mode is required (BUS, TRAIN, METRO, AUTO, TAXI, CYCLE, WALKING, OTHER)"));
+            return;
+        }
+
+        const transports = await findTransportsByMode(mode as "BUS" | "TRAIN" | "METRO" | "AUTO" | "TAXI" | "CYCLE" | "WALKING" | "OTHER");
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                transports,
+                "Transports fetched successfully!"
+            )
+        );
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+// Get transport by ID
 export const getTransportById = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        const transport = await db
-            .select()
-            .from(transportModel)
-            .where(eq(transportModel.id, Number(id)))
-            .limit(1);
-
-        if (!transport[0]) {
-            res
-                .status(404)
-                .json(
-                    new ApiResponse(404, "NOT_FOUND", null, "Transport not found"),
-                );
+        
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    transport[0],
-                    "Fetched Transport!",
-                ),
-            );
+        const transport = await findTransportById(Number(id));
+
+        if (!transport) {
+            res.status(404).json(new ApiError(404, "Transport not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                transport,
+                "Transport fetched successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Update the Transport
+// Update transport
 export const updateTransport = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const updatedTransport = req.body;
+        const { routeName, mode, vehicleNumber, driverName, providerDetails } = req.body;
 
-        const existingTransport = await db
-            .select()
-            .from(transportModel)
-            .where(eq(transportModel.id, +id))
-            .then((transport) => transport[0]);
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
+        }
 
+        // Check if transport exists
+        const existingTransport = await findTransportById(Number(id));
         if (!existingTransport) {
             res.status(404).json(new ApiError(404, "Transport not found"));
             return;
         }
 
-        const updatedTransports = await db
-            .update(transportModel)
-            .set(updatedTransport)
-            .where(eq(transportModel.id, +id))
-            .returning();
-
-        if (updatedTransports.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        updatedTransports[0],
-                        "Transport updated successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Transport not found"));
+        // Validate mode if provided
+        if (mode && !transportTypeEnum.enumValues.includes(mode)) {
+            res.status(400).json(new ApiError(400, "Valid mode is required (BUS, TRAIN, METRO, AUTO, TAXI, CYCLE, WALKING, OTHER)"));
+            return;
         }
+
+        // If vehicle number is being updated, check for duplicates
+        if (vehicleNumber && vehicleNumber !== existingTransport.vehicleNumber) {
+            const duplicateVehicle = await findTransportByVehicleNumber(vehicleNumber);
+            if (duplicateVehicle) {
+                res.status(409).json(new ApiError(409, "Vehicle number already exists"));
+                return;
+            }
+        }
+
+        const updateData: Partial<Omit<Transport, 'id' | 'createdAt' | 'updatedAt'>> = {};
+        
+        if (routeName !== undefined) updateData.routeName = routeName;
+        if (mode !== undefined) updateData.mode = mode as "BUS" | "TRAIN" | "METRO" | "AUTO" | "TAXI" | "CYCLE" | "WALKING" | "OTHER";
+        if (vehicleNumber !== undefined) updateData.vehicleNumber = vehicleNumber;
+        if (driverName !== undefined) updateData.driverName = driverName;
+        if (providerDetails !== undefined) updateData.providerDetails = providerDetails;
+
+        const updatedTransport = await updateTransportService(Number(id), updateData);
+
+        if (!updatedTransport) {
+            res.status(404).json(new ApiError(404, "Transport not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                updatedTransport,
+                "Transport updated successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Delete the Transport
+// Delete transport
 export const deleteTransport = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const deletedTransports = await db
-            .delete(transportModel)
-            .where(eq(transportModel.id, +id))
-            .returning();
 
-        if (deletedTransports.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        deletedTransports[0],
-                        "Transports deleted successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Transports not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
         }
+
+        // Check if transport exists
+        const existingTransport = await findTransportById(Number(id));
+        if (!existingTransport) {
+            res.status(404).json(new ApiError(404, "Transport not found"));
+            return;
+        }
+
+        const deletedTransport = await deleteTransportService(Number(id));
+
+        if (!deletedTransport) {
+            res.status(404).json(new ApiError(404, "Transport not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                deletedTransport,
+                "Transport deleted successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }

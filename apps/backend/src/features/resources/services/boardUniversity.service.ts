@@ -13,6 +13,63 @@ export async function findBoardUniversityById(id: number): Promise<BoardUniversi
     return formattedBoardUniversity;
 }
 
+export async function findAllBoardUniversities(): Promise<BoardUniversity[]> {
+    return await db.select().from(boardUniversityModel).orderBy(boardUniversityModel.sequence);
+}
+
+export async function createBoardUniversity(data: Omit<BoardUniversity, 'id' | 'createdAt' | 'updatedAt'>): Promise<BoardUniversity> {
+    const [newBoardUniversity] = await db
+        .insert(boardUniversityModel)
+        .values({
+            ...data,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        })
+        .returning();
+    
+    return newBoardUniversity;
+}
+
+export async function updateBoardUniversity(id: number, data: Partial<Omit<BoardUniversity, 'id' | 'createdAt' | 'updatedAt'>>): Promise<BoardUniversity | null> {
+    const [updatedBoardUniversity] = await db
+        .update(boardUniversityModel)
+        .set({
+            ...data,
+            updatedAt: new Date()
+        })
+        .where(eq(boardUniversityModel.id, id))
+        .returning();
+    
+    return updatedBoardUniversity || null;
+}
+
+export async function deleteBoardUniversity(id: number): Promise<BoardUniversity | null> {
+    const [deletedBoardUniversity] = await db
+        .delete(boardUniversityModel)
+        .where(eq(boardUniversityModel.id, id))
+        .returning();
+    
+    return deletedBoardUniversity || null;
+}
+
+export async function findBoardUniversityByName(name: string): Promise<BoardUniversity | null> {
+    const [foundBoardUniversity] = await db
+        .select()
+        .from(boardUniversityModel)
+        .where(eq(boardUniversityModel.name, name));
+    
+    return foundBoardUniversity || null;
+}
+
+export async function findBoardUniversityByCode(code: string): Promise<BoardUniversity | null> {
+    const [foundBoardUniversity] = await db
+        .select()
+        .from(boardUniversityModel)
+        .where(eq(boardUniversityModel.code, code));
+    
+    return foundBoardUniversity || null;
+}
+
 export async function boardUniversityResponseFormat(boardUniversity: BoardUniversity): Promise<BoardUniversityType | null> {
     if (!boardUniversity) {
         return null;

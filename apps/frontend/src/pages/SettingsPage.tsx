@@ -2,9 +2,6 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   Frame,
-  UsersRound,
-  UserPlus,
-  Users,
   School,
   Building,
   Layers,
@@ -21,14 +18,6 @@ import SettingsPanel from "@/components/settings/SettingsPanel";
 import SettingsContent from "@/components/settings/SettingsContent";
 
 const settingsCategories = [
-  {
-    category: "Users",
-    icon: <UsersRound size={16} />,
-    tabs: [
-      { label: "All Users", icon: <Users size={16} />, endpoint: "/users" },
-      { label: "Create a new user", icon: <UserPlus size={16} />, endpoint: "/users" },
-    ],
-  },
   {
     category: "Resources",
     icon: <Frame size={16} />,
@@ -56,61 +45,92 @@ export default function Settings() {
   const [activeSetting, setActiveSetting] = useState(settingsCategories[0].tabs[0]);
 
   return (
-    <div className="w-full h-full grid grid-rows-[auto_1fr] bg-gradient-to-br from-purple-50 to-white gap-5 p-5 drop-shadow-xl">
-  {/* Header Section */}
-  <motion.div
-    initial={{ opacity: 0, y: -20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.5 }}
-    className="bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 p-6 rounded-lg shadow-lg text-white"
-  >
-    <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
       <motion.div
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        className="bg-white p-3 rounded-full shadow-xl"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 py-6 px-5 sm:p-4"
       >
-        <Settings2 className="h-8 w-8 drop-shadow-xl text-purple-600" />
+        <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+          <motion.div
+            whileHover={{ scale: 1.05, rotate: -5 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-gradient-to-br from-purple-400 to-purple-600 p-3 rounded-xl shadow-xl"
+          >
+            <Settings2 className="h-8 w-8 drop-shadow-xl text-white" />
+          </motion.div>
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Settings</h2>
+            <p className="text-sm text-purple-600 font-medium">
+              Manage your preferences and configurations here
+            </p>
+          </div>
+        </div>
+
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="h-1 bg-gradient-to-r mt-2 from-purple-400 via-purple-500 to-purple-400 rounded-full origin-left col-span-full"
+        />
       </motion.div>
-      <div>
-        <h1 className="text-3xl font-bold"> Settings</h1>
-        <p className="text-sm font-medium">Manage your preferences and configurations here.</p>
-      </div>
-    </div>
-  </motion.div>
 
-  {/* Main Content */}
-  <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full">
-    {/* Left Section */}
-    <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr]">
-      <div className="bg-gradient-to-r rounded-t-lg from-indigo-500 to-indigo-500 p-5  text-white">
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-           [ {activeSetting.label} ]
-        </h2>
-        <p className="text-sm mt-2">
-          Customize your preferences and manage configurations effortlessly.
-        </p>
-      </div>
-      <div className=" overflow-auto">
-        <SettingsContent activeSetting={activeSetting} />
-      </div>
-    </div>
+      {/* content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full">
+        {/* Left Section */}
+        <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 py-6 px-5 sm:p-4 bg-purple-500 rounded-t-lg"
+          >
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+              <motion.div
+                whileHover={{ scale: 1.05, rotate: -5 }}
+                whileTap={{ scale: 0.95 }}
+                className="bg-gradient-to-br from-white/20 to-white/10 p-3 rounded-xl shadow-xl"
+              >
+                <Settings2 className="h-8 w-8 drop-shadow-xl text-white" />
+              </motion.div>
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">
+                  [ {activeSetting.label} ]
+                </h2>
+                <p className="text-sm text-white/80 font-medium">
+                  Customize your preferences and manage configurations effortlessly.
+                </p>
+              </div>
+            </div>
 
-    {/* Right Section */}
-    <div className="bg-white grid-cols-1 shadow-lg border border-gray-200/70 overflow-auto  rounded-lg p-6">
-      <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 grid grid-cols-[auto_1fr] items-center gap-2">
-        <span className="bg-purple-500 text-white p-2 rounded-full shadow-md">
-          <Settings2 className="h-5 w-5" />
-        </span>
-        <span>Categories</span>
-      </h3>
-      <SettingsPanel
-        settingsCategories={settingsCategories}
-        activeSetting={activeSetting}
-        setActiveSetting={setActiveSetting}
-      />
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="h-1 bg-gradient-to-r mt-2 from-white/40 via-white/60 to-white/40 rounded-full origin-left col-span-full"
+            />
+          </motion.div>
+          <div className="overflow-auto">
+            <SettingsContent activeSetting={activeSetting} />
+          </div>
+        </div>
+
+        {/* Right Section */}
+        <div className="bg-white grid-cols-1 shadow-lg border border-gray-200/70 overflow-auto rounded-lg p-6">
+          <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 grid grid-cols-[auto_1fr] items-center gap-2">
+            <span className="bg-purple-500 text-white p-2 rounded-full shadow-md">
+              <Settings2 className="h-5 w-5" />
+            </span>
+            <span>Categories</span>
+          </h3>
+          <SettingsPanel
+            settingsCategories={settingsCategories}
+            activeSetting={activeSetting}
+            setActiveSetting={setActiveSetting}
+          />
+        </div>
+      </div>
     </div>
-  </div>
-</div>
   );
 }

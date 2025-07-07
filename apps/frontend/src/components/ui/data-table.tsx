@@ -21,6 +21,7 @@ import { CustomPaginationState } from "../settings/SettingsContent";
 import { Skeleton } from "./skeleton";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
 import { SearchX } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pageIndex" | "pageSize"> {
   columns: ColumnDef<TData, TValue>[];
@@ -34,6 +35,7 @@ export interface DataTableProps<TData, TValue> extends Omit<PaginationState, "pa
   refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<TData[] | undefined, Error>>;
   onRowClick?: (row: Row<TData>) => void;
   viewDataToolbar?: boolean;
+  optionalTools?: React.ReactNode,
 }
 
 export function DataTable<TData, TValue>({
@@ -45,10 +47,13 @@ export function DataTable<TData, TValue>({
   searchText,
   setSearchText,
   viewDataToolbar = true,
+  optionalTools,
+
 //   setDataLength,
   refetch,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
+  const location = useLocation();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
@@ -95,7 +100,10 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-3">
         <div>
-        {location.pathname !== '/home/downloads' && viewDataToolbar &&  <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />}
+        {location.pathname !== '/home/downloads' && viewDataToolbar &&  (<>
+        <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
+        {optionalTools}
+        </>)}
         </div>
           <div className="overflow-x-auto">
             <Table className="min-w-full text-sm">
