@@ -16,7 +16,8 @@ import { AcademicYear } from "../models/academic-year.model.js";
 // Create new academic year
 export const createAcademicYearHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const newAcademicYear = await createAcademicYear(req.body as Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>);
+        const { academicYear, session } = req.body;
+        const newAcademicYear = await createAcademicYear(academicYear as Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>, session);
         res.status(201).json(new ApiResponse(201, "SUCCESS", newAcademicYear, "New academic year created successfully!"));
     } catch (error) {
         handleError(error, res, next);

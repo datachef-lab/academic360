@@ -1,15 +1,18 @@
 import { boolean, date, integer, pgEnum, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { userModel } from "@/features/user/models/user.model.js";
-import { streamModel } from "@/features/academics/models/stream.model.js";
+// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { specializationModel } from "./specialization.model.js";
 import { communityTypeEnum } from "./helper.js";
+import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 
 export const studentModel = pgTable("students", {
     id: serial().primaryKey(),
     userId: integer("user_id_fk").notNull().references(() => userModel.id),
+    applicationId: integer("application_id_fk")
+        .references(() => applicationFormModel.id),
     community: communityTypeEnum(),
     handicapped: boolean().default(false),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
@@ -17,6 +20,7 @@ export const studentModel = pgTable("students", {
     notes: text(),
     active: boolean(),
     alumni: boolean(),
+    isSuspended: boolean().default(false),
     leavingDate: timestamp(),
     leavingReason: text(),
     createdAt: timestamp().notNull().defaultNow(),

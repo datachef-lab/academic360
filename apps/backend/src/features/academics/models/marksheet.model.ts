@@ -5,11 +5,12 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { userModel } from "@/features/user/models/user.model.js";
 import { marksheetSourceEnum } from "@/features/user/models/helper.js";
+import { classModel } from "./class.model.js";
 
 export const marksheetModel = pgTable("marksheets", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().references(() => studentModel.id),
-    semester: integer().notNull(),
+    classId: integer("class_id_fk").notNull().references(() => classModel.id),
     year: integer().notNull(),
     sgpa: numeric(),
     cgpa: numeric(),

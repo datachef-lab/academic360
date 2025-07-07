@@ -114,18 +114,16 @@ export const StudentSearchColumn: ColumnDef<Student>[] = [
         <span>Stream</span>
       </div>
     ),
-    cell: ({ row }) => {
-      const student = row.original.academicIdentifier?.stream?.degree;
-      return student ? (
+    cell: () => {
+      // const student = row.original.academicIdentifier?.stream?.degree;
+      return (
         <Badge 
           variant="outline" 
            className="text-xs py-1 px-2 bg-purple-100/90 text-purple-800 font-mono drop-shadow-xl border-none "
         >
-          {student.name}
+          {"degree name"}
         </Badge>
-      ) : (
-        <p>-</p>
-      );
+      )
     },
   },
    {

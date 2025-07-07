@@ -1,16 +1,16 @@
 import { AcademicIdentifierType } from "@/types/user/academic-identifier.js";
 import { AcademicIdentifier, academicIdentifierModel } from "../models/academicIdentifier.model.js";
-import { findStreamById } from "@/features/academics/services/stream.service.js";
+// import { findStreamById } from "@/features/academics/services/stream.service.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { Shift } from "@/features/academics/models/shift.model.js";
 import { getShiftById } from "@/features/academics/services/shift.service.js";
-import { StreamType } from "@/types/academics/stream.js";
+// import { StreamType } from "@/types/academics/stream.js";
 import { Section } from "@/features/academics/models/section.model.js";
 import { findSectionById } from "@/features/academics/services/section.service.js";
 
 export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    const { stream, section, shift, ...props } = academicIdentifier;
+    const { section, shift, ...props } = academicIdentifier;
 
     const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({ ...props }).returning();
 
@@ -38,7 +38,7 @@ export async function findAcademicIdentifierByStudentId(studentId: number): Prom
 }
 
 export async function saveAcademicIdentifier(id: number, academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    const { studentId, stream,createdAt,updatedAt, id: academicIdentifierId, ...props } = academicIdentifier;
+    const { studentId, createdAt,updatedAt, id: academicIdentifierId, ...props } = academicIdentifier;
 
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
     if (!foundAcademicIdentifier) {
@@ -89,12 +89,7 @@ export async function academicIdentifierResponseFormat(academicIdentifier: Acade
         return null;
     }
 
-    const { streamId, shiftId, sectionId, ...props } = academicIdentifier;
-
-    let stream: StreamType | null = null;
-    if (streamId) {
-        stream = await findStreamById(streamId as number);
-    }
+    const { shiftId, sectionId, ...props } = academicIdentifier;
 
     let shift: Shift | null = null;
     if (shiftId) {
@@ -108,7 +103,6 @@ export async function academicIdentifierResponseFormat(academicIdentifier: Acade
 
     const formattedAcademiIdentifier: AcademicIdentifierType = { 
         ...props, 
-        stream: stream as StreamType, 
         section, 
         shift 
     };

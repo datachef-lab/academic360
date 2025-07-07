@@ -2,14 +2,16 @@ import { db, mysqlConnection } from "@/db/index.js";
 import { CourseType } from "@/types/academics/course.js";
 import { Course, courseModel, createCourseModel } from "../models/course.model.js";
 import { and, count, eq, ilike, sql } from "drizzle-orm";
-import { StreamType } from "@/types/academics/stream.js";
-import { findStreamById } from "./stream.service.js";
-import { streamModel } from "../models/stream.model.js";
+// import { StreamType } from "@/types/academics/stream.js";
+// import { findStreamById } from "./stream.service.js";
+// import { streamModel } from "../models/stream.model.js";
 import { OldCourse } from "@/types/old-data/old-course.js";
 import { processCourse } from "./batch.service.js";
 import { studentModel } from "@/features/user/models/student.model.js";
 import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 import { OldStudent } from "@/types/old-student.js";
+import { Degree } from "@/features/resources/models/degree.model.js";
+import { findDegreeById } from "@/features/resources/services/degree.service.js";
 
 export async function findAllCourses(): Promise<CourseType[]> {
     const courses = await db
@@ -49,10 +51,11 @@ export async function createCourse(course: Omit<Course, 'id' | 'createdAt' | 'up
     return formattedCourse;
 }
 
-export async function updateCourse(id: number, course: Partial<Omit<Course, 'id' | 'createdAt' | 'updatedAt'>>): Promise<CourseType | null> {
+export async function updateCourse(id: number, course: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>): Promise<CourseType | null> {
+    console.log("in update course in service, course:", course, "id:", id);
     const [updatedCourse] = await db
         .update(courseModel)
-        .set(course)
+        .set({...course, degreeId: course.degree?.id })
         .where(eq(courseModel.id, id))
         .returning();
 
@@ -91,34 +94,34 @@ export async function searchCourses(query: string): Promise<CourseType[]> {
     return formattedCourses.filter((course): course is CourseType => course !== null);
 }
 
-export async function findCoursesByStreamId(streamId: number): Promise<CourseType[]> {
-    const courses = await db
-        .select()
-        .from(courseModel)
-        .where(eq(courseModel.streamId, streamId));
+// export async function findCoursesByStreamId(streamId: number): Promise<CourseType[]> {
+//     const courses = await db
+//         .select()
+//         .from(courseModel)
+//         .where(eq(courseModel.streamId, streamId));
 
-    const formattedCourses = await Promise.all(
-        courses.map(course => courseFormatResponse(course))
-    );
+//     const formattedCourses = await Promise.all(
+//         courses.map(course => courseFormatResponse(course))
+//     );
 
-    return formattedCourses.filter((course): course is CourseType => course !== null);
-}
+//     return formattedCourses.filter((course): course is CourseType => course !== null);
+// }
 
 export async function courseFormatResponse(course: Course | null): Promise<CourseType | null> {
     if (!course) {
         return null;
     }
 
-    const { streamId, ...props } = course;
+    const { degreeId, ...props } = course;
 
-    let stream: StreamType | null = null;
-    if (streamId) {
-        stream = await findStreamById(streamId);
+    let degree: Degree | null = null;
+    if (degreeId) {
+        degree = await findDegreeById(degreeId);
     }
 
     return {
         ...props,
-        stream,
+        degree,
     }
 }
 

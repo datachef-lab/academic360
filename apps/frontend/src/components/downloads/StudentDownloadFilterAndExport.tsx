@@ -9,9 +9,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import * as XLSX from "xlsx";
 import { Calendar, BookOpen, Filter, ChevronDown, GraduationCap, Download, FileCode2 } from "lucide-react";
-import { Stream } from "@/types/academics/stream";
+
 import { useQuery } from "@tanstack/react-query";
-import { getAllStreams } from "@/services/stream";
+
 
 import { motion } from "framer-motion";
 
@@ -22,6 +22,7 @@ import { PersonalDetails } from "@/types/user/personal-details";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Specialization } from "@/types/resources/specialization";
 import { Community, Level, Shift } from "@/types/enums";
+import { findAllDegrees } from "@/services/degree.service";
 
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
@@ -58,9 +59,11 @@ const StudentDownloadFilterAndExport: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
 
   const { data } = useQuery({
-    queryKey: ["streams"],
-    queryFn: getAllStreams,
+    queryKey: ["degrees"],
+    queryFn: findAllDegrees,
   });
+
+  const streamMemo = useMemo(() => data ?? [], [data]);
 
   const { refetch: fetchStudentExportData, isFetching: isFetchingExport } = useQuery({
     queryKey: ["exportStudent",filters],
@@ -74,17 +77,6 @@ const StudentDownloadFilterAndExport: React.FC = () => {
       }),
     enabled: false, // Do not auto-fetch
   });
-
-  const streamMemo = useMemo(() => {
-    if (!data) return [];
-    const streamMap = new Map();
-    data.forEach((item: Stream) => {
-      if (item.degree) {
-        streamMap.set(item.degree.id, { id: item.degree.id, name: item.degree.name });
-      }
-    });
-    return [...streamMap.values()];
-  }, [data]);
 
   const handleApplyFilters = () => {
     setFilters({
@@ -130,7 +122,7 @@ const handleExportExcel = async () => {
 
       "Student ID": student.id,
       "Name": student.name,
-      "Stream": student.academicIdentifier?.stream?.degree?.name || "",
+      "Stream": student.academicIdentifier?.course?.degree?.name || "",
       "Framework": student.framework,
       "Semester": student.semester,
       "Year": student.year,
@@ -147,8 +139,6 @@ const handleExportExcel = async () => {
       "APAAR ID": student.academicIdentifier?.apaarId || "",
       "ABC ID": student.academicIdentifier?.abcId || "",
       "APPR ID": student.academicIdentifier?.apprid || "",
-      "Degree Programme": student.academicIdentifier?.stream?.degreeProgramme || "",
-      "Degree Level": student.academicIdentifier?.stream?.degree?.level || "",
 
       "Aadhaar Number": student.personalDetails?.aadhaarCardNumber || "",
       "Date of Birth": student.personalDetails?.dateOfBirth 
@@ -247,15 +237,15 @@ const handleExportExcel = async () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="max-h-60 overflow-y-auto shadow-lg rounded-xl border border-slate-200 bg-white">
-              {streamMemo.map((option) => (
+              {Array.isArray(streamMemo) ? streamMemo.map((option) => (
                 <DropdownMenuItem
                   key={option.id}
-                  onClick={() => handleStreamSelect(option as Stream)}
+                  onClick={() => handleStreamSelect(option)}
                   className="hover:bg-slate-100"
                 >
                   {option.name}
                 </DropdownMenuItem>
-              ))}
+              )) : null}
             </DropdownMenuContent>
           </DropdownMenu>
 

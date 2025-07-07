@@ -6,6 +6,7 @@ import {
   FeesHead,
   FeesComponent,
   FeesReceiptType,
+  CreateFeesStructureDto,
 } from "@/types/fees";
 import {
   CalendarDays,
@@ -18,7 +19,7 @@ import {
 } from "lucide-react";
 
 interface PreviewSimulationProps {
-  feesStructure: FeesStructureDto & { feesReceiptTypeId?: number | null };
+  feesStructure: FeesStructureDto & { feesReceiptTypeId?: number | null } | CreateFeesStructureDto;
   feesSlabMappings: FeesSlabMapping[];
   slabs: FeesSlab[];
   feeHeads: FeesHead[];
@@ -61,7 +62,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
     }));
 
     if (!selectedSlabId) {
-      return components.map((c) => ({ ...c, adjustedAmount: c.amount }));
+      return components.map((c) => ({ ...c, adjustedAmount: c.baseAmount }));
     }
 
     const selectedSlabData = feesSlabMappings.find(
@@ -69,27 +70,27 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
     );
 
     if (!selectedSlabData) {
-      return components.map((c) => ({ ...c, adjustedAmount: c.amount }));
+      return components.map((c) => ({ ...c, adjustedAmount: c.baseAmount }));
     }
 
     return components.map((component) => ({
       ...component,
       adjustedAmount: component.isConcessionApplicable
-        ? component.amount -
-          (component.amount * selectedSlabData.feeConcessionRate) / 100
-        : component.amount,
+        ? component.baseAmount -
+          (component.baseAmount * selectedSlabData.feeConcessionRate) / 100
+        : component.baseAmount,
     }));
   }, [feesStructure.components, feesSlabMappings, selectedSlabId, feeHeads]);
 
   const totalAmount = useMemo(
-    () => calculatedFees.reduce((sum, fee) => sum + fee.amount, 0),
+    () => calculatedFees.reduce((sum, fee) => sum + fee.baseAmount, 0),
     [calculatedFees]
   );
 
   const adjustedTotalAmount = useMemo(
     () =>
       calculatedFees.reduce(
-        (sum, fee) => sum + (fee.adjustedAmount ?? fee.amount),
+        (sum, fee) => sum + (fee.adjustedAmount ?? fee.baseAmount),
         0
       ),
     [calculatedFees]
@@ -121,9 +122,9 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Academic Year</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {feesStructure.academicYear?.startYear
+                    {feesStructure.academicYear?.year
                       ? `${new Date(
-                          feesStructure.academicYear.startYear
+                          feesStructure.academicYear.year
                         ).getFullYear()}`
                       : "N/A"}
                   </p>
@@ -134,8 +135,8 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                 <div>
                   <p className="text-sm text-gray-600">Course</p>
                   <p className="text-sm font-medium text-gray-900">
-                    {feesStructure.course?.name || "N/A"} (Semester{" "}
-                    {feesStructure.semester})
+                    {"feesStructure.course?.name"} (Semester{" "}
+                    {feesStructure.class.name})
                   </p>
                 </div>
               </div>
@@ -192,7 +193,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                       <p className="text-sm text-gray-600">Installments</p>
                       <p className="text-sm font-medium text-gray-900">
                         {feesStructure.numberOfInstalments} from{" "}
-                        {formatDate(feesStructure.instalmentStartDate)}
+                        {/* {formatDate(feesStructure.instalmentStartDate)} */}
                       </p>
                     </div>
                   </div>
@@ -294,7 +295,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                         )}
                       </td>
                       <td className="w-32 px-4 py-2 text-right border-r border-gray-300 flex items-center justify-end">
-                        ₹{fee.amount.toLocaleString()}
+                        ₹{fee.baseAmount.toLocaleString()}
                       </td>
                       {selectedSlabId && (
                         <td
@@ -304,7 +305,7 @@ export const PreviewSimulation: React.FC<PreviewSimulationProps> = ({
                               : "text-gray-900"
                           }`}
                         >
-                          ₹{(fee.adjustedAmount ?? fee.amount).toLocaleString()}
+                          ₹{(fee.adjustedAmount ?? fee.baseAmount).toLocaleString()}
                         </td>
                       )}
                     </tr>

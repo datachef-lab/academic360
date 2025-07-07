@@ -22,8 +22,9 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
     studentId: initialData.studentId || 0,
     frameworkType: initialData.frameworkType || null,
     rfid: initialData.rfid || null,
-    stream: initialData.stream || null,
-    degreeProgramme: initialData.degreeProgramme || null,
+    course: initialData.course || null,
+    // pr: initialData.degreeProgramme || null,
+    
     cuFormNumber: initialData.cuFormNumber || null,
     uid: initialData.uid || null,
     oldUid: initialData.oldUid || null,

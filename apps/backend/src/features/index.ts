@@ -1,4 +1,4 @@
-import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter, streamRouter, studentPaperRouter, subjectMetadataRouter, subjectRouter } from "./academics/routes/index.js";
+import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter,  studentPaperRouter, subjectMetadataRouter, subjectRouter } from "./academics/routes/index.js";
 import authRouter from "@/features/auth/routes/auth.route.js";
 import { bloodGroupRouter, boardUniversityRouter, categoryRouter, cityRouter, countryRouter, degreeRouter, institutionRouter, languageMediumRouter, nationalityRouter, occupationRouter, pickupPointRouter, qualificationRouter, religionRouter, stateRouter, transportRouter } from "./resources/routes/index.js";
 import { academicHistoryRouter, academicIdentifierRouter,reportRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter,specializationRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
@@ -10,13 +10,10 @@ import feesSlabRouter from "./fees/routes/fees-slab.route.js";
 import feesStructureRouter from "./fees/routes/fees-structure.route.js";
 import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
 import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
-import feesDesignAbstractLevelRouter from "./fees/routes/fees-design-abstract-level.route.js";
-
 
 export {
     documentRouter,
     marksheetRouter,
-    streamRouter,
     subjectRouter,
     subjectMetadataRouter,
     authRouter,
@@ -61,5 +58,5 @@ export {
     feesStructureRouter,
     studentFeesMappingRouter,
     feesSlabYearMappingRouter,
-    feesDesignAbstractLevelRouter,
+
 }

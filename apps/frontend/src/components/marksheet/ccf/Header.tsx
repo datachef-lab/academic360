@@ -1,7 +1,7 @@
 import { useMarksheetFilterStore } from "@/components/globals/useMarksheetFilterStore";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // import { getAllStreams } from "@/services/stream";
-import { DegreeProgramme } from "@/types/enums";
+import { ProgrammeType } from "@/types/enums";
 // import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -12,12 +12,12 @@ interface HeaderProps {
 
 export default function Header({ selectedSemester, hideSemesterDropdown }: HeaderProps) {
   // const [selectedStream, setSelectedStream] = useState<string>("BCOM");
-  const [selectedCourse, setSelectedCourse] = useState<DegreeProgramme>("HONOURS");
+  const [selectedCourse, setSelectedCourse] = useState<ProgrammeType>("HONOURS");
   const [selectedSemesterState, setSelectedSemester] = useState<number>(1);
   const {setSemester,setCategory,Category,semester}=useMarksheetFilterStore();
 
     const handleCourseTypeChange = (value: string) => {
-    setSelectedCourse(value as DegreeProgramme);
+    setSelectedCourse(value as ProgrammeType);
     setCategory(value);
   };
    const handleSemesterChange = (value: string) => {
@@ -62,7 +62,7 @@ export default function Header({ selectedSemester, hideSemesterDropdown }: Heade
         {/* Course Dropdown */}
         <div className="w-full sm:w-56">
           <Select  
-          value={Category || selectedCourse }
+          value={Category ?? selectedCourse ?? undefined}
             onValueChange={handleCourseTypeChange}
             >
             <SelectTrigger className="w-full bg-white border-blue-300 hover:border-blue-500 shadow-sm">

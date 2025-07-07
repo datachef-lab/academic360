@@ -1,10 +1,12 @@
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const sectionModel =  pgTable('sections', {
     id: serial().primaryKey(),
-    name: varchar({ length: 500 }).notNull(),
+    name: varchar({ length: 500 }).notNull().unique(),
+    sequence: integer().unique(),
+    disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 })

@@ -1,6 +1,7 @@
 import axiosInstance from "@/utils/api";
-import { AcademicYear } from "@/types/fees";
+import { AcademicYear } from "@/types/academics/academic-year";
 import { ApiResonse } from "@/types/api-response";
+import { Session } from "@/types/academics/session";
 
 // Get all academic years
 export async function getAllAcademicYears(): Promise<ApiResonse<AcademicYear[]>> {
@@ -10,13 +11,13 @@ export async function getAllAcademicYears(): Promise<ApiResonse<AcademicYear[]>>
 
 // Get academic year by ID
 export async function getAcademicYearById(id: number): Promise<ApiResonse<AcademicYear>> {
-  const response = await axiosInstance.get(`/api/v1/academics/academic-years/${id}`);
+  const response = await axiosInstance.get(`/api/v1/academics/${id}`);
   return response.data;
 }
 
 // Create new academic year
-export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResonse<AcademicYear>> {
-  const response = await axiosInstance.post(`/api/v1/academics/academic-years`, academicYear);
+export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>, session: Session): Promise<ApiResonse<AcademicYear>> {
+  const response = await axiosInstance.post(`/api/v1/academics`, {academicYear, session});
   return response.data;
 }
 

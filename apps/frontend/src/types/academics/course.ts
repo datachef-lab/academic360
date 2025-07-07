@@ -1,9 +1,10 @@
-import { Stream } from "./stream";
+import { Degree } from "../resources/degree";
 
 export interface Course {
     readonly id?: number;
-    stream: Stream;
+    degree: Degree | null;
     name: string;
+    programmeType: "HONOURS" | "GENERAL" | null
     shortName: string | null;
     codePrefix: string | null;
     universityCode: string | null;

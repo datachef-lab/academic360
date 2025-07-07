@@ -9,6 +9,7 @@ export interface Student {
     readonly id?: number,
     name: string;
     userId: number,
+    applicationId: number | null,
     community: Community | null,
     handicapped: boolean,
     level: Level | null,

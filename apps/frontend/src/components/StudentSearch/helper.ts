@@ -66,14 +66,14 @@ export function formattedStudent(content: Student[]) {
             gender: null,
             religion: null,
             category: null,
-            stream: null,
+            // stream: null,
             specialization: null,
             avatar: undefined,
         };
 
         if (academicIdentifier) {
-            const { registrationNumber, rollNumber, uid, stream } = academicIdentifier;
-            obj = { ...obj, registrationNumber, rollNumber, uid, stream };
+            const { registrationNumber, rollNumber, uid } = academicIdentifier;
+            obj = { ...obj, registrationNumber, rollNumber, uid };
         }
 
         if (personalDetails) {

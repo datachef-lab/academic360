@@ -1,2 +1,0 @@
-ALTER TABLE "student_papers" ADD COLUMN "batch_id_fk" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "student_papers" ADD CONSTRAINT "student_papers_batch_id_fk_batches_id_fk" FOREIGN KEY ("batch_id_fk") REFERENCES "public"."batches"("id") ON DELETE no action ON UPDATE no action;

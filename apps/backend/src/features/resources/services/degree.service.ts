@@ -16,6 +16,13 @@ export async function findDegreeById(id: number): Promise<Degree | null> {
     return foundDegree;
 }
 
+export async function findAllDegrees(): Promise<Degree[]> {
+    const allDegrees = await db.select().from(degreeModel);
+
+    return allDegrees;
+}
+
+
 export async function findDegreeByName(name: string): Promise<Degree | null> {
     const [foundDegree] = await db.select().from(degreeModel).where(eq(degreeModel.name, name));
 

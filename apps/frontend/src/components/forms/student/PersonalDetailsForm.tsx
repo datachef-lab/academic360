@@ -95,6 +95,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
     name,
     sequence: null,
     code: null,
+    disabled: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -103,6 +104,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
     name,
     sequence: null,
     createdAt: new Date(),
+    disabled: false,
     updatedAt: new Date(),
   });
 
@@ -110,6 +112,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
     name,
     code: null,
     documentRequired: false,
+    disabled: false, sequence: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -117,6 +120,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
   const createLanguageMedium = (name: string): LanguageMedium => ({
     name,
     createdAt: new Date(),
+    disabled: false, sequence: null,
     updatedAt: new Date(),
   });
 
@@ -158,7 +162,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
               <div className="relative">
                 <Select
                   value={studentData.community || undefined}
-                  onValueChange={(value: Community) => setStudentData({ ...studentData, community: value })}
+                  onValueChange={(value: string) => setStudentData({ ...studentData, community: value as Community })}
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select community" />
@@ -181,7 +185,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
               <div className="relative">
                 <Select
                   value={studentData.level || undefined}
-                  onValueChange={(value: Level) => setStudentData({ ...studentData, level: value })}
+                  onValueChange={(value: string) => setStudentData({ ...studentData, level: value as Level })}
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select level" />
@@ -204,7 +208,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
               <div className="relative">
                 <Select
                   value={studentData.framework || undefined}
-                  onValueChange={(value: Framework) => setStudentData({ ...studentData, framework: value })}
+                  onValueChange={(value: string) => setStudentData({ ...studentData, framework: value as Framework })}
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select framework" />
@@ -227,7 +231,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
               <div className="relative">
                 <Select
                   value={studentData.shift || undefined}
-                  onValueChange={(value: Shift) => setStudentData({ ...studentData, shift: value })}
+                  onValueChange={(value: string) => setStudentData({ ...studentData, shift: value as Shift })}
                 >
                   <SelectTrigger className="pl-10">
                     <SelectValue placeholder="Select shift" />
@@ -344,7 +348,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
             <div className="relative">
               <Select
                 value={personalDetails.gender || undefined}
-                onValueChange={(value: Gender) => setPersonalDetails({ ...personalDetails, gender: value })}
+                onValueChange={(value: string) => setPersonalDetails({ ...personalDetails, gender: value as Gender })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select gender" />
@@ -490,7 +494,7 @@ export default function StudentForm({ onSubmit, initialData = {}, showStudentSec
             <div className="relative">
               <Select
                 value={personalDetails.disability}
-                onValueChange={(value: Disability) => setPersonalDetails({ ...personalDetails, disability: value })}
+                onValueChange={(value: string) => setPersonalDetails({ ...personalDetails, disability: value as Disability })}
               >
                 <SelectTrigger className="pl-10">
                   <SelectValue placeholder="Select disability" />

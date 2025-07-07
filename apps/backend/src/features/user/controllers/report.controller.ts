@@ -9,6 +9,7 @@ import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
 import { userModel } from "../models/user.model.js";
 import { ApiResponse, handleError } from "@/utils/index.js";
 import { getReports } from "../services/reports.service.js";
+import { classModel } from "@/features/academics/models/class.model.js";
 
 interface StudentReport {
     id: number | 0;
@@ -16,7 +17,7 @@ interface StudentReport {
     registrationNumber: string | null;
     uid: string | null;
     name: string | null;
-    semester: number | 0;
+    semester: string;
     year: number | 0;
     totalfullMarks: number | 0;
     totalobtainedMarks: number | 0;
@@ -59,7 +60,7 @@ export const getReportId = async (req: Request, res: Response, next: NextFunctio
                 registrationNumber: academicIdentifierModel.registrationNumber,
                 uid: academicIdentifierModel.uid,
                 name: userModel.name,
-                semester: marksheetModel.semester,
+                semester: classModel.name,
                 year: marksheetModel.year,
                 fullMarks: subjectMetadataModel.fullMarks,
                 obtainedMarks: subjectModel.totalMarks,
@@ -73,6 +74,7 @@ export const getReportId = async (req: Request, res: Response, next: NextFunctio
             .innerJoin(academicIdentifierModel, eq(marksheetModel.studentId, academicIdentifierModel.studentId))
             .innerJoin(userModel, eq(academicIdentifierModel.studentId, userModel.id))
             .innerJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+            .innerJoin(classModel, eq(classModel.id, marksheetModel.classId))
             .innerJoin(subjectMetadataModel, eq(subjectModel.subjectMetadataId, subjectMetadataModel.id))
             .where(eq(marksheetModel.studentId, Number(studentId)));
 

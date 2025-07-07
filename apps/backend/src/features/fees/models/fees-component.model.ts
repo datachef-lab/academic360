@@ -14,8 +14,7 @@ export const feesComponentModel = pgTable("fees_components", {
         .references(() => feesHeadModel.id)
         .notNull(),
     isConcessionApplicable: boolean().notNull().default(false),
-    amount: doublePrecision().notNull(),
-    // concessionAmount: doublePrecision().notNull().default(0),
+    baseAmount: doublePrecision().notNull(),
     sequence: integer().notNull(),
     remarks: varchar({ length: 500 }),
     createdAt: timestamp().notNull().defaultNow(),
