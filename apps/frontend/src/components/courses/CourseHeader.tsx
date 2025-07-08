@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course } from '@/types/academics/course';
-import { Degree } from '@/types/resources/degree';
+import { Degree } from '@/types/resources/degree.types';
+
 
 // Define ProgrammeOption locally
 type ProgrammeOption = { id: number; degreeProgramme: string; degreeId: number };
