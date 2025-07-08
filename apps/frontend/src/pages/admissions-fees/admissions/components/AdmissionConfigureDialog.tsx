@@ -234,7 +234,7 @@ export default function AdmissionConfigureDialog({ open = true, setOpen = () => 
               <Label>Add Courses ({unmappedCourses.length})</Label>
               <div className="border rounded-lg p-3 mt-2 bg-muted max-h-[350px] overflow-auto thin-scrollbar">
                 {unmappedCourses.length === 0 ? (
-                  <div className="text-gray-500 text-[13px]">No more courses to add</div>
+                <div className="text-gray-500 text-[13px]">No more courses to add</div>
                 ) : (
                   unmappedCourses.map(course => (
                     course.id !== undefined && (

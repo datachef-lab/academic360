@@ -15,7 +15,7 @@ interface HeaderProps {
   };
 }
 
-const Header: React.FC<HeaderProps> = ({
+const Header: React.FC<HeaderProps> = ({  
   title,
   subtitle,
   icon: Icon,
@@ -29,7 +29,7 @@ const Header: React.FC<HeaderProps> = ({
         initial={animationProps.initial ?? { opacity: 0, y: 20 }}
         animate={animationProps.animate ?? { opacity: 1, y: 0 }}
         transition={animationProps.transition ?? { duration: 0.3 }}
-        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-6 items-center"
+        className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4  items-center"
         role="banner"
         aria-label={title}
       >

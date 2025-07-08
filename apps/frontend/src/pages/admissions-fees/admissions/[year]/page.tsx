@@ -323,57 +323,57 @@ export default function AdmissionDetailsPage() {
           </div>
         )}
 
-        <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
-          <StatCard
-            label="Total Forms"
-            value={stats.totalApplications}
-            icon={<Users className="w-8 h-8 text-blue-500 opacity-60" />}
-            bgColor="bg-blue-50"
-            textColor="text-blue-700"
-          />
-          <StatCard
-            label="Submitted"
-            value={stats.submitted}
-            icon={<CheckCircle className="w-8 h-8 text-green-500 opacity-60" />}
-            bgColor="bg-green-50"
-            textColor="text-green-700"
-          />
-          <StatCard
-            label="Approved"
-            value={stats.approved}
-            icon={<CheckCircle className="w-8 h-8 text-purple-500 opacity-60" />}
-            bgColor="bg-purple-50"
-            textColor="text-purple-700"
-          />
-          <StatCard
-            label="Rejected"
-            value={stats.rejected}
-            icon={<XCircle className="w-8 h-8 text-red-500 opacity-60" />}
-            bgColor="bg-red-50"
-            textColor="text-red-700"
-          />
-          <StatCard
-            label="Payments Done"
-            value={stats.paymentsDone}
-            icon={<IndianRupee className="w-8 h-8 text-teal-500 opacity-60" />}
-            bgColor="bg-teal-50"
-            textColor="text-teal-700"
-          />
-          <StatCard
-            label="Payment Due"
-            value={stats.paymentDue}
-            icon={<CreditCard className="w-8 h-8 text-orange-500 opacity-60" />}
-            bgColor="bg-orange-50"
-            textColor="text-orange-700"
-          />
-          <StatCard
-            label="Drafts"
-            value={stats.drafts}
-            icon={<FileText className="w-8 h-8 text-yellow-500 opacity-60" />}
-            bgColor="bg-yellow-50"
-            textColor="text-yellow-700"
-          />
-        </div>
+          <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <StatCard
+              label="Total Forms"
+              value={stats.totalApplications}
+              icon={<Users className="w-8 h-8 text-blue-500 opacity-60" />}
+              bgColor="bg-blue-50"
+              textColor="text-blue-700"
+            />
+            <StatCard
+              label="Submitted"
+              value={stats.submitted}
+              icon={<CheckCircle className="w-8 h-8 text-green-500 opacity-60" />}
+              bgColor="bg-green-50"
+              textColor="text-green-700"
+            />
+            <StatCard
+              label="Approved"
+              value={stats.approved}
+              icon={<CheckCircle className="w-8 h-8 text-purple-500 opacity-60" />}
+              bgColor="bg-purple-50"
+              textColor="text-purple-700"
+            />
+            <StatCard
+              label="Rejected"
+              value={stats.rejected}
+              icon={<XCircle className="w-8 h-8 text-red-500 opacity-60" />}
+              bgColor="bg-red-50"
+              textColor="text-red-700"
+            />
+            <StatCard
+              label="Payments Done"
+              value={stats.paymentsDone}
+              icon={<IndianRupee className="w-8 h-8 text-teal-500 opacity-60" />}
+              bgColor="bg-teal-50"
+              textColor="text-teal-700"
+            />
+            <StatCard
+              label="Payment Due"
+              value={stats.paymentDue}
+              icon={<CreditCard className="w-8 h-8 text-orange-500 opacity-60" />}
+              bgColor="bg-orange-50"
+              textColor="text-orange-700"
+            />
+            <StatCard
+              label="Drafts"
+              value={stats.drafts}
+              icon={<FileText className="w-8 h-8 text-yellow-500 opacity-60" />}
+              bgColor="bg-yellow-50"
+              textColor="text-yellow-700"
+            />
+          </div>
 
         <div className="mb-8 flex justify-between items-center">
           <div className="relative w-full max-w-sm flex items-center gap-2">
@@ -550,30 +550,30 @@ export default function AdmissionDetailsPage() {
                     const isGujarati = app.generalInfo?.isGujarati ? 'Yes' : 'No';
                     const submittedAt = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '-';
                     return (
-                      <TableRow
+                    <TableRow
                         key={appId}
                         className={`hover:bg-gray-50 transition-colors duration-150 ${typeof appId === 'number' && selectedRows.includes(appId) ? "bg-blue-50" : ""}`}
-                      >
-                        <TableCell className="w-12 px-6 py-4">
-                          <input
-                            type="checkbox"
+                    >
+                      <TableCell className="w-12 px-6 py-4">
+                        <input
+                          type="checkbox"
                             checked={typeof appId === 'number' && selectedRows.includes(appId)}
                             onChange={() => handleRowSelect(appId)}
-                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                          />
-                        </TableCell>
+                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                      </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{typeof appId === 'number' ? appId : ''}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{name}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS" ? "bg-green-100 text-green-800" : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
-                          >
-                            {app.formStatus}
-                          </span>
-                        </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS" ? "bg-green-100 text-green-800" : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED" ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
+                        >
+                          {app.formStatus}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           {submittedAt}
-                        </TableCell>
+                      </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{category}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{religion}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
@@ -581,7 +581,7 @@ export default function AdmissionDetailsPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{isGujarati}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
-                      </TableRow>
+                    </TableRow>
                     );
                   })
                 ) : (
@@ -659,13 +659,13 @@ export default function AdmissionDetailsPage() {
                           </span>
                         ) : (
                           typeof page === 'number' ? (
-                            <button
-                              key={page}
+                          <button
+                            key={page}
                               onClick={() => handlePageChange(page)}
-                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
-                            >
-                              {page}
-                            </button>
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+                          >
+                            {page}
+                          </button>
                           ) : null
                         ),
                       )}

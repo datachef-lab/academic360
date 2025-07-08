@@ -110,7 +110,7 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
+// import { DataTableFacetedFilter } from "./DataTableFacetedFilter";
 import { DataTableViewOptions } from "./DataTableViewOptions";
 import { Search } from "lucide-react";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
@@ -149,7 +149,7 @@ export function DataTableToolbar<TData>({ table, searchText, setSearchText, refe
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-center   rounded-md ">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 items-center px-2  rounded-md ">
       {/* Result on the left */}
       {/* <div className="flex border items-center gap-2">
         {table.getFilteredSelectedRowModel().rows.length > 0 ? (
@@ -169,7 +169,7 @@ export function DataTableToolbar<TData>({ table, searchText, setSearchText, refe
       </div> */}
 
       {/* Filters on the right */}
-<div className="flex item-center w-full  justify-end"></div>
+<div className="flex item-center w-full  justify-end "></div>
         <div className="flex flex-row items-center   justify-end gap-4">
           <DataTableViewOptions table={table} />
           <div className="relative max-w-xs   w-full">
@@ -182,7 +182,7 @@ export function DataTableToolbar<TData>({ table, searchText, setSearchText, refe
             />
           </div>
 
-          {table.getColumn("type") && (
+          {/* {table.getColumn("type") && (
             <DataTableFacetedFilter
               column={table.getColumn("type")}
               title="Account"
@@ -191,7 +191,7 @@ export function DataTableToolbar<TData>({ table, searchText, setSearchText, refe
                 { label: "Student", value: "STUDENT" },
               ]}
             />
-          )}
+          )} */}
           {searchText.length > 0 && (
             <Button
               variant="ghost"
