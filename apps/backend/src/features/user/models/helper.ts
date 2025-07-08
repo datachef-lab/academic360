@@ -183,7 +183,7 @@ export const otpType = pgEnum("otp_type", [
 ]);
 
 
-export const studyMaterialTypeEnum = pgEnum("study_material_type", [
+export const attachmentTypeEnum = pgEnum("attachment_type", [
     "FILE",
     "LINK",
 ]);
@@ -200,4 +200,17 @@ export const studyMaterialAvailabilityTypeEnum = pgEnum("study_material_availabi
     "CURRENT_SESSION_ONLY",
     "COURSE_LEVEL",
     "BATCH_LEVEL",
+]);
+
+export const noticeStatusEnum = pgEnum("notice_status", [
+    "ACTIVE",
+    "EXPIRED",
+    "SCHEDULED",
+]);
+
+export const noticeVariantEnum = pgEnum("notice_variant", [
+    "EXAM",
+    "ALERT",
+    "FEE",
+    "EVENT",
 ]);

@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { batchPaperModel } from "./batchPaper.model.js";
-import { studyMaterialAvailabilityTypeEnum, studyMaterialTypeEnum, studyMetaTypeEnum } from "@/features/user/models/helper.js";
+import { studyMaterialAvailabilityTypeEnum, attachmentTypeEnum, studyMetaTypeEnum } from "@/features/user/models/helper.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sessionModel } from "./session.model.js";
@@ -20,7 +20,7 @@ export const studyMaterialModel = pgTable("study_materials", {
         .references(() => courseModel.id),
     batchId: integer("batch_id_fk")
         .references(() => batchModel.id),
-    type: studyMaterialTypeEnum().notNull(),
+    type: attachmentTypeEnum().notNull(),
     variant: studyMetaTypeEnum().notNull(),
     name: varchar({ length: 700 }).notNull(),
     url: varchar({ length: 2000 }).notNull(),

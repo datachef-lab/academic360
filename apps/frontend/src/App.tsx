@@ -40,6 +40,7 @@ import * as attendanceModule from "@/pages/attendance-timetable";
 import * as libraryModule from "@/pages/library";
 import * as appModule from "./pages/apps";
 import * as facultiesStaffsModule from "./pages/faculties-staffs";
+import * as marksheetModule from "@/pages/marksheets";
 import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
 import { AcademicYearPage } from "./pages/admissions-fees/fees";
@@ -149,29 +150,6 @@ const router = createBrowserRouter([
           //   },
           { path: "create", element: <studentModule.AddStudentPage /> },
           { path: "downloads", element: <Downloads /> },
-          { path: "reports", element: <studentModule.GetReportsPage /> },
-          {
-            path: "add-marksheet",
-            element: <Outlet />,
-            children: [
-              { path: "", element: <ManageMarksheetPage /> },
-              {
-                path: ":framework",
-                element: <Outlet />,
-                children: [
-                  { path: "", element: <FrameworkActivitiesTab /> },
-                  {
-                    path: ":rollNumber",
-                    element: <Outlet />,
-                    children: [
-                      { path: "", element: <studentModule.StudentMarksheetsPage /> },
-                      { path: ":marksheetId", element: <studentModule.MarksheetPage /> },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
         ],
       },
 
@@ -215,6 +193,32 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
+      { path: "marksheets", element: <marksheetModule.MarksheetMaster />, children: [
+        { path: "", element: <marksheetModule.HomePage /> },
+        { path: "reports", element: <studentModule.GetReportsPage /> },
+          {
+            path: "add",
+            element: <Outlet />,
+            children: [
+              { path: "", element: <ManageMarksheetPage /> },
+              {
+                path: ":framework",
+                element: <Outlet />,
+                children: [
+                  { path: "", element: <FrameworkActivitiesTab /> },
+                  {
+                    path: ":rollNumber",
+                    element: <Outlet />,
+                    children: [
+                      { path: "", element: <studentModule.StudentMarksheetsPage /> },
+                      { path: ":marksheetId", element: <studentModule.MarksheetPage /> },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+      ] },
       { path: "apps", element: <appModule.AppMaster /> },
       {
         path: "faculty-staff",

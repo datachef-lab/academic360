@@ -9,9 +9,10 @@ import PersonalDetails from "./PersonalDetails";
 import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
 import Marksheet from "../GradeMarks/Marksheet";
+import { TabsContent } from "../ui/tabs";
 
 type StudentContentProps = {
-    studentId: number;
+  studentId: number;
   activeTab: {
     label: string;
     icon: JSX.Element;
@@ -24,28 +25,32 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
     switch (activeTab.label) {
       case "Overview":
         return <OverviewTab />;
-      case "Personal Details":
+      case "Personal":
         return <PersonalDetails studentId={studentId} />;
-      case "Family Details":
+      case "Family":
         return <FamilyDetails studentId={studentId} />;
-      case "Health Details":
+      case "Health":
         return <HealthDetails studentId={studentId} />;
-      case "Emergency Contact":
+      case "Emergency":
         return <EmergencyContact studentId={studentId} />;
-      case "Academic History":
+      case "History":
         return <AcademicHistory />;
-      case "Academic Identifiers":
+      case "Identifiers":
         return <AcademicIdentifier />;
       case "Accommodation":
         return <Accommodation />;
-      case "Transport Details":
+      case "Transport":
         return <TransportDetails />;
-        case "Marksheet":
+      case "Marksheet":
         return <Marksheet />;
       default:
         return <p>No Content!</p>;
     }
   };
 
-  return <div className="my-5">{handleContent()}</div>;
+  return (
+      <TabsContent value={activeTab.label}>
+        <div className="my-5">{handleContent()}</div>;
+      </TabsContent>
+  )
 }
