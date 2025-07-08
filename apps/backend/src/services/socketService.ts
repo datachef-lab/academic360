@@ -1,7 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 
-// Define notification types
+
 export interface Notification {
   id: string;
   userId?: string; // Target user ID (if specific to a user)
