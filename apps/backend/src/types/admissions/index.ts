@@ -10,6 +10,7 @@ import { SportsInfo } from "@/features/admissions/models/sports-info.model.js";
 import { StudentAcademicSubjects } from "@/features/admissions/models/student-academic-subject.model.js";
 import { BoardUniversity } from "@/features/resources/models/boardUniversity.model.js";
 import { Admission } from "@/features/admissions/models/admission.model";
+import { AcademicYear } from "@/features/academics/models/academic-year.model";
 // import { Admission } from "@/features/user/models/admission.model.js";
 
 export interface AdmissionAcademicInfoDto extends AdmissionAcademicInfo {
@@ -37,4 +38,24 @@ export interface BoardUniversityDto extends BoardUniversity {
 
 export interface AdmissionDto extends Admission {
     courses: AdmissionCourse[];
+    academicYear: AcademicYear;
 }
+
+
+export interface Stats {
+    admissionYearCount: number;
+    totalApplications: number;
+    totalPayments: number;
+    totalDrafts: number;
+}
+
+export interface AdmissionSummary {
+    id: number;
+    admissionYear: number;
+    isClosed: boolean;
+    totalApplications: number;
+    totalPayments: number;
+    totalDrafts: number;
+}
+
+

@@ -1,6 +1,6 @@
 {
-  "id": "1fedba0b-3bfe-4ddd-9d71-8e7e9b99e018",
-  "prevId": "2270cd0b-4d9f-4a5c-911d-4cfb3246538e",
+  "id": "a81e5d6e-e420-4d1f-97be-181e5a9347c8",
+  "prevId": "1fedba0b-3bfe-4ddd-9d71-8e7e9b99e018",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2183,7 +2183,7 @@
           "name": "institute_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "other_institute": {
           "name": "other_institute",

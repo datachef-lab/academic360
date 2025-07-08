@@ -18,7 +18,10 @@ import { socketService } from "./services/socketService.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 
 import { generateToken } from "./utils/index.js";
-import { academicYearRouter, classRouter } from "@/features/academics/routes/index.js";
+import {
+  academicYearRouter,
+  classRouter,
+} from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
@@ -61,7 +64,6 @@ import {
   feesHeadRouter,
   feesReceiptTypeRouter,
   feesSlabYearMappingRouter,
-
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "./features/academics/routes/course.route.js";
@@ -285,17 +287,23 @@ app.use("/api/v1/fees/heads", feesHeadRouter);
 app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 
 // Admissions routes
-app.use("/admissions", admissionRouter);
-app.use("/admissions/application-forms", applicationFormRouter);
-app.use("/admissions/general-info", admissionGeneralInfoRouter);
-app.use("/admissions/academic-info", admissionAcademicInfoRouter);
-app.use("/admissions/additional-info", admissionAdditionalInfoRouter);
-app.use("/admissions/courses", admissionCourseRouter);
-app.use("/admissions/course-applications", admissionCourseApplicationRouter);
-app.use("/admissions/sports-category", sportsCategoryRouter);
-app.use("/admissions/sports-info", sportsInfoRouter);
-app.use("/admissions/student-academic-subject", studentAcademicSubjectRouter);
-app.use("/admissions/academic-subject", academicSubjectRouter);
+app.use("/api/admissions", admissionRouter);
+app.use("/api/admissions/application-forms", applicationFormRouter);
+app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
+app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
+app.use("/api/admissions/additional-info", admissionAdditionalInfoRouter);
+app.use("/api/admissions/courses", admissionCourseRouter);
+app.use(
+  "/api/admissions/course-applications",
+  admissionCourseApplicationRouter,
+);
+app.use("/api/admissions/sports-category", sportsCategoryRouter);
+app.use("/api/admissions/sports-info", sportsInfoRouter);
+app.use(
+  "/api/admissions/student-academic-subject",
+  studentAcademicSubjectRouter,
+);
+app.use("/api/admissions/academic-subject", academicSubjectRouter);
 
 app.use("/api/study-materials", studyMaterialRouter);
 

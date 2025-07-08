@@ -1,8 +1,10 @@
+import { Session } from "./session";
+
 export interface AcademicYear {
     readonly id?: number;
     year: string;
     isCurrentYear: boolean;
-    sessionId: number;
+    session: Session;
     creaytedAt?: Date;
     updatedAt?: Date;
 }

@@ -1,3 +1,4 @@
+import { AcademicYear } from "../academics/academic-year";
 import { AdmissionFormStatus, AdmissionStep, BoardResultStatusType, Disability, Gender, Level, PaymentMode, PaymentStatus, PersonTitleType, SportsLevel, StreamType, SubjectResultStatusType } from "../enums"
 
 export interface AdmissionAcademicInfo {
@@ -112,6 +113,16 @@ export interface Payment {
     remarks: string;
 }
 
+export interface AcademicSubject {
+    name: string;
+    boardUniversityId: number;
+    readonly id?: number;
+    disabled?: boolean;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
+    passingMarks?: number;
+}
+
 export interface AdmissionCourseApplication {
     readonly id?: number
     applicationFormId: number;
@@ -152,15 +163,15 @@ export interface BoardUniversity {
     degreeName?: string;
 }
 
-export interface AcademicSubject {
-    readonly id?: number;
-    boardUniversityId: number;
-    name: string
-    passingMarks: number
-    disabled: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
+// export interface AcademicSubject {
+//     readonly id?: number;
+//     boardUniversityId: number;
+//     name: string
+//     passingMarks: number
+//     disabled: boolean;
+//     createdAt?: Date;
+//     updatedAt?: Date;
+// }
 
 export interface AdmissionAdmission {
     readonly id?: number;
@@ -186,4 +197,47 @@ export interface AdmissionCourse {
     createdAt?: Date
     updatedAt?: Date
     remarks: string | null;
+}
+
+export interface Admission {
+    id?: number | undefined;
+    academicYear: AcademicYear;
+    createdAt?: Date | null | undefined;
+    updatedAt?: Date | null | undefined;
+    admissionCode?: string | null | undefined;
+    isClosed?: boolean | undefined;
+    startDate?: string | Date;
+    lastDate?: string | Date;
+    isArchived?: boolean;
+    remarks?: string | null;
+    courses: AdmissionCourse[];
+}
+
+// import { AcademicSubjects, Admission, AdmissionAcademicInfo, AdmissionAdditionalInfo, AdmissionCourse, AdmissionCourseApplication, AdmissionGeneralInfo, ApplicationForm, BoardUniversity, Payment, SportsInfo, StudentAcademicSubjects } from "@/db/schema";
+
+export interface AdmissionAcademicInfoDto extends AdmissionAcademicInfo {
+    subjects: StudentAcademicSubjects[];
+}
+
+
+export interface AdmissionAdditionalInfoDto extends AdmissionAdditionalInfo {
+    sportsInfo: SportsInfo[];
+}
+
+export interface ApplicationFormDto extends ApplicationForm {
+    generalInfo: AdmissionGeneralInfo | null;
+    academicInfo: AdmissionAcademicInfoDto | null;
+    courseApplication: AdmissionCourseApplication[] | null;
+    additionalInfo: AdmissionAdditionalInfoDto | null;
+    paymentInfo: Payment | null;
+    currentStep: number;
+}
+
+export interface BoardUniversityDto extends BoardUniversity {
+    subjects: AcademicSubject[];
+    degreeName?: string;
+}
+
+export interface AdmissionDto extends Admission {
+    courses: AdmissionCourse[];
 }

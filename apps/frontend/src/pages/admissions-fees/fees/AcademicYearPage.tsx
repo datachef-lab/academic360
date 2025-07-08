@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, PlusCircle, AlertCircle, Search, Filter, FileDown, CheckCircle, XCircle } from "lucide-react";
+import { Calendar, PlusCircle, Search, Filter, FileDown, CheckCircle, XCircle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,62 +14,56 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-year-api";
+import { AcademicYear } from "@/types/academics/academic-year";
+import { Session } from "@/types/academics/session";
 
-interface AcademicYearItem {
-  id: number;
-  name: string;
-  startDate: string;
-  endDate: string;
-  active: boolean;
-}
-
-const initialData: AcademicYearItem[] = [
-  {
-    id: 1,
-    name: "2023-24",
-    startDate: "2023-04-01",
-    endDate: "2024-03-31",
-    active: false,
-  },
-  {
-    id: 2,
-    name: "2024-25",
-    startDate: "2024-04-01",
-    endDate: "2025-03-31",
-    active: true,
-  },
-];
+const defaultSession: Session = { id: 1, name: "", from: new Date(), to: new Date(), isCurrentSession: true, codePrefix: "DEF", sequence: 1, disabled: false };
 
 const AcademicYearPage: React.FC = () => {
-  const [data, setData] = useState<AcademicYearItem[]>(initialData);
-  const [filteredData, setFilteredData] = useState<AcademicYearItem[]>(initialData);
+  const [data, setData] = useState<AcademicYear[]>([]);
+  const [filteredData, setFilteredData] = useState<AcademicYear[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<AcademicYearItem | null>(null);
-  const [form, setForm] = useState<AcademicYearItem>({ id: 0, name: "", startDate: "", endDate: "", active: true });
+  const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
+  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true, session: { ...defaultSession } });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    async function fetchAcademicYears() {
+      try {
+        const res = await getAllAcademicYears();
+        const mapped = (res.payload || res).map((item: AcademicYear) => ({
+          id: item.id,
+          year: item.year,
+          isCurrentYear: item.isCurrentYear,
+          session: item.session || { ...defaultSession },
+        }));
+        setData(mapped);
+        setFilteredData(mapped);
+      } catch (error) {
+        console.error("Failed to fetch academic years", error);
+      }
+    }
+    fetchAcademicYears();
+  }, []);
+
+  useEffect(() => {
     let updated = data;
     if (searchTerm) {
-      updated = updated.filter(
-        (y) =>
-          y.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          y.startDate.includes(searchTerm) ||
-          y.endDate.includes(searchTerm),
-      );
+      updated = updated.filter((y) => y.year.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     if (statusFilter !== "all") {
-      updated = updated.filter((y) => (statusFilter === "active" ? y.active : !y.active));
+      updated = updated.filter((y) => (statusFilter === "active" ? y.isCurrentYear : !y.isCurrentYear));
     }
     setFilteredData(updated);
   }, [data, searchTerm, statusFilter]);
 
   const handleExport = () => {
     const csvContent = [
-      ["ID", "Name", "Start Date", "End Date", "Status"],
-      ...filteredData.map((y) => [y.id, y.name, y.startDate, y.endDate, y.active ? "active" : "inactive"]),
+      ["ID", "Year", "Status"],
+      ...filteredData.map((y) => [y.id, y.year, y.isCurrentYear ? "active" : "inactive"]),
     ]
       .map((row) => row.join(","))
       .join("\n");
@@ -82,24 +76,57 @@ const AcademicYearPage: React.FC = () => {
     a.click();
   };
 
-  const handleSubmit = () => {
-    if (!form.name.trim() || !form.startDate || !form.endDate) return;
-
-    if (editingItem) {
-      setData(data.map((item) => (item.id === editingItem.id ? { ...form, id: item.id } : item)));
-    } else {
-      setData([...data, { ...form, id: Date.now() }]);
+  const handleSubmit = async () => {
+    // Validate year is a four-digit number
+    if (!/^[0-9]{4}$/.test(form.year)) {
+      alert("Year must be a four-digit number.");
+      return;
     }
-    handleClose();
+    // Validate session fields
+    if (!form.session.name.trim() || !form.session.from || !form.session.to) {
+      alert("Please fill all session fields.");
+      return;
+    }
+    try {
+      if (editingItem) {
+        const updated = {
+          year: form.year,
+          isCurrentYear: form.isCurrentYear,
+          session: form.session,
+        };
+        await updateAcademicYearById(editingItem.id!, updated);
+      } else {
+        const newAcademicYear = {
+          year: form.year,
+          isCurrentYear: form.isCurrentYear,
+          session: form.session,
+        };
+        await createAcademicYear(newAcademicYear, form.session);
+      }
+      // Always re-fetch the list after create/edit
+      const res = await getAllAcademicYears();
+      const mapped = (res.payload || res).map((item: AcademicYear) => ({
+        id: item.id,
+        year: item.year,
+        isCurrentYear: item.isCurrentYear,
+        session: item.session || { ...defaultSession },
+      }));
+      setData(mapped);
+      setFilteredData(mapped);
+      handleClose();
+    } catch (error) {
+      alert("Failed to save academic year");
+      console.error(error);
+    }
   };
 
   const handleClose = () => {
     setShowModal(false);
     setEditingItem(null);
-    setForm({ id: 0, name: "", startDate: "", endDate: "", active: true });
+    setForm({ id: 0, year: "", isCurrentYear: true, session: { ...defaultSession } });
   };
 
-  const handleEdit = (item: AcademicYearItem) => {
+  const handleEdit = (item: AcademicYear) => {
     setEditingItem(item);
     setForm(item);
     setShowModal(true);
@@ -111,8 +138,8 @@ const AcademicYearPage: React.FC = () => {
   };
 
   const totalYears = data.length;
-  const activeYears = data.filter((y) => y.active).length;
-  const inactiveYears = data.filter((y) => !y.active).length;
+  const activeYears = data.filter((y) => y.isCurrentYear).length;
+  const inactiveYears = data.filter((y) => !y.isCurrentYear).length;
 
   return (
     <div className="min-h-screen bg-gray-50 p-3 lg:p-4">
@@ -251,24 +278,13 @@ const AcademicYearPage: React.FC = () => {
         <Table>
           <TableHeader className="bg-gray-50 border-b border-gray-200">
             <TableRow className="hover:bg-gray-50">
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                #
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Academic Year
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hidden sm:table-cell">
-                Start Date
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider hidden sm:table-cell">
-                End Date
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Status
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                Actions
-              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Academic Year</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Session</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">From</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">To</TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className="bg-white divide-y divide-gray-200">
@@ -277,39 +293,32 @@ const AcademicYearPage: React.FC = () => {
                 <TableRow key={item.id} className="hover:bg-gray-50 transition-colors">
                   <TableCell className="px-4 py-3 whitespace-nowrap font-medium text-gray-900">{index + 1}</TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                    <span className="text-sm text-gray-600">{item.startDate}</span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap hidden sm:table-cell">
-                    <span className="text-sm text-gray-600">{item.endDate}</span>
+                    <span className="text-sm font-medium text-gray-900">{item.year}</span>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        item.active ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {item.active ? "Active" : "Inactive"}
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                      {item.isCurrentYear ? "Active" : "Inactive"}
                     </span>
                   </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  {item.session.name}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  {new Date(item.session.from).toISOString()}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 whitespace-nowrap">
+                  {new Date(item.session.to).toISOString()}
+                  </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
-                    <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">
-                      Edit
-                    </button>
-                    <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 ml-4">
-                      Delete
-                    </button>
+                    <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">Edit</button>
+                    <button onClick={() => handleDelete(item.id!)} className="text-red-600 hover:text-red-800 ml-4">Delete</button>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
-                  <AlertCircle className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">No Academic Years Found</p>
-                  <p className="text-sm text-gray-500 mt-1">Adjust your filters or add a new academic year.</p>
+                <TableCell colSpan={4} className="text-center py-8">
+                  <span className="text-gray-600 font-medium">No Academic Years Found</span>
                 </TableCell>
               </TableRow>
             )}
@@ -325,48 +334,60 @@ const AcademicYearPage: React.FC = () => {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Name / Label</Label>
+              <Label htmlFor="year">Year</Label>
               <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g., 2025-26"
+                id="year"
+                type="number"
+                min={1900}
+                max={2099}
+                value={form.year}
+                onChange={e => {
+                  // Only allow 4 digits
+                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+                  setForm({ ...form, year: val });
+                }}
+                placeholder="e.g., 2025"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="sessionName">Session Name</Label>
               <Input
-                id="startDate"
-                type="date"
-                value={form.startDate}
-                onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+                id="sessionName"
+                value={form.session.name}
+                onChange={e => setForm({ ...form, session: { ...form.session, name: e.target.value } })}
+                placeholder={`e.g., ${new Date().getFullYear()}-${(new Date().getFullYear() % 100) + 1}`}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="sessionFrom">Session Start Date</Label>
               <Input
-                id="endDate"
+                id="sessionFrom"
                 type="date"
-                value={form.endDate}
-                onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                value={form.session.from ? new Date(form.session.from).toISOString().slice(0, 10) : ""}
+                onChange={e => setForm({ ...form, session: { ...form.session, from: new Date(e.target.value) } })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="sessionTo">Session End Date</Label>
+              <Input
+                id="sessionTo"
+                type="date"
+                value={form.session.to ? new Date(form.session.to).toISOString().slice(0, 10) : ""}
+                onChange={e => setForm({ ...form, session: { ...form.session, to: new Date(e.target.value) } })}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="active">Active Status</Label>
+              <Label htmlFor="isCurrentYear">Active Status</Label>
               <Switch
-                id="active"
-                checked={form.active}
-                onCheckedChange={(checked) => setForm({ ...form, active: checked })}
+                id="isCurrentYear"
+                checked={form.isCurrentYear}
+                onCheckedChange={checked => setForm({ ...form, isCurrentYear: checked })}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">
-              {editingItem ? "Update" : "Create"} Academic Year
-            </Button>
+            <Button variant="outline" onClick={handleClose}>Cancel</Button>
+            <Button onClick={handleSubmit} className="bg-purple-600 hover:bg-purple-700">{editingItem ? "Update" : "Create"} Academic Year</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

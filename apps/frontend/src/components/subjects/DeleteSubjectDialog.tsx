@@ -10,12 +10,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Subject } from '@/services/subject-metadata';
+import { SubjectMetadata } from '@/types/academics/subject-metadata';
+// import { Subject } from '@/services/subject-metadata';
 
 interface DeleteSubjectDialogProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  subject: Subject | null;
+  subject: SubjectMetadata | null;
   isDeleting: boolean;
   onConfirmDelete: () => Promise<void>;
 }
@@ -45,7 +46,7 @@ const DeleteSubjectDialog: React.FC<DeleteSubjectDialogProps> = ({
                 <div className="flex gap-2 mt-1 text-sm text-purple-800">
                   <span>Code: {subject.irpCode}</span>
                   <span>•</span>
-                  <span>Semester: {subject.semester}</span>
+                  <span>Semester: {subject.class?.name}</span>
                 </div>
               </div>
             )}

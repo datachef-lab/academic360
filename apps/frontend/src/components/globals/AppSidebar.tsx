@@ -112,6 +112,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
+  // Helper to check if sidebar item is active
+  function isSidebarActive(currentPath: string, itemUrl: string) {
+    return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
+  }
+
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
@@ -154,7 +159,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     key={item.title}
                     icon={item.icon && <item.icon className="h-5 w-5" />}
                     href={item.url}
-                    isActive={!isSearchActive && currentPath.startsWith(item.url)}
+                    isActive={
+                      !isSearchActive &&
+                      (item.url === "/dashboard"
+                        ? currentPath === "/dashboard"
+                        : isSidebarActive(currentPath, item.url)
+                      )
+                    }
                   >
                     <span className="text-lg">{item.title}</span>
                   </NavItem>
@@ -169,7 +180,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       key={item.title}
                       icon={item.icon && <item.icon className="h-5 w-5" />}
                       href={item.url}
-                      isActive={!isSearchActive && currentPath.startsWith(item.url)}
+                      isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
                     >
                       <span className="text-base">{item.title}</span>
                     </NavItem>
@@ -185,7 +196,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <div className="p">
                 {data.navAdministration.map((item) => {
                   const url = item.url ?? "";
-                  const isActive = !isSearchActive && currentPath.startsWith(url);
+                  const isActive = !isSearchActive && isSidebarActive(currentPath, url);
 
                 //   if (item.isModal) {
                 //     return (

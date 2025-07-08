@@ -1,15 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import {
-//   AddStudentPage,
-//   GetReportsPage,
-  HomePage,
-  LoginPage,
-//   MyWorkspacePage,
-  NotFoundPage,
-  SettingsPage,
-  UserProfilePage,
-} from "@/pages";
+import { HomePage, LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -51,6 +42,8 @@ import * as appModule from "./pages/apps";
 import * as facultiesStaffsModule from "./pages/faculties-staffs";
 import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
+import { AcademicYearPage } from "./pages/admissions-fees/fees";
+import Dashboard from "./pages/dashboard/Dashboard";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -64,7 +57,7 @@ const router = createBrowserRouter([
       </AuthProvider>
     ),
     children: [
-      { path: "", element: <div>Dashboard Home (College Dashboard)</div> },
+      { path: "", element: <Dashboard /> },
       { path: "resources", element: <SettingsPage /> },
       {
         path: "courses-subjects",
@@ -81,12 +74,13 @@ const router = createBrowserRouter([
         element: <admissionFeesModule.AdmissionsFeesMaster />,
         children: [
           { path: "", element: <admissionFeesModule.HomePage /> },
+          { path: "academic-years", element: <AcademicYearPage /> },
           {
             path: "admissions",
             element: <Outlet />,
             children: [
-              { path: "", element: <div>Admissions</div> },
-              { path: "admissionId", element: <div>Admission Details</div> },
+              { path: "", element: <admissionFeesModule.AdmissionsPage /> },
+              { path: ":year", element: <admissionFeesModule.AdmissionDetailsPage /> },
             ],
           },
           {
