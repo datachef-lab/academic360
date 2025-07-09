@@ -12,10 +12,10 @@ import {
   Flag,
   MapPin,
   IndianRupee,
-  Settings2,
+  Boxes,
 } from "lucide-react";
-import SettingsPanel from "@/components/settings/SettingsPanel";
 import SettingsContent from "@/components/settings/SettingsContent";
+import ResourceSidebar from "@/components/settings/ResourceSidebar";
 
 const settingsCategories = [
   {
@@ -43,6 +43,17 @@ const settingsCategories = [
 
 export default function Settings() {
   const [activeSetting, setActiveSetting] = useState(settingsCategories[0].tabs[0]);
+  const [activeResourceSection, setActiveResourceSection] = useState("");
+
+  const handleResourceSectionChange = (section: string) => {
+    const foundTab = settingsCategories[0].tabs.find(tab => tab.label === section);
+    if (foundTab) {
+      setActiveSetting(foundTab);
+      setActiveResourceSection(section);
+    } else {
+      setActiveResourceSection(section);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
@@ -58,12 +69,12 @@ export default function Settings() {
             whileTap={{ scale: 0.95 }}
             className="bg-gradient-to-br from-purple-400 to-purple-600 p-3 rounded-xl shadow-xl"
           >
-            <Settings2 className="h-8 w-8 drop-shadow-xl text-white" />
+            <Boxes className="h-8 w-8 drop-shadow-xl text-white" />
           </motion.div>
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Settings</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Resources</h2>
             <p className="text-sm text-purple-600 font-medium">
-              Manage your preferences and configurations here
+              Manage your Resources and configurations here
             </p>
           </div>
         </div>
@@ -92,7 +103,7 @@ export default function Settings() {
                 whileTap={{ scale: 0.95 }}
                 className="bg-gradient-to-br from-white/20 to-white/10 p-3 rounded-xl shadow-xl"
               >
-                <Settings2 className="h-8 w-8 drop-shadow-xl text-white" />
+                <Boxes className="h-8 w-8 drop-shadow-xl text-white" />
               </motion.div>
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-white">
@@ -116,18 +127,11 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Right Section */}
-        <div className="bg-white grid-cols-1 shadow-lg border border-gray-200/70 overflow-auto rounded-lg p-6">
-          <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 grid grid-cols-[auto_1fr] items-center gap-2">
-            <span className="bg-purple-500 text-white p-2 rounded-full shadow-md">
-              <Settings2 className="h-5 w-5" />
-            </span>
-            <span>Categories</span>
-          </h3>
-          <SettingsPanel
-            settingsCategories={settingsCategories}
-            activeSetting={activeSetting}
-            setActiveSetting={setActiveSetting}
+        {/* Right Section: Replace with ResourceNavigationSidebar */}
+        <div className="flex flex-col items-stretch">
+          <ResourceSidebar
+            activeSection={activeResourceSection}
+            onSectionChange={handleResourceSectionChange}
           />
         </div>
       </div>
