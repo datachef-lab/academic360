@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { ReactNode, useEffect } from "react";
 import { LucideProps } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -10,18 +10,22 @@ export type LinkType =  {
   url: string;
   icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
   isModal?: boolean;
+  
   nestedLinks?: LinkType[];
+  status?: "completed" | "in_progress" | "not_started";
+  completedAt?: string;
 }
 
 type MasterLayoutProps = {
   children: React.ReactNode;
-  subLinks: LinkType[];
+  subLinks?: LinkType[];
+  content?: ReactNode;
   rightBarHeader?: React.ReactNode;
   rightBarFooter?: React.ReactNode;
   rightBarContent?: React.ReactNode;
 };
 
-export default function MasterLayout({ children, subLinks, rightBarHeader, rightBarFooter, rightBarContent }: MasterLayoutProps) {
+export default function MasterLayout({ children, content, subLinks, rightBarHeader, rightBarFooter, rightBarContent }: MasterLayoutProps) {
 
   const location = useLocation();
   const currentPath = location.pathname;
@@ -52,7 +56,7 @@ export default function MasterLayout({ children, subLinks, rightBarHeader, right
               rightBarContent
             ) : (
               <ul className="space-y-2">
-                {subLinks.map((link) => {
+                {subLinks?.map((link) => {
                   if (link.isModal) {
                     return (
                       <div
@@ -112,7 +116,10 @@ export default function MasterLayout({ children, subLinks, rightBarHeader, right
                 })}
               </ul>
             )}
+
+            {content}
           </div>
+          
           {/* Sidebar Footer */}
           <div className="border-t px-4 py-2 text-xs text-gray-500 text-center bg-white shadow-sm">
             {rightBarFooter !== undefined ? (
@@ -144,7 +151,7 @@ interface NavItemProps {
   isActive?: boolean;
 }
 
-function NavItem({ href, icon, children, isActive }: NavItemProps) {
+export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <li>
       <Link
