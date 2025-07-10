@@ -1,6 +1,6 @@
 import { AcademicYear } from "@/features/academics/models/academic-year.model.js";
 import { Class } from "@/features/academics/models/class.model.js";
-import { Course } from "@/features/academics/models/course.model.js";
+import { Course } from "@/features/course-design/models/course.model.js";
 import { Shift } from "@/features/academics/models/shift.model.js";
 import { FeesComponent } from "@/features/fees/models/fees-component.model.js";
 import { FeesSlabMapping } from "@/features/fees/models/fees-slab-mapping.model.js";

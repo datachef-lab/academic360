@@ -3,7 +3,7 @@ import { feesStructureModel, FeesStructure } from "../models/fees-structure.mode
 import { and, countDistinct, desc, eq, inArray, sql } from "drizzle-orm";
 import { CreateFeesStructureDto, FeesStructureDto } from "@/types/fees/index.js";
 import { academicYearModel, AcademicYear } from "@/features/academics/models/academic-year.model.js";
-import { Course, courseModel } from "@/features/academics/models/course.model.js";
+import { Course, courseModel } from "@/features/course-design/models/course.model.js";
 import { feesComponentModel, type FeesComponent } from "../models/fees-component.model.js";
 import { alias } from "drizzle-orm/pg-core";
 import { FeesDesignAbstractLevel } from "@/types/fees/index.js";
@@ -55,9 +55,9 @@ export const getFeesStructures = async (): Promise<FeesStructureDto[] | null> =>
                 shift = foundShift;
             }
             const [foundClass] = await db
-            .select()
-            .from(classModel)
-            .where(eq(classModel.name, feesStructure.semester!));
+                .select()
+                .from(classModel)
+                .where(eq(classModel.name, feesStructure.semester!));
 
             // Fetch instalments for this feesStructure
             const instalments: Instalment[] = await db.select().from(instalmentModel).where(eq(instalmentModel.feesStructureId, feesStructure.id));
@@ -113,12 +113,12 @@ export const getFeesStructureById = async (id: number): Promise<FeesStructureDto
             .leftJoin(courseModel, eq(feesStructureModel.courseId, courseModel.id))
             .leftJoin(advanceCourse, eq(feesStructureModel.advanceForCourseId, advanceCourse.id))
             .where(eq(feesStructureModel.id, id));
-            
+
         if (feesStructures.length === 0) {
             return null;
         }
         const feesStructure = feesStructures[0];
-        
+
         if (!feesStructure.academicYear || !feesStructure.course) {
             return null;
         }
@@ -226,11 +226,11 @@ export const createFeesStructure = async (createFeesStructureDto: CreateFeesStru
                         eq(feesStructureModel.feesReceiptTypeId, createFeesStructureDto?.feesReceiptTypeId!),
                     )
                 );
-    
+
             if (existing) {
                 return null;
             }
-            
+
             const dataToInsert: FeesStructure = {
                 ...rest,
                 classId: feesClassSem.id!,
@@ -239,13 +239,13 @@ export const createFeesStructure = async (createFeesStructureDto: CreateFeesStru
                 advanceForCourseId: advanceForCourse?.id ?? null,
                 shiftId: shift?.id!,
             };
-            
+
             const [newFeesStructure] = await db.insert(feesStructureModel).values(dataToInsert).returning();
-            
+
             if (!newFeesStructure) {
                 return null;
             }
-    
+
             if (components && components.length > 0) {
                 const newComponents = createFeesStructureDto.components.map(comp => {
                     const { id: compId, ...compRest } = comp;
@@ -253,7 +253,7 @@ export const createFeesStructure = async (createFeesStructureDto: CreateFeesStru
                 });
                 await db.insert(feesComponentModel).values(newComponents);
             }
-    
+
             // Handle instalments creation
             if (createFeesStructureDto.instalments && createFeesStructureDto.instalments.length > 0) {
                 const newInstalments = createFeesStructureDto.instalments.map(inst => {
@@ -269,12 +269,12 @@ export const createFeesStructure = async (createFeesStructureDto: CreateFeesStru
                 });
                 await db.insert(instalmentModel).values(newInstalments);
             }
-    
+
             for (const feesSlabMapping of feesSlabMappings) {
                 feesSlabMapping.feesStructureId = newFeesStructure.id;
                 console.log("newFeesStructure.id:", newFeesStructure.id)
-                const {id, ...rest } = feesSlabMapping;
-                await createFeesSlabMapping({...rest, feesStructureId: newFeesStructure.id});
+                const { id, ...rest } = feesSlabMapping;
+                await createFeesSlabMapping({ ...rest, feesStructureId: newFeesStructure.id });
             }
         }
 
@@ -293,7 +293,7 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
         if (!academicYear?.id || !course?.id) {
             throw new Error("Academic Year and Course are required.");
         }
-        
+
         const dataToUpdate: FeesStructure = {
             ...rest,
             classId: feesClassSem.id!,
@@ -307,7 +307,7 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
             .set(dataToUpdate)
             .where(eq(feesStructureModel.id, id))
             .returning();
-        
+
         if (!updatedFeesStructure) return null;
 
         // Handle feesComponent update logic
@@ -325,7 +325,7 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
                     await db.insert(feesComponentModel).values({ ...compRest, feesStructureId: updatedFeesStructure.id });
                 } else {
                     // Update existing
-                    let {createdAt, updatedAt, ...tmpComp } = comp;
+                    let { createdAt, updatedAt, ...tmpComp } = comp;
                     await db.update(feesComponentModel).set(tmpComp).where(eq(feesComponentModel.id, comp.id));
                 }
             }
@@ -353,7 +353,7 @@ export const updateFeesStructure = async (id: number, feesStructure: FeesStructu
                 if (!mapping.id || mapping.id === 0) {
                     await createFeesSlabMapping({ ...mapping, feesStructureId: updatedFeesStructure.id });
                 } else {
-                    let { createdAt, updatedAt, ...tmpMapping} = mapping;
+                    let { createdAt, updatedAt, ...tmpMapping } = mapping;
                     await db
                         .update(feesSlabMappingModel)
                         .set(tmpMapping)
@@ -474,7 +474,7 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
 
         if (!academicYear || !course) return null;
         const feesSlabMappings = await getFeesSlabMappingsByFeesStructureId(model.id!);
-        const {classId, ...rest} = model;
+        const { classId, ...rest } = model;
         const foundClass = await findClassById(classId)
 
         return {
@@ -570,23 +570,23 @@ export async function modelToDto(model: FeesStructure): Promise<FeesStructureDto
 // };
 
 export const checkFeesStructureExists = async (
-  academicYearId: number,
-  courseId: number,
-  classId: number,
-  shiftId: number,
-  feesReceiptTypeId: number
+    academicYearId: number,
+    courseId: number,
+    classId: number,
+    shiftId: number,
+    feesReceiptTypeId: number
 ): Promise<boolean> => {
-  const [existing] = await db
-    .select()
-    .from(feesStructureModel)
-    .where(
-      and(
-        eq(feesStructureModel.academicYearId, academicYearId),
-        eq(feesStructureModel.courseId, courseId),
-        eq(feesStructureModel.classId, classId),
-        eq(feesStructureModel.shiftId, shiftId),
-        eq(feesStructureModel.feesReceiptTypeId, feesReceiptTypeId),
-      )
-    );
-  return !!existing;
+    const [existing] = await db
+        .select()
+        .from(feesStructureModel)
+        .where(
+            and(
+                eq(feesStructureModel.academicYearId, academicYearId),
+                eq(feesStructureModel.courseId, courseId),
+                eq(feesStructureModel.classId, classId),
+                eq(feesStructureModel.shiftId, shiftId),
+                eq(feesStructureModel.feesReceiptTypeId, feesReceiptTypeId),
+            )
+        );
+    return !!existing;
 };

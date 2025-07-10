@@ -7,7 +7,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { boardResultStatusModel } from "@/features/resources/models/boardResultStatus.model.js";
 import { institutionModel } from "@/features/resources/models/institution.model.js";
-import { specializationModel } from "./specialization.model.js";
+import { specializationModel } from "../../course-design/models/specialization.model.js";
 
 export const academicHistoryModel = pgTable("academic_history", {
     id: serial().primaryKey(),

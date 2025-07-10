@@ -36,17 +36,17 @@ import { BoardResultStatus, boardResultStatusModel } from "@/features/resources/
 import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { annualIncomeModel } from "../../resources/models/annualIncome.model.js";
-import { Specialization, specializationModel } from "../models/specialization.model.js";
+import { Specialization, specializationModel } from "../../course-design/models/specialization.model.js";
 import { spec } from "node:test/reporters";
 import { fileURLToPath } from "node:url";
 import { readExcelFile } from "@/utils/readExcel.js";
 // import { streamModel } from "@/features/academics/models/stream.model.js";
-import { SubjectMetadata, subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
-import { SubjectRow } from "@/types/academics/subject-row.js";
-import { SubjectTypeModel, subjectTypeModel } from "@/features/academics/models/subjectType.model.js";
+// import { SubjectMetadata, subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
+import { SubjectRow } from "@/types/academics/subject-row.type.js";
+import { subjectTypeModel } from "@/features/course-design/models/subjectType.model.js";
 import { findDegreeByName } from "@/features/resources/services/degree.service.js";
 // import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
-import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
+// import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
 // import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
 
 const BATCH_SIZE = 500; // Number of rows per batch
@@ -832,7 +832,7 @@ export async function loadStudents() {
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // STEP 1: Load all the batches
-        await loadOlderBatches();
+        // await loadOlderBatches();
         // STEP 2: Count the total numbers of students
         await loadStudents();
 
