@@ -10,8 +10,26 @@ import {
 const BASE_URL = '/api/nationality';
 
 export async function getAllNationalities(): Promise<Nationality[]> {
-  const response = await axiosInstance.get<MultipleNationalityResponse>(BASE_URL);
-  return response.data.data;
+  try {
+    const response = await axiosInstance.get<MultipleNationalityResponse>(BASE_URL);
+    const responseData = response.data;
+    
+    // Check if response has payload property (like personal details API)
+    if ('payload' in responseData && Array.isArray(responseData.payload)) {
+      return responseData.payload;
+    }
+    
+    // Fallback to data property (original expected structure)
+    if ('data' in responseData && Array.isArray(responseData.data)) {
+      return responseData.data;
+    }
+    
+    // Return empty array if neither structure matches
+    return [];
+  } catch (error) {
+    console.error('Error fetching nationalities:', error);
+    throw error;
+  }
 }
 
 export async function getNationalityById(id: number): Promise<Nationality> {

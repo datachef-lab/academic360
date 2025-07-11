@@ -9,14 +9,16 @@ import {
   FeesStructureDto,  CreateFeesStructureDto } from "../../../types/fees";
 import {AcademicYear} from "@/types/academics/academic-year"
 import { Course } from "../../../types/academics/course";
-import { useAcademicYears } from "@/hooks/useAcademicYears";
+// import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useFeesSlabs, useFeesHeads, useFeesReceiptTypes } from "@/hooks/useFees";
-import { useShifts } from "@/hooks/useShifts";
+// import { useShifts } from "@/hooks/useShifts";
 import { getAllCourses } from "@/services/course-api";
 import { getAllClasses } from "@/services/classes.service";
 import { Class } from "@/types/academics/class";
 // import { PlusOutlined, DeleteOutlined, CloseCircleTwoTone, CheckCircleTwoTone } from "@ant-design/icons";
 import { FeesComponent, Instalment } from '@/types/fees';
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { useShifts } from "@/hooks/useShifts";
 
 interface FeeStructureFormProps {
   onClose: () => void;

@@ -11,7 +11,20 @@ const BASE_URL = '/api/religions';
 
 export async function getAllReligions(): Promise<Religion[]> {
   const response = await axiosInstance.get<MultipleReligionResponse>(BASE_URL);
-  return response.data.data;
+  const responseData = response.data;
+  
+  // Check if response has payload property (like personal details API)
+  if ('payload' in responseData && Array.isArray(responseData.payload)) {
+    return responseData.payload;
+  }
+  
+  // Fallback to data property (original expected structure)
+  if ('data' in responseData && Array.isArray(responseData.data)) {
+    return responseData.data;
+  }
+  
+  // Return empty array if neither structure matches
+  return [];
 }
 
 export async function getReligionById(id: number): Promise<Religion> {

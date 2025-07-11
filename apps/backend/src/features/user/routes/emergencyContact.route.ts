@@ -1,26 +1,32 @@
-// import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createEmergencyContact, getEmergencyContactById, getEmergencyContactByStudentId, updateEmergencyContact } from "../controllers/emergencyContact.controller.js";
-import { getAddressById } from "../controllers/address.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import {
+  createEmergencyContact,
+  getEmergencyContactById,
+  getEmergencyContactByStudentId,
+  updateEmergencyContact,
+  deleteEmergencyContact,
+  deleteEmergencyContactByStudentId,
+  getAllEmergencyContactsController
+} from "../controllers/emergencyContact.controller.js";
 
 const router = express.Router();
 
-// router.use(verifyJWT);
+router.use(verifyJWT);
+
+// Get all
+router.get("/", getAllEmergencyContactsController);
+// Create
 router.post("/", createEmergencyContact);
-
-router.get("/query", (req, res, next) => {
-    const { id, studentId  } = req.query;
-    console.log(id);
-    if (id) {
-        getEmergencyContactById(req,res,next);
-    }else if( studentId ){
-        getEmergencyContactByStudentId(req,res,next);
-
-    } else {
-        next();
-    }
-});
-
+// Get by id
+router.get("/:id", getEmergencyContactById);
+// Get by studentId
+router.get("/student/:studentId", getEmergencyContactByStudentId);
+// Update
 router.put("/:id", updateEmergencyContact);
+// Delete by id
+router.delete("/:id", deleteEmergencyContact);
+// Delete by studentId
+router.delete("/student/:studentId", deleteEmergencyContactByStudentId);
 
 export default router;

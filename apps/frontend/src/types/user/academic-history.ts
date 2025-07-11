@@ -1,7 +1,7 @@
-import { BoardUniversity } from "../resources/board-university";
-import { Institution } from "../resources/institution";
 import { Specialization } from "../resources/specialization";
 import { ResultStatus } from "../enums"
+import { Institution } from "../resources/institution.types";
+import { BoardUniversity } from "../resources/board-university.types";
 export interface AcademicHistory {
     readonly id?: number;
     studentId: number,

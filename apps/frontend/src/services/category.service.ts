@@ -31,7 +31,20 @@ const BASE_URL = '/api/categories';
 export async function getAllCategories(): Promise<Category[]> {
   try {
     const response = await axiosInstance.get<MultipleCategoryResponse>(BASE_URL);
-    return response.data.data;
+    const responseData = response.data;
+    
+    // Check if response has payload property (like personal details API)
+    if ('payload' in responseData && Array.isArray(responseData.payload)) {
+      return responseData.payload;
+    }
+    
+    // Fallback to data property (original expected structure)
+    if ('data' in responseData && Array.isArray(responseData.data)) {
+      return responseData.data;
+    }
+    
+    // Return empty array if neither structure matches
+    return [];
   } catch (error) {
     console.error('Error fetching categories:', error);
     throw error;

@@ -1,9 +1,9 @@
 
 import { ParentType } from "../enums";
-import { AnnualIncome } from "../resources/annual-income";
+import { AnnualIncome } from "../resources/annual-income.types";
 import { Person } from "./person";
 
-export interface Parent {
+export interface Family {
     readonly id?: number;
     studentId: number,
     parentType: ParentType | null,

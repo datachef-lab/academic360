@@ -2,20 +2,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
 import { PersonalDetails as PersonalDetailsType } from "@/types/user/personal-details";
 import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { getPersonalDetailByStudentId, updatePersonalDetailByStudentId, createPersonalDetail } from "@/services/personal-details.service";
+import { getAllReligions } from "@/services/religion.service";
+import { getAllCategories } from "@/services/category.service";
+import { getAllNationalities } from "@/services/nationality.service";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Religion } from "@/types/user/religion";
+import { Category } from "@/types/user/category";
+import { Nationality } from "@/types/resources/nationality.types";
 
-// Helper function to safely access object properties
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getNameProperty = (obj: any): string => {
-  if (obj && typeof obj === 'object' && 'name' in obj && typeof obj.name === 'string') {
-    return obj.name;
-  }
-  return '';
-};
+// Personal Details component with religion and category dropdowns
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getAddressProperty = (obj: any, prop: string): string => {
@@ -62,16 +62,41 @@ interface PersonalDetailProps {
 export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [religions, setReligions] = useState<Religion[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [nationalities, setNationalities] = useState<Nationality[]>([]);
   const [formData, setFormData] = useState<PersonalDetailsType>({
     ...defaultPersonalDetails,
     studentId
   });
 
+  // Fetch religions and categories on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [religionsData, categoriesData, nationalitiesData] = await Promise.all([
+          getAllReligions(),
+          getAllCategories(),
+          getAllNationalities()
+        ]);
+        console.log("Fetched religions:", religionsData);
+        console.log("Fetched categories:", categoriesData);
+        console.log("Fetched nationalities:", nationalitiesData);
+        setReligions(religionsData);
+        setCategories(categoriesData);
+        setNationalities(nationalitiesData);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
+    };
+    fetchData();
+  }, []);
+
   // Use React Query to fetch personal details
   const { data: personalDetails, isLoading, isError, refetch } = useQuery({
     queryKey: ['personalDetails', studentId],
     queryFn: async () => {
-      const response = await findPersonalDetailsByStudentId(studentId);
+      const response = await getPersonalDetailByStudentId(String(studentId));
       return response.payload;
     },
     enabled: studentId > 0,
@@ -83,16 +108,19 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   useEffect(() => {
     if (personalDetails) {
       console.log("Personal details data loaded:", personalDetails);
+      console.log("Current nationality in data:", personalDetails.nationality);
       setFormData(personalDetails);
     }
   }, [personalDetails]);
 
   const updateMutation = useMutation({
     mutationFn: (formData: PersonalDetailsType) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { createdAt: _createdAt, updatedAt: _updatedAt, ...payload } = formData;
       if (formData.id) {
-        return updatePersonalDetails(formData.id, formData);
+        return updatePersonalDetailByStudentId(String(studentId), payload);
       } else {
-        return addPersonalDetails(formData);
+        return createPersonalDetail(payload);
       }
     },
     onSuccess: () => {
@@ -254,28 +282,36 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Religion</label>
             </div>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="religion"
-                type="text"
-                value={getNameProperty(formData.religion)}
-                onChange={(e) => {
-                  if (formData.religion) {
+              {religions && religions.length > 0 ? (
+                <Select
+                  value={formData.religion?.id?.toString() || ""}
+                  onValueChange={(value) => {
+                    const selectedReligion = religions.find(r => r.id.toString() === value);
                     setFormData(prev => ({
                       ...prev,
-                      religion: { ...prev.religion, name: e.target.value }
+                      religion: selectedReligion || null
                     }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      religion: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+                  }}
+                >
+                  <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                    <SelectValue placeholder="Select religion" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {religions.map((religion) => (
+                      <SelectItem key={religion.id} value={religion.id.toString()}>
+                        {religion.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-full pl-10 pr-3 rounded-lg py-2 border bg-gray-50 text-gray-500">
+                  Loading religions...
+                </div>
+              )}
             </div>
           </div>
 
@@ -285,28 +321,36 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Category</label>
             </div>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="category"
-                type="text"
-                value={getNameProperty(formData.category)}
-                onChange={(e) => {
-                  if (formData.category) {
+              {categories && categories.length > 0 ? (
+                <Select
+                  value={formData.category?.id?.toString() || ""}
+                  onValueChange={(value) => {
+                    const selectedCategory = categories.find(c => c.id.toString() === value);
                     setFormData(prev => ({
                       ...prev,
-                      category: { ...prev.category, name: e.target.value }
+                      category: selectedCategory || null
                     }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      category: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+                  }}
+                >
+                  <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-full pl-10 pr-3 rounded-lg py-2 border bg-gray-50 text-gray-500">
+                  Loading categories...
+                </div>
+              )}
             </div>
           </div>
 
@@ -316,28 +360,38 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Nationality</label>
             </div>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <Globe className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="nationality"
-                type="text"
-                value={getNameProperty(formData.nationality)}
-                onChange={(e) => {
-                  if (formData.nationality) {
+              {nationalities && nationalities.length > 0 ? (
+                <Select
+                  value={formData.nationality?.id?.toString() || ""}
+                  onValueChange={(value) => {
+                    console.log("Nationality selected:", value);
+                    const selectedNationality = nationalities.find(n => n.id.toString() === value);
+                    console.log("Found nationality:", selectedNationality);
                     setFormData(prev => ({
                       ...prev,
-                      nationality: { ...prev.nationality, name: e.target.value }
+                      nationality: selectedNationality || null
                     }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      nationality: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+                  }}
+                >
+                  <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                    <SelectValue placeholder="Select nationality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {nationalities.map((nationality) => (
+                      <SelectItem key={nationality.id} value={nationality.id.toString()}>
+                        {nationality.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-full pl-10 pr-3 rounded-lg py-2 border bg-gray-50 text-gray-500">
+                  Loading nationalities...
+                </div>
+              )}
             </div>
           </div>
 

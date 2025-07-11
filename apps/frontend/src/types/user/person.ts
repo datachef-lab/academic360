@@ -1,6 +1,6 @@
 import { Address } from "../resources/address";
-import { Occupation } from "../resources/occupation";
-import { Qualification } from "../resources/qualification";
+import { Occupation } from "../resources/occupation.types";
+import { Qualification } from "../resources/qualification.types";
 
 export interface Person {
     readonly id?: number,
