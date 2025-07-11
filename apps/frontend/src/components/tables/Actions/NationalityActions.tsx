@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { updateNationality } from "@/services/nationality";
+import { updateNationality } from "@/services/nationality.service";
 import { Nationality } from "@/types/resources/nationality";
 import { Eye } from "lucide-react";
 import { useState } from "react";

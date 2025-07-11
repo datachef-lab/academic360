@@ -2,33 +2,67 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { findPersonalDetailsByStudentId, addPersonalDetails, updatePersonalDetails } from "@/services/personal-details-api";
+import {
+  findPersonalDetailsByStudentId,
+  addPersonalDetails,
+  updatePersonalDetails,
+} from "@/services/personal-details-api";
 import { PersonalDetails as PersonalDetailsType } from "@/types/user/personal-details";
-import { CalendarIcon, Globe, IdCard, Mail, User, Save, Sparkles, BookOpen, CheckCircle, PenLine, Phone, MapPin } from "lucide-react";
+import {
+  CalendarIcon,
+  Globe,
+  IdCard,
+  Mail,
+  User,
+  Save,
+  Sparkles,
+  BookOpen,
+  CheckCircle,
+  PenLine,
+  Phone,
+  MapPin,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { Religion } from "@/types/resources/religion";
+import { findAllReligions } from "@/services/religon.service";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Category } from "@/types/resources/category";
+import { Nationality } from "@/types/resources/nationality";
+import { findAllNationalities } from "@/services/nationality.service";
+import { findAllCategories } from "@/services/category.service";
 
 // Helper function to safely access object properties
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getNameProperty = (obj: any): string => {
-  if (obj && typeof obj === 'object' && 'name' in obj && typeof obj.name === 'string') {
-    return obj.name;
-  }
-  return '';
-};
+// const getNameProperty = (obj: any): string => {
+//   if (obj && typeof obj === "object" && "name" in obj && typeof obj.name === "string") {
+//     return obj.name;
+//   }
+//   return "";
+// };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getAddressProperty = (obj: any, prop: string): string => {
-  if (obj && typeof obj === 'object' && prop in obj && obj[prop] !== null) {
+  if (obj && typeof obj === "object" && prop in obj && obj[prop] !== null) {
     return obj[prop];
   }
-  return '';
+  return "";
 };
 
 const formElements = [
-  { name: "aadhaarCardNumber", label: "Aadhaar Number", type: "text", icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" /> },
+  {
+    name: "aadhaarCardNumber",
+    label: "Aadhaar Number",
+    type: "text",
+    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+  },
   { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "alternativeEmail", label: "Alternative Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
+  {
+    name: "alternativeEmail",
+    label: "Alternative Email",
+    type: "email",
+    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+  },
 ];
 
 const genderOptions = [
@@ -64,12 +98,32 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState<PersonalDetailsType>({
     ...defaultPersonalDetails,
-    studentId
+    studentId,
   });
+  const [religions, setReligions] = useState<Religion[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [nationalities, setNationalities] = useState<Nationality[]>([]);
+
+  useEffect(() => {
+    findAllReligions().then((data) => setReligions(data.payload.content));
+  }, []);
+
+  useEffect(() => {
+    findAllNationalities().then((data) => setNationalities(data.payload.content));
+  }, []);
+
+  useEffect(() => {
+    findAllCategories().then((data) => setCategories(data.payload.content));
+  }, []);
 
   // Use React Query to fetch personal details
-  const { data: personalDetails, isLoading, isError, refetch } = useQuery({
-    queryKey: ['personalDetails', studentId],
+  const {
+    data: personalDetails,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["personalDetails", studentId],
     queryFn: async () => {
       const response = await findPersonalDetailsByStudentId(studentId);
       return response.payload;
@@ -105,17 +159,17 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
     onError: (error) => {
       toast.error("Failed to save personal details. Please try again.");
       console.error("Error saving personal details:", error);
-    }
+    },
   });
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     // Email validation
     if (formData.email && !formData.email.includes("@")) {
       newErrors.email = "Invalid email format";
     }
-    
+
     // Alternative email validation (only if provided)
     if (formData.alternativeEmail && !formData.alternativeEmail.includes("@")) {
       newErrors.alternativeEmail = "Invalid email format";
@@ -127,11 +181,11 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    setErrors(prev => {
+    setErrors((prev) => {
       const newErrors = { ...prev };
       delete newErrors[name];
       return newErrors;
@@ -166,11 +220,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
     return (
       <div className="flex flex-col justify-center items-center h-40 text-red-500">
         <p>Error loading personal details</p>
-        <Button 
-          onClick={() => refetch()} 
-          variant="outline" 
-          className="mt-2"
-        >
+        <Button onClick={() => refetch()} variant="outline" className="mt-2">
           Retry
         </Button>
       </div>
@@ -187,7 +237,9 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
             <div key={name} className="flex flex-col mr-8">
               <div className="relative p-1">
                 {errors[name] ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
-                <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+                <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
+                  {label}
+                </label>
               </div>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
@@ -195,7 +247,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                   id={name}
                   name={name}
                   type={type}
-                  value={formData[name as keyof PersonalDetailsType] as string || ""}
+                  value={(formData[name as keyof PersonalDetailsType] as string) || ""}
                   placeholder={label}
                   onChange={handleChange}
                   className={`w-full pl-10 pr-3 rounded-lg py-2 ${errors[name] ? "border-red-500" : ""}`}
@@ -218,7 +270,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                 name="dateOfBirth"
                 type="date"
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                value={formData.dateOfBirth ? new Date(formData.dateOfBirth as any).toISOString().split('T')[0] : ""}
+                value={formData.dateOfBirth ? new Date(formData.dateOfBirth as any).toISOString().split("T")[0] : ""}
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
               />
@@ -237,12 +289,14 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <select
                 name="gender"
                 value={formData.gender || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }) as PersonalDetailsType)}
+                onChange={(e) => setFormData((prev) => ({ ...prev, gender: e.target.value }) as PersonalDetailsType)}
                 className="w-full pl-10 pr-3 rounded-lg py-2 border"
               >
                 <option value="">Select Gender</option>
-                {genderOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {genderOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -257,25 +311,27 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="religion"
-                type="text"
-                value={getNameProperty(formData.religion)}
-                onChange={(e) => {
-                  if (formData.religion) {
-                    setFormData(prev => ({
-                      ...prev,
-                      religion: { ...prev.religion, name: e.target.value }
-                    }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      religion: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+
+              <Select
+                value={formData.religion?.id?.toString() ?? ""}
+                onValueChange={(religionId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    religion: religions.find((ele) => ele.id!.toString() == religionId),
+                  }))
+                }
+              >
+                <SelectTrigger className="px-10">
+                  <SelectValue placeholder="Theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {religions.map((religion) => (
+                    <SelectItem key={religion.id} value={religion.id!.toString()}>
+                      {religion.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -288,25 +344,26 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="category"
-                type="text"
-                value={getNameProperty(formData.category)}
-                onChange={(e) => {
-                  if (formData.category) {
-                    setFormData(prev => ({
-                      ...prev,
-                      category: { ...prev.category, name: e.target.value }
-                    }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      category: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+              <Select
+                value={formData.category?.id?.toString() ?? ""}
+                onValueChange={(categoryId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    category: categories.find((ele) => ele.id!.toString() == categoryId),
+                  }))
+                }
+              >
+                <SelectTrigger className="px-10">
+                  <SelectValue placeholder="Theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id!.toString()}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -319,25 +376,26 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <Globe className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <Input
-                name="nationality"
-                type="text"
-                value={getNameProperty(formData.nationality)}
-                onChange={(e) => {
-                  if (formData.nationality) {
-                    setFormData(prev => ({
-                      ...prev,
-                      nationality: { ...prev.nationality, name: e.target.value }
-                    }) as PersonalDetailsType);
-                  } else {
-                    setFormData(prev => ({
-                      ...prev,
-                      nationality: { name: e.target.value, id: 0 }
-                    }) as PersonalDetailsType);
-                  }
-                }}
-                className="w-full pl-10 pr-3 rounded-lg py-2"
-              />
+              <Select
+                value={formData.nationality?.id?.toString() ?? ""}
+                onValueChange={(nationalityId) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    nationality: nationalities.find((ele) => ele.id!.toString() == nationalityId),
+                  }))
+                }
+              >
+                <SelectTrigger className="px-10">
+                  <SelectValue placeholder="Theme" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nationalities.map((nationality) => (
+                    <SelectItem key={nationality.id} value={nationality.id!.toString()}>
+                      {nationality.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -353,7 +411,9 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <select
                 name="disability"
                 value={formData.disability || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, disability: e.target.value }) as PersonalDetailsType)}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, disability: e.target.value }) as PersonalDetailsType)
+                }
                 className="w-full pl-10 pr-3 rounded-lg py-2 border"
               >
                 <option value="">None</option>
@@ -369,7 +429,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
 
         {/* Address Section */}
         <h3 className="text-lg font-medium border-b pb-1 mb-6">ADDRESS DETAILS</h3>
-        
+
         {/* Residential Address */}
         <div className="mb-6">
           <h4 className="text-md font-medium mb-2">RESIDENTIAL ADDRESS</h4>
@@ -383,15 +443,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.residentialAddress, 'addressLine')}
+                      value={getAddressProperty(formData.residentialAddress, "addressLine")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          residentialAddress: {
-                            ...prev.residentialAddress,
-                            addressLine: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              residentialAddress: {
+                                ...prev.residentialAddress,
+                                addressLine: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -405,15 +468,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.residentialAddress, 'pincode')}
+                      value={getAddressProperty(formData.residentialAddress, "pincode")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          residentialAddress: {
-                            ...prev.residentialAddress,
-                            pincode: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              residentialAddress: {
+                                ...prev.residentialAddress,
+                                pincode: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -427,15 +493,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.residentialAddress, 'landmark') || ''}
+                      value={getAddressProperty(formData.residentialAddress, "landmark") || ""}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          residentialAddress: {
-                            ...prev.residentialAddress,
-                            landmark: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              residentialAddress: {
+                                ...prev.residentialAddress,
+                                landmark: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       placeholder="Enter landmark"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -450,15 +519,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <Phone className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.residentialAddress, 'phone') || ''}
+                      value={getAddressProperty(formData.residentialAddress, "phone") || ""}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          residentialAddress: {
-                            ...prev.residentialAddress,
-                            phone: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              residentialAddress: {
+                                ...prev.residentialAddress,
+                                phone: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       placeholder="Enter phone number"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -473,15 +545,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <select
-                      value={getAddressProperty(formData.residentialAddress, 'localityType')}
+                      value={getAddressProperty(formData.residentialAddress, "localityType")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          residentialAddress: {
-                            ...prev.residentialAddress,
-                            localityType: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              residentialAddress: {
+                                ...prev.residentialAddress,
+                                localityType: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2 border"
                     >
@@ -497,7 +572,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
             )}
           </div>
         </div>
-        
+
         {/* Mailing Address */}
         <div className="mb-8">
           <h4 className="text-md font-medium mb-2">MAILING ADDRESS</h4>
@@ -511,15 +586,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.mailingAddress, 'addressLine')}
+                      value={getAddressProperty(formData.mailingAddress, "addressLine")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          mailingAddress: {
-                            ...prev.mailingAddress,
-                            addressLine: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              mailingAddress: {
+                                ...prev.mailingAddress,
+                                addressLine: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -533,15 +611,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.mailingAddress, 'pincode')}
+                      value={getAddressProperty(formData.mailingAddress, "pincode")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          mailingAddress: {
-                            ...prev.mailingAddress,
-                            pincode: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              mailingAddress: {
+                                ...prev.mailingAddress,
+                                pincode: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2"
                     />
@@ -555,15 +636,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.mailingAddress, 'landmark') || ''}
+                      value={getAddressProperty(formData.mailingAddress, "landmark") || ""}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          mailingAddress: {
-                            ...prev.mailingAddress,
-                            landmark: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              mailingAddress: {
+                                ...prev.mailingAddress,
+                                landmark: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       placeholder="Enter landmark"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -578,15 +662,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <Phone className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <Input
-                      value={getAddressProperty(formData.mailingAddress, 'phone') || ''}
+                      value={getAddressProperty(formData.mailingAddress, "phone") || ""}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          mailingAddress: {
-                            ...prev.mailingAddress,
-                            phone: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              mailingAddress: {
+                                ...prev.mailingAddress,
+                                phone: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       placeholder="Enter phone number"
                       className="w-full pl-10 pr-3 rounded-lg py-2"
@@ -601,15 +688,18 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
                     <select
-                      value={getAddressProperty(formData.mailingAddress, 'localityType')}
+                      value={getAddressProperty(formData.mailingAddress, "localityType")}
                       onChange={(e) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          mailingAddress: {
-                            ...prev.mailingAddress,
-                            localityType: e.target.value
-                          }
-                        }) as PersonalDetailsType);
+                        setFormData(
+                          (prev) =>
+                            ({
+                              ...prev,
+                              mailingAddress: {
+                                ...prev.mailingAddress,
+                                localityType: e.target.value,
+                              },
+                            }) as PersonalDetailsType,
+                        );
                       }}
                       className="w-full pl-10 pr-3 rounded-lg py-2 border"
                     >
@@ -628,17 +718,26 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
 
         {/* Submit Button */}
         <div className="col-span-2 mt-6">
-          <Button 
-            type="submit" 
-            onClick={handleSubmit} 
+          <Button
+            type="submit"
+            onClick={handleSubmit}
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
             disabled={updateMutation.isLoading}
           >
             {updateMutation.isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Processing...
               </>

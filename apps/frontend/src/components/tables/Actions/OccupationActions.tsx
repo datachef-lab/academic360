@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { updateOccupation } from "@/services/Occupation";
+import { updateOccupation } from "@/services/occupation.service";
 import { Occupation } from "@/types/resources/occupation";
 import { Eye } from "lucide-react";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"; 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 

@@ -9,23 +9,34 @@ import { Parent } from "@/types/user/parent";
 import { ParentType } from "@/types/enums/index";
 import { toast } from "sonner";
 import { Spinner } from "../ui/spinner";
+import { Occupation } from "@/types/resources/occupation";
+import { findAllOccupations } from "@/services/occupation.service";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { AnnualIncome } from "@/types/resources/annual-income";
+import { Qualification } from "@/types/resources/qualification";
 
 // Helper function to safely access object properties
 const getPersonProperty = (obj: any, property: string): string => {
-  if (obj && typeof obj === 'object' && property in obj && typeof obj[property] === 'string') {
+  if (obj && typeof obj === "object" && property in obj && typeof obj[property] === "string") {
     return obj[property];
   }
-  return '';
+  return "";
 };
 
 // Helper function to safely access nested object properties
 const getNestedProperty = (obj: any, nestedKey: string, property: string): string => {
-  if (obj && typeof obj === 'object' && nestedKey in obj && obj[nestedKey] && 
-      typeof obj[nestedKey] === 'object' && property in obj[nestedKey] && 
-      typeof obj[nestedKey][property] === 'string') {
+  if (
+    obj &&
+    typeof obj === "object" &&
+    nestedKey in obj &&
+    obj[nestedKey] &&
+    typeof obj[nestedKey] === "object" &&
+    property in obj[nestedKey] &&
+    typeof obj[nestedKey][property] === "string"
+  ) {
     return obj[nestedKey][property];
   }
-  return '';
+  return "";
 };
 
 const defaultFamilyDetails: Parent = {
@@ -89,26 +100,110 @@ const parentTypes = [
 
 // Form elements configuration for reuse
 const fatherFormElements = [
-  { name: "name", label: "Father's Name", type: "text", icon: <User className="text-gray-500 dark:text-white w-5 h-5" />, field: "fatherDetails" },
-  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />, field: "fatherDetails" },
-  { name: "phone", label: "Phone", type: "text", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />, field: "fatherDetails" },
-  { name: "officePhone", label: "Office Phone", type: "text", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />, field: "fatherDetails" },
-  { name: "aadhaarCardNumber", label: "Aadhaar Number", type: "text", icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />, field: "fatherDetails" },
+  {
+    name: "name",
+    label: "Father's Name",
+    type: "text",
+    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "fatherDetails",
+  },
+  {
+    name: "email",
+    label: "Email",
+    type: "email",
+    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "fatherDetails",
+  },
+  {
+    name: "phone",
+    label: "Phone",
+    type: "text",
+    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "fatherDetails",
+  },
+  {
+    name: "officePhone",
+    label: "Office Phone",
+    type: "text",
+    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "fatherDetails",
+  },
+  {
+    name: "aadhaarCardNumber",
+    label: "Aadhaar Number",
+    type: "text",
+    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "fatherDetails",
+  },
 ];
 
 const motherFormElements = [
-  { name: "name", label: "Mother's Name", type: "text", icon: <User className="text-gray-500 dark:text-white w-5 h-5" />, field: "motherDetails" },
-  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />, field: "motherDetails" },
-  { name: "phone", label: "Phone", type: "text", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />, field: "motherDetails" },
-  { name: "officePhone", label: "Office Phone", type: "text", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />, field: "motherDetails" },
-  { name: "aadhaarCardNumber", label: "Aadhaar Number", type: "text", icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />, field: "motherDetails" },
+  {
+    name: "name",
+    label: "Mother's Name",
+    type: "text",
+    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "motherDetails",
+  },
+  {
+    name: "email",
+    label: "Email",
+    type: "email",
+    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "motherDetails",
+  },
+  {
+    name: "phone",
+    label: "Phone",
+    type: "text",
+    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "motherDetails",
+  },
+  {
+    name: "officePhone",
+    label: "Office Phone",
+    type: "text",
+    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "motherDetails",
+  },
+  {
+    name: "aadhaarCardNumber",
+    label: "Aadhaar Number",
+    type: "text",
+    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "motherDetails",
+  },
 ];
 
 const guardianFormElements = [
-  { name: "name", label: "Guardian's Name", type: "text", icon: <User className="text-gray-500 dark:text-white w-5 h-5" />, field: "guardianDetails" },
-  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />, field: "guardianDetails" },
-  { name: "phone", label: "Phone", type: "text", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />, field: "guardianDetails" },
-  { name: "aadhaarCardNumber", label: "Aadhaar Number", type: "text", icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />, field: "guardianDetails" },
+  {
+    name: "name",
+    label: "Guardian's Name",
+    type: "text",
+    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "guardianDetails",
+  },
+  {
+    name: "email",
+    label: "Email",
+    type: "email",
+    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "guardianDetails",
+  },
+  {
+    name: "phone",
+    label: "Phone",
+    type: "text",
+    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "guardianDetails",
+  },
+  {
+    name: "aadhaarCardNumber",
+    label: "Aadhaar Number",
+    type: "text",
+    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+    field: "guardianDetails",
+  },
 ];
 
 interface FamilyDetailsProps {
@@ -120,12 +215,24 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState<Parent>({
     ...defaultFamilyDetails,
-    studentId
+    studentId,
   });
+  const [occupations, setOccupations] = useState<Occupation[]>([]);
+  const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  const [annualIncomes, setAnnualIncomes] = useState<AnnualIncome[]>([]);
+
+  useEffect(() => {
+    findAllOccupations().then((data) => setOccupations(data.payload.content));
+  }, []);
 
   // Use React Query to fetch family details
-  const { data: familyDetails, isLoading, isError, refetch } = useQuery({
-    queryKey: ['familyDetails', studentId],
+  const {
+    data: familyDetails,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ["familyDetails", studentId],
     queryFn: async () => {
       const response = await findFamilyDetailsByStudentId(studentId);
       return response.payload;
@@ -144,8 +251,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   }, [familyDetails]);
 
   const updateMutation = useMutation({
-    mutationFn: (data: Parent) => 
-      data.id ? updateFamilyDetails(data.id, data) : createFamilyDetails(data),
+    mutationFn: (data: Parent) => (data.id ? updateFamilyDetails(data.id, data) : createFamilyDetails(data)),
     onSuccess: () => {
       toast.success("Family details have been successfully updated.");
       setShowSuccess(true);
@@ -154,7 +260,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     onError: (error) => {
       toast.error("Failed to save family details. Please try again.");
       console.error("Error saving family details:", error);
-    }
+    },
   });
 
   useEffect(() => {
@@ -166,43 +272,43 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     // Validation based on parent type
     if (formData.parentType === "BOTH" || formData.parentType === "FATHER_ONLY") {
       // Father's details validation
       if (formData.fatherDetails?.name === "" || !formData.fatherDetails?.name) {
-        newErrors['fatherDetails_name'] = "Father's name is required";
+        newErrors["fatherDetails_name"] = "Father's name is required";
       }
       if (formData.fatherDetails?.phone === "" || !formData.fatherDetails?.phone) {
-        newErrors['fatherDetails_phone'] = "Phone number is required";
+        newErrors["fatherDetails_phone"] = "Phone number is required";
       }
       if (formData.fatherDetails?.email && !formData.fatherDetails.email.includes("@")) {
-        newErrors['fatherDetails_email'] = "Invalid email format";
+        newErrors["fatherDetails_email"] = "Invalid email format";
       }
     }
-    
+
     // Mother's details validation
     if (formData.parentType === "BOTH" || formData.parentType === "MOTHER_ONLY") {
       if (formData.motherDetails?.name === "" || !formData.motherDetails?.name) {
-        newErrors['motherDetails_name'] = "Mother's name is required";
+        newErrors["motherDetails_name"] = "Mother's name is required";
       }
       if (formData.motherDetails?.phone === "" || !formData.motherDetails?.phone) {
-        newErrors['motherDetails_phone'] = "Phone number is required";
+        newErrors["motherDetails_phone"] = "Phone number is required";
       }
       if (formData.motherDetails?.email && !formData.motherDetails.email.includes("@")) {
-        newErrors['motherDetails_email'] = "Invalid email format";
+        newErrors["motherDetails_email"] = "Invalid email format";
       }
     }
 
     // Guardian details validation (always required)
     if (formData.guardianDetails?.name === "" || !formData.guardianDetails?.name) {
-      newErrors['guardianDetails_name'] = "Guardian's name is required";
+      newErrors["guardianDetails_name"] = "Guardian's name is required";
     }
     if (formData.guardianDetails?.phone === "" || !formData.guardianDetails?.phone) {
-      newErrors['guardianDetails_phone'] = "Phone number is required";
+      newErrors["guardianDetails_phone"] = "Phone number is required";
     }
     if (formData.guardianDetails?.email && !formData.guardianDetails.email.includes("@")) {
-      newErrors['guardianDetails_email'] = "Invalid email format";
+      newErrors["guardianDetails_email"] = "Invalid email format";
     }
 
     setErrors(newErrors);
@@ -210,20 +316,20 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   };
 
   const handleNestedObjectChange = (parentField: string, field: string, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       return {
         ...prev,
         [parentField]: {
           ...(prev[parentField as keyof Parent] as object),
-          [field]: value
-        }
+          [field]: value,
+        },
       } as Parent;
     });
 
     // Clear errors when field changes
     const errorKey = `${parentField}_${field}`;
     if (errors[errorKey]) {
-      setErrors(prev => {
+      setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors[errorKey];
         return newErrors;
@@ -232,7 +338,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   };
 
   const handleNestedNestedChange = (parentField: string, nestedField: string, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const parentObject = prev[parentField as keyof Parent];
       if (!parentObject) return prev;
 
@@ -240,12 +346,12 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
         ...prev,
         [parentField]: {
           ...(parentObject as object),
-          [nestedField]: { 
+          [nestedField]: {
             ...((parentObject as any)[nestedField] || {}),
             name: value,
-            id: ((parentObject as any)[nestedField]?.id || 0)
-          }
-        }
+            id: (parentObject as any)[nestedField]?.id || 0,
+          },
+        },
       } as Parent;
     });
   };
@@ -256,14 +362,14 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     reader.onloadend = () => {
       // When read operation is finished
       const base64String = reader.result as string;
-      
-      setFormData(prev => {
+
+      setFormData((prev) => {
         return {
           ...prev,
           [parentField]: {
             ...(prev[parentField as keyof Parent] as object),
-            image: base64String
-          }
+            image: base64String,
+          },
         } as Parent;
       });
     };
@@ -281,7 +387,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     const newParentType = e.target.value as ParentType;
     setFormData((prev) => ({
       ...prev,
-      parentType: newParentType
+      parentType: newParentType,
     }));
   };
 
@@ -298,11 +404,7 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     return (
       <div className="flex flex-col justify-center items-center h-40 text-red-500">
         <p>Error loading family details</p>
-        <Button 
-          onClick={() => refetch()} 
-          variant="outline" 
-          className="mt-2"
-        >
+        <Button onClick={() => refetch()} variant="outline" className="mt-2">
           Retry
         </Button>
       </div>
@@ -328,14 +430,16 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
 
     const { name, label, type, icon } = element;
     const fullFieldName = `${parentField}.${name}`;
-    const value = getPersonProperty(formData[parentField as keyof Parent], name) || '';
+    const value = getPersonProperty(formData[parentField as keyof Parent], name) || "";
     const hasError = errors[`${parentField}_${name}`];
 
     return (
       <div key={fullFieldName} className="flex flex-col mr-8">
         <div className="relative p-1">
           {hasError ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
-          <label htmlFor={fullFieldName} className="text-md text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+          <label htmlFor={fullFieldName} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
+            {label}
+          </label>
         </div>
         <div className="relative">
           <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
@@ -373,8 +477,10 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                 onChange={handleParentTypeChange}
                 className="w-full pl-10 pr-3 rounded-lg py-2 border"
               >
-                {parentTypes.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                {parentTypes.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
                 ))}
               </select>
             </div>
@@ -387,8 +493,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <div className="col-span-2">
               <h3 className="text-lg font-medium mb-2">Father's Details</h3>
             </div>
-            {fatherFormElements.map(element => renderFormElement(element, "fatherDetails"))}
-            
+            {fatherFormElements.map((element) => renderFormElement(element, "fatherDetails"))}
+
             {/* Father's Qualification */}
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
@@ -401,8 +507,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                 <Input
                   type="text"
                   placeholder="Enter Qualification"
-                  value={getNestedProperty(formData.fatherDetails, 'qualification', 'name') || ''}
-                  onChange={(e) => handleNestedNestedChange('fatherDetails', 'qualification', e.target.value)}
+                  value={getNestedProperty(formData.fatherDetails, "qualification", "name") || ""}
+                  onChange={(e) => handleNestedNestedChange("fatherDetails", "qualification", e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
               </div>
@@ -417,13 +523,41 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
                 </span>
-                <Input
-                  type="text"
-                  placeholder="Enter Occupation"
-                  value={getNestedProperty(formData.fatherDetails, 'occupation', 'name') || ''}
-                  onChange={(e) => handleNestedNestedChange('fatherDetails', 'occupation', e.target.value)}
-                  className="w-full pl-10 pr-3 rounded-lg py-2"
-                />
+                {/* {formData.fatherDetails?.occupation?.id} */}
+                {/* {JSON.stringify(occupations)} */}
+                <Select
+                  value={formData.fatherDetails?.occupation?.id?.toString() ?? ""}
+                  onValueChange={(occupationId) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      fatherDetails: {
+                        ...prev.fatherDetails,
+                        occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
+                        name: prev.fatherDetails?.name || null,
+                        email: prev.fatherDetails?.email || null,
+                        phone: prev.fatherDetails?.phone || null,
+                        aadhaarCardNumber: prev.fatherDetails?.aadhaarCardNumber || null,
+                        image: prev.fatherDetails?.image || null,
+                        officePhone: prev.fatherDetails?.officePhone || null,
+                        qualification: prev.fatherDetails?.qualification || null,
+                        officeAddress: prev.fatherDetails?.officeAddress || null,
+                        createdAt: prev.fatherDetails?.createdAt || new Date(),
+                        updatedAt: prev.fatherDetails?.updatedAt || new Date(),
+                      },
+                    }))
+                  }
+                >
+                  <SelectTrigger className="px-10">
+                    <SelectValue placeholder="Theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {occupations.map((occupation) => (
+                      <SelectItem key={occupation.id} value={occupation.id!.toString()}>
+                        {occupation?.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -435,9 +569,9 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
               <div className="relative">
                 {formData.fatherDetails?.image && (
                   <div className="mb-2">
-                    <img 
-                      src={formData.fatherDetails.image as string} 
-                      alt="Father's photo" 
+                    <img
+                      src={formData.fatherDetails.image as string}
+                      alt="Father's photo"
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                   </div>
@@ -464,8 +598,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <div className="col-span-2 mt-4">
               <h3 className="text-lg font-medium mb-2">Mother's Details</h3>
             </div>
-            {motherFormElements.map(element => renderFormElement(element, "motherDetails"))}
-            
+            {motherFormElements.map((element) => renderFormElement(element, "motherDetails"))}
+
             {/* Mother's Qualification */}
             <div className="flex flex-col mr-8">
               <div className="relative p-1">
@@ -478,8 +612,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                 <Input
                   type="text"
                   placeholder="Enter Qualification"
-                  value={getNestedProperty(formData.motherDetails, 'qualification', 'name') || ''}
-                  onChange={(e) => handleNestedNestedChange('motherDetails', 'qualification', e.target.value)}
+                  value={getNestedProperty(formData.motherDetails, "qualification", "name") || ""}
+                  onChange={(e) => handleNestedNestedChange("motherDetails", "qualification", e.target.value)}
                   className="w-full pl-10 pr-3 rounded-lg py-2"
                 />
               </div>
@@ -494,13 +628,39 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                   <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
                 </span>
-                <Input
-                  type="text"
-                  placeholder="Enter Occupation"
-                  value={getNestedProperty(formData.motherDetails, 'occupation', 'name') || ''}
-                  onChange={(e) => handleNestedNestedChange('motherDetails', 'occupation', e.target.value)}
-                  className="w-full pl-10 pr-3 rounded-lg py-2"
-                />
+                <Select
+                  value={formData.motherDetails?.occupation?.id?.toString() ?? ""}
+                  onValueChange={(occupationId) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      motherDetails: {
+                        ...prev.motherDetails,
+                        occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
+                        name: prev.motherDetails?.name || null,
+                        email: prev.motherDetails?.email || null,
+                        phone: prev.motherDetails?.phone || null,
+                        aadhaarCardNumber: prev.motherDetails?.aadhaarCardNumber || null,
+                        image: prev.motherDetails?.image || null,
+                        officePhone: prev.motherDetails?.officePhone || null,
+                        qualification: prev.motherDetails?.qualification || null,
+                        officeAddress: prev.motherDetails?.officeAddress || null,
+                        createdAt: prev.motherDetails?.createdAt || new Date(),
+                        updatedAt: prev.motherDetails?.updatedAt || new Date(),
+                      },
+                    }))
+                  }
+                >
+                  <SelectTrigger className="px-10">
+                    <SelectValue placeholder="Theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {occupations.map((occupation) => (
+                      <SelectItem key={occupation.id} value={occupation.id!.toString()}>
+                        {occupation?.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -512,9 +672,9 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
               <div className="relative">
                 {formData.motherDetails?.image && (
                   <div className="mb-2">
-                    <img 
-                      src={formData.motherDetails.image as string} 
-                      alt="Mother's photo" 
+                    <img
+                      src={formData.motherDetails.image as string}
+                      alt="Mother's photo"
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                   </div>
@@ -539,8 +699,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
         <div className="col-span-2 mt-4">
           <h3 className="text-lg font-medium mb-2">Guardian's Details</h3>
         </div>
-        {guardianFormElements.map(element => renderFormElement(element, "guardianDetails"))}
-        
+        {guardianFormElements.map((element) => renderFormElement(element, "guardianDetails"))}
+
         {/* Guardian's Qualification */}
         <div className="flex flex-col mr-8">
           <div className="relative p-1">
@@ -553,8 +713,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <Input
               type="text"
               placeholder="Enter Qualification"
-              value={getNestedProperty(formData.guardianDetails, 'qualification', 'name') || ''}
-              onChange={(e) => handleNestedNestedChange('guardianDetails', 'qualification', e.target.value)}
+              value={getNestedProperty(formData.guardianDetails, "qualification", "name") || ""}
+              onChange={(e) => handleNestedNestedChange("guardianDetails", "qualification", e.target.value)}
               className="w-full pl-10 pr-3 rounded-lg py-2"
             />
           </div>
@@ -569,13 +729,39 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
               <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
             </span>
-            <Input
-              type="text"
-              placeholder="Enter Occupation"
-              value={getNestedProperty(formData.guardianDetails, 'occupation', 'name') || ''}
-              onChange={(e) => handleNestedNestedChange('guardianDetails', 'occupation', e.target.value)}
-              className="w-full pl-10 pr-3 rounded-lg py-2"
-            />
+            <Select
+              value={formData.guardianDetails?.occupation?.id?.toString() ?? ""}
+              onValueChange={(occupationId) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  guardianDetails: {
+                    ...prev.guardianDetails,
+                    occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
+                    name: prev.guardianDetails?.name || null,
+                    email: prev.guardianDetails?.email || null,
+                    phone: prev.guardianDetails?.phone || null,
+                    aadhaarCardNumber: prev.guardianDetails?.aadhaarCardNumber || null,
+                    image: prev.guardianDetails?.image || null,
+                    officePhone: prev.guardianDetails?.officePhone || null,
+                    qualification: prev.guardianDetails?.qualification || null,
+                    officeAddress: prev.guardianDetails?.officeAddress || null,
+                    createdAt: prev.guardianDetails?.createdAt || new Date(),
+                    updatedAt: prev.guardianDetails?.updatedAt || new Date(),
+                  },
+                }))
+              }
+            >
+              <SelectTrigger className="px-10">
+                <SelectValue placeholder="Theme" />
+              </SelectTrigger>
+              <SelectContent>
+                {occupations.map((occupation) => (
+                  <SelectItem key={occupation.id} value={occupation.id!.toString()}>
+                    {occupation?.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -587,9 +773,9 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
           <div className="relative">
             {formData.guardianDetails?.image && (
               <div className="mb-2">
-                <img 
-                  src={formData.guardianDetails.image as string} 
-                  alt="Guardian's photo" 
+                <img
+                  src={formData.guardianDetails.image as string}
+                  alt="Guardian's photo"
                   className="w-20 h-20 object-cover rounded-lg"
                 />
               </div>
@@ -623,16 +809,19 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             <Input
               type="text"
               placeholder="Enter Income Range"
-              value={formData.annualIncome?.range || ''}
+              value={formData.annualIncome?.range || ""}
               onChange={(e) => {
-                setFormData(prev => ({
-                  ...prev,
-                  annualIncome: {
-                    ...prev.annualIncome!,
-                    range: e.target.value,
-                    id: prev.annualIncome?.id || 0
-                  }
-                }) as Parent);
+                setFormData(
+                  (prev) =>
+                    ({
+                      ...prev,
+                      annualIncome: {
+                        ...prev.annualIncome!,
+                        range: e.target.value,
+                        id: prev.annualIncome?.id || 0,
+                      },
+                    }) as Parent,
+                );
               }}
               className="w-full pl-10 pr-3 rounded-lg py-2"
             />
@@ -641,17 +830,26 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
 
         {/* Submit Button */}
         <div className="col-span-2 mt-4">
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             onClick={(e) => handleSubmit(e)}
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
             disabled={updateMutation.isLoading}
           >
             {updateMutation.isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Processing...
               </>
