@@ -1,8 +1,7 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express, { Request, Response, NextFunction, RequestHandler } from "express";
-import { 
-  createPersonalDetails, 
-  getPersonalDetailsById, 
+import {
+  createPersonalDetails,
+  getPersonalDetailsById,
   getPersonalDetailsByStudentId,
   updatePersonalDetails,
   updatePersonalDetailsByStudentId,
@@ -10,10 +9,11 @@ import {
   deletePersonalDetailsByStudentId,
   getAllPersonalDetailsController
 } from "../controllers/personalDetails.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js"; 
 
 const router = express.Router();
 
-// Helper to wrap async route handlers without using 'any' or 'unknown'
+// Helper to wrap async route handlers
 function asyncHandler<
   Req extends Request = Request,
   Res extends Response = Response,
@@ -26,24 +26,22 @@ function asyncHandler<
   };
 }
 
-// Apply authentication middleware to all routes
-// router.use(verifyJWT);
+router.use(verifyJWT);
 
-// Get all personal details
 router.get("/", asyncHandler(getAllPersonalDetailsController));
-// Create personal details
+
 router.post("/", asyncHandler(createPersonalDetails));
-// Read personal details by ID
-router.get("/:id", asyncHandler(getPersonalDetailsById));
-// Read personal details by student ID
+
 router.get("/student/:studentId", asyncHandler(getPersonalDetailsByStudentId));
-// Update personal details by ID
-router.put("/:id", asyncHandler(updatePersonalDetails));
-// Update personal details by student ID
+
 router.put("/student/:studentId", asyncHandler(updatePersonalDetailsByStudentId));
-// Delete personal details by ID
-router.delete("/:id", asyncHandler(deletePersonalDetailsById));
-// Delete personal details by student ID
+
 router.delete("/student/:studentId", asyncHandler(deletePersonalDetailsByStudentId));
+
+router.get("/:id", asyncHandler(getPersonalDetailsById));
+
+router.put("/:id", asyncHandler(updatePersonalDetails));
+
+router.delete("/:id", asyncHandler(deletePersonalDetailsById));
 
 export default router;

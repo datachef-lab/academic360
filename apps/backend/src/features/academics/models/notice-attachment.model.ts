@@ -1,0 +1,21 @@
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { noticeModel } from "./notice.model.js";
+import { attachmentTypeEnum } from "@/features/user/models/helper.js";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const noticeAttachmentModel = pgTable("notice_attachments", {
+    id: serial().primaryKey(),
+    noticeId: integer('notice_id_fk')
+        .references(() => noticeModel.id)
+        .notNull(),
+    type: attachmentTypeEnum().notNull(),
+    url: varchar({ length: 2000 }),
+    filePath: varchar({ length: 700 }),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const createNoticeAttachmentSchema = createInsertSchema(noticeAttachmentModel);
+
+export type NoticeAttachment = z.infer<typeof createNoticeAttachmentSchema>;

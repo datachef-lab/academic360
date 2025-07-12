@@ -9,9 +9,10 @@ import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
 import Marksheet from "../GradeMarks/Marksheet";
 import PersonalDetails from "./PersonalDetails";
+import { TabsContent } from "../ui/tabs";
 
 type StudentContentProps = {
-    studentId: number;
+  studentId: number;
   activeTab: {
     label: string;
     icon: JSX.Element;
@@ -24,32 +25,32 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
     switch (activeTab.label) {
       case "Overview":
         return <OverviewTab />;
-      case "Personal Details":
+      case "Personal":
         return <PersonalDetails studentId={studentId}/>;  
-        // Need to add student id above (studentId={studentId})
-      case "Family Details":
-        return <FamilyDetails   />;
-        // Need to add student id above (studentId={studentId})
-      case "Health Details":
-        return <HealthDetails/>;
-        // Need to add student id above (studentId={studentId})
-      case "Emergency Contact":
-        return <EmergencyContact/>;
-        // Need to add student id above (studentId={studentId})
-      case "Academic History":
-        return <AcademicHistory />;
-      case "Academic Identifiers":
-        return <AcademicIdentifier />;
+      case "Family":
+        return <FamilyDetails studentId={studentId} />;
+      case "Health":
+        return <HealthDetails studentId={studentId} />;
+      case "Emergency":
+        return <EmergencyContact studentId={studentId} />;
+      case "History":
+        return <AcademicHistory studentId={studentId} />;
+      case "Identifiers":
+        return <AcademicIdentifier studentId={studentId} onSubmit={() => {}} />;
       case "Accommodation":
-        return <Accommodation />;
-      case "Transport Details":
+        return <Accommodation studentId={studentId} />;
+      case "Transport":
         return <TransportDetails />;
-        case "Marksheet":
+      case "Marksheet":
         return <Marksheet />;
       default:
         return <p>No Content!</p>;
     }
   };
 
-  return <div className="my-5">{handleContent()}</div>;
+  return (
+      <TabsContent value={activeTab.label}>
+        <div className="my-5">{handleContent()}</div>
+      </TabsContent>
+  )
 }

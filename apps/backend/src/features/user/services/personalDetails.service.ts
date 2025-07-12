@@ -87,6 +87,8 @@ export async function savePersonalDetails(id: number, personalDetails: PersonalD
         otherNationality,
         religion,
         studentId,
+        createdAt,
+        updatedAt,
         id: personalDetailsId,
         ...props
     } = personalDetails;

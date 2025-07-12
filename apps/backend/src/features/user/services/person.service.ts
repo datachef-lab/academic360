@@ -37,12 +37,13 @@ export async function getAllPersons(): Promise<Person[]> {
     return formatted.filter((p): p is Person => !!p);
 }
 
-export async function savePerson(id: number, person: Omit<Person, 'id'>): Promise<Person | null> {
+export async function savePerson(id: number, person: Omit<Person, 'id' | "createdAt" | "updatedAt">): Promise<Person | null> {
     const [foundPerson] = await db.select().from(personModel).where(eq(personModel.id, id));
     if (!foundPerson) {
         return null;
     }
-    validatePersonInput(person);
+    // validatePersonInput(person);
+    // const {c} = person;
     const [updatedPerson] = await db.update(personModel).set(person).where(eq(personModel.id, id)).returning();
     return updatedPerson ? await personResponseFormatted(updatedPerson) : null;
 }

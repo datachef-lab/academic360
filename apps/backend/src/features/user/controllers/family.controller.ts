@@ -62,11 +62,11 @@ export const getFamilyByStudentId = async (req: Request, res: Response, next: Ne
 export const updateFamily = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { id } = req.params;
-    const parseResult = createFamilySchema.safeParse(req.body);
-    if (!parseResult.success) {
-      res.status(400).json(new ApiResponse(400, "VALIDATION_ERROR", null, JSON.stringify(parseResult.error.flatten())));
-      return;
-    }
+    // const parseResult = createFamilySchema.safeParse(req.body);
+    // if (!parseResult.success) {
+    //   res.status(400).json(new ApiResponse(400, "VALIDATION_ERROR", null, JSON.stringify(parseResult.error.flatten())));
+    //   return;
+    // }
     const updatedFamily = await saveFamily(Number(id), req.body as FamilyType);
     if (!updatedFamily) {
       res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Family not found"));

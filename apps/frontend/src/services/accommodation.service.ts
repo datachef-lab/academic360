@@ -2,7 +2,7 @@ import { ApiResonse } from "@/types/api-response";
 import { Accommodation } from "@/types/user/accommodation";
 import axiosInstance from "@/utils/api";
 
-const BASE_URL = "/api/accommodation";
+const BASE_URL = "/api/accommodations";
 
 export async function getAllAccommodations(): Promise<ApiResonse<Accommodation[]>> {
   try {

@@ -243,13 +243,13 @@ app.use("/api/blood-groups", bloodGroupRouter);
 
 app.use("/api/categories", categoryRouter);
 
-app.use("/api/specialization", specializationRouter);
+app.use("/api/specializations", specializationRouter);
 
 app.use("/api/languages", languageMediumRouter);
 
 app.use("/api/disability-codes", disabilityRouter);
 
-app.use("/api/resultstatus", boardResultStatusRouter);
+app.use("/api/board-result-statuses", boardResultStatusRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
 
@@ -271,7 +271,7 @@ app.use("/api/annual-incomes", annualIncomeRouter);
 
 app.use("/api/academic-identifiers", academicIdentifierRouter);
 
-app.use("/api/academic-histories", academicHistoryRouter);
+app.use("/api/academic-history", academicHistoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

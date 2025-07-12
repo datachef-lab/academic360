@@ -4,8 +4,6 @@ import {
   BloodGroup,
   CreateBloodGroupPayload,
   UpdateBloodGroupPayload,
-  SingleBloodGroupResponse,
-  MultipleBloodGroupResponse,
 } from "@/types/resources/blood-group.types";
 
 // ============================================================================
@@ -29,8 +27,8 @@ import {
  */
 export async function getAllBloodGroups(): Promise<BloodGroup[]> {
   try {
-    const response = await axiosInstance.get<MultipleBloodGroupResponse>('/api/blood-groups');
-    return response.data.data;
+    const response = await axiosInstance.get('/api/blood-groups');
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching blood groups:', error);
     throw error;
@@ -48,8 +46,8 @@ export async function getBloodGroupById(id: number): Promise<BloodGroup> {
       throw new Error('Blood group ID is required');
     }
 
-    const response = await axiosInstance.get<SingleBloodGroupResponse>(`/api/blood-groups/${id}`);
-    return response.data.data;
+    const response = await axiosInstance.get(`/api/blood-groups/${id}`);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error fetching blood group with ID ${id}:`, error);
     throw error;
@@ -62,8 +60,8 @@ export async function getBloodGroupById(id: number): Promise<BloodGroup> {
  */
 export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
   try {
-    const response = await axiosInstance.get<MultipleBloodGroupResponse>('/api/blood-groups?disabled=false');
-    return response.data.data;
+    const response = await axiosInstance.get('/api/blood-groups?disabled=false');
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching active blood groups:', error);
     throw error;
@@ -85,8 +83,8 @@ export async function createBloodGroup(payload: CreateBloodGroupPayload): Promis
       throw new Error('Blood group type is required');
     }
 
-    const response = await axiosInstance.post<SingleBloodGroupResponse>('/api/blood-groups', payload);
-    return response.data.data;
+    const response = await axiosInstance.post('/api/blood-groups', payload);
+    return response.data.payload;
   } catch (error) {
     console.error('Error creating blood group:', error);
     throw error;
@@ -113,8 +111,8 @@ export async function updateBloodGroup(id: number, payload: UpdateBloodGroupPayl
       throw new Error('Blood group type cannot be empty');
     }
 
-    const response = await axiosInstance.put<SingleBloodGroupResponse>(`/api/blood-groups/${id}`, payload);
-    return response.data.data;
+    const response = await axiosInstance.put(`/api/blood-groups/${id}`, payload);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error updating blood group with ID ${id}:`, error);
     throw error;
@@ -174,8 +172,8 @@ export async function createMultipleBloodGroups(payloads: CreateBloodGroupPayloa
       throw new Error('At least one blood group payload is required');
     }
 
-    const response = await axiosInstance.post<MultipleBloodGroupResponse>('/api/blood-groups/bulk', payloads);
-    return response.data.data;
+    const response = await axiosInstance.post('/api/blood-groups/bulk', payloads);
+    return response.data.payload;
   } catch (error) {
     console.error('Error creating multiple blood groups:', error);
     throw error;
@@ -195,8 +193,8 @@ export async function updateMultipleBloodGroups(
       throw new Error('At least one blood group update is required');
     }
 
-    const response = await axiosInstance.put<MultipleBloodGroupResponse>('/api/blood-groups/bulk', updates);
-    return response.data.data;
+    const response = await axiosInstance.put('/api/blood-groups/bulk', updates);
+    return response.data.payload;
   } catch (error) {
     console.error('Error updating multiple blood groups:', error);
     throw error;
@@ -218,10 +216,10 @@ export async function searchBloodGroups(searchTerm: string): Promise<BloodGroup[
       return getAllBloodGroups();
     }
 
-    const response = await axiosInstance.get<MultipleBloodGroupResponse>(
+    const response = await axiosInstance.get(
       `/api/blood-groups/search?q=${encodeURIComponent(searchTerm.trim())}`
     );
-    return response.data.data;
+    return response.data.payload;
   } catch (error) {
     console.error('Error searching blood groups:', error);
     throw error;
@@ -239,7 +237,7 @@ export async function getBloodGroupsPaginated(
   limit: number = 10
 ): Promise<{ data: BloodGroup[]; total: number; page: number; limit: number }> {
   try {
-    const response = await axiosInstance.get<MultipleBloodGroupResponse>(
+    const response = await axiosInstance.get(
       `/api/blood-groups?page=${page}&limit=${limit}`
     );
     
@@ -247,7 +245,7 @@ export async function getBloodGroupsPaginated(
     const total = parseInt(response.headers['x-total-count'] || '0');
     
     return {
-      data: response.data.data,
+      data: response.data.payload,
       total,
       page,
       limit,
@@ -273,10 +271,10 @@ export async function checkBloodGroupExists(type: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get<MultipleBloodGroupResponse>(
+    const response = await axiosInstance.get(
       `/api/blood-groups?type=${encodeURIComponent(type.trim())}`
     );
-    return response.data.data.length > 0;
+    return response.data.payload.length > 0;
   } catch (error) {
     console.error('Error checking blood group existence:', error);
     return false;
@@ -290,12 +288,12 @@ export async function checkBloodGroupExists(type: string): Promise<boolean> {
 export async function getBloodGroupStats(): Promise<{ total: number; active: number; disabled: number }> {
   try {
     const [allResponse, activeResponse] = await Promise.all([
-      axiosInstance.get<MultipleBloodGroupResponse>('/api/blood-groups'),
-      axiosInstance.get<MultipleBloodGroupResponse>('/api/blood-groups?disabled=false'),
+      axiosInstance.get('/api/blood-groups'),
+      axiosInstance.get('/api/blood-groups?disabled=false'),
     ]);
 
-    const total = allResponse.data.data.length;
-    const active = activeResponse.data.data.length;
+    const total = allResponse.data.payload.length;
+    const active = activeResponse.data.payload.length;
     const disabled = total - active;
 
     return { total, active, disabled };

@@ -243,9 +243,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
 import { Gender, StudentStatus } from "@/types/enums";
-import { Category } from "@/types/resources/category";
-import { Nationality } from "@/types/resources/nationality";
-import { Religion } from "@/types/resources/religion";
 import { Specialization } from "@/types/resources/specialization";
 import { ColumnDef } from "@tanstack/react-table";
 import { Link } from "react-router-dom";
@@ -259,6 +256,9 @@ import {
 } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Nationality } from "@/types/resources/nationality.types";
+import { Religion } from "@/types/resources/religion.types";
+import { Category } from "@/types/resources/category.types";
 export interface StudentSearchType {
   readonly id?: number;
   registrationNumber: string | null;

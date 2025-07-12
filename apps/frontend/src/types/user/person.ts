@@ -1,4 +1,4 @@
-import { Address } from "../resources/address";
+import { Address } from "@/types/user/address";
 import { Occupation } from "../resources/occupation.types";
 import { Qualification } from "../resources/qualification.types";
 

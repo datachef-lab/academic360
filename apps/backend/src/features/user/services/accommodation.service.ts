@@ -20,6 +20,22 @@ function validateAccommodationInput(data: Omit<AccommodationType, 'id'>) {
 export async function addAccommodation(accommodation: AccommodationType): Promise<AccommodationType | null> {
     let { id, address, ...props } = accommodation;
     validateAccommodationInput({ ...props, address });
+
+    // Check for existing accommodation for this student
+    if (typeof props.studentId !== "number") {
+        const error = new Error("studentId is required and must be a number.");
+        // @ts-expect-error
+        error.status = 400;
+        throw error;
+    }
+    const [existing] = await db.select().from(accommodationModel).where(eq(accommodationModel.studentId, props.studentId));
+    if (existing) {
+        const error = new Error("Duplicate entry: Accommodation already exists for this student.");
+        // @ts-expect-error
+        error.status = 409;
+        throw error;
+    }
+
     if (address) {
         address = await addAddress(address);
     }
@@ -97,3 +113,6 @@ export async function getAllAccommodations(): Promise<Accommodation[]> {
     const accommodations = await db.select().from(accommodationModel);
     return accommodations;
 }
+
+
+  

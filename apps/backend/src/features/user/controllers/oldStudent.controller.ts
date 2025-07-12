@@ -832,7 +832,7 @@ export async function loadStudents() {
 export const createOldStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
         // STEP 1: Load all the batches
-        await loadOlderBatches();
+        // await loadOlderBatches();
         // STEP 2: Count the total numbers of students
         await loadStudents();
 

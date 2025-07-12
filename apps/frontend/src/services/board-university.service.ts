@@ -3,8 +3,6 @@ import {
   BoardUniversity,
   CreateBoardUniversityPayload,
   UpdateBoardUniversityPayload,
-  SingleBoardUniversityResponse,
-  MultipleBoardUniversityResponse,
 } from "@/types/resources/board-university.types";
 
 // ============================================================================
@@ -30,8 +28,8 @@ const BASE_URL = '/api/board-universities';
  */
 export async function getAllBoardUniversities(): Promise<BoardUniversity[]> {
   try {
-    const response = await axiosInstance.get<MultipleBoardUniversityResponse>(BASE_URL);
-    return response.data.data;
+    const response = await axiosInstance.get(BASE_URL);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching board universities:', error);
     throw error;
@@ -49,8 +47,8 @@ export async function getBoardUniversityById(id: number): Promise<BoardUniversit
       throw new Error('Board university ID is required');
     }
 
-    const response = await axiosInstance.get<SingleBoardUniversityResponse>(`${BASE_URL}/${id}`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}/${id}`);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error fetching board university with ID ${id}:`, error);
     throw error;
@@ -63,8 +61,8 @@ export async function getBoardUniversityById(id: number): Promise<BoardUniversit
  */
 export async function getActiveBoardUniversities(): Promise<BoardUniversity[]> {
   try {
-    const response = await axiosInstance.get<MultipleBoardUniversityResponse>(`${BASE_URL}?disabled=false`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching active board universities:', error);
     throw error;
@@ -86,8 +84,8 @@ export async function createBoardUniversity(payload: CreateBoardUniversityPayloa
       throw new Error('Board university name is required');
     }
 
-    const response = await axiosInstance.post<SingleBoardUniversityResponse>(BASE_URL, payload);
-    return response.data.data;
+    const response = await axiosInstance.post(BASE_URL, payload);
+    return response.data.payload;
   } catch (error) {
     console.error('Error creating board university:', error);
     throw error;
@@ -114,8 +112,8 @@ export async function updateBoardUniversity(id: number, payload: UpdateBoardUniv
       throw new Error('Board university name cannot be empty');
     }
 
-    const response = await axiosInstance.put<SingleBoardUniversityResponse>(`${BASE_URL}/${id}`, payload);
-    return response.data.data;
+    const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error updating board university with ID ${id}:`, error);
     throw error;
@@ -159,10 +157,10 @@ export async function searchBoardUniversities(searchTerm: string): Promise<Board
       return getAllBoardUniversities();
     }
 
-    const response = await axiosInstance.get<MultipleBoardUniversityResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
     );
-    return response.data.data;
+    return response.data.payload;
   } catch (error) {
     console.error('Error searching board universities:', error);
     throw error;
@@ -184,10 +182,10 @@ export async function checkBoardUniversityExists(name: string): Promise<boolean>
       return false;
     }
 
-    const response = await axiosInstance.get<MultipleBoardUniversityResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
     );
-    return response.data.data.length > 0;
+    return response.data.payload.length > 0;
   } catch (error) {
     console.error('Error checking board university existence:', error);
     return false;

@@ -116,30 +116,38 @@ export async function saveFamily(id: number, family: FamilyType): Promise<Family
     if (!foundFamily) {
         return null;
     }
-    const { fatherDetails, motherDetails, guardianDetails, annualIncome, studentId, ...props } = family;
+    const { fatherDetails, motherDetails, guardianDetails, annualIncome, createdAt, updatedAt, studentId, ...props } = family;
+    console.log("annual income", annualIncome);
+    console.log("Mother details: ", motherDetails)
+     console.log("Father details: ", fatherDetails)
+      console.log("Guardian details: ", guardianDetails)   
     // Validate input (excluding nested objects)
-    validateFamilyInput({ ...props, studentId });
+    // validateFamilyInput({ ...props, studentId });
     // Update the Family fields
     const [updatedFamily] = await db.update(familyModel).set({
         ...props,
         studentId, // Ensure studentId is included in the update
-        updatedAt: new Date(),
+        // updatedAt: new Date(),
         fatherDetailsId: fatherDetails?.id,
         motherDetailsId: motherDetails?.id,
         guardianDetailsId: guardianDetails?.id,
         annualIncomeId: annualIncome?.id,
     }).where(eq(familyModel.id, id)).returning();
     // Update the father-person
+    console.log(updatedFamily);
     if (fatherDetails && fatherDetails.id) {
-        await savePerson(fatherDetails.id, fatherDetails);
+        const {createdAt,updatedAt, ...rest}= fatherDetails
+        await savePerson(fatherDetails.id, rest);
     }
     // Update the mother-person
     if (motherDetails && motherDetails.id) {
-        await savePerson(motherDetails.id, motherDetails);
+        const {createdAt,updatedAt, ...rest}= motherDetails
+        await savePerson(motherDetails.id, rest);
     }
     // Update the guardian-person
     if (guardianDetails && guardianDetails.id) {
-        await savePerson(guardianDetails.id, guardianDetails);
+        const {createdAt,updatedAt, ...rest}= guardianDetails
+        await savePerson(guardianDetails.id, rest);
     }
     const formattedFamily = await familyResponseFormat(updatedFamily);
     return formattedFamily;

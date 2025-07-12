@@ -1,5 +1,5 @@
 import { PlaceOfStay } from "../enums";
-import { Address } from "../resources/address";
+import { Address } from "@/types/user/address";
 
 export interface Accommodation {
     readonly id?: number;

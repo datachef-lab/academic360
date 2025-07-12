@@ -10,7 +10,7 @@ import {
 } from "../controllers/academicHistory.controller.js";
 
 const router = express.Router();
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 // Helper to wrap async route handlers without using any or unknown
 function asyncHandler<

@@ -8,19 +8,23 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { getPersonalDetailByStudentId, updatePersonalDetailByStudentId, createPersonalDetail } from "@/services/personal-details.service";
 import { getAllReligions } from "@/services/religion.service";
-import { getAllCategories } from "@/services/category.service";
-import { getAllNationalities } from "@/services/nationality.service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Religion } from "@/types/user/religion";
 import { Category } from "@/types/user/category";
-import { Nationality } from "@/types/resources/nationality.types";
+import { getAllCategories } from "@/services/categories.service";
+import { getAllNationalities } from "@/services/nationalities.service";
+import { Nationality } from "@/types/user/nationality";
+import { Gender, Disability, LocalityType } from "@/types/enums";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { updateAddress } from "@/services/address.service";
+import type { Address } from "@/types/user/address";
 
 // Personal Details component with religion and category dropdowns
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getAddressProperty = (obj: any, prop: string): string => {
-  if (obj && typeof obj === 'object' && prop in obj && obj[prop] !== null) {
-    return obj[prop];
+const getAddressProperty = <K extends keyof Address>(obj: Address | null | undefined, prop: K): string => {
+  if (obj && typeof obj === 'object' && prop in obj && obj[prop] !== null && obj[prop] !== undefined) {
+    return String(obj[prop]);
   }
   return '';
 };
@@ -31,10 +35,24 @@ const formElements = [
   { name: "alternativeEmail", label: "Alternative Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
 ];
 
-const genderOptions = [
+// Remove old genderOptions and add new arrays for gender and disability
+const genderOptions: { value: Gender, label: string }[] = [
   { value: "MALE", label: "Male" },
   { value: "FEMALE", label: "Female" },
   { value: "TRANSGENDER", label: "Transgender" },
+];
+
+const disabilityOptions: { value: Disability, label: string }[] = [
+  { value: "VISUAL", label: "Visual" },
+  { value: "HEARING_IMPAIRMENT", label: "Hearing Impairment" },
+  { value: "VISUAL_IMPAIRMENT", label: "Visual Impairment" },
+  { value: "ORTHOPEDIC", label: "Orthopedic" },
+  { value: "OTHER", label: "Other" },
+];
+
+const localityOptions: { value: LocalityType, label: string }[] = [
+  { value: "URBAN", label: "Urban" },
+  { value: "RURAL", label: "Rural" },
 ];
 
 const defaultPersonalDetails: PersonalDetailsType = {
@@ -114,16 +132,53 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }, [personalDetails]);
 
   const updateMutation = useMutation({
-    mutationFn: (formData: PersonalDetailsType) => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { createdAt: _createdAt, updatedAt: _updatedAt, ...payload } = formData;
+    mutationFn: async (formData: PersonalDetailsType) => {
+      // Remove relation objects from the payload
+      const {
+        category,
+        mailingAddress,
+        residentialAddress,
+        nationality,
+        religion,
+        ...rest
+      } = formData;
+
+      // Update mailing and residential addresses if present
+      const addressUpdatePromises = [];
+      if (mailingAddress && mailingAddress.id) {
+        const { ...mailingPayload } = mailingAddress as Address;
+        addressUpdatePromises.push(updateAddress(mailingAddress.id, mailingPayload));
+      }
+      if (residentialAddress && residentialAddress.id) {
+        const { ...residentialPayload } = residentialAddress as Address;
+        addressUpdatePromises.push(updateAddress(residentialAddress.id, residentialPayload));
+      }
+      if (addressUpdatePromises.length > 0) {
+        await Promise.all(addressUpdatePromises);
+      }
+
+      const payload = {
+        ...rest,
+        categoryId: category?.id ?? null,
+        mailingAddressId: mailingAddress?.id ?? null,
+        residentialAddressId: residentialAddress?.id ?? null,
+        nationalityId: nationality?.id ?? null,
+        religionId: religion?.id ?? null,
+        // Only send primitive fields and relation IDs
+      };
+      // Log the payload to ensure only IDs are sent for relations
+      console.log('Payload being sent:', payload);
       if (formData.id) {
         return updatePersonalDetailByStudentId(String(studentId), payload);
       } else {
         return createPersonalDetail(payload);
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Log the personal details id from the response
+      if (data && data.payload && data.payload.id) {
+        console.log('Personal Details ID:', data.payload.id);
+      }
       toast.success("Personal details have been successfully updated.", {
         icon: <PenLine />,
       });
@@ -176,6 +231,10 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
 
   const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    if (!formData.studentId || formData.studentId <= 0) {
+      toast.error("Invalid student ID. Cannot update personal details.");
+      return;
+    }
     if (isLoading || !validateForm()) return;
     console.log("Submitting form data:", formData);
     updateMutation.mutate(formData);
@@ -206,17 +265,16 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   }
 
   return (
-    <div className="shadow-lg border py-10 w-full bg-white flex items-center rounded-lg justify-center px-5">
-      <div className="max-w-[80%] w-full">
-        {/* Personal Details Section */}
-        <h3 className="text-lg font-medium border-b pb-1 mb-6">PERSONAL DETAILS</h3>
+    <Card className="max-w-8xl mx-auto my-8 shadow-xl border bg-white">
+      <CardHeader>
+        <CardTitle>Personal Details</CardTitle>
+        <CardDescription>Fill in your personal information as per your official documents.</CardDescription>
+      </CardHeader>
+      <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {formElements.map(({ name, label, type, icon }) => (
-            <div key={name} className="flex flex-col mr-8">
-              <div className="relative p-1">
-                {errors[name] ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
-                <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
-              </div>
+            <div key={name} className="flex flex-col gap-2">
+              <Label htmlFor={name}>{label}</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
                 <Input
@@ -229,24 +287,28 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                   className={`w-full pl-10 pr-3 rounded-lg py-2 ${errors[name] ? "border-red-500" : ""}`}
                 />
               </div>
-              {errors[name] && <p className="text-red-500 text-sm mt-1">{errors[name]}</p>}
+              {errors[name] && <p className="text-red-500 text-xs mt-1">{errors[name]}</p>}
             </div>
           ))}
 
           {/* Date of Birth Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Date of Birth</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <CalendarIcon className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
               <Input
+                id="dateOfBirth"
                 name="dateOfBirth"
                 type="date"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                value={formData.dateOfBirth ? new Date(formData.dateOfBirth as any).toISOString().split('T')[0] : ""}
+                value={formData.dateOfBirth
+                  ? (typeof formData.dateOfBirth === 'string'
+                      ? formData.dateOfBirth
+                      : formData.dateOfBirth instanceof Date
+                        ? formData.dateOfBirth.toISOString().split('T')[0]
+                        : "")
+                  : ""}
                 onChange={handleChange}
                 className="w-full pl-10 pr-3 rounded-lg py-2"
               />
@@ -254,33 +316,33 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
           </div>
 
           {/* Gender Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Gender</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="gender">Gender</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <User className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <select
-                name="gender"
+              <Select
                 value={formData.gender || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, gender: e.target.value }) as PersonalDetailsType)}
-                className="w-full pl-10 pr-3 rounded-lg py-2 border"
+                onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value as Gender }) as PersonalDetailsType)}
               >
-                <option value="">Select Gender</option>
+                <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
                 {genderOptions.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
                 ))}
-              </select>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           {/* Religion Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Religion</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="religion">Religion</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
@@ -316,10 +378,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
           </div>
 
           {/* Category Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Category</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="category">Category</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <BookOpen className="text-gray-500 dark:text-white w-5 h-5" />
@@ -355,10 +415,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
           </div>
 
           {/* Nationality Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Nationality</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="nationality">Nationality</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
                 <Globe className="text-gray-500 dark:text-white w-5 h-5" />
@@ -367,9 +425,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                 <Select
                   value={formData.nationality?.id?.toString() || ""}
                   onValueChange={(value) => {
-                    console.log("Nationality selected:", value);
                     const selectedNationality = nationalities.find(n => n.id.toString() === value);
-                    console.log("Found nationality:", selectedNationality);
                     setFormData(prev => ({
                       ...prev,
                       nationality: selectedNationality || null
@@ -396,42 +452,39 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
           </div>
 
           {/* Disability Field */}
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Disability</label>
-            </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="disability">Disability</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                 <Sparkles className="text-gray-500 dark:text-white w-5 h-5" />
               </span>
-              <select
-                name="disability"
+              <Select
                 value={formData.disability || ""}
-                onChange={(e) => setFormData(prev => ({ ...prev, disability: e.target.value }) as PersonalDetailsType)}
-                className="w-full pl-10 pr-3 rounded-lg py-2 border"
+                onValueChange={(value) => setFormData(prev => ({ ...prev, disability: value as Disability }) as PersonalDetailsType)}
               >
-                <option value="">None</option>
-                <option value="VISUAL">Visual</option>
-                <option value="HEARING_IMPAIRMENT">Hearing Impairment</option>
-                <option value="VISUAL_IMPAIRMENT">Visual Impairment</option>
-                <option value="ORTHOPEDIC">Orthopedic</option>
-                <option value="OTHER">Other</option>
-              </select>
+                <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                  <SelectValue placeholder="Select Disability" />
+                </SelectTrigger>
+                <SelectContent>
+                  {disabilityOptions.map(option => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
         {/* Address Section */}
-        <h3 className="text-lg font-medium border-b pb-1 mb-6">ADDRESS DETAILS</h3>
-        
-        {/* Residential Address */}
-        <div className="mb-6">
-          <h4 className="text-md font-medium mb-2">RESIDENTIAL ADDRESS</h4>
-          <div className="p-4 rounded-lg border">
+        <div className="rounded-lg p-6 mb-8">
+          <CardTitle className="text-lg mb-4">Residential Address</CardTitle>
             {formData.residentialAddress ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Address Line</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Address fields with Label and Input/Select */}
+              <div className="flex flex-col gap-2">
+                <Label>Address Line</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -451,9 +504,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Pincode</label>
+              <div className="flex flex-col gap-2">
+                <Label>Pincode</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -473,9 +525,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Landmark</label>
+              <div className="flex flex-col gap-2">
+                <Label>Landmark</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -496,9 +547,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Phone</label>
+              <div className="flex flex-col gap-2">
+                <Label>Phone</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <Phone className="text-gray-500 dark:text-white w-5 h-5" />
@@ -519,47 +569,49 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Locality Type</label>
+              <div className="flex flex-col gap-2">
+                <Label>Locality Type</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
-                    <select
-                      value={getAddressProperty(formData.residentialAddress, 'localityType')}
-                      onChange={(e) => {
+                  <Select
+                    value={getAddressProperty(formData.residentialAddress, 'localityType') || ""}
+                    onValueChange={(value) => {
                         setFormData(prev => ({
                           ...prev,
                           residentialAddress: {
                             ...prev.residentialAddress,
-                            localityType: e.target.value
+                          localityType: value as LocalityType
                           }
                         }) as PersonalDetailsType);
                       }}
-                      className="w-full pl-10 pr-3 rounded-lg py-2 border"
-                    >
-                      <option value="URBAN">Urban</option>
-                      <option value="RURAL">Rural</option>
-                      <option value="SEMI_URBAN">Semi-Urban</option>
-                    </select>
+                  >
+                    <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                      <SelectValue placeholder="Select Locality Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {localityOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   </div>
                 </div>
               </div>
             ) : (
               <p className="text-gray-500">No residential address provided</p>
             )}
-          </div>
         </div>
         
-        {/* Mailing Address */}
-        <div className="mb-8">
-          <h4 className="text-md font-medium mb-2">MAILING ADDRESS</h4>
-          <div className="p-4 rounded-lg border">
+        <div className="rounded-lg p-6 mb-8">
+          <CardTitle className="text-lg mb-4">Mailing Address</CardTitle>
             {formData.mailingAddress ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Address Line</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <Label>Address Line</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -579,9 +631,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Pincode</label>
+              <div className="flex flex-col gap-2">
+                <Label>Pincode</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -601,9 +652,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Landmark</label>
+              <div className="flex flex-col gap-2">
+                <Label>Landmark</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
@@ -624,9 +674,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Phone</label>
+              <div className="flex flex-col gap-2">
+                <Label>Phone</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <Phone className="text-gray-500 dark:text-white w-5 h-5" />
@@ -647,30 +696,35 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
                     />
                   </div>
                 </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="font-medium">Locality Type</label>
+              <div className="flex flex-col gap-2">
+                <Label>Locality Type</Label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
                       <MapPin className="text-gray-500 dark:text-white w-5 h-5" />
                     </span>
-                    <select
-                      value={getAddressProperty(formData.mailingAddress, 'localityType')}
-                      onChange={(e) => {
+                  <Select
+                    value={getAddressProperty(formData.mailingAddress, 'localityType') || ""}
+                    onValueChange={(value) => {
                         setFormData(prev => ({
                           ...prev,
                           mailingAddress: {
                             ...prev.mailingAddress,
-                            localityType: e.target.value
+                          localityType: value as LocalityType
                           }
                         }) as PersonalDetailsType);
                       }}
-                      className="w-full pl-10 pr-3 rounded-lg py-2 border"
-                    >
-                      <option value="URBAN">Urban</option>
-                      <option value="RURAL">Rural</option>
-                      <option value="SEMI_URBAN">Semi-Urban</option>
-                    </select>
+                  >
+                    <SelectTrigger className="w-full pl-10 pr-3 rounded-lg py-2">
+                      <SelectValue placeholder="Select Locality Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {localityOptions.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   </div>
                 </div>
               </div>
@@ -678,10 +732,8 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               <p className="text-gray-500">No mailing address provided</p>
             )}
           </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="col-span-2 mt-6">
+      </CardContent>
+      <CardFooter className="flex flex-col items-center gap-2">
           <Button 
             type="submit" 
             onClick={handleSubmit} 
@@ -708,8 +760,7 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

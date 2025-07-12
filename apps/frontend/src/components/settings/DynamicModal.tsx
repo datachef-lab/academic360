@@ -30,14 +30,12 @@ import { DegreeLevel } from "@/types/resources/degree.types";
 // Import service functions
 import { createBoardUniversity, updateBoardUniversity } from "@/services/board-university.service";
 import { createInstitution, updateInstitution } from "@/services/institution.service";
-import { createCategory, updateCategory } from "@/services/category.service";
+import { createCategory, updateCategory } from "@/services/categories.service";
 import { createDegree, updateDegree } from "@/services/degree.service";
 import { createReligion, updateReligion } from "@/services/religion.service";
 import { createLanguageMedium, updateLanguageMedium } from "@/services/language-medium.service";
 import { createBloodGroup, updateBloodGroup } from "@/services/blood-group.service";
-import { createOccupation, updateOccupation } from "@/services/occupation.service";
 import { createQualification, updateQualification } from "@/services/qualification.service";
-import { createNationality, updateNationality } from "@/services/nationality.service";
 import { createCountry, updateCountry } from "@/services/country.service";
 import { createState, updateState } from "@/services/state.service";
 import { createCity, updateCity } from "@/services/city.service";
@@ -47,6 +45,8 @@ import { getAllDegrees } from "@/services/degree.service";
 import { getAllStates } from "@/services/state.service";
 import { getAllCountries } from "@/services/country.service";
 import { useQuery } from '@tanstack/react-query';
+import { createOccupation, updateOccupation } from '@/services/occupations.service';
+import { createNationality, updateNationality } from '@/services/nationalities.service';
 
 
 interface DynamicModalProps {

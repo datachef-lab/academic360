@@ -3,8 +3,6 @@ import {
   AnnualIncome,
   CreateAnnualIncomePayload,
   UpdateAnnualIncomePayload,
-  SingleAnnualIncomeResponse,
-  MultipleAnnualIncomeResponse,
 } from "@/types/resources/annual-income.types";
 
 // ============================================================================
@@ -30,8 +28,8 @@ const BASE_URL = '/api/annual-incomes';
  */
 export async function getAllAnnualIncomes(): Promise<AnnualIncome[]> {
   try {
-    const response = await axiosInstance.get<MultipleAnnualIncomeResponse>(BASE_URL);
-    return response.data.data;
+    const response = await axiosInstance.get(BASE_URL);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching annual incomes:', error);
     throw error;
@@ -49,8 +47,8 @@ export async function getAnnualIncomeById(id: number): Promise<AnnualIncome> {
       throw new Error('Annual income ID is required');
     }
 
-    const response = await axiosInstance.get<SingleAnnualIncomeResponse>(`${BASE_URL}/${id}`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}/${id}`);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error fetching annual income with ID ${id}:`, error);
     throw error;
@@ -63,8 +61,8 @@ export async function getAnnualIncomeById(id: number): Promise<AnnualIncome> {
  */
 export async function getActiveAnnualIncomes(): Promise<AnnualIncome[]> {
   try {
-    const response = await axiosInstance.get<MultipleAnnualIncomeResponse>(`${BASE_URL}?disabled=false`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching active annual incomes:', error);
     throw error;
@@ -86,8 +84,8 @@ export async function createAnnualIncome(payload: CreateAnnualIncomePayload): Pr
       throw new Error('Annual income range is required');
     }
 
-    const response = await axiosInstance.post<SingleAnnualIncomeResponse>(BASE_URL, payload);
-    return response.data.data;
+    const response = await axiosInstance.post(BASE_URL, payload);
+    return response.data.payload;
   } catch (error) {
     console.error('Error creating annual income:', error);
     throw error;
@@ -114,8 +112,8 @@ export async function updateAnnualIncome(id: number, payload: UpdateAnnualIncome
       throw new Error('Annual income range cannot be empty');
     }
 
-    const response = await axiosInstance.put<SingleAnnualIncomeResponse>(`${BASE_URL}/${id}`, payload);
-    return response.data.data;
+    const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error updating annual income with ID ${id}:`, error);
     throw error;
@@ -159,10 +157,10 @@ export async function searchAnnualIncomes(searchTerm: string): Promise<AnnualInc
       return getAllAnnualIncomes();
     }
 
-    const response = await axiosInstance.get<MultipleAnnualIncomeResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
     );
-    return response.data.data;
+    return response.data.payload;
   } catch (error) {
     console.error('Error searching annual incomes:', error);
     throw error;
@@ -184,10 +182,10 @@ export async function checkAnnualIncomeExists(name: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get<MultipleAnnualIncomeResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
     );
-    return response.data.data.length > 0;
+    return response.data.payload.length > 0;
   } catch (error) {
     console.error('Error checking annual income existence:', error);
     return false;

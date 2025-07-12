@@ -1,5 +1,5 @@
 import { Disability, Gender } from "../enums";
-import { Address } from "../resources/address";
+import { Address } from "@/types/user/address";
 import { Category } from "../resources/category.types";
 import { DisabilityCode } from "../resources/disability-code";
 import { LanguageMedium } from "../resources/language-medium.types";

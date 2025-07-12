@@ -76,6 +76,7 @@ const data = {
     { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: ClipboardList },
     { title: "Students", url: "/dashboard/students", icon: Users },
+    { title: "Marksheets", url: "/dashboard/marksheets", icon: Users },
     { title: "Library", url: "/dashboard/library", icon: Library },
     { title: "Events", url: "/dashboard/events", icon: PartyPopper },
   ],

@@ -20,16 +20,27 @@ function validateAcademicIdentifierInput(data: Omit<AcademicIdentifierType, 'id'
     return parseResult.data;
 }
 
-export async function addAcademicIdentifier(academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    // Remove id, but keep shift and section for validation
-    const { id, ...dataToValidate } = academicIdentifier;
-    validateAcademicIdentifierInput(dataToValidate);
-    // Now destructure for DB insert
-    const { section, shift, ...props } = dataToValidate;
-    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({ ...props }).returning();
-    const formattedAcademiIdentifier = await academicIdentifierResponseFormat(newAcademicIdentifier);
-    return formattedAcademiIdentifier;
-}
+export async function addAcademicIdentifier(
+    academicIdentifier: AcademicIdentifierType
+  ): Promise<AcademicIdentifierType | null> {
+    const { id, section, shift, courseId, ...rest } = academicIdentifier;
+    validateAcademicIdentifierInput({ ...rest, section, shift, courseId });
+  
+    const insertData = {
+      ...rest,
+      sectionId: section?.id ?? null,
+      shiftId: shift?.id ?? null,
+      courseId: courseId ?? null,
+    };
+  
+    const [inserted] = await db
+      .insert(academicIdentifierModel)
+      .values(insertData)
+      .returning();
+  
+    return await academicIdentifierResponseFormat(inserted);
+  }
+  
 
 export async function findAcademicIdentifierById(id: number): Promise<AcademicIdentifierType | null> {
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
@@ -45,20 +56,45 @@ export async function findAcademicIdentifierByStudentId(studentId: number): Prom
     return formattedAcademiIdentifier;
 }
 
-export async function saveAcademicIdentifier(id: number, academicIdentifier: AcademicIdentifierType): Promise<AcademicIdentifierType | null> {
-    // Remove id, but keep shift and section for validation
+export async function saveAcademicIdentifier(
+    id: number,
+    academicIdentifier: AcademicIdentifierType
+  ): Promise<AcademicIdentifierType | null> {
     const { id: _id, ...dataToValidate } = academicIdentifier;
     validateAcademicIdentifierInput(dataToValidate);
-    // Now destructure for DB update
-    const { studentId, createdAt, updatedAt, section, shift, ...props } = dataToValidate;
-    const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));
-    if (!foundAcademicIdentifier) {
-        return null;
-    }
-    const [updatedAcademicIdentifier] = await db.update(academicIdentifierModel).set({ ...props }).where(eq(academicIdentifierModel.id, id)).returning();
-    const formatedAcademicIdentifier = await academicIdentifierResponseFormat(updatedAcademicIdentifier);
-    return formatedAcademicIdentifier;
-}
+  
+    const [existing] = await db
+      .select()
+      .from(academicIdentifierModel)
+      .where(eq(academicIdentifierModel.id, id));
+    if (!existing) return null;
+  
+    const {
+      studentId,
+      createdAt,
+      updatedAt,
+      section,
+      shift,
+      courseId,
+      ...props
+    } = dataToValidate;
+  
+    const updateData = {
+      ...props,
+      sectionId: section?.id ?? null,
+      shiftId: shift?.id ?? null,
+      courseId: courseId ?? null,
+    };
+  
+    const [updated] = await db
+      .update(academicIdentifierModel)
+      .set(updateData)
+      .where(eq(academicIdentifierModel.id, id))
+      .returning();
+  
+    return await academicIdentifierResponseFormat(updated);
+  }
+  
 
 export async function removeAcademicIdentifier(id: number): Promise<boolean | null> {
     const [foundAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.id, id));

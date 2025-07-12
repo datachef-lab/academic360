@@ -12,7 +12,7 @@ import {
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
 // Get all
 router.get("/", getAllAccommodationsController);

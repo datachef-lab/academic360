@@ -3,8 +3,6 @@ import {
   Institution,
   CreateInstitutionPayload,
   UpdateInstitutionPayload,
-  SingleInstitutionResponse,
-  MultipleInstitutionResponse,
 } from "@/types/resources/institution.types";
 
 // ============================================================================
@@ -30,8 +28,8 @@ const BASE_URL = '/api/institutions';
  */
 export async function getAllInstitutions(): Promise<Institution[]> {
   try {
-    const response = await axiosInstance.get<MultipleInstitutionResponse>(BASE_URL);
-    return response.data.data;
+    const response = await axiosInstance.get(BASE_URL);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching institutions:', error);
     throw error;
@@ -49,8 +47,8 @@ export async function getInstitutionById(id: number): Promise<Institution> {
       throw new Error('Institution ID is required');
     }
 
-    const response = await axiosInstance.get<SingleInstitutionResponse>(`${BASE_URL}/${id}`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}/${id}`);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error fetching institution with ID ${id}:`, error);
     throw error;
@@ -63,8 +61,8 @@ export async function getInstitutionById(id: number): Promise<Institution> {
  */
 export async function getActiveInstitutions(): Promise<Institution[]> {
   try {
-    const response = await axiosInstance.get<MultipleInstitutionResponse>(`${BASE_URL}?disabled=false`);
-    return response.data.data;
+    const response = await axiosInstance.get(`${BASE_URL}?disabled=false`);
+    return response.data.payload;
   } catch (error) {
     console.error('Error fetching active institutions:', error);
     throw error;
@@ -86,8 +84,8 @@ export async function createInstitution(payload: CreateInstitutionPayload): Prom
       throw new Error('Institution name is required');
     }
 
-    const response = await axiosInstance.post<SingleInstitutionResponse>(BASE_URL, payload);
-    return response.data.data;
+    const response = await axiosInstance.post(BASE_URL, payload);
+    return response.data.payload;
   } catch (error) {
     console.error('Error creating institution:', error);
     throw error;
@@ -114,8 +112,8 @@ export async function updateInstitution(id: number, payload: UpdateInstitutionPa
       throw new Error('Institution name cannot be empty');
     }
 
-    const response = await axiosInstance.put<SingleInstitutionResponse>(`${BASE_URL}/${id}`, payload);
-    return response.data.data;
+    const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
+    return response.data.payload;
   } catch (error) {
     console.error(`Error updating institution with ID ${id}:`, error);
     throw error;
@@ -159,10 +157,10 @@ export async function searchInstitutions(searchTerm: string): Promise<Institutio
       return getAllInstitutions();
     }
 
-    const response = await axiosInstance.get<MultipleInstitutionResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
     );
-    return response.data.data;
+    return response.data.payload;
   } catch (error) {
     console.error('Error searching institutions:', error);
     throw error;
@@ -184,10 +182,10 @@ export async function checkInstitutionExists(name: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get<MultipleInstitutionResponse>(
+    const response = await axiosInstance.get(
       `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
     );
-    return response.data.data.length > 0;
+    return response.data.payload.length > 0;
   } catch (error) {
     console.error('Error checking institution existence:', error);
     return false;
