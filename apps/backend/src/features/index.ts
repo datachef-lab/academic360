@@ -10,6 +10,14 @@ import feesSlabRouter from "./fees/routes/fees-slab.route.js";
 import feesStructureRouter from "./fees/routes/fees-structure.route.js";
 import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
 import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
+import courseRouter from "./course-design/routes/course.routes.js";
+import examComponentRouter from "./course-design/routes/exam-component.routes.js";
+import paperComponentRouter from "./course-design/routes/paper-component.routes.js";
+import paperRouter from "./course-design/routes/paper.routes.js";
+import specializationCourseRouter from "./course-design/routes/specialization.routes.js";
+import subjectTypeRouter from "./course-design/routes/subject-type.routes.js";
+import subjectCourseRouter from "./course-design/routes/subject.routes.js";
+import topicRouter from "./course-design/routes/topic.routes.js";
 
 export {
     documentRouter,
@@ -58,5 +66,12 @@ export {
     feesStructureRouter,
     studentFeesMappingRouter,
     feesSlabYearMappingRouter,
-
+    courseRouter,
+    examComponentRouter,
+    paperComponentRouter,
+    paperRouter,
+    specializationCourseRouter,
+    subjectTypeRouter,
+    subjectCourseRouter,
+    topicRouter,
 }
