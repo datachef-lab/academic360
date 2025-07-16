@@ -7,37 +7,47 @@ import React from "react";
 
 const APPS = [
   {
+    baseName: "student-console",
     name: "BESC Student Console",
     logo: null, // Replace with import or <img src=... /> if available
     url: "https://student-console.besc.edu/",
+    backendUrl: "",
     settings: "/dashboard/apps/besc-student-console",
     enabled: true,
   },
   {
+    baseName: "event-gatekeeper",
     name: "Event Gatekeeper",
     logo: null,
     url: "https://event-gatekeeper.besc.edu/",
+    backendUrl: "",
     settings: "/dashboard/apps/event-gatekeeper",
     enabled: true,
   },
   {
+    baseName: "ems-app",
     name: "Exam Management System",
     logo: null,
     url: "https://exam-mgmt.besc.edu/",
+    backendUrl: "",
     settings: "/dashboard/apps/exam-management-system",
     enabled: false,
   },
   {
+    baseName: "event-management",
     name: "Umang Fest",
     logo: null,
     url: "https://umang.besc.edu/",
+    backendUrl: "",
     settings: "/dashboard/apps/umang-fest",
     enabled: true,
   },
   {
+    baseName: "admission-comm-module",
     name: "BESC Admission Comm. Module",
     logo: null,
     url: "https://admission-comm.besc.edu/",
+    backendUrl: "",
     settings: "/dashboard/apps/admission-comm-module",
     enabled: false,
   },
@@ -88,7 +98,7 @@ export default function AppMaster() {
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => navigate(app.settings)}
+                      onClick={() => navigate(app.baseName)}
                       className="flex items-center gap-1"
                       disabled={!app.enabled}
                     >

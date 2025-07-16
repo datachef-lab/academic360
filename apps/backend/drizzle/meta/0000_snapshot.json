@@ -1,5 +1,5 @@
 {
-  "id": "2270cd0b-4d9f-4a5c-911d-4cfb3246538e",
+  "id": "4e01702b-1a43-42b2-82f0-907442e71d5d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2183,7 +2183,7 @@
           "name": "institute_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "other_institute": {
           "name": "other_institute",
@@ -3870,25 +3870,25 @@
           "name": "start_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "end_date": {
           "name": "end_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "online_start_date": {
           "name": "online_start_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "online_end_date": {
           "name": "online_end_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",

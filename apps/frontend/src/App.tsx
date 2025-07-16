@@ -215,8 +215,18 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
-      { path: "apps", element: <appModule.AppMaster /> },
-      { path: "apps/besc-student-console", element: <appModule.BescStudentConsoleSettings /> },
+      {
+        path: "apps",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <appModule.AppMaster /> },
+          { path: "student-console", element: <appModule.BescStudentConsoleSettings /> },
+          { path: "event-gatekeeper", element: <appModule.EventGatekeeperPage /> },
+          { path: "ems-app", element: <appModule.EmsAppPage /> },
+          { path: "event-management", element: <appModule.EventGatekeeperPage /> },
+          { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
+        ],
+      },
       {
         path: "faculty-staff",
         element: <facultiesStaffsModule.FacultyStaffMaster />,

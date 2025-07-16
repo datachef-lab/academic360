@@ -312,7 +312,7 @@ CREATE TABLE "admission_academic_info" (
 	"school_number" varchar(255),
 	"center_number" varchar(255),
 	"admit_card_id" varchar(255),
-	"institute_id_fk" integer NOT NULL,
+	"institute_id_fk" integer,
 	"other_institute" varchar(500),
 	"language_medium_id_fk" integer NOT NULL,
 	"year_of_passing" integer NOT NULL,
@@ -529,10 +529,10 @@ CREATE TABLE "instalments" (
 	"fees_structure_id_fk" integer NOT NULL,
 	"instalment_number" integer NOT NULL,
 	"base_amount" double precision DEFAULT 0 NOT NULL,
-	"start_date" date NOT NULL,
-	"end_date" date NOT NULL,
-	"online_start_date" date NOT NULL,
-	"online_end_date" date NOT NULL,
+	"start_date" date,
+	"end_date" date,
+	"online_start_date" date,
+	"online_end_date" date,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
