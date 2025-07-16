@@ -1,4 +1,5 @@
-import { Degree } from "../resources/degree";
+import { Degree } from "../resources/degree.types";
+
 
 export interface Course {
     readonly id?: number;

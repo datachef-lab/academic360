@@ -29,18 +29,19 @@ import { EmergencyContact } from "@/types/user/emergency-contact";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
-import { Parent } from "@/types/user/parent";
+// import { Parent } from "@/types/user/family";
 import FamilyDetailsForm from "@/components/forms/student/FamilyDetailsForm";
 import { AddressDetailsForm } from "@/components/forms/student/AdressDetailsForm";
 import { Address } from "@/types/resources/address";
 import { Student } from "@/types/user/student";
 import { useStudentSubmission } from '@/hooks/useStudentSubmission';
 import { toast } from "sonner";
+import { Family } from "@/types/user/family";
 
 
 export interface StudentFormData {
   personalDetails: PersonalDetails;
-  familyDetails: Parent;
+  familyDetails: Family;
   addressDetails: Address;
   healthDetails: Health;
   emergencyContact: EmergencyContact;
@@ -132,7 +133,7 @@ export default function AddStudentPage() {
  
   const [formData, setFormData] = useState<StudentFormData>({
     personalDetails: {} as PersonalDetails,
-    familyDetails: {} as Parent,
+    familyDetails: {} as Family,
     addressDetails: {} as Address,
     healthDetails: {} as Health,
     emergencyContact: {} as EmergencyContact,
@@ -221,7 +222,7 @@ export default function AddStudentPage() {
     stepIndex: number,
     data:
       | PersonalDetails
-      | Parent
+      | Family
       | Health
       | EmergencyContact
       | AcademicHistory
@@ -469,7 +470,7 @@ export default function AddStudentPage() {
                     initialData={
                       formData[currentStepKey] as
                         | PersonalDetails
-                        | Parent
+                        | Family
                         | Health
                         | EmergencyContact
                         | AcademicHistory

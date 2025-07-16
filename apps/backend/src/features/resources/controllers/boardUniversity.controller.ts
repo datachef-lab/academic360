@@ -1,175 +1,259 @@
-import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { BoardUniversity, boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
-import { findAll } from "@/utils/helper.js";
+import { BoardUniversity } from "@/features/resources/models/boardUniversity.model.js";
+import { 
+    findAllBoardUniversities,
+    findBoardUniversityById, 
+    createBoardUniversity as createBoardUniversityService,
+    updateBoardUniversity as updateBoardUniversityService,
+    deleteBoardUniversity as deleteBoardUniversityService,
+    findBoardUniversityByName,
+    findBoardUniversityByCode
+} from "@/features/resources/services/boardUniversity.service.js";
 
-// Create a new Board University
+// Create a new board university
 export const createBoardUniversity = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        console.log(req.body);
-        const BoardUniversity = await db
-            .insert(boardUniversityModel)
-            .values(req.body);
-        console.log("New board university added", BoardUniversity);
-        res
-            .status(201)
-            .json(
-                new ApiResponse(
-                    201,
-                    "SUCCESS",
-                    null,
-                    "New board university is added to db!",
-                ),
-            );
+        const { name, degreeId, passingMarks, code, addressId, sequence, disabled } = req.body;
+
+        // Basic validation
+        if (!name || typeof name !== 'string') {
+            res.status(400).json(new ApiError(400, "Name is required and must be a string"));
+            return;
+        }
+
+        if (name.length > 700) {
+            res.status(400).json(new ApiError(400, "Name must be less than 700 characters"));
+            return;
+        }
+
+        // Check if name already exists
+        const existingName = await findBoardUniversityByName(name);
+        if (existingName) {
+            res.status(409).json(new ApiError(409, "Board university name already exists"));
+            return;
+        }
+
+        // Check if code already exists (if provided)
+        if (code) {
+            const existingCode = await findBoardUniversityByCode(code);
+            if (existingCode) {
+                res.status(409).json(new ApiError(409, "Board university code already exists"));
+                return;
+            }
+        }
+
+        // Validate passing marks if provided
+        if (passingMarks !== undefined && (isNaN(passingMarks) || passingMarks < 0 || passingMarks > 100)) {
+            res.status(400).json(new ApiError(400, "Passing marks must be a number between 0 and 100"));
+            return;
+        }
+
+        const boardUniversityData = {
+            name,
+            degreeId: degreeId || null,
+            passingMarks: passingMarks || null,
+            code: code || null,
+            addressId: addressId || null,
+            sequence: sequence || null,
+            disabled: disabled || false
+        };
+
+        const newBoardUniversity = await createBoardUniversityService(boardUniversityData);
+
+        res.status(201).json(
+            new ApiResponse(
+                201,
+                "SUCCESS",
+                newBoardUniversity,
+                "Board university created successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get all Board University
+// Get all board universities
 export const getAllBoardUniversity = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        const boardUniversity = await findAll(boardUniversityModel);
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    boardUniversity,
-                    "Fetched all Board University!",
-                ),
-            );
+        const boardUniversities = await findAllBoardUniversities();
+        
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                boardUniversities,
+                "All board universities fetched successfully."
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get by Board University by ID
+// Get board university by ID
 export const getBoardUniversityById = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        const BoardUniversity = await db
-            .select()
-            .from(boardUniversityModel)
-            .where(eq(boardUniversityModel.id, Number(id)))
-            .limit(1);
-
-        if (!BoardUniversity[0]) {
-            res
-                .status(404)
-                .json(
-                    new ApiResponse(404, "NOT_FOUND", null, "Board University not found"),
-                );
+        
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    BoardUniversity[0],
-                    "Fetched Board University!",
-                ),
-            );
+        const boardUniversity = await findBoardUniversityById(Number(id));
+
+        if (!boardUniversity) {
+            res.status(404).json(new ApiError(404, "Board university not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                boardUniversity,
+                "Board university fetched successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Update the Board University
+// Update board university
 export const updateBoardUniversity = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-         const {createdAt,updatedAt,...props}=req.body as BoardUniversity
+        const { name, degreeId, passingMarks, code, addressId, sequence, disabled } = req.body;
 
-        const existingBoardUniversity = await db
-            .select()
-            .from(boardUniversityModel)
-            .where(eq(boardUniversityModel.id, +id))
-            .then((BoardUniversity) => BoardUniversity[0]);
-
-        if (!existingBoardUniversity) {
-            res.status(404).json(new ApiError(404, "Board University not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        const updatedBoards = await db
-            .update(boardUniversityModel)
-            .set(props)
-            .where(eq(boardUniversityModel.id, +id))
-            .returning();
-
-        if (updatedBoards.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        updatedBoards[0],
-                        "Board University updated successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Language Medium not found"));
+        // Check if board university exists
+        const existingBoardUniversity = await findBoardUniversityById(Number(id));
+        if (!existingBoardUniversity) {
+            res.status(404).json(new ApiError(404, "Board university not found"));
+            return;
         }
+
+        // Validate name length if provided
+        if (name && name.length > 700) {
+            res.status(400).json(new ApiError(400, "Name must be less than 700 characters"));
+            return;
+        }
+
+        // If name is being updated, check for duplicates
+        if (name && name !== existingBoardUniversity.name) {
+            const duplicateName = await findBoardUniversityByName(name);
+            if (duplicateName) {
+                res.status(409).json(new ApiError(409, "Board university name already exists"));
+                return;
+            }
+        }
+
+        // If code is being updated, check for duplicates
+        if (code && code !== existingBoardUniversity.code) {
+            const duplicateCode = await findBoardUniversityByCode(code);
+            if (duplicateCode) {
+                res.status(409).json(new ApiError(409, "Board university code already exists"));
+                return;
+            }
+        }
+
+        // Validate passing marks if provided
+        if (passingMarks !== undefined && (isNaN(passingMarks) || passingMarks < 0 || passingMarks > 100)) {
+            res.status(400).json(new ApiError(400, "Passing marks must be a number between 0 and 100"));
+            return;
+        }
+
+        const updateData: Partial<Omit<BoardUniversity, 'id' | 'createdAt' | 'updatedAt'>> = {};
+        
+        if (name !== undefined) updateData.name = name;
+        if (degreeId !== undefined) updateData.degreeId = degreeId;
+        if (passingMarks !== undefined) updateData.passingMarks = passingMarks;
+        if (code !== undefined) updateData.code = code;
+        if (addressId !== undefined) updateData.addressId = addressId;
+        if (sequence !== undefined) updateData.sequence = sequence;
+        if (disabled !== undefined) updateData.disabled = disabled;
+
+        const updatedBoardUniversity = await updateBoardUniversityService(Number(id), updateData);
+
+        if (!updatedBoardUniversity) {
+            res.status(404).json(new ApiError(404, "Board university not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                updatedBoardUniversity,
+                "Board university updated successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Delete the Board University
+// Delete board university
 export const deleteBoardUniversity = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const deletedBoardUniversity = await db
-            .delete(boardUniversityModel)
-            .where(eq(boardUniversityModel.id, +id))
-            .returning();
 
-        if (deletedBoardUniversity.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        deletedBoardUniversity[0],
-                        "Board University deleted successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Board University not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
         }
+
+        // Check if board university exists
+        const existingBoardUniversity = await findBoardUniversityById(Number(id));
+        if (!existingBoardUniversity) {
+            res.status(404).json(new ApiError(404, "Board university not found"));
+            return;
+        }
+
+        const deletedBoardUniversity = await deleteBoardUniversityService(Number(id));
+
+        if (!deletedBoardUniversity) {
+            res.status(404).json(new ApiError(404, "Board university not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                deletedBoardUniversity,
+                "Board university deleted successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }

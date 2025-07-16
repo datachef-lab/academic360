@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getAllAcademicYears, createAcademicYear, updateAcademicYearById, deleteAcademicYearById } from '@/services/academic-year-api';
 import { AcademicYear } from '@/types/academics/academic-year';
 import { toast } from 'sonner';
-import { getAllShifts } from '../services/academic';
 import { useState, useEffect } from 'react';
 import { Shift } from '@/types/academics/shift';
 import { Session } from '@/types/academics/session';
+import { createAcademicYear, deleteAcademicYearById, getAllAcademicYears, updateAcademicYearById } from '@/services/academic-year-api';
+import { getAllShifts } from '@/services/academic';
 
 // Hook for fetching all academic years
 export const useAcademicYears = () => {

@@ -11,7 +11,7 @@ import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { EmergencyContact } from "@/types/user/emergency-contact";
 import { Health } from "@/types/user/health";
-import { Parent } from "@/types/user/parent";
+import { Parent } from "@/types/user/family";
 import { PersonalDetails } from "@/types/user/personal-details";
 import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";

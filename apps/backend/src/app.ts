@@ -64,6 +64,7 @@ import {
   feesHeadRouter,
   feesReceiptTypeRouter,
   feesSlabYearMappingRouter,
+  personRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
 import courseRouter from "./features/academics/routes/course.route.js";
@@ -87,6 +88,7 @@ import {
 } from "@/features/admissions/index.js";
 import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
+import { disabilityRouter } from "./features/user/routes/index.js";
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -207,6 +209,8 @@ app.use("/api/users", userRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
+app.use("/api/persons", personRouter);
+
 app.use("/api/students", studentRouter);
 
 app.use("/api/subject-metadatas", subjectMetadataRouter);
@@ -239,11 +243,13 @@ app.use("/api/blood-groups", bloodGroupRouter);
 
 app.use("/api/categories", categoryRouter);
 
-app.use("/api/specialization", specializationRouter);
+app.use("/api/specializations", specializationRouter);
 
 app.use("/api/languages", languageMediumRouter);
 
-app.use("/api/resultstatus", boardResultStatusRouter);
+app.use("/api/disability-codes", disabilityRouter);
+
+app.use("/api/board-result-statuses", boardResultStatusRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
 
@@ -263,9 +269,9 @@ app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
 
-app.use("/api/academicIdentifiers", academicIdentifierRouter);
+app.use("/api/academic-identifiers", academicIdentifierRouter);
 
-app.use("/api/academicHistories", academicHistoryRouter);
+app.use("/api/academic-history", academicHistoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

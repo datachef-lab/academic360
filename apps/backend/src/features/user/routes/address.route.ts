@@ -1,24 +1,26 @@
 import express from "express";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
-
-import { createAddress, getAddressById, updateAddress } from "../controllers/address.controller.js";
+import {
+    createAddress,
+    getAddressById,
+    getAllAddress,
+    updateAddress,
+    deleteAddress
+} from "../controllers/address.controller.js";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
+// Create
 router.post("/", createAddress);
-
-router.get("/query", (req, res, next) => {
-    const { id } = req.query;
-    console.log(id);
-    if (id) {
-        getAddressById(req, res, next);
-    } else {
-        next();
-    }
-});
-
+// Get all
+router.get("/", getAllAddress);
+// Get by id
+router.get("/:id", getAddressById);
+// Update
 router.put("/:id", updateAddress);
+// Delete
+router.delete("/:id", deleteAddress);
 
 export default router;

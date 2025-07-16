@@ -1,10 +1,10 @@
 import { Disability, Gender } from "../enums";
-import { Address } from "../resources/address";
-import { Category } from "../resources/category";
+import { Address } from "@/types/user/address";
+import { Category } from "../resources/category.types";
 import { DisabilityCode } from "../resources/disability-code";
-import { LanguageMedium } from "../resources/language-medium";
-import { Nationality } from "../resources/nationality";
-import { Religion } from "../resources/religion";
+import { LanguageMedium } from "../resources/language-medium.types";
+import { Nationality } from "../resources/nationality.types";
+import { Religion } from "../resources/religion.types";
 
 export interface PersonalDetails {
     readonly id?: number;

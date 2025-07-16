@@ -13,13 +13,13 @@ import type { QueryObserverResult } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { getAllBatches } from "@/services/batch";
 import { BatchSummary } from "@/types/academics/batch";
-import { getAllAcademicYears } from "@/services/academic-year-api";
 import { getAllCourses } from "@/services/course-api";
-import { getAllShifts, getAllSections } from "@/services/academic";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/academics/course";
 import { Shift } from "@/types/academics/shift";
 import { Section } from "@/types/academics/section";
+import { getAllAcademicYears } from "@/services/academic-year-api";
+import { getAllSections, getAllShifts } from "@/services/academic";
 
 const columns: ColumnDef<BatchSummary, unknown>[] = [
   { accessorKey: "id", header: "Batch ID" },

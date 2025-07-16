@@ -14,9 +14,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-year-api";
+// import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-identifiers.service";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Session } from "@/types/academics/session";
+import { createAcademicYear, getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
 
 const defaultSession: Session = { id: 1, name: "", from: new Date(), to: new Date(), isCurrentSession: true, codePrefix: "DEF", sequence: 1, disabled: false };
 

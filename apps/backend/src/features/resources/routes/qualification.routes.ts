@@ -9,19 +9,29 @@ import {
 
 const router = express.Router();
 
-// Create a new Qualification Route
+/**
+ * Qualification Routes
+ * 
+ * POST   /                    - Create a new qualification
+ * GET    /                    - Get all qualifications
+ * GET    /:id                 - Get qualification by ID
+ * PUT    /:id                 - Update qualification by ID
+ * DELETE /:id                 - Delete qualification by ID
+ */
+
+// Create a new qualification
 router.post("/", createNewQualification);
 
-// Get all Qualification  Route
+// Get all qualifications
 router.get("/", getAllQualification);
 
-// Get by Qualification ID
+// Get qualification by ID
 router.get("/:id", getQualificationById);
 
-// Update the Qualification  Route
+// Update qualification by ID
 router.put("/:id", updateQualification);
 
-//Delete the Qualification  Route
+// Delete qualification by ID
 router.delete("/:id", deleteQualifications);
 
 export default router;

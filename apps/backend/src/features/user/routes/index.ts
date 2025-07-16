@@ -13,7 +13,7 @@ import userRouter from '@/features/user/routes/user.route.js';
 import studentRouter from '@/features/user/routes/student.route.js';
 import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/user/routes/specialization.routes.js";
-
+import disabilityRouter from "@/features/user/routes/disabilityCode.route.js";
 export {
     academicHistoryRouter,
     academicIdentifierRouter,
@@ -25,6 +25,7 @@ export {
     familyRouter,
     personRouter,
     personalDetailsRouter,
+    disabilityRouter,
     transportDetailsRouter,
     userRouter,
     studentRouter,

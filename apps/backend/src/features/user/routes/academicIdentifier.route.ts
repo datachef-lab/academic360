@@ -1,27 +1,32 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-import { createAcademicIdentifier, getAcademicIdentifierById, getAcademicIdentifierByStudentId, updateAcademicIdentifier } from "../controllers/academicIdentifier.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import {
+  createAcademicIdentifier,
+  getAcademicIdentifierById,
+  getAcademicIdentifierByStudentId,
+  updateAcademicIdentifier,
+  deleteAcademicIdentifier,
+  deleteAcademicIdentifierByStudentId,
+  getAllAcademicIdentifiersController
+} from "../controllers/academicIdentifier.controller.js";
 
 const router = express.Router();
 
-router.use(verifyJWT);
+// router.use(verifyJWT);
 
+// Get all
+router.get("/", getAllAcademicIdentifiersController);
+// Create
 router.post("/", createAcademicIdentifier);
-
-router.get("/query", (req, res, next) => {
-    const { id, studentId } = req.query;
-
-    if (id) {
-        return getAcademicIdentifierById(req, res, next);
-    } else if (studentId) {
-        return getAcademicIdentifierByStudentId(req, res, next);
-    }
-    else {
-        next();
-    }
-
-});
-
+// Get by id
+router.get("/:id", getAcademicIdentifierById);
+// Get by studentId
+router.get("/student/:studentId", getAcademicIdentifierByStudentId);
+// Update
 router.put("/:id", updateAcademicIdentifier);
+// Delete by id
+router.delete("/:id", deleteAcademicIdentifier);
+// Delete by studentId
+router.delete("/student/:studentId", deleteAcademicIdentifierByStudentId);
 
 export default router;

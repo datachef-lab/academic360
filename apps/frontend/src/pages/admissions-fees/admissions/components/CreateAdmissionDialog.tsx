@@ -146,7 +146,7 @@ export default function CreateAdmissionDialog({
     setOpen(false);
   };
 
-  const usedAcademicYearIds = new Set((admissions ?? []).map(a => a.academicYear.id!));
+  const usedAcademicYearIds = new Set((admissions ?? []).map(a => a.academicYear?.id).filter(id => id !== undefined));
   const availableAcademicYears = (academicYears ?? []).filter(y => !usedAcademicYearIds.has(y.id!));
 
   return (

@@ -1,37 +1,51 @@
-import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { BloodGroup } from "@/features/resources/models/bloodGroup.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { findAll } from "@/utils/helper.js";
+import { 
+    findAllBloodGroups, 
+    findBloodGroupById, 
+    createBloodGroup as createBloodGroupService, 
+    updateBloodGroup as updateBloodGroupService, 
+    deleteBloodGroup as deleteBloodGroupService,
+    findBloodGroupByType 
+} from "@/features/resources/services/bloodGroup.service.js";
 
 // Create a new blood group
-export const createBloodGroup = async (req: Request, res: Response, next: NextFunction) => {
+export const createBloodGroup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        console.log(req.body);
-        // Ensure dates are properly formatted to avoid issues
+        const { type, sequence, disabled } = req.body;
+
+        // Basic validation
+        if (!type || typeof type !== 'string') {
+            res.status(400).json(new ApiError(400, "Type is required and must be a string"));
+            return;
+        }
+
+        // Check if type already exists
+        const existingType = await findBloodGroupByType(type);
+        if (existingType) {
+            res.status(409).json(new ApiError(409, "Blood group type already exists"));
+            return;
+        }
+
         const bloodGroupData = {
-            ...req.body,
-            createdAt: new Date(),
-            updatedAt: new Date()
+            type,
+            sequence: sequence || null,
+            disabled: disabled || false
         };
-        
-        const newBloodGroupModel = await db
-            .insert(bloodGroupModel)
-            .values(bloodGroupData);
-        console.log("New Document added", newBloodGroupModel);
-        res
-            .status(201)
-            .json(
-                new ApiResponse(
-                    201,
-                    "SUCCESS",
-                    null,
-                    "New Blood Group is added to db!",
-                ),
-            );
+
+        const newBloodGroup = await createBloodGroupService(bloodGroupData);
+
+        res.status(201).json(
+            new ApiResponse(
+                201,
+                "SUCCESS",
+                newBloodGroup,
+                "Blood group created successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
@@ -42,20 +56,18 @@ export const getAllBloodGroups = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        console.log(req.body);
-        const bloodGroups = await findAll(bloodGroupModel);
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    bloodGroups,
-                    "All Blood Groups fetched successfully.",
-                ),
-            );
+        const bloodGroups = await findAllBloodGroups();
+        
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                bloodGroups,
+                "All blood groups fetched successfully."
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
@@ -66,27 +78,30 @@ export const getBloodGroup = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        const bloodGroup = await db
-            .select()
-            .from(bloodGroupModel)
-            .where(eq(bloodGroupModel.id, Number(id)))
-            .limit(1);
-// kl
-        if (!bloodGroup[0]) {
-            res
-                .status(404)
-                .json(new ApiResponse(404, "NOT_FOUND", null, "Blood group not found"));
+        
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        res
-            .status(200)
-            .json(
-                new ApiResponse(200, "SUCCESS", bloodGroup[0], "Fetched blood group!"),
-            );
+        const bloodGroup = await findBloodGroupById(Number(id));
+
+        if (!bloodGroup) {
+            res.status(404).json(new ApiError(404, "Blood group not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                bloodGroup,
+                "Blood group fetched successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
@@ -97,49 +112,53 @@ export const updateBloodGroup = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        
-        // Ensure proper date handling by removing any existing date fields and adding a fresh updatedAt
-        const { createdAt, updatedAt, ...bodyData } = req.body;
-        const updatedBloodGroup = {
-            ...bodyData,
-            updatedAt: new Date(),
-        };
+        const { type, sequence, disabled } = req.body;
 
-        const existingBloodGroup = await db
-            .select()
-            .from(bloodGroupModel)
-            .where(eq(bloodGroupModel.id, +id))
-            .then((bloodGroup) => bloodGroup[0]);
-
-        if (!existingBloodGroup) {
-            res.status(404).json(new ApiError(404, "Blood Group not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        const updateBloodGroup = await db
-            .update(bloodGroupModel)
-            .set(updatedBloodGroup)
-            .where(eq(bloodGroupModel.id, +id))
-            .returning();
-
-        if (updateBloodGroup.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        updateBloodGroup[0],
-                        " updated Blood Group successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Blood Group not found"));
+        // Check if blood group exists
+        const existingBloodGroup = await findBloodGroupById(Number(id));
+        if (!existingBloodGroup) {
+            res.status(404).json(new ApiError(404, "Blood group not found"));
+            return;
         }
+
+        // If type is being updated, check for duplicates
+        if (type && type !== existingBloodGroup.type) {
+            const duplicateType = await findBloodGroupByType(type);
+            if (duplicateType) {
+                res.status(409).json(new ApiError(409, "Blood group type already exists"));
+                return;
+            }
+        }
+
+        const updateData: Partial<Omit<BloodGroup, 'id' | 'createdAt' | 'updatedAt'>> = {};
+        
+        if (type !== undefined) updateData.type = type;
+        if (sequence !== undefined) updateData.sequence = sequence;
+        if (disabled !== undefined) updateData.disabled = disabled;
+
+        const updatedBloodGroup = await updateBloodGroupService(Number(id), updateData);
+
+        if (!updatedBloodGroup) {
+            res.status(404).json(new ApiError(404, "Blood group not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                updatedBloodGroup,
+                "Blood group updated successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
@@ -150,29 +169,37 @@ export const deleteBloodGroup = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const deletedBloodGroup = await db
-            .delete(bloodGroupModel)
-            .where(eq(bloodGroupModel.id, +id))
-            .returning();
 
-        if (deletedBloodGroup.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        deletedBloodGroup[0],
-                        "Blood Group deleted successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Blood Group not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
         }
+
+        // Check if blood group exists
+        const existingBloodGroup = await findBloodGroupById(Number(id));
+        if (!existingBloodGroup) {
+            res.status(404).json(new ApiError(404, "Blood group not found"));
+            return;
+        }
+
+        const deletedBloodGroup = await deleteBloodGroupService(Number(id));
+
+        if (!deletedBloodGroup) {
+            res.status(404).json(new ApiError(404, "Blood group not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                deletedBloodGroup,
+                "Blood group deleted successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
