@@ -1,14 +1,16 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { subjectTypes } from "../models/subject-type.model";
-import { eq } from "drizzle-orm";
-import { SubjectTypeSchema } from "@/types/course-design";
+import {
+  createSubjectType as createSubjectTypeService,
+  getAllSubjectTypes as getAllSubjectTypesService,
+  getSubjectTypeById as getSubjectTypeByIdService,
+  updateSubjectType as updateSubjectTypeService,
+  deleteSubjectType as deleteSubjectTypeService,
+} from "../services/subject-type.service";
 
 export const createSubjectType = async (req: Request, res: Response) => {
   try {
-    const subjectTypeData = SubjectTypeSchema.parse(req.body);
-    const newSubjectType = await db.insert(subjectTypes).values(subjectTypeData).returning();
-    res.status(201).json(newSubjectType[0]);
+    const newSubjectType = await createSubjectTypeService(req.body);
+    res.status(201).json(newSubjectType);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -16,7 +18,7 @@ export const createSubjectType = async (req: Request, res: Response) => {
 
 export const getAllSubjectTypes = async (_req: Request, res: Response) => {
   try {
-    const allSubjectTypes = await db.select().from(subjectTypes);
+    const allSubjectTypes = await getAllSubjectTypesService();
     res.json(allSubjectTypes);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -25,14 +27,11 @@ export const getAllSubjectTypes = async (_req: Request, res: Response) => {
 
 export const getSubjectTypeById = async (req: Request, res: Response) => {
   try {
-    const subjectType = await db
-      .select()
-      .from(subjectTypes)
-      .where(eq(subjectTypes.id, req.params.id));
-    if (!subjectType.length) {
+    const subjectType = await getSubjectTypeByIdService(req.params.id);
+    if (!subjectType) {
       return res.status(404).json({ error: "Subject Type not found" });
     }
-    res.json(subjectType[0]);
+    res.json(subjectType);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -40,16 +39,11 @@ export const getSubjectTypeById = async (req: Request, res: Response) => {
 
 export const updateSubjectType = async (req: Request, res: Response) => {
   try {
-    const subjectTypeData = SubjectTypeSchema.parse(req.body);
-    const updatedSubjectType = await db
-      .update(subjectTypes)
-      .set(subjectTypeData)
-      .where(eq(subjectTypes.id, req.params.id))
-      .returning();
-    if (!updatedSubjectType.length) {
+    const updatedSubjectType = await updateSubjectTypeService(req.params.id, req.body);
+    if (!updatedSubjectType) {
       return res.status(404).json({ error: "Subject Type not found" });
     }
-    res.json(updatedSubjectType[0]);
+    res.json(updatedSubjectType);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -57,11 +51,8 @@ export const updateSubjectType = async (req: Request, res: Response) => {
 
 export const deleteSubjectType = async (req: Request, res: Response) => {
   try {
-    const deletedSubjectType = await db
-      .delete(subjectTypes)
-      .where(eq(subjectTypes.id, req.params.id))
-      .returning();
-    if (!deletedSubjectType.length) {
+    const deletedSubjectType = await deleteSubjectTypeService(req.params.id);
+    if (!deletedSubjectType) {
       return res.status(404).json({ error: "Subject Type not found" });
     }
     res.json({ message: "Subject Type deleted successfully" });

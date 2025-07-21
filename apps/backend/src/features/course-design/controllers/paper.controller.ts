@@ -1,17 +1,19 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { papers } from "../models/paper.model";
-import { eq } from "drizzle-orm";
-import { PaperSchema } from "@/types/course-design";
+import {
+  createPaper as createPaperService,
+  getAllPapers as getAllPapersService,
+  getPaperById as getPaperByIdService,
+  updatePaper as updatePaperService,
+  deletePaper as deletePaperService,
+} from "../services/paper.service";
 
 export const createPaper = async (req: Request, res: Response) => {
   try {
-    const paperData = PaperSchema.parse(req.body);
-    const newPaper = await db.insert(papers).values({
-      ...paperData,
+    const newPaper = await createPaperService({
+      ...req.body,
       subjectId: req.body.subjectId,
-    }).returning();
-    res.status(201).json(newPaper[0]);
+    });
+    res.status(201).json(newPaper);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -19,7 +21,7 @@ export const createPaper = async (req: Request, res: Response) => {
 
 export const getAllPapers = async (_req: Request, res: Response) => {
   try {
-    const allPapers = await db.select().from(papers);
+    const allPapers = await getAllPapersService();
     res.json(allPapers);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -28,14 +30,11 @@ export const getAllPapers = async (_req: Request, res: Response) => {
 
 export const getPaperById = async (req: Request, res: Response) => {
   try {
-    const paper = await db
-      .select()
-      .from(papers)
-      .where(eq(papers.id, req.params.id));
-    if (!paper.length) {
+    const paper = await getPaperByIdService(req.params.id);
+    if (!paper) {
       return res.status(404).json({ error: "Paper not found" });
     }
-    res.json(paper[0]);
+    res.json(paper);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -43,19 +42,14 @@ export const getPaperById = async (req: Request, res: Response) => {
 
 export const updatePaper = async (req: Request, res: Response) => {
   try {
-    const paperData = PaperSchema.parse(req.body);
-    const updatedPaper = await db
-      .update(papers)
-      .set({
-        ...paperData,
-        subjectId: req.body.subjectId,
-      })
-      .where(eq(papers.id, req.params.id))
-      .returning();
-    if (!updatedPaper.length) {
+    const updatedPaper = await updatePaperService(req.params.id, {
+      ...req.body,
+      subjectId: req.body.subjectId,
+    });
+    if (!updatedPaper) {
       return res.status(404).json({ error: "Paper not found" });
     }
-    res.json(updatedPaper[0]);
+    res.json(updatedPaper);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -63,11 +57,8 @@ export const updatePaper = async (req: Request, res: Response) => {
 
 export const deletePaper = async (req: Request, res: Response) => {
   try {
-    const deletedPaper = await db
-      .delete(papers)
-      .where(eq(papers.id, req.params.id))
-      .returning();
-    if (!deletedPaper.length) {
+    const deletedPaper = await deletePaperService(req.params.id);
+    if (!deletedPaper) {
       return res.status(404).json({ error: "Paper not found" });
     }
     res.json({ message: "Paper deleted successfully" });

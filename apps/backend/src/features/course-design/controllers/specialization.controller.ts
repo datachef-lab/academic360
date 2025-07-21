@@ -1,14 +1,16 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { specializations } from "../models/specialization.model";
-import { eq } from "drizzle-orm";
-import { SpecializationSchema } from "@/types/course-design";
+import {
+  createSpecialization as createSpecializationService,
+  getAllSpecializations as getAllSpecializationsService,
+  getSpecializationById as getSpecializationByIdService,
+  updateSpecialization as updateSpecializationService,
+  deleteSpecialization as deleteSpecializationService,
+} from "../services/specialization.service";
 
 export const createSpecialization = async (req: Request, res: Response) => {
   try {
-    const specializationData = SpecializationSchema.parse(req.body);
-    const newSpecialization = await db.insert(specializations).values(specializationData).returning();
-    res.status(201).json(newSpecialization[0]);
+    const newSpecialization = await createSpecializationService(req.body);
+    res.status(201).json(newSpecialization);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -16,7 +18,7 @@ export const createSpecialization = async (req: Request, res: Response) => {
 
 export const getAllSpecializations = async (_req: Request, res: Response) => {
   try {
-    const allSpecializations = await db.select().from(specializations);
+    const allSpecializations = await getAllSpecializationsService();
     res.json(allSpecializations);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -25,14 +27,11 @@ export const getAllSpecializations = async (_req: Request, res: Response) => {
 
 export const getSpecializationById = async (req: Request, res: Response) => {
   try {
-    const specialization = await db
-      .select()
-      .from(specializations)
-      .where(eq(specializations.id, req.params.id));
-    if (!specialization.length) {
+    const specialization = await getSpecializationByIdService(req.params.id);
+    if (!specialization) {
       return res.status(404).json({ error: "Specialization not found" });
     }
-    res.json(specialization[0]);
+    res.json(specialization);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -40,16 +39,11 @@ export const getSpecializationById = async (req: Request, res: Response) => {
 
 export const updateSpecialization = async (req: Request, res: Response) => {
   try {
-    const specializationData = SpecializationSchema.parse(req.body);
-    const updatedSpecialization = await db
-      .update(specializations)
-      .set(specializationData)
-      .where(eq(specializations.id, req.params.id))
-      .returning();
-    if (!updatedSpecialization.length) {
+    const updatedSpecialization = await updateSpecializationService(req.params.id, req.body);
+    if (!updatedSpecialization) {
       return res.status(404).json({ error: "Specialization not found" });
     }
-    res.json(updatedSpecialization[0]);
+    res.json(updatedSpecialization);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -57,11 +51,8 @@ export const updateSpecialization = async (req: Request, res: Response) => {
 
 export const deleteSpecialization = async (req: Request, res: Response) => {
   try {
-    const deletedSpecialization = await db
-      .delete(specializations)
-      .where(eq(specializations.id, req.params.id))
-      .returning();
-    if (!deletedSpecialization.length) {
+    const deletedSpecialization = await deleteSpecializationService(req.params.id);
+    if (!deletedSpecialization) {
       return res.status(404).json({ error: "Specialization not found" });
     }
     res.json({ message: "Specialization deleted successfully" });

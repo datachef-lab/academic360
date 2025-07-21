@@ -1,17 +1,19 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { topics } from "../models/topic.model";
-import { eq } from "drizzle-orm";
-import { TopicSchema } from "@/types/course-design";
+import {
+  createTopic as createTopicService,
+  getAllTopics as getAllTopicsService,
+  getTopicById as getTopicByIdService,
+  updateTopic as updateTopicService,
+  deleteTopic as deleteTopicService,
+} from "../services/topic.service";
 
 export const createTopic = async (req: Request, res: Response) => {
   try {
-    const topicData = TopicSchema.parse(req.body);
-    const newTopic = await db.insert(topics).values({
-      ...topicData,
+    const newTopic = await createTopicService({
+      ...req.body,
       paperId: req.body.paperId,
-    }).returning();
-    res.status(201).json(newTopic[0]);
+    });
+    res.status(201).json(newTopic);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -19,7 +21,7 @@ export const createTopic = async (req: Request, res: Response) => {
 
 export const getAllTopics = async (_req: Request, res: Response) => {
   try {
-    const allTopics = await db.select().from(topics);
+    const allTopics = await getAllTopicsService();
     res.json(allTopics);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -28,14 +30,11 @@ export const getAllTopics = async (_req: Request, res: Response) => {
 
 export const getTopicById = async (req: Request, res: Response) => {
   try {
-    const topic = await db
-      .select()
-      .from(topics)
-      .where(eq(topics.id, req.params.id));
-    if (!topic.length) {
+    const topic = await getTopicByIdService(req.params.id);
+    if (!topic) {
       return res.status(404).json({ error: "Topic not found" });
     }
-    res.json(topic[0]);
+    res.json(topic);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -43,19 +42,14 @@ export const getTopicById = async (req: Request, res: Response) => {
 
 export const updateTopic = async (req: Request, res: Response) => {
   try {
-    const topicData = TopicSchema.parse(req.body);
-    const updatedTopic = await db
-      .update(topics)
-      .set({
-        ...topicData,
-        paperId: req.body.paperId,
-      })
-      .where(eq(topics.id, req.params.id))
-      .returning();
-    if (!updatedTopic.length) {
+    const updatedTopic = await updateTopicService(req.params.id, {
+      ...req.body,
+      paperId: req.body.paperId,
+    });
+    if (!updatedTopic) {
       return res.status(404).json({ error: "Topic not found" });
     }
-    res.json(updatedTopic[0]);
+    res.json(updatedTopic);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -63,11 +57,8 @@ export const updateTopic = async (req: Request, res: Response) => {
 
 export const deleteTopic = async (req: Request, res: Response) => {
   try {
-    const deletedTopic = await db
-      .delete(topics)
-      .where(eq(topics.id, req.params.id))
-      .returning();
-    if (!deletedTopic.length) {
+    const deletedTopic = await deleteTopicService(req.params.id);
+    if (!deletedTopic) {
       return res.status(404).json({ error: "Topic not found" });
     }
     res.json({ message: "Topic deleted successfully" });

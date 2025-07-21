@@ -1,17 +1,19 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { paperComponents } from "../models/paper-component.model";
-import { eq } from "drizzle-orm";
-import { PaperComponentSchema } from "@/types/course-design";
+import {
+  createPaperComponent as createPaperComponentService,
+  getAllPaperComponents as getAllPaperComponentsService,
+  getPaperComponentById as getPaperComponentByIdService,
+  updatePaperComponent as updatePaperComponentService,
+  deletePaperComponent as deletePaperComponentService,
+} from "../services/paper-component.service";
 
 export const createPaperComponent = async (req: Request, res: Response) => {
   try {
-    const paperComponentData = PaperComponentSchema.parse(req.body);
-    const newPaperComponent = await db.insert(paperComponents).values({
-      ...paperComponentData,
+    const newPaperComponent = await createPaperComponentService({
+      ...req.body,
       paperId: req.body.paperId,
-    }).returning();
-    res.status(201).json(newPaperComponent[0]);
+    });
+    res.status(201).json(newPaperComponent);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -19,7 +21,7 @@ export const createPaperComponent = async (req: Request, res: Response) => {
 
 export const getAllPaperComponents = async (_req: Request, res: Response) => {
   try {
-    const allPaperComponents = await db.select().from(paperComponents);
+    const allPaperComponents = await getAllPaperComponentsService();
     res.json(allPaperComponents);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -28,14 +30,11 @@ export const getAllPaperComponents = async (_req: Request, res: Response) => {
 
 export const getPaperComponentById = async (req: Request, res: Response) => {
   try {
-    const paperComponent = await db
-      .select()
-      .from(paperComponents)
-      .where(eq(paperComponents.id, req.params.id));
-    if (!paperComponent.length) {
+    const paperComponent = await getPaperComponentByIdService(req.params.id);
+    if (!paperComponent) {
       return res.status(404).json({ error: "Paper Component not found" });
     }
-    res.json(paperComponent[0]);
+    res.json(paperComponent);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -43,19 +42,14 @@ export const getPaperComponentById = async (req: Request, res: Response) => {
 
 export const updatePaperComponent = async (req: Request, res: Response) => {
   try {
-    const paperComponentData = PaperComponentSchema.parse(req.body);
-    const updatedPaperComponent = await db
-      .update(paperComponents)
-      .set({
-        ...paperComponentData,
-        paperId: req.body.paperId,
-      })
-      .where(eq(paperComponents.id, req.params.id))
-      .returning();
-    if (!updatedPaperComponent.length) {
+    const updatedPaperComponent = await updatePaperComponentService(req.params.id, {
+      ...req.body,
+      paperId: req.body.paperId,
+    });
+    if (!updatedPaperComponent) {
       return res.status(404).json({ error: "Paper Component not found" });
     }
-    res.json(updatedPaperComponent[0]);
+    res.json(updatedPaperComponent);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -63,11 +57,8 @@ export const updatePaperComponent = async (req: Request, res: Response) => {
 
 export const deletePaperComponent = async (req: Request, res: Response) => {
   try {
-    const deletedPaperComponent = await db
-      .delete(paperComponents)
-      .where(eq(paperComponents.id, req.params.id))
-      .returning();
-    if (!deletedPaperComponent.length) {
+    const deletedPaperComponent = await deletePaperComponentService(req.params.id);
+    if (!deletedPaperComponent) {
       return res.status(404).json({ error: "Paper Component not found" });
     }
     res.json({ message: "Paper Component deleted successfully" });

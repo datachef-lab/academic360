@@ -1,17 +1,19 @@
 import { Request, Response } from "express";
-import { db } from "@/db";
-import { examComponents } from "../models/exam-component.model";
-import { eq } from "drizzle-orm";
-import { ExamComponentSchema } from "@/types/course-design";
+import {
+  createExamComponent as createExamComponentService,
+  getAllExamComponents as getAllExamComponentsService,
+  getExamComponentById as getExamComponentByIdService,
+  updateExamComponent as updateExamComponentService,
+  deleteExamComponent as deleteExamComponentService,
+} from "../services/exam-component.service";
 
 export const createExamComponent = async (req: Request, res: Response) => {
   try {
-    const examComponentData = ExamComponentSchema.parse(req.body);
-    const newExamComponent = await db.insert(examComponents).values({
-      ...examComponentData,
+    const newExamComponent = await createExamComponentService({
+      ...req.body,
       subjectId: req.body.subjectId,
-    }).returning();
-    res.status(201).json(newExamComponent[0]);
+    });
+    res.status(201).json(newExamComponent);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -19,7 +21,7 @@ export const createExamComponent = async (req: Request, res: Response) => {
 
 export const getAllExamComponents = async (_req: Request, res: Response) => {
   try {
-    const allExamComponents = await db.select().from(examComponents);
+    const allExamComponents = await getAllExamComponentsService();
     res.json(allExamComponents);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -28,14 +30,11 @@ export const getAllExamComponents = async (_req: Request, res: Response) => {
 
 export const getExamComponentById = async (req: Request, res: Response) => {
   try {
-    const examComponent = await db
-      .select()
-      .from(examComponents)
-      .where(eq(examComponents.id, req.params.id));
-    if (!examComponent.length) {
+    const examComponent = await getExamComponentByIdService(req.params.id);
+    if (!examComponent) {
       return res.status(404).json({ error: "Exam Component not found" });
     }
-    res.json(examComponent[0]);
+    res.json(examComponent);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -43,16 +42,11 @@ export const getExamComponentById = async (req: Request, res: Response) => {
 
 export const updateExamComponent = async (req: Request, res: Response) => {
   try {
-    const examComponentData = ExamComponentSchema.parse(req.body);
-    const updatedExamComponent = await db
-      .update(examComponents)
-      .set(examComponentData)
-      .where(eq(examComponents.id, req.params.id))
-      .returning();
-    if (!updatedExamComponent.length) {
+    const updatedExamComponent = await updateExamComponentService(req.params.id, req.body);
+    if (!updatedExamComponent) {
       return res.status(404).json({ error: "Exam Component not found" });
     }
-    res.json(updatedExamComponent[0]);
+    res.json(updatedExamComponent);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -60,11 +54,8 @@ export const updateExamComponent = async (req: Request, res: Response) => {
 
 export const deleteExamComponent = async (req: Request, res: Response) => {
   try {
-    const deletedExamComponent = await db
-      .delete(examComponents)
-      .where(eq(examComponents.id, req.params.id))
-      .returning();
-    if (!deletedExamComponent.length) {
+    const deletedExamComponent = await deleteExamComponentService(req.params.id);
+    if (!deletedExamComponent) {
       return res.status(404).json({ error: "Exam Component not found" });
     }
     res.json({ message: "Exam Component deleted successfully" });
