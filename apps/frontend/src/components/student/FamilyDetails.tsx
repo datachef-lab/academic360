@@ -12,8 +12,8 @@ import { Spinner } from "../ui/spinner";
 import { Occupation } from "@/types/resources/occupation";
 import { findAllOccupations } from "@/services/occupation.service";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { AnnualIncome } from "@/types/resources/annual-income";
-import { Qualification } from "@/types/resources/qualification";
+// import { AnnualIncome } from "@/types/resources/annual-income";
+// import { Qualification } from "@/types/resources/qualification";
 
 // Helper function to safely access object properties
 const getPersonProperty = (obj: any, property: string): string => {
@@ -218,8 +218,8 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     studentId,
   });
   const [occupations, setOccupations] = useState<Occupation[]>([]);
-  const [qualifications, setQualifications] = useState<Qualification[]>([]);
-  const [annualIncomes, setAnnualIncomes] = useState<AnnualIncome[]>([]);
+  // const [qualifications, setQualifications] = useState<Qualification[]>([]);
+  // const [annualIncomes, setAnnualIncomes] = useState<AnnualIncome[]>([]);
 
   useEffect(() => {
     findAllOccupations().then((data) => setOccupations(data.payload.content));
