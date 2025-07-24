@@ -328,3 +328,13 @@ app.all("*", (req: Request, res: Response) => {
 });
 
 export { app, httpServer };
+
+// Register course-design routes
+app.use("/api/course-design/courses", courseRouter);
+// app.use("/api/course-design/subjects", subjectRouter);
+// app.use("/api/course-design/papers", paperRouter);
+// app.use("/api/course-design/topics", topicRouter);
+// app.use("/api/course-design/streams", streamRouter);
+// app.use("/api/course-design/affiliations", affiliationRouter);
+// app.use("/api/course-design/course-types", courseTypeRouter);
+// app.use("/api/course-design/specializations", specializationRouter);

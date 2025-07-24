@@ -43,7 +43,7 @@ import { readExcelFile } from "@/utils/readExcel.js";
 // import { streamModel } from "@/features/academics/models/stream.model.js";
 // import { SubjectMetadata, subjectMetadataModel } from "@/features/academics/models/subjectMetadata.model.js";
 import { SubjectRow } from "@/types/academics/subject-row.type.js";
-import { subjectTypeModel } from "@/features/course-design/models/subjectType.model.js";
+import { subjectTypeModel } from "@/features/course-design/models/subject-type.model.js";
 import { findDegreeByName } from "@/features/resources/services/degree.service.js";
 // import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
 // import { loadOlderBatches } from "@/features/academics/services/batch.service.js";

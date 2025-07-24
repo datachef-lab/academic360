@@ -64,7 +64,6 @@ export async function findAdmissionCourseByIdWithDetails(id: number) {
                 name: courseModel.name,
                 shortName: courseModel.shortName,
                 codePrefix: courseModel.codePrefix,
-                universityCode: courseModel.universityCode,
             },
             admission: {
                 id: admissionModel.id,
@@ -118,7 +117,6 @@ export async function findAdmissionCoursesByAdmissionIdWithDetails(
                 name: courseModel.name,
                 shortName: courseModel.shortName,
                 codePrefix: courseModel.codePrefix,
-                universityCode: courseModel.universityCode,
             },
         })
         .from(admissionCourseModel)
@@ -200,7 +198,6 @@ export async function findAllActiveAdmissionCoursesWithDetails() {
                 name: courseModel.name,
                 shortName: courseModel.shortName,
                 codePrefix: courseModel.codePrefix,
-                universityCode: courseModel.universityCode,
             },
             admission: {
                 id: admissionModel.id,
@@ -249,7 +246,6 @@ export async function findAllAdmissionCoursesWithDetails() {
                 name: courseModel.name,
                 shortName: courseModel.shortName,
                 codePrefix: courseModel.codePrefix,
-                universityCode: courseModel.universityCode,
             },
             admission: {
                 id: admissionModel.id,

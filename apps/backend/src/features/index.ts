@@ -10,6 +10,7 @@ import feesSlabRouter from "./fees/routes/fees-slab.route.js";
 import feesStructureRouter from "./fees/routes/fees-structure.route.js";
 import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
 import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
+export * from "./course-design/routes/index.js";
 
 export {
     documentRouter,

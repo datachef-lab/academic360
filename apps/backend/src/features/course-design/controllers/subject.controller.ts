@@ -1,0 +1,55 @@
+import { Request, Response, NextFunction } from "express";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
+import { createSubject, getSubjectById, getAllSubjects, updateSubject, deleteSubject } from "@/features/course-design/services/subject.service.js";
+
+export const createSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const created = await createSubject(req.body);
+        res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Subject created successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const getSubjectByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const subject = await getSubjectById(id);
+        if (!subject) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Subject with ID ${id} not found`));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", subject, "Subject fetched successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const getAllSubjectsHandler = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const subjects = await getAllSubjects();
+        res.status(200).json(new ApiResponse(200, "SUCCESS", subjects, "All subjects fetched"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const updateSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const updated = await updateSubject(id, req.body);
+        if (!updated) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject not found"));
+        res.status(200).json(new ApiResponse(200, "UPDATED", updated, "Subject updated successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const deleteSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const deleted = await deleteSubject(id);
+        if (!deleted) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Subject not found"));
+        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Subject deleted successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}; 
