@@ -1,5 +1,5 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { courseModel } from "./course.model.js";
+import { courseModel } from "../../course-design/models/course.model.js";
 import { classModel } from "./class.model.js";
 import { sectionModel } from "./section.model.js";
 import { relations } from "drizzle-orm";
@@ -7,13 +7,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { shiftModel } from "./shift.model.js";
 import { sessionModel } from "./session.model.js";
-import { academicYearModel } from "./academic-year.model.js";
 
 export const batchModel = pgTable('batches', {
     id: serial().primaryKey(),
-    academicYearId: integer("academic_year_id_fk")
-        .references(() => academicYearModel.id)
-        .notNull(),
     courseId: integer("course_id_fk")
         .notNull()
         .references(() => courseModel.id),

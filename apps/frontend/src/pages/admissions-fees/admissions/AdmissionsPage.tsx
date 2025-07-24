@@ -2,9 +2,20 @@ import { UserDataTable } from "@/pages/DataTableTest";
 import { columns } from "@/pages/column";
 import { dummyUsers } from "@/pages/dummyData";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
+import { CustomPaginationState } from "@/components/ui/simple-data-table";
 import React from "react";
-import { CustomPaginationState } from "@/components/settings/SettingsContent";
+import { PlusCircle } from "lucide-react";
+import { QueryObserverResult } from "@tanstack/react-query";
+// import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+// import { useNavigate } from "react-router-dom";
+// import CreateAdmissionDialog from "./components/CreateAdmissionDialog";
+// import AdmissionsStats from "./components/AdmissionsStats";
+// import AdmissionConfigureDialog from "./components/AdmissionConfigureDialog";
+// import {  AdmissionSummary, Stats } from "./types";
+// import { fetchStatsSummary, fetchAdmissionSummaries, createAdmission } from "@/services/admissions.service";
+// import { getAllCourses } from "@/services/course-api";
+// import { Course } from "@/types/course-design/course";
+// import { Admission } from "@/types/admissions";
 
 export default function AdmissionsPage() {
   const [pagination, setPagination] = React.useState<CustomPaginationState>({
@@ -16,7 +27,17 @@ export default function AdmissionsPage() {
   const [searchText, setSearchText] = React.useState("");
   const setDataLength = React.useState(dummyUsers.length)[1];
 
-  const refetch = async () => {};
+  const refetch = async () => {
+    return {
+      data: dummyUsers,
+      error: null,
+      isFetching: false,
+      status: "success",
+    } as QueryObserverResult<
+      { id: number; name: string; position: string; email: string; contact: string; avatarColor: string }[] | undefined,
+      Error
+    >;
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

@@ -1,17 +1,19 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const streams = pgTable("streams", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const streamModel = pgTable('streams', {
+    id: serial().primaryKey(),
+    name: varchar({ length: 500 }).notNull(),
+    code: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
+    codePrefix: varchar({ length: 10 }),
+    sequence: integer().unique(),
+    disabled: boolean().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertStreamSchema = createInsertSchema(streams);
-export const selectStreamSchema = createSelectSchema(streams);
-export type Stream = z.infer<typeof selectStreamSchema>;
-export type NewStream = z.infer<typeof insertStreamSchema>;
+export const createStreamModel = createInsertSchema(streamModel);
+
+export type Stream = z.infer<typeof createStreamModel>;

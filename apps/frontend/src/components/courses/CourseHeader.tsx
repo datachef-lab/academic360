@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design/course';
 import { Degree } from '@/types/resources/degree';
 
 // Define ProgrammeOption locally

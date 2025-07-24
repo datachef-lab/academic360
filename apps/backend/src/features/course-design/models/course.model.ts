@@ -1,20 +1,27 @@
-import { pgTable, text, timestamp, uuid, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { degreeModel } from "@/features/resources/models/degree.model.js";
 
-export const courses = pgTable("courses", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  code: text("code").notNull(),
-  description: text("description").notNull(),
-  duration: integer("duration").notNull(),
-  totalCredits: integer("total_credits").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const courseModel = pgTable('courses', {
+    id: serial().primaryKey(),
+    degreeId: integer("degree_id_fk").references(() => degreeModel.id),
+    name: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
+    codePrefix: varchar({ length: 10 }),
+    universityCode: varchar({ length: 10 }),
+    amount: integer("amount"),
+    numberOfSemesters: integer(),
+    duration: varchar({length: 255}),
+    sequene: integer().unique().default(0),
+
+    sequence: integer().unique(),
+
+    disabled: boolean().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertCourseSchema = createInsertSchema(courses);
-export const selectCourseSchema = createSelectSchema(courses);
-export type Course = z.infer<typeof selectCourseSchema>;
-export type NewCourse = z.infer<typeof insertCourseSchema>;
+export const createCourseModel = createInsertSchema(courseModel);
+
+export type Course = z.infer<typeof createCourseModel>;

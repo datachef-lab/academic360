@@ -21,14 +21,15 @@ import { generateToken } from "./utils/index.js";
 import {
   academicYearRouter,
   classRouter,
+  batchStudentMappingRouter,
+  marksheetPaperMappingRouter,
+  marksheetPaperComponentMappingRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
   documentRouter,
   marksheetRouter,
-  subjectMetadataRouter,
-  subjectRouter,
   countryRouter,
   userRouter,
   authRouter,
@@ -50,8 +51,6 @@ import {
   degreeRouter,
   occupationRouter,
   batchRouter,
-  batchPaperRouter,
-  studentPaperRouter,
   emergencyContactRouter,
   addressRouter,
   reportRouter,
@@ -66,7 +65,7 @@ import {
   feesSlabYearMappingRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
-import courseRouter from "./features/academics/routes/course.route.js";
+import courseRouter from "@/features/course-design/routes/course.route.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
 import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -85,7 +84,7 @@ import {
   studentAcademicSubjectRouter,
   academicSubjectRouter,
 } from "@/features/admissions/index.js";
-import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
+// import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
 import { streamRouter, courseTypeRouter, courseLevelRouter, affiliationTypeRouter, regulationTypeRouter, programCourseRouter } from "@/features/course-design/routes/index.js";
 
@@ -202,8 +201,14 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 app.use("/auth", authRouter);
 
 app.use("/api/batches", batchRouter);
+app.use("/api/academics/batch-student-mappings", batchStudentMappingRouter);
+app.use("/api/academics/marksheet-paper-mappings", marksheetPaperMappingRouter);
+app.use(
+  "/api/academics/marksheet-paper-component-mappings",
+  marksheetPaperComponentMappingRouter,
+);
 
-app.use("/api/batch-papers/old-data", batchPaperRouter);
+// app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
 
@@ -211,13 +216,13 @@ app.use("/api/personal-details", personalDetailsRouter);
 
 app.use("/api/students", studentRouter);
 
-app.use("/api/subject-metadatas", subjectMetadataRouter);
+// app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use("/api/marksheets", marksheetRouter);
 
-app.use("/api/student-papers/", studentPaperRouter);
+// app.use("/api/student-papers/", studentPaperRouter);
 
-app.use("/api/subjects", subjectRouter);
+// app.use("/api/subjects", subjectRouter);
 
 app.use("/api/nationality", nationalityRouter);
 
@@ -307,7 +312,7 @@ app.use(
 );
 app.use("/api/admissions/academic-subject", academicSubjectRouter);
 
-app.use("/api/study-materials", studyMaterialRouter);
+// app.use("/api/study-materials", studyMaterialRouter);
 
 app.use("/api/v1/sections", sectionRoutes);
 
@@ -333,3 +338,13 @@ app.all("*", (req: Request, res: Response) => {
 });
 
 export { app, httpServer };
+
+// Register course-design routes
+app.use("/api/course-design/courses", courseRouter);
+// app.use("/api/course-design/subjects", subjectRouter);
+// app.use("/api/course-design/papers", paperRouter);
+// app.use("/api/course-design/topics", topicRouter);
+// app.use("/api/course-design/streams", streamRouter);
+// app.use("/api/course-design/affiliations", affiliationRouter);
+// app.use("/api/course-design/course-types", courseTypeRouter);
+// app.use("/api/course-design/specializations", specializationRouter);

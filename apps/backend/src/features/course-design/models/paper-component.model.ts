@@ -1,21 +1,23 @@
-import { pgTable, text, timestamp, uuid, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { paperModel } from "./paper.model";
+import { examComponentModel } from "./exam-component.model";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { papers } from "./paper.model";
 
-export const paperComponents = pgTable("paper_components", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  maxMarks: integer("max_marks").notNull(),
-  passingMarks: integer("passing_marks").notNull(),
-  paperId: uuid("paper_id").references(() => papers.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const paperComponentModel = pgTable("paper_components", {
+    id: serial().primaryKey(),
+    paperId: integer("paper_id_fk")
+        .references(() => paperModel.id)
+        .notNull(),
+    examComponentId: integer("exam_component_id_fk")
+        .references(() => examComponentModel.id)
+        .notNull(),
+    fullMarks: doublePrecision().notNull().default(0),
+    credit: doublePrecision().notNull().default(0),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertPaperComponentSchema = createInsertSchema(paperComponents);
-export const selectPaperComponentSchema = createSelectSchema(paperComponents);
-export type PaperComponent = z.infer<typeof selectPaperComponentSchema>;
-export type NewPaperComponent = z.infer<typeof insertPaperComponentSchema>;
+export const createPaperComponentSchema = createInsertSchema(paperComponentModel);
+
+export type PaperComponent = z.infer<typeof createPaperComponentSchema>;

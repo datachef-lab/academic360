@@ -1,68 +1,55 @@
-import { Request, Response } from "express";
-import {
-  createPaper as createPaperService,
-  getAllPapers as getAllPapersService,
-  getPaperById as getPaperByIdService,
-  updatePaper as updatePaperService,
-  deletePaper as deletePaperService,
-} from "../services/paper.service";
+import { Request, Response, NextFunction } from "express";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
+import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaper } from "@/features/course-design/services/paper.service.js";
 
-export const createPaper = async (req: Request, res: Response) => {
-  try {
-    const newPaper = await createPaperService({
-      ...req.body,
-      subjectId: req.body.subjectId,
-    });
-    res.status(201).json(newPaper);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-export const getAllPapers = async (_req: Request, res: Response) => {
-  try {
-    const allPapers = await getAllPapersService();
-    res.json(allPapers);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const getPaperById = async (req: Request, res: Response) => {
-  try {
-    const paper = await getPaperByIdService(req.params.id);
-    if (!paper) {
-      return res.status(404).json({ error: "Paper not found" });
+export const createPaperHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const created = await createPaper(req.body);
+        res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Paper created successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(paper);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
 };
 
-export const updatePaper = async (req: Request, res: Response) => {
-  try {
-    const updatedPaper = await updatePaperService(req.params.id, {
-      ...req.body,
-      subjectId: req.body.subjectId,
-    });
-    if (!updatedPaper) {
-      return res.status(404).json({ error: "Paper not found" });
+export const getPaperByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const paper = await getPaperById(id);
+        if (!paper) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Paper with ID ${id} not found`));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", paper, "Paper fetched successfully"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(updatedPaper);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
 };
 
-export const deletePaper = async (req: Request, res: Response) => {
-  try {
-    const deletedPaper = await deletePaperService(req.params.id);
-    if (!deletedPaper) {
-      return res.status(404).json({ error: "Paper not found" });
+export const getAllPapersHandler = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const papers = await getAllPapers();
+        res.status(200).json(new ApiResponse(200, "SUCCESS", papers, "All papers fetched"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json({ message: "Paper deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
 };
+
+export const updatePaperHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const updated = await updatePaper(id, req.body);
+        if (!updated) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+        res.status(200).json(new ApiResponse(200, "UPDATED", updated, "Paper updated successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const deletePaperHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const deleted = await deletePaper(id);
+        if (!deleted) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Paper deleted successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}; 

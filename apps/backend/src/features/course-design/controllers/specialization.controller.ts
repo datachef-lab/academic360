@@ -1,62 +1,96 @@
-import { Request, Response } from "express";
-import {
-  createSpecialization as createSpecializationService,
-  getAllSpecializations as getAllSpecializationsService,
-  getSpecializationById as getSpecializationByIdService,
-  updateSpecialization as updateSpecializationService,
-  deleteSpecialization as deleteSpecializationService,
-} from "../services/specialization.service";
+import { Request, Response, NextFunction } from "express";
+import { db } from "@/db/index.js";
+import { specializationModel, createSpecializationSchema } from "@/features/course-design/models/specialization.model.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
+import { eq } from "drizzle-orm";
 
-export const createSpecialization = async (req: Request, res: Response) => {
-  try {
-    const newSpecialization = await createSpecializationService(req.body);
-    res.status(201).json(newSpecialization);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-};
+// Create specialization
+export const createSpecialization = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const validatedData = createSpecializationSchema.parse(req.body);
 
-export const getAllSpecializations = async (_req: Request, res: Response) => {
-  try {
-    const allSpecializations = await getAllSpecializationsService();
-    res.json(allSpecializations);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
+        const [newSpecialization] = await db
+            .insert(specializationModel)
+            .values(validatedData)
+            .returning();
 
-export const getSpecializationById = async (req: Request, res: Response) => {
-  try {
-    const specialization = await getSpecializationByIdService(req.params.id);
-    if (!specialization) {
-      return res.status(404).json({ error: "Specialization not found" });
+        res.status(201).json(new ApiResponse(201, "SUCCESS", newSpecialization, "Specialization created successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(specialization);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
 };
 
-export const updateSpecialization = async (req: Request, res: Response) => {
-  try {
-    const updatedSpecialization = await updateSpecializationService(req.params.id, req.body);
-    if (!updatedSpecialization) {
-      return res.status(404).json({ error: "Specialization not found" });
+// Get specialization by ID
+export const getSpecializationById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.query;
+
+        const [specialization] = await db
+            .select()
+            .from(specializationModel)
+            .where(eq(specializationModel.id, Number(id)));
+
+        if (!specialization) {
+            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Specialization with ID ${id} not found`));
+        }
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", specialization, "Specialization fetched successfully"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(updatedSpecialization);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
 };
 
-export const deleteSpecialization = async (req: Request, res: Response) => {
-  try {
-    const deletedSpecialization = await deleteSpecializationService(req.params.id);
-    if (!deletedSpecialization) {
-      return res.status(404).json({ error: "Specialization not found" });
+// Get all specializations
+export const getAllSpecializations = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const specializations = await db.select().from(specializationModel);
+        res.status(200).json(new ApiResponse(200, "SUCCESS", specializations, "All specializations fetched"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json({ message: "Specialization deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
+};
+
+// Update specialization
+export const updateSpecialization = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.query;
+        const { createdAt, updatedAt, ...rest } = req.body;
+
+        const validatedData = createSpecializationSchema.parse(rest);
+
+        const [updatedSpecialization] = await db
+            .update(specializationModel)
+            .set(validatedData)
+            .where(eq(specializationModel.id, Number(id)))
+            .returning();
+
+        if (!updatedSpecialization) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Specialization not found"));
+        }
+
+        res.status(200).json(new ApiResponse(200, "UPDATED", updatedSpecialization, "Specialization updated successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+// Delete specialization
+export const deleteSpecialization = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.query;
+
+        const [deletedSpecialization] = await db
+            .delete(specializationModel)
+            .where(eq(specializationModel.id, Number(id)))
+            .returning();
+
+        if (!deletedSpecialization) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Specialization not found"));
+        }
+
+        res.status(200).json(new ApiResponse(200, "DELETED", deletedSpecialization, "Specialization deleted successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
 };

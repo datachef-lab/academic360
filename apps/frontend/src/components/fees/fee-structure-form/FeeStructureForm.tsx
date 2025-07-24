@@ -8,7 +8,7 @@ import { ChevronRight, ChevronLeft } from "lucide-react";
 import { 
   FeesStructureDto,  CreateFeesStructureDto } from "../../../types/fees";
 import {AcademicYear} from "@/types/academics/academic-year"
-import { Course } from "../../../types/academics/course";
+import { Course } from "../../../types/course-design/course";
 import { useAcademicYears } from "@/hooks/useAcademicYears";
 import { useFeesSlabs, useFeesHeads, useFeesReceiptTypes } from "@/hooks/useFees";
 import { useShifts } from "@/hooks/useShifts";

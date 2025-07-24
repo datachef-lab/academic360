@@ -1,68 +1,55 @@
-import { Request, Response } from "express";
-import {
-  createTopic as createTopicService,
-  getAllTopics as getAllTopicsService,
-  getTopicById as getTopicByIdService,
-  updateTopic as updateTopicService,
-  deleteTopic as deleteTopicService,
-} from "../services/topic.service";
+import { Request, Response, NextFunction } from "express";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
+import { createTopic, getTopicById, getAllTopics, updateTopic, deleteTopic } from "@/features/course-design/services/topic.service.js";
 
-export const createTopic = async (req: Request, res: Response) => {
-  try {
-    const newTopic = await createTopicService({
-      ...req.body,
-      paperId: req.body.paperId,
-    });
-    res.status(201).json(newTopic);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-export const getAllTopics = async (_req: Request, res: Response) => {
-  try {
-    const allTopics = await getAllTopicsService();
-    res.json(allTopics);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-export const getTopicById = async (req: Request, res: Response) => {
-  try {
-    const topic = await getTopicByIdService(req.params.id);
-    if (!topic) {
-      return res.status(404).json({ error: "Topic not found" });
+export const createTopicHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const created = await createTopic(req.body);
+        res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Topic created successfully!"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(topic);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
 };
 
-export const updateTopic = async (req: Request, res: Response) => {
-  try {
-    const updatedTopic = await updateTopicService(req.params.id, {
-      ...req.body,
-      paperId: req.body.paperId,
-    });
-    if (!updatedTopic) {
-      return res.status(404).json({ error: "Topic not found" });
+export const getTopicByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const topic = await getTopicById(id);
+        if (!topic) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Topic with ID ${id} not found`));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", topic, "Topic fetched successfully"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json(updatedTopic);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
-  }
 };
 
-export const deleteTopic = async (req: Request, res: Response) => {
-  try {
-    const deletedTopic = await deleteTopicService(req.params.id);
-    if (!deletedTopic) {
-      return res.status(404).json({ error: "Topic not found" });
+export const getAllTopicsHandler = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+        const topics = await getAllTopics();
+        res.status(200).json(new ApiResponse(200, "SUCCESS", topics, "All topics fetched"));
+    } catch (error) {
+        handleError(error, res, next);
     }
-    res.json({ message: "Topic deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
 };
+
+export const updateTopicHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const updated = await updateTopic(id, req.body);
+        if (!updated) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+        res.status(200).json(new ApiResponse(200, "UPDATED", updated, "Topic updated successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const deleteTopicHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = Number(req.query.id || req.params.id);
+        const deleted = await deleteTopic(id);
+        if (!deleted) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Topic deleted successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+}; 

@@ -1,22 +1,18 @@
-import { pgTable, text, timestamp, uuid, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { subjects } from "./subject.model";
 
-export const examComponents = pgTable("exam_components", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  maxMarks: integer("max_marks").notNull(),
-  passingMarks: integer("passing_marks").notNull(),
-  weight: integer("weight").notNull(),
-  subjectId: uuid("subject_id").references(() => subjects.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const examComponentModel = pgTable("exam_components", {
+    id: serial().primaryKey(),
+    name: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
+    code: varchar({ length: 500 }),
+    sequence: serial().unique(),
+    disabled: boolean().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertExamComponentSchema = createInsertSchema(examComponents);
-export const selectExamComponentSchema = createSelectSchema(examComponents);
-export type ExamComponent = z.infer<typeof selectExamComponentSchema>;
-export type NewExamComponent = z.infer<typeof insertExamComponentSchema>;
+export const createExamComponentSchema = createInsertSchema(examComponentModel);
+
+export type ExamComponent = z.infer<typeof createExamComponentSchema>;

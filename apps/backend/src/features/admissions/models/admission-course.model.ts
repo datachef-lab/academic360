@@ -1,6 +1,6 @@
 import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
-import { courseModel } from "@/features/academics/models/course.model.js";
+import { courseModel } from "@/features/course-design/models/course.model.js";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 
@@ -12,6 +12,7 @@ export const admissionCourseModel = pgTable("admission_courses", {
     courseId: integer("course_id_fk")
         .references(() => courseModel.id)
         .notNull(),
+    amount: integer("amount").notNull(),
     disabled: boolean().default(false),
     isClosed: boolean().default(false),
     createdAt: timestamp("created_at").defaultNow(),

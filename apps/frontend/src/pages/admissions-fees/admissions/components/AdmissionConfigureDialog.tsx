@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { updateAdmission, fetchAcademicYears, findAdmissionById } from "@/services/admissions.service";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design/course";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { Admission } from "@/types/admissions";
 import { Checkbox } from "@/components/ui/checkbox";

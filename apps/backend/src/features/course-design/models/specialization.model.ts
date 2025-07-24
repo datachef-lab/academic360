@@ -1,19 +1,15 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { courses } from "./course.model";
 
-export const specializations = pgTable("specializations", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description").notNull(),
-  courseId: uuid("course_id").references(() => courses.id, { onDelete: "cascade" }).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const specializationModel = pgTable("specializations", {
+    id: serial().primaryKey(),
+    name: varchar({ length: 255 }).notNull().unique(),
+    sequence: integer(),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertSpecializationSchema = createInsertSchema(specializations);
-export const selectSpecializationSchema = createSelectSchema(specializations);
-export type Specialization = z.infer<typeof selectSpecializationSchema>;
-export type NewSpecialization = z.infer<typeof insertSpecializationSchema>;
+export const createSpecializationSchema = createInsertSchema(specializationModel);
+
+export type Specialization = z.infer<typeof createSpecializationSchema>;

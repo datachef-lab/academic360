@@ -1,56 +1,30 @@
-import { db } from "@/db";
-import { topics } from "../models/topic.model";
+import { db } from "@/db/index.js";
+import { topicModel, createTopicSchema, Topic } from "@/features/course-design/models/topic.model.js";
 import { eq } from "drizzle-orm";
-import { TopicSchema } from "@/types/course-design";
-import { z } from "zod";
 
-// Types
-export type TopicData = z.infer<typeof TopicSchema>;
+export async function createTopic(data: Omit<Topic, 'id' | 'createdAt' | 'updatedAt'>) {
+    const validated = createTopicSchema.parse(data);
+    const [created] = await db.insert(topicModel).values(validated).returning();
+    return created;
+}
 
-// Create a new topic
-export const createTopic = async (topicData: TopicData & { paperId: string }) => {
-  const validatedData = TopicSchema.parse(topicData);
-  const newTopic = await db.insert(topics).values({
-    ...validatedData,
-    paperId: topicData.paperId,
-  }).returning();
-  return newTopic[0];
-};
+export async function getTopicById(id: number) {
+    const [topic] = await db.select().from(topicModel).where(eq(topicModel.id, id));
+    return topic;
+}
 
-// Get all topics
-export const getAllTopics = async () => {
-  const allTopics = await db.select().from(topics);
-  return allTopics;
-};
+export async function getAllTopics() {
+    return db.select().from(topicModel);
+}
 
-// Get topic by ID
-export const getTopicById = async (id: string) => {
-  const topic = await db
-    .select()
-    .from(topics)
-    .where(eq(topics.id, id));
-  return topic.length > 0 ? topic[0] : null;
-};
+export async function updateTopic(id: number, data: Partial<Topic>) {
+    const { createdAt, updatedAt, ...rest } = data;
+    const validated = createTopicSchema.partial().parse(rest);
+    const [updated] = await db.update(topicModel).set(validated).where(eq(topicModel.id, id)).returning();
+    return updated;
+}
 
-// Update topic
-export const updateTopic = async (id: string, topicData: TopicData & { paperId: string }) => {
-  const validatedData = TopicSchema.parse(topicData);
-  const updatedTopic = await db
-    .update(topics)
-    .set({
-      ...validatedData,
-      paperId: topicData.paperId,
-    })
-    .where(eq(topics.id, id))
-    .returning();
-  return updatedTopic.length > 0 ? updatedTopic[0] : null;
-};
-
-// Delete topic
-export const deleteTopic = async (id: string) => {
-  const deletedTopic = await db
-    .delete(topics)
-    .where(eq(topics.id, id))
-    .returning();
-  return deletedTopic.length > 0 ? deletedTopic[0] : null;
-};
+export async function deleteTopic(id: number) {
+    const [deleted] = await db.delete(topicModel).where(eq(topicModel.id, id)).returning();
+    return deleted;
+} 

@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 // import { Course } from '@/types/course';
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design/course';
 
 interface DeleteCourseDialogProps {
   isOpen: boolean;

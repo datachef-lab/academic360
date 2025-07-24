@@ -1,17 +1,16 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const courseLevels = pgTable("course_levels", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const courseLevelModel = pgTable('course_levels', {
+    id: serial().primaryKey(),
+    name: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
+    sequence: integer().unique(),
+    disabled: boolean().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertCourseLevelSchema = createInsertSchema(courseLevels);
-export const selectCourseLevelSchema = createSelectSchema(courseLevels);
-export type CourseLevel = z.infer<typeof selectCourseLevelSchema>;
-export type NewCourseLevel = z.infer<typeof insertCourseLevelSchema>;
+export const createCourseLevelModel = createInsertSchema(courseLevelModel);
+export type CourseLevel = z.infer<typeof createCourseLevelModel>;

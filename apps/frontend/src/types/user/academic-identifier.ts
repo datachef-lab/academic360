@@ -1,4 +1,4 @@
-import { Course } from "../academics/course";
+import { Course } from "../course-design/course";
 import { Framework } from "../enums";
 
 export interface AcademicIdentifier {

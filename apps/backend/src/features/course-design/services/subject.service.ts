@@ -1,50 +1,30 @@
-import { db } from "@/db";
-import { subjects } from "../models/subject.model";
+import { db } from "@/db/index.js";
+import { subjectModel, createSubjectSchema, Subject } from "@/features/course-design/models/subject.model.js";
 import { eq } from "drizzle-orm";
-import { SubjectSchema } from "@/types/course-design";
-import { z } from "zod";
 
-// Types
-export type SubjectData = z.infer<typeof SubjectSchema>;
+export async function createSubject(data: Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>) {
+    const validated = createSubjectSchema.parse(data);
+    const [created] = await db.insert(subjectModel).values(validated).returning();
+    return created;
+}
 
-// Create a new subject
-export const createSubject = async (subjectData: SubjectData) => {
-  const validatedData = SubjectSchema.parse(subjectData);
-  const newSubject = await db.insert(subjects).values(validatedData).returning();
-  return newSubject[0];
-};
+export async function getSubjectById(id: number) {
+    const [subject] = await db.select().from(subjectModel).where(eq(subjectModel.id, id));
+    return subject;
+}
 
-// Get all subjects
-export const getAllSubjects = async () => {
-  const allSubjects = await db.select().from(subjects);
-  return allSubjects;
-};
+export async function getAllSubjects() {
+    return db.select().from(subjectModel);
+}
 
-// Get subject by ID
-export const getSubjectById = async (id: string) => {
-  const subject = await db
-    .select()
-    .from(subjects)
-    .where(eq(subjects.id, id));
-  return subject.length > 0 ? subject[0] : null;
-};
+export async function updateSubject(id: number, data: Partial<Subject>) {
+    const { createdAt, updatedAt, ...rest } = data;
+    const validated = createSubjectSchema.partial().parse(rest);
+    const [updated] = await db.update(subjectModel).set(validated).where(eq(subjectModel.id, id)).returning();
+    return updated;
+}
 
-// Update subject
-export const updateSubject = async (id: string, subjectData: SubjectData) => {
-  const validatedData = SubjectSchema.parse(subjectData);
-  const updatedSubject = await db
-    .update(subjects)
-    .set(validatedData)
-    .where(eq(subjects.id, id))
-    .returning();
-  return updatedSubject.length > 0 ? updatedSubject[0] : null;
-};
-
-// Delete subject
-export const deleteSubject = async (id: string) => {
-  const deletedSubject = await db
-    .delete(subjects)
-    .where(eq(subjects.id, id))
-    .returning();
-  return deletedSubject.length > 0 ? deletedSubject[0] : null;
-};
+export async function deleteSubject(id: number) {
+    const [deleted] = await db.delete(subjectModel).where(eq(subjectModel.id, id)).returning();
+    return deleted;
+} 

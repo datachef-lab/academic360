@@ -1,17 +1,16 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const regulationTypes = pgTable("regulation_types", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  description: text("description"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const regulationTypeModel = pgTable('regulation_types', {
+    id: serial().primaryKey(),
+    name: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 500 }),
+    sequence: integer().unique(),
+    disabled: boolean().default(false),
+    createdAt: timestamp().notNull().defaultNow(),
+    updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-// Zod Schemas for validation
-export const insertRegulationTypeSchema = createInsertSchema(regulationTypes);
-export const selectRegulationTypeSchema = createSelectSchema(regulationTypes);
-export type RegulationType = z.infer<typeof selectRegulationTypeSchema>;
-export type NewRegulationType = z.infer<typeof insertRegulationTypeSchema>;
+export const createRegulationTypeModel = createInsertSchema(regulationTypeModel);
+export type RegulationType = z.infer<typeof createRegulationTypeModel>; 

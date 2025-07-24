@@ -1,56 +1,30 @@
-import { db } from "@/db";
-import { papers } from "../models/paper.model";
+import { db } from "@/db/index.js";
+import { paperModel, createPaperModel, Paper } from "@/features/course-design/models/paper.model.js";
 import { eq } from "drizzle-orm";
-import { PaperSchema } from "@/types/course-design";
-import { z } from "zod";
 
-// Types
-export type PaperData = z.infer<typeof PaperSchema>;
+export async function createPaper(data: Omit<Paper, 'id' | 'createdAt' | 'updatedAt'>) {
+    const validated = createPaperModel.parse(data);
+    const [created] = await db.insert(paperModel).values(validated).returning();
+    return created;
+}
 
-// Create a new paper
-export const createPaper = async (paperData: PaperData & { subjectId: string }) => {
-  const validatedData = PaperSchema.parse(paperData);
-  const newPaper = await db.insert(papers).values({
-    ...validatedData,
-    subjectId: paperData.subjectId,
-  }).returning();
-  return newPaper[0];
-};
+export async function getPaperById(id: number) {
+    const [paper] = await db.select().from(paperModel).where(eq(paperModel.id, id));
+    return paper;
+}
 
-// Get all papers
-export const getAllPapers = async () => {
-  const allPapers = await db.select().from(papers);
-  return allPapers;
-};
+export async function getAllPapers() {
+    return db.select().from(paperModel);
+}
 
-// Get paper by ID
-export const getPaperById = async (id: string) => {
-  const paper = await db
-    .select()
-    .from(papers)
-    .where(eq(papers.id, id));
-  return paper.length > 0 ? paper[0] : null;
-};
+export async function updatePaper(id: number, data: Partial<Paper>) {
+    const { createdAt, updatedAt, ...rest } = data;
+    const validated = createPaperModel.partial().parse(rest);
+    const [updated] = await db.update(paperModel).set(validated).where(eq(paperModel.id, id)).returning();
+    return updated;
+}
 
-// Update paper
-export const updatePaper = async (id: string, paperData: PaperData & { subjectId: string }) => {
-  const validatedData = PaperSchema.parse(paperData);
-  const updatedPaper = await db
-    .update(papers)
-    .set({
-      ...validatedData,
-      subjectId: paperData.subjectId,
-    })
-    .where(eq(papers.id, id))
-    .returning();
-  return updatedPaper.length > 0 ? updatedPaper[0] : null;
-};
-
-// Delete paper
-export const deletePaper = async (id: string) => {
-  const deletedPaper = await db
-    .delete(papers)
-    .where(eq(papers.id, id))
-    .returning();
-  return deletedPaper.length > 0 ? deletedPaper[0] : null;
-};
+export async function deletePaper(id: number) {
+    const [deleted] = await db.delete(paperModel).where(eq(paperModel.id, id)).returning();
+    return deleted;
+} 

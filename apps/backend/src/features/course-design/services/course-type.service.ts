@@ -1,47 +1,30 @@
-import { db } from "@/db";
-import { courseTypes } from "../models/course-type.model";
+import { db } from "@/db/index.js";
+import { courseTypeModel, createCourseTypeModel, CourseType } from "@/features/course-design/models/course-type.model.js";
 import { eq } from "drizzle-orm";
-import { insertCourseTypeSchema } from "../models/course-type.model";
-import { z } from "zod";
 
-// Types
-export type CourseTypeData = z.infer<typeof insertCourseTypeSchema>;
+export async function createCourseType(data: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>) {
+    const validated = createCourseTypeModel.parse(data);
+    const [created] = await db.insert(courseTypeModel).values(validated).returning();
+    return created;
+}
 
-// Create a new courseType
-export const createCourseType = async (courseTypeData: CourseTypeData) => {
-  const validatedData = insertCourseTypeSchema.parse(courseTypeData);
-  const newCourseType = await db.insert(courseTypes).values(validatedData).returning();
-  return newCourseType[0];
-};
+export async function getCourseTypeById(id: number) {
+    const [courseType] = await db.select().from(courseTypeModel).where(eq(courseTypeModel.id, id));
+    return courseType;
+}
 
-// Get all courseTypes
-export const getAllCourseTypes = async () => {
-  const allCourseTypes = await db.select().from(courseTypes);
-  return allCourseTypes;
-};
+export async function getAllCourseTypes() {
+    return db.select().from(courseTypeModel);
+}
 
-// Get courseType by ID
-export const getCourseTypeById = async (id: string) => {
-  const courseType = await db.select().from(courseTypes).where(eq(courseTypes.id, id));
-  return courseType.length > 0 ? courseType[0] : null;
-};
+export async function updateCourseType(id: number, data: Partial<CourseType>) {
+    const { createdAt, updatedAt, ...rest } = data;
+    const validated = createCourseTypeModel.partial().parse(rest);
+    const [updated] = await db.update(courseTypeModel).set(validated).where(eq(courseTypeModel.id, id)).returning();
+    return updated;
+}
 
-// Update courseType
-export const updateCourseType = async (id: string, courseTypeData: CourseTypeData) => {
-  const validatedData = insertCourseTypeSchema.parse(courseTypeData);
-  const updatedCourseType = await db
-    .update(courseTypes)
-    .set(validatedData)
-    .where(eq(courseTypes.id, id))
-    .returning();
-  return updatedCourseType.length > 0 ? updatedCourseType[0] : null;
-};
-
-// Delete courseType
-export const deleteCourseType = async (id: string) => {
-  const deletedCourseType = await db
-    .delete(courseTypes)
-    .where(eq(courseTypes.id, id))
-    .returning();
-  return deletedCourseType.length > 0 ? deletedCourseType[0] : null;
-};
+export async function deleteCourseType(id: number) {
+    const [deleted] = await db.delete(courseTypeModel).where(eq(courseTypeModel.id, id)).returning();
+    return deleted;
+} 

@@ -1,328 +1,324 @@
 import { db } from "@/db/index.js";
 import {
-  admissionCourseModel,
-  AdmissionCourse,
+    admissionCourseModel,
+    AdmissionCourse,
 } from "../models/admission-course.model.js";
-import { courseModel } from "@/features/academics/models/course.model.js";
+import { courseModel } from "@/features/course-design/models/course.model.js";
 import { admissionModel } from "../models/admission.model.js";
 import { and, eq } from "drizzle-orm";
 import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
 
 // CREATE
 export async function createAdmissionCourse(givenAdmCourse: AdmissionCourse) {
-  const [existingEntry] = await db
-    .select()
-    .from(admissionCourseModel)
-    .where(
-      and(
-        eq(admissionCourseModel.admissionId, givenAdmCourse.admissionId),
-        eq(admissionCourseModel.courseId, givenAdmCourse.courseId),
-      ),
-    );
+    const [existingEntry] = await db
+        .select()
+        .from(admissionCourseModel)
+        .where(
+            and(
+                eq(admissionCourseModel.admissionId, givenAdmCourse.admissionId),
+                eq(admissionCourseModel.courseId, givenAdmCourse.courseId),
+            ),
+        );
 
-  if (existingEntry) {
+    if (existingEntry) {
+        return {
+            course: existingEntry,
+            message: "Admission course already exists.",
+        };
+    }
+
+    const [newCourse] = await db
+        .insert(admissionCourseModel)
+        .values(givenAdmCourse)
+        .returning();
+
     return {
-      course: existingEntry,
-      message: "Admission course already exists.",
+        course: newCourse,
+        message: "New Admission Course Created!",
     };
-  }
-
-  const [newCourse] = await db
-    .insert(admissionCourseModel)
-    .values(givenAdmCourse)
-    .returning();
-
-  return {
-    course: newCourse,
-    message: "New Admission Course Created!",
-  };
 }
 
 // READ by ID
 export async function findAdmissionCourseById(id: number) {
-  const [course] = await db
-    .select()
-    .from(admissionCourseModel)
-    .where(eq(admissionCourseModel.id, id));
+    const [course] = await db
+        .select()
+        .from(admissionCourseModel)
+        .where(eq(admissionCourseModel.id, id));
 
-  return course || null;
+    return course || null;
 }
 
 // READ by ID with course and admission details
 export async function findAdmissionCourseByIdWithDetails(id: number) {
-  const [course] = await db
-    .select({
-      id: admissionCourseModel.id,
-      admissionId: admissionCourseModel.admissionId,
-      courseId: admissionCourseModel.courseId,
-      disabled: admissionCourseModel.disabled,
-      createdAt: admissionCourseModel.createdAt,
-      updatedAt: admissionCourseModel.updatedAt,
-      remarks: admissionCourseModel.remarks,
-      course: {
-        id: courseModel.id,
-        name: courseModel.name,
-        shortName: courseModel.shortName,
-        codePrefix: courseModel.codePrefix,
-        universityCode: courseModel.universityCode,
-      },
-      admission: {
-        id: admissionModel.id,
-        year: academicYearModel.year,
-        isClosed: admissionModel.isClosed,
-        startDate: admissionModel.startDate,
-        lastDate: admissionModel.lastDate,
-        isArchived: admissionModel.isArchived,
-      },
-    })
-    .from(admissionCourseModel)
-    .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
-    .leftJoin(
-      admissionModel,
-      eq(admissionCourseModel.admissionId, admissionModel.id),
-    )
-    .leftJoin(
-      admissionModel,
-      eq(academicYearModel.id, admissionModel.academicYearId),
-    )
-    .where(eq(admissionCourseModel.id, id));
+    const [course] = await db
+        .select({
+            id: admissionCourseModel.id,
+            admissionId: admissionCourseModel.admissionId,
+            courseId: admissionCourseModel.courseId,
+            disabled: admissionCourseModel.disabled,
+            createdAt: admissionCourseModel.createdAt,
+            updatedAt: admissionCourseModel.updatedAt,
+            remarks: admissionCourseModel.remarks,
+            course: {
+                id: courseModel.id,
+                name: courseModel.name,
+                shortName: courseModel.shortName,
+                codePrefix: courseModel.codePrefix,
+            },
+            admission: {
+                id: admissionModel.id,
+                year: academicYearModel.year,
+                isClosed: admissionModel.isClosed,
+                startDate: admissionModel.startDate,
+                lastDate: admissionModel.lastDate,
+                isArchived: admissionModel.isArchived,
+            },
+        })
+        .from(admissionCourseModel)
+        .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
+        .leftJoin(
+            admissionModel,
+            eq(admissionCourseModel.admissionId, admissionModel.id),
+        )
+        .leftJoin(
+            admissionModel,
+            eq(academicYearModel.id, admissionModel.academicYearId),
+        )
+        .where(eq(admissionCourseModel.id, id));
 
-  return course || null;
+    return course || null;
 }
 
 // READ by Admission ID
 export async function findAdmissionCoursesByAdmissionId(admissionId: number) {
-  const admissionCoursesList = await db
-    .select()
-    .from(admissionCourseModel)
-    .where(eq(admissionCourseModel.admissionId, admissionId));
+    const admissionCoursesList = await db
+        .select()
+        .from(admissionCourseModel)
+        .where(eq(admissionCourseModel.admissionId, admissionId));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ by Admission ID with course details
 export async function findAdmissionCoursesByAdmissionIdWithDetails(
-  admissionId: number,
+    admissionId: number,
 ) {
-  const admissionCoursesList = await db
-    .select({
-      id: admissionCourseModel.id,
-      admissionId: admissionCourseModel.admissionId,
-      courseId: admissionCourseModel.courseId,
-      disabled: admissionCourseModel.disabled,
-      createdAt: admissionCourseModel.createdAt,
-      updatedAt: admissionCourseModel.updatedAt,
-      remarks: admissionCourseModel.remarks,
-      course: {
-        id: courseModel.id,
-        name: courseModel.name,
-        shortName: courseModel.shortName,
-        codePrefix: courseModel.codePrefix,
-        universityCode: courseModel.universityCode,
-      },
-    })
-    .from(admissionCourseModel)
-    .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
-    .where(eq(admissionCourseModel.admissionId, admissionId));
+    const admissionCoursesList = await db
+        .select({
+            id: admissionCourseModel.id,
+            admissionId: admissionCourseModel.admissionId,
+            courseId: admissionCourseModel.courseId,
+            disabled: admissionCourseModel.disabled,
+            createdAt: admissionCourseModel.createdAt,
+            updatedAt: admissionCourseModel.updatedAt,
+            remarks: admissionCourseModel.remarks,
+            course: {
+                id: courseModel.id,
+                name: courseModel.name,
+                shortName: courseModel.shortName,
+                codePrefix: courseModel.codePrefix,
+            },
+        })
+        .from(admissionCourseModel)
+        .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
+        .where(eq(admissionCourseModel.admissionId, admissionId));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ by Course ID
 export async function findAdmissionCoursesByCourseId(courseId: number) {
-  const admissionCoursesList = await db
-    .select()
-    .from(admissionCourseModel)
-    .where(eq(admissionCourseModel.courseId, courseId));
+    const admissionCoursesList = await db
+        .select()
+        .from(admissionCourseModel)
+        .where(eq(admissionCourseModel.courseId, courseId));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ by Course ID with admission details
 export async function findAdmissionCoursesByCourseIdWithDetails(
-  courseId: number,
+    courseId: number,
 ) {
-  const admissionCoursesList = await db
-    .select({
-      id: admissionCourseModel.id,
-      admissionId: admissionCourseModel.admissionId,
-      courseId: admissionCourseModel.courseId,
-      disabled: admissionCourseModel.disabled,
-      createdAt: admissionCourseModel.createdAt,
-      updatedAt: admissionCourseModel.updatedAt,
-      remarks: admissionCourseModel.remarks,
-      admission: {
-        id: admissionModel.id,
-        year: academicYearModel.year,
-        isClosed: admissionModel.isClosed,
-        startDate: admissionModel.startDate,
-        lastDate: admissionModel.lastDate,
-        isArchived: admissionModel.isArchived,
-      },
-    })
-    .from(admissionCourseModel)
-    .leftJoin(
-      admissionModel,
-      eq(admissionCourseModel.admissionId, admissionModel.id),
-    )
-    .leftJoin(
-      admissionModel,
-      eq(academicYearModel.id, admissionModel.academicYearId),
-    )
-    .where(eq(admissionCourseModel.courseId, courseId));
+    const admissionCoursesList = await db
+        .select({
+            id: admissionCourseModel.id,
+            admissionId: admissionCourseModel.admissionId,
+            courseId: admissionCourseModel.courseId,
+            disabled: admissionCourseModel.disabled,
+            createdAt: admissionCourseModel.createdAt,
+            updatedAt: admissionCourseModel.updatedAt,
+            remarks: admissionCourseModel.remarks,
+            admission: {
+                id: admissionModel.id,
+                year: academicYearModel.year,
+                isClosed: admissionModel.isClosed,
+                startDate: admissionModel.startDate,
+                lastDate: admissionModel.lastDate,
+                isArchived: admissionModel.isArchived,
+            },
+        })
+        .from(admissionCourseModel)
+        .leftJoin(
+            admissionModel,
+            eq(admissionCourseModel.admissionId, admissionModel.id),
+        )
+        .leftJoin(
+            admissionModel,
+            eq(academicYearModel.id, admissionModel.academicYearId),
+        )
+        .where(eq(admissionCourseModel.courseId, courseId));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ all active courses
 export async function findAllActiveAdmissionCourses() {
-  const admissionCoursesList = await db
-    .select()
-    .from(admissionCourseModel)
-    .where(eq(admissionCourseModel.disabled, false));
+    const admissionCoursesList = await db
+        .select()
+        .from(admissionCourseModel)
+        .where(eq(admissionCourseModel.disabled, false));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ all active courses with details
 export async function findAllActiveAdmissionCoursesWithDetails() {
-  const admissionCoursesList = await db
-    .select({
-      id: admissionCourseModel.id,
-      admissionId: admissionCourseModel.admissionId,
-      courseId: admissionCourseModel.courseId,
-      disabled: admissionCourseModel.disabled,
-      createdAt: admissionCourseModel.createdAt,
-      updatedAt: admissionCourseModel.updatedAt,
-      remarks: admissionCourseModel.remarks,
-      course: {
-        id: courseModel.id,
-        name: courseModel.name,
-        shortName: courseModel.shortName,
-        codePrefix: courseModel.codePrefix,
-        universityCode: courseModel.universityCode,
-      },
-      admission: {
-        id: admissionModel.id,
-        year: academicYearModel.year,
-        isClosed: admissionModel.isClosed,
-        startDate: admissionModel.startDate,
-        lastDate: admissionModel.lastDate,
-        isArchived: admissionModel.isArchived,
-      },
-    })
-    .from(admissionCourseModel)
-    .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
-    .leftJoin(
-      admissionModel,
-      eq(academicYearModel.id, admissionModel.academicYearId),
-    )
-    .leftJoin(
-      admissionModel,
-      eq(admissionCourseModel.admissionId, admissionModel.id),
-    )
-    .where(eq(admissionCourseModel.disabled, false));
+    const admissionCoursesList = await db
+        .select({
+            id: admissionCourseModel.id,
+            admissionId: admissionCourseModel.admissionId,
+            courseId: admissionCourseModel.courseId,
+            disabled: admissionCourseModel.disabled,
+            createdAt: admissionCourseModel.createdAt,
+            updatedAt: admissionCourseModel.updatedAt,
+            remarks: admissionCourseModel.remarks,
+            course: {
+                id: courseModel.id,
+                name: courseModel.name,
+                shortName: courseModel.shortName,
+                codePrefix: courseModel.codePrefix,
+            },
+            admission: {
+                id: admissionModel.id,
+                year: academicYearModel.year,
+                isClosed: admissionModel.isClosed,
+                startDate: admissionModel.startDate,
+                lastDate: admissionModel.lastDate,
+                isArchived: admissionModel.isArchived,
+            },
+        })
+        .from(admissionCourseModel)
+        .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
+        .leftJoin(
+            admissionModel,
+            eq(academicYearModel.id, admissionModel.academicYearId),
+        )
+        .leftJoin(
+            admissionModel,
+            eq(admissionCourseModel.admissionId, admissionModel.id),
+        )
+        .where(eq(admissionCourseModel.disabled, false));
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ all courses
 export async function findAllAdmissionCourses() {
-  const admissionCoursesList = await db.select().from(admissionCourseModel);
+    const admissionCoursesList = await db.select().from(admissionCourseModel);
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // READ all courses with details
 export async function findAllAdmissionCoursesWithDetails() {
-  const admissionCoursesList = await db
-    .select({
-      id: admissionCourseModel.id,
-      admissionId: admissionCourseModel.admissionId,
-      courseId: admissionCourseModel.courseId,
-      disabled: admissionCourseModel.disabled,
-      createdAt: admissionCourseModel.createdAt,
-      updatedAt: admissionCourseModel.updatedAt,
-      remarks: admissionCourseModel.remarks,
-      course: {
-        id: courseModel.id,
-        name: courseModel.name,
-        shortName: courseModel.shortName,
-        codePrefix: courseModel.codePrefix,
-        universityCode: courseModel.universityCode,
-      },
-      admission: {
-        id: admissionModel.id,
-        year: academicYearModel.year,
-        isClosed: admissionModel.isClosed,
-        startDate: admissionModel.startDate,
-        lastDate: admissionModel.lastDate,
-        isArchived: admissionModel.isArchived,
-      },
-    })
-    .from(admissionCourseModel)
-    .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
-    .leftJoin(
-      admissionModel,
-      eq(academicYearModel.id, admissionModel.academicYearId),
-    )
-    .leftJoin(
-      admissionModel,
-      eq(admissionCourseModel.admissionId, admissionModel.id),
-    );
+    const admissionCoursesList = await db
+        .select({
+            id: admissionCourseModel.id,
+            admissionId: admissionCourseModel.admissionId,
+            courseId: admissionCourseModel.courseId,
+            disabled: admissionCourseModel.disabled,
+            createdAt: admissionCourseModel.createdAt,
+            updatedAt: admissionCourseModel.updatedAt,
+            remarks: admissionCourseModel.remarks,
+            course: {
+                id: courseModel.id,
+                name: courseModel.name,
+                shortName: courseModel.shortName,
+                codePrefix: courseModel.codePrefix,
+            },
+            admission: {
+                id: admissionModel.id,
+                year: academicYearModel.year,
+                isClosed: admissionModel.isClosed,
+                startDate: admissionModel.startDate,
+                lastDate: admissionModel.lastDate,
+                isArchived: admissionModel.isArchived,
+            },
+        })
+        .from(admissionCourseModel)
+        .leftJoin(courseModel, eq(admissionCourseModel.courseId, courseModel.id))
+        .leftJoin(
+            admissionModel,
+            eq(academicYearModel.id, admissionModel.academicYearId),
+        )
+        .leftJoin(
+            admissionModel,
+            eq(admissionCourseModel.admissionId, admissionModel.id),
+        );
 
-  return admissionCoursesList;
+    return admissionCoursesList;
 }
 
 // UPDATE
 export async function updateAdmissionCourse(
-  course: Omit<AdmissionCourse, "createdAt" | "updatedAt">,
+    course: Omit<AdmissionCourse, "createdAt" | "updatedAt">,
 ) {
-  if (!course.id) return null;
+    if (!course.id) return null;
 
-  const [updatedCourse] = await db
-    .update(admissionCourseModel)
-    .set({
-      admissionId: course.admissionId,
-      courseId: course.courseId,
-      disabled: course.disabled,
-      remarks: course.remarks ?? null,
-      isClosed: course.isClosed ?? false,
-    })
-    .where(eq(admissionCourseModel.id, course.id))
-    .returning();
+    const [updatedCourse] = await db
+        .update(admissionCourseModel)
+        .set({
+            admissionId: course.admissionId,
+            courseId: course.courseId,
+            disabled: course.disabled,
+            remarks: course.remarks ?? null,
+            isClosed: course.isClosed ?? false,
+        })
+        .where(eq(admissionCourseModel.id, course.id))
+        .returning();
 
-  return updatedCourse;
+    return updatedCourse;
 }
 
 // DELETE
 export async function deleteAdmissionCourse(id: number) {
-  const deleted = await db
-    .delete(admissionCourseModel)
-    .where(eq(admissionCourseModel.id, id))
-    .returning();
+    const deleted = await db
+        .delete(admissionCourseModel)
+        .where(eq(admissionCourseModel.id, id))
+        .returning();
 
-  return deleted.length > 0;
+    return deleted.length > 0;
 }
 
 // SOFT DELETE (disable)
 export async function disableAdmissionCourse(id: number) {
-  const [disabledCourse] = await db
-    .update(admissionCourseModel)
-    .set({ disabled: true })
-    .where(eq(admissionCourseModel.id, id))
-    .returning();
+    const [disabledCourse] = await db
+        .update(admissionCourseModel)
+        .set({ disabled: true })
+        .where(eq(admissionCourseModel.id, id))
+        .returning();
 
-  return disabledCourse;
+    return disabledCourse;
 }
 
 // ENABLE COURSE
 export async function enableAdmissionCourse(id: number) {
-  const [enabledCourse] = await db
-    .update(admissionCourseModel)
-    .set({ disabled: false })
-    .where(eq(admissionCourseModel.id, id))
-    .returning();
+    const [enabledCourse] = await db
+        .update(admissionCourseModel)
+        .set({ disabled: false })
+        .where(eq(admissionCourseModel.id, id))
+        .returning();
 
-  return enabledCourse;
+    return enabledCourse;
 }

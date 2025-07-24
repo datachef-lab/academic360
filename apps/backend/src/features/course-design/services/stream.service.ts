@@ -1,47 +1,30 @@
-import { db } from "@/db";
-import { streams } from "../models/stream.model";
+import { db } from "@/db/index.js";
+import { streamModel, createStreamModel, Stream } from "@/features/course-design/models/stream.model.js";
 import { eq } from "drizzle-orm";
-import { insertStreamSchema } from "../models/stream.model";
-import { z } from "zod";
 
-// Types
-export type StreamData = z.infer<typeof insertStreamSchema>;
+export async function createStream(data: Omit<Stream, 'id' | 'createdAt' | 'updatedAt'>) {
+    const validated = createStreamModel.parse(data);
+    const [created] = await db.insert(streamModel).values(validated).returning();
+    return created;
+}
 
-// Create a new stream
-export const createStream = async (streamData: StreamData) => {
-  const validatedData = insertStreamSchema.parse(streamData);
-  const newStream = await db.insert(streams).values(validatedData).returning();
-  return newStream[0];
-};
+export async function getStreamById(id: number) {
+    const [stream] = await db.select().from(streamModel).where(eq(streamModel.id, id));
+    return stream;
+}
 
-// Get all streams
-export const getAllStreams = async () => {
-  const allStreams = await db.select().from(streams);
-  return allStreams;
-};
+export async function getAllStreams() {
+    return db.select().from(streamModel);
+}
 
-// Get stream by ID
-export const getStreamById = async (id: string) => {
-  const stream = await db.select().from(streams).where(eq(streams.id, id));
-  return stream.length > 0 ? stream[0] : null;
-};
+export async function updateStream(id: number, data: Partial<Stream>) {
+    const { createdAt, updatedAt, ...rest } = data;
+    const validated = createStreamModel.partial().parse(rest);
+    const [updated] = await db.update(streamModel).set(validated).where(eq(streamModel.id, id)).returning();
+    return updated;
+}
 
-// Update stream
-export const updateStream = async (id: string, streamData: StreamData) => {
-  const validatedData = insertStreamSchema.parse(streamData);
-  const updatedStream = await db
-    .update(streams)
-    .set(validatedData)
-    .where(eq(streams.id, id))
-    .returning();
-  return updatedStream.length > 0 ? updatedStream[0] : null;
-};
-
-// Delete stream
-export const deleteStream = async (id: string) => {
-  const deletedStream = await db
-    .delete(streams)
-    .where(eq(streams.id, id))
-    .returning();
-  return deletedStream.length > 0 ? deletedStream[0] : null;
-};
+export async function deleteStream(id: number) {
+    const [deleted] = await db.delete(streamModel).where(eq(streamModel.id, id)).returning();
+    return deleted;
+} 

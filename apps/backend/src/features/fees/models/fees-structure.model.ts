@@ -1,5 +1,5 @@
 import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
-import { courseModel } from "@/features/academics/models/course.model.js";
+import { courseModel } from "@/features/course-design/models/course.model.js";
 import { shiftModel } from "@/features/academics/models/shift.model.js";
 import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
@@ -18,7 +18,7 @@ export const feesStructureModel = pgTable("fees_structures", {
     courseId: integer("course_id_fk").notNull()
         .references(() => courseModel.id)
         .notNull(),
-        classId: integer("class_id_fk").notNull().references(() => classModel.id),
+    classId: integer("class_id_fk").notNull().references(() => classModel.id),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id).notNull(),
     advanceForCourseId: integer("advance_for_course_id_fk")
         .references(() => courseModel.id),
@@ -28,7 +28,7 @@ export const feesStructureModel = pgTable("fees_structures", {
     onlineStartDate: date().notNull(),
     onlineEndDate: date().notNull(),
     numberOfInstalments: integer(),
-    
+
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

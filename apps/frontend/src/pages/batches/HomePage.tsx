@@ -17,7 +17,7 @@ import { getAllAcademicYears } from "@/services/academic-year-api";
 import { getAllCourses } from "@/services/course-api";
 import { getAllShifts, getAllSections } from "@/services/academic";
 import { AcademicYear } from "@/types/academics/academic-year";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design/course";
 import { Shift } from "@/types/academics/shift";
 import { Section } from "@/types/academics/section";
 

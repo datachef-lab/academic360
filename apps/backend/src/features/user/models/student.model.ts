@@ -4,7 +4,7 @@ import { userModel } from "@/features/user/models/user.model.js";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { specializationModel } from "./specialization.model.js";
+import { specializationModel } from "../../course-design/models/specialization.model.js";
 import { communityTypeEnum } from "./helper.js";
 import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
 
