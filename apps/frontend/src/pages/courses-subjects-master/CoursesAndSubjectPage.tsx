@@ -29,7 +29,7 @@ import {
   deleteSubject,
   updateSubject
 } from '@/services/subject-metadata';
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design/course';
 
 // Import services for courses
 import {

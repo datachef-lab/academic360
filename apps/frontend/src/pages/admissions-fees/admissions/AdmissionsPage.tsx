@@ -9,7 +9,7 @@ import AdmissionConfigureDialog from "./components/AdmissionConfigureDialog";
 import {  AdmissionSummary, Stats } from "./types";
 import { fetchStatsSummary, fetchAdmissionSummaries, createAdmission } from "@/services/admissions.service";
 import { getAllCourses } from "@/services/course-api";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design/course";
 import { Admission } from "@/types/admissions";
 
 export default function AdmissionsPage() {

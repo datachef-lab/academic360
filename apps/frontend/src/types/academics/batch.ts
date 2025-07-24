@@ -1,5 +1,5 @@
 import { Class } from "./class";
-import { Course } from "./course";
+import { Course } from "../course-design/course";
 import { Section } from "./section";
 import { Shift } from "./shift";
 import { Session } from "./session";

@@ -1,7 +1,7 @@
 import axiosInstance from "@/utils/api";
 import axios from "axios";
 import { ApiResonse } from "@/types/api-response";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design/course";
 import { Shift } from "@/types/academics/shift";
 import { Section } from "@/types/academics/section";
 
