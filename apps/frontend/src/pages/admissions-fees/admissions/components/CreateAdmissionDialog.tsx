@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Loader2 } from "lucide-react";
-import { Course } from '@/types/course-design/course';
+import { Course } from '@/types/course-design';
 import DatePicker from "react-datepicker";
 // import { format } from "date-fns";
 import "react-datepicker/dist/react-datepicker.css";

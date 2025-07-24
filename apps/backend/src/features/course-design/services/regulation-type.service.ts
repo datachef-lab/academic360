@@ -1,38 +1,38 @@
 import { db } from "@/db";
-import { regulationTypes } from "../models/regulation-type.model";
+import { RegulationType, regulationTypeModel } from "../models/regulation-type.model";
 import { eq } from "drizzle-orm";
-import { insertRegulationTypeSchema } from "../models/regulation-type.model";
+// import { insertRegulationTypeSchema } from "../models/regulation-type.model";
 import { z } from "zod";
 
 // Types
-export type RegulationTypeData = z.infer<typeof insertRegulationTypeSchema>;
+// export type RegulationTypeData = z.infer<typeof insertRegulationTypeSchema>;
 
 // Create a new regulationType
-export const createRegulationType = async (regulationTypeData: RegulationTypeData) => {
-  const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
-  const newRegulationType = await db.insert(regulationTypes).values(validatedData).returning();
+export const createRegulationType = async (regulationTypeData: RegulationType) => {
+  // const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
+  const newRegulationType = await db.insert(regulationTypeModel).values(regulationTypeData).returning();
   return newRegulationType[0];
 };
 
 // Get all regulationTypes
 export const getAllRegulationTypes = async () => {
-  const allRegulationTypes = await db.select().from(regulationTypes);
+  const allRegulationTypes = await db.select().from(regulationTypeModel);
   return allRegulationTypes;
 };
 
 // Get regulationType by ID
 export const getRegulationTypeById = async (id: string) => {
-  const regulationType = await db.select().from(regulationTypes).where(eq(regulationTypes.id, id));
+  const regulationType = await db.select().from(regulationTypeModel).where(eq(regulationTypeModel.id, +id));
   return regulationType.length > 0 ? regulationType[0] : null;
 };
 
 // Update regulationType
-export const updateRegulationType = async (id: string, regulationTypeData: RegulationTypeData) => {
-  const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
+export const updateRegulationType = async (id: string, regulationTypeData: RegulationType) => {
+  // const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
   const updatedRegulationType = await db
-    .update(regulationTypes)
-    .set(validatedData)
-    .where(eq(regulationTypes.id, id))
+    .update(regulationTypeModel)
+    .set(regulationTypeData)
+    .where(eq(regulationTypeModel.id, +id))
     .returning();
   return updatedRegulationType.length > 0 ? updatedRegulationType[0] : null;
 };
@@ -40,8 +40,8 @@ export const updateRegulationType = async (id: string, regulationTypeData: Regul
 // Delete regulationType
 export const deleteRegulationType = async (id: string) => {
   const deletedRegulationType = await db
-    .delete(regulationTypes)
-    .where(eq(regulationTypes.id, id))
+    .delete(regulationTypeModel)
+    .where(eq(regulationTypeModel.id, +id))
     .returning();
   return deletedRegulationType.length > 0 ? deletedRegulationType[0] : null;
 };

@@ -22,7 +22,7 @@ export const getAllProgramCourses = async () => {
 
 // Get programCourse by ID
 export const getProgramCourseById = async (id: string) => {
-  const programCourse = await db.select().from(programCourses).where(eq(programCourses.id, id));
+  const programCourse = await db.select().from(programCourses).where(eq(programCourses.id, +id));
   return programCourse.length > 0 ? programCourse[0] : null;
 };
 
@@ -32,7 +32,7 @@ export const updateProgramCourse = async (id: string, programCourseData: Program
   const updatedProgramCourse = await db
     .update(programCourses)
     .set(validatedData)
-    .where(eq(programCourses.id, id))
+    .where(eq(programCourses.id, +id))
     .returning();
   return updatedProgramCourse.length > 0 ? updatedProgramCourse[0] : null;
 };
@@ -41,7 +41,7 @@ export const updateProgramCourse = async (id: string, programCourseData: Program
 export const deleteProgramCourse = async (id: string) => {
   const deletedProgramCourse = await db
     .delete(programCourses)
-    .where(eq(programCourses.id, id))
+    .where(eq(programCourses.id, +id))
     .returning();
   return deletedProgramCourse.length > 0 ? deletedProgramCourse[0] : null;
 };

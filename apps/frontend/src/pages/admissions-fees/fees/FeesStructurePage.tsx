@@ -14,7 +14,7 @@ import {
 // import { toast } from "sonner";
 import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureForm";
 // import { getAllCourses } from "../../services/course-api";
-import { Course } from "@/types/course-design/course";
+import { Course } from "@/types/course-design";
 import { FeesStructureDto, FeesSlabMapping, FeesSlab, CreateFeesStructureDto } from "@/types/fees";
 import {AcademicYear} from "@/types/academics/academic-year"
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";

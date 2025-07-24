@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { getCourse } from '@/services/course-api';
 import { getAllSubjects } from '@/services/subject-metadata';
-import { Course } from '@/types/course-design/course';
+import { Course } from '@/types/course-design';
 import { SubjectMetadata } from '@/types/academics/subject-metadata';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';

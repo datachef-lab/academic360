@@ -1,20 +1,20 @@
 import { Router } from "express";
 import {
-  createPaper,
-  getAllPapers,
-  getPaperById,
-  updatePaper,
-  deletePaper,
-} from "../controllers/paper.controller";
+  createPaperHandler,
+  getAllPapersHandler,
+  getPaperByIdHandler,
+  updatePaperHandler,
+  deletePaperHandler,
+} from "../controllers/paper.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();
 
 // Paper routes
-router.post("/", createPaper as RequestHandler);
-router.get("/", getAllPapers as RequestHandler);
-router.get("/:id", getPaperById as RequestHandler);
-router.put("/:id", updatePaper as RequestHandler);
-router.delete("/:id", deletePaper as RequestHandler);
+router.post("/", createPaperHandler as RequestHandler);
+router.get("/", getAllPapersHandler as RequestHandler);
+router.get("/:id", getPaperByIdHandler as RequestHandler);
+router.put("/:id", updatePaperHandler as RequestHandler);
+router.delete("/:id", deletePaperHandler as RequestHandler);
 
 export default router;

@@ -1,20 +1,20 @@
 import { Router } from "express";
 import {
-  createStream,
-  getAllStreams,
-  getStreamById,
-  updateStream,
-  deleteStream,
-} from "../controllers/stream.controller";
+  createStreamHandler,
+  getAllStreamsHandler,
+  getStreamByIdHandler,
+  updateStreamHandler,
+  deleteStreamHandler,
+} from "../controllers/stream.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();
 
 // Stream routes
-router.post("/", createStream as RequestHandler);
-router.get("/", getAllStreams as RequestHandler);
-router.get("/:id", getStreamById as RequestHandler);
-router.put("/:id", updateStream as RequestHandler);
-router.delete("/:id", deleteStream as RequestHandler);
+router.post("/", createStreamHandler as RequestHandler);
+router.get("/", getAllStreamsHandler as RequestHandler);
+router.get("/:id", getStreamByIdHandler as RequestHandler);
+router.put("/:id", updateStreamHandler as RequestHandler);
+router.delete("/:id", deleteStreamHandler as RequestHandler);
 
 export default router;

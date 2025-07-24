@@ -144,7 +144,7 @@ interface NavItemProps {
   isActive?: boolean;
 }
 
-function NavItem({ href, icon, children, isActive }: NavItemProps) {
+export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <li>
       <Link

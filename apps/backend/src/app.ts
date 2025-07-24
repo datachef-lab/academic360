@@ -86,7 +86,12 @@ import {
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
-import { streamRouter, courseTypeRouter, courseLevelRouter, affiliationTypeRouter, regulationTypeRouter, programCourseRouter } from "@/features/course-design/routes/index.js";
+import { streamRouter, courseTypeRouter, 
+  // courseLevelRouter,
+  //  affiliationTypeRouter, 
+  //  regulationTypeRouter, 
+  //  programCourseRouter 
+  } from "@/features/course-design/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -319,10 +324,10 @@ app.use("/api/v1/sections", sectionRoutes);
 // Course Design routes
 app.use("/api/v1/course-design/streams", streamRouter);
 app.use("/api/v1/course-design/course-types", courseTypeRouter);
-app.use("/api/v1/course-design/course-levels", courseLevelRouter);
-app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
-app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
-app.use("/api/v1/course-design/program-courses", programCourseRouter);
+// app.use("/api/v1/course-design/course-levels", courseLevelRouter);
+// app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
+// app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
+// app.use("/api/v1/course-design/program-courses", programCourseRouter);
 
 app.use(errorHandler);
 

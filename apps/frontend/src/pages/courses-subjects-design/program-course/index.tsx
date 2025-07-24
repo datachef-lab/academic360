@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, FileText, Download, Upload, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Library, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -13,54 +13,58 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { SubjectPaper } from "@/types/course-design";
-import { SubjectPaperMappingForm } from "./subject-paper-mapping-form";
+import { ProgramCourse } from "@/types/course-design";
 
 // Dummy lookup data for names
-const subjects: Record<number, string> = { 1: "Mathematics", 2: "Physics" };
-const affiliations: Record<number, string> = { 1: "CU", 2: "WBSU" };
+const streams: Record<number, string> = { 1: "Science", 2: "Commerce" };
+const courses: Record<number, string> = { 1: "B.Sc", 2: "B.Com" };
+const courseTypes: Record<number, string> = { 1: "Honours", 2: "General" };
+const courseLevels: Record<number, string> = { 1: "UG", 2: "PG" };
+const affiliationTypes: Record<number, string> = { 1: "CU", 2: "WBSU" };
 const regulationTypes: Record<number, string> = { 1: "CBCS", 2: "OBE" };
-const academicYears: Record<number, string> = { 1: "2022-23", 2: "2023-24" };
 
-const dummyMappings: SubjectPaper[] = [
+const dummyProgramCourses: ProgramCourse[] = [
   {
     id: 1,
-    subjectId: 1,
-    affiliationId: 1,
+    streamId: 1,
+    courseId: 1,
+    courseTypeId: 1,
+    courseLevelId: 1,
+    duration: 3,
+    totalSemesters: 6,
+    affiliationTypeId: 1,
     regulationTypeId: 1,
-    academicYearId: 1,
-    sequence: 1,
     disabled: false,
-    createdAt: undefined,
-    updatedAt: undefined,
   },
   {
     id: 2,
-    subjectId: 2,
-    affiliationId: 2,
+    streamId: 2,
+    courseId: 2,
+    courseTypeId: 2,
+    courseLevelId: 2,
+    duration: 2,
+    totalSemesters: 4,
+    affiliationTypeId: 2,
     regulationTypeId: 2,
-    academicYearId: 2,
-    sequence: 2,
     disabled: true,
-    createdAt: undefined,
-    updatedAt: undefined,
   },
 ];
 
-const SubjectPaperMappingPage = () => {
+const ProgramCoursesPage = () => {
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selected, setSelected] = React.useState<SubjectPaper | null>(null);
+  const [selected, setSelected] = React.useState<ProgramCourse | null>(null);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
 
-  const filtered = dummyMappings.filter((m) =>
+  const filtered = dummyProgramCourses.filter((pc) =>
     Object.values({
-      subject: subjects[m.subjectId],
-      affiliation: affiliations[m.affiliationId],
-      regulationType: regulationTypes[m.regulationTypeId],
-      academicYear: academicYears[m.academicYearId],
-      sequence: m.sequence,
+      stream: streams[pc.streamId] ?? "-",
+      course: courses[pc.courseId] ?? "-",
+      courseType: courseTypes[pc.courseTypeId] ?? "-",
+      courseLevel: courseLevels[pc.courseLevelId] ?? "-",
+      affiliationType: affiliationTypes[pc.affiliationTypeId] ?? "-",
+      regulationType: regulationTypes[pc.regulationTypeId] ?? "-",
     })
       .join(" ")
       .toLowerCase()
@@ -73,10 +77,10 @@ const SubjectPaperMappingPage = () => {
         <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
           <div>
             <CardTitle className="flex items-center">
-              <FileText className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Subject Paper Mapping
+              <Library className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              Program Courses
             </CardTitle>
-            <div className="text-muted-foreground">Map subject papers to courses.</div>
+            <div className="text-muted-foreground">A list of all program courses.</div>
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -88,7 +92,7 @@ const SubjectPaperMappingPage = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Bulk Upload Subject Paper Mappings</DialogTitle>
+                  <DialogTitle>Bulk Upload Program Courses</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
                   <input
@@ -115,9 +119,10 @@ const SubjectPaperMappingPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selected ? "Edit Mapping" : "Add New Mapping"}</AlertDialogTitle>
+                  <AlertDialogTitle>{selected ? "Edit Program Course" : "Add New Program Course"}</AlertDialogTitle>
                 </AlertDialogHeader>
-                <SubjectPaperMappingForm />
+                {/* ProgramCourseForm goes here */}
+                <div>ProgramCourse form goes here.</div>
               </AlertDialogContent>
             </AlertDialog>
           </div>
@@ -132,15 +137,18 @@ const SubjectPaperMappingPage = () => {
           </div>
           <div className="relative" style={{ height: '600px' }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: 'fixed' }}>
+              <Table className="border rounded-md min-w-[1200px]" style={{ tableLayout: 'fixed' }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
                   <TableRow>
                     <TableHead style={{ width: 40 }}>#</TableHead>
-                    <TableHead style={{ width: 180 }}>Subject</TableHead>
-                    <TableHead style={{ width: 120 }}>Affiliation</TableHead>
+                    <TableHead style={{ width: 120 }}>Stream</TableHead>
+                    <TableHead style={{ width: 120 }}>Course</TableHead>
+                    <TableHead style={{ width: 120 }}>Course Type</TableHead>
+                    <TableHead style={{ width: 120 }}>Course Level</TableHead>
+                    <TableHead style={{ width: 80 }}>Duration</TableHead>
+                    <TableHead style={{ width: 80 }}>Semesters</TableHead>
+                    <TableHead style={{ width: 120 }}>Affiliation Type</TableHead>
                     <TableHead style={{ width: 120 }}>Regulation Type</TableHead>
-                    <TableHead style={{ width: 120 }}>Academic Year</TableHead>
-                    <TableHead style={{ width: 80 }}>Sequence</TableHead>
                     <TableHead style={{ width: 100 }}>Status</TableHead>
                     <TableHead style={{ width: 120 }}>Actions</TableHead>
                   </TableRow>
@@ -148,19 +156,22 @@ const SubjectPaperMappingPage = () => {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">No mappings found.</TableCell>
+                      <TableCell colSpan={11} className="text-center">No program courses found.</TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((m, idx) => (
-                      <TableRow key={m.id} className="group">
+                    filtered.map((pc, idx) => (
+                      <TableRow key={pc.id} className="group">
                         <TableCell>{idx + 1}</TableCell>
-                        <TableCell>{subjects[m.subjectId] ?? "-"}</TableCell>
-                        <TableCell>{affiliations[m.affiliationId] ?? "-"}</TableCell>
-                        <TableCell>{regulationTypes[m.regulationTypeId] ?? "-"}</TableCell>
-                        <TableCell>{academicYears[m.academicYearId] ?? "-"}</TableCell>
-                        <TableCell>{m.sequence}</TableCell>
+                        <TableCell>{streams[pc.streamId] ?? "-"}</TableCell>
+                        <TableCell>{courses[pc.courseId] ?? "-"}</TableCell>
+                        <TableCell>{courseTypes[pc.courseTypeId] ?? "-"}</TableCell>
+                        <TableCell>{courseLevels[pc.courseLevelId] ?? "-"}</TableCell>
+                        <TableCell>{pc.duration}</TableCell>
+                        <TableCell>{pc.totalSemesters}</TableCell>
+                        <TableCell>{affiliationTypes[pc.affiliationTypeId] ?? "-"}</TableCell>
+                        <TableCell>{regulationTypes[pc.regulationTypeId] ?? "-"}</TableCell>
                         <TableCell>
-                          {!m.disabled ? (
+                          {!pc.disabled ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
@@ -171,7 +182,7 @@ const SubjectPaperMappingPage = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => { setSelected(m); setIsFormOpen(true); }}
+                              onClick={() => { setSelected(pc); setIsFormOpen(true); }}
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
@@ -199,4 +210,4 @@ const SubjectPaperMappingPage = () => {
   );
 };
 
-export default SubjectPaperMappingPage;
+export default ProgramCoursesPage;

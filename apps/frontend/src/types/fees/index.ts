@@ -1,6 +1,6 @@
 import { AcademicYear } from "../academics/academic-year";
 import { Class } from "../academics/class";
-import { Course } from "../course-design/course";
+import { Course } from "../course-design";
 import { Shift } from "../academics/shift";
 
 export interface AddOn {

@@ -83,7 +83,7 @@ export async function searchCourses(query: string): Promise<CourseDto[]> {
             or(
                 ilike(courseModel.name, `%${query}%`),
                 ilike(courseModel.shortName, `%${query}%`),
-                ilike(courseModel.codePrefix, `%${query}%`)
+                ilike(courseModel.sequence, `%${query}%`)
             )
         );
 

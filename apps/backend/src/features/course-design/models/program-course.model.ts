@@ -1,24 +1,24 @@
-import { pgTable, text, timestamp, uuid, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, boolean, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { streams } from "./stream.model";
-import { courses } from "./course.model";
-import { courseTypes } from "./course-type.model";
-import { courseLevels } from "./course-level.model";
-import { affiliationTypes } from "./affiliation-type.model";
-import { regulationTypes } from "./regulation-type.model";
+import { streamModel } from "./stream.model";
+import { courseModel } from "./course.model";
+import { courseTypeModel } from "./course-type.model";
+import { courseLevelModel } from "./course-level.model";
+import { affiliationTypeModel } from "./affiliation-type.model";
+import { regulationTypeModel } from "./regulation-type.model";
 
 export const programCourses = pgTable("program_courses", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  streamId: uuid("stream_id").references(() => streams.id),
-  courseId: uuid("course_id").references(() => courses.id),
-  courseTypeId: uuid("course_type_id").references(() => courseTypes.id),
-  courseLevelId: uuid("course_level_id").references(() => courseLevels.id),
+  id: serial().primaryKey(),
+  streamId: integer("stream_id_fk").references(() => streamModel.id),
+  courseId: integer("course_id_fk").references(() => courseModel.id),
+  courseTypeId: integer("course_type_id_fk").references(() => courseTypeModel.id),
+  courseLevelId: integer("course_level_id_fk").references(() => courseLevelModel.id),
   duration: integer("duration").notNull(),
   totalSemesters: integer("total_semesters").notNull(),
-  affiliationTypeId: uuid("affiliation_type_id").references(() => affiliationTypes.id),
-  regulationTypeId: uuid("regulation_type_id").references(() => regulationTypes.id),
-  status: boolean("status").default(true),
+    affiliationTypeId: integer("affiliation_type_id_fk").references(() => affiliationTypeModel.id),
+  regulationTypeId: integer("regulation_type_id_fk").references(() => regulationTypeModel.id),
+  disabled: boolean().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

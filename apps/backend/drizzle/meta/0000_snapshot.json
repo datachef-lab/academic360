@@ -1,5 +1,5 @@
 {
-  "id": "939011db-9d65-47a5-89fa-30b51bc9a92e",
+  "id": "15fa0bf0-d76a-4dcb-bb5b-2be1a000b50a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2393,6 +2393,51 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.affiliation_types": {
+      "name": "affiliation_types",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.affiliations": {
       "name": "affiliations",
       "schema": "",
@@ -2697,17 +2742,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "code_prefix": {
-          "name": "code_prefix",
-          "type": "varchar(10)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "sequence": {
           "name": "sequence",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": 0
         },
         "disabled": {
           "name": "disabled",
@@ -3065,6 +3105,173 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.program_courses": {
+      "name": "program_courses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "stream_id_fk": {
+          "name": "stream_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "course_id_fk": {
+          "name": "course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "course_type_id_fk": {
+          "name": "course_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "course_level_id_fk": {
+          "name": "course_level_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "total_semesters": {
+          "name": "total_semesters",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "affiliation_type_id_fk": {
+          "name": "affiliation_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regulation_type_id_fk": {
+          "name": "regulation_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "program_courses_stream_id_fk_streams_id_fk": {
+          "name": "program_courses_stream_id_fk_streams_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "streams",
+          "columnsFrom": [
+            "stream_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "program_courses_course_id_fk_courses_id_fk": {
+          "name": "program_courses_course_id_fk_courses_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "program_courses_course_type_id_fk_course_types_id_fk": {
+          "name": "program_courses_course_type_id_fk_course_types_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "course_types",
+          "columnsFrom": [
+            "course_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "program_courses_course_level_id_fk_course_levels_id_fk": {
+          "name": "program_courses_course_level_id_fk_course_levels_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "course_levels",
+          "columnsFrom": [
+            "course_level_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "program_courses_affiliation_type_id_fk_affiliation_types_id_fk": {
+          "name": "program_courses_affiliation_type_id_fk_affiliation_types_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "affiliation_types",
+          "columnsFrom": [
+            "affiliation_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "program_courses_regulation_type_id_fk_regulation_types_id_fk": {
+          "name": "program_courses_regulation_type_id_fk_regulation_types_id_fk",
+          "tableFrom": "program_courses",
+          "tableTo": "regulation_types",
+          "columnsFrom": [
+            "regulation_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

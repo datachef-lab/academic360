@@ -6,7 +6,6 @@ export const courseTypeModel = pgTable('course_types', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
-    codePrefix: varchar({ length: 10 }),
     sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),

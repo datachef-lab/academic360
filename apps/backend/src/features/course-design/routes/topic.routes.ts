@@ -1,20 +1,20 @@
 import { Router } from "express";
 import {
-  createTopic,
-  getAllTopics,
-  getTopicById,
-  updateTopic,
-  deleteTopic,
-} from "../controllers/topic.controller";
+  createTopicHandler,
+  getAllTopicsHandler,
+  getTopicByIdHandler,
+  updateTopicHandler,
+  deleteTopicHandler,
+} from "../controllers/topic.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();
 
 // Topic routes
-router.post("/", createTopic as RequestHandler);
-router.get("/", getAllTopics as RequestHandler);
-router.get("/:id", getTopicById as RequestHandler);
-router.put("/:id", updateTopic as RequestHandler);
-router.delete("/:id", deleteTopic as RequestHandler);
+router.post("/", createTopicHandler as RequestHandler);
+router.get("/", getAllTopicsHandler as RequestHandler);
+router.get("/:id", getTopicByIdHandler as RequestHandler);
+router.put("/:id", updateTopicHandler as RequestHandler);
+router.delete("/:id", deleteTopicHandler as RequestHandler);
 
 export default router;

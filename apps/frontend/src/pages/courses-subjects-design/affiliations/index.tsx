@@ -1,10 +1,7 @@
 import React from "react";
-// import { CustomPaginationState } from "@/components/settings/SettingsContent";
-import { SubjectForm } from "./subject-form";
-import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, BookOpen, Download, Upload, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Landmark, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -15,85 +12,57 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
 import { Button } from "@/components/ui/button";
+import { Affiliation } from "@/types/course-design";
 
-type LocalSubject = {
-  id: string;
-  name: string;
-  code: string;
-  description: string;
-  isActive: boolean;
-};
-
-const dummySubjects: LocalSubject[] = [
-  { id: "1", name: "Introduction to Programming", code: "CS101", description: "Basics of programming", isActive: true },
-  { id: "2", name: "Data Structures", code: "CS201", description: "Fundamental data structures", isActive: true },
-  { id: "3", name: "Calculus I", code: "MATH101", description: "Introduction to calculus", isActive: false },
+const dummyAffiliations: Affiliation[] = [
+  { id: 1, name: "University of Calcutta", shortName: "CU", sequence: 1, disabled: false, remarks: "Main university", createdAt: undefined, updatedAt: undefined },
+  { id: 2, name: "West Bengal State University", shortName: "WBSU", sequence: 2, disabled: false, remarks: "State university", createdAt: undefined, updatedAt: undefined },
+  { id: 3, name: "Other Board", shortName: "OB", sequence: 3, disabled: true, remarks: "Other affiliations", createdAt: undefined, updatedAt: undefined },
 ];
 
-const SubjectsPage = () => {
+const AffiliationsPage = () => {
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedSubject, setSelectedSubject] = React.useState<LocalSubject | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedAffiliation, setSelectedAffiliation] = React.useState<Affiliation | null>(null);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
 
-  // Remove pagination and setDataLength as not needed for local dummy data
-
-  const handleEdit = (subject: LocalSubject) => {
-    setSelectedSubject(subject);
+  const handleEdit = (affiliation: Affiliation) => {
+    setSelectedAffiliation(affiliation);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = (id: number | undefined) => {
     console.log("Delete:", id);
-    toast.info("Delete functionality not implemented yet.");
-  };
-
-  const handleSubmit = async (data: unknown) => {
-    setIsSubmitting(true);
-    try {
-      console.log("Submit:", data);
-      toast.success(selectedSubject ? "Subject updated" : "Subject created");
-      setIsFormOpen(false);
-    } catch (error) {
-      toast.error(`Failed to save subject with error: ${error}`);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCancel = () => {
-    setIsFormOpen(false);
+    // toast.info("Delete functionality not implemented yet.");
   };
 
   const handleAddNew = () => {
-    setSelectedSubject(null);
+    setSelectedAffiliation(null);
     setIsFormOpen(true);
   };
 
   const handleBulkUpload = () => {
     if (!bulkFile) return;
-    toast.success("Bulk upload successful (mock)");
+    // toast.success("Bulk upload successful (mock)");
     setIsBulkUploadOpen(false);
     setBulkFile(null);
   };
 
   const handleDownloadTemplate = () => {
     const link = document.createElement('a');
-    link.href = '/templates/subject-bulk-upload-template.xlsx';
-    link.download = 'subject-bulk-upload-template.xlsx';
+    link.href = '/templates/affiliation-bulk-upload-template.xlsx';
+    link.download = 'affiliation-bulk-upload-template.xlsx';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const filteredSubjects = dummySubjects.filter((subject) =>
-    subject.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (subject.code?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-    (subject.description?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
+  const filteredAffiliations = dummyAffiliations.filter((aff) =>
+    aff.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    (aff.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
+    (aff.remarks?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
   );
 
   return (
@@ -102,10 +71,10 @@ const SubjectsPage = () => {
         <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
           <div>
             <CardTitle className="flex items-center">
-              <BookOpen className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-              Subjects
+              <Landmark className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              Affiliations
             </CardTitle>
-            <div className="text-muted-foreground">A list of all available subjects.</div>
+            <div className="text-muted-foreground">A list of all affiliations.</div>
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -117,7 +86,7 @@ const SubjectsPage = () => {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Bulk Upload Subjects</DialogTitle>
+                  <DialogTitle>Bulk Upload Affiliations</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
                   <input
@@ -144,14 +113,10 @@ const SubjectsPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedSubject ? "Edit Subject" : "Add New Subject"}</AlertDialogTitle>
+                  <AlertDialogTitle>{selectedAffiliation ? "Edit Affiliation" : "Add New Affiliation"}</AlertDialogTitle>
                 </AlertDialogHeader>
-                <SubjectForm
-                  initialData={selectedSubject}
-                  onSubmit={handleSubmit}
-                  onCancel={handleCancel}
-                  isLoading={isSubmitting}
-                />
+                {/* AffiliationForm component goes here */}
+                <div>Affiliation form goes here.</div>
               </AlertDialogContent>
             </AlertDialog>
           </div>
@@ -171,26 +136,26 @@ const SubjectsPage = () => {
                   <TableRow>
                     <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
                     <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
-                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Description</TableHead>
+                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
+                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Remarks</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredSubjects.length === 0 ? (
+                  {filteredAffiliations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No subjects found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">No affiliations found.</TableCell>
                     </TableRow>
                   ) : (
-                    filteredSubjects.map((subject, idx) => (
-                      <TableRow key={subject.id} className="group">
+                    filteredAffiliations.map((aff, idx) => (
+                      <TableRow key={aff.id} className="group">
                         <TableCell style={{ width: 60 }}>{idx + 1}</TableCell>
-                        <TableCell style={{ width: 220 }}>{subject.name}</TableCell>
-                        <TableCell style={{ width: 120 }}>{subject.code}</TableCell>
-                        <TableCell style={{ width: 320 }}>{subject.description}</TableCell>
+                        <TableCell style={{ width: 220 }}>{aff.name}</TableCell>
+                        <TableCell style={{ width: 120 }}>{aff.shortName ?? "-"}</TableCell>
+                        <TableCell style={{ width: 320 }}>{aff.remarks ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {subject.isActive ? (
+                          {!aff.disabled ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
@@ -201,7 +166,7 @@ const SubjectsPage = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleEdit(subject)}
+                              onClick={() => handleEdit(aff)}
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
@@ -209,7 +174,7 @@ const SubjectsPage = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(subject.id)}
+                              onClick={() => handleDelete(aff.id)}
                               className="h-5 w-5 p-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -229,4 +194,4 @@ const SubjectsPage = () => {
   );
 };
 
-export default SubjectsPage;
+export default AffiliationsPage; 

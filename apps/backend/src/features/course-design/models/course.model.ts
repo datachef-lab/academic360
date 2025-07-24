@@ -8,15 +8,7 @@ export const courseModel = pgTable('courses', {
     degreeId: integer("degree_id_fk").references(() => degreeModel.id),
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
-    codePrefix: varchar({ length: 10 }),
-    universityCode: varchar({ length: 10 }),
-    amount: integer("amount"),
-    numberOfSemesters: integer(),
-    duration: varchar({length: 255}),
-    sequene: integer().unique().default(0),
-
-    sequence: integer().unique(),
-
+    sequence: integer().unique().default(0),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

@@ -8,8 +8,11 @@ import RegulationTypesPage from "./regulation-types";
 import SubjectsPage from "./subjects";
 import SubjectCategoriesPage from "./subject-categories";
 import CoursesSubjectsMaster from "./CoursesSubjectsMaster";
-
+import AffiliationsPage from "./affiliations";
+import ProgramCoursesPage from "./program-course";
 export {
+    ProgramCoursesPage,
+    AffiliationsPage,
     SubjectPaperMappingPage,
     StreamsPage,
     CoursesPage,

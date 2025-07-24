@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Course } from "./columns";
+import { Course } from "@/types/course-design";
+// import { Course } from "./columns";
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -32,11 +33,17 @@ export function CourseForm({
   onCancel,
   isSubmitting,
 }: CourseFormProps) {
-  const defaultValues = {
+  const defaultValues: Course = {
     name: initialData?.name || "",
-    code: initialData?.code || "",
-    description: initialData?.description || "",
-    isActive: initialData?.isActive ?? true,
+    degree: initialData?.degree || null,
+    shortName: initialData?.shortName || "",
+    sequence: initialData?.sequence || 0,
+    disabled: initialData?.disabled || false,
+    createdAt: initialData?.createdAt || new Date(),
+    updatedAt: initialData?.updatedAt || new Date(),
+    // code: initialData?.code || "",
+    // description: initialData?.description || "",
+    // isActive: initialData?.isActive ?? true,
   };
 
   const { register, handleSubmit, formState: { errors } } = useForm<CourseFormValues>({
@@ -89,7 +96,7 @@ export function CourseForm({
         <Checkbox
           id="isActive"
           {...register("isActive")}
-          defaultChecked={defaultValues.isActive}
+          defaultChecked={!defaultValues.disabled}
         />
         <Label htmlFor="isActive">Active</Label>
       </div>

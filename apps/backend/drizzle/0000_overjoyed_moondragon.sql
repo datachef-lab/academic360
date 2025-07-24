@@ -330,6 +330,14 @@ CREATE TABLE "otps" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+CREATE TABLE "affiliation_types" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"name" text NOT NULL,
+	"description" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "affiliations" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
@@ -377,8 +385,7 @@ CREATE TABLE "courses" (
 	"degree_id_fk" integer,
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
-	"code_prefix" varchar(10),
-	"sequence" integer,
+	"sequence" integer DEFAULT 0,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -421,6 +428,21 @@ CREATE TABLE "papers" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "papers_sequence_unique" UNIQUE("sequence")
+);
+--> statement-breakpoint
+CREATE TABLE "program_courses" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"stream_id_fk" integer,
+	"course_id_fk" integer,
+	"course_type_id_fk" integer,
+	"course_level_id_fk" integer,
+	"duration" integer NOT NULL,
+	"total_semesters" integer NOT NULL,
+	"affiliation_type_id_fk" integer,
+	"regulation_type_id_fk" integer,
+	"status" boolean DEFAULT true,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "regulation_types" (
@@ -1088,6 +1110,12 @@ ALTER TABLE "papers" ADD CONSTRAINT "papers_subject_paper_id_fk_subject_papers_i
 ALTER TABLE "papers" ADD CONSTRAINT "papers_subject_type_id_fk_subject_types_id_fk" FOREIGN KEY ("subject_type_id_fk") REFERENCES "public"."subject_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_course_type_id_fk_course_types_id_fk" FOREIGN KEY ("course_type_id_fk") REFERENCES "public"."course_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_course_level_id_fk_course_levels_id_fk" FOREIGN KEY ("course_level_id_fk") REFERENCES "public"."course_levels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_affiliation_type_id_fk_affiliation_types_id_fk" FOREIGN KEY ("affiliation_type_id_fk") REFERENCES "public"."affiliation_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_regulation_type_id_fk_regulation_types_id_fk" FOREIGN KEY ("regulation_type_id_fk") REFERENCES "public"."regulation_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_papers" ADD CONSTRAINT "subject_papers_subject_id_fk_subjects_id_fk" FOREIGN KEY ("subject_id_fk") REFERENCES "public"."subjects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_papers" ADD CONSTRAINT "subject_papers_affiliation_id_fk_affiliations_id_fk" FOREIGN KEY ("affiliation_id_fk") REFERENCES "public"."affiliations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subject_papers" ADD CONSTRAINT "subject_papers_regulation_type_id_fk_regulation_types_id_fk" FOREIGN KEY ("regulation_type_id_fk") REFERENCES "public"."regulation_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

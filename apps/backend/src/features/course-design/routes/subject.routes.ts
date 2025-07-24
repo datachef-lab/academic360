@@ -1,20 +1,20 @@
 import { Router } from "express";
 import {
-  createSubject,
-  getAllSubjects,
-  getSubjectById,
-  updateSubject,
-  deleteSubject,
-} from "../controllers/subject.controller";
+  createSubjectHandler,
+  getAllSubjectsHandler,
+  getSubjectByIdHandler,
+  updateSubjectHandler,
+  deleteSubjectHandler,
+} from "../controllers/subject.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();
 
 // Subject routes
-router.post("/", createSubject as RequestHandler);
-router.get("/", getAllSubjects as RequestHandler);
-router.get("/:id", getSubjectById as RequestHandler);
-router.put("/:id", updateSubject as RequestHandler);
-router.delete("/:id", deleteSubject as RequestHandler);
+router.post("/", createSubjectHandler as RequestHandler);
+router.get("/", getAllSubjectsHandler as RequestHandler);
+router.get("/:id", getSubjectByIdHandler as RequestHandler);
+router.put("/:id", updateSubjectHandler as RequestHandler);
+router.delete("/:id", deleteSubjectHandler as RequestHandler);
 
 export default router;

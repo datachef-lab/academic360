@@ -7,7 +7,6 @@ export const streamModel = pgTable('streams', {
     name: varchar({ length: 500 }).notNull(),
     code: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
-    codePrefix: varchar({ length: 10 }),
     sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),

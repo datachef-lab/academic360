@@ -1,9 +1,12 @@
-import { UserDataTable } from "@/pages/DataTableTest";
-import { columns, RegulationType } from "./columns";
-import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
 import React from "react";
-import { CustomPaginationState } from "@/components/settings/SettingsContent";
+import { RegulationTypeForm } from "./regulation-type-form";
+import { toast } from "sonner";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { PlusCircle, Scale, Download, Upload, Edit, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -11,8 +14,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { RegulationTypeForm } from "./regulation-type-form";
-import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { RegulationType } from "./columns";
 
 const dummyRegulationTypes: RegulationType[] = [
   { id: "1", name: "Choice Based Credit System", description: "CBCS regulation", isActive: true },
@@ -20,19 +23,12 @@ const dummyRegulationTypes: RegulationType[] = [
 ];
 
 const RegulationTypesPage = () => {
-  const [pagination, setPagination] = React.useState<CustomPaginationState>({
-    pageIndex: 0,
-    pageSize: 10,
-    totalElements: dummyRegulationTypes.length,
-    totalPages: Math.ceil(dummyRegulationTypes.length / 10),
-  });
   const [searchText, setSearchText] = React.useState("");
-  const setDataLength = React.useState(dummyRegulationTypes.length)[1];
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedRegulationType, setSelectedRegulationType] = React.useState<RegulationType | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const refetch = async () => {};
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
+  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
 
   const handleEdit = (regulationType: RegulationType) => {
     setSelectedRegulationType(regulationType);
@@ -44,13 +40,11 @@ const RegulationTypesPage = () => {
     toast.info("Delete functionality not implemented yet.");
   };
 
-  const handleSubmit = async (data: unknown) => {
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      console.log("Submit:", data);
       toast.success(selectedRegulationType ? "Regulation type updated" : "Regulation type created");
       setIsFormOpen(false);
-      refetch();
     } catch (error) {
       toast.error(`Failed to save regulation type with error: ${error}`);
     } finally {
@@ -67,46 +61,154 @@ const RegulationTypesPage = () => {
     setIsFormOpen(true);
   };
 
+  const handleBulkUpload = () => {
+    if (!bulkFile) return;
+    toast.success("Bulk upload successful (mock)");
+    setIsBulkUploadOpen(false);
+    setBulkFile(null);
+  };
+
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/templates/regulation-type-bulk-upload-template.xlsx';
+    link.download = 'regulation-type-bulk-upload-template.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredRegulationTypes = dummyRegulationTypes.filter((type) =>
+    type.name.toLowerCase().includes(searchText.toLowerCase()) ||
+    (type.description?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
+  );
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Regulation Types</h1>
-          <p className="text-gray-500">A list of all regulation types.</p>
-        </div>
-        <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <AlertDialogTrigger asChild>
-            <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Regulation Type
+    <div className="p-4">
+      <Card className="border-none">
+        <CardHeader className="flex flex-row items-center mb-3 justify-between border rounded-md p-4 sticky top-0 z-30 bg-background">
+          <div>
+            <CardTitle className="flex items-center">
+              <Scale className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
+              Regulation Types
+            </CardTitle>
+            <div className="text-muted-foreground">A list of all regulation types.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Bulk Upload
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Regulation Types</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-4">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                  />
+                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
+                    Upload
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Template
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>
-                {selectedRegulationType ? "Edit Regulation Type" : "Add New Regulation Type"}
-              </AlertDialogTitle>
-            </AlertDialogHeader>
-            <RegulationTypeForm
-              initialData={selectedRegulationType}
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isLoading={isSubmitting}
-            />
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-      <UserDataTable
-        columns={columns({ onEdit: handleEdit, onDelete: handleDelete })}
-        data={dummyRegulationTypes}
-        pagination={pagination}
-        setPagination={setPagination}
-        isLoading={false}
-        searchText={searchText}
-        setSearchText={setSearchText}
-        setDataLength={setDataLength}
-        refetch={refetch}
-      />
+            <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <AlertDialogTrigger asChild>
+                <Button onClick={handleAddNew} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{selectedRegulationType ? "Edit Regulation Type" : "Add New Regulation Type"}</AlertDialogTitle>
+                </AlertDialogHeader>
+                <RegulationTypeForm
+                  initialData={selectedRegulationType ?? undefined}
+                  onSubmit={handleSubmit}
+                  onCancel={handleCancel}
+                  isLoading={isSubmitting}
+                />
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
+            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Button variant="outline" onClick={() => {}}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+          <div className="relative" style={{ height: '600px' }}>
+            <div className="overflow-y-auto overflow-x-auto h-full">
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+                  <TableRow>
+                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
+                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
+                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Description</TableHead>
+                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
+                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRegulationTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">No regulation types found.</TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRegulationTypes.map((type, idx) => (
+                      <TableRow key={type.id} className="group">
+                        <TableCell style={{ width: 60 }}>{idx + 1}</TableCell>
+                        <TableCell style={{ width: 320 }}>{type.name}</TableCell>
+                        <TableCell style={{ width: 320 }}>{type.description ?? "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>
+                          {type.isActive ? (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                          ) : (
+                            <Badge variant="secondary">Inactive</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: 120 }}>
+                          <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit(type)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(String(type.id ?? ''))}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

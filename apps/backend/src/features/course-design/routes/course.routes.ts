@@ -1,20 +1,20 @@
 import { Router } from "express";
 import {
-  createCourse,
-  getAllCourses,
-  getCourseById,
-  updateCourse,
-  deleteCourse,
-} from "../controllers/course.controller";
+  createCourseHandler,
+  getAllCoursesHandler,
+  getCourseByIdHandler,
+  updateCourseHandler,
+  deleteCourseHandler,
+} from "../controllers/course.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();
 
 // Course routes
-router.post("/", createCourse as RequestHandler);
-router.get("/", getAllCourses as RequestHandler);
-router.get("/:id", getCourseById as RequestHandler);
-router.put("/:id", updateCourse as RequestHandler);
-router.delete("/:id", deleteCourse as RequestHandler);
+  router.post("/", createCourseHandler);
+router.get("/", getAllCoursesHandler);
+router.get("/:id", getCourseByIdHandler);
+router.put("/:id", updateCourseHandler);
+router.delete("/:id", deleteCourseHandler);
 
 export default router;

@@ -1,6 +1,6 @@
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import { Course } from '@/types/course-design/course';
+import { Course } from '@/types/course-design';
 
 // Get all courses
 export async function getAllCourses(): Promise<ApiResonse<Course[]>> {

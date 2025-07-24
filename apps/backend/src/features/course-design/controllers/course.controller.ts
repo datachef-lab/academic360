@@ -3,51 +3,60 @@ import { z } from "zod";
 import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse } from "@/features/course-design/services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 
-export async function getAllCoursesHandler(req: Request, res: Response) {
+export async function getAllCoursesHandler(req: Request, res: Response): Promise<void> {
     try {
         const courses = await findAllCourses();
-        return res.status(200).json(new ApiResponse(200, "SUCCESS", courses, "Courses fetched successfully"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", courses, "Courses fetched successfully"));
+        return;
     } catch (error) {
         console.error("Error fetching all courses:", error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to fetch courses"));
+        res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to fetch courses"));
+        return;
     }
 }
 
-export async function getCourseByIdHandler(req: Request, res: Response) {
+export async function getCourseByIdHandler(req: Request, res: Response): Promise<void> {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            return;
         }
 
         const course = await findCourseById(id);
         if (!course) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+            return;
         }
 
-        return res.status(200).json(new ApiResponse(200, "SUCCESS", course, "Course fetched successfully"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", course, "Course fetched successfully"));
+        return;
     } catch (error) {
         console.error(`Error fetching course with ID ${req.params.id}:`, error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to fetch course"));
+        res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to fetch course"));
+        return;
     }
 }
 
-export async function createCourseHandler(req: Request, res: Response) {
+export async function createCourseHandler(req: Request, res: Response): Promise<void> {
     try {
 
         const newCourse = await createCourse(req.body);
-        return res.status(201).json(new ApiResponse(201, "CREATED", newCourse, "Course created successfully"));
+        res.status(201).json(new ApiResponse(201, "CREATED", newCourse, "Course created successfully"));
+        return;
     } catch (error) {
         console.error("Error creating course:", error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to create course"));
+        res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to create course"));
+        return;
     }
 }
 
-export async function updateCourseHandler(req: Request, res: Response) {
+export async function updateCourseHandler(req: Request, res: Response): Promise<void> {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            return;
         }
 
         // const validationResult = updateCourseSchema.safeParse();
@@ -59,33 +68,40 @@ export async function updateCourseHandler(req: Request, res: Response) {
         const updatedCourse = await updateCourse(id, req.body);
 
         if (!updatedCourse) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+                    res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+            return;
         }
 
-        return res.status(200).json(new ApiResponse(200, "SUCCESS", updatedCourse, "Course updated successfully"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", updatedCourse, "Course updated successfully"));
+        return;
     } catch (error) {
         console.error(`Error updating course with ID ${req.params.id}:`, error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to update course"));
+        res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to update course"));
+        return;
     }
 }
 
-export async function deleteCourseHandler(req: Request, res: Response) {
+export async function deleteCourseHandler(req: Request, res: Response): Promise<void> {
     try {
         const id = parseInt(req.params.id);
         if (isNaN(id)) {
-            return res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid course ID"));
+            return;
         }
 
         const deletedCourse = await deleteCourse(id);
 
         if (!deletedCourse) {
-            return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
+            return;
         }
 
-        return res.status(200).json(new ApiResponse(200, "DELETED", deletedCourse, "Course deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", deletedCourse, "Course deleted successfully"));
+        return;
     } catch (error) {
         console.error(`Error deleting course with ID ${req.params.id}:`, error);
-        return res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to delete course"));
+        res.status(500).json(new ApiResponse(500, "ERROR", null, "Failed to delete course"));
+        return;
     }
 }
 
