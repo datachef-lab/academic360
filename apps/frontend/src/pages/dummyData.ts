@@ -1,86 +1,58 @@
-// dummyData.ts
-
-export const studentData = {
-  name: 'John Doe',
-  registrationNo: '123456',
-  rollNo: '789101',
-};
-
-export const coursesData = [
+export const dummyUsers = [
   {
-    courseCode: 'CSE-101',
-    courseType: 'Core Course',
-    courseName: 'INTRODUCTION TO PROGRAMMING',
-    year: 2023,
-  
-    theoreticalType: 'Theoretical',
-    theoreticalFullMarks: 100,
-    theoreticalMarksObtained: 85,
-    theoreticalCredit: 4,
-    theoreticalCreditPointsObtained: 3400,
-    theoreticalGrade: 'A',
-    theoreticalStatus: 'P',
-  
-    practicalType: 'Practical',
-    practicalFullMarks: 50,
-    practicalMarksObtained: 45,
-    practicalCredit: 2,
-    practicalCreditPointsObtained: 1800,
-  
-    totalFullMarks: 150,
-    totalMarksObtained: 130,
-    totalCredit: 6,
-    totalCreditPointsObtained: 5200,
+    id: 1,
+    name: "Rithu Bhawanaj",
+    position: "Teacher",
+    email: "manager@edu.in",
+    contact: "Theory of Computation",
+    avatarColor: "#FFB74D"
   },
   {
-    courseCode: 'MATH-201',
-    courseType: 'Elective Course',
-    courseName: 'DISCRETE MATHEMATICS',
-    year: 2023,
-  
-    theoreticalType: 'Theoretical',
-    theoreticalFullMarks: 75,
-    theoreticalMarksObtained: 65,
-    theoreticalCredit: 3,
-    theoreticalCreditPointsObtained: 1950,
-    theoreticalGrade: 'B+',
-    theoreticalStatus: 'P',
-  
-    practicalType: 'Practical',
-    practicalFullMarks: 25,
-    practicalMarksObtained: 18,
-    practicalCredit: 1,
-    practicalCreditPointsObtained: 600,
-  
-    totalFullMarks: 100,
-    totalMarksObtained: 83,
-    totalCredit: 4,
-    totalCreditPointsObtained: 2550,
+    id: 2,
+    name: "K Krishna shankar",
+    position: "Teacher",
+    email: "krish@ak.edu.in",
+    contact: "Design of Digital Systems",
+    avatarColor: "#4CAF50"
   },
   {
-    courseCode: 'PHY-101',
-    courseType: 'Core Course',
-    courseName: 'PHYSICAL SCIENCES',
-    year: 2023,
-  
-    theoreticalType: 'Theoretical',
-    theoreticalFullMarks: 100,
-    theoreticalMarksObtained: 70,
-    theoreticalCredit: 4,
-    theoreticalCreditPointsObtained: 2800,
-    theoreticalGrade: 'B',
-    theoreticalStatus: 'P',
-  
-    practicalType: 'Practical',
-    practicalFullMarks: 50,
-    practicalMarksObtained: 40,
-    practicalCredit: 2,
-    practicalCreditPointsObtained: 1200,
-  
-    totalFullMarks: 150,
-    totalMarksObtained: 110,
-    totalCredit: 6,
-    totalCreditPointsObtained: 4000,
+    id: 3,
+    name: "Aparna Rajendran",
+    position: "Student",
+    email: "ritcha.23cs@students.edu.in",
+    contact: "23CS103",
+    avatarColor: "#00BCD4"
   },
-
+  {
+    id: 4,
+    name: "Prabha SH",
+    position: "Student",
+    email: "prabha.23cs@students.edu.in",
+    contact: "23CS102",
+    avatarColor: "#E040FB"
+  },
+  {
+    id: 5,
+    name: "Vinod Noyal",
+    position: "Student",
+    email: "vinod@example.23cs@students.edu.in",
+    contact: "23CS112",
+    avatarColor: "#FFD700"
+  },
+  {
+    id: 6,
+    name: "Shashwath Raja",
+    position: "Student",
+    email: "shashwath.raja.23cs@students.edu.in",
+    contact: "23CS119",
+    avatarColor: "#7B68EE"
+  },
+  {
+    id: 7,
+    name: "Aarav",
+    position: "Student",
+    email: "aarav.23cs@students.edu.in",
+    contact: "Mtech(Networked[1])",
+    avatarColor: "#FF4444"
+  }
 ];
