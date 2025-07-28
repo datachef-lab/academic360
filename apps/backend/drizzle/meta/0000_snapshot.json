@@ -1357,6 +1357,7 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+          "notNull": false
         },
         "other_institute": {
           "name": "other_institute",
@@ -4473,11 +4474,13 @@
           "type": "date",
           "primaryKey": false,
           "notNull": false
+          "notNull": false
         },
         "end_date": {
           "name": "end_date",
           "type": "date",
           "primaryKey": false,
+          "notNull": false
           "notNull": false
         },
         "online_start_date": {
@@ -4485,11 +4488,13 @@
           "type": "date",
           "primaryKey": false,
           "notNull": false
+          "notNull": false
         },
         "online_end_date": {
           "name": "online_end_date",
           "type": "date",
           "primaryKey": false,
+          "notNull": false
           "notNull": false
         },
         "created_at": {

@@ -187,9 +187,9 @@ export default function AdmissionConfigureDialog({ open = true, setOpen = () => 
             </div>
           </div>
           <div className="flex flex-col md:flex-row gap-6 mt-4">
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-[300px] h-[50vh]">
               <Label>Mapped Courses ({mappedCourses.length})</Label>
-              <div className="border rounded-lg p-3 mt-2 bg-muted min-h-[350px] overflow-auto thin-scrollbar">
+              <div className="border rounded-lg p-3 mt-2 bg-muted h-[350px] overflow-auto thin-scrollbar">
                 {mappedCourses.length === 0 ? (
                   <div className="text-gray-500 text-xs">No courses mapped</div>
                 ) : (

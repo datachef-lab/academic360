@@ -1,5 +1,5 @@
 import { HealthType } from "@/types/user/health.js";
-import { Health, healthModel } from "../models/health.model.js";
+import { Health, healthModel, createHealthSchema } from "../models/health.model.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
@@ -15,29 +15,35 @@ interface DateObject {
 // Helper function to ensure we have proper Date objects
 const ensureDateObjects = (obj: DateObject): DateObject => {
     if (!obj) return obj;
-    
-    // Create a new object with the same properties
     const result = { ...obj };
-    
-    // Convert string dates to Date objects
     if (typeof result.createdAt === 'string') {
         result.createdAt = new Date(result.createdAt);
     }
-    
     if (typeof result.updatedAt === 'string') {
         result.updatedAt = new Date(result.updatedAt);
     }
-    
     return result;
-};
+}
+
+// Validate input using Zod schema
+function validateHealthInput(data: Omit<HealthType, 'id'>) {
+    const parseResult = createHealthSchema.safeParse(data);
+    if (!parseResult.success) {
+        const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
+        // @ts-expect-error
+        error.status = 400;
+        throw error;
+    }
+    return parseResult.data;
+}
 
 export async function addHealth(health: HealthType): Promise<HealthType | null> {
     try {
         const { bloodGroup, ...props } = health;
-
+        // Validate input (excluding nested objects)
+        validateHealthInput(props);
         // Ensure we have proper Date objects
         const sanitizedProps = ensureDateObjects(props);
-        
         // Set dates if not provided
         if (!sanitizedProps.createdAt) {
             sanitizedProps.createdAt = new Date();
@@ -60,7 +66,6 @@ export async function addHealth(health: HealthType): Promise<HealthType | null> 
         if (!newHealth) {
             return null;
         }
-
         // Now fetch the complete health record with blood group
         return findHealthById(newHealth.id);
     } catch (error) {
@@ -74,9 +79,7 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
         // Perform a join with the blood group table to get ALL blood group fields
         const result = await db
             .select({
-                // Select all fields from health model
                 health: healthModel,
-                // Select all fields from blood group model
                 bloodGroup: {
                     id: bloodGroupModel.id,
                     type: bloodGroupModel.type,
@@ -89,14 +92,10 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
             .from(healthModel)
             .leftJoin(bloodGroupModel, eq(healthModel.bloodGroupId, bloodGroupModel.id))
             .where(eq(healthModel.id, id));
-        
         if (!result || result.length === 0) {
             return null;
         }
-        
         const { health, bloodGroup } = result[0];
-        
-        // Format the response with complete blood group data
         const { bloodGroupId, ...healthProps } = health;
         
         // Convert string dates to Date objects in bloodGroup
@@ -120,7 +119,6 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
             updatedAt: sanitizedHealthProps.updatedAt as Date,
             bloodGroup: sanitizedBloodGroup
         };
-        
         return formattedHealth;
     } catch (error) {
         console.error("Error in findHealthById service:", error);
@@ -130,12 +128,9 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
 
 export async function findHealthByStudentId(studentId: number): Promise<HealthType | null> {
     try {
-        // Perform a join with the blood group table to get ALL blood group fields
         const result = await db
             .select({
-                // Select all fields from health model
                 health: healthModel,
-                // Select all fields from blood group model
                 bloodGroup: {
                     id: bloodGroupModel.id,
                     type: bloodGroupModel.type,
@@ -148,14 +143,10 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
             .from(healthModel)
             .leftJoin(bloodGroupModel, eq(healthModel.bloodGroupId, bloodGroupModel.id))
             .where(eq(healthModel.studentId, studentId));
-        
         if (!result || result.length === 0) {
             return null;
         }
-        
         const { health, bloodGroup } = result[0];
-        
-        // Format the response with complete blood group data
         const { bloodGroupId, ...healthProps } = health;
         
         // Convert string dates to Date objects in bloodGroup
@@ -179,7 +170,6 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
             updatedAt: sanitizedHealthProps.updatedAt as Date,
             bloodGroup: sanitizedBloodGroup
         };
-        
         return formattedHealth;
     } catch (error) {
         console.error("Error in findHealthByStudentId service:", error);
@@ -187,20 +177,42 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
     }
 }
 
+export async function updateHealth(id: number, health: HealthType): Promise<HealthType | null> {
+    try {
+        const { bloodGroup, studentId, ...props } = health;
+        // Validate input (excluding nested objects)
+        validateHealthInput({ ...props, studentId });
+        // Ensure we have proper Date objects
+        const sanitizedProps = ensureDateObjects({ ...props, studentId });
+        sanitizedProps.updatedAt = new Date();
+        // Update the health record
+        const [updatedHealth] = await db.update(healthModel).set({
+            ...sanitizedProps,
+            createdAt: sanitizedProps.createdAt as Date,
+            updatedAt: sanitizedProps.updatedAt as Date,
+            bloodGroupId: bloodGroup?.id,
+        }).where(eq(healthModel.id, id)).returning();
+        if (!updatedHealth) {
+            return null;
+        }
+        return findHealthById(updatedHealth.id);
+    } catch (error) {
+        console.error("Error in updateHealth service:", error);
+        return null;
+    }
+}
+
 export async function removeHealth(id: number): Promise<boolean | null> {
     try {
-        // Return if the health doesn't exist
         const [foundHealth] = await db.select().from(healthModel).where(eq(healthModel.id, id));
         if (!foundHealth) {
             return null;
         }
-        // Delete the health
         const [deletedHealth] = await db.delete(healthModel).where(eq(healthModel.id, id)).returning();
         if (!deletedHealth) {
-            return false; // Failure!
+            return false;
         }
-
-        return true; // Success!
+        return true;
     } catch (error) {
         console.error("Error in removeHealth service:", error);
         return false;
@@ -209,18 +221,15 @@ export async function removeHealth(id: number): Promise<boolean | null> {
 
 export async function removeHealthByStudentId(studentId: number): Promise<boolean | null> {
     try {
-        // Return if the health doesn't exist
         const [foundHealth] = await db.select().from(healthModel).where(eq(healthModel.studentId, studentId));
         if (!foundHealth) {
             return null;
         }
-        // Delete the health
         const [deletedHealth] = await db.delete(healthModel).where(eq(healthModel.studentId, studentId)).returning();
         if (!deletedHealth) {
-            return false; // Failure!
+            return false;
         }
-
-        return true; // Success!
+        return true;
     } catch (error) {
         console.error("Error in removeHealthByStudentId service:", error);
         return false;
@@ -232,10 +241,7 @@ export async function healthResponseFormat(health: Health): Promise<HealthType |
         if (!health) {
             return null;
         }
-
         const { bloodGroupId, ...props } = health;
-
-        // Ensure we have proper Date objects
         const sanitizedProps = ensureDateObjects(props);
 
         const formattedHealth: HealthType = { 
@@ -263,10 +269,14 @@ export async function healthResponseFormat(health: Health): Promise<HealthType |
         } else {
             formattedHealth.bloodGroup = null;
         }
-
         return formattedHealth;
     } catch (error) {
         console.error("Error in healthResponseFormat service:", error);
         return null;
     }
+}
+
+export async function getAllHealths(): Promise<Health[]> {
+    const healths = await db.select().from(healthModel);
+    return healths;
 }

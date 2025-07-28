@@ -6,7 +6,7 @@ import { createDefaultExamComponents } from "@/features/course-design/services/e
 
 // Create a connection pool
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL,
 });
 
 // Initialize Drizzle ORM with the pool
@@ -37,23 +37,23 @@ export const connectToDatabase = async () => {
 //     process.env.OLD_DB_NAME!
 // )
 export const mysqlConnection = await createConnection({
-  host: process.env.OLD_DB_HOST!,
-  port: parseInt(process.env.OLD_DB_PORT!, 10),
-  user: process.env.OLD_DB_USER!,
-  password: process.env.OLD_DB_PASSWORD!,
-  database: process.env.OLD_DB_NAME!,
+    host: process.env.OLD_DB_HOST!,
+    port: parseInt(process.env.OLD_DB_PORT!, 10),
+    user: process.env.OLD_DB_USER!,
+    password: process.env.OLD_DB_PASSWORD!,
+    database: process.env.OLD_DB_NAME!,
 });
 
 // Test MySQL Connection
 export const connectToMySQL = async () => {
-  try {
-    const [rows] = await mysqlConnection.query(
-      "SELECT COUNT(*) AS totalRows FROM community",
-    ); // Simple query to test the connection
-    console.log(rows);
-    console.log("[MySQL] - Connected successfully. 🎉");
-  } catch (error) {
-    console.error("[MySQL] - Connection failed: ⚠", error);
-    // process.exit(1); // Exit the application if the database connection fails
-  }
+    try {
+        const [rows] = await mysqlConnection.query(
+            "SELECT COUNT(*) AS totalRows FROM community",
+        ); // Simple query to test the connection
+        console.log(rows);
+        console.log("[MySQL] - Connected successfully. 🎉");
+    } catch (error) {
+        console.error("[MySQL] - Connection failed: ⚠", error);
+        // process.exit(1); // Exit the application if the database connection fails
+    }
 };

@@ -1,34 +1,32 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
   createFamily,
   getFamilyById,
   getFamilyByStudentId,
   updateFamily,
   deleteFamilyById,
-  deleteFamilyByStudentId
+  deleteFamilyByStudentId,
+  getAllFamiliesController
 } from "../controllers/family.controller.js";
 
 const router = express.Router();
 
 router.use(verifyJWT);
 
-// Create family
+// Get all
+router.get("/", getAllFamiliesController);
+// Create
 router.post("/", createFamily);
-
-// Get family by ID
+// Get by id
 router.get("/:id", getFamilyById);
-
-// Get family by student ID
+// Get by studentId
 router.get("/student/:studentId", getFamilyByStudentId);
-
-// Update family
+// Update
 router.put("/:id", updateFamily);
-
-// Delete family by ID
+// Delete by id
 router.delete("/:id", deleteFamilyById);
-
-// Delete family by student ID
+// Delete by studentId
 router.delete("/student/:studentId", deleteFamilyByStudentId);
 
 export default router;

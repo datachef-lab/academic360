@@ -1,4 +1,4 @@
-import { Degree } from "@/types/resources/degree";
+import { Degree } from "@/types/resources/degree.types";
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import { PaginatedResponse } from "@/types/pagination";

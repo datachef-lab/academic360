@@ -40,6 +40,7 @@ import * as attendanceModule from "@/pages/attendance-timetable";
 import * as libraryModule from "@/pages/library";
 import * as appModule from "./pages/apps";
 import * as facultiesStaffsModule from "./pages/faculties-staffs";
+import * as marksheetModule from "@/pages/marksheets";
 import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
 import { AcademicYearPage } from "./pages/admissions-fees/fees";
@@ -77,6 +78,7 @@ const router = createBrowserRouter([
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
         ],
       },
+      { path: "admissions-fees/admissions/:year", element: <admissionFeesModule.AdmissionDetailsPage /> },
       {
         path: "admissions-fees",
         element: <admissionFeesModule.AdmissionsFeesMaster />,
@@ -88,7 +90,7 @@ const router = createBrowserRouter([
             element: <Outlet />,
             children: [
               { path: "", element: <admissionFeesModule.AdmissionsPage /> },
-              { path: ":year", element: <admissionFeesModule.AdmissionDetailsPage /> },
+              
             ],
           },
           {
@@ -157,29 +159,6 @@ const router = createBrowserRouter([
           //   },
           { path: "create", element: <studentModule.AddStudentPage /> },
           { path: "downloads", element: <Downloads /> },
-          { path: "reports", element: <studentModule.GetReportsPage /> },
-          {
-            path: "add-marksheet",
-            element: <Outlet />,
-            children: [
-              { path: "", element: <ManageMarksheetPage /> },
-              {
-                path: ":framework",
-                element: <Outlet />,
-                children: [
-                  { path: "", element: <FrameworkActivitiesTab /> },
-                  {
-                    path: ":rollNumber",
-                    element: <Outlet />,
-                    children: [
-                      { path: "", element: <studentModule.StudentMarksheetsPage /> },
-                      { path: ":marksheetId", element: <studentModule.MarksheetPage /> },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
         ],
       },
 
@@ -223,7 +202,44 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
-      { path: "apps", element: <appModule.AppMaster /> },
+      { path: "marksheets", element: <marksheetModule.MarksheetMaster />, children: [
+        { path: "", element: <marksheetModule.HomePage /> },
+        { path: "reports", element: <studentModule.GetReportsPage /> },
+          {
+            path: "add",
+            element: <Outlet />,
+            children: [
+              { path: "", element: <ManageMarksheetPage /> },
+              {
+                path: ":framework",
+                element: <Outlet />,
+                children: [
+                  { path: "", element: <FrameworkActivitiesTab /> },
+                  {
+                    path: ":rollNumber",
+                    element: <Outlet />,
+                    children: [
+                      { path: "", element: <studentModule.StudentMarksheetsPage /> },
+                      { path: ":marksheetId", element: <studentModule.MarksheetPage /> },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+      ] },
+      {
+        path: "apps",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <appModule.AppMaster /> },
+          { path: "student-console", element: <appModule.BescStudentConsoleSettings /> },
+          { path: "event-gatekeeper", element: <appModule.EventGatekeeperPage /> },
+          { path: "ems-app", element: <appModule.EmsAppPage /> },
+          { path: "event-management", element: <appModule.EventGatekeeperPage /> },
+          { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
+        ],
+      },
       {
         path: "faculty-staff",
         element: <facultiesStaffsModule.FacultyStaffMaster />,

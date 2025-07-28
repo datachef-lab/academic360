@@ -5,8 +5,10 @@ import { z } from "zod";
 export const appsModel = pgTable("apps", {
     id: serial().primaryKey(),
     name: varchar({ length: 700 }).notNull(),
+    collegeName: varchar({ length: 700 }).notNull(),
+    collegeShortName: varchar({length: 7}).notNull(),
     description: varchar({ length: 1000 }),
-    icon: varchar({ length: 500 }),
+    logo: varchar({ length: 5000 }),
     url: varchar({ length: 1000 }).notNull(),
     isActive: boolean().notNull().default(false),
     createdAt: timestamp().notNull().defaultNow(),

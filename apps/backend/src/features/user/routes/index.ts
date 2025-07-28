@@ -25,6 +25,7 @@ export {
     familyRouter,
     personRouter,
     personalDetailsRouter,
+    // disabilityRouter,
     transportDetailsRouter,
     userRouter,
     studentRouter,

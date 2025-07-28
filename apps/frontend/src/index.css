@@ -6,14 +6,21 @@ html {
   overflow-x: hidden !important;
 }
 
-/* Custom Scrollbar Styles - Hidden but functional */
+/* Custom Scrollbar Styles - Visible and styled for sidebar */
 .custom-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #a78bfa #f3f4f6; /* thumb and track */
 }
-
 .custom-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  width: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #a78bfa;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
 }
 
 /* Hide all scrollbars */

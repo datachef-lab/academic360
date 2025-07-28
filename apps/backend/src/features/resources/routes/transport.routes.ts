@@ -4,24 +4,39 @@ import {
     deleteTransport,
     getAllTransport,
     getTransportById,
+    getTransportsByMode,
     updateTransport,
 } from "@/features/resources/controllers/transport.controller.js";
 
 const router = express.Router();
 
-// Create a new Transport Route
+/**
+ * Transport Routes
+ * 
+ * POST   /                    - Create a new transport
+ * GET    /                    - Get all transports
+ * GET    /:id                 - Get transport by ID
+ * GET    /mode/:mode          - Get transports by mode
+ * PUT    /:id                 - Update transport by ID
+ * DELETE /:id                 - Delete transport by ID
+ */
+
+// Create a new transport
 router.post("/", createNewTransport);
 
-// Get all Transport Route
+// Get all transports
 router.get("/", getAllTransport);
 
-// Get by Transport ID
+// Get transport by ID
 router.get("/:id", getTransportById);
 
-// Update the Transport Route
+// Get transports by mode
+router.get("/mode/:mode", getTransportsByMode);
+
+// Update transport by ID
 router.put("/:id", updateTransport);
 
-//Delete the Transport Route
+// Delete transport by ID
 router.delete("/:id", deleteTransport);
 
 export default router;

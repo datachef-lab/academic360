@@ -1,247 +1,391 @@
-
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  getAcademicHistoryByStudentId,
+  createAcademicHistory,
+  updateAcademicHistory,
+} from "@/services/academic-history.service";
+import { AcademicHistory } from "@/types/user/academic-history";
+import { Institution } from "@/types/resources/institution.types";
+import { BoardUniversity } from "@/types/resources/board-university.types";
+import { Specialization } from "@/types/resources/specialization";
+import { getAllInstitutions } from "@/services/institution.service";
+import { getAllBoardUniversities } from "@/services/board-university.service";
+import { getAllSpecializations } from "@/services/specialization.service";
+import { getAllBoardResultStatuses } from "@/services/board-result-status.service";
+import { BoardResultStatus } from "@/types/resources/board-result-status.types";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-// import { Skeleton } from "@/components/ui/skeleton";
-import { useEffect, useMemo, useState } from "react";
-import { School, GraduationCap, Calendar, FileText, BookOpen, MessageSquare, ChevronDown, Book, PenLine, CheckCircle, Save, User } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AcademicHistory } from "@/types/user/academic-history";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useLocation } from "react-router-dom";
-import { getAcademicHistory, getAllSpecialization } from "@/services/academic";
-import { createAcademicHistory, updateAcademicHistory } from "@/services/student-apis";
-import { ResultStatus } from "@/types/enums";
-import { Specialization } from "@/types/resources/specialization";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Save, CheckCircle } from "lucide-react";
 
-const resultOptions: ResultStatus[] = ["PASS", "FAIL"];
+interface AcademicHistoryFormProps {
+  studentId: number;
+}
 
-const formElement = [
-  { name: "id", label: "ID", type: "text", icon: <User className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "lastInstitution", label: "Last Institution", type: "text", icon: <School className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "lastBoardUniversity", label: "Last Board University", type: "text", icon: <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "studiedUpToClass", label: "Studied Up To Class", type: "text", icon: <BookOpen className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "passedYear", label: "Passed Year", type: "text", icon: <Calendar className="text-gray-500 w-5 h-5 dark:text-white" /> }, 
-  { name: "remarks", label: "Remarks", type: "text", icon: <MessageSquare className="text-gray-500 w-5 dark:text-white h-5" /> },
-];
+const defaultAcademicHistory: Partial<AcademicHistory> = {
+  studentId: 0,
+  lastInstitution: null,
+  lastBoardUniversity: null,
+  specialization: null,
+  lastResult: null,
+  studiedUpToClass: null,
+  passedYear: null,
+  remarks: null,
+};
 
-const AcademicHistoryForm = () => {
-  const location = useLocation();
-  const studentId = location.pathname.split("/").pop();
-  const id = Number(studentId);
-  const [selected, setSelected] = useState<ResultStatus>("PASS");
-  const [updateID, setUpdateID] = useState<number>();
-  const [selectedSpecialization, setSelectedSpecialization] = useState<{ id: number; name: string } | null>(null);
+// Utility to remove createdAt and updatedAt from object and nested
+function stripDates<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    return obj.map(stripDates) as T;
+  } else if (obj && typeof obj === "object") {
+    const result = {} as { [K in keyof T]: T[K] };
+    for (const key in obj) {
+      if (key === "createdAt" || key === "updatedAt") continue;
+      const value = obj[key];
+      result[key] = (typeof value === "object" && value !== null)
+        ? stripDates(value)
+        : value;
+    }
+    return result as T;
+  }
+  return obj;
+}
+
+export default function AcademicHistoryForm({ studentId }: AcademicHistoryFormProps) {
+  const [formData, setFormData] = useState<Partial<AcademicHistory>>({
+    ...defaultAcademicHistory,
+    studentId,
+  });
+  const [institutionOptions, setInstitutionOptions] = useState<Institution[]>([]);
+  const [boardUniversityOptions, setBoardUniversityOptions] = useState<BoardUniversity[]>([]);
+  const [specializationOptions, setSpecializationOptions] = useState<Specialization[]>([]);
+  const [resultStatusOptions, setResultStatusOptions] = useState<BoardResultStatus[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const defaultAcademicHistory: AcademicHistory = {
-    studentId: id,
-    lastInstitution: null,
-    lastBoardUniversity: null,
-    specialization: null,
-    studiedUpToClass: null,
-    passedYear: null,
-    lastResult: null,
-    remarks: "",
-  };
-
-  const { data: academicData, loading, refetch } = useFetch<AcademicHistory>({
-    getFn: () => getAcademicHistory(id),
-    postFn: (data) => createAcademicHistory(data),
-    default: defaultAcademicHistory
+  // Fetch academic history details
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["academicHistory", studentId],
+    queryFn: async () => {
+      const res = await getAcademicHistoryByStudentId(studentId);
+      return res.payload;
+    },
+    enabled: !!studentId,
   });
 
-  const [formData, setFormData] = useState<AcademicHistory>(defaultAcademicHistory);
-
-  const { data: specialization } = useQuery({
-    queryKey: ["specialization"],
-    queryFn: getAllSpecialization,
-  });
-
-  const SpecializationMemo = useMemo(() => {
-    if (!specialization) return [];
-    const specializationMap = new Map();
-    specialization.forEach((item: Specialization) => {
-      if (item) specializationMap.set(item.id, { id: item.id, name: item.name });
-    });
-    return [...specializationMap.values()];
-  }, [specialization]);
-
+  // Load Institution options
   useEffect(() => {
-    if (academicData) {
+    getAllInstitutions()
+      .then((institutions) => setInstitutionOptions(institutions ?? []))
+      .catch((err) => {
+        console.error("Failed to fetch institutions:", err);
+        setInstitutionOptions([]);
+      });
+  }, []);
+
+  // Load Board/University options
+  useEffect(() => {
+    getAllBoardUniversities()
+      .then((boardUniversities) => setBoardUniversityOptions(boardUniversities ?? []))
+      .catch((err) => {
+        console.error("Failed to fetch board universities:", err);
+        setBoardUniversityOptions([]);
+      });
+  }, []);
+
+  // Load Specialization options
+  useEffect(() => {
+    getAllSpecializations()
+      .then((specializations) => setSpecializationOptions(specializations ?? []))
+      .catch((err) => {
+        console.error("Failed to fetch specializations:", err);
+        setSpecializationOptions([]);
+      });
+  }, []);
+
+  // Load Board Result Status options
+  useEffect(() => {
+    getAllBoardResultStatuses()
+      .then((statuses) => setResultStatusOptions(statuses ?? []))
+      .catch(() => setResultStatusOptions([]));
+  }, []);
+
+  // When academic history data is loaded
+  useEffect(() => {
+    if (data) {
+      console.log("Academic history data loaded:", data);
       setFormData({
-        ...academicData,
-        lastInstitution: academicData.lastInstitution || null,
-        lastBoardUniversity: academicData.lastBoardUniversity || null,
-        specialization: academicData.specialization || null,
+        ...data,
       });
-      setUpdateID(academicData.id);
-
-      if (academicData.specialization?.id) {
-        setSelectedSpecialization({
-          id: academicData.specialization.id,
-          name: academicData.specialization.name || ""
-        });
-      }
-
-      if (academicData.lastResult) {
-        setSelected(academicData.lastResult);
-      }
     }
-  }, [academicData]);
+  }, [data]);
 
-  const updateData = useMutation({
-    mutationFn: (formData: AcademicHistory) => updateAcademicHistory(updateID as number, formData),
+  // Save handler
+  const mutation = useMutation({
+    mutationFn: async (payload: Partial<AcademicHistory>) => {
+      const cleanedPayload = stripDates(payload);
+      const { id, ...rest } = cleanedPayload;
+      if (id) {
+        return await updateAcademicHistory(id, rest);
+      } else {
+        return await createAcademicHistory(rest);
+      }
+    },
     onSuccess: () => {
-      toast.success("Your data has been successfully updated.", {
-        icon: <PenLine />,
-      });
+      toast.success("Academic history updated!");
       refetch();
+    },
+    onError: () => {
+      toast.error("Failed to update academic history.");
     },
   });
 
-  const handleStreamSelect = (option: { id: number; name: string }) => {
-    setSelectedSpecialization(option);
-    setFormData(prev => ({
-      ...prev,
-      specialization: { ...(prev.specialization || {}), ...option } as Specialization,
-    }));
+  const handleChange = (field: keyof AcademicHistory, value: string | number | null | object) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: ["studiedUpToClass", "passedYear"].includes(name) 
-        ? value === "" ? "" : Number(value) 
-        : value,
-    }));
+  const handleNumberChange = (field: keyof AcademicHistory, value: string) => {
+    const numValue = value === "" ? null : parseInt(value, 10);
+    setFormData((prev) => ({ ...prev, [field]: numValue }));
   };
 
-  const handleDropdownChange = (value: string) => {
-    setSelected(value as ResultStatus);
-    setFormData(prev => ({
-      ...prev,
-      lastResult: value as ResultStatus,
-    }));
-  };
-
-  useEffect(() => {
-    if (updateData.isSuccess) {
-      setShowSuccess(true);
-      const timer = setTimeout(() => setShowSuccess(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [updateData.isSuccess]);
-
-  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
-    updateData.mutate(formData);
+    setShowSuccess(false);
+    console.log("Submitting form data:", formData);
+    mutation.mutate(formData, {
+      onSuccess: () => {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
+      },
+    });
   };
 
- 
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error loading academic history details.</div>;
+
   return (
-    <div className="shadow-md border rounded-xl py-6 md:py-10 bg-white  md:px-8 w-full flex items-center justify-center px-4 sm:px-5">
-      <div className="w-full max-w-6xl grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 md:gap-10">
-        {formElement.map(({ name, label, type, icon }) => (
-          <div key={name} className="flex flex-col">
-            <div className="relative p-1">
-              <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
-                {label}
-              </label>
+    <Card className="max-w-8xl mx-auto my-8">
+      <CardHeader>
+        <CardTitle>Academic History</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-6">
+          {/* Institution Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Previous Institution</h3>
+            
+            <div>
+              <Label>Last Institution</Label>
+              <Select
+                value={
+                  formData.lastInstitution?.id
+                    ? String(formData.lastInstitution.id)
+                    : ""
+                }
+                onValueChange={(value) => {
+                  const selected = institutionOptions.find(
+                    (inst) => String(inst.id) === value
+                  );
+                  setFormData((prev) => ({
+                    ...prev,
+                    lastInstitution: selected ?? null,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Institution" />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutionOptions.map((inst) => (
+                    <SelectItem key={inst.id} value={String(inst.id)}>
+                      {inst.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                {icon}
-              </span>
-              <Input
-                id={name}
-                name={name}
-                type={type}
-                value={formData[name as keyof AcademicHistory] as string || ""}
-                placeholder={label}
-                onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2 rounded-lg text-sm sm:text-base"
-              />
+
+            <div>
+              <Label>Board/University</Label>
+              <Select
+                value={
+                  formData.lastBoardUniversity?.id
+                    ? String(formData.lastBoardUniversity.id)
+                    : ""
+                }
+                onValueChange={(value) => {
+                  const selected = boardUniversityOptions.find(
+                    (bu) => String(bu.id) === value
+                  );
+                  setFormData((prev) => ({
+                    ...prev,
+                    lastBoardUniversity: selected ?? null,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Board/University" />
+                </SelectTrigger>
+                <SelectContent>
+                  {boardUniversityOptions.map((bu) => (
+                    <SelectItem key={bu.id} value={String(bu.id)}>
+                      {bu.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Specialization</Label>
+              <Select
+                value={
+                  formData.specialization?.id
+                    ? String(formData.specialization.id)
+                    : ""
+                }
+                onValueChange={(value) => {
+                  const selected = specializationOptions.find(
+                    (spec) => String(spec.id) === value
+                  );
+                  setFormData((prev) => ({
+                    ...prev,
+                    specialization: selected ?? null,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {specializationOptions.map((spec) => (
+                    <SelectItem key={spec.id} value={String(spec.id)}>
+                      {spec.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
-        ))}
 
-        <div className="flex flex-col">
-          <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
-            Result Status
-          </label>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="relative">
-              <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                <FileText className="text-gray-500 dark:text-gray-300 w-4 h-4 sm:w-5 sm:h-5" />
-              </span>
-              <Button variant="outline" className="w-full font-normal pl-8 sm:pl-10 justify-between rounded-lg text-sm sm:text-base">
-                <span>{formData.lastResult || "Select Result"}</span>
-                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-white dark:bg-gray-700 shadow-lg rounded-lg w-full min-w-[200px]">
-              <DropdownMenuRadioGroup value={selected} onValueChange={handleDropdownChange}>
-                {resultOptions.map((option) => (
-                  <DropdownMenuRadioItem 
-                    key={option} 
-                    value={option}
-                    className="text-sm sm:text-base"
-                  >
-                    {option}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          {/* Academic Details Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Academic Details</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Studied Up To Class</Label>
+                <Input
+                  type="number"
+                  value={formData.studiedUpToClass || ""}
+                  onChange={(e) =>
+                    handleNumberChange("studiedUpToClass", e.target.value)
+                  }
+                  placeholder="e.g., 12"
+                />
+              </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm sm:text-md text-gray-700 dark:text-white mb-1 font-medium">
-            Specialization
-          </label>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="relative">
-              <span className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                <Book className="text-gray-500 dark:text-gray-300 w-4 h-4 sm:w-5 sm:h-5" />
-              </span>
-              <Button 
-                className="border border-gray-400 w-full pl-8 sm:pl-10 flex items-center justify-between text-sm sm:text-base" 
-                variant="outline"
+              <div>
+                <Label>Passed Year</Label>
+                <Input
+                  type="number"
+                  value={formData.passedYear || ""}
+                  onChange={(e) =>
+                    handleNumberChange("passedYear", e.target.value)
+                  }
+                  placeholder="e.g., 2023"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Board Result Status</Label>
+              <Select
+                value={formData.lastResult?.id ? String(formData.lastResult.id) : ""}
+                onValueChange={(value) => {
+                  const selected = resultStatusOptions.find((rs) => String(rs.id) === value);
+                  setFormData((prev) => ({
+                    ...prev,
+                    lastResult: selected ?? null,
+                  }));
+                }}
               >
-                {selectedSpecialization ? selectedSpecialization.name : "Select Specialization"} 
-                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="min-w-[200px]">
-              {SpecializationMemo.map((option) => (
-                <DropdownMenuItem
-                  key={option.id}
-                  onClick={() => handleStreamSelect(option)}
-                  className="text-sm sm:text-base"
-                >
-                  {option.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Result" />
+                </SelectTrigger>
+                <SelectContent>
+                  {resultStatusOptions.map((rs) => (
+                    <SelectItem key={rs.id} value={String(rs.id)}>
+                      {rs.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        <div className="col-span-1 sm:col-span-2 mt-2">
-          <Button 
-            type="submit" 
-            onClick={handleSubmit} 
+          {/* Remarks Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Additional Information</h3>
+            
+    <div>
+              <Label>Remarks</Label>
+              <Textarea
+                value={formData.remarks || ""}
+                onChange={(e) =>
+                  handleChange("remarks", e.target.value)
+                }
+                placeholder="Enter any additional remarks or notes..."
+                rows={4}
+              />
+            </div>
+    </div>
+        </CardContent>
+
+        <CardFooter className="flex flex-col items-center gap-2">
+          <Button
+            type="submit"
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
-            disabled={ updateData.isLoading }
+            disabled={mutation.isLoading}
           >
-            { updateData.isLoading ? (
+            {mutation.isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Processing...
               </>
@@ -253,14 +397,12 @@ const AcademicHistoryForm = () => {
             ) : (
               <>
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Submit
+                Save Changes
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </CardFooter>
+      </form>
+    </Card>
   );
-};
-
-export default AcademicHistoryForm;
+}

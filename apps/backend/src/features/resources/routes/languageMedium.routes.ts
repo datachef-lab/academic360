@@ -9,19 +9,29 @@ import {
 
 const router = express.Router();
 
-// Create a new Language Medium Route
+/**
+ * Language Medium Routes
+ * 
+ * POST   /                    - Create a new language medium
+ * GET    /                    - Get all language mediums
+ * GET    /:id                 - Get language medium by ID
+ * PUT    /:id                 - Update language medium by ID
+ * DELETE /:id                 - Delete language medium by ID
+ */
+
+// Create a new language medium
 router.post("/", createNewLanguageMedium);
 
-// Get all Language Medium Route
+// Get all language mediums
 router.get("/", getAllLanguageMedium);
 
-// Get by Language Medium ID
+// Get language medium by ID
 router.get("/:id", getLanguageMediumById);
 
-// Update the Language Medium Route
+// Update language medium by ID
 router.put("/:id", updateLanguageMedium);
 
-//Delete the Language Medium Route
+// Delete language medium by ID
 router.delete("/:id", deleteLanguageMedium);
 
 export default router;

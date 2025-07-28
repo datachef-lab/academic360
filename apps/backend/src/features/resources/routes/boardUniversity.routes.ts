@@ -9,18 +9,19 @@ import {
 
 const router = express.Router();
 
+// Create a new board university
 router.post("/", createBoardUniversity);
 
-
+// Get all board universities
 router.get("/", getAllBoardUniversity);
 
-
+// Get a specific board university by ID
 router.get("/:id", getBoardUniversityById);
 
-// Update the  Board University Route
+// Update a board university
 router.put("/:id", updateBoardUniversity);
 
-//Delete the  Board University Route
+// Delete a board university
 router.delete("/:id", deleteBoardUniversity);
 
 export default router;

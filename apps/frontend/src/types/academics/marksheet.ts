@@ -1,12 +1,13 @@
 import { AcademicIdentifier } from "../user/academic-identifier";
 import { User } from "../user/user";
+import { AcademicYear } from "./academic-year";
 import { Subject } from "./subject";
 
 export interface Marksheet {
     readonly id?: number;
     studentId: number | null;
     semester: number;
-    year: number;
+    academicYear: AcademicYear;
     sgpa: number | null;
     cgpa: number | null;
     classification: string | null;
