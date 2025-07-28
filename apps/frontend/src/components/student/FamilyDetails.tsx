@@ -19,212 +19,183 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Spinner } from "../ui/spinner";
-import { Occupation } from "@/types/resources/occupation";
-import { findAllOccupations } from "@/services/occupation.service";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+// import { Spinner } from "../ui/spinner";
+import { Occupation } from "@/types/resources/occupation.types";
+import { getAllOccupations } from "@/services/occupations.service";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+  } from "@/components/ui/select";
+  import { AnnualIncome } from "@/types/resources/annual-income.types";
+  import { Save, CheckCircle } from "lucide-react";
 // import { AnnualIncome } from "@/types/resources/annual-income";
 // import { Qualification } from "@/types/resources/qualification";
 
 // Helper function to safely access object properties
-const getPersonProperty = (obj: any, property: string): string => {
-  if (obj && typeof obj === "object" && property in obj && typeof obj[property] === "string") {
-    return obj[property];
-  }
-  return "";
-};
+// const getPersonProperty = (obj: any, property: string): string => {
+//   if (obj && typeof obj === "object" && property in obj && typeof obj[property] === "string") {
+//     return obj[property];
+//   }
+//   return "";
+// };
 
-// Helper function to safely access nested object properties
-const getNestedProperty = (obj: any, nestedKey: string, property: string): string => {
-  if (
-    obj &&
-    typeof obj === "object" &&
-    nestedKey in obj &&
-    obj[nestedKey] &&
-    typeof obj[nestedKey] === "object" &&
-    property in obj[nestedKey] &&
-    typeof obj[nestedKey][property] === "string"
-  ) {
-    return obj[nestedKey][property];
-  }
-  return "";
-};
+// // Helper function to safely access nested object properties
+// const getNestedProperty = (obj: any, nestedKey: string, property: string): string => {
+//   if (
+//     obj &&
+//     typeof obj === "object" &&
+//     nestedKey in obj &&
+//     obj[nestedKey] &&
+//     typeof obj[nestedKey] === "object" &&
+//     property in obj[nestedKey] &&
+//     typeof obj[nestedKey][property] === "string"
+//   ) {
+//     return obj[nestedKey][property];
+//   }
+//   return "";
+// };
 
-const defaultFamilyDetails: Parent = {
-  studentId: 0,
-  parentType: "BOTH",
-  fatherDetails: {
-    name: null,
-    email: null,
-    phone: null,
-    aadhaarCardNumber: null,
-    image: null,
-    officePhone: null,
-    qualification: null,
-    occupation: null,
-    officeAddress: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  motherDetails: {
-    name: null,
-    email: null,
-    phone: null,
-    aadhaarCardNumber: null,
-    image: null,
-    officePhone: null,
-    qualification: null,
-    occupation: null,
-    officeAddress: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  guardianDetails: {
-    name: null,
-    email: null,
-    phone: null,
-    aadhaarCardNumber: null,
-    image: null,
-    officePhone: null,
-    qualification: null,
-    occupation: null,
-    officeAddress: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  annualIncome: {
-    range: "",
-    disabled: false,
-    sequence: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  createdAt: new Date(),
-  updatedAt: new Date(),
-};
+// const defaultFamilyDetails: Parent = {
+//   studentId: 0,
+//   parentType: "BOTH",
+//   fatherDetails: {
+//     name: null,
+//     email: null,
+//     phone: null,
+//     aadhaarCardNumber: null,
+//     image: null,
+//     officePhone: null,
+//     qualification: null,
+//     occupation: null,
+//     officeAddress: null,
+//     createdAt: new Date(),
+//     updatedAt: new Date(),
+//   },
+//   motherDetails: {
+//     name: null,
+//     email: null,
+//     phone: null,
+//     aadhaarCardNumber: null,
+//     image: null,
+//     officePhone: null,
+//     qualification: null,
+//     occupation: null,
+//     officeAddress: null,
+//     createdAt: new Date(),
+//     updatedAt: new Date(),
+//   },
+//   guardianDetails: {
+//     name: null,
+//     email: null,
+//     phone: null,
+//     aadhaarCardNumber: null,
+//     image: null,
+//     officePhone: null,
+//     qualification: null,
+//     occupation: null,
+//     officeAddress: null,
+//     createdAt: new Date(),
+//     updatedAt: new Date(),
+//   },
+//   annualIncome: {
+//     range: "",
+//     disabled: false,
+//     sequence: null,
+//     createdAt: new Date(),
+//     updatedAt: new Date(),
+//   },
+//   createdAt: new Date(),
+//   updatedAt: new Date(),
+// };
 
-const parentTypes = [
-  { value: "BOTH", label: "Both Parents" },
-  { value: "FATHER_ONLY", label: "Father Only" },
-  { value: "MOTHER_ONLY", label: "Mother Only" },
-];
+// const parentTypes = [
+//   { value: "BOTH", label: "Both Parents" },
+//   { value: "FATHER_ONLY", label: "Father Only" },
+//   { value: "MOTHER_ONLY", label: "Mother Only" },
+// ];
 
-// Form elements configuration for reuse
-const fatherFormElements = [
-  {
-    name: "name",
-    label: "Father's Name",
-    type: "text",
-    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "fatherDetails",
-  },
-  {
-    name: "email",
-    label: "Email",
-    type: "email",
-    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "fatherDetails",
-  },
-  {
-    name: "phone",
-    label: "Phone",
-    type: "text",
-    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "fatherDetails",
-  },
-  {
-    name: "officePhone",
-    label: "Office Phone",
-    type: "text",
-    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "fatherDetails",
-  },
-  {
-    name: "aadhaarCardNumber",
-    label: "Aadhaar Number",
-    type: "text",
-    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "fatherDetails",
-  },
-];
+// // Form elements configuration for reuse
+// const fatherFormElements = [
+//   {
+//     name: "name",
+//     label: "Father's Name",
+//     type: "text",
+//     icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "fatherDetails",
+//   },
+//   {
+//     name: "email",
+//     label: "Email",
+//     type: "email",
+//     icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "fatherDetails",
+//   },
+//   {
+//     name: "phone",
+//     label: "Phone",
+//     type: "text",
+//     icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "fatherDetails",
+//   },
+//   {
+//     name: "officePhone",
+//     label: "Office Phone",
+//     type: "text",
+//     icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "fatherDetails",
+//   },
+//   {
+//     name: "aadhaarCardNumber",
+//     label: "Aadhaar Number",
+//     type: "text",
+//     icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "fatherDetails",
+//   },
+// ];
 
-const motherFormElements = [
-  {
-    name: "name",
-    label: "Mother's Name",
-    type: "text",
-    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "motherDetails",
-  },
-  {
-    name: "email",
-    label: "Email",
-    type: "email",
-    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "motherDetails",
-  },
-  {
-    name: "phone",
-    label: "Phone",
-    type: "text",
-    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "motherDetails",
-  },
-  {
-    name: "officePhone",
-    label: "Office Phone",
-    type: "text",
-    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "motherDetails",
-  },
-  {
-    name: "aadhaarCardNumber",
-    label: "Aadhaar Number",
-    type: "text",
-    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "motherDetails",
-  },
-];
+// const motherFormElements = [
+//   {
+//     name: "name",
+//     label: "Mother's Name",
+//     type: "text",
+//     icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "motherDetails",
+//   },
+//   {
+//     name: "email",
+//     label: "Email",
+//     type: "email",
+//     icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "motherDetails",
+//   },
+//   {
+//     name: "phone",
+//     label: "Phone",
+//     type: "text",
+//     icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "motherDetails",
+//   },
+//   {
+//     name: "officePhone",
+//     label: "Office Phone",
+//     type: "text",
+//     icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "motherDetails",
+//   },
+//   {
+//     name: "aadhaarCardNumber",
+//     label: "Aadhaar Number",
+//     type: "text",
+//     icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
+//     field: "motherDetails",
+//   },
+// ];
 
-const guardianFormElements = [
-  {
-    name: "name",
-    label: "Guardian's Name",
-    type: "text",
-    icon: <User className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "guardianDetails",
-  },
-  {
-    name: "email",
-    label: "Email",
-    type: "email",
-    icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "guardianDetails",
-  },
-  {
-    name: "phone",
-    label: "Phone",
-    type: "text",
-    icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "guardianDetails",
-  },
-  {
-    name: "aadhaarCardNumber",
-    label: "Aadhaar Number",
-    type: "text",
-    icon: <IdCard className="text-gray-500 dark:text-white w-5 h-5" />,
-    field: "guardianDetails",
-  },
-];
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { AnnualIncome } from "@/types/resources/annual-income.types";
-import { Save, CheckCircle } from "lucide-react";
+
+
 
 interface FamilyDetailsProps {
   studentId: number;
@@ -263,13 +234,13 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
     ...defaultFamily,
     studentId,
   });
-  const [occupations, setOccupations] = useState<Occupation[]>([]);
+  const  setOccupations = useState<Occupation[]>([])[1];
   // const [qualifications, setQualifications] = useState<Qualification[]>([]);
   // const [annualIncomes, setAnnualIncomes] = useState<AnnualIncome[]>([]);
 
   useEffect(() => {
-    findAllOccupations().then((data) => setOccupations(data.payload.content));
-  }, []);
+    getAllOccupations().then((data) => setOccupations(data));
+  }, [setOccupations]);
   const [annualIncomeOptions, setAnnualIncomeOptions] = useState<AnnualIncome[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
 
