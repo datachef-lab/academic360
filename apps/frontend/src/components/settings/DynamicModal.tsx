@@ -31,7 +31,7 @@ import { DegreeLevel } from "@/types/resources/degree.types";
 import { createBoardUniversity, updateBoardUniversity } from "@/services/board-university.service";
 import { createInstitution, updateInstitution } from "@/services/institution.service";
 import { createCategory, updateCategory } from "@/services/categories.service";
-import { createDegree, updateDegree } from "@/services/degree.service";
+import { createDegree, findAllDegrees, updateDegree } from "@/services/degree.service";
 import { createReligion, updateReligion } from "@/services/religion.service";
 import { createLanguageMedium, updateLanguageMedium } from "@/services/language-medium.service";
 import { createBloodGroup, updateBloodGroup } from "@/services/blood-group.service";
@@ -41,7 +41,7 @@ import { createState, updateState } from "@/services/state.service";
 import { createCity, updateCity } from "@/services/city.service";
 import { createAnnualIncome, updateAnnualIncome } from "@/services/annual-income.service";
 import { createDocument, updateDocument } from "@/services/document.service";
-import { getAllDegrees } from "@/services/degree.service";
+// import { getAllDegrees } from "@/services/degree.service";
 import { getAllStates } from "@/services/state.service";
 import { getAllCountries } from "@/services/country.service";
 import { useQuery } from '@tanstack/react-query';
@@ -351,7 +351,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
     queryKey: ['degrees'],
     queryFn: async () => {
       try {
-        const result = await getAllDegrees();
+        const result = await findAllDegrees();
         return result || [];
       } catch (error) {
         console.error('Failed to fetch degrees:', error);

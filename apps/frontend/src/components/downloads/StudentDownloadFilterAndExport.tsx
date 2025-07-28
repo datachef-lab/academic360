@@ -22,7 +22,7 @@ import { PersonalDetails } from "@/types/user/personal-details";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Specialization } from "@/types/resources/specialization";
 import { Community, Level, Shift } from "@/types/enums";
-import { getAllDegrees } from "@/services/degree.service";
+import { findAllDegrees } from "@/services/degree.service";
 
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
@@ -60,7 +60,7 @@ const StudentDownloadFilterAndExport: React.FC = () => {
 
   const { data } = useQuery({
     queryKey: ["degrees"],
-    queryFn: getAllDegrees,
+    queryFn: findAllDegrees,
   });
 
   const streamMemo = useMemo(() => data ?? [], [data]);
