@@ -23,7 +23,7 @@ import { useMarksheetStore } from "@/components/globals/useMarksheetStore";
 import { getAllMarksheet } from "@/services/student-apis";
 import { toast } from "sonner";
 import { getAllClasses } from "@/services/classes.service";
-import { getAllDegrees } from "@/services/degree.service";
+import { findAllDegrees } from "@/services/degree.service";
 import { Degree } from "@/types/resources/degree.types";
 
 type Year = "2021" | "2022" | "2023" | "2024" | "2025";
@@ -41,7 +41,7 @@ const FilterAndExportComponent: React.FC = () => {
 
   const { data: degrees } = useQuery({
     queryKey: ["degrees"],
-    queryFn: getAllDegrees,
+    queryFn: findAllDegrees,
   });
 
   const { refetch: fetchExportData, isFetching: isFetchingExport } = useQuery({
