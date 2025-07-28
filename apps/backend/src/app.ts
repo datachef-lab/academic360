@@ -260,7 +260,7 @@ app.use("/api/specializations", specializationRouter);
 
 app.use("/api/languages", languageMediumRouter);
 
-app.use("/api/disability-codes", disabilityRouter);
+// app.use("/api/disability-codes", disabilityRouter);
 
 app.use("/api/board-result-statuses", boardResultStatusRouter);
 

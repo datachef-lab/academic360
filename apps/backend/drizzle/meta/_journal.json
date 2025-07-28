@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1753378693422,
-      "tag": "0000_overjoyed_moondragon",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1753593907052,
-      "tag": "0001_special_alex_power",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753595131342,
-      "tag": "0002_grey_robin_chapel",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1753596532227,
-      "tag": "0003_orange_young_avengers",
+      "when": 1753679659137,
+      "tag": "0000_cool_luke_cage",
       "breakpoints": true
     }
   ]

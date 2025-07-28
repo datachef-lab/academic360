@@ -1,5 +1,5 @@
 {
-  "id": "15fa0bf0-d76a-4dcb-bb5b-2be1a000b50a",
+  "id": "04465a51-b0d8-4313-bc44-f0c89d83b5e3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -781,6 +781,190 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.notice_attachments": {
+      "name": "notice_attachments",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "notice_id_fk": {
+          "name": "notice_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "attachment_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_path": {
+          "name": "file_path",
+          "type": "varchar(700)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notice_attachments_notice_id_fk_notices_id_fk": {
+          "name": "notice_attachments_notice_id_fk_notices_id_fk",
+          "tableFrom": "notice_attachments",
+          "tableTo": "notices",
+          "columnsFrom": [
+            "notice_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.notices": {
+      "name": "notices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "academic_year_id_fk": {
+          "name": "academic_year_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(600)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "notice_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ACTIVE'"
+        },
+        "variant": {
+          "name": "variant",
+          "type": "notice_variant",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ALERT'"
+        },
+        "is_pinned": {
+          "name": "is_pinned",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "for_students": {
+          "name": "for_students",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "for_faculty": {
+          "name": "for_faculty",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "for_staff": {
+          "name": "for_staff",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "for_admins": {
+          "name": "for_admins",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notices_academic_year_id_fk_academic_years_id_fk": {
+          "name": "notices_academic_year_id_fk_academic_years_id_fk",
+          "tableFrom": "notices",
+          "tableTo": "academic_years",
+          "columnsFrom": [
+            "academic_year_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.sections": {
       "name": "sections",
       "schema": "",
@@ -1356,7 +1540,6 @@
           "name": "institute_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false
           "notNull": false
         },
         "other_institute": {
@@ -2288,15 +2471,27 @@
           "primaryKey": false,
           "notNull": true
         },
+        "college_name": {
+          "name": "college_name",
+          "type": "varchar(700)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "college_short_name": {
+          "name": "college_short_name",
+          "type": "varchar(7)",
+          "primaryKey": false,
+          "notNull": true
+        },
         "description": {
           "name": "description",
           "type": "varchar(1000)",
           "primaryKey": false,
           "notNull": false
         },
-        "icon": {
-          "name": "icon",
-          "type": "varchar(500)",
+        "logo": {
+          "name": "logo",
+          "type": "varchar(5000)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2416,6 +2611,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2473,6 +2682,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2662,12 +2877,6 @@
         "short_name": {
           "name": "short_name",
           "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "code_prefix": {
-          "name": "code_prefix",
-          "type": "varchar(10)",
           "primaryKey": false,
           "notNull": false
         },
@@ -3156,8 +3365,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "affiliation_type_id_fk": {
-          "name": "affiliation_type_id_fk",
+        "affiliation_id_fk": {
+          "name": "affiliation_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3168,8 +3377,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "status": {
-          "name": "status",
+        "disabled": {
+          "name": "disabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
@@ -3244,12 +3453,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "program_courses_affiliation_type_id_fk_affiliation_types_id_fk": {
-          "name": "program_courses_affiliation_type_id_fk_affiliation_types_id_fk",
+        "program_courses_affiliation_id_fk_affiliations_id_fk": {
+          "name": "program_courses_affiliation_id_fk_affiliations_id_fk",
           "tableFrom": "program_courses",
-          "tableTo": "affiliation_types",
+          "tableTo": "affiliations",
           "columnsFrom": [
-            "affiliation_type_id_fk"
+            "affiliation_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3365,6 +3574,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3421,12 +3637,6 @@
         "short_name": {
           "name": "short_name",
           "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "code_prefix": {
-          "name": "code_prefix",
-          "type": "varchar(10)",
           "primaryKey": false,
           "notNull": false
         },
@@ -4474,13 +4684,11 @@
           "type": "date",
           "primaryKey": false,
           "notNull": false
-          "notNull": false
         },
         "end_date": {
           "name": "end_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": false
           "notNull": false
         },
         "online_start_date": {
@@ -4488,13 +4696,11 @@
           "type": "date",
           "primaryKey": false,
           "notNull": false
-          "notNull": false
         },
         "online_end_date": {
           "name": "online_end_date",
           "type": "date",
           "primaryKey": false,
-          "notNull": false
           "notNull": false
         },
         "created_at": {
@@ -7890,6 +8096,14 @@
         "SUBMITTED"
       ]
     },
+    "public.attachment_type": {
+      "name": "attachment_type",
+      "schema": "public",
+      "values": [
+        "FILE",
+        "LINK"
+      ]
+    },
     "public.board_result_status_type": {
       "name": "board_result_status_type",
       "schema": "public",
@@ -7968,6 +8182,25 @@
       "values": [
         "FILE_UPLOAD",
         "ADDED"
+      ]
+    },
+    "public.notice_status": {
+      "name": "notice_status",
+      "schema": "public",
+      "values": [
+        "ACTIVE",
+        "EXPIRED",
+        "SCHEDULED"
+      ]
+    },
+    "public.notice_variant": {
+      "name": "notice_variant",
+      "schema": "public",
+      "values": [
+        "EXAM",
+        "ALERT",
+        "FEE",
+        "EVENT"
       ]
     },
     "public.otp_type": {
@@ -8087,14 +8320,6 @@
         "CURRENT_SESSION_ONLY",
         "COURSE_LEVEL",
         "BATCH_LEVEL"
-      ]
-    },
-    "public.study_material_type": {
-      "name": "study_material_type",
-      "schema": "public",
-      "values": [
-        "FILE",
-        "LINK"
       ]
     },
     "public.study_meta_type": {
