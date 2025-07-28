@@ -1,5 +1,5 @@
 // import { UserDataTable } from "@/pages/DataTableTest";
-import {  CourseType } from "./columns";
+import { CourseType } from "@/types/course-design";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Layers, Download, Upload } from "lucide-react";
 import React from "react";
@@ -15,7 +15,6 @@ import { CourseTypeForm } from "./course-type-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { QueryObserverResult } from "@tanstack/react-query";
 import {
   Table,
   TableHeader,
@@ -24,75 +23,81 @@ import {
   TableCell,
   TableHead,
 } from "@/components/ui/table";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-const dummyCourseTypes: CourseType[] = [
-  {
-    id: "1",
-    name: "Undergraduate",
-    description: "Undergraduate Programs",
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "2",
-    name: "Postgraduate",
-    description: "Postgraduate Programs",
-    isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: "3",
-    name: "Doctorate",
-    description: "Doctoral Programs",
-    isActive: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+import {
+  getCourseTypes,
+  createCourseType,
+  updateCourseType,
+  
+  // bulkUploadCourseTypes,
+  BulkUploadResult,
+} from "@/services/course-design.api";
+import * as XLSX from "xlsx";
 
 const CourseTypesPage = () => {
-  // const [pagination, setPagination] = React.useState<CustomPaginationState>({
-  //   pageIndex: 0,
-  //   pageSize: 10,
-  //   totalElements: dummyCourseTypes.length,
-  //   totalPages: Math.ceil(dummyCourseTypes.length / 10),
-  // });
+  const [courseTypes, setCourseTypes] = React.useState<CourseType[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
-  // const setDataLength = React.useState(dummyCourseTypes.length)[1];
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedCourseType, setSelectedCourseType] = React.useState<CourseType | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
-  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  const setBulkFile = React.useState<File | null>(null)[1];
+  const [bulkUploadResult, ] = React.useState<BulkUploadResult | null>(null);
+  // const  setIsBulkUploading = React.useState(false)[1];
 
-  const refetch = async (): Promise<QueryObserverResult<CourseType[] | undefined, Error>> => {
-    return Promise.resolve({} as QueryObserverResult<CourseType[] | undefined, Error>);
-  };
+  React.useEffect(() => {
+    setLoading(true);
+    getCourseTypes()
+      .then(res => {
+        const courseTypesData = Array.isArray(res) ? res : [];
+        setCourseTypes(courseTypesData);
+        setError(null);
+      })
+      .catch((error) => {
+        console.error('Error fetching course types:', error);
+        setError("Failed to fetch course types");
+        setCourseTypes([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleEdit = (courseType: CourseType) => {
     setSelectedCourseType(courseType);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    console.log("Delete:", id);
-    toast.info("Delete functionality not implemented yet.");
-  };
+  // const handleDelete = async (id: number) => {
+  //   try {
+  //     await deleteCourseType(id);
+  //     setCourseTypes(prev => prev.filter(ct => ct.id !== id));
+  //     toast.success("Course type deleted successfully");
+  //   } catch (error) {
+  //     toast.error("Failed to delete course type");
+  //   }
+  // };
 
-  const handleSubmit = async (data: unknown) => {
+  const handleSubmit = async (data: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>) => {
     setIsSubmitting(true);
     try {
-      console.log("Submit:", data);
-      toast.success(selectedCourseType ? "Course type updated successfully" : "Course type created successfully");
+      if (selectedCourseType?.id) {
+        // Update
+        await updateCourseType(selectedCourseType.id, data);
+        toast.success("Course type updated successfully");
+      } else {
+        // Create
+        await createCourseType(data);
+        toast.success("Course type created successfully");
+      }
+      // Always re-fetch after add/edit
+      const freshCourseTypes = await getCourseTypes();
+      setCourseTypes(Array.isArray(freshCourseTypes) ? freshCourseTypes : []);
       setIsFormOpen(false);
-      refetch();
     } catch (error) {
-      toast.error(`Failed to save course type with error: ${error}`);
+      toast.error(`Failed to save course type: ${error}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -107,26 +112,115 @@ const CourseTypesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleBulkUpload = () => {
-    if (!bulkFile) return;
-    // TODO: Implement actual upload logic
-    toast.success("Bulk upload successful (mock)");
-    setIsBulkUploadOpen(false);
-    setBulkFile(null);
-  };
+  // const handleBulkUpload = async () => {
+  //   if (!bulkFile) return;
+    
+  //   setIsBulkUploading(true);
+  //   try {
+  //     const result = await bulkUploadCourseTypes(bulkFile);
+  //     setBulkUploadResult(result);
+      
+  //     if (result.summary.successful > 0) {
+  //       toast.success(`Successfully uploaded ${result.summary.successful} course types`);
+  //       // Re-fetch the list to show new data
+  //       const freshCourseTypes = await getCourseTypes();
+  //       setCourseTypes(Array.isArray(freshCourseTypes) ? freshCourseTypes : []);
+  //     }
+      
+  //     if (result.summary.failed > 0) {
+  //       toast.error(`${result.summary.failed} course types failed to upload`);
+  //     }
+      
+  //   } catch (error: any) {
+  //     toast.error(`Bulk upload failed: ${error.message || 'Unknown error'}`);
+  //   } finally {
+  //     setIsBulkUploading(false);
+  //   }
+  // };
 
   const handleDownloadTemplate = () => {
-    const link = document.createElement('a');
-    link.href = '/templates/course-type-bulk-upload-template.xlsx';
-    link.download = 'course-type-bulk-upload-template.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create template data
+    const templateData = [
+      {
+        Name: "Regular",
+        "Short Name": "Reg",
+        Sequence: 1,
+        Status: "Active"
+      },
+      {
+        Name: "Distance Learning", 
+        "Short Name": "DL",
+        Sequence: 2,
+        Status: "Active"
+      }
+    ];
+    
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Course Types Template");
+    XLSX.writeFile(wb, "course-type-bulk-upload-template.xlsx");
   };
 
-  const filteredCourseTypes = dummyCourseTypes.filter((ct) =>
-    ct.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (ct.description?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
+  const handleDownloadAll = async () => {
+    try {
+      const res = await getCourseTypes();
+      const data = res.map(courseType => ({
+        ID: courseType.id,
+        Name: courseType.name,
+        "Short Name": courseType.shortName || "-",
+        Sequence: courseType.sequence || "-",
+        Status: courseType.disabled ? "Inactive" : "Active",
+        "Created At": courseType.createdAt,
+        "Updated At": courseType.updatedAt,
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Course Types");
+      XLSX.writeFile(wb, "course-types.xlsx");
+    } catch {
+      toast.error("Failed to download course types");
+    }
+  };
+
+  // const handleCloseBulkUpload = () => {
+  //   setIsBulkUploadOpen(false);
+  //   setBulkFile(null);
+  //   setBulkUploadResult(null);
+  // };
+
+  const handleDownloadFailedData = () => {
+    if (!bulkUploadResult || bulkUploadResult.errors.length === 0) {
+      toast.error("No failed data to download");
+      return;
+    }
+
+    try {
+      // Create failed data with error details
+      const failedData = bulkUploadResult.errors.map((error) => ({
+        "Row Number": error.row,
+        "Error Message": error.error,
+        "Original Data": JSON.stringify(error.data),
+        "Name": error.data[0] || "",
+        "Short Name": error.data[1] || "",
+        "Sequence": error.data[2] || "",
+        "Status": error.data[3] || ""
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(failedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Failed Course Types");
+      XLSX.writeFile(wb, "failed-course-types-upload.xlsx");
+      
+      toast.success("Failed data downloaded successfully");
+    } catch {
+      toast.error("Failed to download error data");
+    }
+  };
+
+  const filteredCourseTypes = (Array.isArray(courseTypes) ? courseTypes : []).filter((courseType) =>
+    (courseType.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+    (courseType.shortName ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+    (courseType.sequence?.toString() ?? '').includes(searchText.toLowerCase())
   );
 
   return (
@@ -141,32 +235,83 @@ const CourseTypesPage = () => {
             <div className="text-muted-foreground">A list of all course types.</div>
           </div>
           <div className="flex items-center gap-2">
-            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="mr-2 h-4 w-4" />
-                  Bulk Upload
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Bulk Upload Course Types</DialogTitle>
-                </DialogHeader>
-                <div className="flex flex-col gap-4">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={e => setBulkFile(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
+                          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="mr-2 h-4 w-4" />
+                    Bulk Upload
                   </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Bulk Upload Course Types</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" onClick={handleDownloadTemplate}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Template
+                      </Button>
+                      <span className="text-sm text-muted-foreground">
+                        Download the template to see the required format
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Upload Excel File</label>
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                        className="w-full p-2 border rounded"
+                      />
+                    </div>
+                                     {bulkUploadResult && (
+                     <div className="space-y-4 p-4 border rounded">
+                       <h4 className="font-medium">Upload Results</h4>
+                       <div className="grid grid-cols-3 gap-4 text-sm">
+                         <div>
+                           <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                         </div>
+                         <div className="text-green-600">
+                           <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                         </div>
+                         <div className="text-red-600">
+                           <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                         </div>
+                       </div>
+                       
+                       {bulkUploadResult.errors.length > 0 && (
+                         <div className="space-y-2">
+                           <div className="flex items-center justify-between">
+                             <h5 className="font-medium text-red-600">Errors:</h5>
+                             <Button 
+                               variant="outline" 
+                               size="sm" 
+                               onClick={handleDownloadFailedData}
+                               className="text-xs"
+                             >
+                               <Download className="mr-1 h-3 w-3" />
+                               Download Failed Data
+                             </Button>
+                           </div>
+                           <div className="max-h-40 overflow-y-auto space-y-1">
+                             {bulkUploadResult.errors.map((error, index) => (
+                               <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                 <span className="font-medium">Row {error.row}:</span> {error.error}
+                               </div>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   )}
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
+            <Button variant="outline" onClick={handleDownloadAll}>
               <Download className="mr-2 h-4 w-4" />
-              Download Template
+              Download All
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
@@ -198,29 +343,39 @@ const CourseTypesPage = () => {
               <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
                 <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
+                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>ID</TableHead>
                     <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Description</TableHead>
+                    <TableHead style={{ width: 200, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
+                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourseTypes.length === 0 ? (
+                  {loading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">No course types found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                    </TableRow>
+                  ) : filteredCourseTypes.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center">No course types found.</TableCell>
                     </TableRow>
                   ) : (
-                    filteredCourseTypes.map((ct, idx) => (
-                      <TableRow key={ct.id} className="group">
-                        <TableCell style={{ width: 60 }}>{idx + 1}</TableCell>
-                        <TableCell style={{ width: 220 }}>{ct.name}</TableCell>
-                        <TableCell style={{ width: 320 }}>{ct.description}</TableCell>
+                    filteredCourseTypes.map((courseType) => (
+                      <TableRow key={courseType.id} className="group">
+                        <TableCell style={{ width: 60 }}>{courseType.id}</TableCell>
+                        <TableCell style={{ width: 220 }}>{courseType.name}</TableCell>
+                        <TableCell style={{ width: 200 }}>{courseType.shortName || "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{courseType.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {ct.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
-                          ) : (
+                          {courseType.disabled ? (
                             <Badge variant="secondary">Inactive</Badge>
+                          ) : (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           )}
                         </TableCell>
                         <TableCell style={{ width: 120 }}>
@@ -228,19 +383,12 @@ const CourseTypesPage = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleEdit(ct)}
+                              onClick={() => handleEdit(courseType)}
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(ct.id)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                     
                           </div>
                         </TableCell>
                       </TableRow>

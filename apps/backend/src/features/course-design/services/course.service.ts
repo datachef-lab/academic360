@@ -36,10 +36,16 @@ export async function findCourseById(id: number): Promise<CourseDto | null> {
     return formattedCourse;
 }
 
-export async function createCourse(course: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>): Promise<CourseDto> {
+export async function createCourse(course: CourseDto): Promise<CourseDto> {
+    const { degree, id, createdAt, updatedAt, ...props } = course;
+    console.log("in create course in service, course:", course);
+    const courseData: Course = {
+        ...props,
+        degreeId: degree?.id,
+    }
     const [newCourse] = await db
         .insert(courseModel)
-        .values(course)
+        .values(courseData)
         .returning();
 
     const formattedCourse = await courseFormatResponse(newCourse);
@@ -51,11 +57,12 @@ export async function createCourse(course: Omit<Course, 'id' | 'createdAt' | 'up
     return formattedCourse;
 }
 
-export async function updateCourse(id: number, course: Omit<CourseDto, 'id' | 'createdAt' | 'updatedAt'>): Promise<CourseDto | null> {
+export async function updateCourse(id: number, course: CourseDto): Promise<CourseDto | null> {
+    const { degree, id: idObj, createdAt, updatedAt, ...props } = course;
     console.log("in update course in service, course:", course, "id:", id);
     const [updatedCourse] = await db
         .update(courseModel)
-        .set({ ...course, degreeId: course.degree?.id })
+        .set({ ...props, degreeId: course.degree?.id, ...props })
         .where(eq(courseModel.id, id))
         .returning();
 
@@ -125,7 +132,7 @@ export async function courseFormatResponse(course: Course | null): Promise<Cours
     }
 }
 
-function or(...conditions: any[]) {
+function or(...conditions: unknown[]) {
     return sql`(${conditions.join(' OR ')})`;
 }
 

@@ -6,6 +6,8 @@ import {
   updateExamComponent as updateExamComponentService,
   deleteExamComponent as deleteExamComponentService,
 } from "../services/exam-component.service";
+import { ApiResponse } from "@/utils/ApiResonse";
+import { handleError } from "@/utils/handleError";
 
 export const createExamComponent = async (req: Request, res: Response) => {
   try {
@@ -13,18 +15,18 @@ export const createExamComponent = async (req: Request, res: Response) => {
       ...req.body,
       subjectId: req.body.subjectId,
     });
-    res.status(201).json(newExamComponent);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(201).json(new ApiResponse(201, "SUCCESS", newExamComponent, "Exam Component created successfully"));
+  } catch (error: unknown) {
+    handleError(error, res);
   }
 };
 
 export const getAllExamComponents = async (_req: Request, res: Response) => {
   try {
     const allExamComponents = await getAllExamComponentsService();
-    res.json(allExamComponents);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(200).json(new ApiResponse(200, "SUCCESS", allExamComponents, "Exam Components retrieved successfully"));
+  } catch (error: unknown) {
+    handleError(error, res);
   }
 };
 
@@ -32,11 +34,11 @@ export const getExamComponentById = async (req: Request, res: Response) => {
   try {
     const examComponent = await getExamComponentByIdService(req.params.id);
     if (!examComponent) {
-      return res.status(404).json({ error: "Exam Component not found" });
+      return res.status(404).json(new ApiResponse(404, "FAIL", null, "Exam Component not found"));
     }
-    res.json(examComponent);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(200).json(new ApiResponse(200, "SUCCESS", examComponent, "Exam Component retrieved successfully"));
+  } catch (error: unknown) {
+    handleError(error, res);
   }
 };
 
@@ -44,11 +46,12 @@ export const updateExamComponent = async (req: Request, res: Response) => {
   try {
     const updatedExamComponent = await updateExamComponentService(req.params.id, req.body);
     if (!updatedExamComponent) {
-      return res.status(404).json({ error: "Exam Component not found" });
+      res.status(404).json(new ApiResponse(404, "FAIL", null, "Exam Component not found"));
+      return;
     }
-    res.json(updatedExamComponent);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(200).json(new ApiResponse(200, "SUCCESS", updatedExamComponent, "Exam Component updated successfully"));
+  } catch (error: unknown) {
+    handleError(error, res);
   }
 };
 
@@ -56,10 +59,11 @@ export const deleteExamComponent = async (req: Request, res: Response) => {
   try {
     const deletedExamComponent = await deleteExamComponentService(req.params.id);
     if (!deletedExamComponent) {
-      return res.status(404).json({ error: "Exam Component not found" });
+      res.status(404).json(new ApiResponse(404, "FAIL", null, "Exam Component not found"));
+      return;
     }
-    res.json({ message: "Exam Component deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(200).json(new ApiResponse(200, "SUCCESS", { message: "Exam Component deleted successfully" }, "Exam Component deleted successfully"));
+  } catch (error: unknown) {
+    handleError(error, res);
   }
 };

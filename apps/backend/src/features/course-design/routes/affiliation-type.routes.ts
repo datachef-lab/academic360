@@ -1,20 +1,23 @@
-// import { Router } from "express";
-// import {
-//   createAffiliationType,
-//   getAllAffiliationTypes,
-//   getAffiliationTypeById,
-//   updateAffiliationType,
-//   deleteAffiliationType,
-// } from "../controllers/affiliation-type.controller";
-// import { RequestHandler } from "express";
+import { Router } from "express";
+import {
+  createAffiliationTypeHandler,
+  deleteAffiliationTypeHandler,
+  getAllAffiliationTypesHandler,
+  getAffiliationTypeByIdHandler,
+  updateAffiliationTypeHandler,
+  bulkUploadAffiliationTypesHandler
+} from "../controllers/affiliation-type.controller";
+import { RequestHandler } from "express";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
 
-// const router = Router();
+const router = Router();
 
-// // AffiliationType routes
-// router.post("/", createAffiliationType as RequestHandler);
-// router.get("/", getAllAffiliationTypes as RequestHandler);
-// router.get("/:id", getAffiliationTypeById as RequestHandler);
-// router.put("/:id", updateAffiliationType as RequestHandler);
-// router.delete("/:id", deleteAffiliationType as RequestHandler);
+// Affiliation Type routes
+router.post("/", createAffiliationTypeHandler as RequestHandler);
+router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadAffiliationTypesHandler as RequestHandler);
+router.get("/", getAllAffiliationTypesHandler as RequestHandler);
+router.get("/:id", getAffiliationTypeByIdHandler as RequestHandler);
+router.put("/:id", updateAffiliationTypeHandler as RequestHandler);
+router.delete("/:id", deleteAffiliationTypeHandler as RequestHandler);
 
-// export default router;
+export default router;

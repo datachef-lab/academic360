@@ -4,13 +4,55 @@ import { eq } from "drizzle-orm";
 import { ExamComponentSchema } from "@/types/course-design";
 import { z } from "zod";
 
+const defaultExamComponents: ExamComponent[] = [
+  {
+    name: "Theoretical",
+    shortName: "Theory",
+    code: "TH",
+    sequence: 1,
+    disabled: false,
+  },
+  {
+    name: "Practical",
+    shortName: "Practical",
+    code: "PR",
+    sequence: 2,
+    disabled: false,
+  },    
+  {
+    name: "Viva",
+    shortName: "Viva",
+    code: "VIVA",
+    sequence: 3,
+    disabled: false,
+  },
+
+  {
+    name: "Project",
+    shortName: "Project",
+    code: "PROJ",
+    sequence: 4,
+    disabled: false,
+  },
+]
+
+export const createDefaultExamComponents = async () => {
+  console.log("Creating default exam components");
+  const examComponents = await db.select().from(examComponentModel);
+  if (examComponents.length > 0) {
+    return examComponents;
+  }
+  const newExamComponents = await db.insert(examComponentModel).values(defaultExamComponents).returning();
+  return newExamComponents;
+};
+
 // Types
 export type ExamComponentData = z.infer<typeof ExamComponentSchema>;
 
 // Create a new exam component
 export const createExamComponent = async (examComponentData: ExamComponent) => {
-  // const validatedData = ExamComponentSchema.parse(examComponentData);
-  const newExamComponent = await db.insert(examComponentModel).values(examComponentData).returning();
+  const { id, createdAt, updatedAt, ...props } = examComponentData;
+  const newExamComponent = await db.insert(examComponentModel).values(props).returning();
   return newExamComponent[0];
 };
 
@@ -31,10 +73,10 @@ export const getExamComponentById = async (id: string) => {
 
 // Update exam component
 export const updateExamComponent = async (id: string, examComponentData: ExamComponent) => {
-  // const validatedData = ExamComponentSchema.parse(examComponentData);
+  const { id: idObj, createdAt, updatedAt, ...props } = examComponentData;
   const updatedExamComponent = await db
     .update(examComponentModel)
-    .set(examComponentData)
+    .set(props)
     .where(eq(examComponentModel.id, +id))
     .returning();
   return updatedExamComponent.length > 0 ? updatedExamComponent[0] : null;

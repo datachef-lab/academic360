@@ -2,7 +2,12 @@ import * as XLSX from "xlsx";
 import * as fs from "fs";
 import * as path from "path";
 
-export function writeExcelFile(directoryPath: string, fileName: string, data: any[]) {
+interface ExcelRow {
+    error?: string;
+    [key: string]: unknown;
+}
+
+export function writeExcelFile(directoryPath: string, fileName: string, data: ExcelRow[]) {
     if (!data || data.length === 0) {
         console.error("No data to write.");
         return;

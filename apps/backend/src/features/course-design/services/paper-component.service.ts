@@ -1,16 +1,12 @@
 import { db } from "@/db";
 import { PaperComponent, paperComponentModel } from "../models/paper-component.model";
 import { eq } from "drizzle-orm";
-import { PaperComponentSchema } from "@/types/course-design";
-import { z } from "zod";
-
-// Types
-export type PaperComponentData = z.infer<typeof PaperComponentSchema>;
+import { PaperComponentDto } from "@/types/course-design/index.type";
 
 // Create a new paper component
-export const createPaperComponent = async (paperComponentData: PaperComponent) => {
-  // const validatedData = PaperComponentSchema.parse(paperComponentData);
-  const newPaperComponent = await db.insert(paperComponentModel).values(paperComponentData).returning();
+export const createPaperComponent = async (paperComponentData: PaperComponentDto) => {
+  const { id, createdAt, updatedAt, examComponent, ...props } = paperComponentData;
+  const newPaperComponent = await db.insert(paperComponentModel).values({...props, examComponentId: examComponent?.id!}).returning();
   return newPaperComponent[0];
 };
 
@@ -30,13 +26,11 @@ export const getPaperComponentById = async (id: string) => {
 };
 
 // Update paper component
-export const updatePaperComponent = async (id: string, paperComponentData: PaperComponent) => {
-  // const validatedData = PaperComponentSchema.parse(paperComponentData);
+export const updatePaperComponent = async (id: string, paperComponentData: PaperComponentDto) => {
+  const { id: idObj, createdAt, updatedAt, examComponent, ...props } = paperComponentData;
   const updatedPaperComponent = await db
     .update(paperComponentModel)
-    .set({
-      ...paperComponentData,
-    })
+    .set({...props, examComponentId: examComponent?.id!})
     .where(eq(paperComponentModel.id, +id))
     .returning();
   return updatedPaperComponent.length > 0 ? updatedPaperComponent[0] : null;

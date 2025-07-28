@@ -86,11 +86,13 @@ import {
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
-import { streamRouter, courseTypeRouter, 
-  // courseLevelRouter,
-  //  affiliationTypeRouter, 
-  //  regulationTypeRouter, 
-  //  programCourseRouter 
+import { streamRouter, courseTypeRouter, subjectRouter, subjectPaperRouter, paperRouter, topicRouter, affiliationRouter, 
+  courseLevelRouter,
+  subjectTypeRouter,
+  affiliationTypeRouter,
+  regulationTypeRouter,
+  programCourseRouter,
+  examComponentRouter,
   } from "@/features/course-design/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
@@ -324,12 +326,30 @@ app.use("/api/v1/sections", sectionRoutes);
 // Course Design routes
 app.use("/api/v1/course-design/streams", streamRouter);
 app.use("/api/v1/course-design/course-types", courseTypeRouter);
-// app.use("/api/v1/course-design/course-levels", courseLevelRouter);
+app.use("/api/v1/course-design/course-levels", courseLevelRouter);
 // app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
-// app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
-// app.use("/api/v1/course-design/program-courses", programCourseRouter);
+app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
+app.use("/api/v1/course-design/program-courses", programCourseRouter);
 
 app.use(errorHandler);
+
+
+// Register course-design routes
+app.use("/api/course-design/courses", courseRouter);
+app.use("/api/course-design/subjects", subjectRouter);
+app.use("/api/course-design/subject-papers", subjectPaperRouter);
+app.use("/api/course-design/subject-types", subjectTypeRouter);
+app.use("/api/course-design/papers", paperRouter);
+app.use("/api/course-design/topics", topicRouter);
+app.use("/api/course-design/streams", streamRouter);
+app.use("/api/course-design/affiliations", affiliationRouter);
+app.use("/api/course-design/affiliation-types", affiliationTypeRouter);
+app.use("/api/course-design/regulation-types", regulationTypeRouter);
+app.use("/api/course-design/program-courses", programCourseRouter);
+app.use("/api/course-design/course-types", courseTypeRouter);
+app.use("/api/course-design/course-levels", courseLevelRouter);
+app.use("/api/course-design/exam-components", examComponentRouter);
+app.use("/api/course-design/specializations", specializationRouter);
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404);
@@ -343,13 +363,3 @@ app.all("*", (req: Request, res: Response) => {
 });
 
 export { app, httpServer };
-
-// Register course-design routes
-app.use("/api/course-design/courses", courseRouter);
-// app.use("/api/course-design/subjects", subjectRouter);
-// app.use("/api/course-design/papers", paperRouter);
-// app.use("/api/course-design/topics", topicRouter);
-// app.use("/api/course-design/streams", streamRouter);
-// app.use("/api/course-design/affiliations", affiliationRouter);
-// app.use("/api/course-design/course-types", courseTypeRouter);
-// app.use("/api/course-design/specializations", specializationRouter);

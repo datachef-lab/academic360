@@ -2,13 +2,20 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Stream } from "./columns";
+import { Stream } from "@/types/course-design";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+// import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const streamSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
+  code: z.string().min(1, "Code is required"),
+  shortName: z.string().optional().nullable(),
+  sequence: z.number().optional().nullable(),
+  disabled: z.boolean().default(false),
 });
 
 type StreamFormValues = z.infer<typeof streamSchema>;
@@ -37,19 +44,29 @@ export function StreamForm({
     resolver: zodResolver(streamSchema),
     defaultValues: {
       name: initialData?.name || "",
-      description: initialData?.description || "",
-      isActive: initialData?.isActive ?? true,
+      code: initialData?.code || "",
+      shortName: initialData?.shortName || "",
+      sequence: initialData?.sequence || null,
+      disabled: initialData?.disabled ?? false,
     },
   });
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData);
+      reset({
+        name: initialData.name,
+        code: initialData.code || "",
+        shortName: initialData.shortName || "",
+        sequence: initialData.sequence || null,
+        disabled: initialData.disabled,
+      });
     } else {
       reset({
         name: "",
-        description: "",
-        isActive: true,
+        code: "",
+        shortName: "",
+        sequence: null,
+        disabled: false,
       });
     }
   }, [initialData, reset]);
@@ -57,64 +74,86 @@ export function StreamForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
+        <div className="space-y-2">
+          <Label htmlFor="name">
             Name <span className="text-red-500">*</span>
-          </label>
-          <input
+          </Label>
+          <Input
             id="name"
             type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+            placeholder="Enter stream name"
             {...register("name")}
             disabled={isLoading}
+            className={errors.name ? "border-red-500" : ""}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+            <p className="text-sm text-red-600">{errors.name.message}</p>
           )}
         </div>
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-          <textarea
-            id="description"
-            rows={3}
-            className={`mt-1 block w-full rounded-md border ${
-              errors.description ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("description")}
+        <div className="space-y-2">
+          <Label htmlFor="code">
+            Code <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="code"
+            type="text"
+            placeholder="Enter stream code"
+            {...register("code")}
             disabled={isLoading}
+            className={errors.code ? "border-red-500" : ""}
           />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
+          {errors.code && (
+            <p className="text-sm text-red-600">{errors.code.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="shortName">Short Name</Label>
+          <Input
+            id="shortName"
+            type="text"
+            placeholder="Enter short name"
+            {...register("shortName")}
+            disabled={isLoading}
+            className={errors.shortName ? "border-red-500" : ""}
+          />
+          {errors.shortName && (
+            <p className="text-sm text-red-600">
+              {errors.shortName.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="sequence">Sequence</Label>
+          <Input
+            id="sequence"
+            type="number"
+            placeholder="Enter sequence number"
+            {...register("sequence", { valueAsNumber: true })}
+            disabled={isLoading}
+            className={errors.sequence ? "border-red-500" : ""}
+          />
+          {errors.sequence && (
+            <p className="text-sm text-red-600">
+              {errors.sequence.message}
             </p>
           )}
         </div>
 
         <div className="flex items-center space-x-2">
-          <input
-            id="isActive"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            {...register("isActive")}
+          <Checkbox
+            id="disabled"
+            {...register("disabled")}
             disabled={isLoading}
           />
-          <label
-            htmlFor="isActive"
-            className="text-sm font-medium text-gray-700"
+          <Label
+            htmlFor="disabled"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            Active
-          </label>
+            Disabled
+          </Label>
         </div>
       </div>
 

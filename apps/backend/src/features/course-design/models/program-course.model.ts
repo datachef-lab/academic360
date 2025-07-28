@@ -5,7 +5,7 @@ import { streamModel } from "./stream.model";
 import { courseModel } from "./course.model";
 import { courseTypeModel } from "./course-type.model";
 import { courseLevelModel } from "./course-level.model";
-import { affiliationTypeModel } from "./affiliation-type.model";
+import { affiliationModel } from "./affiliation.model";
 import { regulationTypeModel } from "./regulation-type.model";
 
 export const programCourses = pgTable("program_courses", {
@@ -16,9 +16,9 @@ export const programCourses = pgTable("program_courses", {
   courseLevelId: integer("course_level_id_fk").references(() => courseLevelModel.id),
   duration: integer("duration").notNull(),
   totalSemesters: integer("total_semesters").notNull(),
-    affiliationTypeId: integer("affiliation_type_id_fk").references(() => affiliationTypeModel.id),
+  affiliationId: integer("affiliation_id_fk").references(() => affiliationModel.id),
   regulationTypeId: integer("regulation_type_id_fk").references(() => regulationTypeModel.id),
-  disabled: boolean().default(true),
+  disabled: boolean("disabled").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

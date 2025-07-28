@@ -8,7 +8,7 @@
 // )
 
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Trash2, Download, Upload, Library } from "lucide-react";
+import { PlusCircle, Edit, Download, Upload, Library } from "lucide-react";
 import React from "react";
 import {
   AlertDialog,
@@ -33,324 +33,46 @@ import {
 } from "@/components/ui/table";
 import { Course } from "@/types/course-design";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-const dummyCourses: Course[] = [
-  {
-    id: 1,
-    name: "Bachelor of Science in Computer Science",
-    shortName: "BSc CS",
-    sequence: 1,
-    disabled: false,
-    createdAt: new Date("2022-01-01"),
-    updatedAt: new Date("2023-01-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 2,
-    name: "Master of Business Administration",
-    shortName: "MBA",
-    sequence: 2,
-    disabled: false,
-    createdAt: new Date("2022-02-01"),
-    updatedAt: new Date("2023-02-01"),
-    degree: { id: 2, name: "MBA", level: null, sequence: 2, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 3,
-    name: "Bachelor of Arts in History",
-    shortName: "BA History",
-    sequence: 3,
-    disabled: true,
-    createdAt: new Date("2022-03-01"),
-    updatedAt: new Date("2023-03-01"),
-    degree: null,
-  },
-  {
-    id: 4,
-    name: "Bachelor of Commerce",
-    shortName: "BCom",
-    sequence: 4,
-    disabled: false,
-    createdAt: new Date("2022-04-01"),
-    updatedAt: new Date("2023-04-01"),
-    degree: { id: 3, name: "B.Com", level: null, sequence: 3, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 5,
-    name: "Bachelor of Science in Mathematics",
-    shortName: "BSc Math",
-    sequence: 5,
-    disabled: false,
-    createdAt: new Date("2022-05-01"),
-    updatedAt: new Date("2023-05-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 6,
-    name: "Bachelor of Science in Physics",
-    shortName: "BSc Physics",
-    sequence: 6,
-    disabled: false,
-    createdAt: new Date("2022-06-01"),
-    updatedAt: new Date("2023-06-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 7,
-    name: "Bachelor of Science in Chemistry",
-    shortName: "BSc Chem",
-    sequence: 7,
-    disabled: false,
-    createdAt: new Date("2022-07-01"),
-    updatedAt: new Date("2023-07-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 8,
-    name: "Bachelor of Science in Botany",
-    shortName: "BSc Botany",
-    sequence: 8,
-    disabled: false,
-    createdAt: new Date("2022-08-01"),
-    updatedAt: new Date("2023-08-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 9,
-    name: "Bachelor of Science in Zoology",
-    shortName: "BSc Zoology",
-    sequence: 9,
-    disabled: false,
-    createdAt: new Date("2022-09-01"),
-    updatedAt: new Date("2023-09-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 10,
-    name: "Bachelor of Science in Statistics",
-    shortName: "BSc Stats",
-    sequence: 10,
-    disabled: false,
-    createdAt: new Date("2022-10-01"),
-    updatedAt: new Date("2023-10-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 11,
-    name: "Bachelor of Science in Economics",
-    shortName: "BSc Econ",
-    sequence: 11,
-    disabled: false,
-    createdAt: new Date("2022-11-01"),
-    updatedAt: new Date("2023-11-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 12,
-    name: "Bachelor of Science in Microbiology",
-    shortName: "BSc Microbio",
-    sequence: 12,
-    disabled: false,
-    createdAt: new Date("2022-12-01"),
-    updatedAt: new Date("2023-12-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 13,
-    name: "Bachelor of Science in Environmental Science",
-    shortName: "BSc EnvSci",
-    sequence: 13,
-    disabled: false,
-    createdAt: new Date("2023-01-01"),
-    updatedAt: new Date("2024-01-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 14,
-    name: "Bachelor of Science in Electronics",
-    shortName: "BSc Electronics",
-    sequence: 14,
-    disabled: false,
-    createdAt: new Date("2023-02-01"),
-    updatedAt: new Date("2024-02-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 15,
-    name: "Bachelor of Science in Geology",
-    shortName: "BSc Geology",
-    sequence: 15,
-    disabled: false,
-    createdAt: new Date("2023-03-01"),
-    updatedAt: new Date("2024-03-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 16,
-    name: "Bachelor of Science in Geography",
-    shortName: "BSc Geography",
-    sequence: 16,
-    disabled: false,
-    createdAt: new Date("2023-04-01"),
-    updatedAt: new Date("2024-04-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 17,
-    name: "Bachelor of Science in Psychology",
-    shortName: "BSc Psychology",
-    sequence: 17,
-    disabled: false,
-    createdAt: new Date("2023-05-01"),
-    updatedAt: new Date("2024-05-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 18,
-    name: "Bachelor of Science in Sociology",
-    shortName: "BSc Sociology",
-    sequence: 18,
-    disabled: false,
-    createdAt: new Date("2023-06-01"),
-    updatedAt: new Date("2024-06-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 19,
-    name: "Bachelor of Science in Philosophy",
-    shortName: "BSc Philosophy",
-    sequence: 19,
-    disabled: false,
-    createdAt: new Date("2023-07-01"),
-    updatedAt: new Date("2024-07-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 20,
-    name: "Bachelor of Science in Political Science",
-    shortName: "BSc PolSci",
-    sequence: 20,
-    disabled: false,
-    createdAt: new Date("2023-08-01"),
-    updatedAt: new Date("2024-08-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 21,
-    name: "Bachelor of Science in Anthropology",
-    shortName: "BSc Anthropology",
-    sequence: 21,
-    disabled: false,
-    createdAt: new Date("2023-09-01"),
-    updatedAt: new Date("2024-09-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 22,
-    name: "Bachelor of Science in Linguistics",
-    shortName: "BSc Linguistics",
-    sequence: 22,
-    disabled: false,
-    createdAt: new Date("2023-10-01"),
-    updatedAt: new Date("2024-10-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 23,
-    name: "Bachelor of Science in Computer Applications",
-    shortName: "BCA",
-    sequence: 23,
-    disabled: false,
-    createdAt: new Date("2023-11-01"),
-    updatedAt: new Date("2024-11-01"),
-    degree: { id: 1, name: "B.Sc", level: null, sequence: 1, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 24,
-    name: "Bachelor of Business Administration",
-    shortName: "BBA",
-    sequence: 24,
-    disabled: false,
-    createdAt: new Date("2023-12-01"),
-    updatedAt: new Date("2024-12-01"),
-    degree: { id: 4, name: "BBA", level: null, sequence: 4, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 25,
-    name: "Master of Science in Computer Science",
-    shortName: "MSc CS",
-    sequence: 25,
-    disabled: false,
-    createdAt: new Date("2024-01-01"),
-    updatedAt: new Date("2025-01-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 26,
-    name: "Master of Science in Mathematics",
-    shortName: "MSc Math",
-    sequence: 26,
-    disabled: false,
-    createdAt: new Date("2024-02-01"),
-    updatedAt: new Date("2025-02-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 27,
-    name: "Master of Science in Physics",
-    shortName: "MSc Physics",
-    sequence: 27,
-    disabled: false,
-    createdAt: new Date("2024-03-01"),
-    updatedAt: new Date("2025-03-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 28,
-    name: "Master of Science in Chemistry",
-    shortName: "MSc Chem",
-    sequence: 28,
-    disabled: false,
-    createdAt: new Date("2024-04-01"),
-    updatedAt: new Date("2025-04-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 29,
-    name: "Master of Science in Botany",
-    shortName: "MSc Botany",
-    sequence: 29,
-    disabled: false,
-    createdAt: new Date("2024-05-01"),
-    updatedAt: new Date("2025-05-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-  {
-    id: 30,
-    name: "Master of Science in Zoology",
-    shortName: "MSc Zoology",
-    sequence: 30,
-    disabled: true,
-    createdAt: new Date("2024-06-01"),
-    updatedAt: new Date("2025-06-01"),
-    degree: { id: 5, name: "M.Sc", level: null, sequence: 5, disabled: false, createdAt: new Date(), updatedAt: new Date() },
-  },
-];
+import {
+  getCourses,
+  createCourse,
+  updateCourse,
+} from "@/services/course-design.api";  
+import * as XLSX from "xlsx";
 
 const CoursesPage = () => {
+  const [courses, setCourses] = React.useState<Course[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [selectedCourse, setSelectedCourse] = React.useState<Course | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  // const [selectedRows] = React.useState<number[]>([]);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
 
-  const filteredCourses = dummyCourses.filter((course) =>
-    course.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (course.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-    (course.degree?.name?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-    (course.sequence?.toString().includes(searchText.toLowerCase()) ?? false)
+  React.useEffect(() => {
+    setLoading(true);
+    getCourses()
+      .then(res => {
+        // Ensure we have an array, even if the API returns something unexpected
+        const coursesData = Array.isArray(res) ? res : [];
+        setCourses(coursesData);
+        setError(null);
+      })
+      .catch((error) => {
+        console.error('Error fetching courses:', error);
+        setError("Failed to fetch courses");
+        setCourses([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filteredCourses = (Array.isArray(courses) ? courses : []).filter((course) =>
+    (course.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+    (course.shortName ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+    (course.degree?.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
+    (course.sequence?.toString() ?? '').includes(searchText.toLowerCase())
   );
 
   const handleEdit = (course: Course) => {
@@ -358,19 +80,26 @@ const CoursesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    console.log("Delete:", id);
-    toast.info("Delete functionality not implemented yet.");
-  };
 
-  const handleSubmit = async (data: unknown) => {
+
+  const handleSubmit = async (data: Course) => {
     setIsSubmitting(true);
     try {
-      console.log("Submit:", data);
-      toast.success(selectedCourse ? "Course updated successfully" : "Course created successfully");
+      if (selectedCourse) {
+        // Update
+        await updateCourse(selectedCourse.id!, data);
+        toast.success("Course updated successfully");
+      } else {
+        // Create
+        await createCourse(data);
+        toast.success("Course created successfully");
+      }
+      // Always re-fetch after add/edit
+      const freshCourses = await getCourses();
+      setCourses(Array.isArray(freshCourses) ? freshCourses : []);
       setIsFormOpen(false);
-    } catch (error) {
-      toast.error(`Failed to save course with error: ${error}`);
+    } catch {
+      toast.error(`Failed to save course`);
     } finally {
       setIsSubmitting(false);
     }
@@ -395,13 +124,33 @@ const CoursesPage = () => {
 
   const handleDownloadTemplate = () => {
     // For now, just download a static file or trigger a download
-    // You can replace this with your actual template file URL
     const link = document.createElement('a');
     link.href = '/templates/course-bulk-upload-template.xlsx';
     link.download = 'course-bulk-upload-template.xlsx';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDownloadAll = async () => {
+    try {
+      const res = await getCourses();
+      const data = res.map(course => ({
+        ID: course.id,
+        Name: course.name,
+        "Short Name": course.shortName,
+        Degree: course.degree?.name ?? "-",
+        Status: course.disabled ? "Inactive" : "Active",
+        "Created At": course.createdAt,
+        "Updated At": course.updatedAt,
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Courses");
+      XLSX.writeFile(wb, "courses.xlsx");
+    } catch {
+      toast.error("Failed to download courses");
+    }
   };
 
   // const allSelected =
@@ -484,7 +233,7 @@ const CoursesPage = () => {
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
             <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
@@ -502,7 +251,15 @@ const CoursesPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.length === 0 ? (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center">Loading...</TableCell>
+                    </TableRow>
+                  ) : error ? (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center text-red-500">{error}</TableCell>
+                    </TableRow>
+                  ) : filteredCourses.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={10} className="text-center">No courses found.</TableCell>
                     </TableRow>
@@ -514,7 +271,7 @@ const CoursesPage = () => {
                         <TableCell style={{ width: 140 }}>{course.shortName}</TableCell>
                         <TableCell style={{ width: 120 }}>{course.degree?.name ?? "-"}</TableCell>
                         <TableCell style={{ width: 100 }}>
-                          {course.disabled ? (
+                          {course.disabled === true ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
@@ -529,14 +286,6 @@ const CoursesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(course.id ?? -1)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

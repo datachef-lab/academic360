@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -12,28 +12,71 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { SubjectType } from "@/types/course-design";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Category name must be at least 2 characters.",
-  }),
+  name: z.string().min(2, { message: "Category name must be at least 2 characters." }),
+  code: z.string().nullable().optional(),
+  sequence: z.number().nullable().optional(),
+  disabled: z.boolean().default(false),
 });
 
-export const SubjectCategoryForm = () => {
-  const form = useForm<z.infer<typeof formSchema>>({
+type FormValues = z.infer<typeof formSchema>;
+
+interface SubjectCategoryFormProps {
+  initialData?: SubjectType | null;
+  onSubmit: (data: Omit<SubjectType, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onCancel: () => void;
+  isLoading?: boolean;
+}
+
+export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
+  initialData,
+  onSubmit,
+  onCancel,
+  isLoading = false,
+}) => {
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      name: initialData?.name || "",
+      code: initialData?.code || "",
+      sequence: initialData?.sequence ?? null,
+      disabled: initialData?.disabled ?? false,
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        name: initialData.name || "",
+        code: initialData.code || "",
+        sequence: initialData.sequence ?? null,
+        disabled: initialData.disabled ?? false,
+      });
+    } else {
+      form.reset({
+        name: "",
+        code: "",
+        sequence: null,
+        disabled: false,
+      });
+    }
+  }, [initialData]);
+
+  function handleSubmit(values: FormValues) {
+    onSubmit({
+      name: values.name,
+      code: values.code || null,
+      sequence: values.sequence ?? null,
+      disabled: values.disabled,
+    });
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="name"
@@ -47,7 +90,57 @@ export const SubjectCategoryForm = () => {
             </FormItem>
           )}
         />
-        <Button type="submit">Submit</Button>
+        <FormField
+          control={form.control}
+          name="code"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Code</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter code" {...field} value={field.value ?? ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="sequence"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sequence</FormLabel>
+              <FormControl>
+                <Input type="number" placeholder="Enter sequence" {...field} value={field.value ?? ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Controller
+          name="disabled"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center space-x-2">
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  id="disabled"
+                  disabled={isLoading}
+                />
+              </FormControl>
+              <FormLabel htmlFor="disabled">Disabled</FormLabel>
+            </FormItem>
+          )}
+        />
+        <div className="flex justify-end space-x-3">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : initialData ? "Update Category" : "Create Category"}
+          </Button>
+        </div>
       </form>
     </Form>
   );

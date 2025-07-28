@@ -3,24 +3,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CourseLevel } from "@/services/course-level.api";
+import { Controller } from "react-hook-form";
 
+// Form validation schema
 const courseLevelSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  description: z.string().optional().nullable(),
-  levelOrder: z.number().int().positive("Order must be a positive number"),
-  isActive: z.boolean().default(true),
+  shortName: z.string().nullable().optional(),
+  sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
+  disabled: z.boolean().default(false),
 });
 
 type CourseLevelFormValues = z.infer<typeof courseLevelSchema>;
 
 interface CourseLevelFormProps {
   initialData?: CourseLevel | null;
-  onSubmit: (data: CourseLevelFormValues) => Promise<void>;
+  onSubmit: (data: CourseLevel) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }
@@ -33,30 +33,31 @@ export function CourseLevelForm({
 }: CourseLevelFormProps) {
   const isEdit = !!initialData?.id;
   
+  const defaultValues: CourseLevelFormValues = {
+    name: initialData?.name || "",
+    shortName: initialData?.shortName || "",
+    sequence: initialData?.sequence || 0,
+    disabled: initialData?.disabled || false,
+  };
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    watch,
+    control,
   } = useForm<CourseLevelFormValues>({
     resolver: zodResolver(courseLevelSchema),
-    defaultValues: initialData || {
-      name: "",
-      description: "",
-      levelOrder: 1,
-      isActive: true,
-    },
+    defaultValues,
   });
 
-  const isActive = watch("isActive");
-
   const handleFormSubmit = async (data: CourseLevelFormValues) => {
-    try {
-      await onSubmit(data);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong");
-    }
+    const courseLevelData: CourseLevel = {
+      name: data.name,
+      shortName: data.shortName || null,
+      sequence: data.sequence || null,
+      disabled: data.disabled,
+    };
+    await onSubmit(courseLevelData);
   };
 
   return (
@@ -75,39 +76,45 @@ export function CourseLevelForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description (Optional)</Label>
-        <Textarea
-          id="description"
-          placeholder="Enter description"
-          {...register("description")}
-          className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
+        <Label htmlFor="shortName">Short Name</Label>
+        <Input
+          id="shortName"
+          placeholder="Enter short name (optional)"
+          {...register("shortName")}
+          className={errors.shortName ? 'border-red-500' : ''}
         />
-        {errors.description && (
-          <p className="text-sm text-red-500">{errors.description.message}</p>
+        {errors.shortName && (
+          <p className="text-sm text-red-500">{errors.shortName.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="levelOrder">Order</Label>
+        <Label htmlFor="sequence">Sequence</Label>
         <Input
-          id="levelOrder"
+          id="sequence"
           type="number"
-          placeholder="Enter level order"
-          {...register("levelOrder", { valueAsNumber: true })}
-          className={errors.levelOrder ? 'border-red-500' : ''}
+          placeholder="Enter sequence number"
+          {...register("sequence", { valueAsNumber: true })}
+          className={errors.sequence ? 'border-red-500' : ''}
         />
-        {errors.levelOrder && (
-          <p className="text-sm text-red-500">{errors.levelOrder.message}</p>
+        {errors.sequence && (
+          <p className="text-sm text-red-500">{errors.sequence.message}</p>
         )}
       </div>
 
       <div className="flex items-center space-x-2">
-        <Switch
-          id="isActive"
-          checked={isActive}
-          onCheckedChange={(checked) => setValue("isActive", checked)}
+        <Controller
+          name="disabled"
+          control={control}
+          render={({ field }) => (
+            <Checkbox
+              id="disabled"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
-        <Label htmlFor="isActive">Active</Label>
+        <Label htmlFor="disabled">Disabled</Label>
       </div>
 
       <div className="flex justify-end space-x-4">

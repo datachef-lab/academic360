@@ -1,21 +1,26 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { AffiliationType, AffiliationTypeData } from "@/services/affiliation-type.api";
+import { AffiliationType } from "@/types/course-design";
+import { Form, FormControl, FormField, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const affiliationTypeSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  code: z.string().min(1, "Code is required"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
   description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
+  sequence: z.number().optional().nullable(),
+  disabled: z.boolean().default(false),
 });
 
 type AffiliationTypeFormValues = z.infer<typeof affiliationTypeSchema>;
 
 interface AffiliationTypeFormProps {
   initialData?: AffiliationType | null;
-  onSubmit: (data: AffiliationTypeData) => void;
+  onSubmit: (data: Omit<AffiliationType, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -28,145 +33,153 @@ export function AffiliationTypeForm({
 }: AffiliationTypeFormProps) {
   const isEdit = !!initialData;
   
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<AffiliationTypeFormValues>({
+  const form = useForm<AffiliationTypeFormValues>({
     resolver: zodResolver(affiliationTypeSchema),
     defaultValues: {
       name: initialData?.name || "",
-      code: initialData?.code || "",
       description: initialData?.description || "",
-      isActive: initialData?.isActive ?? true,
+      sequence: initialData?.sequence || null,
+      disabled: initialData?.disabled ?? false,
     },
   });
 
   useEffect(() => {
     if (initialData) {
-      reset({
+      form.reset({
         name: initialData.name,
-        code: initialData.code,
         description: initialData.description || "",
-        isActive: initialData.isActive,
+        sequence: initialData.sequence || null,
+        disabled: initialData.disabled,
       });
     } else {
-      reset({
+      form.reset({
         name: "",
-        code: "",
         description: "",
-        isActive: true,
+        sequence: null,
+        disabled: false,
       });
     }
-  }, [initialData, reset]);
+  }, [initialData, form]);
+
+  const handleSubmit = (data: AffiliationTypeFormValues) => {
+    const affiliationTypeData = {
+      name: data.name,
+      description: data.description || null,
+      sequence: data.sequence || null,
+      disabled: data.disabled,
+    };
+    onSubmit(affiliationTypeData);
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="name"
-            type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("name")}
-            disabled={isLoading}
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormControl>
+              <div className="space-y-2">
+                <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+                <Input
+                  placeholder="Enter affiliation type name"
+                  {...field}
+                  disabled={isLoading}
+                />
+                <FormMessage />
+              </div>
+            </FormControl>
           )}
-        </div>
+        />
 
-        <div>
-          <label
-            htmlFor="code"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Code <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="code"
-            type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.code ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("code")}
-            disabled={isLoading || isEdit}
-          />
-          {errors.code && (
-            <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormControl>
+              <div className="space-y-2">
+                <FormLabel>Description</FormLabel>
+                <Textarea
+                  placeholder="Enter description"
+                  {...field}
+                  value={field.value ?? ""}
+                  disabled={isLoading}
+                />
+                <FormMessage />
+              </div>
+            </FormControl>
           )}
-        </div>
+        />
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-          <textarea
-            id="description"
-            rows={3}
-            className={`mt-1 block w-full rounded-md border ${
-              errors.description ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("description")}
-            disabled={isLoading}
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
-            </p>
+        <FormField
+          control={form.control}
+          name="sequence"
+          render={({ field }) => (
+            <FormControl>
+              <div className="space-y-2">
+                <FormLabel>Sequence</FormLabel>
+                <Input
+                  type="number"
+                  placeholder="Enter sequence number"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                  disabled={isLoading}
+                />
+                <FormMessage />
+              </div>
+            </FormControl>
           )}
-        </div>
+        />
 
-        <div className="flex items-center space-x-2">
-          <input
-            id="isActive"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            {...register("isActive")}
+        <FormField
+          control={form.control}
+          name="disabled"
+          render={() => (
+            <FormControl>
+              <div className="flex items-center space-x-2">
+                <Controller
+                  name="disabled"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  )}
+                />
+                <FormLabel className="text-sm font-normal">
+                  Disabled
+                </FormLabel>
+                <FormMessage />
+              </div>
+            </FormControl>
+          )}
+        />
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
             disabled={isLoading}
-          />
-          <label
-            htmlFor="isActive"
-            className="text-sm font-medium text-gray-700"
           >
-            Active
-          </label>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="flex-1"
+          >
+            {isLoading
+              ? "Saving..."
+              : isEdit
+              ? "Update Affiliation Type"
+              : "Create Affiliation Type"}
+          </Button>
         </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          disabled={isLoading}
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          className="rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-          disabled={isLoading}
-        >
-          {isLoading
-            ? "Saving..."
-            : isEdit
-            ? "Update Affiliation Type"
-            : "Create Affiliation Type"}
-        </button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 }

@@ -1,20 +1,21 @@
-import { Router } from "express";
+import { Router, RequestHandler } from "express";
 import {
-  createProgramCourse,
-  getAllProgramCourses,
-  getProgramCourseById,
-  updateProgramCourse,
-  deleteProgramCourse,
+  createProgramCourseHandler,
+  deleteProgramCourseHandler,
+  getAllProgramCoursesHandler,
+  getProgramCourseByIdHandler,
+  updateProgramCourseHandler,
+  bulkUploadProgramCoursesHandler
 } from "../controllers/program-course.controller";
-import { RequestHandler } from "express";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
 
 const router = Router();
 
-// ProgramCourse routes
-router.post("/", createProgramCourse as RequestHandler);
-router.get("/", getAllProgramCourses as RequestHandler);
-router.get("/:id", getProgramCourseById as RequestHandler);
-router.put("/:id", updateProgramCourse as RequestHandler);
-router.delete("/:id", deleteProgramCourse as RequestHandler);
+router.post("/", createProgramCourseHandler as RequestHandler);
+router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadProgramCoursesHandler as RequestHandler);
+router.get("/", getAllProgramCoursesHandler as RequestHandler);
+router.get("/:id", getProgramCourseByIdHandler as RequestHandler);
+router.put("/:id", updateProgramCourseHandler as RequestHandler);
+router.delete("/:id", deleteProgramCourseHandler as RequestHandler);
 
 export default router;

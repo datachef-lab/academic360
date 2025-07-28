@@ -5,13 +5,16 @@ import {
   getCourseLevelById,
   updateCourseLevel,
   deleteCourseLevel,
+  bulkUploadCourseLevels,
 } from "../controllers/course-level.controller";
 import { RequestHandler } from "express";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 
 // CourseLevel routes
 router.post("/", createCourseLevel as RequestHandler);
+router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadCourseLevels as RequestHandler);
 router.get("/", getAllCourseLevels as RequestHandler);
 router.get("/:id", getCourseLevelById as RequestHandler);
 router.put("/:id", updateCourseLevel as RequestHandler);

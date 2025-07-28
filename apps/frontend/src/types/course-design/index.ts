@@ -71,6 +71,8 @@ export interface ExamComponent {
     updatedAt?: Date;
 }
 
+
+
 export interface PaperComponent {
     readonly id?: number;
     paperId: number;
@@ -105,7 +107,7 @@ export interface ProgramCourse {
     courseLevelId: number;
     duration: number;
     totalSemesters: number;
-    affiliationTypeId: number;
+    affiliationId: number;
     regulationTypeId: number;
     disabled: boolean;
     createdAt?: Date;

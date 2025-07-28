@@ -1,21 +1,34 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { RegulationType } from "./columns";
+import { RegulationType } from "@/types/course-design";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+// import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+// import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 const regulationTypeSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  shortName: z.string().optional().nullable(),
+  sequence: z.number().optional().nullable(),
+  disabled: z.boolean().default(false),
 });
 
 type RegulationTypeFormValues = z.infer<typeof regulationTypeSchema>;
 
 interface RegulationTypeFormProps {
   initialData?: RegulationType | null;
-  onSubmit: (data: RegulationTypeFormValues) => void;
+  onSubmit: (data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -28,116 +41,141 @@ export function RegulationTypeForm({
 }: RegulationTypeFormProps) {
   const isEdit = !!initialData;
   
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<RegulationTypeFormValues>({
+  const form = useForm<RegulationTypeFormValues>({
     resolver: zodResolver(regulationTypeSchema),
     defaultValues: {
       name: initialData?.name || "",
-      description: initialData?.description || "",
-      isActive: initialData?.isActive ?? true,
+      shortName: initialData?.shortName || "",
+      sequence: initialData?.sequence || 0,
+      disabled: initialData?.disabled ?? false,
     },
   });
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData);
+      form.reset({
+        name: initialData.name,
+        shortName: initialData.shortName || "",
+        sequence: initialData.sequence || 0,
+        disabled: initialData.disabled,
+      });
     } else {
-      reset({
+      form.reset({
         name: "",
-        description: "",
-        isActive: true,
+        shortName: "",
+        sequence: 0,
+        disabled: false,
       });
     }
-  }, [initialData, reset]);
+  }, [initialData, form]);
+
+  const handleSubmit = (data: RegulationTypeFormValues) => {
+    onSubmit({
+      name: data.name,
+      shortName: data.shortName || null,
+      sequence: data.sequence || null,
+      disabled: data.disabled,
+    });
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="space-y-4">
-        <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="name"
-            type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("name")}
-            disabled={isLoading}
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
+              <FormControl>
+                <Input placeholder="Enter regulation type name" {...field} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
 
-        <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-          <textarea
-            id="description"
-            rows={3}
-            className={`mt-1 block w-full rounded-md border ${
-              errors.description ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("description")}
-            disabled={isLoading}
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
-            </p>
+        <FormField
+          control={form.control}
+          name="shortName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Short Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter short name" {...field} value={field.value ?? ""} disabled={isLoading} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
-        </div>
+        />
 
-        <div className="flex items-center space-x-2">
-          <input
-            id="isActive"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            {...register("isActive")}
+        <FormField
+          control={form.control}
+          name="sequence"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sequence</FormLabel>
+              <FormControl>
+                <Input 
+                  type="number" 
+                  placeholder="Enter sequence number" 
+                  {...field} 
+                  value={field.value ?? ""} 
+                  disabled={isLoading}
+                  onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="disabled"
+          render={() => (
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+              <FormControl>
+                <Controller
+                  name="disabled"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isLoading}
+                    />
+                  )}
+                />
+              </FormControl>
+              <div className="space-y-1 leading-none">
+                <FormLabel>Disabled</FormLabel>
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <div className="flex justify-end space-x-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
             disabled={isLoading}
-          />
-          <label
-            htmlFor="isActive"
-            className="text-sm font-medium text-gray-700"
           >
-            Active
-          </label>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isLoading}
+          >
+            {isLoading
+              ? "Saving..."
+              : isEdit
+              ? "Update Regulation Type"
+              : "Create Regulation Type"}
+          </Button>
         </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading
-            ? "Saving..."
-            : isEdit
-            ? "Update Regulation Type"
-            : "Create Regulation Type"}
-        </Button>
-      </div>
-    </form>
+      </form>
+    </Form>
   );
 }

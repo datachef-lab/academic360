@@ -6,7 +6,7 @@ export const affiliationTypeModel = pgTable("affiliation_types", {
   id: serial().primaryKey(),
   name: text("name").notNull(),
   description: text("description"),
-  sequence: integer("sequence").default(0).notNull(),
+  sequence: integer("sequence").default(0),
   disabled: boolean("disabled").default(false),
   // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),

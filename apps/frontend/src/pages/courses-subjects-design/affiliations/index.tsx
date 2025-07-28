@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Landmark, Download, Upload, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Landmark, Download, Upload, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -14,12 +14,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Affiliation } from "@/types/course-design";
-
-const dummyAffiliations: Affiliation[] = [
-  { id: 1, name: "University of Calcutta", shortName: "CU", sequence: 1, disabled: false, remarks: "Main university", createdAt: undefined, updatedAt: undefined },
-  { id: 2, name: "West Bengal State University", shortName: "WBSU", sequence: 2, disabled: false, remarks: "State university", createdAt: undefined, updatedAt: undefined },
-  { id: 3, name: "Other Board", shortName: "OB", sequence: 3, disabled: true, remarks: "Other affiliations", createdAt: undefined, updatedAt: undefined },
-];
+import { getAffiliations, createAffiliation, updateAffiliation, bulkUploadAffiliations, BulkUploadResult } from "@/services/course-design.api";
+import { AffiliationForm } from "./affiliation-form";
+import * as XLSX from "xlsx";
+import { toast } from "sonner";
 
 const AffiliationsPage = () => {
   const [searchText, setSearchText] = React.useState("");
@@ -27,43 +25,188 @@ const AffiliationsPage = () => {
   const [selectedAffiliation, setSelectedAffiliation] = React.useState<Affiliation | null>(null);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
+  const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
 
-  const handleEdit = (affiliation: Affiliation) => {
+  React.useEffect(() => {
+    fetchAffiliations();
+  }, []);
+
+  const fetchAffiliations = async () => {
+    setLoading(true);
+    try {
+      const res = await getAffiliations();
+      setAffiliations(Array.isArray(res) ? res : []);
+      setError(null);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to fetch affiliations";
+      setError(errorMessage);
+      toast.error("Failed to fetch affiliations");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (affiliation: Affiliation): void => {
     setSelectedAffiliation(affiliation);
     setIsFormOpen(true);
   };
 
-  const handleDelete = (id: number | undefined) => {
-    console.log("Delete:", id);
-    // toast.info("Delete functionality not implemented yet.");
-  };
+  // const handleDelete = async (id: number | undefined) => {
+  //   if (!id) return;
+  //   try {
+  //     await deleteAffiliation(id);
+  //     toast.success("Affiliation deleted successfully");
+  //     fetchAffiliations();
+  //   } catch (error: any) {
+  //     toast.error(`Failed to delete affiliation: ${error.message}`);
+  //   }
+  // };
 
   const handleAddNew = () => {
     setSelectedAffiliation(null);
     setIsFormOpen(true);
   };
 
-  const handleBulkUpload = () => {
+  const handleFormSubmit = async (data: Omit<Affiliation, 'id' | 'createdAt' | 'updatedAt'>) => {
+    setIsFormSubmitting(true);
+    try {
+      if (selectedAffiliation) {
+        await updateAffiliation(selectedAffiliation.id!, data);
+        toast.success("Affiliation updated successfully");
+      } else {
+        await createAffiliation(data);
+        toast.success("Affiliation created successfully");
+      }
+      setIsFormOpen(false);
+      fetchAffiliations();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Failed to ${selectedAffiliation ? 'update' : 'create'} affiliation: ${errorMessage}`);
+    } finally {
+      setIsFormSubmitting(false);
+    }
+  };
+
+  const handleFormCancel = () => {
+    setIsFormOpen(false);
+    setSelectedAffiliation(null);
+  };
+
+  const handleBulkUpload = async () => {
     if (!bulkFile) return;
-    // toast.success("Bulk upload successful (mock)");
-    setIsBulkUploadOpen(false);
-    setBulkFile(null);
+    setIsBulkUploading(true);
+    try {
+      const result = await bulkUploadAffiliations(bulkFile);
+      setBulkUploadResult(result);
+      if (result.summary.successful > 0) {
+        toast.success(`Successfully uploaded ${result.summary.successful} affiliations`);
+        fetchAffiliations();
+      }
+      if (result.summary.failed > 0) {
+        toast.error(`${result.summary.failed} affiliations failed to upload`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Bulk upload failed: ${errorMessage}`);
+    } finally {
+      setIsBulkUploading(false);
+    }
   };
 
   const handleDownloadTemplate = () => {
-    const link = document.createElement('a');
-    link.href = '/templates/affiliation-bulk-upload-template.xlsx';
-    link.download = 'affiliation-bulk-upload-template.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Create template data
+    const templateData = [
+      { Name: "University of Calcutta", "Short Name": "CU", Sequence: 1, Disabled: false, Remarks: "Main university" },
+      { Name: "West Bengal State University", "Short Name": "WBSU", Sequence: 2, Disabled: false, Remarks: "State university" },
+    ];
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Affiliations Template");
+    XLSX.writeFile(wb, "affiliation-bulk-upload-template.xlsx");
   };
 
-  const filteredAffiliations = dummyAffiliations.filter((aff) =>
+  const handleDownloadAll = async () => {
+    try {
+      const res = await getAffiliations();
+      const data = (Array.isArray(res) ? res : []).map((aff: Affiliation) => ({
+        ID: aff.id,
+        Name: aff.name,
+        "Short Name": aff.shortName || "-",
+        Sequence: aff.sequence || "-",
+        Disabled: aff.disabled ? "Yes" : "No",
+        Remarks: aff.remarks || "-",
+        "Created At": aff.createdAt,
+        "Updated At": aff.updatedAt,
+      }));
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Affiliations");
+      XLSX.writeFile(wb, "affiliations.xlsx");
+    } catch  {
+      toast.error("Failed to download affiliations");
+    }
+  };
+
+  const handleDownloadFailedData = () => {
+    if (!bulkUploadResult || !bulkUploadResult.errors || bulkUploadResult.errors.length === 0) {
+      toast.error("No failed data to download");
+      return;
+    }
+    try {
+      const failedData = bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }) => ({
+        "Row Number": error.row,
+        "Error Message": error.error,
+        "Original Data": JSON.stringify(error.data),
+        Name: error.data[0] || "",
+        "Short Name": error.data[1] || "",
+        Sequence: error.data[2] || "",
+        Disabled: error.data[3] || "",
+        Remarks: error.data[4] || ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(failedData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Failed Affiliations");
+      XLSX.writeFile(wb, "failed-affiliations-upload.xlsx");
+      toast.success("Failed data downloaded successfully");
+    } catch {
+      toast.error("Failed to download error data");
+    }
+  };
+
+  const filteredAffiliations = affiliations.filter((aff) =>
     aff.name.toLowerCase().includes(searchText.toLowerCase()) ||
     (aff.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
     (aff.remarks?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
   );
+
+  if (loading) {
+    return (
+      <div className="p-4">
+        <Card className="border-none">
+          <CardContent className="flex items-center justify-center h-64">
+            <div className="text-center">Loading affiliations...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <Card className="border-none">
+          <CardContent className="flex items-center justify-center h-64">
+            <div className="text-center text-red-600">Error: {error}</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
@@ -89,20 +232,81 @@ const AffiliationsPage = () => {
                   <DialogTitle>Bulk Upload Affiliations</DialogTitle>
                 </DialogHeader>
                 <div className="flex flex-col gap-4">
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls,.csv"
-                    onChange={e => setBulkFile(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Template
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Download the template to see the required format
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Upload Excel File</label>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  {bulkUploadResult && (
+                    <div className="space-y-4 p-4 border rounded">
+                      <h4 className="font-medium">Upload Results</h4>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                        </div>
+                        <div className="text-green-600">
+                          <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                        </div>
+                        <div className="text-red-600">
+                          <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                        </div>
+                      </div>
+                      {bulkUploadResult.errors && bulkUploadResult.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium text-red-600">Errors:</h5>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={handleDownloadFailedData}
+                              className="text-xs"
+                            >
+                              <Download className="mr-1 h-3 w-3" />
+                              Download Failed Data
+                            </Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }, index: number) => (
+                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                <span className="font-medium">Row {error.row}:</span> {error.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleBulkUpload} 
+                      disabled={!bulkFile || isBulkUploading}
+                      className="flex-1"
+                    >
+                      {isBulkUploading ? "Uploading..." : "Upload"}
+                    </Button>
+                    <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkFile(null); setBulkUploadResult(null); }}>
+                      Close
+                    </Button>
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={handleDownloadTemplate}>
-              <Download className="mr-2 h-4 w-4" />
-              Download Template
+            <Button variant="outline" onClick={handleDownloadAll}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
             </Button>
             <AlertDialog open={isFormOpen} onOpenChange={setIsFormOpen}>
               <AlertDialogTrigger asChild>
@@ -115,8 +319,12 @@ const AffiliationsPage = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>{selectedAffiliation ? "Edit Affiliation" : "Add New Affiliation"}</AlertDialogTitle>
                 </AlertDialogHeader>
-                {/* AffiliationForm component goes here */}
-                <div>Affiliation form goes here.</div>
+                <AffiliationForm
+                  initialData={selectedAffiliation}
+                  onSubmit={handleFormSubmit}
+                  onCancel={handleFormCancel}
+                  isLoading={isFormSubmitting}
+                />
               </AlertDialogContent>
             </AlertDialog>
           </div>
@@ -124,10 +332,6 @@ const AffiliationsPage = () => {
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
             <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
-            <Button variant="outline" onClick={() => {}}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
           </div>
           <div className="relative" style={{ height: '600px' }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
@@ -170,14 +374,6 @@ const AffiliationsPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => handleDelete(aff.id)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

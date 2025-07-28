@@ -16,7 +16,10 @@ export const getPaperByIdHandler = async (req: Request, res: Response, next: Nex
     try {
         const id = Number(req.query.id || req.params.id);
         const paper = await getPaperById(id);
-        if (!paper) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Paper with ID ${id} not found`));
+        if (!paper) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Paper with ID ${id} not found`));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "SUCCESS", paper, "Paper fetched successfully"));
     } catch (error) {
         handleError(error, res, next);
@@ -36,7 +39,10 @@ export const updatePaperHandler = async (req: Request, res: Response, next: Next
     try {
         const id = Number(req.query.id || req.params.id);
         const updated = await updatePaper(id, req.body);
-        if (!updated) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+        if (!updated) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "UPDATED", updated, "Paper updated successfully"));
     } catch (error) {
         handleError(error, res, next);
@@ -47,7 +53,10 @@ export const deletePaperHandler = async (req: Request, res: Response, next: Next
     try {
         const id = Number(req.query.id || req.params.id);
         const deleted = await deletePaper(id);
-        if (!deleted) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+        if (!deleted) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Paper deleted successfully"));
     } catch (error) {
         handleError(error, res, next);

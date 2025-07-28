@@ -14,8 +14,9 @@ export const createPaperComponent = async (req: Request, res: Response) => {
       paperId: req.body.paperId,
     });
     res.status(201).json(newPaperComponent);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(400).json({ error: errorMessage });
   }
 };
 
@@ -23,8 +24,9 @@ export const getAllPaperComponents = async (_req: Request, res: Response) => {
   try {
     const allPaperComponents = await getAllPaperComponentsService();
     res.json(allPaperComponents);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMessage });
   }
 };
 
@@ -35,8 +37,9 @@ export const getPaperComponentById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Paper Component not found" });
     }
     res.json(paperComponent);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMessage });
   }
 };
 
@@ -47,11 +50,13 @@ export const updatePaperComponent = async (req: Request, res: Response) => {
       paperId: req.body.paperId,
     });
     if (!updatedPaperComponent) {
-      return res.status(404).json({ error: "Paper Component not found" });
+      res.status(404).json({ error: "Paper Component not found" });
+      return;
     }
     res.json(updatedPaperComponent);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(400).json({ error: errorMessage });
   }
 };
 
@@ -59,10 +64,12 @@ export const deletePaperComponent = async (req: Request, res: Response) => {
   try {
     const deletedPaperComponent = await deletePaperComponentService(req.params.id);
     if (!deletedPaperComponent) {
-      return res.status(404).json({ error: "Paper Component not found" });
+      res.status(404).json({ error: "Paper Component not found" });
+      return;
     }
     res.json({ message: "Paper Component deleted successfully" });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMessage });
   }
 };

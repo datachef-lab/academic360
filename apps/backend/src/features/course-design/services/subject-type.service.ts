@@ -3,6 +3,8 @@ import { SubjectType, subjectTypeModel } from "../models/subject-type.model";
 import { eq } from "drizzle-orm";
 import { SubjectTypeSchema } from "@/types/course-design";
 import { z } from "zod";
+import * as XLSX from "xlsx";
+import fs from "fs";
 
 // Types
 export type SubjectTypeData = z.infer<typeof SubjectTypeSchema>;
@@ -10,7 +12,8 @@ export type SubjectTypeData = z.infer<typeof SubjectTypeSchema>;
 // Create a new subject type
 export const createSubjectType = async (subjectTypeData: SubjectType) => {
   // const validatedData = SubjectTypeSchema.parse(subjectTypeData);
-  const newSubjectType = await db.insert(subjectTypeModel).values(subjectTypeData).returning();
+  const { id, createdAt, updatedAt, ...props } = subjectTypeData;
+  const newSubjectType = await db.insert(subjectTypeModel).values(props).returning();
   return newSubjectType[0];
 };
 
@@ -31,10 +34,10 @@ export const getSubjectTypeById = async (id: string) => {
 
 // Update subject type
 export const updateSubjectType = async (id: string, subjectTypeData: SubjectType) => {
-  // const validatedData = SubjectTypeSchema.parse(subjectTypeData);
+  const { id: idObj, createdAt, updatedAt, ...props } = subjectTypeData;
   const updatedSubjectType = await db
     .update(subjectTypeModel)
-    .set(subjectTypeData)
+    .set(props)
     .where(eq(subjectTypeModel.id, +id))
     .returning();
   return updatedSubjectType.length > 0 ? updatedSubjectType[0] : null;
@@ -47,4 +50,73 @@ export const deleteSubjectType = async (id: string) => {
     .where(eq(subjectTypeModel.id, +id))
     .returning();
   return deletedSubjectType.length > 0 ? deletedSubjectType[0] : null;
+};
+
+export interface BulkUploadResult {
+  success: SubjectType[];
+  errors: Array<{
+    row: number;
+    data: unknown[];
+    error: string;
+  }>;
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+}
+
+export const bulkUploadSubjectTypes = async (filePath: string): Promise<BulkUploadResult> => {
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  const rowsArr = Array.isArray(rows) ? rows : [];
+  const [header, ...dataRows] = rowsArr;
+
+  if (!Array.isArray(dataRows)) return {
+    success: [],
+    errors: [],
+    summary: { total: 0, successful: 0, failed: 0 }
+  };
+
+  const rowsArray: unknown[][] = dataRows as unknown[][];
+  const success: SubjectType[] = [];
+  const errors: BulkUploadResult["errors"] = [];
+
+  for (let i = 0; i < rowsArray.length; i++) {
+    const row = rowsArray[i];
+    const [name, code, sequence, disabled] = row;
+    // Validation: name required
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      errors.push({ row: i + 2, data: row, error: "Name is required and must be at least 2 characters." });
+      continue;
+    }
+    try {
+      const created = await db.insert(subjectTypeModel).values({
+        name: name.trim(),
+        code: code ? String(code).trim() : null,
+        sequence: sequence !== undefined && sequence !== null && sequence !== '' ? Number(sequence) : null,
+        disabled: disabled === true || disabled === "true" || disabled === 1 || disabled === "1"
+      }).returning();
+      success.push(created[0]);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      errors.push({ row: i + 2, data: row, error: errorMessage });
+    }
+  }
+
+  // Clean up file
+  fs.unlinkSync(filePath);
+
+  return {
+    success,
+    errors,
+    summary: {
+      total: dataRows.length,
+      successful: success.length,
+      failed: errors.length,
+    },
+  };
 };

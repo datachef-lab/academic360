@@ -1,12 +1,131 @@
 import { db } from "@/db/index.js";
 import { subjectModel, createSubjectSchema, Subject } from "@/features/course-design/models/subject.model.js";
 import { eq } from "drizzle-orm";
+import * as XLSX from "xlsx";
+import fs from "fs";
 
-export async function createSubject(data: Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>) {
-    const validated = createSubjectSchema.parse(data);
-    const [created] = await db.insert(subjectModel).values(validated).returning();
+// Bulk upload interface
+export interface BulkUploadResult {
+  success: Subject[];
+  errors: Array<{
+    row: number;
+    data: unknown[];
+    error: string;
+  }>;
+}
+
+export async function createSubject(data: Subject) {
+    const { id, createdAt, updatedAt, ...props } = data;
+    const [created] = await db.insert(subjectModel).values(props).returning();
     return created;
 }
+
+// Bulk upload subjects
+export const bulkUploadSubjects = async (filePath: string): Promise<BulkUploadResult> => {
+  const result: BulkUploadResult = {
+    success: [],
+    errors: []
+  };
+
+  try {
+    // Read the Excel file
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    
+    // Convert to JSON
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    // Skip header row and process data
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as any[];
+      const rowNumber = i + 1;
+      
+      try {
+        // Map Excel columns to our model
+        const subjectData = {
+          name: row[0]?.toString()?.trim(),
+          code: row[1]?.toString()?.trim() || null,
+          sequence: row[2] ? parseInt(row[2].toString()) : null,
+          disabled: row[3]?.toString()?.toLowerCase() === 'inactive' || row[3]?.toString()?.toLowerCase() === 'false',
+        };
+
+        // Validate required fields
+        if (!subjectData.name) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: "Name is required"
+          });
+          continue;
+        }
+
+        // Check if code is unique (if provided)
+        if (subjectData.code) {
+          const existingWithCode = await db
+            .select()
+            .from(subjectModel)
+            .where(eq(subjectModel.code, subjectData.code));
+          
+          if (existingWithCode.length > 0) {
+            result.errors.push({
+              row: rowNumber,
+              data: row,
+              error: `Code ${subjectData.code} already exists`
+            });
+            continue;
+          }
+        }
+
+        // Check if sequence is unique (if provided)
+        if (subjectData.sequence !== null) {
+          const existingWithSequence = await db
+            .select()
+            .from(subjectModel)
+            .where(eq(subjectModel.sequence, subjectData.sequence));
+          
+          if (existingWithSequence.length > 0) {
+            result.errors.push({
+              row: rowNumber,
+              data: row,
+              error: `Sequence ${subjectData.sequence} already exists`
+            });
+            continue;
+          }
+        }
+
+        // Insert the subject
+        const newSubject = await db
+          .insert(subjectModel)
+          .values(subjectData)
+          .returning();
+
+        result.success.push(newSubject[0]);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        result.errors.push({
+          row: rowNumber,
+          data: row,
+          error: errorMessage
+        });
+      }
+    }
+
+    // Clean up the temporary file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    return result;
+  } catch (error: unknown) {
+    // Clean up the temporary file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    throw new Error(`Failed to process Excel file: ${errorMessage}`);
+  }
+};
 
 export async function getSubjectById(id: number) {
     const [subject] = await db.select().from(subjectModel).where(eq(subjectModel.id, id));
@@ -18,9 +137,8 @@ export async function getAllSubjects() {
 }
 
 export async function updateSubject(id: number, data: Partial<Subject>) {
-    const { createdAt, updatedAt, ...rest } = data;
-    const validated = createSubjectSchema.partial().parse(rest);
-    const [updated] = await db.update(subjectModel).set(validated).where(eq(subjectModel.id, id)).returning();
+    const { id: idObj, createdAt, updatedAt, ...props } = data;
+    const [updated] = await db.update(subjectModel).set(props).where(eq(subjectModel.id, id)).returning();
     return updated;
 }
 

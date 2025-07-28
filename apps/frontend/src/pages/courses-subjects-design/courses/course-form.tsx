@@ -4,28 +4,38 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+// import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Course } from "@/types/course-design";
-// import { Course } from "./columns";
-
-const formSchema = z.object({
-  name: z.string().min(2, {
-    message: "Name must be at least 2 characters.",
-  }),
-  code: z.string().min(1, "Code is required"),
-  description: z.string().optional(),
-  isActive: z.boolean().default(true),
-});
-
-type CourseFormValues = z.infer<typeof formSchema>;
+import { Degree } from "@/types/resources/degree";
+import { findAllDegrees } from "@/services/degree.service";
+import { useEffect, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Controller } from "react-hook-form";
 
 interface CourseFormProps {
   initialData?: Course | null;
-  onSubmit: (data: CourseFormValues) => void;
+  onSubmit: (data: Course) => void;
   onCancel: () => void;
   isSubmitting: boolean;
 }
+
+// Form validation schema
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  shortName: z.string().nullable().optional(),
+  sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
+  disabled: z.boolean().default(false),
+  degreeId: z.number().nullable().optional(),
+});
+
+type CourseFormValues = z.infer<typeof formSchema>;
 
 export function CourseForm({
   initialData,
@@ -33,26 +43,55 @@ export function CourseForm({
   onCancel,
   isSubmitting,
 }: CourseFormProps) {
-  const defaultValues: Course = {
+  const [degrees, setDegrees] = useState<Degree[]>([]);
+  const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
+
+  const defaultValues: CourseFormValues = {
     name: initialData?.name || "",
-    degree: initialData?.degree || null,
     shortName: initialData?.shortName || "",
     sequence: initialData?.sequence || 0,
     disabled: initialData?.disabled || false,
-    createdAt: initialData?.createdAt || new Date(),
-    updatedAt: initialData?.updatedAt || new Date(),
-    // code: initialData?.code || "",
-    // description: initialData?.description || "",
-    // isActive: initialData?.isActive ?? true,
+    degreeId: initialData?.degree?.id || null,
   };
 
-  const { register, handleSubmit, formState: { errors } } = useForm<CourseFormValues>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
+  // Fetch degrees on component mount
+  useEffect(() => {
+    const fetchDegrees = async () => {
+      try {
+        setIsLoadingDegrees(true);
+        const degreesData = await findAllDegrees();
+        setDegrees(degreesData);
+      } catch (error) {
+        console.error("Error fetching degrees:", error);
+      } finally {
+        setIsLoadingDegrees(false);
+      }
+    };
+
+    fetchDegrees();
+  }, []);
+
+  const handleFormSubmit = (data: CourseFormValues) => {
+    const selectedDegree = degrees.find(d => d.id === data.degreeId);
+    const courseData: Course = {
+      name: data.name,
+      shortName: data.shortName || null,
+      sequence: data.sequence || null,
+      disabled: data.disabled,
+      degree: selectedDegree || null,
+      createdAt: initialData?.createdAt || new Date(),
+      updatedAt: new Date(),
+    };
+    onSubmit(courseData);
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
@@ -67,38 +106,74 @@ export function CourseForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="code">Code</Label>
+        <Label htmlFor="shortName">Short Name</Label>
         <Input
-          id="code"
-          placeholder="Enter course code"
-          {...register("code")}
-          className={errors.code ? 'border-red-500' : ''}
+          id="shortName"
+          placeholder="Enter short name (optional)"
+          {...register("shortName")}
+          className={errors.shortName ? 'border-red-500' : ''}
         />
-        {errors.code && (
-          <p className="text-sm text-red-500">{errors.code.message}</p>
+        {errors.shortName && (
+          <p className="text-sm text-red-500">{errors.shortName.message}</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Enter description (optional)"
-          className={`resize-none ${errors.description ? 'border-red-500' : ''}`}
-          {...register("description")}
+        <Label htmlFor="degree">Degree</Label>
+        <Select
+          value={watch("degreeId")?.toString() || "none"}
+          onValueChange={(value) => setValue("degreeId", value === "none" ? null : parseInt(value))}
+        >
+          <SelectTrigger className={errors.degreeId ? 'border-red-500' : ''}>
+            <SelectValue placeholder="Select a degree" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">None</SelectItem>
+            {isLoadingDegrees ? (
+              <SelectItem value="loading" disabled>Loading degrees...</SelectItem>
+            ) : (
+              Array.isArray(degrees) ? degrees.map((degree) => (
+                <SelectItem key={degree.id} value={degree.id?.toString() || "0"}>
+                  {degree.name}
+                </SelectItem>
+              )) : (
+                <SelectItem value="error" disabled>Error loading degrees</SelectItem>
+              )
+            )}
+          </SelectContent>
+        </Select>
+        {errors.degreeId && (
+          <p className="text-sm text-red-500">{errors.degreeId.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="sequence">Sequence</Label>
+        <Input
+          id="sequence"
+          type="number"
+          placeholder="Enter sequence number"
+          {...register("sequence", { valueAsNumber: true })}
+          className={errors.sequence ? 'border-red-500' : ''}
         />
-        {errors.description && (
-          <p className="text-sm text-red-500">{errors.description.message}</p>
+        {errors.sequence && (
+          <p className="text-sm text-red-500">{errors.sequence.message}</p>
         )}
       </div>
 
       <div className="flex items-center space-x-2">
-        <Checkbox
-          id="isActive"
-          {...register("isActive")}
-          defaultChecked={!defaultValues.disabled}
+        <Controller
+          name="disabled"
+          control={control}
+          render={({ field }) => (
+            <Checkbox
+              id="disabled"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
+          )}
         />
-        <Label htmlFor="isActive">Active</Label>
+        <Label htmlFor="disabled">Disabled</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">

@@ -114,10 +114,9 @@ export const CoursesAndSubjectPage: React.FC = () => {
   const [newCourse, setNewCourse] = useState<Course>({
     name: "",
     shortName: "",
-    codePrefix: "",
-    universityCode: "",
+    sequence: 0,
+    disabled: false,
     degree: null,
-    programmeType: "HONOURS",
   });
 
   // Options for dropdowns
@@ -184,8 +183,6 @@ export const CoursesAndSubjectPage: React.FC = () => {
         setCourses(response.payload.map(course => ({
           ...course,
           shortName: course.shortName || '',
-          codePrefix: course.codePrefix || '',
-          universityCode: course.universityCode || '',
         }) as Course));
         setCourseError(""); // Clear any previous error when successful
       } else {
@@ -395,9 +392,8 @@ export const CoursesAndSubjectPage: React.FC = () => {
     setNewCourse({
       name: course.name,
       shortName: course.shortName || "",
-      codePrefix: course.codePrefix || "",
-      universityCode: course.universityCode || "",
-      programmeType: course.programmeType,
+      sequence: course.sequence,
+      disabled: course.disabled,
       degree: null,
     });
 
@@ -470,8 +466,10 @@ export const CoursesAndSubjectPage: React.FC = () => {
         setCourses(refreshResponse.payload.map(course => ({
           ...course,
           shortName: course.shortName || '',
-          codePrefix: course.codePrefix || '',
-          universityCode: course.universityCode || '',
+          sequence: course.sequence,
+          disabled: course.disabled,
+          degree: course.degree,
+
         }) as Course));
       }
 
@@ -479,10 +477,9 @@ export const CoursesAndSubjectPage: React.FC = () => {
       setNewCourse({
         name: "",
         shortName: "",
-        codePrefix: "",
-        universityCode: "",
+        sequence: 0,
+        disabled: false,
         degree: null,
-        programmeType: "HONOURS",
       });
       setIsAddCourseDialogOpen(false);
       setIsEditMode(false);
@@ -517,10 +514,11 @@ export const CoursesAndSubjectPage: React.FC = () => {
     setNewCourse({
       name: "",
       shortName: "",
-      codePrefix: "",
-      universityCode: "",
+      sequence: 0,
+      
+
+      disabled: false,
       degree: null,
-      programmeType: "HONOURS",
     });
   }, []);
 
@@ -641,7 +639,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
     if (!courses || !courses.length) return [] as string[];
 
     const programmes = courses
-      .map((course) => course?.programmeType)
+      .map((course) => course?.degree?.name)
       .filter((name) => typeof name === 'string');
     return [...new Set(programmes)].sort() as string[];
   }, [courses]);
@@ -656,10 +654,8 @@ export const CoursesAndSubjectPage: React.FC = () => {
         const searchTermLower = courseSearchQuery.toLowerCase();
         const nameMatch = (course.name || '').toLowerCase().includes(searchTermLower);
         const shortNameMatch = (course.shortName || '').toLowerCase().includes(searchTermLower);
-        const codePrefixMatch = (course.codePrefix || '').toLowerCase().includes(searchTermLower);
-        const universityCodeMatch = (course.universityCode || '').toLowerCase().includes(searchTermLower);
 
-        if (!nameMatch && !shortNameMatch && !codePrefixMatch && !universityCodeMatch) {
+        if (!nameMatch && !shortNameMatch) {
           return false;
         }
       }
@@ -669,7 +665,7 @@ export const CoursesAndSubjectPage: React.FC = () => {
       }
 
       // Filter by programme
-      if (courseProgrammeFilter !== "all" && course?.programmeType !== courseProgrammeFilter) {
+      if (courseProgrammeFilter !== "all" && course?.degree?.name !== courseProgrammeFilter) {
         return false;
       }
 

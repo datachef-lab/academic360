@@ -1,12 +1,12 @@
 export class ApiResponse extends Response {
   httpStatusCode: number;
   httpStatus: string;
-  payload: any;
+  payload: unknown;
   message: string;
   constructor(
     httpStatusCode: number,
     httpStatus: string,
-    payload: any,
+    payload: unknown,
     message: string = "SUCCESS",
   ) {
     super(message);

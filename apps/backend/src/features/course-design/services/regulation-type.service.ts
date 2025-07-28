@@ -1,47 +1,98 @@
-import { db } from "@/db";
-import { RegulationType, regulationTypeModel } from "../models/regulation-type.model";
+import { db } from "@/db/index.js";
+import { regulationTypeModel, RegulationType } from "@/features/course-design/models/regulation-type.model.js";
 import { eq } from "drizzle-orm";
-// import { insertRegulationTypeSchema } from "../models/regulation-type.model";
-import { z } from "zod";
+import * as XLSX from "xlsx";
+import fs from "fs";
 
-// Types
-// export type RegulationTypeData = z.infer<typeof insertRegulationTypeSchema>;
+export async function createRegulationType(data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) {
+    const [created] = await db.insert(regulationTypeModel).values(data).returning();
+    return created;
+}
 
-// Create a new regulationType
-export const createRegulationType = async (regulationTypeData: RegulationType) => {
-  // const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
-  const newRegulationType = await db.insert(regulationTypeModel).values(regulationTypeData).returning();
-  return newRegulationType[0];
-};
+export async function getRegulationTypeById(id: number) {
+    const [regulationType] = await db.select().from(regulationTypeModel).where(eq(regulationTypeModel.id, id));
+    return regulationType;
+}
 
-// Get all regulationTypes
-export const getAllRegulationTypes = async () => {
-  const allRegulationTypes = await db.select().from(regulationTypeModel);
-  return allRegulationTypes;
-};
+export async function getAllRegulationTypes() {
+    return db.select().from(regulationTypeModel);
+}
 
-// Get regulationType by ID
-export const getRegulationTypeById = async (id: string) => {
-  const regulationType = await db.select().from(regulationTypeModel).where(eq(regulationTypeModel.id, +id));
-  return regulationType.length > 0 ? regulationType[0] : null;
-};
+export async function updateRegulationType(id: number, data: Partial<RegulationType>) {
+    const { id: idObj, createdAt, updatedAt, ...props } = data;
+    const [updated] = await db.update(regulationTypeModel).set(props).where(eq(regulationTypeModel.id, id)).returning();
+    return updated;
+}
 
-// Update regulationType
-export const updateRegulationType = async (id: string, regulationTypeData: RegulationType) => {
-  // const validatedData = insertRegulationTypeSchema.parse(regulationTypeData);
-  const updatedRegulationType = await db
-    .update(regulationTypeModel)
-    .set(regulationTypeData)
-    .where(eq(regulationTypeModel.id, +id))
-    .returning();
-  return updatedRegulationType.length > 0 ? updatedRegulationType[0] : null;
-};
+export async function deleteRegulationType(id: number) {
+    const [deleted] = await db.delete(regulationTypeModel).where(eq(regulationTypeModel.id, id)).returning();
+    return deleted;
+}
 
-// Delete regulationType
-export const deleteRegulationType = async (id: string) => {
-  const deletedRegulationType = await db
-    .delete(regulationTypeModel)
-    .where(eq(regulationTypeModel.id, +id))
-    .returning();
-  return deletedRegulationType.length > 0 ? deletedRegulationType[0] : null;
+export interface BulkUploadResult {
+  success: RegulationType[];
+  errors: Array<{
+    row: number;
+    data: unknown[];
+    error: string;
+  }>;
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+}
+
+export const bulkUploadRegulationTypes = async (filePath: string): Promise<BulkUploadResult> => {
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+  const rowsArr = Array.isArray(rows) ? rows : [];
+  const [header, ...dataRows] = rowsArr;
+
+  if (!Array.isArray(dataRows)) return {
+    success: [],
+    errors: [],
+    summary: { total: 0, successful: 0, failed: 0 }
+  };
+
+  const rowsArray: unknown[][] = dataRows as unknown[][];
+  const success: RegulationType[] = [];
+  const errors: BulkUploadResult["errors"] = [];
+
+  for (let i = 0; i < rowsArray.length; i++) {
+    const row = rowsArray[i];
+    const [name, shortName, sequence, disabled] = row;
+    if (!name || typeof name !== "string" || name.trim().length < 2) {
+      errors.push({ row: i + 2, data: row, error: "Name is required and must be at least 2 characters." });
+      continue;
+    }
+    try {
+      const created = await db.insert(regulationTypeModel).values({
+        name: name.trim(),
+        shortName: shortName ? String(shortName).trim() : null,
+        sequence: sequence !== undefined && sequence !== null && sequence !== '' ? Number(sequence) : 0,
+        disabled: disabled === true || disabled === "true" || disabled === 1 || disabled === "1"
+      }).returning();
+      success.push(created[0]);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      errors.push({ row: i + 2, data: row, error: errorMessage });
+    }
+  }
+
+  // Clean up file
+  fs.unlinkSync(filePath);
+
+  return {
+    success,
+    errors,
+    summary: {
+      total: dataRows.length,
+      successful: success.length,
+      failed: errors.length,
+    },
+  };
 };

@@ -2,9 +2,9 @@ import { db } from "@/db/index.js";
 import { topicModel, createTopicSchema, Topic } from "@/features/course-design/models/topic.model.js";
 import { eq } from "drizzle-orm";
 
-export async function createTopic(data: Omit<Topic, 'id' | 'createdAt' | 'updatedAt'>) {
-    const validated = createTopicSchema.parse(data);
-    const [created] = await db.insert(topicModel).values(validated).returning();
+export async function createTopic(data: Topic) {
+    const { id, createdAt, updatedAt, ...props } = data;
+    const [created] = await db.insert(topicModel).values(props).returning();
     return created;
 }
 
@@ -18,9 +18,8 @@ export async function getAllTopics() {
 }
 
 export async function updateTopic(id: number, data: Partial<Topic>) {
-    const { createdAt, updatedAt, ...rest } = data;
-    const validated = createTopicSchema.partial().parse(rest);
-    const [updated] = await db.update(topicModel).set(validated).where(eq(topicModel.id, id)).returning();
+    const { id: idObj, createdAt, updatedAt, ...props } = data;
+    const [updated] = await db.update(topicModel).set(props).where(eq(topicModel.id, id)).returning();
     return updated;
 }
 

@@ -16,7 +16,10 @@ export const getTopicByIdHandler = async (req: Request, res: Response, next: Nex
     try {
         const id = Number(req.query.id || req.params.id);
         const topic = await getTopicById(id);
-        if (!topic) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Topic with ID ${id} not found`));
+        if (!topic) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Topic with ID ${id} not found`));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "SUCCESS", topic, "Topic fetched successfully"));
     } catch (error) {
         handleError(error, res, next);
@@ -36,7 +39,10 @@ export const updateTopicHandler = async (req: Request, res: Response, next: Next
     try {
         const id = Number(req.query.id || req.params.id);
         const updated = await updateTopic(id, req.body);
-        if (!updated) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+        if (!updated) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "UPDATED", updated, "Topic updated successfully"));
     } catch (error) {
         handleError(error, res, next);
@@ -47,7 +53,10 @@ export const deleteTopicHandler = async (req: Request, res: Response, next: Next
     try {
         const id = Number(req.query.id || req.params.id);
         const deleted = await deleteTopic(id);
-        if (!deleted) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+        if (!deleted) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
+            return;
+        }
         res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Topic deleted successfully"));
     } catch (error) {
         handleError(error, res, next);

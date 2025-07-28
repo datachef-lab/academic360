@@ -14,7 +14,7 @@ router.get("/query", (req, res, next) => {
         getAllTopicsHandler(req, res, next);
     }
 });
-// router.put("/query", updateTopicHandler);
-// router.delete("/query", deleteTopicHandler);
+router.put("/query", updateTopicHandler);
+router.delete("/query", deleteTopicHandler);
 
 export default router; 

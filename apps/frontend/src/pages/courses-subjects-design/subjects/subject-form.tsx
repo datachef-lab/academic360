@@ -1,15 +1,18 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Subject } from "./columns";
+import { Subject } from "@/types/course-design";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const subjectSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  code: z.string().min(1, "Code is required"),
-  description: z.string().optional().nullable(),
-  isActive: z.boolean().default(true),
+  code: z.string().nullable().optional(),
+  sequence: z.number().nullable().optional(),
+  disabled: z.boolean().default(false),
 });
 
 type SubjectFormValues = z.infer<typeof subjectSchema>;
@@ -34,25 +37,31 @@ export function SubjectForm({
     handleSubmit,
     reset,
     formState: { errors },
+    control,
   } = useForm<SubjectFormValues>({
     resolver: zodResolver(subjectSchema),
     defaultValues: {
       name: initialData?.name || "",
       code: initialData?.code || "",
-      description: initialData?.description || "",
-      isActive: initialData?.isActive ?? true,
+      sequence: initialData?.sequence || null,
+      disabled: initialData?.disabled ?? false,
     },
   });
 
   useEffect(() => {
     if (initialData) {
-      reset(initialData);
+      reset({
+        name: initialData.name || "",
+        code: initialData.code || "",
+        sequence: initialData.sequence || null,
+        disabled: initialData.disabled ?? false,
+      });
     } else {
       reset({
         name: "",
         code: "",
-        description: "",
-        isActive: true,
+        sequence: null,
+        disabled: false,
       });
     }
   }, [initialData, reset]);
@@ -61,18 +70,13 @@ export function SubjectForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
         <div>
-          <label
-            htmlFor="name"
-            className="block text-sm font-medium text-gray-700"
-          >
+          <Label htmlFor="name">
             Name <span className="text-red-500">*</span>
-          </label>
-          <input
+          </Label>
+          <Input
             id="name"
             type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.name ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+            className={errors.name ? "border-red-500" : ""}
             {...register("name")}
             disabled={isLoading}
           />
@@ -82,20 +86,15 @@ export function SubjectForm({
         </div>
 
         <div>
-          <label
-            htmlFor="code"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Code <span className="text-red-500">*</span>
-          </label>
-          <input
+          <Label htmlFor="code">
+            Code
+          </Label>
+          <Input
             id="code"
             type="text"
-            className={`mt-1 block w-full rounded-md border ${
-              errors.code ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
+            className={errors.code ? "border-red-500" : ""}
             {...register("code")}
-            disabled={isLoading || isEdit}
+            disabled={isLoading}
           />
           {errors.code && (
             <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
@@ -103,42 +102,37 @@ export function SubjectForm({
         </div>
 
         <div>
-          <label
-            htmlFor="description"
-            className="block text-sm font-medium text-gray-700"
-          >
-            Description
-          </label>
-          <textarea
-            id="description"
-            rows={3}
-            className={`mt-1 block w-full rounded-md border ${
-              errors.description ? "border-red-500" : "border-gray-300"
-            } p-2 shadow-sm focus:border-blue-500 focus:ring-blue-500`}
-            {...register("description")}
+          <Label htmlFor="sequence">
+            Sequence
+          </Label>
+          <Input
+            id="sequence"
+            type="number"
+            className={errors.sequence ? "border-red-500" : ""}
+            {...register("sequence", { valueAsNumber: true })}
             disabled={isLoading}
           />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
-            </p>
+          {errors.sequence && (
+            <p className="mt-1 text-sm text-red-600">{errors.sequence.message}</p>
           )}
         </div>
 
         <div className="flex items-center space-x-2">
-          <input
-            id="isActive"
-            type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            {...register("isActive")}
-            disabled={isLoading}
+          <Controller
+            name="disabled"
+            control={control}
+            render={({ field: { value, onChange } }) => (
+              <Checkbox
+                id="disabled"
+                checked={value}
+                onCheckedChange={onChange}
+                disabled={isLoading}
+              />
+            )}
           />
-          <label
-            htmlFor="isActive"
-            className="text-sm font-medium text-gray-700"
-          >
-            Active
-          </label>
+          <Label htmlFor="disabled">
+            Disabled
+          </Label>
         </div>
       </div>
 

@@ -14,7 +14,7 @@ router.get("/query", (req, res, next) => {
         getAllPapersHandler(req, res, next);
     }
 });
-// router.put("/query", updatePaperHandler);
-// router.delete("/query", deletePaperHandler);
+router.put("/query", updatePaperHandler);
+router.delete("/query", deletePaperHandler);
 
 export default router; 

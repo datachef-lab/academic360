@@ -1,0 +1,1 @@
+ALTER TABLE "affiliation_types" ALTER COLUMN "sequence" DROP NOT NULL;

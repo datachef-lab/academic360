@@ -4,9 +4,16 @@ import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
 import { bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
+import { BloodGroupType } from "@/types/resources/blood-group.js";
+
+interface DateObject {
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+    [key: string]: unknown;
+}
 
 // Helper function to ensure we have proper Date objects
-const ensureDateObjects = (obj: any): any => {
+const ensureDateObjects = (obj: DateObject): DateObject => {
     if (!obj) return obj;
     
     // Create a new object with the same properties
@@ -39,11 +46,16 @@ export async function addHealth(health: HealthType): Promise<HealthType | null> 
             sanitizedProps.updatedAt = new Date();
         }
 
+        // Prepare insert data without bloodGroupId
+        const insertData = {
+            ...sanitizedProps,
+            createdAt: sanitizedProps.createdAt as Date,
+            updatedAt: sanitizedProps.updatedAt as Date,
+            bloodGroupId: bloodGroup?.id || null
+        };
+
         // Insert the new health record
-        const [newHealth] = await db.insert(healthModel).values({ 
-            ...sanitizedProps, 
-            bloodGroupId: bloodGroup?.id 
-        }).returning();
+        const [newHealth] = await db.insert(healthModel).values(insertData).returning();
 
         if (!newHealth) {
             return null;
@@ -68,6 +80,8 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
                 bloodGroup: {
                     id: bloodGroupModel.id,
                     type: bloodGroupModel.type,
+                    sequence: bloodGroupModel.sequence,
+                    disabled: bloodGroupModel.disabled,
                     createdAt: bloodGroupModel.createdAt,
                     updatedAt: bloodGroupModel.updatedAt
                 }
@@ -86,13 +100,24 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
         const { bloodGroupId, ...healthProps } = health;
         
         // Convert string dates to Date objects in bloodGroup
-        let sanitizedBloodGroup = null;
+        let sanitizedBloodGroup: BloodGroupType | null = null;
         if (bloodGroup?.id) {
-            sanitizedBloodGroup = ensureDateObjects(bloodGroup);
+            const sanitized = ensureDateObjects(bloodGroup);
+            sanitizedBloodGroup = {
+                id: sanitized.id as number,
+                type: sanitized.type as string,
+                sequence: sanitized.sequence as number | null,
+                disabled: sanitized.disabled as boolean,
+                createdAt: sanitized.createdAt as Date,
+                updatedAt: sanitized.updatedAt as Date
+            };
         }
         
+        const sanitizedHealthProps = ensureDateObjects(healthProps);
         const formattedHealth: HealthType = {
-            ...ensureDateObjects(healthProps),
+            ...sanitizedHealthProps,
+            createdAt: sanitizedHealthProps.createdAt as Date,
+            updatedAt: sanitizedHealthProps.updatedAt as Date,
             bloodGroup: sanitizedBloodGroup
         };
         
@@ -114,6 +139,8 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
                 bloodGroup: {
                     id: bloodGroupModel.id,
                     type: bloodGroupModel.type,
+                    sequence: bloodGroupModel.sequence,
+                    disabled: bloodGroupModel.disabled,
                     createdAt: bloodGroupModel.createdAt,
                     updatedAt: bloodGroupModel.updatedAt
                 }
@@ -132,13 +159,24 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
         const { bloodGroupId, ...healthProps } = health;
         
         // Convert string dates to Date objects in bloodGroup
-        let sanitizedBloodGroup = null;
+        let sanitizedBloodGroup: BloodGroupType | null = null;
         if (bloodGroup?.id) {
-            sanitizedBloodGroup = ensureDateObjects(bloodGroup);
+            const sanitized = ensureDateObjects(bloodGroup);
+            sanitizedBloodGroup = {
+                id: sanitized.id as number,
+                type: sanitized.type as string,
+                sequence: sanitized.sequence as number | null,
+                disabled: sanitized.disabled as boolean,
+                createdAt: sanitized.createdAt as Date,
+                updatedAt: sanitized.updatedAt as Date
+            };
         }
         
+        const sanitizedHealthProps = ensureDateObjects(healthProps);
         const formattedHealth: HealthType = {
-            ...ensureDateObjects(healthProps),
+            ...sanitizedHealthProps,
+            createdAt: sanitizedHealthProps.createdAt as Date,
+            updatedAt: sanitizedHealthProps.updatedAt as Date,
             bloodGroup: sanitizedBloodGroup
         };
         
@@ -200,12 +238,28 @@ export async function healthResponseFormat(health: Health): Promise<HealthType |
         // Ensure we have proper Date objects
         const sanitizedProps = ensureDateObjects(props);
 
-        const formattedHealth: HealthType = { ...sanitizedProps };
+        const formattedHealth: HealthType = { 
+            ...sanitizedProps,
+            createdAt: sanitizedProps.createdAt as Date,
+            updatedAt: sanitizedProps.updatedAt as Date
+        };
 
         // Always include bloodGroup in the response, even if null
         if (bloodGroupId) {
             const bloodGroup = await findBloodGroupById(bloodGroupId);
-            formattedHealth.bloodGroup = bloodGroup ? ensureDateObjects(bloodGroup) : null;
+            if (bloodGroup) {
+                const sanitized = ensureDateObjects(bloodGroup);
+                formattedHealth.bloodGroup = {
+                    id: sanitized.id as number,
+                    type: sanitized.type as string,
+                    sequence: sanitized.sequence as number | null,
+                    disabled: sanitized.disabled as boolean,
+                    createdAt: sanitized.createdAt as Date,
+                    updatedAt: sanitized.updatedAt as Date
+                };
+            } else {
+                formattedHealth.bloodGroup = null;
+            }
         } else {
             formattedHealth.bloodGroup = null;
         }
