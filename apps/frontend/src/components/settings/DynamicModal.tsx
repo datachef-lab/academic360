@@ -31,7 +31,7 @@ import { Degree, DegreeLevel } from "@/types/resources/degree.types";
 import { createBoardUniversity, updateBoardUniversity } from "@/services/board-university.service";
 import { createInstitution, updateInstitution } from "@/services/institution.service";
 import { createCategory, updateCategory } from "@/services/categories.service";
-// import { createDegree, updateDegree } from "@/services/degree.service";
+import {  findAllDegrees } from "@/services/degree.service";
 import { createReligion, updateReligion } from "@/services/religion.service";
 import { createLanguageMedium, updateLanguageMedium } from "@/services/language-medium.service";
 import { createBloodGroup, updateBloodGroup } from "@/services/blood-group.service";
@@ -351,8 +351,8 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
     queryKey: ['degrees'],
     queryFn: async () => {
       try {
-        // const result = await getAllDegrees();
-        return  [] as Degree[];
+        const result = await findAllDegrees();
+        return result || [];
       } catch (error) {
         console.error('Failed to fetch degrees:', error);
         return [] as Degree[];
