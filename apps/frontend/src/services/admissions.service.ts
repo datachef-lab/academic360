@@ -12,16 +12,19 @@ export interface AdmissionUpdatePayload {
 
 // API helpers using axios
 export async function fetchAdmissions() {
-    const res = await axiosInstance.get("/api/admissions/");
+    const res = await axiosInstance.get("/api/admissions");
+    console.log('fetchAdmissions response:', res.data);
     return res.data.data;
   }
 export async function fetchAdmissionStats() {
     const res = await axiosInstance.get("/api/admissions/stats");
+    console.log('fetchAdmissionStats response:', res.data);
     return res.data.data;
   }
 
 export async function fetchStatsSummary() {
   const res = await axiosInstance.get("/api/admissions/stats-summary");
+  console.log('fetchStatsSummary response:', res.data);
   return res.data.data;
 }
 
@@ -31,7 +34,7 @@ export async function fetchAdmissionSummaries() {
 }
 
 export async function createAdmission(admission: Admission) {
-  const res = await axiosInstance.post("/api/admissions/", admission);
+  const res = await axiosInstance.post("/api/admissions", admission);
   return res.data;
 }
 

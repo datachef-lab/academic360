@@ -1,56 +1,34 @@
 import React, { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  
   Users,
   CheckCircle,
   FileText,
   XCircle,
   CreditCard,
-  
   IndianRupee,
   HomeIcon,
-  
-  
   BookCheck,
   BookOpen,
   DollarSign,
-  
   Clock,
-  
   FileCog,
   IdCard,
   Loader2,
 } from "lucide-react";
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// import { ApplicationFormProvider } from "../components/ApplicationFormProvider";
 import type { Admission, ApplicationFormDto } from "@/types/admissions";
-import type { AdmissionSummary } from "../types";
-// import AdmissionForm from ".components/AdmissionForm";
-import {
-  fetchAdmissionSummaries,
-  findAdmissionById,
-} from "@/services/admissions.service";
-import axios from "axios";
+// import type { AdmissionSummary } from "../types";
 import MasterLayout, { LinkType } from "@/components/layouts/MasterLayout";
 import { cn } from "@/lib/utils";
 
 const defaultLinks: LinkType[] = [
   { icon: HomeIcon, title: "Home", url: "" },
-  ];
+];
 
 const configurationLinks: LinkType[] = [
-  // { icon: GraduationCap, title: "Mapped Courses", url: "mapped-courses" },
-  // { icon: Landmark, title: "Seat Matrix", url: "seat-matrix" },
   { icon: CheckCircle, title: "Eligibility Rules", url: "eligibility-rules" },
   { icon: BookCheck, title: "Merit Criteria", url: "merit-criteria" },
   { icon: DollarSign, title: "Fee Slab Mapping", url: "fee-slab-mapping" },
-  // { icon: ClipboardList, title: "Form Settings", url: "form-settings" },
-  // { icon: Clock, title: "Important Dates", url: "important-dates" },
 ];
 
 const workflowLinks: LinkType[] = [
@@ -70,37 +48,26 @@ function formatDateTime(dateString?: string) {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-    day: '2-digit',
     month: 'short',
-    year: 'numeric',
+    day: 'numeric',
   });
 }
 
-// const workflowSteps = [
-//   { title: "Applications", status: "completed" },
-//   { title: "Eligibility Filter", status: "completed" },
-//   { title: "Generate Merit", status: "in_progress" },
-//   { title: "Fee Payment Review", status: "not_started" },
-//   { title: "Document Verification", status: "not_started" },
-//   { title: "ID Card Generator", status: "not_started" },
-//   { title: "Pending", status: "not_started" },
-// ];
-
 const content = (
-  <div className="flex flex-col gap-4 py-3">
-    <div>
+  <div className="flex flex-col justify-between h-full  gap-4 py-3">
+    <div className="">
       <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm">
         {defaultLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5" />}>{link.title}</NavItem>
+          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>{link.title}</NavItem>
         ))}
       </ul>
     </div>
     {/* Admission Workflow Section */}
-    <div>
+    <div className="">
       <div className="font-semibold text-gray-700 mb-2 flex items-center">
         <span>📄</span> Admission Workflow
       </div>
-      <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm">
+      <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm space-y-1">
         {workflowLinks.map((link) => (
           <NavItem
             key={link.title}
@@ -112,22 +79,24 @@ const content = (
             }
             isActive={link.status === "in_progress"}
           >
-            <span
-              className={
-                link.status === "completed"
-                  ? "text-green-700 font-semibold"
-                  : link.status === "in_progress"
-                  ? "text-blue-700 font-semibold"
-                  : "text-gray-400"
-              }
-            >
-              {link.title}
-            </span>
-            {link.status === "completed" && link.completedAt && (
-              <span className="block text-xs text-gray-500 ml-7">
-                {formatDateTime(link.completedAt)}
+            <div className="flex flex-col w-full ">
+              <span
+                className={
+                  link.status === "completed"
+                    ? "text-green-700 font-semibold"
+                    : link.status === "in_progress"
+                    ? "text-blue-700 font-semibold"
+                    : "text-gray-400"
+                }
+              >
+                {link.title}
               </span>
-            )}
+              {link.status === "completed" && link.completedAt && (
+                <p className="text-xs text-right w-full text-gray-500 ml-2">
+                  {formatDateTime(link.completedAt)}
+                </p>
+              )}
+            </div>
           </NavItem>
         ))}
       </ul>
@@ -137,13 +106,12 @@ const content = (
       <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
         <span>🛠️</span> Configurations
       </div>
-      <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm">
+      <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm space-y-1">
         {configurationLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5" />}>{link.title}</NavItem>
+          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>{link.title}</NavItem>
         ))}
       </ul>
     </div>
-    
   </div>
 );
 
@@ -157,192 +125,133 @@ interface ApplicationFormStats {
   paymentDue: number;
 }
 
+// Dummy data
+const dummyAdmission: Admission = {
+  id: 1,
+  academicYear: {
+    id: 1,
+    year: "2024",
+    isCurrentYear: true,
+    session: {
+      id: 1,
+      name: "2024-25",
+      from: new Date("2024-06-01"),
+      to: new Date("2025-05-31"),
+      isCurrentSession: true,
+      codePrefix: "2024",
+      sequence: 1,
+      disabled: false,
+      createdAt: new Date("2024-01-15"),
+      updatedAt: new Date("2024-07-10"),
+    },
+    creaytedAt: new Date("2024-01-15"),
+    updatedAt: new Date("2024-07-10"),
+  },
+  admissionCode: "ADM2024",
+  isClosed: false,
+  startDate: new Date("2024-06-01"),
+  lastDate: new Date("2024-08-31"),
+  isArchived: false,
+  createdAt: new Date("2024-01-15"),
+  updatedAt: new Date("2024-07-10"),
+  remarks: "Admission process for the academic year 2024-25",
+  courses: [],
+};
+
+const dummyStats: ApplicationFormStats = {
+  totalApplications: 120,
+  paymentsDone: 75,
+  drafts: 30,
+  submitted: 100,
+  approved: 80,
+  rejected: 20,
+  paymentDue: 25,
+};
+
+const dummyApplications: ApplicationFormDto[] = [
+  {
+    id: 1,
+    admissionId: 1,
+    applicationNumber: "APP001",
+    formStatus: "SUBMITTED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-01"),
+    updatedAt: new Date("2024-07-05"),
+    remarks: "Application submitted successfully",
+    generalInfo: null,
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 2,
+    admissionId: 1,
+    applicationNumber: "APP002",
+    formStatus: "APPROVED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-02"),
+    updatedAt: new Date("2024-07-06"),
+    remarks: "Application approved",
+    generalInfo: null,
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 3,
+    admissionId: 1,
+    applicationNumber: "APP003",
+    formStatus: "DRAFT",
+    admissionStep: "GENERAL_INFORMATION",
+    createdAt: new Date("2024-07-03"),
+    updatedAt: new Date("2024-07-03"),
+    remarks: "Draft application",
+    generalInfo: null,
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 1,
+  },
+];
+
 export default function AdmissionDetailsPage() {
   const { year } = useParams<{ year: string }>();
   const [admission, setAdmission] = useState<Admission | null>(null);
-  const defaultStats: ApplicationFormStats = {
-    totalApplications: 0,
-    paymentsDone: 0,
-    drafts: 0,
-    submitted: 0,
-    approved: 0,
-    rejected: 0,
-    paymentDue: 0,
-  };
-  const setStats = useState<ApplicationFormStats>(defaultStats)[1];
-  const setApplications = useState<ApplicationFormDto[]>([])[1];
-  const [isLoading, setIsLoading] = useState(true); 
-  const [searchTerm] = useState("");
-  const [currentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  const setTotalItems = useState(0)[1];
-  // const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  // const [selectAll, setSelectAll] = useState(false);
-  // const setIsFilterOpen = useState(false)[1];
-  // const [isAddApplicationOpen, setIsAddApplicationOpen] = useState(false);
+  const [stats, setStats] = useState<ApplicationFormStats>(dummyStats);
+  const setApplications = useState<ApplicationFormDto[]>(dummyApplications)[1];
+  const [isLoading, setIsLoading] = useState(false);
+  // const [searchTerm] = useState("");
+  // const [currentPage] = useState(1);
+  // const [itemsPerPage] = useState(10);
+  const setTotalItems = useState(120)[1];
 
-  const [filters] = useState({
-    category: "",
-    religion: "",
-    annualIncome: "",
-    gender: "",
-    isGujarati: "",
-    formStatus: "",
-    course: "",
-    boardUniversity: "",
-  });
-
-  // const setTempFilters = useState(filters)[1];
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      let admissionData = null;
-      if (year) {
-        const summaries: AdmissionSummary[] = await fetchAdmissionSummaries();
-        const found = summaries.find(
-          (a) => String(a.admissionYear) === String(year)
-        );
-        if (found && found.id) {
-          const admissionId = Number(found.id);
-          admissionData = await findAdmissionById(admissionId);
-          setAdmission(admissionData.payload);
-          // Build query params for pagination, search, and filters
-          const params = {
-            page: currentPage,
-            size: itemsPerPage,
-            search: searchTerm,
-            ...filters,
-          };
-          const res = await axios.get(`/api/admissions/${year}/applications`, { params });
-          const data = res.data;
-          if (data && data.status === 'SUCCESS' && data.data) {
-            setApplications(data.data.applications || []);
-            setStats({
-              totalApplications: data.data.totalItems ?? 0,
-              paymentsDone: data.data.stats?.paymentsDone ?? 0,
-              drafts: data.data.stats?.drafts ?? 0,
-              submitted: data.data.stats?.submitted ?? 0,
-              approved: data.data.stats?.approved ?? 0,
-              rejected: data.data.stats?.rejected ?? 0,
-              paymentDue: data.data.stats?.paymentDue ?? 0,
-            });
-            setTotalItems(data.data.totalItems ?? 0);
-          } else {
-            setApplications([]);
-            setStats(defaultStats);
-            setTotalItems(0);
-          }
-        } else {
-          setAdmission(null);
-          setApplications([]);
-          setStats(defaultStats);
-          setTotalItems(0);
-        }
-      }
-    } catch (err) {
-      setAdmission(null);
-      setApplications([]);
-      setStats(defaultStats);
-      setTotalItems(0);
-      console.error(err);
-    }
-    setIsLoading(false);
-  };
+  // const [filters] = useState({
+  //   category: "",
+  //   religion: "",
+  //   annualIncome: "",
+  //   gender: "",
+  //   isGujarati: "",
+  //   formStatus: "",
+  //   course: "",
+  //   boardUniversity: "",
+  // });
 
   useEffect(() => {
-    fetchData();
-  }, [year, currentPage, itemsPerPage, searchTerm, filters]);
-
-  // const handleFilterChange = (field: string, value: string) => {
-  //   setTempFilters((prev) => ({ ...prev, [field]: value === "all" ? "" : value }));
-  // };
-
-  // const applyFilters = () => {
-  //   setFilters(tempFilters);
-  //   setCurrentPage(1);
-  //   fetchData();
-  //   setIsFilterOpen(false);
-  // };
-
-  // const clearFilters = () => {
-  //   const emptyFilters = {
-  //     category: "",
-  //     religion: "",
-  //     annualIncome: "",
-  //     gender: "",
-  //     isGujarati: "",
-  //     formStatus: "",
-  //     course: "",
-  //     boardUniversity: "",
-  //   };
-  //   setTempFilters(emptyFilters);
-  //   setFilters(emptyFilters);
-  //   setCurrentPage(1);
-  // };
-
-  // const handlePageChange = (page: number) => {
-  //   setCurrentPage(page);
-  // };
-
-  // const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-  // const getPageNumbers = () => {
-  //   const pages = [];
-  //   const maxVisiblePages = 5;
-
-  //   if (totalPages <= maxVisiblePages) {
-  //     for (let i = 1; i <= totalPages; i++) pages.push(i);
-  //   } else {
-  //     if (currentPage <= 3) {
-  //       for (let i = 1; i <= 4; i++) pages.push(i);
-  //       pages.push("...");
-  //       pages.push(totalPages);
-  //     } else if (currentPage >= totalPages - 2) {
-  //       pages.push(1);
-  //       pages.push("...");
-  //       for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-  //     } else {
-  //       pages.push(1);
-  //       pages.push("...");
-  //       for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-  //       pages.push("...");
-  //       pages.push(totalPages);
-  //     }
-  //   }
-  //   return pages;
-  // };
-
-  // const handleRowSelect = (id: number | undefined) => {
-  //   if (typeof id !== 'number') return;
-  //   setSelectedRows((prev) => (prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]));
-  // };
-
-  // const handleSelectAll = () => {
-  //   if (selectAll) {
-  //     setSelectedRows([]);
-  //   } else {
-  //     setSelectedRows(applications.map((app) => (app as ApplicationFormDto).id).filter((id): id is number => typeof id === 'number'));
-  //   }
-  //   setSelectAll(!selectAll);
-  // };
-
-  // const handleBulkAction = async (action: string) => {
-  //   if (selectedRows.length === 0) {
-  //     alert("Please select at least one application");
-  //     return;
-  //   }
-  //   console.log(`Performing ${action} on`, selectedRows);
-  //   await new Promise((resolve) => setTimeout(resolve, 1000));
-  //   alert(`Successfully ${action.toLowerCase()}ed selected applications`);
-  //   setSelectedRows([]);
-  //   setSelectAll(false);
-  //   fetchData();
-  // };
-
-  // const getActiveFilterCount = () => {
-  //   return Object.values(filters).filter((value) => value !== "" && value !== "all").length;
-  // };
+    // Simulate loading
+    setIsLoading(true);
+    setTimeout(() => {
+      setAdmission(dummyAdmission);
+      setStats(dummyStats);
+      setApplications(dummyApplications);
+      setTotalItems(120);
+      setIsLoading(false);
+    }, 500);
+  }, [year]);
 
   if (isLoading) {
     return (
@@ -360,29 +269,21 @@ export default function AdmissionDetailsPage() {
     );
   }
 
-  // const formStatusOptions = ["DRAFT", "PAYMENT_DUE", "PAYMENT_SUCCESS", "SUBMITTED", "APPROVED", "REJECTED"];
-  // const genderOptions = ["MALE", "FEMALE", "TRANSGENDER"];
-  // const categoryOptions = ["General", "OBC", "SC", "ST"];
-  // const religionOptions = ["Hinduism", "Muslim", "Christian", "Sikh"];
-  // const annualIncomeOptions = ["Below 2 LPA", "2-5 LPA", "5-10 LPA", "Above 10 LPA"];
-  // const courseOptions = ["B.Tech", "M.Tech", "MBA", "BBA", "BCA"];
-  // const boardUniversityOptions = ["CBSE", "ICSE", "State Board", "Gujarat University", "Other"];
-
   return (
     <MasterLayout content={content}>
       <div className="min-h-screen flex justify-center pb-8">
         <div className="rounded-2xl p-3 w-full max-w-6xl">
           {/* Header */}
-          <h1 className="text-3xl font-bold mb-8">Admission Dashboard – 2024</h1>
+          <h1 className="text-3xl font-bold mb-8">Admission Dashboard - {year}</h1>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-6 gap-4 mb-8">
-            <StatCard label="Total Forms" value={120} bgColor="bg-blue-50" textColor="text-blue-700" icon={null} />
-            <StatCard label="Submitted" value={100} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
-            <StatCard label="Approved" value={80} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
-            <StatCard label="Rejected" value={20} bgColor="bg-red-50" textColor="text-red-700" icon={<XCircle className="inline w-5 h-5 ml-1 text-red-700" />} />
-            <StatCard label="Payments Done" value={75} bgColor="bg-teal-50" textColor="text-teal-700" icon={<IndianRupee className="inline w-5 h-5 ml-1 text-teal-700" />} />
-            <StatCard label="Drafts" value={30} bgColor="bg-yellow-50" textColor="text-yellow-700" icon={<FileText className="inline w-5 h-5 ml-1 text-yellow-700" />} />
+            <StatCard label="Total Forms" value={stats.totalApplications} bgColor="bg-blue-50" textColor="text-blue-700" icon={null} />
+            <StatCard label="Submitted" value={stats.submitted} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
+            <StatCard label="Approved" value={stats.approved} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
+            <StatCard label="Rejected" value={stats.rejected} bgColor="bg-red-50" textColor="text-red-700" icon={<XCircle className="inline w-5 h-5 ml-1 text-red-700" />} />
+            <StatCard label="Payments Done" value={stats.paymentsDone} bgColor="bg-teal-50" textColor="text-teal-700" icon={<IndianRupee className="inline w-5 h-5 ml-1 text-teal-700" />} />
+            <StatCard label="Drafts" value={stats.drafts} bgColor="bg-yellow-50" textColor="text-yellow-700" icon={<FileText className="inline w-5 h-5 ml-1 text-yellow-700" />} />
           </div>
 
           {/* Main Grid */}
@@ -392,56 +293,93 @@ export default function AdmissionDetailsPage() {
               {/* Applications by Course Table */}
               <div className="bg-white rounded-xl border p-4">
                 <h2 className="font-semibold mb-2">Applications by Course</h2>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-gray-500">
-                      <th className="text-left">Course</th>
-                      <th>Applicants</th>
-                      <th>Paid</th>
-                      <th>Approved</th>
-                      <th>Download</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { course: "B.Sc (Physics)", applicants: 40, paid: 28, approved: 30 },
-                      { course: "B.A. English", applicants: 35, paid: 20, approved: 25 },
-                      { course: "B.Com", applicants: 30, paid: 18, approved: 22 },
-                      { course: "BBA", applicants: 15, paid: 8, approved: 10 },
-                    ].map((row) => (
-                      <tr key={row.course} className="border-t">
-                        <td>{row.course}</td>
-                        <td className="text-center">{row.applicants}</td>
-                        <td className="text-center">{row.paid}</td>
-                        <td className="text-center">{row.approved}</td>
-                        <td className="text-center">
-                          <button className="text-blue-600 underline">Download</button>
-                        </td>
+                <div className="max-h-96 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-white z-10">
+                      <tr className="text-gray-500">
+                        <th className="text-left py-2">Course</th>
+                        <th>Applicants</th>
+                        <th>Paid</th>
+                        <th>Approved</th>
+                        <th>Download</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {[
+                        { course: "B.Sc (Physics)", applicants: 40, paid: 28, approved: 30 },
+                        { course: "B.A. English", applicants: 35, paid: 20, approved: 25 },
+                        { course: "B.Com", applicants: 30, paid: 18, approved: 22 },
+                        { course: "BBA", applicants: 15, paid: 8, approved: 10 },
+                        { course: "B.Sc (Chemistry)", applicants: 25, paid: 15, approved: 18 },
+                        { course: "B.Sc (Mathematics)", applicants: 20, paid: 12, approved: 15 },
+                        { course: "B.A. History", applicants: 18, paid: 10, approved: 12 },
+                        { course: "B.A. Political Science", applicants: 22, paid: 14, approved: 16 },
+                        { course: "B.Sc (Biology)", applicants: 28, paid: 18, approved: 20 },
+                        { course: "B.A. Economics", applicants: 32, paid: 20, approved: 25 },
+                        { course: "B.Sc (Computer Science)", applicants: 45, paid: 30, approved: 35 },
+                        { course: "B.A. Sociology", applicants: 15, paid: 8, approved: 10 },
+                        { course: "B.Sc (Statistics)", applicants: 12, paid: 6, approved: 8 },
+                        { course: "B.A. Geography", applicants: 10, paid: 5, approved: 7 },
+                        { course: "B.Sc (Environmental Science)", applicants: 18, paid: 10, approved: 12 },
+                        { course: "B.A. Psychology", applicants: 25, paid: 15, approved: 18 },
+                        { course: "B.Sc (Microbiology)", applicants: 20, paid: 12, approved: 15 },
+                        { course: "B.A. Philosophy", applicants: 8, paid: 4, approved: 6 },
+                        { course: "B.Sc (Biotechnology)", applicants: 22, paid: 14, approved: 16 },
+                        { course: "B.A. Literature", applicants: 16, paid: 9, approved: 11 },
+                        { course: "B.Sc (Physics Honours)", applicants: 12, paid: 7, approved: 9 },
+                        { course: "B.A. Journalism", applicants: 14, paid: 8, approved: 10 },
+                        { course: "B.Sc (Chemistry Honours)", applicants: 15, paid: 9, approved: 11 },
+                        { course: "B.A. Mass Communication", applicants: 18, paid: 10, approved: 12 },
+                        { course: "B.Sc (Mathematics Honours)", applicants: 10, paid: 5, approved: 7 },
+                        { course: "B.A. Fine Arts", applicants: 12, paid: 6, approved: 8 },
+                        { course: "B.Sc (Botany)", applicants: 16, paid: 9, approved: 11 },
+                        { course: "B.A. Music", applicants: 8, paid: 4, approved: 6 },
+                        { course: "B.Sc (Zoology)", applicants: 14, paid: 8, approved: 10 },
+                        { course: "B.A. Dance", applicants: 6, paid: 3, approved: 4 },
+                        { course: "B.Sc (Geology)", applicants: 12, paid: 6, approved: 8 },
+                        { course: "B.A. Theatre", applicants: 10, paid: 5, approved: 7 },
+                        { course: "B.Sc (Oceanography)", applicants: 8, paid: 4, approved: 6 },
+                        { course: "B.A. Film Studies", applicants: 14, paid: 8, approved: 10 },
+                        { course: "B.Sc (Meteorology)", applicants: 6, paid: 3, approved: 4 },
+                        { course: "B.A. Media Studies", applicants: 16, paid: 9, approved: 11 },
+                        { course: "B.Sc (Astronomy)", applicants: 4, paid: 2, approved: 3 },
+                        { course: "B.A. Creative Writing", applicants: 12, paid: 6, approved: 8 },
+                        { course: "B.Sc (Forensic Science)", applicants: 20, paid: 12, approved: 15 },
+                        { course: "B.A. Translation Studies", applicants: 8, paid: 4, approved: 6 },
+                        { course: "B.Sc (Food Technology)", applicants: 18, paid: 10, approved: 12 },
+                        { course: "B.A. Linguistics", applicants: 10, paid: 5, approved: 7 },
+                        { course: "B.Sc (Nutrition Science)", applicants: 16, paid: 9, approved: 11 },
+                        { course: "B.A. Archaeology", applicants: 6, paid: 3, approved: 4 },
+                        { course: "B.Sc (Sports Science)", applicants: 14, paid: 8, approved: 10 },
+                        { course: "B.A. Heritage Studies", applicants: 8, paid: 4, approved: 6 },
+                      ].map((row) => (
+                        <tr key={row.course} className="border-t hover:bg-gray-50">
+                          <td className="py-2">{row.course}</td>
+                          <td className="text-center py-2">{row.applicants}</td>
+                          <td className="text-center py-2">{row.paid}</td>
+                          <td className="text-center py-2">{row.approved}</td>
+                          <td className="text-center py-2">
+                            <button className="text-blue-600 underline hover:text-blue-800">Download</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              {/* Actions */}
-              <div className="flex gap-4 mt-2">
-                <button className="border rounded-lg px-6 py-2 font-medium">Download Report</button>
-                <button className="border rounded-lg px-6 py-2 font-medium flex items-center gap-2">
-                  <Users className="w-5 h-5" /> Staff Assignment
-                </button>
-              </div>
+              
             </div>
 
             {/* Right: Side Widgets */}
             <div className="flex flex-col gap-4">
               {/* Approved Pie */}
-              <div className="bg-white rounded-xl border p-4 flex flex-col items-center">
+              {/* <div className="bg-white rounded-xl border p-4 flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mb-2">
-                  
                   <span className="text-2xl font-bold">80</span>
                 </div>
                 <div className="text-sm">Approved</div>
                 <div className="text-xs text-gray-500">Rejected: 20</div>
-              </div>
+              </div> */}
               {/* Merit Round Summary */}
               <div className="bg-white rounded-xl border p-4">
                 <h4 className="font-semibold mb-1">Merit Round Summary</h4>
@@ -459,42 +397,14 @@ export default function AdmissionDetailsPage() {
                 </div>
               </div>
               {/* Staff Assignment */}
-              <div className="bg-white rounded-xl border p-4 flex items-center gap-3">
+              <Link to={`staff-assignment`} className="bg-white rounded-xl border p-4 flex items-center gap-3">
                 <Users className="w-6 h-6 text-gray-500" />
                 <span className="font-semibold">Staff Assignment</span>
+              </Link>
+              {/* Actions */}
+              <div className="flex gap-4 mt-2">
+                <button className="border rounded-lg px-6 py-2 font-medium">Download Report</button>
               </div>
-              {/* Admission Workflow */}
-              {/* <div className="bg-white rounded-xl border p-4">
-                <h3 className="font-semibold mb-3">Admission Workflow</h3>
-                <ul className="space-y-2">
-                  {workflowSteps.map((step) => (
-                    <li key={step.title} className="flex items-center gap-2">
-                      <span className={
-                        step.status === "completed"
-                          ? "text-green-500"
-                          : step.status === "in_progress"
-                          ? "text-blue-500 animate-spin"
-                          : "text-gray-400"
-                      }>
-                        {step.status === "completed" && <CheckCircle className="w-4 h-4" />}
-                        {step.status === "in_progress" && <Loader2 className="w-4 h-4" />}
-                        {step.status === "not_started" && <Clock className="w-4 h-4" />}
-                      </span>
-                      <span
-                        className={
-                          step.status === "completed"
-                            ? "text-green-700 font-semibold"
-                            : step.status === "in_progress"
-                            ? "text-blue-700 font-semibold"
-                            : "text-gray-400"
-                        }
-                      >
-                        {step.title}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div> */}
             </div>
           </div>
         </div>
@@ -525,38 +435,6 @@ const StatCard = ({
   </div>
 );
 
-// const FilterSelect = ({
-//   label,
-//   options,
-//   value,
-//   onChange,
-// }: {
-//   label: string;
-//   options: string[];
-//   value: string;
-//   onChange: (value: string) => void;
-// }) => {
-//   const displayValue = value || "all";
-//   return (
-//     <div className="w-full">
-//       <Label className="block text-sm font-medium text-gray-700 mb-2">{label}</Label>
-//       <Select value={displayValue} onValueChange={onChange}>
-//         <SelectTrigger className="w-full">
-//           <SelectValue placeholder="All" />
-//         </SelectTrigger>
-//         <SelectContent>
-//           <SelectItem value="all">All</SelectItem>
-//           {options.map((option) => (
-//             <SelectItem key={option} value={option}>
-//               {label === "Is Gujarati" ? (option === "true" ? "Yes" : option === "false" ? "No" : "All") : option}
-//             </SelectItem>
-//           ))}
-//         </SelectContent>
-//       </Select>
-//     </div>
-//   );
-// };
-
 interface NavItemProps {
   href: string;
   icon: React.ReactNode;
@@ -570,12 +448,14 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
       <Link
         to={href}
         className={cn(
-          "flex items-center gap-3 px-4 py-2 rounded-md font-medium transition-colors",
+          "flex items-center gap-3 px-3 py-1 rounded-md font-medium transition-colors",
           isActive ? "bg-purple-100 text-purple-700 shadow-sm" : "text-gray-700 hover:bg-gray-100",
         )}
       >
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-gray-500")}>{icon}</span>
-        <span className="text-sm">{children}</span>
+        <span className={cn("h-5 w-5 flex-shrink-0 text-[12px]", isActive ? "text-purple-600" : "text-gray-500")}>{icon}</span>
+        <div className="flex-1 min-w-0 text-[12px]">
+          {children}
+        </div>
       </Link>
     </li>
   );
