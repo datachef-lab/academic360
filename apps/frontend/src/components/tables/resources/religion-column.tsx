@@ -1,96 +1,111 @@
-// import { ColumnDef } from "@tanstack/react-table";
-// import { Religion } from "@/types/resources/religion";
-// import ActionEntityMenu from "../../settings/ActionEntityMenu";
-
-// export const religionColumns: ColumnDef<Religion>[] = [
-//     {
-//         accessorKey: "name",
-//         header: "Name",
-//     },
-//     {
-//         accessorKey: "sequence",
-//         header: "Sequence",
-//     },
-//     {
-//         accessorKey: "action",
-//         header: "Action",
-//         cell:({row})=>{
-//           return <ActionEntityMenu type="Religion" data={row.original} ></ActionEntityMenu>;
-//         }
-//       },
-// ];
-
 import { ColumnDef } from "@tanstack/react-table";
-import { Religion } from "@/types/resources/religion";
-import ActionEntityMenu from "../../settings/ActionEntityMenu";
+import { Religion } from "@/types/resources/religion.types";
 import { 
   BookHeart,
-  ListOrdered,
-  Settings2
+  Edit,
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-export const religionColumns: ColumnDef<Religion>[] = [
+export const religionColumns = (onEditRow?: (rowData: Religion) => void): ColumnDef<Religion>[] => [
   {
-    accessorKey: "name",
-    header: () => (
-      <div className="flex items-center justify-start gap-2 text-slate-800 font-semibold">
-        <BookHeart className="h-5 w-5 text-purple-600" />
-        <span>Religion</span>
-      </div>
-    ),
+    accessorKey: "id",
+    header: "ID",
     cell: ({ row }) => {
-      const religionName = row.original.name;
       return (
-        <div className="flex items-center justify-start">
-          <Badge 
-            variant="outline" 
-            className="px-3 py-1.5 text-xs bg-amber-50 text-amber-700 drop-shadow-md border-none"
-          >
-            <div className="flex items-center gap-2">
-              
-              <span className="font-semibold">{religionName}</span>
-            </div>
-          </Badge>
+        <div className="flex items-center">
+          <span className="font-mono text-sm text-gray-500">
+            #{row.getValue("id")}
+          </span>
         </div>
       );
-    
+    },
+  },
+  {
+    accessorKey: "name",
+    header: "Religion",
+    cell: ({ row }) => {
+      return (
+        <div className="flex items-center gap-2">
+          <BookHeart className="h-4 w-4 text-blue-500" />
+          <span className="font-medium">{row.getValue("name")}</span>
+        </div>
+      );
     },
   },
   {
     accessorKey: "sequence",
-    header: () => (
-      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold whitespace-nowrap">
-        <ListOrdered className="h-5 w-5 text-purple-600" />
-        <span>Sequence</span>
-      </div>
-    ),
+    header: "Sequence",
     cell: ({ row }) => {
-      const sequence = row.original.sequence;
-      return sequence ? (
-        <Badge 
-          variant="outline" 
-          className="px-2.5 py-1.5 text-xs   bg-blue-50 text-blue-600  drop-shadow-md border-none font-mono"
-        >
-          {sequence}
+      const sequence = row.getValue("sequence") as number | null;
+      return (
+        <div className="flex items-center">
+          {sequence ? (
+            <Badge variant="secondary" className="font-mono">
+              {sequence}
+            </Badge>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          )}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "disabled",
+    header: "Status",
+    cell: ({ row }) => {
+      const disabled = row.getValue("disabled") as boolean;
+      return (
+        <Badge variant={disabled ? "destructive" : "default"}>
+          {disabled ? "Disabled" : "Active"}
         </Badge>
-      ) : (
-        <span className="text-gray-400 text-sm">-</span>
+      );
+    },
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("createdAt"));
+      return (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "updatedAt",
+    header: "Updated At",
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("updatedAt"));
+      return (
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </span>
+        </div>
       );
     },
   },
   {
     id: "actions",
-    header: () => (
-      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
-        <Settings2 className="h-5 w-5 text-purple-600" />
-        <span>Actions</span>
-      </div>
-    ),
+    enableHiding: false,
     cell: ({ row }) => {
+      const rowData = row.original;
       return (
-        <div className="flex justify-center">
-          <ActionEntityMenu type="Religion" data={row.original} />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEditRow && onEditRow(rowData)}>
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
         </div>
       );
     },

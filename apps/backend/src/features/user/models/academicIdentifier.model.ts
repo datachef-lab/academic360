@@ -6,7 +6,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sectionModel } from "@/features/academics/models/section.model.js";
 import { shiftModel } from "@/features/academics/models/shift.model.js";
-import { courseModel } from "@/features/academics/models/course.model.js";
+import { courseModel } from "@/features/course-design/models/course.model.js";
 import { frameworkTypeEnum } from "./helper.js";
 
 export const academicIdentifierModel = pgTable("academic_identifiers", {

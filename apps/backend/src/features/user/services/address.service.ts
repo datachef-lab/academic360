@@ -1,59 +1,50 @@
 import { db } from "@/db/index.js";
-import { Address, addressModel } from "../models/address.model.js";
-import { AddressType } from "@/types/user/address.js";
+import { Address, addressModel, createAddressSchema } from "../models/address.model.js";
 import { countryModel } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
 import { stateModel } from "@/features/resources/models/state.model.js";
 import { cityModel } from "@/features/resources/models/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
+import { z } from "zod";
 
-export async function addAddress(address: AddressType): Promise<AddressType | null> {
-    const { country, state, city, ...props } = address;
-
-    const [newAddress] = await db.insert(addressModel).values({
-        ...props,
-        countryId: country?.id,
-        stateId: state?.id,
-        cityId: city?.id
-    }).returning();
-
-    const formattedAddress = await addressResponseFormat(newAddress);
-
-    return formattedAddress;
-}
-
-export async function findAddressById(id: number): Promise<AddressType | null> {
-    const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
-
-    if (foundAddress) {
-        const formattedAddress = await addressResponseFormat(foundAddress);
-
-        return formattedAddress;
+// Validate input using Zod schema
+function validateAddressInput(data: Omit<Address, 'id'>) {
+    const parseResult = createAddressSchema.safeParse(data);
+    if (!parseResult.success) {
+        const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
+        // @ts-expect-error
+        error.status = 400;
+        throw error;
     }
-
-    return null;
+    return parseResult.data;
 }
 
-export async function saveAddress(id: number, address: AddressType): Promise<AddressType | null> {
-    const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
+export async function addAddress(address: Omit<Address, 'id'>): Promise<Address | null> {
+    validateAddressInput(address);
+    const [newAddress] = await db.insert(addressModel).values(address).returning();
+    return newAddress ? await addressResponseFormat(newAddress) : null;
+}
 
+export async function findAddressById(id: number): Promise<Address | null> {
+    const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
+    return foundAddress ? await addressResponseFormat(foundAddress) : null;
+}
+
+export async function getAllAddresses(): Promise<Address[]> {
+    const addresses = await db.select().from(addressModel);
+    const formatted = await Promise.all(addresses.map(addressResponseFormat));
+    return formatted.filter((a): a is Address => !!a);
+}
+
+export async function saveAddress(id: number, address: Omit<Address, 'id'>): Promise<Address | null> {
+    const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
     if (!foundAddress) {
         return null;
     }
-
-    const { country, state, city, ...props } = address;
-
-    const [updatedAddress] = await db.update(addressModel).set({
-        countryId: country?.id,
-        stateId: state?.id,
-        cityId: city?.id,
-        ...props
-    }).where(eq(addressModel.id, id)).returning();
-
-    const formattedAddress = await addressResponseFormat(updatedAddress);
-
-    return formattedAddress;
+    validateAddressInput(address);
+    const [updatedAddress] = await db.update(addressModel).set(address).where(eq(addressModel.id, id)).returning();
+    return updatedAddress ? await addressResponseFormat(updatedAddress) : null;
 }
 
 export async function removeAddress(id: number): Promise<boolean | null> {
@@ -77,7 +68,6 @@ export async function removeAddress(id: number): Promise<boolean | null> {
     if (!deletedAddress) {
         return false;
     }
-
     return true; // Success!
 }
 
@@ -85,30 +75,25 @@ export async function addressResponseFormat(address: Address) {
     if (!address) {
         return null;
     }
-
     const { countryId, stateId, cityId, ...props } = address;
-
-    const formattedAddress: AddressType = { ...props }
-
+    const formattedAddress: Address = { ...props } as Address;
     if (countryId) {
         const [country] = await db.select().from(countryModel).where(eq(countryModel.id, countryId));
         if (country) {
-            formattedAddress.country = country;
+            (formattedAddress as any).country = country;
         }
     }
     if (stateId) {
         const [state] = await db.select().from(stateModel).where(eq(stateModel.id, stateId));
         if (state) {
-            formattedAddress.state = state;
+            (formattedAddress as any).state = state;
         }
     }
     if (cityId) {
         const [city] = await db.select().from(cityModel).where(eq(cityModel.id, cityId));
         if (city) {
-            formattedAddress.city = city;
+            (formattedAddress as any).city = city;
         }
     }
-
-
     return formattedAddress;
 }

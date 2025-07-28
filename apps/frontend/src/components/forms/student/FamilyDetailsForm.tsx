@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, User, Briefcase, Phone, Mail, DollarSign } from "lucide-react";
-import { Parent } from "@/types/user/parent";
+import { Parent } from "@/types/user/family";
 import { Occupation } from "@/types/resources/occupation";
 import { AnnualIncome } from "@/types/resources/annual-income";
 import { ParentType } from "@/types/enums";

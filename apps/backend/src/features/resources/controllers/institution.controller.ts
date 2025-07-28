@@ -1,169 +1,231 @@
-import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
-import { institutionModel } from "@/features/resources/models/institution.model.js";
-import { findAll } from "@/utils/helper.js";
+import { Institution } from "@/features/resources/models/institution.model.js";
+import { 
+    findAllInstitutions,
+    findInstitutionById, 
+    createInstitution as createInstitutionService,
+    updateInstitution as updateInstitutionService,
+    deleteInstitution as deleteInstitutionService,
+    findInstitutionByName
+} from "@/features/resources/services/institution.service.js";
 
-// Create a new Institution
-export const createNewInstitution = async (req: Request, res: Response, next: NextFunction) => {
+// Create a new institution
+export const createNewInstitution = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        console.log(req.body);
-        const newInstitution = await db
-            .insert(institutionModel)
-            .values(req.body);
-        console.log("New institution added", newInstitution);
-        res
-            .status(201)
-            .json(
-                new ApiResponse(
-                    201,
-                    "SUCCESS",
-                    null,
-                    "New institution is added to db!",
-                ),
-            );
+        const { name, degreeId, addressId, sequence, disabled } = req.body;
+
+        // Basic validation
+        if (!name || typeof name !== 'string') {
+            res.status(400).json(new ApiError(400, "Name is required and must be a string"));
+            return;
+        }
+
+        if (name.length > 700) {
+            res.status(400).json(new ApiError(400, "Name must be less than 700 characters"));
+            return;
+        }
+
+        if (!degreeId || isNaN(Number(degreeId))) {
+            res.status(400).json(new ApiError(400, "Valid degree ID is required"));
+            return;
+        }
+
+        // Check if name already exists
+        const existingName = await findInstitutionByName(name);
+        if (existingName) {
+            res.status(409).json(new ApiError(409, "Institution name already exists"));
+            return;
+        }
+
+        const institutionData = {
+            name,
+            degreeId: Number(degreeId),
+            addressId: addressId ? Number(addressId) : null,
+            sequence: sequence || null,
+            disabled: disabled || false
+        };
+
+        const newInstitution = await createInstitutionService(institutionData);
+
+        res.status(201).json(
+            new ApiResponse(
+                201,
+                "SUCCESS",
+                newInstitution,
+                "Institution created successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get all Institution
+// Get all institutions
 export const getAllInstitution = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
-        const institution = await findAll(institutionModel);
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    institution,
-                    "Fetched all Institution!",
-                ),
-            );
+        const institutions = await findAllInstitutions();
+        
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                institutions,
+                "All institutions fetched successfully."
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Get Institution By ID
+// Get institution by ID
 export const getInstitutionById = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        const institution = await db
-            .select()
-            .from(institutionModel)
-            .where(eq(institutionModel.id, Number(id)))
-            .limit(1);
-
-        if (!institution[0]) {
-            res
-                .status(404)
-                .json(
-                    new ApiResponse(404, "NOT_FOUND", null, "Institution not found"),
-                );
+        
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
             return;
         }
 
-        res
-            .status(200)
-            .json(
-                new ApiResponse(
-                    200,
-                    "SUCCESS",
-                    institution[0],
-                    "Fetched Institution!",
-                ),
-            );
+        const institution = await findInstitutionById(Number(id));
+
+        if (!institution) {
+            res.status(404).json(new ApiError(404, "Institution not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                institution,
+                "Institution fetched successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Update the Institution
+// Update institution
 export const updateInstitution = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const updatedInstitution = req.body;
+        const { name, degreeId, addressId, sequence, disabled } = req.body;
 
-        const existingInstitution = await db
-            .select()
-            .from(institutionModel)
-            .where(eq(institutionModel.id, +id))
-            .then((Institution) => Institution[0]);
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
+        }
 
+        // Check if institution exists
+        const existingInstitution = await findInstitutionById(Number(id));
         if (!existingInstitution) {
             res.status(404).json(new ApiError(404, "Institution not found"));
             return;
         }
 
-        const updatedInstitutions = await db
-            .update(institutionModel)
-            .set(updatedInstitution)
-            .where(eq(institutionModel.id, +id))
-            .returning();
-
-        if (updatedInstitutions.length > 0) {
-            res
-                .status(200)
-                .json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        updatedInstitutions[0],
-                        "Institutions updated successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Institutions not found"));
+        // Validate name length if provided
+        if (name && name.length > 700) {
+            res.status(400).json(new ApiError(400, "Name must be less than 700 characters"));
+            return;
         }
+
+        // Validate degree ID if provided
+        if (degreeId && isNaN(Number(degreeId))) {
+            res.status(400).json(new ApiError(400, "Valid degree ID is required"));
+            return;
+        }
+
+        // If name is being updated, check for duplicates
+        if (name && name !== existingInstitution.name) {
+            const duplicateName = await findInstitutionByName(name);
+            if (duplicateName) {
+                res.status(409).json(new ApiError(409, "Institution name already exists"));
+                return;
+            }
+        }
+
+        const updateData: Partial<Omit<Institution, 'id' | 'createdAt' | 'updatedAt'>> = {};
+        
+        if (name !== undefined) updateData.name = name;
+        if (degreeId !== undefined) updateData.degreeId = Number(degreeId);
+        if (addressId !== undefined) updateData.addressId = addressId ? Number(addressId) : null;
+        if (sequence !== undefined) updateData.sequence = sequence;
+        if (disabled !== undefined) updateData.disabled = disabled;
+
+        const updatedInstitution = await updateInstitutionService(Number(id), updateData);
+
+        if (!updatedInstitution) {
+            res.status(404).json(new ApiError(404, "Institution not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                updatedInstitution,
+                "Institution updated successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }
 };
 
-// Delete the Institution
+// Delete institution
 export const deleteInstitutions = async (
     req: Request,
     res: Response,
     next: NextFunction,
-) => {
+): Promise<void> => {
     try {
         const { id } = req.params;
-        console.log(id);
-        const deletedInstitutions = await db
-            .delete(institutionModel)
-            .where(eq(institutionModel.id, +id))
-            .returning();
 
-        if (deletedInstitutions.length > 0) {
-            res.status(200).json(
-                    new ApiResponse(
-                        200,
-                        "SUCCESS",
-                        deletedInstitutions[0],
-                        "Institutions deleted successfully!",
-                    ),
-                );
-        } else {
-            res.status(404).json(new ApiError(404, "Institutions not found"));
+        if (!id || isNaN(Number(id))) {
+            res.status(400).json(new ApiError(400, "Valid ID is required"));
+            return;
         }
+
+        // Check if institution exists
+        const existingInstitution = await findInstitutionById(Number(id));
+        if (!existingInstitution) {
+            res.status(404).json(new ApiError(404, "Institution not found"));
+            return;
+        }
+
+        const deletedInstitution = await deleteInstitutionService(Number(id));
+
+        if (!deletedInstitution) {
+            res.status(404).json(new ApiError(404, "Institution not found"));
+            return;
+        }
+
+        res.status(200).json(
+            new ApiResponse(
+                200,
+                "SUCCESS",
+                deletedInstitution,
+                "Institution deleted successfully!"
+            )
+        );
     } catch (error) {
         handleError(error, res, next);
     }

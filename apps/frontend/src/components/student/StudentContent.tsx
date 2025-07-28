@@ -5,10 +5,10 @@ import Accommodation from "./AccommodationForm";
 import EmergencyContact from "./EmergencyContactForm";
 import HealthDetails from "./HealthDetails";
 import OverviewTab from "./OverviewTab";
-import PersonalDetails from "./PersonalDetails";
 import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
 import Marksheet from "../GradeMarks/Marksheet";
+import PersonalDetails from "./PersonalDetails";
 import { TabsContent } from "../ui/tabs";
 
 type StudentContentProps = {
@@ -26,7 +26,7 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
       case "Overview":
         return <OverviewTab />;
       case "Personal":
-        return <PersonalDetails studentId={studentId} />;
+        return <PersonalDetails studentId={studentId}/>;  
       case "Family":
         return <FamilyDetails studentId={studentId} />;
       case "Health":
@@ -34,11 +34,11 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
       case "Emergency":
         return <EmergencyContact studentId={studentId} />;
       case "History":
-        return <AcademicHistory />;
+        return <AcademicHistory studentId={studentId} />;
       case "Identifiers":
-        return <AcademicIdentifier />;
+        return <AcademicIdentifier studentId={studentId} onSubmit={() => {}} />;
       case "Accommodation":
-        return <Accommodation />;
+        return <Accommodation studentId={studentId} />;
       case "Transport":
         return <TransportDetails />;
       case "Marksheet":
@@ -50,7 +50,7 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
 
   return (
       <TabsContent value={activeTab.label}>
-        <div className="my-5">{handleContent()}</div>;
+        <div className="my-5">{handleContent()}</div>
       </TabsContent>
   )
 }

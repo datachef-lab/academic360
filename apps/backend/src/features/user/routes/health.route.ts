@@ -1,34 +1,32 @@
-import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
   createHealth,
   getHealthById,
   getHealthByStudentId,
   updateHealth,
   deleteHealth,
-  deleteHealthByStudentId
+  deleteHealthByStudentId,
+  getAllHealthsController
 } from "../controllers/health.controller.js";
 
 const router = express.Router();
 
 router.use(verifyJWT);
 
-// Create health record
+// Get all
+router.get("/", getAllHealthsController);
+// Create
 router.post("/", createHealth);
-
-// Get health by student ID (must be before generic /:id route)
-router.get("/student/:studentId", getHealthByStudentId);
-
-// Get health by ID
+// Get by id
 router.get("/:id", getHealthById);
-
-// Update health
+// Get by studentId
+router.get("/student/:studentId", getHealthByStudentId);
+// Update
 router.put("/:id", updateHealth);
-
-// Delete health by ID
+// Delete by id
 router.delete("/:id", deleteHealth);
-
-// Delete health by student ID
+// Delete by studentId
 router.delete("/student/:studentId", deleteHealthByStudentId);
 
 export default router;

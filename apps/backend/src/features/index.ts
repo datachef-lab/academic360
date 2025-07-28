@@ -1,4 +1,4 @@
-import { batchPaperRouter, batchRouter, documentRouter, marksheetRouter,  studentPaperRouter, subjectMetadataRouter, subjectRouter } from "./academics/routes/index.js";
+import {  batchRouter, documentRouter, marksheetRouter } from "./academics/routes/index.js";
 import authRouter from "@/features/auth/routes/auth.route.js";
 import { bloodGroupRouter, boardUniversityRouter, categoryRouter, cityRouter, countryRouter, degreeRouter, institutionRouter, languageMediumRouter, nationalityRouter, occupationRouter, pickupPointRouter, qualificationRouter, religionRouter, stateRouter, transportRouter } from "./resources/routes/index.js";
 import { academicHistoryRouter, academicIdentifierRouter,reportRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter,specializationRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
@@ -10,12 +10,13 @@ import feesSlabRouter from "./fees/routes/fees-slab.route.js";
 import feesStructureRouter from "./fees/routes/fees-structure.route.js";
 import studentFeesMappingRouter from "./fees/routes/student-fees-mapping.route.js";
 import feesSlabYearMappingRouter from "./fees/routes/fees-slab-mapping.route.js";
+import { courseRouter, paperRouter, subjectRouter, topicRouter } from "./course-design/routes/index.js";
 
 export {
     documentRouter,
     marksheetRouter,
-    subjectRouter,
-    subjectMetadataRouter,
+    
+    
     authRouter,
     reportRouter,
     specializationRouter,
@@ -48,8 +49,8 @@ export {
     studentRouter,
     userRouter,
     batchRouter,
-    batchPaperRouter,
-    studentPaperRouter,
+   
+    
     feesComponentRouter,
     addonRouter,
     feesHeadRouter,
@@ -58,5 +59,8 @@ export {
     feesStructureRouter,
     studentFeesMappingRouter,
     feesSlabYearMappingRouter,
-
+    courseRouter,
+    paperRouter,
+    subjectRouter,
+    topicRouter,
 }

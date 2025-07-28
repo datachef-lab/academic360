@@ -31,7 +31,7 @@ import GradeCard from "./components/GradeMarks/GradeCard";
 // import CoursesSubjectsMaster from "@/pages/courses-subjects-master/CoursesSubjectsMaster";
 // import CourseSubjectMasterHomePage from "@/pages/courses-subjects-master/HomePage";
 
-import * as courseSubjectModule from "@/pages/courses-subjects-master";
+import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
@@ -61,13 +61,21 @@ const router = createBrowserRouter([
       { path: "", element: <Dashboard /> },
       { path: "resources", element: <SettingsPage /> },
       {
-        path: "courses-subjects",
+        path: "courses-subjects-design",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
         children: [
-          // { path: "", element: <courseSubjectModule.HomePage /> },
-          { path: "", element: <courseSubjectModule.CoursesAndSubjectPage /> },
-          { path: ":courseId", element: <courseSubjectModule.CoursePage /> },
-          { path: "materials", element: <courseSubjectModule.CourseMaterialPage /> },
+          { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+          { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
+          { path: "streams", element: <courseSubjectModule.StreamsPage /> },
+          { path: "courses", element: <courseSubjectModule.CoursesPage /> },
+          { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
+          { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
+          { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
+          { path: "affiliation-types", element: <courseSubjectModule.AffiliationTypesPage /> },
+          { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
+          { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
+          { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
+          { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
         ],
       },
       { path: "admissions-fees/admissions/:year", element: <admissionFeesModule.AdmissionDetailsPage /> },
@@ -220,7 +228,18 @@ const router = createBrowserRouter([
             ],
           },
       ] },
-      { path: "apps", element: <appModule.AppMaster /> },
+      {
+        path: "apps",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <appModule.AppMaster /> },
+          { path: "student-console", element: <appModule.BescStudentConsoleSettings /> },
+          { path: "event-gatekeeper", element: <appModule.EventGatekeeperPage /> },
+          { path: "ems-app", element: <appModule.EmsAppPage /> },
+          { path: "event-management", element: <appModule.EventGatekeeperPage /> },
+          { path: "admission-comm-module", element: <appModule.AdmissionCommModulePage /> },
+        ],
+      },
       {
         path: "faculty-staff",
         element: <facultiesStaffsModule.FacultyStaffMaster />,

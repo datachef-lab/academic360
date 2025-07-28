@@ -1,4 +1,4 @@
-import { BloodGroup } from "../resources/blood-group";
+import { BloodGroup } from "../resources/blood-group.types";
 
 export interface Health {
     readonly id?: number;

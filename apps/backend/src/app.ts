@@ -21,14 +21,15 @@ import { generateToken } from "./utils/index.js";
 import {
   academicYearRouter,
   classRouter,
+  batchStudentMappingRouter,
+  marksheetPaperMappingRouter,
+  marksheetPaperComponentMappingRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
   documentRouter,
   marksheetRouter,
-  subjectMetadataRouter,
-  subjectRouter,
   countryRouter,
   userRouter,
   authRouter,
@@ -50,8 +51,6 @@ import {
   degreeRouter,
   occupationRouter,
   batchRouter,
-  batchPaperRouter,
-  studentPaperRouter,
   emergencyContactRouter,
   addressRouter,
   reportRouter,
@@ -64,9 +63,10 @@ import {
   feesHeadRouter,
   feesReceiptTypeRouter,
   feesSlabYearMappingRouter,
+  personRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
-import courseRouter from "./features/academics/routes/course.route.js";
+import courseRouter from "@/features/course-design/routes/course.route.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
 import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";
@@ -85,8 +85,17 @@ import {
   studentAcademicSubjectRouter,
   academicSubjectRouter,
 } from "@/features/admissions/index.js";
-import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
+// import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
+import { streamRouter, courseTypeRouter, subjectRouter, subjectPaperRouter, paperRouter, topicRouter, affiliationRouter, 
+  courseLevelRouter,
+  subjectTypeRouter,
+  affiliationTypeRouter,
+  regulationTypeRouter,
+  programCourseRouter,
+  examComponentRouter,
+  } from "@/features/course-design/routes/index.js";
+
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -200,22 +209,30 @@ passport.deserializeUser((user: Express.User, done) => done(null, user));
 app.use("/auth", authRouter);
 
 app.use("/api/batches", batchRouter);
+app.use("/api/academics/batch-student-mappings", batchStudentMappingRouter);
+app.use("/api/academics/marksheet-paper-mappings", marksheetPaperMappingRouter);
+app.use(
+  "/api/academics/marksheet-paper-component-mappings",
+  marksheetPaperComponentMappingRouter,
+);
 
-app.use("/api/batch-papers/old-data", batchPaperRouter);
+// app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
+app.use("/api/persons", personRouter);
+
 app.use("/api/students", studentRouter);
 
-app.use("/api/subject-metadatas", subjectMetadataRouter);
+// app.use("/api/subject-metadatas", subjectMetadataRouter);
 
 app.use("/api/marksheets", marksheetRouter);
 
-app.use("/api/student-papers/", studentPaperRouter);
+// app.use("/api/student-papers/", studentPaperRouter);
 
-app.use("/api/subjects", subjectRouter);
+// app.use("/api/subjects", subjectRouter);
 
 app.use("/api/nationality", nationalityRouter);
 
@@ -239,11 +256,13 @@ app.use("/api/blood-groups", bloodGroupRouter);
 
 app.use("/api/categories", categoryRouter);
 
-app.use("/api/specialization", specializationRouter);
+app.use("/api/specializations", specializationRouter);
 
 app.use("/api/languages", languageMediumRouter);
 
-app.use("/api/resultstatus", boardResultStatusRouter);
+// app.use("/api/disability-codes", disabilityRouter);
+
+app.use("/api/board-result-statuses", boardResultStatusRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
 
@@ -263,9 +282,9 @@ app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
 
-app.use("/api/academicIdentifiers", academicIdentifierRouter);
+app.use("/api/academic-identifiers", academicIdentifierRouter);
 
-app.use("/api/academicHistories", academicHistoryRouter);
+app.use("/api/academic-history", academicHistoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 
@@ -305,11 +324,37 @@ app.use(
 );
 app.use("/api/admissions/academic-subject", academicSubjectRouter);
 
-app.use("/api/study-materials", studyMaterialRouter);
+// app.use("/api/study-materials", studyMaterialRouter);
 
 app.use("/api/v1/sections", sectionRoutes);
 
+// Course Design routes
+app.use("/api/v1/course-design/streams", streamRouter);
+app.use("/api/v1/course-design/course-types", courseTypeRouter);
+app.use("/api/v1/course-design/course-levels", courseLevelRouter);
+// app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
+app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
+app.use("/api/v1/course-design/program-courses", programCourseRouter);
+
 app.use(errorHandler);
+
+
+// Register course-design routes
+app.use("/api/course-design/courses", courseRouter);
+app.use("/api/course-design/subjects", subjectRouter);
+app.use("/api/course-design/subject-papers", subjectPaperRouter);
+app.use("/api/course-design/subject-types", subjectTypeRouter);
+app.use("/api/course-design/papers", paperRouter);
+app.use("/api/course-design/topics", topicRouter);
+app.use("/api/course-design/streams", streamRouter);
+app.use("/api/course-design/affiliations", affiliationRouter);
+app.use("/api/course-design/affiliation-types", affiliationTypeRouter);
+app.use("/api/course-design/regulation-types", regulationTypeRouter);
+app.use("/api/course-design/program-courses", programCourseRouter);
+app.use("/api/course-design/course-types", courseTypeRouter);
+app.use("/api/course-design/course-levels", courseLevelRouter);
+app.use("/api/course-design/exam-components", examComponentRouter);
+app.use("/api/course-design/specializations", specializationRouter);
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404);

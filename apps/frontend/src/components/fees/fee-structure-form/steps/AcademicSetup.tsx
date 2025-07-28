@@ -1,7 +1,7 @@
 import React from 'react';
 import { Select } from 'antd';
 import { FeesStructureDto, CreateFeesStructureDto } from '@/types/fees';
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design';
 import { AcademicYear } from '@/types/academics/academic-year';
 // import { Checkbox } from '@/components/ui/checkbox';
 import { Select as ShadcnSelect, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';

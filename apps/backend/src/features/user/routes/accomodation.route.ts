@@ -1,27 +1,32 @@
-// import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express from "express";
-
-import { createAccommodation, getAccommodationById, getAccommodationByStudentId, updateAccommodation } from "../controllers/accommodation.controller.js";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import {
+  createAccommodation,
+  getAccommodationById,
+  getAccommodationByStudentId,
+  updateAccommodation,
+  deleteAccommodation,
+  deleteAccommodationByStudentId,
+  getAllAccommodationsController
+} from "../controllers/accommodation.controller.js";
 
 const router = express.Router();
 
 // router.use(verifyJWT);
 
+// Get all
+router.get("/", getAllAccommodationsController);
+// Create
 router.post("/", createAccommodation);
-
-router.get("/query", (req, res, next) => {
-    const { id, studentId } = req.query;
-//65
-    if (id) {
-        return getAccommodationById(req, res, next);
-    } else if (studentId) {
-        return getAccommodationByStudentId(req, res, next);
-    }
-    else {
-        next();
-    }
-});
-
-router.put("/query", updateAccommodation);
+// Get by id
+router.get("/:id", getAccommodationById);
+// Get by studentId
+router.get("/student/:studentId", getAccommodationByStudentId);
+// Update
+router.put("/:id", updateAccommodation);
+// Delete by id
+router.delete("/:id", deleteAccommodation);
+// Delete by studentId
+router.delete("/student/:studentId", deleteAccommodationByStudentId);
 
 export default router;

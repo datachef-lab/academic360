@@ -123,7 +123,7 @@ export default function Dashboard() {
                   <CardContent className="pt-0">
                     <div className="grid grid-cols-2 gap-3">
                       <StatBox color="bg-blue-600" icon={<Users className="w-7 h-7 text-white" />} value="426" label="Total Students" />
-                      <StatBox color="bg-orange-500" icon={<BookOpen className="w-7 h-7 text-white" />} value="560" label="Courses & Subjects" />
+                      <StatBox color="bg-orange-500" icon={<BookOpen className="w-7 h-7 text-white" />} value="560" label="Courses & Subjects Design" />
                       <StatBox color="bg-green-600" icon={<Boxes className="w-7 h-7 text-white" />} value="24" label="Active Batches" />
                       <StatBox color="bg-pink-500" icon={<CheckCircle className="w-7 h-7 text-white" />} value="24" label="Avg Attendance" />
                       <StatBox color="bg-purple-600" icon={<FileText className="w-7 h-7 text-white" />} value="58" label="Exams Conducted" />

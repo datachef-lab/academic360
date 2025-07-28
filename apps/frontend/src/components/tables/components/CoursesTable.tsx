@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 
 // Import Course type from service
 // import { Course } from '@/services/course-api';
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design';
 
 interface CoursesTableProps {
   courses: Course[];

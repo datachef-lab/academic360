@@ -53,7 +53,7 @@ import {
   
 } from '@/types/fees';
 import {AcademicYear } from "@/types/academics/academic-year"
-import { Course } from '@/types/academics/course';
+import { Course } from '@/types/course-design';
 import {
   getFeesStructures,
   getAcademicYearsFromFeesStructures,

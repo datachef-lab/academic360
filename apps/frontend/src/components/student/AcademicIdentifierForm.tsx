@@ -1,206 +1,450 @@
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { useState,useEffect,  } from "react";
-// import {
-//   DropdownMenu,
-//   DropdownMenuTrigger,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-// } from "@/components/ui/dropdown-menu";
-import {
-  Settings, Barcode, FileText, Fingerprint, 
-  Hash, IdCard, ListOrdered, LayoutGrid, Landmark, BadgeCheck, ShieldCheck,
-  
-
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  GraduationCap, 
+  CreditCard, 
+  Hash, 
+  User, 
+  BookOpen, 
+  FileText, 
+  CheckCircle2,
+  RefreshCw
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { saveAcademicIdentifier } from "@/services/stream";
-import { getAcademicIdentifier } from "@/services/academic";
-import { createAcademicIdentifier } from "@/services/student-apis";
-import axios from "axios";
+import { Course } from "@/types/academics/course";
+import { Framework, Shift } from "@/types/enums";
+import { getAllCourses } from "@/services/course-api";
+import { ApiResonse } from "@/types/api-response";
+import { getAcademicIdentifierByStudentId, createAcademicIdentifier, updateAcademicIdentifier } from "@/services/academic-identifiers.service";
+import { toast } from "sonner";
 
+interface AcademicIdentifierFormProps {
+  onSubmit: (data: AcademicIdentifier) => void;
+  initialData?: Partial<AcademicIdentifier>;
+  studentId: number;
+}
 
-
-const formElement = [
-  
-  { name: "frameworkType", label: "Framework Type", type: "text", icon: <Settings className="w-5 h-5 text-gray-500" /> },
-  { name: "rfid", label: "RFID", type: "text", icon: <Barcode className="w-5 h-5 text-gray-500" /> },
- 
-  { name: "cuFormNumber", label: "CU Form Number", type: "text", icon: <FileText className="w-5 h-5 text-gray-500" /> },
-  { name: "uid", label: "UID", type: "text", icon: <Fingerprint className="w-5 h-5 text-gray-500" /> },
-  { name: "oldUid", label: "Old UID", type: "text", icon: <Hash className="w-5 h-5 text-gray-500" /> },
-  { name: "registrationNumber", label: "Registration Number", type: "text", icon: <IdCard className="w-5 h-5 text-gray-500" /> },
-  { name: "rollNumber", label: "Roll Number", type: "text", icon: <ListOrdered className="w-5 h-5 text-gray-500" /> },
-  { name: "section", label: "Section", type: "text", icon: <LayoutGrid className="w-5 h-5 text-gray-500" /> },
-  { name: "classRollNumber", label: "Class Roll Number", type: "text", icon: <Landmark className="w-5 h-5 text-gray-500" /> },
-  { name: "apaarId", label: "APAAR ID", type: "text", icon: <BadgeCheck className="w-5 h-5 text-gray-500" /> },
-  { name: "abcId", label: "ABC ID", type: "text", icon: <ShieldCheck className="w-5 h-5 text-gray-500" /> },
-  { name: "apprid", label: "Appr ID", type: "text", icon: <ShieldCheck className="w-5 h-5 text-gray-500" /> },
-  
-];
-
-const AcademicIdentifierForm = () => {
-  const location = useLocation();
-  const studentId  = location.pathname.split("/").pop();
-
-const id=Number(studentId);
-
-const [isNew,setIsNew]=useState(false);
-const [formData, setFormData] = useState<AcademicIdentifier>({
-  studentId: 0,
-  frameworkType: null,
-  rfid: "",
-  course: null,
-  cuFormNumber: "",
-  uid: "",
-  oldUid: "",
-  registrationNumber: "",
-  rollNumber: "",
-  section: "",
-  classRollNumber: "",
-  apaarId: "",
-  abcId: "",
-  apprid: "",
-  checkRepeat: false,
-});
-
-
-
-
-const { data ,isError,error} = useQuery({
-  queryKey: ["AcademicIdentifier", id],
-  queryFn: () => getAcademicIdentifier(id),
-  enabled: !!id,
-  retry: false,
-});
-
-
-
-  useEffect(() => {
-   
-    if (isError && axios.isAxiosError(error) && error.response?.status === 404) {
-      alert("No academic history found - initializing new record");
-      console.log("error code ***1+*",error.response?.status);
-      setIsNew(true);
-      setFormData({
-        studentId: 0,
-        frameworkType: null,
-        rfid: "",
-        course: null,
-        cuFormNumber: "",
-        uid: "",
-        oldUid: "",
-        registrationNumber: "",
-        rollNumber: "",
-        section: "",
-        classRollNumber: "",
-        apaarId: "",
-        abcId: "",
-        apprid: "",
-        checkRepeat: false,
-      });
-     
-    }
-    else if(data?.payload) {
-      // console.log(JSON.stringify(data.payload,null,2));
-      setFormData((prev) => ({
-        ...prev,
-        ...data.payload, 
-      }));
-   
-    }
-    else{
-      console.log("error on fetching ",error);
-      
-    }
-    
-   
-   
-  }, [data, error, isError, id]);
-
-
-
-  const updateData=useMutation({
-    mutationFn:saveAcademicIdentifier,
-    onSuccess: (formData) => {
-      console.log("data saved:", formData);
-    }
-  })
-  
-  const createData = useMutation({
-    mutationFn: (formData: AcademicIdentifier) =>createAcademicIdentifier(formData),
-    onSuccess: (data) => {
-      console.log("Data saved:", data);
-      console.log("Data saved successfully");
-    },
+export default function AcademicIdentifierForm({  
+  initialData = {}, 
+  studentId 
+}: AcademicIdentifierFormProps) {
+  const [formData, setFormData] = useState<Partial<AcademicIdentifier>>({
+    studentId,
+    framework: null,
+    rfid: null,
+    course: null,
+    cuFormNumber: null,
+    uid: null,
+    oldUid: null,
+    registrationNumber: null,
+    rollNumber: null,
+    section: null,
+    classRollNumber: null,
+    apaarId: null,
+    abcId: null,
+    apprid: null,
+    checkRepeat: false,
+    shift: null,
+    ...initialData
   });
 
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : name === "studentId" ? Number(value) : value || null,
-    }));
+  // Fetch courses and academic identifier on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch courses
+        const coursesResponse: ApiResonse<Course[]> = await getAllCourses();
+        const coursesList = coursesResponse.payload || [];
+        setCourses(coursesList);
 
-  
-  };
+        // Fetch academic identifier by studentId
+        const identifier = await getAcademicIdentifierByStudentId(studentId);
+        if (identifier) {
+          setFormData(identifier);
+        }
+      } catch {
+        // Optionally handle 404 (no record) gracefully
+        // Form will remain empty for new records
+      }
+    };
+    fetchData();
+  }, [studentId]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-   
-    if(isNew){
-      console.log("Creating new academic history:", formData);
-      console.log("No academic history found - creating new record");
-      createData.mutate(formData);
+    setIsSubmitting(true);
+
+    try {
+      const { ...rest } = formData;
+      if (formData.id) {
+        await updateAcademicIdentifier(formData.id, rest);
+        toast.success("Academic Identifier updated!");
+      } else {
+        await createAcademicIdentifier(rest);
+        toast.success("Academic Identifier created!");
+      }
+      // Refetch and update form state
+      const latest = await getAcademicIdentifierByStudentId(studentId);
+      if (latest) setFormData(latest);
+    } catch {
+      toast.error("Failed to save Academic Identifier.");
+    } finally {
+      setIsSubmitting(false);
     }
-    else{
-      console.log("Updating academic history:", formData);
-      updateData.mutate(formData);
-    }
- 
   };
- 
+
+  const frameworkOptions: { value: Framework; label: string }[] = [
+    { value: "CCF", label: "CCF" },
+    { value: "CBCS", label: "CBCS" }
+  ];
+
+  const shiftOptions: { value: Shift; label: string }[] = [
+    { value: "MORNING", label: "Morning" },
+    { value: "AFTERNOON", label: "Afternoon" },
+    { value: "EVENING", label: "Evening" },
+  ];
 
   return (
-    <div className="shadow-md border py-10 w-full flex bg-white items-center justify-center px-5">
-      <div className="max-w-[90%] w-full grid grid-cols-2 gap-6">
-        {formElement.map(({ name, label, type, icon }) => (
-          <div key={name} className="flex flex-col mr-8">
-            <div className="relative p-1">
-             
-              <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
-                {label}
-              </label>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl font-semibold text-gray-800">
+            <GraduationCap className="w-5 h-5" />
+            Academic Identifier Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Framework and Course Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="framework" className="flex items-center gap-2 text-gray-700">
+                  <BookOpen className="w-4 h-4" />
+                  Framework Type
+                </Label>
+                <Select
+                  value={formData.framework || ""}
+                  onValueChange={(value: string) => 
+                    setFormData({ ...formData, framework: value as Framework })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select framework type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {frameworkOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value || ""}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="course" className="flex items-center gap-2 text-gray-700">
+                  <GraduationCap className="w-4 h-4" />
+                  Course
+                </Label>
+                <Select
+                  value={formData.course?.id?.toString() || ""}
+                  onValueChange={(value) => {
+                    const selectedCourse = courses.find(course => course.id?.toString() === value);
+                    setFormData({ ...formData, course: selectedCourse || null });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select course" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id?.toString() || ""}>
+                        {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
-              
-                <Input
-                  id={name}
-                  name={name}
-                  type={type}
-                  value={(formData[name as keyof AcademicIdentifier] as string) || ""}
-                  placeholder={label}
-                  onChange={handleChange}
-                  className={`w-full pl-10 pr-3 py-2 `}
+
+            {/* Shift Section */}
+            <div className="space-y-2">
+              <Label htmlFor="shift" className="flex items-center gap-2 text-gray-700">
+                <BookOpen className="w-4 h-4" />
+                Shift
+              </Label>
+              <Select
+                value={formData.shift || ""}
+                onValueChange={(value: string) =>
+                  setFormData({ ...formData, shift: value as Shift })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shiftOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* RFID and UID Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="rfid" className="flex items-center gap-2 text-gray-700">
+                  <CreditCard className="w-4 h-4" />
+                  RFID Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="rfid"
+                    value={formData.rfid || ""}
+                    onChange={(e) => setFormData({ ...formData, rfid: e.target.value || null })}
+                    placeholder="Enter RFID number"
+                    className="pl-10"
+                  />
+                  <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="uid" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  UID Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="uid"
+                    value={formData.uid || ""}
+                    onChange={(e) => setFormData({ ...formData, uid: e.target.value || null })}
+                    placeholder="Enter UID number"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Old UID and CU Form Number Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="oldUid" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  Old UID Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="oldUid"
+                    value={formData.oldUid || ""}
+                    onChange={(e) => setFormData({ ...formData, oldUid: e.target.value || null })}
+                    placeholder="Enter old UID number"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cuFormNumber" className="flex items-center gap-2 text-gray-700">
+                  <FileText className="w-4 h-4" />
+                  CU Form Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="cuFormNumber"
+                    value={formData.cuFormNumber || ""}
+                    onChange={(e) => setFormData({ ...formData, cuFormNumber: e.target.value || null })}
+                    placeholder="Enter CU form number"
+                    className="pl-10"
+                  />
+                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Registration and Roll Number Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="registrationNumber" className="flex items-center gap-2 text-gray-700">
+                  <User className="w-4 h-4" />
+                  Registration Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="registrationNumber"
+                    value={formData.registrationNumber || ""}
+                    onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value || null })}
+                    placeholder="Enter registration number"
+                    className="pl-10"
+                  />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="rollNumber" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  Roll Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="rollNumber"
+                    value={formData.rollNumber || ""}
+                    onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value || null })}
+                    placeholder="Enter roll number"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Section and Class Roll Number Section */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="section" className="flex items-center gap-2 text-gray-700">
+                  <BookOpen className="w-4 h-4" />
+                  Section
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="section"
+                    value={formData.section || ""}
+                    onChange={(e) => setFormData({ ...formData, section: e.target.value || null })}
+                    placeholder="Enter section (e.g., A, B, C)"
+                    className="pl-10"
+                  />
+                  <BookOpen className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="classRollNumber" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  Class Roll Number
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="classRollNumber"
+                    value={formData.classRollNumber || ""}
+                    onChange={(e) => setFormData({ ...formData, classRollNumber: e.target.value || null })}
+                    placeholder="Enter class roll number"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* APAAR, ABC, and APPR ID Section */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="apaarId" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  APAAR ID
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="apaarId"
+                    value={formData.apaarId || ""}
+                    onChange={(e) => setFormData({ ...formData, apaarId: e.target.value || null })}
+                    placeholder="Enter APAAR ID"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="abcId" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  ABC ID
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="abcId"
+                    value={formData.abcId || ""}
+                    onChange={(e) => setFormData({ ...formData, abcId: e.target.value || null })}
+                    placeholder="Enter ABC ID"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apprid" className="flex items-center gap-2 text-gray-700">
+                  <Hash className="w-4 h-4" />
+                  APPR ID
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="apprid"
+                    value={formData.apprid || ""}
+                    onChange={(e) => setFormData({ ...formData, apprid: e.target.value || null })}
+                    placeholder="Enter APPR ID"
+                    className="pl-10"
+                  />
+                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Check Repeat Section */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="checkRepeat"
+                  checked={formData.checkRepeat}
+                  onCheckedChange={(checked) => 
+                    setFormData({ ...formData, checkRepeat: checked as boolean })
+                  }
                 />
-             
+                <Label htmlFor="checkRepeat" className="flex items-center gap-2 text-gray-700">
+                  <RefreshCw className="w-4 h-4" />
+                  Check Repeat
+                </Label>
+              </div>
+              <p className="text-sm text-gray-500 ml-6">
+                Check this if the student is repeating the course
+              </p>
             </div>
-          </div>
-        ))}
-      
-        <div className="col-span-2">
-          <Button type="submit" onClick={handleSubmit} className="w-auto text-white font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700">
-            Submit
-          </Button>
-        </div>
-      </div>
+
+            {/* Submit Button */}
+            <div className="flex justify-center">
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="flex items-center mb-5 gap-2 bg-blue-600 hover:bg-blue-700 font-bold"
+              >
+                {isSubmitting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default AcademicIdentifierForm;
+}

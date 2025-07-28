@@ -1,5 +1,5 @@
 // import { AcademicYear } from "@/types/academics/academic-year";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design";
 import { Admission } from "@/types/admissions";
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";

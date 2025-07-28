@@ -1,6 +1,6 @@
 import useSWR from 'swr';
-import { getAllShifts } from '@/services/academic';
 import { Shift } from '@/types/academics/shift';
+import { getAllShifts } from '@/services/academic';
 
 const fetcher = async (): Promise<Shift[]> => {
     const res = await getAllShifts();

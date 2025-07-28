@@ -23,7 +23,7 @@ import {
   removePersonalDetailsByStudentId,
   savePersonalDetails,
 } from "./personalDetails.service.js";
-import { removeMarksheetByStudentId } from "@/features/academics/services/marksheet.service.js";
+// import { removeMarksheetByStudentId } from "@/features/academics/services/marksheet.service.js";
 import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
 import { findUserById } from "./user.service.js";
 import { academicIdentifierModel } from "../models/academicIdentifier.model.js";
@@ -199,9 +199,9 @@ export async function removeStudent(id: number): Promise<boolean | null> {
   isDeleted = await removePersonalDetailsByStudentId(id);
   if (isDeleted !== null && !isDeleted) return false;
 
-  // Step 10: Delete all the marksheets
-  isDeleted = await removeMarksheetByStudentId(id);
-  if (isDeleted !== null && !isDeleted) return false;
+//   // Step 10: Delete all the marksheets
+//   isDeleted = await removeMarksheetByStudentId(id);
+//   if (isDeleted !== null && !isDeleted) return false;
 
   // Step 11: Delete the student
   const [deletedStudent] = await db
@@ -427,7 +427,7 @@ export async function findFilteredStudents({
 }): Promise<PaginatedResponse<StudentType>> {
   const filters = [
     stream ? eq(degreeModel.name, stream) : undefined,
-    year ? eq(marksheetModel.year, year) : undefined,
+    // year ? eq(marksheetModel.year, year) : undefined,
     // framework ? eq(streamModel.framework, framework) : undefined,
   ].filter(Boolean);
   if (semester) {
@@ -445,7 +445,7 @@ export async function findFilteredStudents({
     )
     // .leftJoin(streamModel, eq(academicIdentifierModel.streamId, streamModel.id))
     // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
-    .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
+    // .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
     .where(and(...filters));
 
   const [{ count: countRows }] = await db
@@ -457,7 +457,7 @@ export async function findFilteredStudents({
     )
     // .leftJoin(de, eq(academicIdentifierModel.de, streamModel.id))
     // .leftJoin(degreeModel, eq(streamModel.degreeId, degreeModel.id))
-    .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
+    // .leftJoin(marksheetModel, eq(studentModel.id, marksheetModel.studentId))
     .where(and(...filters));
 
   let students;

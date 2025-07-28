@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1751703229867,
-      "tag": "0000_slippery_reptil",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1751810883810,
-      "tag": "0001_adorable_skaar",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1751816502502,
-      "tag": "0002_mushy_adam_destine",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1751967471865,
-      "tag": "0003_hesitant_stryfe",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1751967790765,
-      "tag": "0004_last_bruce_banner",
+      "when": 1753680046796,
+      "tag": "0000_wonderful_onslaught",
       "breakpoints": true
     }
   ]

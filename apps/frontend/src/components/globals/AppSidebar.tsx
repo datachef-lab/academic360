@@ -70,7 +70,7 @@ const data = {
   ],
   navMain: [
     { title: "Resources", url: "/dashboard/resources", icon: Boxes },
-    { title: "Courses & Subject", url: "/dashboard/courses-subjects", icon: LayoutList },
+    { title: "Courses & Subject Design", url: "/dashboard/courses-subjects-design", icon: LayoutList },
     { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },

@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType, CreateFeesStructureDto } from "@/types/fees";
 import { Select,  } from "antd";
 // import dayjs from "dayjs";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design";
 import { Shift } from "@/types/academics/shift";
 import { Class as ClassType } from "@/types/academics/class";
 

@@ -1,0 +1,970 @@
+{
+	"info": {
+		"_postman_id": "academic360-api-collection",
+		"name": "Academic360 APIs",
+		"description": "Complete RESTful CRUD APIs for Academic360 - Academic Management System",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Batch-Student Mapping",
+			"item": [
+				{
+					"name": "Create Batch-Student Mapping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"batchId\": 1,\n  \"studentId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Batch-Student Mappings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings?page=1&pageSize=10&batchId=1&studentId=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								},
+								{
+									"key": "batchId",
+									"value": "1"
+								},
+								{
+									"key": "studentId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Batch-Student Mapping by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Batch-Student Mapping",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"batchId\": 2,\n  \"studentId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Batch-Student Mapping",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Batch-Student Mappings by Batch ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings/batch/1?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings",
+								"batch",
+								"1"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Batch-Student Mappings by Student ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/batch-student-mappings/student/1?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"batch-student-mappings",
+								"student",
+								"1"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Marksheet-Paper Mapping",
+			"item": [
+				{
+					"name": "Create Marksheet-Paper Mapping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"marksheetId\": 1,\n  \"batchStudentPaperId\": 1,\n  \"yearOfAppearanceId\": 1,\n  \"yearOfPassingId\": 1,\n  \"totalCreditObtained\": 4.0,\n  \"totalMarksObtained\": 85.0,\n  \"tgp\": 340.0,\n  \"ngp\": 4.0,\n  \"letterGrade\": \"A\",\n  \"status\": \"PASS\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Marksheet-Paper Mappings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings?page=1&pageSize=10&marksheetId=1&batchStudentPaperId=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								},
+								{
+									"key": "marksheetId",
+									"value": "1"
+								},
+								{
+									"key": "batchStudentPaperId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Marksheet-Paper Mapping by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Marksheet-Paper Mapping",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"totalMarksObtained\": 90.0,\n  \"tgp\": 360.0,\n  \"ngp\": 4.5,\n  \"letterGrade\": \"A+\",\n  \"status\": \"PASS\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Marksheet-Paper Mapping",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Marksheet-Paper Mappings by Marksheet ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-mappings/marksheet/1?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-mappings",
+								"marksheet",
+								"1"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Marksheet-Paper Component Mapping",
+			"item": [
+				{
+					"name": "Create Marksheet-Paper Component Mapping",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"marksheetPaperMappingId\": 1,\n  \"paperComponentId\": 1,\n  \"marksObtained\": 85.0,\n  \"creditObtained\": 4.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get All Marksheet-Paper Component Mappings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings?page=1&pageSize=10&marksheetPaperMappingId=1&paperComponentId=1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								},
+								{
+									"key": "marksheetPaperMappingId",
+									"value": "1"
+								},
+								{
+									"key": "paperComponentId",
+									"value": "1"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Marksheet-Paper Component Mapping by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Marksheet-Paper Component Mapping",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"marksObtained\": 90.0,\n  \"creditObtained\": 4.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Marksheet-Paper Component Mapping",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Marksheet-Paper Component Mappings by Marksheet Paper Mapping ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/academics/marksheet-paper-component-mappings/marksheet-paper/1?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"academics",
+								"marksheet-paper-component-mappings",
+								"marksheet-paper",
+								"1"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Batch APIs (Existing)",
+			"item": [
+				{
+					"name": "Get All Batches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/batches?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"batches"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Batch by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/batches/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"batches",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Batch",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": 1,\n  \"classId\": 1,\n  \"sectionId\": 1,\n  \"shiftId\": 1,\n  \"sessionId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/batches",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"batches"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Batch",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"courseId\": 2,\n  \"classId\": 1,\n  \"sectionId\": 1,\n  \"shiftId\": 1,\n  \"sessionId\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/batches/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"batches",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Batch",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/batches/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"batches",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Marksheet APIs (Existing)",
+			"item": [
+				{
+					"name": "Get All Marksheets",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/marksheets?page=1&pageSize=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"marksheets"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "10"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Marksheet by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/marksheets/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"marksheets",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Create Marksheet",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"batchStudentMappingId\": 1,\n  \"classId\": 1,\n  \"sgpa\": 3.8,\n  \"cgpa\": 3.9,\n  \"classification\": \"FIRST_CLASS\",\n  \"remarks\": \"Excellent performance\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/marksheets",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"marksheets"
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Marksheet",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sgpa\": 3.9,\n  \"cgpa\": 4.0,\n  \"classification\": \"FIRST_CLASS\",\n  \"remarks\": \"Outstanding performance\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/marksheets/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"marksheets",
+								"1"
+							]
+						}
+					}
+				},
+				{
+					"name": "Delete Marksheet",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{jwt_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/marksheets/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"marksheets",
+								"1"
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		}
+	]
+} 

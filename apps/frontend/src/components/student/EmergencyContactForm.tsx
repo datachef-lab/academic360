@@ -1,147 +1,233 @@
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  getEmergencyContactByStudentId,
+  createEmergencyContact,
+  updateEmergencyContact,
+} from "@/services/emergency-contact.service";
+import { EmergencyContact } from "@/types/user/emergency-contact";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-
-import { EmergencyContact } from "@/types/user/emergency-contact";
-import { useMutation } from "@tanstack/react-query";
-import {  getEmergencyContact } from "@/services/academic";
-import { createEmergencyContact, updateEmergencyContact } from "@/services/student-apis";
-import { Users, Mail, Phone, Briefcase, Home, Save, CheckCircle, PenLine } from "lucide-react";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
+import { Save, CheckCircle } from "lucide-react";
 
-const formElements = [
-  { name: "personName", label: "Guardian's Name", type: "text", icon: <Users className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "relationToStudent", label: "Relation to Student", type: "text", icon: <Users className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "email", label: "Email", type: "email", icon: <Mail className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "phone", label: "Phone", type: "tel", icon: <Phone className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "officePhone", label: "Office Phone", type: "tel", icon: <Briefcase className="text-gray-500 dark:text-white w-5 h-5" /> },
-  { name: "residentialPhone", label: "Residential Phone", type: "tel", icon: <Home className="text-gray-500 dark:text-white w-5 h-5" /> },
-];
-
-const defaultEmergencyContact: EmergencyContact = {
-  studentId: 0,
-  personName: "",
-  relationToStudent: "",
-  email: "",
-  phone: "",
-  officePhone: "",
-  residentialPhone: "",
-};
-
-// Define interface for component props
-interface EmergencyContactProps {
+interface EmergencyContactFormProps {
   studentId: number;
 }
 
-const EmergencyContactForm = ({ studentId }: EmergencyContactProps) => {
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+const defaultEmergencyContact: Partial<EmergencyContact> = {
+  studentId: 0,
+  personName: null,
+  relationToStudent: null,
+  email: null,
+  phone: null,
+  officePhone: null,
+  residentialPhone: null,
+};
 
-  const { data: emergencyContactData, loading, refetch } = useFetch<EmergencyContact>({
-    getFn: () => getEmergencyContact(studentId),
-    postFn: (data) => createEmergencyContact(data),
-    default: defaultEmergencyContact
+// Utility to remove createdAt and updatedAt from object and nested
+function stripDates<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    // Recursively strip dates from array elements
+    return obj.map(stripDates) as T;
+  } else if (obj && typeof obj === "object") {
+    const result = {} as { [K in keyof T]: T[K] };
+    for (const key in obj) {
+      if (key === "createdAt" || key === "updatedAt") continue;
+      const value = obj[key];
+      result[key] = (typeof value === "object" && value !== null)
+        ? stripDates(value)
+        : value;
+    }
+    return result as T;
+  }
+  return obj;
+}
+
+export default function EmergencyContactForm({ studentId }: EmergencyContactFormProps) {
+  const [formData, setFormData] = useState<Partial<EmergencyContact>>({
+    ...defaultEmergencyContact,
+    studentId,
+  });
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // Fetch emergency contact details
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["emergencyContact", studentId],
+    queryFn: async () => {
+      const res = await getEmergencyContactByStudentId(studentId);
+      return res.payload;
+    },
+    enabled: !!studentId,
   });
 
-  const [formData, setFormData] = useState<EmergencyContact>(defaultEmergencyContact);
-
+  // When emergency contact data is loaded
   useEffect(() => {
-    if (emergencyContactData) {
-      setFormData(emergencyContactData);
-    }
-  }, [emergencyContactData]);
-
-  const updateMutation = useMutation({
-    mutationFn: (formData: EmergencyContact) => 
-      emergencyContactData?.id 
-        ? updateEmergencyContact(formData, studentId)
-        : createEmergencyContact(formData),
-    onSuccess: () => {
-      toast.success("Emergency contact has been successfully updated.", {
-        icon: <PenLine />,
+    if (data) {
+      setFormData({
+        ...data,
       });
+    }
+  }, [data]);
+
+  // Save handler
+  const mutation = useMutation({
+    mutationFn: async (payload: Partial<EmergencyContact>) => {
+      const cleanedPayload = stripDates(payload);
+      const { id, ...rest } = cleanedPayload;
+      if (id) {
+        return await updateEmergencyContact(id, rest);
+      } else {
+        return await createEmergencyContact(rest);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Emergency contact updated!");
       refetch();
     },
-    onError: (error) => {
-      toast.error("Failed to save emergency contact. Please try again.");
-      console.error("Error saving emergency contact:", error);
-    }
+    onError: () => {
+      toast.error("Failed to update emergency contact.");
+    },
   });
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    if (!formData.personName) newErrors.personName = "Name is required";
-    if (!formData.relationToStudent) newErrors.relationToStudent = "Relation is required";
-    if (!formData.email || !formData.email.includes("@")) newErrors.email = "Invalid email format";
-    if (!formData.phone || formData.phone.length < 10) newErrors.phone = "Phone number is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (field: keyof EmergencyContact, value: string | number | null) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[name];
-      return newErrors;
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowSuccess(false);
+    mutation.mutate(formData, {
+      onSuccess: () => {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
+      },
     });
   };
 
-  useEffect(() => {
-    if (updateMutation.isSuccess) {
-      setShowSuccess(true);
-      const timer = setTimeout(() => setShowSuccess(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [updateMutation.isSuccess]);
-
-  const handleSubmit = (e: React.FormEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    if (loading || !validateForm()) return;
-    updateMutation.mutate(formData);
-  };
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error loading emergency contact details.</div>;
 
   return (
-    <div className="shadow-lg border bg-white py-10 w-full flex items-center rounded-lg  justify-center px-5">
-      <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
-        {formElements.map(({ name, label, type, icon }) => (
-          <div key={name} className="flex flex-col mr-8">
-            <div className="relative p-1">
-              {errors[name] ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
-              <label htmlFor={name} className="text-md text-gray-700 dark:text-white mb-1 font-medium">{label}</label>
+    <Card className="max-w-8xl mx-auto my-8">
+      <CardHeader>
+        <CardTitle>Emergency Contact Details</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-6">
+          {/* Person Name */}
+          <div>
+            <Label>Person Name</Label>
+            <Input
+              value={formData.personName || ""}
+              onChange={(e) =>
+                handleChange("personName", e.target.value)
+              }
+              placeholder="Enter person name"
+            />
+          </div>
+
+          {/* Relation to Student */}
+          <div>
+            <Label>Relation to Student</Label>
+            <Input
+              value={formData.relationToStudent || ""}
+              onChange={(e) =>
+                handleChange("relationToStudent", e.target.value)
+              }
+              placeholder="e.g., Father, Mother, Guardian, Brother, Sister"
+            />
+          </div>
+
+          {/* Email */}
+          <div>
+            <Label>Email</Label>
+            <Input
+              type="email"
+              value={formData.email || ""}
+              onChange={(e) =>
+                handleChange("email", e.target.value)
+              }
+              placeholder="Enter email address"
+            />
+          </div>
+
+          {/* Phone Numbers Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Contact Numbers</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Primary Phone</Label>
+                <Input
+                  value={formData.phone || ""}
+                  onChange={(e) =>
+                    handleChange("phone", e.target.value)
+                  }
+                  placeholder="Primary phone number"
+                />
+              </div>
+
+              <div>
+                <Label>Office Phone</Label>
+                <Input
+                  value={formData.officePhone || ""}
+                  onChange={(e) =>
+                    handleChange("officePhone", e.target.value)
+                  }
+                  placeholder="Office phone number"
+                />
+              </div>
             </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
+
+            <div>
+              <Label>Residential Phone</Label>
               <Input
-                id={name}
-                name={name}
-                type={type}
-                 value={formData[name as keyof EmergencyContact] as string || ""}
-                placeholder={label}
-                onChange={handleChange}
-                className={`w-full pl-10 pr-3 rounded-lg py-2 ${errors[name] ? "border-red-500" : ""}`}
+                value={formData.residentialPhone || ""}
+                onChange={(e) =>
+                  handleChange("residentialPhone", e.target.value)
+                }
+                placeholder="Residential phone number"
               />
             </div>
           </div>
-        ))}
-         <div className="col-span-1 sm:col-span-2 mt-2">
-          <Button 
-            type="submit" 
-            onClick={handleSubmit} 
+        </CardContent>
+
+        <CardFooter className="flex flex-col items-center gap-2">
+          <Button
+            type="submit"
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
-            disabled={updateMutation.isLoading}
+            disabled={mutation.isLoading}
           >
-            {updateMutation.isLoading ? (
+            {mutation.isLoading ? (
               <>
-                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 Processing...
               </>
@@ -153,14 +239,12 @@ const EmergencyContactForm = ({ studentId }: EmergencyContactProps) => {
             ) : (
               <>
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Submit
+                Save Changes
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </CardFooter>
+      </form>
+    </Card>
   );
-};
-
-export default EmergencyContactForm;
+}

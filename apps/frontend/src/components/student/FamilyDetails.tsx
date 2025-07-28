@@ -1,12 +1,23 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { IdCard, Mail, Phone, User, Briefcase, GraduationCap, BadgeIndianRupee, Save, CheckCircle } from "lucide-react";
-import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { useState, useEffect } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { findFamilyDetailsByStudentId, createFamilyDetails, updateFamilyDetails } from "@/services/Family-details-api";
-import { Parent } from "@/types/user/parent";
-import { ParentType } from "@/types/enums/index";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import {
+  getFamilyDetailByStudentId,
+  createFamilyDetail,
+  updateFamilyDetail,
+} from "@/services/family-details.service";
+import { getAllAnnualIncomes } from "@/services/annual-income.service";
+import { Family } from "@/types/user/family";
+import { ParentType } from "@/types/enums";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Spinner } from "../ui/spinner";
 import { Occupation } from "@/types/resources/occupation";
@@ -205,16 +216,51 @@ const guardianFormElements = [
     field: "guardianDetails",
   },
 ];
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AnnualIncome } from "@/types/resources/annual-income.types";
+import { Save, CheckCircle } from "lucide-react";
 
 interface FamilyDetailsProps {
   studentId: number;
 }
 
+const defaultFamily: Partial<Family> = {
+  studentId: 0,
+  parentType: null,
+  fatherDetails: null,
+  motherDetails: null,
+  guardianDetails: null,
+  annualIncome: null,
+};
+
+// Utility to remove createdAt and updatedAt from object and nested
+function stripDates<T>(obj: T): T {
+  if (Array.isArray(obj)) {
+    // Recursively strip dates from array elements
+    return obj.map(stripDates) as T;
+  } else if (obj && typeof obj === "object") {
+    const result = {} as { [K in keyof T]: T[K] };
+    for (const key in obj) {
+      if (key === "createdAt" || key === "updatedAt") continue;
+      const value = obj[key];
+      result[key] = (typeof value === "object" && value !== null)
+        ? stripDates(value)
+        : value;
+    }
+    return result as T;
+  }
+  return obj;
+}
+
 export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [formData, setFormData] = useState<Parent>({
-    ...defaultFamilyDetails,
+  const [formData, setFormData] = useState<Partial<Family>>({
+    ...defaultFamily,
     studentId,
   });
   const [occupations, setOccupations] = useState<Occupation[]>([]);
@@ -224,619 +270,387 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
   useEffect(() => {
     findAllOccupations().then((data) => setOccupations(data.payload.content));
   }, []);
+  const [annualIncomeOptions, setAnnualIncomeOptions] = useState<AnnualIncome[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  // Use React Query to fetch family details
-  const {
-    data: familyDetails,
-    isLoading,
-    isError,
-    refetch,
-  } = useQuery({
+  // Fetch family details
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["familyDetails", studentId],
     queryFn: async () => {
-      const response = await findFamilyDetailsByStudentId(studentId);
-      return response.payload;
+      const res = await getFamilyDetailByStudentId(studentId);
+      return res.payload;
     },
-    enabled: studentId > 0,
-    retry: 1,
-    staleTime: 300000, // 5 minutes
+    enabled: !!studentId,
   });
 
-  // Update form data when family details are loaded
+  // Load Annual Income options
   useEffect(() => {
-    if (familyDetails) {
-      console.log("Family details data loaded:", familyDetails);
-      setFormData(familyDetails);
-    }
-  }, [familyDetails]);
+    getAllAnnualIncomes()
+      .then((incomes) => setAnnualIncomeOptions(incomes ?? []))
+      .catch((err) => {
+        console.error("Failed to fetch annual incomes:", err);
+        setAnnualIncomeOptions([]);
+      });
+  }, []);
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Parent) => (data.id ? updateFamilyDetails(data.id, data) : createFamilyDetails(data)),
+  // When both family data and annual incomes are loaded
+  useEffect(() => {
+    if (data && annualIncomeOptions.length > 0) {
+      const matchedIncome = annualIncomeOptions.find(
+        (ai) => ai.id === data.annualIncome?.id
+      );
+      setFormData({
+        ...data,
+        annualIncome: matchedIncome ?? null,
+      });
+    }
+  }, [data, annualIncomeOptions]);
+
+  // Save handler
+  const mutation = useMutation({
+    mutationFn: async (payload: Partial<Family>) => {
+      const cleanedPayload = stripDates(payload);
+      const { id, ...rest } = cleanedPayload;
+      if (id) {
+        return await updateFamilyDetail(id, rest);
+      } else {
+        return await createFamilyDetail(rest);
+      }
+    },
     onSuccess: () => {
-      toast.success("Family details have been successfully updated.");
-      setShowSuccess(true);
+      toast.success("Family details updated!");
       refetch();
     },
-    onError: (error) => {
-      toast.error("Failed to save family details. Please try again.");
-      console.error("Error saving family details:", error);
+    onError: () => {
+      toast.error("Failed to update family details.");
     },
   });
 
-  useEffect(() => {
-    if (showSuccess) {
-      const timer = setTimeout(() => setShowSuccess(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [showSuccess]);
-
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    // Validation based on parent type
-    if (formData.parentType === "BOTH" || formData.parentType === "FATHER_ONLY") {
-      // Father's details validation
-      if (formData.fatherDetails?.name === "" || !formData.fatherDetails?.name) {
-        newErrors["fatherDetails_name"] = "Father's name is required";
-      }
-      if (formData.fatherDetails?.phone === "" || !formData.fatherDetails?.phone) {
-        newErrors["fatherDetails_phone"] = "Phone number is required";
-      }
-      if (formData.fatherDetails?.email && !formData.fatherDetails.email.includes("@")) {
-        newErrors["fatherDetails_email"] = "Invalid email format";
-      }
-    }
-
-    // Mother's details validation
-    if (formData.parentType === "BOTH" || formData.parentType === "MOTHER_ONLY") {
-      if (formData.motherDetails?.name === "" || !formData.motherDetails?.name) {
-        newErrors["motherDetails_name"] = "Mother's name is required";
-      }
-      if (formData.motherDetails?.phone === "" || !formData.motherDetails?.phone) {
-        newErrors["motherDetails_phone"] = "Phone number is required";
-      }
-      if (formData.motherDetails?.email && !formData.motherDetails.email.includes("@")) {
-        newErrors["motherDetails_email"] = "Invalid email format";
-      }
-    }
-
-    // Guardian details validation (always required)
-    if (formData.guardianDetails?.name === "" || !formData.guardianDetails?.name) {
-      newErrors["guardianDetails_name"] = "Guardian's name is required";
-    }
-    if (formData.guardianDetails?.phone === "" || !formData.guardianDetails?.phone) {
-      newErrors["guardianDetails_phone"] = "Phone number is required";
-    }
-    if (formData.guardianDetails?.email && !formData.guardianDetails.email.includes("@")) {
-      newErrors["guardianDetails_email"] = "Invalid email format";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleChange = (field: keyof Family, value: string | number | null) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleNestedObjectChange = (parentField: string, field: string, value: string) => {
+  const handlePersonChange = <T extends keyof Family>(
+    personType: T,
+    field: string,
+    value: string | number | null | object
+  ) => {
     setFormData((prev) => {
+      const current = prev[personType];
+      const base = (current && typeof current === 'object') ? current : {};
       return {
         ...prev,
-        [parentField]: {
-          ...(prev[parentField as keyof Parent] as object),
-          [field]: value,
-        },
-      } as Parent;
+        [personType]: { ...base, [field]: value },
+      };
     });
-
-    // Clear errors when field changes
-    const errorKey = `${parentField}_${field}`;
-    if (errors[errorKey]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[errorKey];
-        return newErrors;
-      });
-    }
-  };
-
-  const handleNestedNestedChange = (parentField: string, nestedField: string, value: string) => {
-    setFormData((prev) => {
-      const parentObject = prev[parentField as keyof Parent];
-      if (!parentObject) return prev;
-
-      return {
-        ...prev,
-        [parentField]: {
-          ...(parentObject as object),
-          [nestedField]: {
-            ...((parentObject as any)[nestedField] || {}),
-            name: value,
-            id: (parentObject as any)[nestedField]?.id || 0,
-          },
-        },
-      } as Parent;
-    });
-  };
-
-  // Add a new function for image handling before the handleSubmit function
-  const handleImageUpload = (file: File, parentField: string) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      // When read operation is finished
-      const base64String = reader.result as string;
-
-      setFormData((prev) => {
-        return {
-          ...prev,
-          [parentField]: {
-            ...(prev[parentField as keyof Parent] as object),
-            image: base64String,
-          },
-        } as Parent;
-      });
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading || !validateForm()) return;
-    console.log("Submitting family form data:", formData);
-    updateMutation.mutate(formData);
+    setShowSuccess(false);
+    mutation.mutate(formData, {
+      onSuccess: () => {
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2000);
+      },
+    });
   };
 
-  const handleParentTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newParentType = e.target.value as ParentType;
-    setFormData((prev) => ({
-      ...prev,
-      parentType: newParentType,
-    }));
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-40">
-        <Spinner className="w-8 h-8 text-blue-500" />
-        <span className="ml-2">Loading family details...</span>
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex flex-col justify-center items-center h-40 text-red-500">
-        <p>Error loading family details</p>
-        <Button onClick={() => refetch()} variant="outline" className="mt-2">
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
-  // Helper to determine if a specific parent section should be shown
-  const shouldShowParentSection = (parentType: string): boolean => {
-    switch (formData.parentType) {
-      case "FATHER_ONLY":
-        return parentType === "fatherDetails" || parentType === "guardianDetails";
-      case "MOTHER_ONLY":
-        return parentType === "motherDetails" || parentType === "guardianDetails";
-      case "BOTH":
-      default:
-        return true;
-    }
-  };
-
-  const renderFormElement = (element: any, parentField: string) => {
-    // Skip rendering if this parent type shouldn't be shown
-    if (!shouldShowParentSection(parentField)) return null;
-
-    const { name, label, type, icon } = element;
-    const fullFieldName = `${parentField}.${name}`;
-    const value = getPersonProperty(formData[parentField as keyof Parent], name) || "";
-    const hasError = errors[`${parentField}_${name}`];
-
-    return (
-      <div key={fullFieldName} className="flex flex-col mr-8">
-        <div className="relative p-1">
-          {hasError ? <span className="text-red-600 absolute left-[-2px] top-[-2px]">*</span> : null}
-          <label htmlFor={fullFieldName} className="text-md text-gray-700 dark:text-white mb-1 font-medium">
-            {label}
-          </label>
-        </div>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2">{icon}</span>
-          <Input
-            id={fullFieldName}
-            name={fullFieldName}
-            type={type}
-            value={value}
-            placeholder={label}
-            onChange={(e) => handleNestedObjectChange(parentField, name, e.target.value)}
-            className={`w-full pl-10 pr-3 rounded-lg py-2 ${hasError ? "border-red-500" : ""}`}
-          />
-        </div>
-        {hasError && <p className="text-red-500 text-sm mt-1">{hasError}</p>}
-      </div>
-    );
-  };
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error loading family details.</div>;
 
   return (
-    <div className="shadow-lg border py-10 w-full bg-white flex items-center rounded-lg justify-center px-5">
-      <div className="max-w-[80%] w-full grid grid-cols-2 gap-6">
-        {/* Parent Type Selection */}
-        <div className="col-span-2 mb-4">
-          <div className="flex flex-col mr-8">
-            <div className="relative p-1">
-              <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Parent Type</label>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <User className="text-gray-500 dark:text-white w-5 h-5" />
-              </span>
-              <select
-                name="parentType"
-                value={formData.parentType || "BOTH"}
-                onChange={handleParentTypeChange}
-                className="w-full pl-10 pr-3 rounded-lg py-2 border"
-              >
-                {parentTypes.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Father Details */}
-        {shouldShowParentSection("fatherDetails") && (
-          <>
-            <div className="col-span-2">
-              <h3 className="text-lg font-medium mb-2">Father's Details</h3>
-            </div>
-            {fatherFormElements.map((element) => renderFormElement(element, "fatherDetails"))}
-
-            {/* Father's Qualification */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Qualification</label>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" />
-                </span>
-                <Input
-                  type="text"
-                  placeholder="Enter Qualification"
-                  value={getNestedProperty(formData.fatherDetails, "qualification", "name") || ""}
-                  onChange={(e) => handleNestedNestedChange("fatherDetails", "qualification", e.target.value)}
-                  className="w-full pl-10 pr-3 rounded-lg py-2"
-                />
-              </div>
-            </div>
-
-            {/* Father's Occupation */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Occupation</label>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
-                </span>
-                {/* {formData.fatherDetails?.occupation?.id} */}
-                {/* {JSON.stringify(occupations)} */}
-                <Select
-                  value={formData.fatherDetails?.occupation?.id?.toString() ?? ""}
-                  onValueChange={(occupationId) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      fatherDetails: {
-                        ...prev.fatherDetails,
-                        occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
-                        name: prev.fatherDetails?.name || null,
-                        email: prev.fatherDetails?.email || null,
-                        phone: prev.fatherDetails?.phone || null,
-                        aadhaarCardNumber: prev.fatherDetails?.aadhaarCardNumber || null,
-                        image: prev.fatherDetails?.image || null,
-                        officePhone: prev.fatherDetails?.officePhone || null,
-                        qualification: prev.fatherDetails?.qualification || null,
-                        officeAddress: prev.fatherDetails?.officeAddress || null,
-                        createdAt: prev.fatherDetails?.createdAt || new Date(),
-                        updatedAt: prev.fatherDetails?.updatedAt || new Date(),
-                      },
-                    }))
-                  }
-                >
-                  <SelectTrigger className="px-10">
-                    <SelectValue placeholder="Theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {occupations.map((occupation) => (
-                      <SelectItem key={occupation.id} value={occupation.id!.toString()}>
-                        {occupation?.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Father's Image Upload */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Upload Image</label>
-              </div>
-              <div className="relative">
-                {formData.fatherDetails?.image && (
-                  <div className="mb-2">
-                    <img
-                      src={formData.fatherDetails.image as string}
-                      alt="Father's photo"
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const file = e.target.files[0];
-                      handleImageUpload(file, "fatherDetails");
-                    }
-                  }}
-                  className="w-full py-2"
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Mother Details */}
-        {shouldShowParentSection("motherDetails") && (
-          <>
-            <div className="col-span-2 mt-4">
-              <h3 className="text-lg font-medium mb-2">Mother's Details</h3>
-            </div>
-            {motherFormElements.map((element) => renderFormElement(element, "motherDetails"))}
-
-            {/* Mother's Qualification */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Qualification</label>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" />
-                </span>
-                <Input
-                  type="text"
-                  placeholder="Enter Qualification"
-                  value={getNestedProperty(formData.motherDetails, "qualification", "name") || ""}
-                  onChange={(e) => handleNestedNestedChange("motherDetails", "qualification", e.target.value)}
-                  className="w-full pl-10 pr-3 rounded-lg py-2"
-                />
-              </div>
-            </div>
-
-            {/* Mother's Occupation */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Occupation</label>
-              </div>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
-                </span>
-                <Select
-                  value={formData.motherDetails?.occupation?.id?.toString() ?? ""}
-                  onValueChange={(occupationId) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      motherDetails: {
-                        ...prev.motherDetails,
-                        occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
-                        name: prev.motherDetails?.name || null,
-                        email: prev.motherDetails?.email || null,
-                        phone: prev.motherDetails?.phone || null,
-                        aadhaarCardNumber: prev.motherDetails?.aadhaarCardNumber || null,
-                        image: prev.motherDetails?.image || null,
-                        officePhone: prev.motherDetails?.officePhone || null,
-                        qualification: prev.motherDetails?.qualification || null,
-                        officeAddress: prev.motherDetails?.officeAddress || null,
-                        createdAt: prev.motherDetails?.createdAt || new Date(),
-                        updatedAt: prev.motherDetails?.updatedAt || new Date(),
-                      },
-                    }))
-                  }
-                >
-                  <SelectTrigger className="px-10">
-                    <SelectValue placeholder="Theme" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {occupations.map((occupation) => (
-                      <SelectItem key={occupation.id} value={occupation.id!.toString()}>
-                        {occupation?.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Mother's Image Upload */}
-            <div className="flex flex-col mr-8">
-              <div className="relative p-1">
-                <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Upload Image</label>
-              </div>
-              <div className="relative">
-                {formData.motherDetails?.image && (
-                  <div className="mb-2">
-                    <img
-                      src={formData.motherDetails.image as string}
-                      alt="Mother's photo"
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      const file = e.target.files[0];
-                      handleImageUpload(file, "motherDetails");
-                    }
-                  }}
-                  className="w-full py-2"
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Guardian Details */}
-        <div className="col-span-2 mt-4">
-          <h3 className="text-lg font-medium mb-2">Guardian's Details</h3>
-        </div>
-        {guardianFormElements.map((element) => renderFormElement(element, "guardianDetails"))}
-
-        {/* Guardian's Qualification */}
-        <div className="flex flex-col mr-8">
-          <div className="relative p-1">
-            <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Qualification</label>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <GraduationCap className="text-gray-500 dark:text-white w-5 h-5" />
-            </span>
-            <Input
-              type="text"
-              placeholder="Enter Qualification"
-              value={getNestedProperty(formData.guardianDetails, "qualification", "name") || ""}
-              onChange={(e) => handleNestedNestedChange("guardianDetails", "qualification", e.target.value)}
-              className="w-full pl-10 pr-3 rounded-lg py-2"
-            />
-          </div>
-        </div>
-
-        {/* Guardian's Occupation */}
-        <div className="flex flex-col mr-8">
-          <div className="relative p-1">
-            <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Occupation</label>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <Briefcase className="text-gray-500 dark:text-white w-5 h-5" />
-            </span>
+    <Card className="max-w-8xl mx-auto my-8">
+      <CardHeader>
+        <CardTitle>Family Details</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-6">
+          {/* Parent Type */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <Label>Parent Type</Label>
             <Select
-              value={formData.guardianDetails?.occupation?.id?.toString() ?? ""}
-              onValueChange={(occupationId) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  guardianDetails: {
-                    ...prev.guardianDetails,
-                    occupation: occupations.find((ele) => ele.id!.toString() == occupationId) || null,
-                    name: prev.guardianDetails?.name || null,
-                    email: prev.guardianDetails?.email || null,
-                    phone: prev.guardianDetails?.phone || null,
-                    aadhaarCardNumber: prev.guardianDetails?.aadhaarCardNumber || null,
-                    image: prev.guardianDetails?.image || null,
-                    officePhone: prev.guardianDetails?.officePhone || null,
-                    qualification: prev.guardianDetails?.qualification || null,
-                    officeAddress: prev.guardianDetails?.officeAddress || null,
-                    createdAt: prev.guardianDetails?.createdAt || new Date(),
-                    updatedAt: prev.guardianDetails?.updatedAt || new Date(),
-                  },
-                }))
+              value={formData.parentType || ""}
+              onValueChange={(value) =>
+                handleChange("parentType", value as ParentType)
               }
             >
-              <SelectTrigger className="px-10">
-                <SelectValue placeholder="Theme" />
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Parent Type" />
               </SelectTrigger>
               <SelectContent>
-                {occupations.map((occupation) => (
-                  <SelectItem key={occupation.id} value={occupation.id!.toString()}>
-                    {occupation?.name}
+                <SelectItem value="BOTH">Both</SelectItem>
+                <SelectItem value="FATHER_ONLY">Father Only</SelectItem>
+                <SelectItem value="MOTHER_ONLY">Mother Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Annual Income */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <Label>Annual Income</Label>
+            <Select
+              value={
+                formData.annualIncome?.id
+                  ? String(formData.annualIncome.id)
+                  : ""
+              }
+              onValueChange={(value) => {
+                const selected = annualIncomeOptions.find(
+                  (ai) => String(ai.id) === value
+                );
+                setFormData((prev) => ({
+                  ...prev,
+                  annualIncome: selected ?? null,
+                }));
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Annual Income" />
+              </SelectTrigger>
+              <SelectContent>
+                {annualIncomeOptions.map((ai) => (
+                  <SelectItem key={ai.id} value={String(ai.id)}>
+                    {ai.range}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        {/* Guardian's Image Upload */}
-        <div className="flex flex-col mr-8">
-          <div className="relative p-1">
-            <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Upload Image</label>
-          </div>
-          <div className="relative">
-            {formData.guardianDetails?.image && (
-              <div className="mb-2">
-                <img
-                  src={formData.guardianDetails.image as string}
-                  alt="Guardian's photo"
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
-              </div>
-            )}
-            <Input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  const file = e.target.files[0];
-                  handleImageUpload(file, "guardianDetails");
+          {/* Father's Details Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Father's Details</h3>
+            
+            <div>
+              <Label>Father's Name</Label>
+              <Input
+                value={formData.fatherDetails?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "name", e.target.value)
                 }
-              }}
-              className="w-full py-2"
-            />
-          </div>
-        </div>
+                placeholder="Father's Name"
+              />
+            </div>
 
-        {/* Annual Income */}
-        <div className="col-span-2 mt-4">
-          <h3 className="text-lg font-medium mb-2">Annual Income</h3>
-        </div>
-        <div className="flex flex-col mr-8">
-          <div className="relative p-1">
-            <label className="text-md text-gray-700 dark:text-white mb-1 font-medium">Income Range</label>
-          </div>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <BadgeIndianRupee className="text-gray-500 dark:text-white w-5 h-5" />
-            </span>
-            <Input
-              type="text"
-              placeholder="Enter Income Range"
-              value={formData.annualIncome?.range || ""}
-              onChange={(e) => {
-                setFormData(
-                  (prev) =>
-                    ({
-                      ...prev,
-                      annualIncome: {
-                        ...prev.annualIncome!,
-                        range: e.target.value,
-                        id: prev.annualIncome?.id || 0,
-                      },
-                    }) as Parent,
-                );
-              }}
-              className="w-full pl-10 pr-3 rounded-lg py-2"
-            />
-          </div>
-        </div>
+            <div>
+              <Label>Father's Email</Label>
+              <Input
+                type="email"
+                value={formData.fatherDetails?.email || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "email", e.target.value)
+                }
+                placeholder="Father's Email"
+              />
+            </div>
 
-        {/* Submit Button */}
-        <div className="col-span-2 mt-4">
+            <div>
+              <Label>Father's Phone</Label>
+              <Input
+                value={formData.fatherDetails?.phone || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "phone", e.target.value)
+                }
+                placeholder="Father's Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Father's Aadhaar Card Number</Label>
+              <Input
+                value={formData.fatherDetails?.aadhaarCardNumber || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "aadhaarCardNumber", e.target.value)
+                }
+                placeholder="Father's Aadhaar Card Number"
+              />
+            </div>
+
+            <div>
+              <Label>Father's Office Phone</Label>
+              <Input
+                value={formData.fatherDetails?.officePhone || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "officePhone", e.target.value)
+                }
+                placeholder="Father's Office Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Father's Occupation</Label>
+              <Input
+                value={formData.fatherDetails?.occupation?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("fatherDetails", "occupation", {
+                    ...formData.fatherDetails?.occupation,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Father's Occupation"
+              />
+            </div>
+          </div>
+
+          {/* Mother's Details Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Mother's Details</h3>
+            
+            <div>
+              <Label>Mother's Name</Label>
+              <Input
+                value={formData.motherDetails?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "name", e.target.value)
+                }
+                placeholder="Mother's Name"
+              />
+            </div>
+
+            <div>
+              <Label>Mother's Email</Label>
+              <Input
+                type="email"
+                value={formData.motherDetails?.email || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "email", e.target.value)
+                }
+                placeholder="Mother's Email"
+              />
+            </div>
+
+            <div>
+              <Label>Mother's Phone</Label>
+              <Input
+                value={formData.motherDetails?.phone || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "phone", e.target.value)
+                }
+                placeholder="Mother's Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Mother's Aadhaar Card Number</Label>
+              <Input
+                value={formData.motherDetails?.aadhaarCardNumber || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "aadhaarCardNumber", e.target.value)
+                }
+                placeholder="Mother's Aadhaar Card Number"
+              />
+            </div>
+
+            <div>
+              <Label>Mother's Office Phone</Label>
+              <Input
+                value={formData.motherDetails?.officePhone || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "officePhone", e.target.value)
+                }
+                placeholder="Mother's Office Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Mother's Occupation</Label>
+              <Input
+                value={formData.motherDetails?.occupation?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("motherDetails", "occupation", {
+                    ...formData.motherDetails?.occupation,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Mother's Occupation"
+              />
+            </div>
+          </div>
+
+          {/* Guardian's Details Section */}
+          <div className="space-y-4 border rounded-lg p-4">
+            <h3 className="text-lg font-semibold">Guardian's Details</h3>
+            
+            <div>
+              <Label>Guardian's Name</Label>
+              <Input
+                value={formData.guardianDetails?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "name", e.target.value)
+                }
+                placeholder="Guardian's Name"
+              />
+            </div>
+
+            <div>
+              <Label>Guardian's Email</Label>
+              <Input
+                type="email"
+                value={formData.guardianDetails?.email || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "email", e.target.value)
+                }
+                placeholder="Guardian's Email"
+              />
+            </div>
+
+            <div>
+              <Label>Guardian's Phone</Label>
+              <Input
+                value={formData.guardianDetails?.phone || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "phone", e.target.value)
+                }
+                placeholder="Guardian's Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Guardian's Aadhaar Card Number</Label>
+              <Input
+                value={formData.guardianDetails?.aadhaarCardNumber || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "aadhaarCardNumber", e.target.value)
+                }
+                placeholder="Guardian's Aadhaar Card Number"
+              />
+            </div>
+
+            <div>
+              <Label>Guardian's Office Phone</Label>
+              <Input
+                value={formData.guardianDetails?.officePhone || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "officePhone", e.target.value)
+                }
+                placeholder="Guardian's Office Phone"
+              />
+            </div>
+
+            <div>
+              <Label>Guardian's Occupation</Label>
+              <Input
+                value={formData.guardianDetails?.occupation?.name || ""}
+                onChange={(e) =>
+                  handlePersonChange("guardianDetails", "occupation", {
+                    ...formData.guardianDetails?.occupation,
+                    name: e.target.value,
+                  })
+                }
+                placeholder="Guardian's Occupation"
+              />
+            </div>
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex flex-col items-center gap-2">
           <Button
             type="submit"
-            onClick={(e) => handleSubmit(e)}
             className="w-full sm:w-auto text-white font-medium sm:font-bold py-2 px-4 rounded bg-blue-600 hover:bg-blue-700 text-sm sm:text-base flex items-center justify-center gap-2 transition-all"
-            disabled={updateMutation.isLoading}
+            disabled={mutation.isLoading}
           >
-            {updateMutation.isLoading ? (
+            {mutation.isLoading ? (
               <>
                 <svg
                   className="animate-spin h-4 w-4 text-white"
@@ -844,7 +658,14 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"
@@ -861,12 +682,12 @@ export default function FamilyDetails({ studentId }: FamilyDetailsProps) {
             ) : (
               <>
                 <Save className="w-4 h-4 sm:w-5 sm:h-5" />
-                Submit
+                Save Changes
               </>
             )}
           </Button>
-        </div>
-      </div>
-    </div>
+        </CardFooter>
+      </form>
+    </Card>
   );
 }

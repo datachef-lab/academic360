@@ -1,47 +1,112 @@
 import { ColumnDef } from "@tanstack/react-table";
-import { BloodGroup } from "@/types/resources/blood-group";
-import { BloodGroupActions } from "../Actions/BloodGroupActions";
-import { Droplet, Settings2 } from 'lucide-react';
+import { 
+  Droplet, 
+  Edit,
+  Calendar,
+  Clock
+} from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-
-export const bloodGroupColumns: ColumnDef<BloodGroup>[] = [
+import { BloodGroup } from "@/types/resources/blood-group.types";
+import { Button } from "@/components/ui/button";
+export const bloodGroupColumns = (onEditRow?: (rowData: BloodGroup) => void): ColumnDef<BloodGroup>[] => [
+  {
+    accessorKey: "id",
+    header: "ID",
+    cell: ({ row }) => {
+      return (
+        <div className="flex items-center">
+          <span className="font-mono text-sm text-gray-500">
+            #{row.getValue("id")}
+          </span>
+        </div>
+      );
+    },
+  },
   {
     accessorKey: "type",
-    header: () => (
-      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
-        <Droplet className="h-5 w-5 text-purple-600" />
-        <span>Blood Type</span>
-      </div>
-    ),
+    header: "Blood Type",
     cell: ({ row }) => {
-      const bloodType = row.original.type;
       return (
-        <div className="flex items-center justify-center">
-          <Badge 
-            variant="outline" 
-            className="px-3 py-1.5 text-sm bg-amber-50 text-amber-700 drop-shadow-md font-mono border-none"
-          >
-            <div className="flex items-center gap-2">
-              {/* <HeartPulse className="h-4 w-4 text-rose-600" /> */}
-              <span className="font-bold">{bloodType}</span>
-            </div>
+        <div className="flex items-center gap-2">
+          <Droplet className="h-4 w-4 text-blue-500" />
+          <Badge variant="outline" className="font-mono font-bold">
+            {row.getValue("type")}
           </Badge>
         </div>
       );
     },
   },
   {
-    id: "actions",
-    header: () => (
-      <div className="flex items-center justify-center gap-2 text-slate-800 font-semibold">
-        <Settings2 className="h-5 w-5 text-purple-600" />
-        <span>Actions</span>
-      </div>
-    ),
+    accessorKey: "sequence",
+    header: "Sequence",
     cell: ({ row }) => {
+      const sequence = row.getValue("sequence") as number | null;
       return (
-        <div className="flex justify-center">
-          <BloodGroupActions bloodGroup={row.original} />
+        <div className="flex items-center">
+          {sequence ? (
+            <Badge variant="secondary" className="font-mono">
+              {sequence}
+            </Badge>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          )}
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "disabled",
+    header: "Status",
+    cell: ({ row }) => {
+      const disabled = row.getValue("disabled") as boolean;
+      return (
+        <Badge variant={disabled ? "destructive" : "default"}>
+          {disabled ? "Disabled" : "Active"}
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: "createdAt",
+    header: "Created At",
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("createdAt"));
+      return (
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
+    accessorKey: "updatedAt",
+    header: "Updated At",
+    cell: ({ row }) => {
+      const date = new Date(row.getValue("updatedAt"));
+      return (
+        <div className="flex items-center gap-2">
+          <Clock className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-600">
+            {date.toLocaleDateString()}
+          </span>
+        </div>
+      );
+    },
+  },
+  {
+    id: "actions",
+    enableHiding: false,
+    cell: ({ row }) => {
+      const rowData = row.original;
+      return (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEditRow && onEditRow(rowData)}>
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
         </div>
       );
     },
