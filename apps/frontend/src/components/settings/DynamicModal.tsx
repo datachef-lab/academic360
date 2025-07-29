@@ -31,7 +31,7 @@ import { Degree, DegreeLevel } from "@/types/resources/degree.types";
 import { createBoardUniversity, updateBoardUniversity } from "@/services/board-university.service";
 import { createInstitution, updateInstitution } from "@/services/institution.service";
 import { createCategory, updateCategory } from "@/services/categories.service";
-import {  findAllDegrees } from "@/services/degree.service";
+import {  createDegree, findAllDegrees } from "@/services/degree.service";
 import { createReligion, updateReligion } from "@/services/religion.service";
 import { createLanguageMedium, updateLanguageMedium } from "@/services/language-medium.service";
 import { createBloodGroup, updateBloodGroup } from "@/services/blood-group.service";
@@ -292,7 +292,7 @@ const getServiceFunction = (settingType: string) => {
     "Board Universities": createBoardUniversity,
     "Institutions": createInstitution,
     "Categories": createCategory,
-    "Degree": () => {},
+    "Degree": createDegree,
     "Religion": createReligion,
     "Language Medium": createLanguageMedium,
     "Documents": createDocument,

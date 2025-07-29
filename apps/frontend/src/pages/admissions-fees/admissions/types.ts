@@ -13,4 +13,16 @@ export interface AdmissionSummary {
   totalApplications: number;
   totalPayments: number;
   totalDrafts: number;
+  startDate?: string;
+  lastDate?: string;
+  courses?: AdmissionCourse[];
+}
+
+export interface AdmissionCourse {
+  id?: number;
+  admissionId: number;
+  courseId: number;
+  disabled: boolean;
+  isClosed: boolean;
+  remarks: string | null;
 }

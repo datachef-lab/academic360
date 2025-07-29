@@ -9,19 +9,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import * as admissionsApi from "@/services/admissions.service";
 import { getAllCourses } from "@/services/course-api";
 import { AcademicYear } from "@/types/academics/academic-year";
-
-interface Admission {
-  id?: number;
-  admissionYear: { id: number; year: string };
-  academicYearId: number;
-  totalApplications: number;
-  totalPayments: number;
-  totalDrafts: number;
-  startDate: string;
-  lastDate: string;
-  isClosed: boolean;
-  courses: Course[];
-}
+import { AdmissionSummary } from "./types";
+import { Admission as AdmissionType } from "@/types/admissions";
 
 interface Course {
   id?: number;
@@ -69,7 +58,7 @@ interface AdmissionDisplay {
 export default function AdmissionsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [configureOpen, setConfigureOpen] = useState(false);
-  const [selectedAdmission, setSelectedAdmission] = useState<Admission | null>(null);
+  const [selectedAdmission, setSelectedAdmission] = useState<AdmissionType | null>(null);
   const [createForm, setCreateForm] = useState({
     academicYear: null as AcademicYear | null,
     startDate: "",
@@ -96,110 +85,101 @@ export default function AdmissionsPage() {
       setLoading(true);
       setError(null);
       
-      let statsSummary = null;
-      let admissionsList: Admission[] = [];
-      let academicYearsRes = null;
-      let coursesRes = null;
-      
       try {
-        // Try to fetch stats summary
-        try {
-          statsSummary = await admissionsApi.fetchStatsSummary();
-        } catch (err) {
-          console.error('Failed to fetch stats summary:', err);
-        }
-        
-        // Try to fetch admissions list
-        try {
-          admissionsList = await admissionsApi.fetchAdmissions();
-        } catch (err) {
-          console.error('Failed to fetch admissions:', err);
-        }
-        
-        // Try to fetch academic years
-        try {
-          academicYearsRes = await admissionsApi.fetchAcademicYears();
-        } catch (err) {
-          console.error('Failed to fetch academic years:', err);
-        }
-        
-        // Try to fetch courses
-        try {
-          coursesRes = await getAllCourses();
-        } catch (err) {
-          console.error('Failed to fetch courses:', err);
-        }
-        
-        console.log('API Responses:', {
-          statsSummary,
-          admissionsList,
-          academicYearsRes,
-          coursesRes
-        });
-        
-        // Map stats to expected format
-        setStats([
-          {
-            title: "Total Years",
-            value: statsSummary?.admissionYearCount || 0,
-            icon: <Calendar className="w-6 h-6 text-blue-400" />,
-            bg: "bg-blue-50",
-            text: "text-blue-700",
-          },
-          {
-            title: "Total Applications",
-            value: statsSummary?.totalApplications || 0,
-            icon: <CheckCircle className="w-6 h-6 text-green-400" />,
-            bg: "bg-green-50",
-            text: "text-green-700",
-          },
-          {
-            title: "Total Payments",
-            value: statsSummary?.totalPayments || 0,
-            icon: <IndianRupee className="w-6 h-6 text-purple-400" />,
-            bg: "bg-purple-50",
-            text: "text-purple-700",
-          },
-          {
-            title: "Total Drafts",
-            value: statsSummary?.totalDrafts || 0,
-            icon: <FileText className="w-6 h-6 text-yellow-400" />,
-            bg: "bg-yellow-50",
-            text: "text-yellow-700",
-          },
+        // Fetch all data in parallel
+        const [statsSummary, admissionsResponse, academicYearsResponse, coursesResponse] = await Promise.allSettled([
+          admissionsApi.fetchStatsSummary(),
+          admissionsApi.fetchAdmissions(),
+          admissionsApi.fetchAcademicYears(),
+          getAllCourses()
         ]);
         
-        // Map admissions to expected format - add null check
-        const mappedAdmissions: AdmissionDisplay[] = (admissionsList || []).map((adm: Admission) => ({
-          id: adm.id,
-          year: adm.admissionYear.year,
-          academicYear: { id: adm.academicYearId, year: adm.admissionYear.year },
-          totalApplications: adm.totalApplications || 0,
-          total_applications: adm.totalApplications || 0,
-          paymentsDone: adm.totalPayments || 0,
-          payments_done: adm.totalPayments || 0,
-          paymentsPercent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
-          payments_percent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
-          drafts: adm.totalDrafts || 0,
-          drafts_count: adm.totalDrafts || 0,
-          draftsPercent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
-          drafts_percent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
-          startDate: adm.startDate,
-          lastDate: adm.lastDate,
-          isClosed: adm.isClosed,
-          courses: adm.courses || [],
-        }));
+        console.log('API Responses:', {
+          statsSummary: statsSummary.status === 'fulfilled' ? statsSummary.value : null,
+          admissionsResponse: admissionsResponse.status === 'fulfilled' ? admissionsResponse.value : null,
+          academicYearsResponse: academicYearsResponse.status === 'fulfilled' ? academicYearsResponse.value : null,
+          coursesResponse: coursesResponse.status === 'fulfilled' ? coursesResponse.value : null
+        });
         
-        setAdmissions(mappedAdmissions);
-        console.log('Setting academicYears:', academicYearsRes);
-        console.log('academicYears type:', typeof academicYearsRes);
-        console.log('academicYears isArray:', Array.isArray(academicYearsRes));
-        setAcademicYears(Array.isArray(academicYearsRes?.payload) ? academicYearsRes.payload : 
-                        Array.isArray(academicYearsRes) ? academicYearsRes : []);
-        setCourses(Array.isArray(coursesRes?.payload) ? coursesRes.payload : coursesRes?.payload || []);
+        // Handle stats
+        if (statsSummary.status === 'fulfilled' && statsSummary.value) {
+          const statsData = statsSummary.value;
+          setStats([
+            {
+              title: "Total Years",
+              value: statsData.admissionYearCount || 0,
+              icon: <Calendar className="w-6 h-6 text-blue-400" />,
+              bg: "bg-blue-50",
+              text: "text-blue-700",
+            },
+            {
+              title: "Total Applications",
+              value: statsData.totalApplications || 0,
+              icon: <CheckCircle className="w-6 h-6 text-green-400" />,
+              bg: "bg-green-50",
+              text: "text-green-700",
+            },
+            {
+              title: "Total Payments",
+              value: statsData.totalPayments || 0,
+              icon: <IndianRupee className="w-6 h-6 text-purple-400" />,
+              bg: "bg-purple-50",
+              text: "text-purple-700",
+            },
+            {
+              title: "Total Drafts",
+              value: statsData.totalDrafts || 0,
+              icon: <FileText className="w-6 h-6 text-yellow-400" />,
+              bg: "bg-yellow-50",
+              text: "text-yellow-700",
+            },
+          ]);
+        }
         
-        // If no data was fetched successfully, show error
-        if (!statsSummary && admissionsList.length === 0 && !academicYearsRes && !coursesRes) {
+        // Handle admissions
+        if (admissionsResponse.status === 'fulfilled' && admissionsResponse.value) {
+          const admissionsList = admissionsResponse.value.payload || [];
+          const mappedAdmissions: AdmissionDisplay[] = admissionsList.map((adm: AdmissionSummary) => ({
+            id: adm.id,
+            year: `${adm.admissionYear}`,
+            academicYear: { id: adm.admissionYear, year: `${adm.admissionYear}` },
+            totalApplications: adm.totalApplications || 0,
+            total_applications: adm.totalApplications || 0,
+            paymentsDone: adm.totalPayments || 0,
+            payments_done: adm.totalPayments || 0,
+            paymentsPercent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+            payments_percent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+            drafts: adm.totalDrafts || 0,
+            drafts_count: adm.totalDrafts || 0,
+            draftsPercent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+            drafts_percent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+            startDate: '', // API doesn't provide these fields
+            lastDate: '',
+            isClosed: adm.isClosed || false,
+            courses: [], // API doesn't provide courses in summary
+          }));
+          setAdmissions(mappedAdmissions);
+        }
+        
+        // Handle academic years
+        if (academicYearsResponse.status === 'fulfilled' && academicYearsResponse.value) {
+          const yearsData = academicYearsResponse.value.payload || academicYearsResponse.value;
+          setAcademicYears(Array.isArray(yearsData) ? yearsData : []);
+        }
+        
+        // Handle courses
+        if (coursesResponse.status === 'fulfilled' && coursesResponse.value) {
+          const coursesData = coursesResponse.value.payload || coursesResponse.value;
+          setCourses(Array.isArray(coursesData) ? coursesData : []);
+        }
+        
+        // Check if any data was fetched successfully
+        const hasData = statsSummary.status === 'fulfilled' || 
+                       admissionsResponse.status === 'fulfilled' || 
+                       academicYearsResponse.status === 'fulfilled' || 
+                       coursesResponse.status === 'fulfilled';
+        
+        if (!hasData) {
           setError("Failed to load admissions data. Please check if the backend server is running.");
         }
       } catch (err: unknown) {
@@ -231,6 +211,7 @@ export default function AdmissionsPage() {
       ),
     }));
   };
+  
   const handleConfigureAddCourse = (course: Course) => {
     if (course.id === undefined) return;
     setConfigureForm((prev) => ({
@@ -242,17 +223,42 @@ export default function AdmissionsPage() {
 
   // Open Configure Modal with data
   const openConfigure = (adm: AdmissionDisplay) => {
-    const admissionData: Admission = {
-      id: adm.id || 0,
-      admissionYear: adm.academicYear,
-      academicYearId: adm.academicYear.id,
-      totalApplications: adm.totalApplications,
-      totalPayments: adm.paymentsDone,
-      totalDrafts: adm.drafts,
+    const admissionData: AdmissionType = {
+      id: adm.id,
+      academicYear: {
+        id: adm.academicYear.id,
+        year: adm.academicYear.year,
+        isCurrentYear: false,
+        session: {
+          id: 1,
+          name: "Default",
+          from: new Date(),
+          to: new Date(),
+          isCurrentSession: false,
+          codePrefix: "DEF",
+          sequence: 1,
+          disabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        creaytedAt: new Date(),
+        updatedAt: new Date()
+      },
       startDate: adm.startDate,
       lastDate: adm.lastDate,
       isClosed: adm.isClosed,
-      courses: adm.courses,
+      courses: adm.courses.map(c => ({
+        admissionId: adm.id || 0,
+        courseId: c.id || 0,
+        disabled: c.disabled || false,
+        isClosed: c.isClosed || false,
+        remarks: null
+      })),
+      admissionCode: null,
+      isArchived: false,
+      remarks: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
     setSelectedAdmission(admissionData);
     setConfigureForm({
@@ -268,8 +274,12 @@ export default function AdmissionsPage() {
           isCurrentSession: false, 
           codePrefix: "DEF", 
           sequence: 1, 
-          disabled: false 
-        }
+          disabled: false,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        },
+        creaytedAt: new Date(),
+        updatedAt: new Date()
       },
       startDate: adm.startDate,
       endDate: adm.lastDate,
@@ -288,8 +298,8 @@ export default function AdmissionsPage() {
   const handleCreateAdmission = async () => {
     try {
       setLoading(true);
-      await admissionsApi.createAdmission({
-        academicYear: createForm.academicYear as AcademicYear,
+      const admissionData: AdmissionType = {
+        academicYear: createForm.academicYear!,
         startDate: createForm.startDate,
         lastDate: createForm.endDate,
         courses: createForm.selectedCourses.map((c) => ({ 
@@ -297,14 +307,44 @@ export default function AdmissionsPage() {
           disabled: false, 
           isClosed: false, 
           remarks: null,
-          admissionId: 0 // This will be set by the backend
+          admissionId: 0
         })),
-      });
+        admissionCode: null,
+        isClosed: false,
+        isArchived: false,
+        remarks: null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      await admissionsApi.createAdmission(admissionData);
       setCreateOpen(false);
+      
       // Refresh admissions
-      const admissionsList = await admissionsApi.fetchAdmissions();
-      setAdmissions(admissionsList);
-    } catch {
+      const response = await admissionsApi.fetchAdmissions();
+      const admissionsList = response.payload || [];
+      const mappedAdmissions: AdmissionDisplay[] = admissionsList.map((adm: AdmissionSummary) => ({
+        id: adm.id,
+        year: `${adm.admissionYear}`,
+        academicYear: { id: adm.admissionYear, year: `${adm.admissionYear}` },
+        totalApplications: adm.totalApplications || 0,
+        total_applications: adm.totalApplications || 0,
+        paymentsDone: adm.totalPayments || 0,
+        payments_done: adm.totalPayments || 0,
+        paymentsPercent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+        payments_percent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+        drafts: adm.totalDrafts || 0,
+        drafts_count: adm.totalDrafts || 0,
+        draftsPercent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+        drafts_percent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+        startDate: '',
+        lastDate: '',
+        isClosed: adm.isClosed || false,
+        courses: [],
+      }));
+      setAdmissions(mappedAdmissions);
+    } catch (error) {
+      console.error('Error creating admission:', error);
       setError("Failed to create admission.");
     } finally {
       setLoading(false);
@@ -316,9 +356,9 @@ export default function AdmissionsPage() {
     if (!selectedAdmission) return;
     try {
       setLoading(true);
-      await admissionsApi.updateAdmission(Number(selectedAdmission.id), {
+      const updatedAdmission: AdmissionType = {
         ...selectedAdmission,
-        academicYear: configureForm.academicYear as AcademicYear,
+        academicYear: configureForm.academicYear!,
         startDate: configureForm.startDate,
         lastDate: configureForm.endDate,
         courses: configureForm.mappedCourses.map((c) => ({ 
@@ -326,14 +366,38 @@ export default function AdmissionsPage() {
           disabled: !c.enabled, 
           isClosed: c.closed, 
           remarks: null,
-          admissionId: 0 // This will be set by the backend
+          admissionId: selectedAdmission.id || 0
         })),
-      });
+      };
+      
+      await admissionsApi.updateAdmission(selectedAdmission.id!, updatedAdmission);
       setConfigureOpen(false);
+      
       // Refresh admissions
-      const admissionsList = await admissionsApi.fetchAdmissions();
-      setAdmissions(admissionsList);
-    } catch {
+      const response = await admissionsApi.fetchAdmissions();
+      const admissionsList = response.payload || [];
+      const mappedAdmissions: AdmissionDisplay[] = admissionsList.map((adm: AdmissionSummary) => ({
+        id: adm.id,
+        year: `${adm.admissionYear}`,
+        academicYear: { id: adm.admissionYear, year: `${adm.admissionYear}` },
+        totalApplications: adm.totalApplications || 0,
+        total_applications: adm.totalApplications || 0,
+        paymentsDone: adm.totalPayments || 0,
+        payments_done: adm.totalPayments || 0,
+        paymentsPercent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+        payments_percent: adm.totalPayments && adm.totalApplications ? Math.round((adm.totalPayments / adm.totalApplications) * 100) : 0,
+        drafts: adm.totalDrafts || 0,
+        drafts_count: adm.totalDrafts || 0,
+        draftsPercent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+        drafts_percent: adm.totalDrafts && adm.totalApplications ? Math.round((adm.totalDrafts / adm.totalApplications) * 100) : 0,
+        startDate: '',
+        lastDate: '',
+        isClosed: adm.isClosed || false,
+        courses: [],
+      }));
+      setAdmissions(mappedAdmissions);
+    } catch (error) {
+      console.error('Error updating admission:', error);
       setError("Failed to update admission.");
     } finally {
       setLoading(false);
@@ -373,11 +437,9 @@ export default function AdmissionsPage() {
                     }}
                   >
                     <option value="">Select Year</option>
-                    {Array.isArray(academicYears) ? academicYears.map((y: AcademicYear) => (
+                    {academicYears.map((y: AcademicYear) => (
                       <option key={y.id} value={y.id}>{y.year}</option>
-                    )) : (
-                      <option value="" disabled>Loading academic years...</option>
-                    )}
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -400,7 +462,7 @@ export default function AdmissionsPage() {
               <div>
                 <label className="block text-sm font-medium mb-1">Select Courses</label>
                 <div className="max-h-48 overflow-y-auto border rounded bg-gray-50 p-2">
-                  {Array.isArray(courses) ? courses.map((course: Course) => (
+                  {courses.map((course: Course) => (
                     <div key={course.id} className="flex items-center gap-2 mb-1">
                       <Checkbox
                         checked={createForm.selectedCourses.some((c) => c.id === course.id)}
@@ -409,9 +471,7 @@ export default function AdmissionsPage() {
                       />
                       <label htmlFor={String(course.id)} className="text-sm cursor-pointer">{course.name}</label>
                     </div>
-                  )) : (
-                    <div className="text-sm text-gray-500">Loading courses...</div>
-                  )}
+                  ))}
                 </div>
                 <div className="text-xs text-gray-500 mt-1">
                   Selected: {createForm.selectedCourses.length} courses
@@ -428,7 +488,7 @@ export default function AdmissionsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {Array.isArray(stats) ? stats.map((stat, idx) => (
+        {stats.map((stat, idx) => (
           <Card key={idx} className={`${stat.bg} ${stat.text} flex flex-row items-center`}>
             <CardHeader className="flex flex-row items-center gap-3 pb-2">
               <div>{stat.icon}</div>
@@ -438,9 +498,7 @@ export default function AdmissionsPage() {
               <span className="text-2xl font-bold">{stat.value}</span>
             </CardContent>
           </Card>
-        )) : (
-          <div className="col-span-4 text-center text-gray-500">Loading stats...</div>
-        )}
+        ))}
       </div>
 
       {/* Search */}
@@ -462,7 +520,7 @@ export default function AdmissionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.isArray(admissions) ? admissions.map((adm: AdmissionDisplay, idx: number) => (
+            {admissions.map((adm: AdmissionDisplay, idx: number) => (
               <TableRow key={adm.id || adm.year}>
                 <TableCell>{idx + 1}</TableCell>
                 <TableCell>{adm.year || adm.academicYear?.year}</TableCell>
@@ -503,7 +561,7 @@ export default function AdmissionsPage() {
                           <div>
                             <label className="block text-sm font-medium mb-1">Mapped Courses ({configureForm.mappedCourses.length})</label>
                             <div className="max-h-[50vh] overflow-y-auto border rounded bg-gray-50 p-2">
-                              {Array.isArray(configureForm.mappedCourses) ? configureForm.mappedCourses.map((c, i) => (
+                              {configureForm.mappedCourses.map((c, i) => (
                                 <div key={c.courseId} className="flex items-center gap-2 mb-1">
                                   <span className="flex-1 text-sm">{c.name}</span>
                                   <label className="flex items-center gap-1 text-xs">
@@ -513,22 +571,18 @@ export default function AdmissionsPage() {
                                     <Checkbox checked={c.closed} onCheckedChange={() => handleConfigureCourseToggle(i, "closed")}/> Closed
                                   </label>
                                 </div>
-                              )) : (
-                                <div className="text-sm text-gray-500">No mapped courses</div>
-                              )}
+                              ))}
                             </div>
                           </div>
                           <div>
                             <label className="block text-sm font-medium mb-1">Add Courses ({configureForm.addCourses.length})</label>
                             <div className="max-h-48 overflow-y-auto border rounded bg-gray-50 p-2">
-                              {Array.isArray(configureForm.addCourses) ? configureForm.addCourses.map((c: Course) => (
+                              {configureForm.addCourses.map((c: Course) => (
                                 <div key={c.id} className="flex items-center gap-2 mb-1">
                                   <span className="flex-1 text-sm">{c.name}</span>
                                   <Button size="sm" variant="secondary" onClick={() => handleConfigureAddCourse(c)}>Add</Button>
                                 </div>
-                              )) : (
-                                <div className="text-sm text-gray-500">No additional courses</div>
-                              )}
+                              ))}
                             </div>
                           </div>
                         </div>
@@ -542,11 +596,7 @@ export default function AdmissionsPage() {
                   </Dialog>
                 </TableCell>
               </TableRow>
-            )) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500">Loading admissions...</TableCell>
-              </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </div>
