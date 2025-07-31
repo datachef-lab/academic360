@@ -140,17 +140,23 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
         residentialAddress,
         nationality,
         religion,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        createdAt: _createdAt, // Exclude from payload
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        updatedAt: _updatedAt, // Exclude from payload
         ...rest
       } = formData;
 
       // Update mailing and residential addresses if present
       const addressUpdatePromises = [];
       if (mailingAddress && mailingAddress.id) {
-        const { ...mailingPayload } = mailingAddress as Address;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id: _id, createdAt: _mailingCreatedAt, updatedAt: _mailingUpdatedAt, ...mailingPayload } = mailingAddress as Address;
         addressUpdatePromises.push(updateAddress(mailingAddress.id, mailingPayload));
       }
       if (residentialAddress && residentialAddress.id) {
-        const { ...residentialPayload } = residentialAddress as Address;
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id: _residentialId, createdAt: _residentialCreatedAt, updatedAt: _residentialUpdatedAt, ...residentialPayload } = residentialAddress as Address;
         addressUpdatePromises.push(updateAddress(residentialAddress.id, residentialPayload));
       }
       if (addressUpdatePromises.length > 0) {

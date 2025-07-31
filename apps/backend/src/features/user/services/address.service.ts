@@ -1,16 +1,28 @@
 import { db } from "@/db/index.js";
-import { Address, addressModel, createAddressSchema } from "../models/address.model.js";
-import { countryModel } from "@/features/resources/models/country.model.js";
+import { Address, addressModel, createAddressSchema, updateAddressSchema, AddressUpdate } from "../models/address.model.js";
+import { countryModel, Country } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
-import { stateModel } from "@/features/resources/models/state.model.js";
-import { cityModel } from "@/features/resources/models/city.model.js";
+import { stateModel, State } from "@/features/resources/models/state.model.js";
+import { cityModel, City } from "@/features/resources/models/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 import { z } from "zod";
 
-// Validate input using Zod schema
+// Validate input using Zod schema for creation
 function validateAddressInput(data: Omit<Address, 'id'>) {
     const parseResult = createAddressSchema.safeParse(data);
+    if (!parseResult.success) {
+        const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
+        // @ts-expect-error
+        error.status = 400;
+        throw error;
+    }
+    return parseResult.data;
+}
+
+// Validate input using Zod schema for updates
+function validateAddressUpdateInput(data: AddressUpdate) {
+    const parseResult = updateAddressSchema.safeParse(data);
     if (!parseResult.success) {
         const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
         // @ts-expect-error
@@ -37,12 +49,12 @@ export async function getAllAddresses(): Promise<Address[]> {
     return formatted.filter((a): a is Address => !!a);
 }
 
-export async function saveAddress(id: number, address: Omit<Address, 'id'>): Promise<Address | null> {
+export async function saveAddress(id: number, address: AddressUpdate): Promise<Address | null> {
     const [foundAddress] = await db.select().from(addressModel).where(eq(addressModel.id, id));
     if (!foundAddress) {
         return null;
     }
-    validateAddressInput(address);
+    validateAddressUpdateInput(address);
     const [updatedAddress] = await db.update(addressModel).set(address).where(eq(addressModel.id, id)).returning();
     return updatedAddress ? await addressResponseFormat(updatedAddress) : null;
 }
@@ -76,23 +88,23 @@ export async function addressResponseFormat(address: Address) {
         return null;
     }
     const { countryId, stateId, cityId, ...props } = address;
-    const formattedAddress: Address = { ...props } as Address;
+    const formattedAddress: Address & { country?: Country; state?: State; city?: City } = { ...props } as Address;
     if (countryId) {
         const [country] = await db.select().from(countryModel).where(eq(countryModel.id, countryId));
         if (country) {
-            (formattedAddress as any).country = country;
+            formattedAddress.country = country;
         }
     }
     if (stateId) {
         const [state] = await db.select().from(stateModel).where(eq(stateModel.id, stateId));
         if (state) {
-            (formattedAddress as any).state = state;
+            formattedAddress.state = state;
         }
     }
     if (cityId) {
         const [city] = await db.select().from(cityModel).where(eq(cityModel.id, cityId));
         if (city) {
-            (formattedAddress as any).city = city;
+            formattedAddress.city = city;
         }
     }
     return formattedAddress;

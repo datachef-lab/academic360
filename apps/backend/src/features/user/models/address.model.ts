@@ -38,4 +38,12 @@ export const addressRelations = relations(addressModel, ({ one }) => ({
 
 export const createAddressSchema = createInsertSchema(addressModel);
 
+// Schema for updates that excludes timestamp fields
+export const updateAddressSchema = createAddressSchema.omit({ 
+    id: true, 
+    createdAt: true, 
+    updatedAt: true 
+});
+
 export type Address = z.infer<typeof createAddressSchema>;
+export type AddressUpdate = z.infer<typeof updateAddressSchema>;

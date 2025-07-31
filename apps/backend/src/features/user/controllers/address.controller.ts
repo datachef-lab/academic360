@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createAddressSchema } from "@/features/user/models/address.model.js";
+import { createAddressSchema, updateAddressSchema } from "@/features/user/models/address.model.js";
 import { addAddress, findAddressById, saveAddress, removeAddress, getAllAddresses } from "@/features/user/services/address.service.js";
 import { Address } from "@/features/user/models/address.model.js";
 
@@ -53,7 +53,7 @@ export const updateAddress = async (req: Request, res: Response, next: NextFunct
             res.status(400).json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
             return;
         }
-        const parseResult = createAddressSchema.safeParse(req.body);
+        const parseResult = updateAddressSchema.safeParse(req.body);
         if (!parseResult.success) {
             res.status(400).json(new ApiResponse(400, "VALIDATION_ERROR", null, JSON.stringify(parseResult.error.flatten())));
             return;
