@@ -1,5 +1,5 @@
 {
-  "id": "7821588d-b5c9-4ce8-87a3-3c4be6f437b2",
+  "id": "7ddeb836-ec9e-4dfc-9a3c-625222f6ac51",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3179,8 +3179,26 @@
           "primaryKey": true,
           "notNull": true
         },
-        "subject_paper_id_fk": {
-          "name": "subject_paper_id_fk",
+        "subject_id_fk": {
+          "name": "subject_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "affiliation_id_fk": {
+          "name": "affiliation_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "regulation_type_id_fk": {
+          "name": "regulation_type_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "academic_year_id_fk": {
+          "name": "academic_year_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -3252,12 +3270,51 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "papers_subject_paper_id_fk_subject_papers_id_fk": {
-          "name": "papers_subject_paper_id_fk_subject_papers_id_fk",
+        "papers_subject_id_fk_subjects_id_fk": {
+          "name": "papers_subject_id_fk_subjects_id_fk",
           "tableFrom": "papers",
-          "tableTo": "subject_papers",
+          "tableTo": "subjects",
           "columnsFrom": [
-            "subject_paper_id_fk"
+            "subject_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "papers_affiliation_id_fk_affiliations_id_fk": {
+          "name": "papers_affiliation_id_fk_affiliations_id_fk",
+          "tableFrom": "papers",
+          "tableTo": "affiliations",
+          "columnsFrom": [
+            "affiliation_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "papers_regulation_type_id_fk_regulation_types_id_fk": {
+          "name": "papers_regulation_type_id_fk_regulation_types_id_fk",
+          "tableFrom": "papers",
+          "tableTo": "regulation_types",
+          "columnsFrom": [
+            "regulation_type_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "papers_academic_year_id_fk_academic_years_id_fk": {
+          "name": "papers_academic_year_id_fk_academic_years_id_fk",
+          "tableFrom": "papers",
+          "tableTo": "academic_years",
+          "columnsFrom": [
+            "academic_year_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3306,15 +3363,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "papers_sequence_unique": {
-          "name": "papers_sequence_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "sequence"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -3674,137 +3723,6 @@
       "uniqueConstraints": {
         "streams_sequence_unique": {
           "name": "streams_sequence_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "sequence"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.subject_papers": {
-      "name": "subject_papers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "subject_id_fk": {
-          "name": "subject_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "affiliation_id_fk": {
-          "name": "affiliation_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "regulation_type_id_fk": {
-          "name": "regulation_type_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "academic_year_id_fk": {
-          "name": "academic_year_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sequence": {
-          "name": "sequence",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "disabled": {
-          "name": "disabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "subject_papers_subject_id_fk_subjects_id_fk": {
-          "name": "subject_papers_subject_id_fk_subjects_id_fk",
-          "tableFrom": "subject_papers",
-          "tableTo": "subjects",
-          "columnsFrom": [
-            "subject_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "subject_papers_affiliation_id_fk_affiliations_id_fk": {
-          "name": "subject_papers_affiliation_id_fk_affiliations_id_fk",
-          "tableFrom": "subject_papers",
-          "tableTo": "affiliations",
-          "columnsFrom": [
-            "affiliation_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "subject_papers_regulation_type_id_fk_regulation_types_id_fk": {
-          "name": "subject_papers_regulation_type_id_fk_regulation_types_id_fk",
-          "tableFrom": "subject_papers",
-          "tableTo": "regulation_types",
-          "columnsFrom": [
-            "regulation_type_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "subject_papers_academic_year_id_fk_academic_years_id_fk": {
-          "name": "subject_papers_academic_year_id_fk_academic_years_id_fk",
-          "tableFrom": "subject_papers",
-          "tableTo": "academic_years",
-          "columnsFrom": [
-            "academic_year_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "subject_papers_sequence_unique": {
-          "name": "subject_papers_sequence_unique",
           "nullsNotDistinct": false,
           "columns": [
             "sequence"

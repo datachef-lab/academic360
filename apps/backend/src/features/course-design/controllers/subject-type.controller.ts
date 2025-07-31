@@ -13,7 +13,7 @@ import { ApiResponse } from "@/utils/ApiResonse";
 export const createSubjectType = async (req: Request, res: Response) => {
   try {
     const newSubjectType = await createSubjectTypeService(req.body);
-    res.status(201).json(newSubjectType);
+    res.status(201).json(new ApiResponse(201, "SUCCESS", newSubjectType, "Subject type created successfully"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(400).json({ error: errorMessage });
@@ -23,7 +23,7 @@ export const createSubjectType = async (req: Request, res: Response) => {
 export const getAllSubjectTypes = async (_req: Request, res: Response) => {
   try {
     const allSubjectTypes = await getAllSubjectTypesService();
-    res.json(allSubjectTypes);
+    res.json(new ApiResponse(200, "SUCCESS", allSubjectTypes, "Subject types retrieved successfully"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });

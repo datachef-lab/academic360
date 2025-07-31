@@ -2,6 +2,7 @@
 import axiosInstance from '@/utils/api';
 import {
   Paper,
+  PaperWithDetails,
   PaperComponent,
   Subject,
   SubjectPaper,
@@ -77,8 +78,12 @@ export interface AcademicYear {
 const BASE = '/api/course-design';
 
 // Papers
-export const getPapers = () => axiosInstance.get<Paper[]>(`${BASE}/papers`);
+export const getPapers = async () => {
+  const res = await axiosInstance.get<ApiResonse<Paper[]>>(`${BASE}/papers`);
+  return res.data.payload;
+};
 export const getPaper = (id: number) => axiosInstance.get<Paper>(`${BASE}/papers/${id}`);
+export const getPaperById = (id: number) => axiosInstance.get<ApiResonse<PaperWithDetails>>(`${BASE}/papers/query?id=${id}`);
 export const createPaper = (data: Omit<Paper, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Paper>(`${BASE}/papers`, data);
 export const updatePaper = (id: number, data: Partial<Paper>) => axiosInstance.put<Paper>(`${BASE}/papers/${id}`, data);
 export const deletePaper = (id: number) => axiosInstance.delete<Paper>(`${BASE}/papers/${id}`);
@@ -91,7 +96,10 @@ export const updatePaperComponent = (id: number, data: Partial<PaperComponent>) 
 export const deletePaperComponent = (id: number) => axiosInstance.delete<PaperComponent>(`${BASE}/paper-components/${id}`);
 
 // Subjects
-export const getSubjects = () => axiosInstance.get<Subject[]>(`${BASE}/subjects`);
+export const getSubjects = async () => {
+  const res = await axiosInstance.get<ApiResonse<Subject[]>>(`${BASE}/subjects`);
+  return res.data.payload;
+};
 export const getSubject = (id: number) => axiosInstance.get<Subject>(`${BASE}/subjects/${id}`);
 export const createSubject = (data: Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Subject>(`${BASE}/subjects`, data);
 export const updateSubject = (id: number, data: Partial<Subject>) => axiosInstance.put<Subject>(`${BASE}/subjects/${id}`, data);
@@ -132,7 +140,10 @@ export const bulkUploadCourseTypes = async (file: File): Promise<BulkUploadResul
 };
 
 // Subject Types
-export const getSubjectTypes = () => axiosInstance.get<SubjectType[]>(`${BASE}/subject-types`);
+export const getSubjectTypes = async () => {
+  const res = await axiosInstance.get<ApiResonse<SubjectType[]>>(`${BASE}/subject-types`);
+  return res.data.payload;
+};
 export const getSubjectType = (id: number) => axiosInstance.get<SubjectType>(`${BASE}/subject-types/${id}`);
 export const createSubjectType = (data: Omit<SubjectType, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<SubjectType>(`${BASE}/subject-types`, data);
 export const updateSubjectType = (id: number, data: Partial<SubjectType>) => axiosInstance.put<SubjectType>(`${BASE}/subject-types/${id}`, data);
@@ -214,7 +225,7 @@ export const bulkUploadRegulationTypes = async (file: File): Promise<BulkUploadR
     },
   });
   return res.data.payload;
-}; 
+};
 
 // Program Courses
 export const getProgramCourses = async () => {
@@ -273,11 +284,62 @@ export const createSubjectPaper = (data: Omit<SubjectPaper, 'id' | 'createdAt' |
 export const updateSubjectPaper = (id: number, data: Partial<SubjectPaper>) => axiosInstance.put<SubjectPaper>(`${BASE}/subject-papers/${id}`, data);
 export const deleteSubjectPaper = (id: number) => axiosInstance.delete<SubjectPaper>(`${BASE}/subject-papers/${id}`);
 
+// Create subject paper with multiple papers
+export const createSubjectPaperWithPapers = (data: {
+  subjectId: number;
+  affiliationId: number;
+  regulationTypeId: number;
+  academicYearId: number;
+  papers: Array<{
+    subjectTypeId: number;
+    courseId: number;
+    classId: number;
+    name: string;
+    code: string;
+    isOptional: boolean;
+    components: Array<{
+      examComponentId: number;
+      fullMarks: number;
+      credit: number;
+    }>;
+  }>;
+}) => axiosInstance.post(`${BASE}/subject-papers/with-papers`, data);
+
+// Check for duplicate subject paper mappings
+export const checkSubjectPaperDuplicate = (data: {
+  subjectId: number;
+  affiliationId: number;
+  regulationTypeId: number;
+  academicYearId: number;
+  papers: Array<{
+    code: string;
+  }>;
+}) => axiosInstance.post(`${BASE}/subject-papers/check-duplicate`, data);
+
+// Update a paper with components
+export const updatePaperWithComponents = (paperId: number, data: {
+  paperName: string;
+  subjectId: number;
+  affiliationId: number;
+  regulationTypeId: number;
+  academicYearId: number;
+  courseId: number;
+  subjectTypeId: number;
+  semester: string;
+  paperCode: string;
+  isOptional: boolean;
+  isActive: boolean;
+  components: Array<{
+    examComponentId: number;
+    fullMarks: number;
+    credit: number;
+  }>;
+}) => axiosInstance.put(`${BASE}/papers/${paperId}/with-components`, data);
+
 // Bulk upload subject papers
 export const bulkUploadSubjectPapers = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append('file', file);
-  
   const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/subject-papers/bulk-upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -298,9 +360,32 @@ export const deleteExamComponent = (id: number) => axiosInstance.delete<ExamComp
 
 // Academic Years
 export const getAcademicYears = async () => {
-  const res = await axiosInstance.get<ApiResonse<AcademicYear[]>>('/api/v1/fees/structure/academic-years/all');
+  const res = await axiosInstance.get<ApiResonse<AcademicYear[]>>('/api/v1/academics/all');
   return res.data.payload;
 };
 
 // Classes
+ 
+// Get filtered and paginated subject papers
+export const getFilteredSubjectPapersWithPagination = (filters: {
+  subjectId?: number;
+  affiliationId?: number;
+  regulationTypeId?: number;
+  academicYearId?: number;
+  searchText?: string;
+  page?: number;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  
+  if (filters.subjectId) params.append('subjectId', filters.subjectId.toString());
+  if (filters.affiliationId) params.append('affiliationId', filters.affiliationId.toString());
+  if (filters.regulationTypeId) params.append('regulationTypeId', filters.regulationTypeId.toString());
+  if (filters.academicYearId) params.append('academicYearId', filters.academicYearId.toString());
+  if (filters.searchText) params.append('searchText', filters.searchText);
+  if (filters.page) params.append('page', filters.page.toString());
+  if (filters.limit) params.append('limit', filters.limit.toString());
+
+  return axiosInstance.get(`${BASE}/subject-papers/filtered?${params.toString()}`);
+};
  

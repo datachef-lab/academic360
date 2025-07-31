@@ -1,13 +1,24 @@
 import { db } from "@/db";
 import { PaperComponent, paperComponentModel } from "../models/paper-component.model";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { PaperComponentDto } from "@/types/course-design/index.type";
 
 // Create a new paper component
 export const createPaperComponent = async (paperComponentData: PaperComponentDto) => {
   const { id, createdAt, updatedAt, examComponent, ...props } = paperComponentData;
-  const newPaperComponent = await db.insert(paperComponentModel).values({...props, examComponentId: examComponent?.id!}).returning();
-  return newPaperComponent[0];
+  let [existingPaperComponent] = await db
+  .select().from(paperComponentModel)
+  .where(
+    and(
+      eq(paperComponentModel.examComponentId, examComponent?.id!),
+      eq(paperComponentModel.paperId, paperComponentData.paperId!)
+    )
+  );  
+  if (!existingPaperComponent) {
+    const [newPaperComponent] = await db.insert(paperComponentModel).values({...props, examComponentId: examComponent?.id!}).returning();
+    existingPaperComponent = newPaperComponent;
+  }
+  return existingPaperComponent;
 };
 
 // Get all paper components

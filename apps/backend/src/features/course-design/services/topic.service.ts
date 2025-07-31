@@ -1,11 +1,21 @@
 import { db } from "@/db/index.js";
 import { topicModel, createTopicSchema, Topic } from "@/features/course-design/models/topic.model.js";
-import { eq } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 
 export async function createTopic(data: Topic) {
     const { id, createdAt, updatedAt, ...props } = data;
-    const [created] = await db.insert(topicModel).values(props).returning();
-    return created;
+    let [existingTopic] = await db
+    .select().from(topicModel).where(
+        and(
+            ilike(topicModel.name, props.name.trim()),
+            eq(topicModel.paperId, props.paperId)
+        )
+    );
+    if (!existingTopic) {
+        const [created] = await db.insert(topicModel).values(props).returning();
+        existingTopic = created;
+    }
+    return existingTopic;
 }
 
 export async function getTopicById(id: number) {
