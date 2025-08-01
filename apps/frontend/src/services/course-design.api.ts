@@ -14,9 +14,10 @@ import {
     ProgramCourse,
     CourseLevel,
     ExamComponent,
+    Stream,
 } from '@/types/course-design';
 import { ApiResonse } from '@/types/api-response';
-import { Stream } from '@/pages/courses-subjects-design/streams/columns';
+// import { Stream } from '@/pages/courses-subjects-design/streams/columns';
 import { AcademicYear } from '@/types/academics/academic-year';
 
 // Define proper types for bulk upload data

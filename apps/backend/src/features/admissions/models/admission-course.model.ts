@@ -12,7 +12,7 @@ export const admissionCourseModel = pgTable("admission_courses", {
     courseId: integer("course_id_fk")
         .references(() => courseModel.id)
         .notNull(),
-    amount: integer("amount").notNull(),
+    amount: integer("amount").notNull().default(750),
     disabled: boolean().default(false),
     isClosed: boolean().default(false),
     createdAt: timestamp("created_at").defaultNow(),

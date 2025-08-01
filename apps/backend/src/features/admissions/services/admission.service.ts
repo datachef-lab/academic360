@@ -34,7 +34,7 @@ import { findAcademicYearById } from "@/features/academics/services/academic-yea
 export async function createAdmission(
     admissionDto: AdmissionDto,
 ): Promise<AdmissionDto | null> {
-    const { courses, academicYear, ...rest } = admissionDto;
+    const { courses, createdAt, updatedAt, academicYear, ...rest } = admissionDto;
     rest.academicYearId = academicYear.id!;
     const [foundAdmission] = await db
         .select()

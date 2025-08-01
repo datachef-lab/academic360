@@ -113,7 +113,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   }, [isOpen, paperId, givenPaper, examComponents]);
 
   // Handlers for each field
-  const handleChange = (field: keyof Paper, value: string | number) => {
+  const handleChange = (field: keyof Paper, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -138,7 +138,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
     setComponents((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const updateComponent = useCallback((index: number, field: keyof PaperComponent, value: string | number) => {
+  const updateComponent = useCallback((index: number, field: keyof PaperComponent, value: string | number | ExamComponent) => {
     setComponents((prev) =>
       prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp))
     );
@@ -409,7 +409,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                                 <TableCell>
                                   <Select
                                     value={component.examComponent?.id ? component.examComponent.id.toString() : ""}
-                                    onValueChange={(value) => updateComponent(index, "examComponent", examComponents.find(ec => ec.id === Number(value)))}
+                                    onValueChange={(value) => updateComponent(index, "examComponent", examComponents.find(ec => ec.id === Number(value))!)}
                                   >
                                     <SelectTrigger className="w-full">
                                       <SelectValue placeholder="Select component" />

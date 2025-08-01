@@ -1,0 +1,1 @@
+ALTER TABLE "admission_courses" ALTER COLUMN "amount" SET DEFAULT 750;
