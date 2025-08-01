@@ -1,5 +1,5 @@
 {
-  "id": "207c388c-c1d8-4718-8ce9-7dd3736264d0",
+  "id": "9a8eb3fe-ccd7-42fb-9684-0ce01c20c4e1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1804,7 +1804,8 @@
           "name": "amount",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 750
         },
         "disabled": {
           "name": "disabled",

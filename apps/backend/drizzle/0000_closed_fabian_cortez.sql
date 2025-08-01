@@ -254,7 +254,7 @@ CREATE TABLE "admission_courses" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"admission_id_fk" integer NOT NULL,
 	"course_id_fk" integer NOT NULL,
-	"amount" integer NOT NULL,
+	"amount" integer DEFAULT 750 NOT NULL,
 	"disabled" boolean DEFAULT false,
 	"is_closed" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
