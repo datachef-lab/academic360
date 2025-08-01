@@ -5,6 +5,28 @@ import { and, eq } from "drizzle-orm";
 
 import type { Class } from "../models/class.model.js";
 
+const defaultClasses: Class[] = [
+    { name: "SEMESTER I", type: "SEMESTER" },
+    { name: "SEMESTER II", type: "SEMESTER" },
+    { name: "SEMESTER III", type: "SEMESTER" },
+    { name: "SEMESTER IV", type: "SEMESTER" },
+    { name: "SEMESTER V", type: "SEMESTER" },
+    { name: "SEMESTER VI", type: "SEMESTER" },
+    { name: "SEMESTER VII", type: "SEMESTER" },
+    { name: "SEMESTER VIII", type: "SEMESTER" },
+]
+
+export async function initializeClasses() {
+    const existingClasses = await db.select().from(classModel);
+    if (existingClasses.length === 0) {
+        console.log("No classes found, initializing default classes...");
+        const insertedClasses = await db.insert(classModel).values(defaultClasses).returning();
+        console.log("Default classes initialized:", insertedClasses);
+    } else {
+        console.log("Classes already initialized, skipping...");
+    }
+}
+
 export async function processClassBySemesterNumber(semester: number) {
     console.log("semester in class: ", semester);
     let className: string | undefined;
