@@ -10,4 +10,7 @@ export interface Address {
   pincode: string | null;
   createdAt: string;
   updatedAt: string;
+  country?: { id: number; name: string } | null;
+  state?: { id: number; name: string } | null;
+  city?: { id: number; name: string } | null;
 }

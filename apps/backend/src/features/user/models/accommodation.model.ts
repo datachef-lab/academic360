@@ -30,4 +30,12 @@ export const accommodationRelations = relations(accommodationModel, ({ one }) =>
 
 export const createAccommodationSchema = createInsertSchema(accommodationModel);
 
+// Schema for updates that excludes timestamp fields
+export const updateAccommodationSchema = createAccommodationSchema.omit({ 
+    id: true, 
+    createdAt: true, 
+    updatedAt: true 
+});
+
 export type Accommodation = z.infer<typeof createAccommodationSchema>;
+export type AccommodationUpdate = z.infer<typeof updateAccommodationSchema>;

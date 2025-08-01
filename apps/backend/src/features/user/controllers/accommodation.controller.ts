@@ -1,19 +1,15 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
-import { Accommodation, createAccommodationSchema } from "@/features/user/models/accommodation.model.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import {
-  addAccommodation,
-  findAccommotionById,
-  findAccommotionByStudentId,
-  updateAccommodation as updateAccommodationService,
-  removeAccommodation,
-  removeAccommodationByStudentId,
-  getAllAccommodations
-} from "../services/accommodation.service.js";
+import { createAccommodationSchema, updateAccommodationSchema } from "@/features/user/models/accommodation.model.js";
+import { addAccommodation, findAccommotionById, findAccommotionByStudentId, updateAccommodation as updateAccommodationService, removeAccommodation, removeAccommodationByStudentId, getAllAccommodations } from "@/features/user/services/accommodation.service.js";
 import { AccommodationType } from "@/types/user/accommodation.js";
 
 export const createAccommodation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  if (!req.body) {
+    res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Fields content can not be empty"));
+    return;
+  }
   try {
     const parseResult = createAccommodationSchema.safeParse(req.body);
     if (!parseResult.success) {
@@ -21,6 +17,10 @@ export const createAccommodation = async (req: Request, res: Response, next: Nex
       return;
     }
     const newAccommodation = await addAccommodation(req.body as AccommodationType);
+    if (!newAccommodation) {
+      res.status(409).json(new ApiResponse(409, "CONFLICT", null, "Accommodation already exists for this student"));
+      return;
+    }
     res.status(201).json(new ApiResponse(201, "SUCCESS", newAccommodation, "New accommodation is added to db!"));
   } catch (error) {
     handleError(error, res, next);
@@ -74,12 +74,12 @@ export const updateAccommodation = async (req: Request, res: Response, next: Nex
       res.status(400).json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parseResult = createAccommodationSchema.safeParse(req.body);
+    const parseResult = updateAccommodationSchema.safeParse(req.body);
     if (!parseResult.success) {
       res.status(400).json(new ApiResponse(400, "VALIDATION_ERROR", null, JSON.stringify(parseResult.error.flatten())));
       return;
     }
-    const updatedAccommodation = await updateAccommodationService(id, req.body as AccommodationType);
+    const updatedAccommodation = await updateAccommodationService(id, req.body);
     if (!updatedAccommodation) {
       res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "accommodation not found"));
       return;

@@ -33,22 +33,75 @@ const localityTypeOptions = [
   { value: "URBAN", label: "Urban" },
 ];
 
-// Utility to remove createdAt and updatedAt from object and nested
-function stripDates<T>(obj: T): T {
-  if (Array.isArray(obj)) {
-    return obj.map(stripDates) as T;
-  } else if (obj && typeof obj === "object") {
-    const result = {} as { [K in keyof T]: T[K] };
-    for (const key in obj) {
-      if (key === "createdAt" || key === "updatedAt") continue;
-      const value = obj[key];
-      result[key] = (typeof value === "object" && value !== null)
-        ? stripDates(value)
-        : value;
-    }
-    return result as T;
+// Type for submission data with string dates
+type AccommodationSubmissionData = Omit<Partial<Accommodation>, 'startDate' | 'endDate'> & {
+  startDate?: string;
+  endDate?: string;
+};
+
+// Utility to prepare data for backend submission
+function prepareDataForSubmission(data: Partial<Accommodation>): AccommodationSubmissionData {
+  const prepared = { ...data } as AccommodationSubmissionData;
+  
+  // Convert dates to strings for backend
+  if (prepared.startDate) {
+    prepared.startDate = new Date(prepared.startDate).toISOString().split('T')[0];
   }
-  return obj;
+  if (prepared.endDate) {
+    prepared.endDate = new Date(prepared.endDate).toISOString().split('T')[0];
+  }
+  
+  // Handle address data
+  if (prepared.address) {
+    const address = { ...prepared.address };
+    
+    // Remove nested objects and keep only IDs
+    delete (address as Record<string, unknown>).country;
+    delete (address as Record<string, unknown>).state;
+    delete (address as Record<string, unknown>).city;
+    delete (address as Record<string, unknown>).createdAt;
+    delete (address as Record<string, unknown>).updatedAt;
+    
+    // Ensure we have the correct ID structure
+    if (address.id === undefined) {
+      delete (address as Record<string, unknown>).id;
+    }
+    
+    prepared.address = address;
+  }
+  
+  // Remove accommodation timestamps
+  delete (prepared as Record<string, unknown>).createdAt;
+  delete (prepared as Record<string, unknown>).updatedAt;
+  
+  return prepared;
+}
+
+// Utility to normalize accommodation data from backend
+function normalizeAccommodationData(data: Partial<Accommodation>): Partial<Accommodation> {
+  if (!data) return data;
+  
+  const normalized = { ...data };
+  
+  // Handle address normalization
+  if (normalized.address) {
+    const address = { ...normalized.address };
+    
+    // Extract IDs from nested objects if they exist
+    if (address.country && typeof address.country === 'object') {
+      address.countryId = (address.country as { id: number }).id;
+    }
+    if (address.state && typeof address.state === 'object') {
+      address.stateId = (address.state as { id: number }).id;
+    }
+    if (address.city && typeof address.city === 'object') {
+      address.cityId = (address.city as { id: number }).id;
+    }
+    
+    normalized.address = address;
+  }
+  
+  return normalized;
 }
 
 export default function AccommodationForm({ studentId }: AccommodationFormProps) {
@@ -63,24 +116,38 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
   const [countries, setCountries] = useState<Country[]>([]);
   const [states, setStates] = useState<State[]>([]);
   const [cities, setCities] = useState<City[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoadingData(true);
       try {
-        const response = await getAccommodationByStudentId(studentId);
-        const accommodation = response?.payload;
+        // Fetch all data in parallel
+        const [countriesData, statesData, citiesData, accommodationResponse] = await Promise.all([
+          getAllCountries(),
+          getAllStates(),
+          getAllCities(),
+          getAccommodationByStudentId(studentId).catch(() => ({ payload: null }))
+        ]);
+
+        setCountries(countriesData);
+        setStates(statesData);
+        setCities(citiesData);
+
+        const accommodation = accommodationResponse?.payload;
         if (accommodation) {
-          setFormData(accommodation);
+          console.log('Loaded accommodation data:', accommodation);
+          const normalized = normalizeAccommodationData(accommodation);
+          console.log('Normalized accommodation data:', normalized);
+          setFormData(normalized);
         }
-      } catch {
-        // Optionally handle 404 (no record) gracefully
+      } catch (error) {
+        console.error('Error loading accommodation data:', error);
+      } finally {
+        setIsLoadingData(false);
       }
     };
     fetchData();
-    // Fetch all countries, states, and cities on mount
-    getAllCountries().then(setCountries);
-    getAllStates().then(setStates);
-    getAllCities().then(setCities);
   }, [studentId]);
 
   const handleChange = (field: keyof Accommodation, value: string | number | null | object | undefined) => {
@@ -92,19 +159,37 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
     setIsSubmitting(true);
     try {
       const studentIdNum = Number(formData.studentId);
-      const cleaned = stripDates({ ...formData, studentId: studentIdNum });
+      
+      // Prepare data for submission
+      const submissionData = prepareDataForSubmission({
+        ...formData,
+        studentId: studentIdNum,
+        startDate: formData.startDate,
+        endDate: formData.endDate
+      });
+      
+      console.log('Sending accommodation data:', submissionData);
+      
       const latest = (await getAccommodationByStudentId(studentId))?.payload;
       if (latest?.id) {
-        await updateAccommodation(latest.id, cleaned);
+        const result = await updateAccommodation(latest.id, submissionData as Partial<Accommodation>);
+        console.log('Update result:', result);
         toast.success("Accommodation updated!");
       } else {
-        await createAccommodation(cleaned);
+        const result = await createAccommodation(submissionData as Partial<Accommodation>);
+        console.log('Create result:', result);
         toast.success("Accommodation created!");
       }
+      
       // Always refetch to get fresh data (including updated timestamps or IDs)
       const updated = (await getAccommodationByStudentId(studentId))?.payload;
-      if (updated) setFormData(updated);
+      console.log('Refetched accommodation data:', updated);
+      if (updated) {
+        const normalized = normalizeAccommodationData(updated);
+        setFormData(normalized);
+      }
     } catch (error) {
+      console.error('Accommodation save error:', error);
       if (typeof error === 'object' && error !== null && 'response' in error && (error as { response?: { status?: number } }).response?.status === 409) {
         toast.error("Duplicate entry: A record already exists for this student.");
       } else {
@@ -115,7 +200,25 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
       setIsSubmitting(false);
     }
   };
+
+  // Get current country, state, and city IDs for filtering
+  const currentCountryId = formData.address?.countryId;
+  const currentStateId = formData.address?.stateId;
+  const currentCityId = formData.address?.cityId;
+
+  // Filter states and cities based on selection
+  const filteredStates = states.filter(state => 
+    !currentCountryId || state.countryId === currentCountryId
+  );
   
+  const filteredCities = cities.filter(city => 
+    !currentStateId || city.stateId === currentStateId
+  );
+
+  // Debug logging
+  console.log('Current IDs:', { currentCountryId, currentStateId, currentCityId });
+  console.log('Available states:', states.length, 'Filtered states:', filteredStates.length);
+  console.log('Available cities:', cities.length, 'Filtered cities:', filteredCities.length);
 
   return (
     <div className="space-y-6">
@@ -176,14 +279,22 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
               <Label>Address</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <Label>Country</Label>
+                  <Label>Country Name</Label>
                   <Select
-                    value={formData.address?.countryId?.toString() || ""}
+                    value={currentCountryId?.toString() || ""}
                     onValueChange={(value) => {
-                      handleChange("address", { ...formData.address, countryId: Number(value), stateId: null, cityId: null });
+                      console.log('Country selected:', value);
+                      const newAddress = { 
+                        ...formData.address, 
+                        countryId: Number(value), 
+                        stateId: null, 
+                        cityId: null 
+                      };
+                      handleChange("address", newAddress);
                     }}
+                    disabled={isLoadingData}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={isLoadingData ? "Loading..." : "Select country"} /></SelectTrigger>
                     <SelectContent>
                       {countries.map((country) => (
                         <SelectItem key={country.id} value={country.id.toString()}>{country.name}</SelectItem>
@@ -192,42 +303,47 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
                   </Select>
                 </div>
                 <div>
-                  <Label>State</Label>
+                  <Label>State Name</Label>
                   <Select
-                    value={formData.address?.stateId?.toString() || ""}
+                    value={currentStateId?.toString() || ""}
                     onValueChange={(value) => {
-                      handleChange("address", { ...formData.address, stateId: Number(value), cityId: null });
+                      console.log('State selected:', value);
+                      const newAddress = { 
+                        ...formData.address, 
+                        stateId: Number(value), 
+                        cityId: null 
+                      };
+                      handleChange("address", newAddress);
                     }}
+                    disabled={!currentCountryId || isLoadingData}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select state" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={!currentCountryId ? "Select country first" : isLoadingData ? "Loading..." : "Select state"} /></SelectTrigger>
                     <SelectContent>
-                      {states
-                        .filter(state =>
-                          !formData.address?.countryId || state.countryId === formData.address?.countryId
-                        )
-                        .map((state) => (
-                          <SelectItem key={state.id} value={state.id.toString()}>{state.name}</SelectItem>
-                        ))}
+                      {filteredStates.map((state) => (
+                        <SelectItem key={state.id} value={state.id.toString()}>{state.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>City</Label>
+                  <Label>City Name</Label>
                   <Select
-                    value={formData.address?.cityId?.toString() || ""}
+                    value={currentCityId?.toString() || ""}
                     onValueChange={(value) => {
-                      handleChange("address", { ...formData.address, cityId: Number(value) });
+                      console.log('City selected:', value);
+                      const newAddress = { 
+                        ...formData.address, 
+                        cityId: Number(value) 
+                      };
+                      handleChange("address", newAddress);
                     }}
+                    disabled={!currentStateId || isLoadingData}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select city" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={!currentStateId ? "Select state first" : isLoadingData ? "Loading..." : "Select city"} /></SelectTrigger>
                     <SelectContent>
-                      {cities
-                        .filter(city =>
-                          !formData.address?.stateId || city.stateId === formData.address?.stateId
-                        )
-                        .map((city) => (
-                          <SelectItem key={city.id} value={city.id.toString()}>{city.name}</SelectItem>
-                        ))}
+                      {filteredCities.map((city) => (
+                        <SelectItem key={city.id} value={city.id.toString()}>{city.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -271,7 +387,7 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
                     placeholder="Enter phone"
                   />
                 </div>
-    <div>
+                <div>
                   <Label>Pincode</Label>
                   <Input
                     value={formData.address?.pincode || ""}

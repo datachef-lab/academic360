@@ -1,13 +1,25 @@
 import { AccommodationType } from "@/types/user/accommodation.js";
-import { Accommodation, accommodationModel, createAccommodationSchema } from "../models/accommodation.model.js";
-import { addAddress, findAddressById } from "./address.service.js";
+import { Accommodation, accommodationModel, createAccommodationSchema, updateAccommodationSchema, AccommodationUpdate } from "../models/accommodation.model.js";
+import { addAddress, findAddressById, saveAddress } from "./address.service.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-// Validate input using Zod schema
+// Validate input using Zod schema for creation
 function validateAccommodationInput(data: Omit<AccommodationType, 'id'>) {
     const parseResult = createAccommodationSchema.safeParse(data);
+    if (!parseResult.success) {
+        const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
+        // @ts-expect-error
+        error.status = 400;
+        throw error;
+    }
+    return parseResult.data;
+}
+
+// Validate input using Zod schema for updates
+function validateAccommodationUpdateInput(data: AccommodationUpdate) {
+    const parseResult = updateAccommodationSchema.safeParse(data);
     if (!parseResult.success) {
         const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
         // @ts-expect-error
@@ -60,16 +72,32 @@ export async function findAccommotionByStudentId(studentId: number): Promise<Acc
 
 export async function updateAccommodation(id: number, accommodation: AccommodationType): Promise<AccommodationType | null> {
     let { id: _id, address, ...props } = accommodation;
-    validateAccommodationInput({ ...props, address });
-    if (address) {
-        address = await addAddress(address);
-    }
+    console.log('Updating accommodation:', { id, props, address });
+    validateAccommodationUpdateInput(props);
+    
     const [foundAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.id, id));
     if (!foundAccommodation) {
         return null;
     }
-    const [updatedAccommodation] = await db.update(accommodationModel).set({ ...props, addressId: address?.id }).where(eq(accommodationModel.id, id)).returning();
+
+    // Update address if present
+    let addressId = foundAccommodation.addressId;
+    if (address && address.id) {
+        // Use saveAddress for updates instead of addAddress
+        const { id: _addressId, createdAt: _createdAt, updatedAt: _updatedAt, ...addressPayload } = address;
+        console.log('Updating address with payload:', addressPayload);
+        const updatedAddress = await saveAddress(address.id, addressPayload);
+        addressId = updatedAddress?.id || addressId;
+        console.log('Address updated, new addressId:', addressId);
+    } else if (address && !address.id) {
+        // Create new address if no id
+        const newAddress = await addAddress(address);
+        addressId = newAddress?.id || addressId;
+    }
+
+    const [updatedAccommodation] = await db.update(accommodationModel).set({ ...props, addressId }).where(eq(accommodationModel.id, id)).returning();
     const formattedAccommodation = await accommodationResponseFormat(updatedAccommodation);
+    console.log('Final formatted accommodation:', formattedAccommodation);
     return formattedAccommodation;
 }
 
