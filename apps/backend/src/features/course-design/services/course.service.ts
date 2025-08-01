@@ -36,13 +36,26 @@ export async function findCourseById(id: number): Promise<CourseDto | null> {
     return formattedCourse;
 }
 
-export async function createCourse(course: CourseDto): Promise<CourseDto> {
+export async function createCourse(course: CourseDto): Promise<CourseDto | null> {
     const { degree, id, createdAt, updatedAt, ...props } = course;
     console.log("in create course in service, course:", course);
     const courseData: Course = {
         ...props,
         degreeId: degree?.id,
     }
+
+    const [existingCourse] = await db
+        .select()
+        .from(courseModel)
+        .where(
+            and(
+                ilike(courseModel.name, courseData.name.trim()),
+                eq(courseModel.degreeId, courseData.degreeId!),
+            )
+        );
+
+    if (existingCourse) return null;
+
     const [newCourse] = await db
         .insert(courseModel)
         .values(courseData)

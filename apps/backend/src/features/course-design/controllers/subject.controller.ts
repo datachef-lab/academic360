@@ -6,6 +6,10 @@ import { createSubject, getSubjectById, getAllSubjects, updateSubject, deleteSub
 export const createSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createSubject(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Subject already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Subject created successfully!"));
     } catch (error) {
         handleError(error, res, next);

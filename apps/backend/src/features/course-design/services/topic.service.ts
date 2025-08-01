@@ -23,6 +23,11 @@ export async function getTopicById(id: number) {
     return topic;
 }
 
+export async function getTopicsByPaperId(paperId: number) {
+    const topics = await db.select().from(topicModel).where(eq(topicModel.paperId, paperId));
+    return topics;
+}
+
 export async function getAllTopics() {
     return db.select().from(topicModel);
 }

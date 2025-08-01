@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { programCourses, ProgramCourse, NewProgramCourse } from "@/features/course-design/models/program-course.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@/features/course-design/models/stream.model.js";
@@ -11,6 +11,22 @@ import { affiliationModel } from "@/features/course-design/models/affiliation.mo
 import { regulationTypeModel } from "@/features/course-design/models/regulation-type.model.js";
 
 export async function createProgramCourse(data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) {
+    const [existingProgramCourse] = await db
+        .select()
+        .from(programCourses)
+        .where(
+            and(
+                eq(programCourses.streamId, data.streamId!),
+                eq(programCourses.courseId, data.courseId!),
+                eq(programCourses.courseTypeId, data.courseTypeId!),
+                eq(programCourses.courseLevelId, data.courseLevelId!),
+                eq(programCourses.affiliationId, data.affiliationId!),
+                eq(programCourses.regulationTypeId, data.regulationTypeId!),
+            )
+        );
+
+    if (existingProgramCourse) return null;
+    
     const [created] = await db.insert(programCourses).values(data).returning();
     return created;
 }

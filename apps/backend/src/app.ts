@@ -24,6 +24,7 @@ import {
   batchStudentMappingRouter,
   marksheetPaperMappingRouter,
   marksheetPaperComponentMappingRouter,
+  sessionRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -226,6 +227,7 @@ app.use(
 // app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
+app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
 

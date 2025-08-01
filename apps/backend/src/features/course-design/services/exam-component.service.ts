@@ -63,7 +63,7 @@ export const getAllExamComponents = async () => {
 };
 
 // Get exam component by ID
-export const getExamComponentById = async (id: string) => {
+export const findExamComponentById = async (id: string) => {
   const examComponent = await db
     .select()
     .from(examComponentModel)

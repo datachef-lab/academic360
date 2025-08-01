@@ -93,13 +93,13 @@ export interface Paper {
     courseId: number;
     classId: number;
     name: string;
-    code: string | null;
+    code: string;
     isOptional: boolean;
     sequence: number | null;
     disabled: boolean;
     createdAt?: Date;
     updatedAt?: Date;
-    paperComponents: PaperComponent[];
+    components: PaperComponent[];
     topics: Topic[];
 }
 

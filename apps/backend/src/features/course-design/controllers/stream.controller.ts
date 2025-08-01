@@ -6,6 +6,10 @@ import { createStream, getStreamById, getAllStreams, updateStream, deleteStream,
 export const createStreamHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createStream(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Stream already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Stream created successfully!"));
     } catch (error) {
         handleError(error, res, next);

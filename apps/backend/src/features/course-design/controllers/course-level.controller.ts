@@ -12,6 +12,10 @@ import {
 export const createCourseLevel = async (req: Request, res: Response) => {
   try {
     const newCourseLevel = await createCourseLevelService(req.body);
+    if (!newCourseLevel) {
+      res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Course level already exists"));
+      return 
+    }
     res.status(201).json(new ApiResponse(201, "SUCCESS", newCourseLevel, "Course level created successfully!"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

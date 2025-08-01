@@ -6,6 +6,10 @@ import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffili
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createAffiliation(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Affiliation already exists"));
+            return
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Affiliation created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -61,15 +65,15 @@ export const deleteAffiliationHandler = async (req: Request, res: Response, next
 };
 
 export const bulkUploadAffiliationsHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    if (!req.file || !req.file.path) {
-      return res.status(400).json({ error: "No file uploaded" });
+    try {
+        if (!req.file || !req.file.path) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+        const result = await bulkUploadAffiliations(req.file.path);
+        res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
+        return
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        handleError(error, res, next);
     }
-    const result = await bulkUploadAffiliations(req.file.path);
-    res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
-    return 
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    handleError(error, res, next);
-  }
 }; 

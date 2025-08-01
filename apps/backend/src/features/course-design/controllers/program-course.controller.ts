@@ -13,6 +13,10 @@ import {
 export const createProgramCourseHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createProgramCourse(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Program course already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Program course created successfully!"));
     } catch (error) {
         handleError(error, res, next);

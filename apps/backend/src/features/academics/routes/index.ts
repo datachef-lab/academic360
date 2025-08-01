@@ -9,10 +9,12 @@ import academicYearRouter from "@/features/academics/routes/academic-year.route.
 import shiftRouter from "@/features/academics/routes/shift.route.js";
 import classRouter from "@/features/academics/routes/class.route.js";
 import sectionRoutes from "@/features/academics/routes/section.route.js";
+import sessionRouter from "@/features/academics/routes/session.route.js";
 
 export {
   classRouter,
   documentRouter,
+  sessionRouter,
   marksheetRouter,
   academicYearRouter,
   batchRouter,

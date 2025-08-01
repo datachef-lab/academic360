@@ -13,6 +13,10 @@ import { ApiResponse } from "@/utils/ApiResonse";
 export const createSubjectType = async (req: Request, res: Response) => {
   try {
     const newSubjectType = await createSubjectTypeService(req.body);
+    if (!newSubjectType) {
+      res.status(400).json({ error: "Subject Type already exists" });
+      return;
+    }
     res.status(201).json(new ApiResponse(201, "SUCCESS", newSubjectType, "Subject type created successfully"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";

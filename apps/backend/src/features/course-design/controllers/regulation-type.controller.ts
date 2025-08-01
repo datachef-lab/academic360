@@ -13,6 +13,10 @@ import {
 export const createRegulationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createRegulationType(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Regulation type already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Regulation type created successfully!"));
     } catch (error) {
         handleError(error, res, next);

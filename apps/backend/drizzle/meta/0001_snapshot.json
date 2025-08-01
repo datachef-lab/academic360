@@ -1,6 +1,6 @@
 {
-  "id": "207c388c-c1d8-4718-8ce9-7dd3736264d0",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "d3c8cabd-2be5-41ba-a562-41aeb77d148a",
+  "prevId": "207c388c-c1d8-4718-8ce9-7dd3736264d0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3197,8 +3197,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "academic_year_id_fk": {
-          "name": "academic_year_id_fk",
+        "session_id_fk": {
+          "name": "session_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -3309,12 +3309,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "papers_academic_year_id_fk_academic_years_id_fk": {
-          "name": "papers_academic_year_id_fk_academic_years_id_fk",
+        "papers_session_id_fk_sessions_id_fk": {
+          "name": "papers_session_id_fk_sessions_id_fk",
           "tableFrom": "papers",
-          "tableTo": "academic_years",
+          "tableTo": "sessions",
           "columnsFrom": [
-            "academic_year_id_fk"
+            "session_id_fk"
           ],
           "columnsTo": [
             "id"
