@@ -48,7 +48,11 @@ export interface BulkUploadResult {
     };
 }
 
-export const bulkUploadRegulationTypes = async (filePath: string): Promise<BulkUploadResult> => {
+export const bulkUploadRegulationTypes = async (
+    filePath: string,
+    io?: any,
+    uploadSessionId?: string
+): Promise<BulkUploadResult> => {
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
@@ -86,12 +90,19 @@ export const bulkUploadRegulationTypes = async (filePath: string): Promise<BulkU
             const errorMessage = err instanceof Error ? err.message : "Unknown error";
             errors.push({ row: i + 2, data: row, error: errorMessage });
         }
+        if (io && uploadSessionId) {
+            io.to(uploadSessionId).emit("bulk-upload-progress", {
+                processed: i,
+                total: dataRows.length - 1,
+                percent: Math.round((i / (dataRows.length - 1)) * 100)
+            });
+        }
     }
 
     // Clean up file
     fs.unlinkSync(filePath);
 
-    return {
+    const result: BulkUploadResult = {
         success,
         errors,
         summary: {
@@ -100,4 +111,14 @@ export const bulkUploadRegulationTypes = async (filePath: string): Promise<BulkU
             failed: errors.length,
         },
     };
+
+    if (io && uploadSessionId) {
+        if (result.errors.length > 0) {
+            io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+        } else {
+            io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+        }
+    }
+
+    return result;
 };

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createSubject, getSubjectById, getAllSubjects, updateSubject, deleteSubject, bulkUploadSubjects } from "@/features/course-design/services/subject.service.js";
+import { socketService } from "@/services/socketService";
 
 export const createSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -23,7 +24,10 @@ export const bulkUploadSubjectsHandler = async (req: Request, res: Response, nex
             return;
         }
 
-        const result = await bulkUploadSubjects(req.file.path);
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+
+        const result = await bulkUploadSubjects(req.file.path, io, uploadSessionId);
         
         const response = {
             success: result.success,

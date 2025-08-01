@@ -29,7 +29,11 @@ export async function createCourseType(data: CourseType) {
 }
 
 // Bulk upload course types
-export const bulkUploadCourseTypes = async (filePath: string): Promise<BulkUploadResult> => {
+export const bulkUploadCourseTypes = async (
+    filePath: string,
+    io?: any,
+    uploadSessionId?: string
+): Promise<BulkUploadResult> => {
     const result: BulkUploadResult = {
         success: [],
         errors: []
@@ -100,11 +104,26 @@ export const bulkUploadCourseTypes = async (filePath: string): Promise<BulkUploa
                     error: errorMessage
                 });
             }
+            if (io && uploadSessionId) {
+                io.to(uploadSessionId).emit("bulk-upload-progress", {
+                    processed: i,
+                    total: data.length - 1,
+                    percent: Math.round((i / (data.length - 1)) * 100)
+                });
+            }
         }
 
         // Clean up the temporary file
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
+        }
+
+        if (io && uploadSessionId) {
+            if (result.errors.length > 0) {
+                io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+            } else {
+                io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+            }
         }
 
         return result;

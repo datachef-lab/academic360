@@ -9,6 +9,7 @@ import {
 } from "../services/subject-type.service";
 import * as XLSX from "xlsx";
 import { ApiResponse } from "@/utils/ApiResonse";
+import { socketService } from "@/services/socketService";
 
 export const createSubjectType = async (req: Request, res: Response) => {
   try {
@@ -82,12 +83,13 @@ export const bulkUploadSubjectTypesHandler = async (req: Request, res: Response)
       res.status(400).json({ error: "No file uploaded" });
       return ;
     }
-    const result = await bulkUploadSubjectTypesService(req.file.path);
+    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const io = socketService.getIO();
+    const result = await bulkUploadSubjectTypesService(req.file.path, io, uploadSessionId);
     res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
     return 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: error instanceof Error ? error.message : "Unknown error" });
     return 
   }
 };

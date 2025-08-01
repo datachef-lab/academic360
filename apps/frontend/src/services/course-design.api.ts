@@ -238,19 +238,21 @@ export const deleteCourseLevel = (id: number) => axiosInstance.delete<CourseLeve
 
 // Update a paper with components
 export const updatePaperWithComponents = (paperId: number, data: {
-    paperName: string;
+    name: string;
     subjectId: number;
     affiliationId: number;
     regulationTypeId: number;
     academicYearId: number;
     courseId: number;
     subjectTypeId: number;
-    semester: string;
-    paperCode: string;
+    classId: number;
+    code: string;
     isOptional: boolean;
-    isActive: boolean;
+    disabled: boolean;
     components: Array<{
-        examComponentId: number;
+        examComponent: {
+            id: number;
+        };
         fullMarks: number;
         credit: number;
     }>;

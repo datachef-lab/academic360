@@ -9,6 +9,7 @@ import {
   deleteRegulationType, 
   bulkUploadRegulationTypes 
 } from "@/features/course-design/services/regulation-type.service.js";
+import { socketService } from "@/services/socketService";
 
 export const createRegulationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -76,10 +77,11 @@ export const bulkUploadRegulationTypesHandler = async (req: Request, res: Respon
     if (!req.file || !req.file.path) {
       return res.status(400).json({ error: "No file uploaded" });
     }
-    const result = await bulkUploadRegulationTypes(req.file.path);
+    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const io = socketService.getIO();
+    const result = await bulkUploadRegulationTypes(req.file.path, io, uploadSessionId);
     res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     handleError(error, res, next);
   }
 };

@@ -30,6 +30,7 @@ import {
   getPapers,
   BulkUploadRow,
   BulkUploadError,
+  updatePaperWithComponents,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 // import { useAuth } from "@/hooks/useAuth";
@@ -102,14 +103,7 @@ const SubjectPaperMappingPage = () => {
   //   const [classes, setClasses] = React.useState<Class[]>([]);
 
   const fetchFilteredData = React.useCallback(async () => {
-    const filters = {
-      ...filtersObj,
-      searchText: searchText || undefined,
-      page: currentPage,
-      limit: itemsPerPage,
-    };
-
-    console.log("Fetching filtered data with filters:", filters);
+    console.log("Fetching papers data");
     try {
       const result = await getPapers();
       console.log("API Response:", result);
@@ -124,15 +118,48 @@ const SubjectPaperMappingPage = () => {
         return;
       }
 
-      // Ensure result is an array before setting it
+      // Ensure result is an array before filtering
       if (Array.isArray(result)) {
-        setPapers(result as unknown as Paper[]);
-        setTotalPages(1); // For now, set to 1 since we're not paginating
-        setTotalItems(result.length);
+        // Apply client-side filtering
+        let filteredPapers = result as Paper[];
+        
+        // Filter by subject
+        if (filtersObj.subjectId) {
+          filteredPapers = filteredPapers.filter(paper => paper.subjectId === filtersObj.subjectId);
+        }
+        
+        // Filter by affiliation
+        if (filtersObj.affiliationId) {
+          filteredPapers = filteredPapers.filter(paper => paper.affiliationId === filtersObj.affiliationId);
+        }
+        
+        // Filter by regulation type
+        if (filtersObj.regulationTypeId) {
+          filteredPapers = filteredPapers.filter(paper => paper.regulationTypeId === filtersObj.regulationTypeId);
+        }
+        
+        // Filter by academic year
+        if (filtersObj.academicYearId) {
+          filteredPapers = filteredPapers.filter(paper => paper.academicYearId === filtersObj.academicYearId);
+        }
+        
+        // Filter by search text
+        if (searchText) {
+          const searchLower = searchText.toLowerCase();
+          filteredPapers = filteredPapers.filter(paper => 
+            paper.name?.toLowerCase().includes(searchLower) ||
+            paper.code?.toLowerCase().includes(searchLower) ||
+            subjects.find(s => s.id === paper.subjectId)?.name?.toLowerCase().includes(searchLower)
+          );
+        }
 
-        console.log("Set papers:", result);
+        setPapers(filteredPapers);
+        setTotalPages(1); // For now, set to 1 since we're not paginating
+        setTotalItems(filteredPapers.length);
+
+        console.log("Set papers:", filteredPapers);
         console.log("Total pages:", 1);
-        console.log("Total items:", result.length);
+        console.log("Total items:", filteredPapers.length);
       } else {
         console.error("API returned non-array result:", result);
         setPapers([]);
@@ -156,7 +183,7 @@ const SubjectPaperMappingPage = () => {
       setTotalPages(1);
       setTotalItems(0);
     }
-  }, [filtersObj, searchText, currentPage, itemsPerPage]);
+  }, [filtersObj, searchText, subjects]);
 
   // Fetch filtered data when filters change
   useEffect(() => {
@@ -309,7 +336,31 @@ const SubjectPaperMappingPage = () => {
         data: data,
       });
 
-      // await updatePaperWithComponents(selectedPaperForEdit.id, data as unknown as Paper);
+      // Transform the data to match the API expected format
+      const updateData = {
+        name: data.name,
+        subjectId: data.subjectId,
+        affiliationId: data.affiliationId,
+        regulationTypeId: data.regulationTypeId,
+        academicYearId: data.academicYearId,
+        courseId: data.courseId,
+        subjectTypeId: data.subjectTypeId,
+        classId: data.classId,
+        code: data.code,
+        isOptional: data.isOptional,
+        disabled: data.disabled,
+        components: data.components
+          ?.filter(comp => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
+          .map(comp => ({
+            examComponent: {
+              id: comp.examComponent.id!,
+            },
+            fullMarks: comp.fullMarks!,
+            credit: comp.credit!,
+          })) || [],
+      };
+
+      await updatePaperWithComponents(selectedPaperForEdit.id, updateData);
       toast.success("Paper updated successfully!");
       setIsPaperEditModalOpen(false);
       setSelectedPaperForEdit(null);
@@ -318,8 +369,6 @@ const SubjectPaperMappingPage = () => {
       const errorMessage = error instanceof Error ? error.message : "Failed to update paper";
       toast.error(`Failed to update paper: ${errorMessage}`);
       console.error("Full error object:", error);
-    } finally {
-      fetchData();
     }
   };
 
@@ -852,9 +901,13 @@ const SubjectPaperMappingPage = () => {
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
                         {courses.find((ele) => ele.id == sp.courseId)?.name ?? "-"}
                       </div>
-                      <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "20%" }}>
+                      <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
+                        <p>
+
                         {sp.name ?? "-"}
                         {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
+                        </p>
+                        <p>({subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"})</p>
                       </div>
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
@@ -866,13 +919,13 @@ const SubjectPaperMappingPage = () => {
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "12%" }}
                       >
-                        {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.name ?? "-"}
+                        {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.code ?? "-"}
                       </div>
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "10%" }}
                       >
-                        {classes.find((cls) => cls.id === sp.classId)?.name ?? "-"}
+                        {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r" style={{ width: "21%" }}>
                         {/* Display exam component names */}
@@ -893,7 +946,10 @@ const SubjectPaperMappingPage = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setIsPaperEditModalOpen(true)}
+                            onClick={() => {
+                              setIsPaperEditModalOpen(true);
+                              setSelectedPaperForEdit(sp);
+                            }}
                             className="h-5 w-5 p-0"
                           >
                             <Edit className="h-4 w-4" />

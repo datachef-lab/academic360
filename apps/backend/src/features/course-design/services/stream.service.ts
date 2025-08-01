@@ -26,118 +26,87 @@ export async function createStream(data: Stream) {
 }
 
 // Bulk upload streams
-export const bulkUploadStreams = async (filePath: string): Promise<BulkUploadResult> => {
-    const result: BulkUploadResult = {
-        success: [],
-        errors: []
-    };
+export const bulkUploadStreams = async (
+  filePath: string,
+  io?: any,
+  uploadSessionId?: string
+): Promise<BulkUploadResult> => {
+  const result: BulkUploadResult = {
+    success: [],
+    errors: []
+  };
 
-    try {
-        // Read the Excel file
-        const workbook = XLSX.readFile(filePath);
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+  try {
+    // Read the Excel file
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
 
-        // Convert to JSON
-        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    // Convert to JSON
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Skip header row and process data
-        for (let i = 1; i < data.length; i++) {
-            const row = data[i] as any[];
-            const rowNumber = i + 1;
+    // Skip header row and process data
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as any[];
+      const rowNumber = i + 1;
+      try {
+        // Map Excel columns to our model
+        const streamData = {
+          name: row[0]?.toString()?.trim(),
+          code: row[1]?.toString()?.trim(),
+          shortName: row[2]?.toString()?.trim() || null,
+          sequence: row[3] ? parseInt(row[3].toString()) : null,
+          disabled: row[4]?.toString()?.toLowerCase() === 'inactive' || row[4]?.toString()?.toLowerCase() === 'false',
+        };
 
-            try {
-                // Map Excel columns to our model
-                const streamData = {
-                    name: row[0]?.toString()?.trim(),
-                    code: row[1]?.toString()?.trim(),
-                    shortName: row[2]?.toString()?.trim() || null,
-                    sequence: row[3] ? parseInt(row[3].toString()) : null,
-                    disabled: row[4]?.toString()?.toLowerCase() === 'inactive' || row[4]?.toString()?.toLowerCase() === 'false',
-                };
-
-                // Validate required fields
-                if (!streamData.name) {
-                    result.errors.push({
-                        row: rowNumber,
-                        data: row,
-                        error: "Name is required"
-                    });
-                    continue;
-                }
-
-                if (!streamData.code) {
-                    result.errors.push({
-                        row: rowNumber,
-                        data: row,
-                        error: "Code is required"
-                    });
-                    continue;
-                }
-
-                // Check if code is unique
-                const existingWithCode = await db
-                    .select()
-                    .from(streamModel)
-                    .where(eq(streamModel.code, streamData.code));
-
-                if (existingWithCode.length > 0) {
-                    result.errors.push({
-                        row: rowNumber,
-                        data: row,
-                        error: `Code ${streamData.code} already exists`
-                    });
-                    continue;
-                }
-
-                // Check if sequence is unique (if provided)
-                if (streamData.sequence !== null) {
-                    const existingWithSequence = await db
-                        .select()
-                        .from(streamModel)
-                        .where(eq(streamModel.sequence, streamData.sequence));
-
-                    if (existingWithSequence.length > 0) {
-                        result.errors.push({
-                            row: rowNumber,
-                            data: row,
-                            error: `Sequence ${streamData.sequence} already exists`
-                        });
-                        continue;
-                    }
-                }
-
-                // Insert the stream
-                const newStream = await db
-                    .insert(streamModel)
-                    .values(streamData)
-                    .returning();
-
-                result.success.push(newStream[0]);
-            } catch (error: unknown) {
-                const errorMessage = error instanceof Error ? error.message : "Unknown error";
-                result.errors.push({
-                    row: rowNumber,
-                    data: row,
-                    error: errorMessage
-                });
-            }
+        // Validate required fields
+        if (!streamData.name) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: "Name is required"
+          });
+          continue;
         }
-
-        // Clean up the temporary file
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
+        if (!streamData.code) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: "Code is required"
+          });
+          continue;
         }
-
-        return result;
-    } catch (error: unknown) {
-        // Clean up the temporary file
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        throw new Error(`Failed to process Excel file: ${errorMessage}`);
+        // Insert the stream
+        const [newStream] = await db.insert(streamModel).values(streamData).returning();
+        result.success.push(newStream);
+      } catch (error: unknown) {
+        result.errors.push({
+          row: rowNumber,
+          data: row,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      if (io && uploadSessionId) {
+        io.to(uploadSessionId).emit("bulk-upload-progress", {
+          processed: i,
+          total: data.length - 1,
+          percent: Math.round((i / (data.length - 1)) * 100)
+        });
+      }
     }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (io && uploadSessionId) {
+      if (result.errors.length > 0) {
+        io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+      } else {
+        io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+      }
+    }
+    return result;
+  } catch (error: unknown) {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    throw new Error(`Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
 };
 
 export async function getStreamById(id: number) {

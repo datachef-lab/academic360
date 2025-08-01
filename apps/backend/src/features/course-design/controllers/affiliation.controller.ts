@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliation, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
+import { socketService } from "@/services/socketService";
 
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -69,11 +70,12 @@ export const bulkUploadAffiliationsHandler = async (req: Request, res: Response,
         if (!req.file || !req.file.path) {
             return res.status(400).json({ error: "No file uploaded" });
         }
-        const result = await bulkUploadAffiliations(req.file.path);
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+        const result = await bulkUploadAffiliations(req.file.path, io, uploadSessionId);
         res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
-        return
+        return;
     } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         handleError(error, res, next);
     }
 }; 
