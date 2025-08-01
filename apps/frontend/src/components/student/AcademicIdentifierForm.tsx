@@ -16,7 +16,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
-import { Course } from "@/types/academics/course";
+import { Course } from "@/types/course-design/index";
 import { Framework, Shift } from "@/types/enums";
 import { getAllCourses } from "@/services/course-api";
 import { ApiResonse } from "@/types/api-response";
@@ -182,10 +182,10 @@ export default function AcademicIdentifierForm({
                 Shift
               </Label>
               <Select
-                value={formData.shift || ""}
-                onValueChange={(value: string) =>
-                  setFormData({ ...formData, shift: value as Shift })
-                }
+                value={formData.shift?.name?.toString() || ""}
+                // onValueChange={(value: string) =>
+                // //   setFormData({ ...formData, shift: shiftOptions.find(option => option.name === value). || null })
+                // }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select shift" />

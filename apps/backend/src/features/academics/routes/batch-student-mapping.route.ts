@@ -8,7 +8,7 @@ import {
   deleteBatchStudentMappingController,
   getBatchStudentMappingsByBatchIdController,
   getBatchStudentMappingsByStudentIdController,
-} from "../controllers/batch-student-mapping.controller";
+} from "../controllers/batch-student-mapping.controller.js";
 
 const router = express.Router();
 

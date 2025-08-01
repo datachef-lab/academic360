@@ -7,7 +7,7 @@ import {
   updateMarksheetPaperComponentMapping,
   deleteMarksheetPaperComponentMapping,
   getMarksheetPaperComponentMappingsByMarksheetPaperMappingId,
-} from "../services/marksheet-paper-component-mapping.service";
+} from "../services/marksheet-paper-component-mapping.service.js";
 
 // Create a new marksheet-paper-component mapping
 export const createMarksheetPaperComponentMappingController = async (

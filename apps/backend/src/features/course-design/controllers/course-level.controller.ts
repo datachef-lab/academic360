@@ -7,8 +7,8 @@ import {
   updateCourseLevel as updateCourseLevelService,
   deleteCourseLevel as deleteCourseLevelService,
   bulkUploadCourseLevels as bulkUploadCourseLevelsService,
-} from "../services/course-level.service";
-import { socketService } from "@/services/socketService";
+} from "../services/course-level.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createCourseLevel = async (req: Request, res: Response) => {
   try {

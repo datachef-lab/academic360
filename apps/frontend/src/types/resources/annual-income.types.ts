@@ -13,12 +13,12 @@
  * Main Annual Income interface that mirrors the backend model
  */
 export interface AnnualIncome {
-  id: number;
+    readonly id?: number;
   range: string;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================

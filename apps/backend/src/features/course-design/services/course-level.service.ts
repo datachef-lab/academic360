@@ -1,5 +1,5 @@
-import { db } from "@/db";
-import { CourseLevel, courseLevelModel } from "../models/course-level.model";
+import { db } from "@/db/index.js";
+import { CourseLevel, courseLevelModel } from "../models/course-level.model.js";
 import { eq, ilike } from "drizzle-orm";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";

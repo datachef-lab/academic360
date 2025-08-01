@@ -1,6 +1,6 @@
 import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { marksheetPaperMappingModel } from "./marksheet-paper-mapping.model";
-import { paperComponentModel } from "@/features/course-design/models/paper-component.model";
+import { marksheetPaperMappingModel } from "./marksheet-paper-mapping.model.js";
+import { paperComponentModel } from "@/features/course-design/models/paper-component.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

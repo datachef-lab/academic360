@@ -13,15 +13,15 @@
  * Main City interface that mirrors the backend model
  */
 export interface City {
-  id: number;
+    readonly id?: number;
   stateId: number;
   name: string;
   documentRequired: boolean;
   code: string;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 /**

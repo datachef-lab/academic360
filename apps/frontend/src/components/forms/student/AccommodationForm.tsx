@@ -130,11 +130,11 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
               </Label>
               <Input
                 id="city"
-                value={formData.address.city || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, city: e.target.value }
-                })}
+                // value={formData.address.city || ""}
+                // onChange={(e) => setFormData({
+                //   ...formData,
+                //   address: { ...formData.address!, city: e.target.value }
+                // })}
                 placeholder="Enter city"
                 className="w-full"
               />
@@ -147,11 +147,11 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
               </Label>
               <Input
                 id="state"
-                value={formData.address.state || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, state: e.target.value }
-                })}
+                // value={formData.address.state || ""}
+                // onChange={(e) => setFormData({
+                //   ...formData,
+                //   address: { ...formData.address!, state: e.target.value }
+                // })}
                 placeholder="Enter state"
                 className="w-full"
               />
@@ -164,11 +164,11 @@ export default function AccommodationForm({ onSubmit, initialData = {} }: Accomm
               </Label>
               <Input
                 id="country"
-                value={formData.address.country || ""}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  address: { ...formData.address!, country: e.target.value }
-                })}
+                // value={formData.address.country || ""}
+                // onChange={(e) => setFormData({
+                //   ...formData,
+                //   address: { ...formData.address!, country: e.target.value }
+                // })}
                 placeholder="Enter country"
                 className="w-full"
               />

@@ -4,7 +4,7 @@ import {
   getRegulationTypesByAffiliationAndAcademicYear, 
   getSubjectsByAffiliationAcademicYearAndRegulation,
   getAvailableAffiliations 
-} from '../services/cascading-dropdowns.service';
+} from '../services/cascading-dropdowns.service.js';
 
 // Get available affiliations
 export const getAvailableAffiliationsHandler = async (req: Request, res: Response) => {

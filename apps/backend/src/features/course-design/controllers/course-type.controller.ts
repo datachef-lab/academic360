@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createCourseType, getCourseTypeById, getAllCourseTypes, updateCourseType, deleteCourseType, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
 
 export const createCourseTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { batchModel } from "./batch.model";
-import { studentModel } from "@/features/user/models/student.model";
+import { batchModel } from "./batch.model.js";
+import { studentModel } from "@/features/user/models/student.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

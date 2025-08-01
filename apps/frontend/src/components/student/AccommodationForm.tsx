@@ -186,7 +186,7 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
                     <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
                     <SelectContent>
                       {countries.map((country) => (
-                        <SelectItem key={country.id} value={country.id.toString()}>{country.name}</SelectItem>
+                        <SelectItem key={country.id} value={country.id!.toString()}>{country.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -226,7 +226,7 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
                           !formData.address?.stateId || city.stateId === formData.address?.stateId
                         )
                         .map((city) => (
-                          <SelectItem key={city.id} value={city.id.toString()}>{city.name}</SelectItem>
+                          <SelectItem key={city.id} value={city.id!.toString()}>{city.name}</SelectItem>
                         ))}
                     </SelectContent>
                   </Select>

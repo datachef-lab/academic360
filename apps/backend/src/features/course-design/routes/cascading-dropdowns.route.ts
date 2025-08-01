@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { verifyJWT } from '@/middlewares/verifyJWT';
+import { verifyJWT } from '@/middlewares/verifyJWT.js';
 import {
   getAvailableAffiliationsHandler,
   getAcademicYearsByAffiliationHandler,
   getRegulationTypesByAffiliationAndAcademicYearHandler,
   getSubjectsByAffiliationAcademicYearAndRegulationHandler,
-} from '../controllers/cascading-dropdowns.controller';
+} from '../controllers/cascading-dropdowns.controller.js';
 
 const router = Router();
 

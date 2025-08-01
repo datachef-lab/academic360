@@ -6,8 +6,8 @@ import {
   getRegulationTypeByIdHandler,
   updateRegulationTypeHandler,
   bulkUploadRegulationTypesHandler
-} from "../controllers/regulation-type.controller";
-import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
+} from "../controllers/regulation-type.controller.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 

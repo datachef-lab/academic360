@@ -1,7 +1,7 @@
-import { db } from "@/db";
-import { SubjectType, subjectTypeModel } from "../models/subject-type.model";
+import { db } from "@/db/index.js";
+import { SubjectType, subjectTypeModel } from "../models/subject-type.model.js";
 import { eq } from "drizzle-orm";
-import { SubjectTypeSchema } from "@/types/course-design";
+import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 import * as XLSX from "xlsx";
 import fs from "fs";

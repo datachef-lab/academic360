@@ -1,10 +1,10 @@
 import { db } from "@/db/index.js";
-import { academicYearModel } from "@/features/academics/models/academic-year.model";
+import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
 import { eq, and } from "drizzle-orm";
-import { regulationTypeModel } from "../models/regulation-type.model";
-import { subjectModel } from "../models/subject.model";
-import { affiliationModel } from "../models/affiliation.model";
-import { paperModel } from "../models/paper.model";
+import { regulationTypeModel } from "../models/regulation-type.model.js";
+import { subjectModel } from "../models/subject.model.js";
+import { affiliationModel } from "../models/affiliation.model.js";
+import { paperModel } from "../models/paper.model.js";
 
 // Get academic years based on affiliation
 export async function getAcademicYearsByAffiliation(affiliationId: number) {

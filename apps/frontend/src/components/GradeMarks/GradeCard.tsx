@@ -126,7 +126,7 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
           registrationNo: mks.academicIdentifier?.registrationNumber || "",
           rollNo: mks.academicIdentifier?.rollNumber || "",
           semester: mks.semester?.toString() || "",
-          examination: mks.year?.toString() || "",
+          examination: mks.academicYear.year?.toString() || "",
         },
         courses: (mks.subjects || []).map(
           (subject: Subject): Course => ({
@@ -134,7 +134,7 @@ const GradeCard = ({ initialData, marksheetId, showActions = false }: GradeCardP
             courseCode: subject.subjectMetadata?.marksheetCode || "",
             courseType: subject.subjectMetadata?.subjectType?.name || "course",
             courseName: subject.subjectMetadata?.name || "",
-            year: mks.year,
+            year: mks.academicYear.year,
             components: [
               {
                 id: generateId(),

@@ -3,7 +3,7 @@ import { marksheetPaperMappingModel } from "../models/marksheet-paper-mapping.mo
 import { marksheetModel } from "../models/marksheet.model.js";
 import { batchStudentPaperModel } from "@/features/course-design/models/batch-student-paper.model.js";
 import { eq, and, desc, count } from "drizzle-orm";
-import { PaginatedResponse } from "@/utils/PaginatedResponse";
+import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 
 export interface MarksheetPaperMappingFilters {
   page?: number;

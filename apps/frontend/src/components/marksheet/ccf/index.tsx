@@ -64,7 +64,11 @@ const MarksheetCCF = () => {
       // create new marksheet
       const newMarksheet: Marksheet = {
         studentId: 0,
-        year: 0,
+        academicYear: {
+          id: 0,
+          year: "2023",
+          isCurrentYear: true,
+        },
         cgpa: null,
         classification: null,
         semester: 1,
@@ -81,7 +85,9 @@ const MarksheetCCF = () => {
         academicIdentifier: {
           rollNumber: rollNumber as string,
           studentId: 0,
-          frameworkType: framework as Framework,
+          shift: null,
+
+          framework: framework as Framework,
           rfid: null,
           // stream: null,
           // degreeProgramme: null,

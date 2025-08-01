@@ -1,4 +1,3 @@
-import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,20 +69,28 @@ export default function IdCardGeneratorPage() {
                     <TableCell>{id.appNo}</TableCell>
                     <TableCell>{id.course}</TableCell>
                     <TableCell>
-                      <span className={
-                        id.status === "Ready"
-                          ? "text-blue-600 font-medium"
-                          : id.status === "Printed"
-                          ? "text-green-600 font-medium"
-                          : "text-yellow-600 font-medium"
-                      }>
+                      <span
+                        className={
+                          id.status === "Ready"
+                            ? "text-blue-600 font-medium"
+                            : id.status === "Printed"
+                              ? "text-green-600 font-medium"
+                              : "text-yellow-600 font-medium"
+                        }
+                      >
                         {id.status}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button size="sm" variant="outline">Preview</Button>
-                      <Button size="sm" className="ml-2">Download</Button>
-                      <Button size="sm" className="ml-2" variant="secondary">Mark Printed</Button>
+                      <Button size="sm" variant="outline">
+                        Preview
+                      </Button>
+                      <Button size="sm" className="ml-2">
+                        Download
+                      </Button>
+                      <Button size="sm" className="ml-2" variant="secondary">
+                        Mark Printed
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

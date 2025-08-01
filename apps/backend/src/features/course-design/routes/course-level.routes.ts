@@ -6,7 +6,7 @@ import {
   updateCourseLevel,
   deleteCourseLevel,
   bulkUploadCourseLevels,
-} from "../controllers/course-level.controller";
+} from "../controllers/course-level.controller.js";
 import { RequestHandler } from "express";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 

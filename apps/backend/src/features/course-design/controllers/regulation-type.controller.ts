@@ -9,7 +9,7 @@ import {
   deleteRegulationType, 
   bulkUploadRegulationTypes 
 } from "@/features/course-design/services/regulation-type.service.js";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
 
 export const createRegulationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

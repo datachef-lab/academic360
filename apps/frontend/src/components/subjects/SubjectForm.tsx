@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
-import { Degree } from '@/types/resources/degree';
+import { Degree } from '@/types/resources/degree.types';
 
 
 interface SubjectFormProps {

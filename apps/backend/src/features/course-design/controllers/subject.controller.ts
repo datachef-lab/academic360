@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createSubject, getSubjectById, getAllSubjects, updateSubject, deleteSubject, bulkUploadSubjects } from "@/features/course-design/services/subject.service.js";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
 
 export const createSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

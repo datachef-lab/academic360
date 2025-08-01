@@ -21,9 +21,7 @@ import type { Admission, ApplicationFormDto } from "@/types/admissions";
 import MasterLayout, { LinkType } from "@/components/layouts/MasterLayout";
 import { cn } from "@/lib/utils";
 
-const defaultLinks: LinkType[] = [
-  { icon: HomeIcon, title: "Home", url: "" },
-];
+const defaultLinks: LinkType[] = [{ icon: HomeIcon, title: "Home", url: "" }];
 
 const configurationLinks: LinkType[] = [
   { icon: CheckCircle, title: "Eligibility Rules", url: "eligibility-rules" },
@@ -32,7 +30,13 @@ const configurationLinks: LinkType[] = [
 ];
 
 const workflowLinks: LinkType[] = [
-  { icon: FileText, title: "Pre-Admission Queries", url: "pre-admission-queries", status: "completed", completedAt: "2024-07-09T13:45:00" },
+  {
+    icon: FileText,
+    title: "Pre-Admission Queries",
+    url: "pre-admission-queries",
+    status: "completed",
+    completedAt: "2024-07-09T13:45:00",
+  },
   { icon: Users, title: "Applications", url: "applications", status: "completed", completedAt: "2024-07-09T14:10:00" },
   { icon: BookOpen, title: "Generate Merit", url: "generate-merit", status: "in_progress" },
   { icon: CreditCard, title: "Fee Payment Review", url: "fee-payment-review", status: "not_started" },
@@ -44,12 +48,12 @@ const workflowLinks: LinkType[] = [
 function formatDateTime(dateString?: string) {
   if (!dateString) return null;
   const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: true,
-    month: 'short',
-    day: 'numeric',
+    month: "short",
+    day: "numeric",
   });
 }
 
@@ -58,7 +62,9 @@ const content = (
     <div className="">
       <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm">
         {defaultLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>{link.title}</NavItem>
+          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>
+            {link.title}
+          </NavItem>
         ))}
       </ul>
     </div>
@@ -73,9 +79,13 @@ const content = (
             key={link.title}
             href={link.url}
             icon={
-              link.status === "completed" ? <CheckCircle className="w-5 h-5 text-green-500" /> :
-              link.status === "in_progress" ? <Loader2 className="w-5 h-5 text-blue-500 animate-spin" /> :
-              <link.icon className="w-5 h-5 text-gray-400" />
+              link.status === "completed" ? (
+                <CheckCircle className="w-5 h-5 text-green-500" />
+              ) : link.status === "in_progress" ? (
+                <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+              ) : (
+                <link.icon className="w-5 h-5 text-gray-400" />
+              )
             }
             isActive={link.status === "in_progress"}
           >
@@ -85,16 +95,14 @@ const content = (
                   link.status === "completed"
                     ? "text-green-700 font-semibold"
                     : link.status === "in_progress"
-                    ? "text-blue-700 font-semibold"
-                    : "text-gray-400"
+                      ? "text-blue-700 font-semibold"
+                      : "text-gray-400"
                 }
               >
                 {link.title}
               </span>
               {link.status === "completed" && link.completedAt && (
-                <p className="text-xs text-right w-full text-gray-500 ml-2">
-                  {formatDateTime(link.completedAt)}
-                </p>
+                <p className="text-xs text-right w-full text-gray-500 ml-2">{formatDateTime(link.completedAt)}</p>
               )}
             </div>
           </NavItem>
@@ -108,7 +116,9 @@ const content = (
       </div>
       <ul className="bg-white rounded-lg px-3 flex flex-col shadow-sm space-y-1">
         {configurationLinks.map((link) => (
-          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>{link.title}</NavItem>
+          <NavItem key={link.title} href={link.url} icon={<link.icon className="h-5 w-5 text-[12px]" />}>
+            {link.title}
+          </NavItem>
         ))}
       </ul>
     </div>
@@ -132,19 +142,7 @@ const dummyAdmission: Admission = {
     id: 1,
     year: "2024",
     isCurrentYear: true,
-    session: {
-      id: 1,
-      name: "2024-25",
-      from: new Date("2024-06-01"),
-      to: new Date("2025-05-31"),
-      isCurrentSession: true,
-      codePrefix: "2024",
-      sequence: 1,
-      disabled: false,
-      createdAt: new Date("2024-01-15"),
-      updatedAt: new Date("2024-07-10"),
-    },
-    creaytedAt: new Date("2024-01-15"),
+    createdAt: new Date("2024-01-15"),
     updatedAt: new Date("2024-07-10"),
   },
   admissionCode: "ADM2024",
@@ -251,7 +249,7 @@ export default function AdmissionDetailsPage() {
       setTotalItems(120);
       setIsLoading(false);
     }, 500);
-  }, [year]);
+  }, [year, setApplications, setTotalItems]);
 
   if (isLoading) {
     return (
@@ -278,12 +276,48 @@ export default function AdmissionDetailsPage() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-6 gap-4 mb-8">
-            <StatCard label="Total Forms" value={stats.totalApplications} bgColor="bg-blue-50" textColor="text-blue-700" icon={null} />
-            <StatCard label="Submitted" value={stats.submitted} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
-            <StatCard label="Approved" value={stats.approved} bgColor="bg-green-50" textColor="text-green-700" icon={null} />
-            <StatCard label="Rejected" value={stats.rejected} bgColor="bg-red-50" textColor="text-red-700" icon={<XCircle className="inline w-5 h-5 ml-1 text-red-700" />} />
-            <StatCard label="Payments Done" value={stats.paymentsDone} bgColor="bg-teal-50" textColor="text-teal-700" icon={<IndianRupee className="inline w-5 h-5 ml-1 text-teal-700" />} />
-            <StatCard label="Drafts" value={stats.drafts} bgColor="bg-yellow-50" textColor="text-yellow-700" icon={<FileText className="inline w-5 h-5 ml-1 text-yellow-700" />} />
+            <StatCard
+              label="Total Forms"
+              value={stats.totalApplications}
+              bgColor="bg-blue-50"
+              textColor="text-blue-700"
+              icon={null}
+            />
+            <StatCard
+              label="Submitted"
+              value={stats.submitted}
+              bgColor="bg-green-50"
+              textColor="text-green-700"
+              icon={null}
+            />
+            <StatCard
+              label="Approved"
+              value={stats.approved}
+              bgColor="bg-green-50"
+              textColor="text-green-700"
+              icon={null}
+            />
+            <StatCard
+              label="Rejected"
+              value={stats.rejected}
+              bgColor="bg-red-50"
+              textColor="text-red-700"
+              icon={<XCircle className="inline w-5 h-5 ml-1 text-red-700" />}
+            />
+            <StatCard
+              label="Payments Done"
+              value={stats.paymentsDone}
+              bgColor="bg-teal-50"
+              textColor="text-teal-700"
+              icon={<IndianRupee className="inline w-5 h-5 ml-1 text-teal-700" />}
+            />
+            <StatCard
+              label="Drafts"
+              value={stats.drafts}
+              bgColor="bg-yellow-50"
+              textColor="text-yellow-700"
+              icon={<FileText className="inline w-5 h-5 ml-1 text-yellow-700" />}
+            />
           </div>
 
           {/* Main Grid */}
@@ -367,7 +401,6 @@ export default function AdmissionDetailsPage() {
                   </table>
                 </div>
               </div>
-              
             </div>
 
             {/* Right: Side Widgets */}
@@ -393,7 +426,11 @@ export default function AdmissionDetailsPage() {
                 <Clock className="w-6 h-6 text-gray-500" />
                 <div>
                   <div className="font-semibold text-sm">Next-Deadline</div>
-                  <div className="text-xs text-gray-500">Document Submission<br />July 25, 2024</div>
+                  <div className="text-xs text-gray-500">
+                    Document Submission
+                    <br />
+                    July 25, 2024
+                  </div>
                 </div>
               </div>
               {/* Staff Assignment */}
@@ -452,10 +489,10 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
           isActive ? "bg-purple-100 text-purple-700 shadow-sm" : "text-gray-700 hover:bg-gray-100",
         )}
       >
-        <span className={cn("h-5 w-5 flex-shrink-0 text-[12px]", isActive ? "text-purple-600" : "text-gray-500")}>{icon}</span>
-        <div className="flex-1 min-w-0 text-[12px]">
-          {children}
-        </div>
+        <span className={cn("h-5 w-5 flex-shrink-0 text-[12px]", isActive ? "text-purple-600" : "text-gray-500")}>
+          {icon}
+        </span>
+        <div className="flex-1 min-w-0 text-[12px]">{children}</div>
       </Link>
     </li>
   );

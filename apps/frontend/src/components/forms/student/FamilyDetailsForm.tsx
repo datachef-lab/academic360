@@ -3,15 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, User, Briefcase, Phone, Mail, DollarSign } from "lucide-react";
-import { Parent } from "@/types/user/family";
-import { Occupation } from "@/types/resources/occupation";
-import { AnnualIncome } from "@/types/resources/annual-income";
+import { Family } from "@/types/user/family";
+import { Occupation } from "@/types/resources/occupation.types";
+import { AnnualIncome } from "@/types/resources/annual-income.types";
 import { ParentType } from "@/types/enums";
 import { Person } from "@/types/user/person";
 
 interface FamilyDetailsFormProps {
-  onSubmit: (data: Parent) => void;
-  initialData?:  Partial<Parent>;
+  onSubmit: (data: Family) => void;
+  initialData?:  Partial<Family>;
 
 }
 
@@ -31,12 +31,10 @@ const createAnnualIncome = (range: string): AnnualIncome => ({
   range,
   disabled: false,
   sequence: null,
-  createdAt: new Date(),
-  updatedAt: new Date(),
 });
 
 export default function FamilyDetailsForm({ onSubmit, initialData = {} }: FamilyDetailsFormProps) {
-  const [parentFormData, setParentFormData] = useState<Partial<Parent>>({
+  const [parentFormData, setParentFormData] = useState<Partial<Family>>({
     parentType: "BOTH" as ParentType,
     fatherDetails: createPerson(initialData.fatherDetails || {}),
     motherDetails: createPerson(initialData.motherDetails || {}),
@@ -50,7 +48,7 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
     setIsSubmitting(true);
 
     try {
-      await onSubmit(parentFormData as Parent);
+      await onSubmit(parentFormData as Family);
     } catch (error) {
       console.error("Form submission error:", error);
     } finally {
@@ -62,8 +60,6 @@ export default function FamilyDetailsForm({ onSubmit, initialData = {} }: Family
     name,
     disabled: false,
     sequence: null,
-    createdAt: new Date(),
-    updatedAt: new Date(),
   });
 
   return (

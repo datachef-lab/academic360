@@ -1,6 +1,6 @@
-import { verifyJWT } from '@/middlewares';
+import { verifyJWT } from '@/middlewares/index.js';
 import express from 'express';
-import { createSessionHandler, getAllSessionsHandler } from '../controllers/session.controller';
+import { createSessionHandler, getAllSessionsHandler } from '../controllers/session.controller.js';
 
 const router = express.Router();
 

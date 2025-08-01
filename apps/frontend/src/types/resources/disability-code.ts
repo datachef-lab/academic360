@@ -3,6 +3,6 @@ export interface DisabilityCode {
     code: string | null;
     sequence: number | null;
     disabled: boolean;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }

@@ -1,6 +1,6 @@
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { academicYearModel } from "./academic-year.model";
-import { noticeStatusEnum, noticeVariantEnum } from "@/features/user/models/helper";
+import { academicYearModel } from "./academic-year.model.js";
+import { noticeStatusEnum, noticeVariantEnum } from "@/features/user/models/helper.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

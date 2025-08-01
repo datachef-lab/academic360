@@ -13,10 +13,10 @@
  * Main Pickup Point interface that mirrors the backend model
  */
 export interface PickupPoint {
-  id: number;
+    readonly id?: number;
   name?: string | null;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================

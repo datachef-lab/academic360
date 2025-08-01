@@ -13,7 +13,7 @@
  * Main Board University interface that mirrors the backend model
  */
 export interface BoardUniversity {
-  id: number;
+    readonly id?: number;
   name: string;
   degreeId?: number | null;
   passingMarks?: number | null;
@@ -21,8 +21,8 @@ export interface BoardUniversity {
   addressId?: number | null;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 /**

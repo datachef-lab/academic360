@@ -1,5 +1,5 @@
-import { db } from "@/db/index";
-import { sessionModel } from "../models/session.model";
+import { db } from "@/db/index.js";
+import { sessionModel } from "../models/session.model.js";
 import { and, desc, eq } from "drizzle-orm";
 
 export async function findAll() {

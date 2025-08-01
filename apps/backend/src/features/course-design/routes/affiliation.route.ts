@@ -1,7 +1,7 @@
 import express from "express";
 import { createAffiliationHandler, deleteAffiliationHandler, getAllAffiliationsHandler, getAffiliationByIdHandler, updateAffiliationHandler, bulkUploadAffiliationsHandler } from "../../course-design/controllers/affiliation.controller.js";
 import { RequestHandler } from "express";
-import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 // import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();

@@ -2,7 +2,7 @@ import "dotenv/config";
 import pg, { PoolClient } from "pg";
 import { createConnection } from "mysql2/promise"; // For MySQL
 import { drizzle } from "drizzle-orm/node-postgres";
-import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service";
+import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 
 // Create a connection pool
 const pool = new pg.Pool({

@@ -6,10 +6,10 @@ import {
   updateSubjectType as updateSubjectTypeService,
   deleteSubjectType as deleteSubjectTypeService,
   bulkUploadSubjectTypes as bulkUploadSubjectTypesService
-} from "../services/subject-type.service";
+} from "../services/subject-type.service.js";
 import * as XLSX from "xlsx";
-import { ApiResponse } from "@/utils/ApiResonse";
-import { socketService } from "@/services/socketService";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createSubjectType = async (req: Request, res: Response) => {
   try {

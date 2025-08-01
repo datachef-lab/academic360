@@ -5,9 +5,9 @@ import {
     findExamComponentById as getExamComponentByIdService,
     updateExamComponent as updateExamComponentService,
     deleteExamComponent as deleteExamComponentService,
-} from "../services/exam-component.service";
-import { ApiResponse } from "@/utils/ApiResonse";
-import { handleError } from "@/utils/handleError";
+} from "../services/exam-component.service.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 
 export const createExamComponent = async (req: Request, res: Response) => {
     try {

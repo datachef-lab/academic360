@@ -53,36 +53,12 @@ const CoursesTable: React.FC<CoursesTableProps> = ({
         header: 'Short Name',
         cell: info => <span>{info.getValue() || 'N/A'}</span>,
       }),
-      columnHelper.accessor('codePrefix', {
-        header: 'Code Prefix',
-        cell: info => (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-            {info.getValue() || 'N/A'}
-          </Badge>
-        ),
-      }),
-      columnHelper.accessor('universityCode', {
-        header: 'University Code',
-        cell: info => (
-          <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
-            {info.getValue() || 'N/A'}
-          </Badge>
-        ),
-      }),
+      
       columnHelper.accessor(row => row?.degree?.name, {
         id: 'degree',
         header: 'Degree',
         cell: info => (
           <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-            {info.getValue() || 'N/A'}
-          </Badge>
-        ),
-      }),
-      columnHelper.accessor(row => row?.programmeType, {
-        id: 'programme',
-        header: 'Programme',
-        cell: info => (
-          <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
             {info.getValue() || 'N/A'}
           </Badge>
         ),

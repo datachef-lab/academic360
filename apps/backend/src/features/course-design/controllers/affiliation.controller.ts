@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliation, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
 
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

@@ -5,7 +5,7 @@ import {
   getPaperComponentById,
   updatePaperComponent,
   deletePaperComponent,
-} from "../controllers/paper-component.controller";
+} from "../controllers/paper-component.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();

@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model";
-import { batchStudentMappingModel } from "@/features/academics/models/batch-student-mapping.model";
+import { paperModel } from "./paper.model.js";
+import { batchStudentMappingModel } from "@/features/academics/models/batch-student-mapping.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

@@ -44,8 +44,8 @@
 
 import { Student } from "@/types/user/student";
 import { StudentSearchType } from "../tables/users/student-search-column";
-import { Religion } from "@/types/resources/religion";
-import { Category } from "@/types/resources/category";
+import { Religion } from "@/types/resources/religion.types";
+import { Category } from "@/types/resources/category.types";
 import { Specialization } from "@/types/resources/specialization";
 
 export function formattedStudent(content: Student[]) {

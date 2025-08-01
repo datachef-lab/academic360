@@ -5,7 +5,7 @@ import {
   getPaperComponentById as getPaperComponentByIdService,
   updatePaperComponent as updatePaperComponentService,
   deletePaperComponent as deletePaperComponentService,
-} from "../services/paper-component.service";
+} from "../services/paper-component.service.js";
 
 export const createPaperComponent = async (req: Request, res: Response) => {
   try {

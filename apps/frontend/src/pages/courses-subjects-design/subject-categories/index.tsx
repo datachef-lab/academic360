@@ -42,7 +42,7 @@ const SubjectCategoriesPage = () => {
     setLoading(true);
     try {
       const res = await getSubjectTypes();
-      setCategories(Array.isArray(res.data) ? res.data : []);
+      setCategories(Array.isArray(res) ? res : []);
       setError(null);
     } catch {
       setError("Failed to fetch subject categories");
@@ -114,7 +114,7 @@ const SubjectCategoriesPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getSubjectTypes();
-      const data = (Array.isArray(res.data) ? res.data : []).map((cat: SubjectType) => ({
+      const data = (Array.isArray(res) ? res : []).map((cat: SubjectType) => ({
         ID: cat.id,
         Name: cat.name,
         Code: cat.code || "-",

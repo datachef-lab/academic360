@@ -229,19 +229,7 @@ export default function AdmissionsPage() {
         id: adm.academicYear.id,
         year: adm.academicYear.year,
         isCurrentYear: false,
-        session: {
-          id: 1,
-          name: "Default",
-          from: new Date(),
-          to: new Date(),
-          isCurrentSession: false,
-          codePrefix: "DEF",
-          sequence: 1,
-          disabled: false,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        creaytedAt: new Date(),
+        createdAt: new Date(),
         updatedAt: new Date()
       },
       startDate: adm.startDate,
@@ -266,19 +254,7 @@ export default function AdmissionsPage() {
         id: adm.academicYear.id, 
         year: adm.academicYear.year,
         isCurrentYear: false,
-        session: { 
-          id: 1, 
-          name: "Default", 
-          from: new Date(), 
-          to: new Date(), 
-          isCurrentSession: false, 
-          codePrefix: "DEF", 
-          sequence: 1, 
-          disabled: false,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        },
-        creaytedAt: new Date(),
+        createdAt: new Date(),
         updatedAt: new Date()
       },
       startDate: adm.startDate,

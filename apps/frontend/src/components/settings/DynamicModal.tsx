@@ -401,7 +401,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       if (degreeField) {
         if (degrees.length > 0) {
           degreeField!.options = degrees.map(degree => ({
-            value: degree.id.toString(),
+            value: degree.id!.toString(),
             label: degree?.name || ''
           }));
         } else {
@@ -420,7 +420,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       if (countryField) {
         if (countries.length > 0) {
           countryField.options = countries.map(country => ({
-            value: country.id.toString(),
+            value: country.id!.toString(),
             label: country.name
           }));
         } else {

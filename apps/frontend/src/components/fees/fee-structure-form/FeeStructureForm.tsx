@@ -154,7 +154,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
   useEffect(() => {
     getAllClasses().then((data) => {
       console.log("classes response data:", data);
-      setClasses(data.payload)
+      setClasses(data)
     });
   }, []);
 
@@ -173,7 +173,7 @@ const FeeStructureForm: React.FC<FeeStructureFormProps> = ({
         }))
       }));
     }
-  }, [currentStep, feesSlabs, (formFeesStructureAdd as CreateFeesStructureDto).feesSlabMappings.length, setFormFeesStructureAdd]);
+  }, [currentStep, feesSlabs,formFeesStructureAdd, setFormFeesStructureAdd]);
 
   // Validation logic for each step
   const validateStep = () => {

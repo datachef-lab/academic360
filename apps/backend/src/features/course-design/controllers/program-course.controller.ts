@@ -9,7 +9,7 @@ import {
   deleteProgramCourse, 
   bulkUploadProgramCourses 
 } from "@/features/course-design/services/program-course.service.js";
-import { socketService } from "@/services/socketService";
+import { socketService } from "@/services/socketService.js";
 
 export const createProgramCourseHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

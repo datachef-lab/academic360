@@ -1,8 +1,8 @@
-import { db } from "@/db";
-import { PaperComponent, paperComponentModel } from "../models/paper-component.model";
+import { db } from "@/db/index.js";
+import { PaperComponent, paperComponentModel } from "../models/paper-component.model.js";
 import { and, eq } from "drizzle-orm";
 import { PaperComponentDto } from "@/types/course-design/index.type";
-import { findExamComponentById } from "./exam-component.service";
+import { findExamComponentById } from "./exam-component.service.js";
 
 // Create a new paper component
 export const createPaperComponent = async (paperComponentData: PaperComponentDto) => {

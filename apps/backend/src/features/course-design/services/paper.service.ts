@@ -1,17 +1,17 @@
 import { db } from "@/db/index.js";
 import { eq, and, ilike } from "drizzle-orm";
-import { Paper, paperModel } from "../models/paper.model";
-import { PaperDto } from "@/types/course-design/index.type";
+import { Paper, paperModel } from "../models/paper.model.js";
+import { PaperDto } from "@/types/course-design/index.type.js";
 import {
     createPaperComponent,
     // updatePaperComponent,
     // deletePaperComponent,
     findPaperComponentsByPaperId,
-} from "./paper-component.service";
-import { createTopic, getTopicsByPaperId, updateTopic } from "./topic.service";
-import { paperComponentModel } from "../models/paper-component.model";
-import { examComponentModel } from "../models/exam-component.model";
-import { classModel } from "@/features/academics/models/class.model";
+} from "./paper-component.service.js";
+import { createTopic, getTopicsByPaperId, updateTopic } from "./topic.service.js";
+import { paperComponentModel } from "../models/paper-component.model.js";
+import { examComponentModel } from "../models/exam-component.model.js";
+import { classModel } from "@/features/academics/models/class.model.js";
 // import { findCourseById } from "./course.service";
 // import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
 // import { findClassById } from "@/features/academics/services/class.service";

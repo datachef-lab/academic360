@@ -2,8 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaper, updatePaperWithComponents, createPapers } from "@/features/course-design/services/paper.service.js";
-import { Paper } from "@/types/course-design";
-import { PaperDto } from "@/types/course-design/index.type";
+import { PaperDto } from "@/types/course-design/index.type.js";
 
 export const createPaperHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

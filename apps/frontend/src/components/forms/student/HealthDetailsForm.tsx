@@ -67,16 +67,16 @@ export default function HealthDetailsForm({ onSubmit, initialData = {} }: Health
           <div className="relative">
             <Select
               value={formData.bloodGroup?.type || ""}
-              onValueChange={(value) => setFormData({ 
-                ...formData, 
-                bloodGroup: value ? { 
-                  type: value,
-                  disabled: false,
-                  sequence: null,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                } : null 
-              })}
+            //   onValueChange={(value) => setFormData({ 
+            //     ...formData, 
+            //     bloodGroup: value ? { 
+            //       type: value,
+            //       disabled: false,
+            //       sequence: null,
+            //       createdAt: new Date(),
+            //       updatedAt: new Date()
+            //     } : null 
+            //   })}
             >
               <SelectTrigger className="pl-10">
                 <SelectValue placeholder="Select blood group" />
