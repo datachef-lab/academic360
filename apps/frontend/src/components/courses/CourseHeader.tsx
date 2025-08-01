@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Course } from '@/types/course-design';
-import { Degree } from '@/types/resources/degree';
+import { Degree } from '@/types/resources/degree.types';
 
 // Define ProgrammeOption locally
 type ProgrammeOption = { id: number; degreeProgramme: string; degreeId: number };
@@ -103,7 +103,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                 name="codePrefix"
                 placeholder="Enter code prefix"
                 className="col-span-3"
-                value={newCourse.codePrefix || ''}
+                // value={newCourse.codePrefix || ''}
                 onChange={handleInputChange}
               />
             </div>
@@ -116,7 +116,6 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
                 name="universityCode"
                 placeholder="Enter university code"
                 className="col-span-3"
-                value={newCourse.universityCode || ''}
                 onChange={handleInputChange}
               />
             </div>
@@ -146,7 +145,7 @@ const CourseHeader: React.FC<CourseHeaderProps> = ({
               </Label>
               <Select 
                 onValueChange={(value) => handleSelectChange('programmeType', value)}
-                value={newCourse.programmeType || ''}
+                // value={newCourse. || ''}
               >
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder={selectedDegreeId === 0 ? "Select degree first" : "Select programme"} />

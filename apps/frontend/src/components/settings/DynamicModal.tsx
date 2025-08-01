@@ -25,13 +25,13 @@ import { useMutation } from '@tanstack/react-query';
 import axiosInstance from "@/utils/api";
 
 // Import all the types we need
-import { DegreeLevel } from "@/types/resources/degree.types";
+import { Degree, DegreeLevel } from "@/types/resources/degree.types";
 
 // Import service functions
 import { createBoardUniversity, updateBoardUniversity } from "@/services/board-university.service";
 import { createInstitution, updateInstitution } from "@/services/institution.service";
 import { createCategory, updateCategory } from "@/services/categories.service";
-import { createDegree, findAllDegrees, updateDegree } from "@/services/degree.service";
+import {  createDegree, findAllDegrees } from "@/services/degree.service";
 import { createReligion, updateReligion } from "@/services/religion.service";
 import { createLanguageMedium, updateLanguageMedium } from "@/services/language-medium.service";
 import { createBloodGroup, updateBloodGroup } from "@/services/blood-group.service";
@@ -314,7 +314,7 @@ const getUpdateServiceFunction = (settingType: string) => {
     "Board Universities": updateBoardUniversity,
     "Institutions": updateInstitution,
     "Categories": updateCategory,
-    "Degree": updateDegree,
+    "Degree": "updateDegree",
     "Religion": updateReligion,
     "Language Medium": updateLanguageMedium,
     "Documents": updateDocument,
@@ -355,7 +355,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
         return result || [];
       } catch (error) {
         console.error('Failed to fetch degrees:', error);
-        return [];
+        return [] as Degree[];
       }
     },
     enabled: settingType === 'Institutions' && isOpen,
@@ -400,9 +400,9 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       const degreeField = config.find(field => field.name === 'degreeId');
       if (degreeField) {
         if (degrees.length > 0) {
-          degreeField.options = degrees.map(degree => ({
-            value: degree.id.toString(),
-            label: degree.name
+          degreeField!.options = degrees.map(degree => ({
+            value: degree.id!.toString(),
+            label: degree?.name || ''
           }));
         } else {
           // Fallback: show a message that no degrees are available
@@ -420,7 +420,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
       if (countryField) {
         if (countries.length > 0) {
           countryField.options = countries.map(country => ({
-            value: country.id.toString(),
+            value: country.id!.toString(),
             label: country.name
           }));
         } else {
@@ -670,7 +670,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [validateForm, addMutation, formData, fieldConfig]);
+  }, [validateForm, addMutation, formData]);
 
   const handleEdit = useCallback(async () => {
     if (!validateForm()) return;
@@ -689,7 +689,7 @@ export const DynamicModal: React.FC<DynamicModalProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [validateForm, editMutation, formData, fieldConfig]);
+  }, [validateForm, editMutation, formData]);
 
   const handleInputChange = useCallback((fieldName: string, value: string | number | boolean | null) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));

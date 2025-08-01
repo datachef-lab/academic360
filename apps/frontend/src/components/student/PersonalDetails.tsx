@@ -80,9 +80,9 @@ interface PersonalDetailProps {
 export default function PersonalDetail({ studentId }: PersonalDetailProps) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [religions, setReligions] = useState<Religion[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [nationalities, setNationalities] = useState<Nationality[]>([]);
+  const [religions,] = useState<Religion[]>([]);
+  const [categories, ] = useState<Category[]>([]);
+  const [nationalities, ] = useState<Nationality[]>([]);
   const [formData, setFormData] = useState<PersonalDetailsType>({
     ...defaultPersonalDetails,
     studentId
@@ -100,9 +100,9 @@ export default function PersonalDetail({ studentId }: PersonalDetailProps) {
         console.log("Fetched religions:", religionsData);
         console.log("Fetched categories:", categoriesData);
         console.log("Fetched nationalities:", nationalitiesData);
-        setReligions(religionsData);
-        setCategories(categoriesData);
-        setNationalities(nationalitiesData);
+        // setReligions(religionsData);
+        // setCategories(categoriesData);
+        // setNationalities(nationalitiesData);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       }

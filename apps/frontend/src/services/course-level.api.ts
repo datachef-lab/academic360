@@ -2,13 +2,13 @@ import axiosInstance from '@/utils/api';
 import { ApiResonse } from '@/types/api-response';
 
 export interface CourseLevel {
-  id: number;
+  readonly id?: number;
   name: string;
   shortName?: string | null;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type CourseLevelData = Omit<CourseLevel, "id" | "createdAt" | "updatedAt">;

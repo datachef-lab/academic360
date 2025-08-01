@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import SubjectForm from './SubjectForm';
 import { SubjectMetadata, SubjectType } from '@/types/academics/subject-metadata';
-import { Degree } from '@/types/resources/degree';
+import { Degree } from '@/types/resources/degree.types';
 
 
 interface SubjectHeaderProps {

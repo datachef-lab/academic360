@@ -1,8 +1,8 @@
 
 import { doublePrecision, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { marksheetModel } from "./marksheet.model";
-import { academicYearModel } from "./academic-year.model";
-import { batchStudentPaperModel } from "@/features/course-design/models/batch-student-paper.model";
+import { marksheetModel } from "./marksheet.model.js";
+import { academicYearModel } from "./academic-year.model.js";
+import { batchStudentPaperModel } from "@/features/course-design/models/batch-student-paper.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

@@ -145,7 +145,7 @@ export const categoryColumns = (onEditRow?: (rowData: Category) => void): Column
       </div>
     ),
     cell: ({ row }) => {
-      const createdAt = new Date(row.original.createdAt);
+      const createdAt = new Date(row.original.createdAt!);
       return (
         <div className="flex items-center justify-center text-xs text-gray-600">
           {createdAt.toLocaleDateString()}
@@ -162,7 +162,7 @@ export const categoryColumns = (onEditRow?: (rowData: Category) => void): Column
       </div>
     ),
     cell: ({ row }) => {
-      const updatedAt = new Date(row.original.updatedAt);
+      const updatedAt = new Date(row.original.updatedAt!);
       return (
         <div className="flex items-center justify-center text-xs text-gray-600">
           {updatedAt.toLocaleDateString()}

@@ -10,7 +10,6 @@ import {
   GraduationCap
 } from "lucide-react";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
-import { Framework } from "@/types/enums";
 
 interface AcademicIdentifierFormProps {
   onSubmit: (data: AcademicIdentifier) => void;
@@ -20,9 +19,10 @@ interface AcademicIdentifierFormProps {
 export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: AcademicIdentifierFormProps) {
   const [formData, setFormData] = useState<AcademicIdentifier>({
     studentId: initialData.studentId || 0,
-    frameworkType: initialData.frameworkType || null,
+    framework: initialData.framework || null,
     rfid: initialData.rfid || null,
     course: initialData.course || null,
+    shift: null,
     // pr: initialData.degreeProgramme || null,
     
     cuFormNumber: initialData.cuFormNumber || null,
@@ -120,8 +120,8 @@ export default function AcademicIdentifierForm({ onSubmit, initialData = {} }: A
             Framework Type
           </Label>
           <Select
-            value={formData.frameworkType || ""}
-            onValueChange={(value) => setFormData({ ...formData, frameworkType: value as Framework })}
+            value={formData.framework || ""}
+            // onValueChange={(value) => setFormData({ ...formData, framework: value as Framework })}
           >
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select framework type" />

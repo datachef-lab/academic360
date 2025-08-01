@@ -2,10 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createSubject, getSubjectById, getAllSubjects, updateSubject, deleteSubject, bulkUploadSubjects } from "@/features/course-design/services/subject.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createSubjectHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createSubject(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Subject already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Subject created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -19,7 +24,10 @@ export const bulkUploadSubjectsHandler = async (req: Request, res: Response, nex
             return;
         }
 
-        const result = await bulkUploadSubjects(req.file.path);
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+
+        const result = await bulkUploadSubjects(req.file.path, io, uploadSessionId);
         
         const response = {
             success: result.success,

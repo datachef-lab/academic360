@@ -5,7 +5,7 @@ import {
   getExamComponentById,
   updateExamComponent,
   deleteExamComponent,
-} from "../controllers/exam-component.controller";
+} from "../controllers/exam-component.controller.js";
 import { RequestHandler } from "express";
 
 const router = Router();

@@ -1,6 +1,6 @@
 import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model";
-import { examComponentModel } from "./exam-component.model";
+import { paperModel } from "./paper.model.js";
+import { examComponentModel } from "./exam-component.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

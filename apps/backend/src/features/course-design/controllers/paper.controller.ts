@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaper } from "@/features/course-design/services/paper.service.js";
+import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaper, updatePaperWithComponents, createPapers } from "@/features/course-design/services/paper.service.js";
+import { PaperDto } from "@/types/course-design/index.type.js";
 
 export const createPaperHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const created = await createPaper(req.body);
+        console.log(req.body.arr)
+        const created = await createPapers(req.body.arr as PaperDto[]);
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Paper created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -60,5 +62,17 @@ export const deletePaperHandler = async (req: Request, res: Response, next: Next
         res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Paper deleted successfully"));
     } catch (error) {
         handleError(error, res, next);
+    }
+};
+
+export const updatePaperWithComponentsHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const id = parseInt(req.params.id);
+        const result = await updatePaperWithComponents(id, req.body);
+        res.status(200).json(new ApiResponse(200, "Paper updated successfully", result));
+        return
+    } catch (error) {
+        handleError(error, res, next);
+        return
     }
 }; 

@@ -85,7 +85,7 @@ export const columns = ({ onEdit, onDelete }: ColumnsProps): ColumnDef<CourseLev
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => onDelete?.(courseLevel.id)}
+            onClick={() => onDelete?.(courseLevel.id!.toString())}
             className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
           >
             <Trash2 className="h-4 w-4" />

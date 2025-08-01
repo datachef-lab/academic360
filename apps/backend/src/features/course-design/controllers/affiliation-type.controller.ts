@@ -8,7 +8,7 @@ import {
   updateAffiliationType, 
   deleteAffiliationType, 
   bulkUploadAffiliationTypes 
-} from "@/features/course-design/services/affiliation-type.service";
+} from "@/features/course-design/services/affiliation-type.service.js";
 
 export const createAffiliationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

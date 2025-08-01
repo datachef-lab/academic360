@@ -6,14 +6,19 @@ import {
   updateSubjectType as updateSubjectTypeService,
   deleteSubjectType as deleteSubjectTypeService,
   bulkUploadSubjectTypes as bulkUploadSubjectTypesService
-} from "../services/subject-type.service";
+} from "../services/subject-type.service.js";
 import * as XLSX from "xlsx";
-import { ApiResponse } from "@/utils/ApiResonse";
+import { ApiResponse } from "@/utils/ApiResonse.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createSubjectType = async (req: Request, res: Response) => {
   try {
     const newSubjectType = await createSubjectTypeService(req.body);
-    res.status(201).json(newSubjectType);
+    if (!newSubjectType) {
+      res.status(400).json({ error: "Subject Type already exists" });
+      return;
+    }
+    res.status(201).json(new ApiResponse(201, "SUCCESS", newSubjectType, "Subject type created successfully"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(400).json({ error: errorMessage });
@@ -23,7 +28,7 @@ export const createSubjectType = async (req: Request, res: Response) => {
 export const getAllSubjectTypes = async (_req: Request, res: Response) => {
   try {
     const allSubjectTypes = await getAllSubjectTypesService();
-    res.json(allSubjectTypes);
+    res.json(new ApiResponse(200, "SUCCESS", allSubjectTypes, "Subject types retrieved successfully"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });
@@ -78,12 +83,13 @@ export const bulkUploadSubjectTypesHandler = async (req: Request, res: Response)
       res.status(400).json({ error: "No file uploaded" });
       return ;
     }
-    const result = await bulkUploadSubjectTypesService(req.file.path);
+    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const io = socketService.getIO();
+    const result = await bulkUploadSubjectTypesService(req.file.path, io, uploadSessionId);
     res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
     return 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ error: errorMessage });
+    res.status(500).json({ error: error instanceof Error ? error.message : "Unknown error" });
     return 
   }
 };

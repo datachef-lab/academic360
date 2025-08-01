@@ -27,13 +27,13 @@ export enum DegreeLevel {
  * Main Degree interface that mirrors the backend model
  */
 export interface Degree {
-  id: number;
+    readonly id?: number;
   name: string;
   level: DegreeLevel;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================

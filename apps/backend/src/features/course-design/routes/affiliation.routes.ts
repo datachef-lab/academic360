@@ -6,9 +6,9 @@ import {
   getAffiliationByIdHandler,
   updateAffiliationHandler,
   bulkUploadAffiliationsHandler
-} from "../controllers/affiliation.controller";
+} from "../controllers/affiliation.controller.js";
 import { RequestHandler } from "express";
-import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 

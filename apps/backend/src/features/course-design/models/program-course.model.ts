@@ -1,12 +1,12 @@
 import { pgTable, text, timestamp, integer, boolean, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
-import { streamModel } from "./stream.model";
-import { courseModel } from "./course.model";
-import { courseTypeModel } from "./course-type.model";
-import { courseLevelModel } from "./course-level.model";
-import { affiliationModel } from "./affiliation.model";
-import { regulationTypeModel } from "./regulation-type.model";
+import { streamModel } from "./stream.model.js";
+import { courseModel } from "./course.model.js";
+import { courseTypeModel } from "./course-type.model.js";
+import { courseLevelModel } from "./course-level.model.js";
+import { affiliationModel } from "./affiliation.model.js";
+import { regulationTypeModel } from "./regulation-type.model.js";
 
 export const programCourses = pgTable("program_courses", {
   id: serial().primaryKey(),

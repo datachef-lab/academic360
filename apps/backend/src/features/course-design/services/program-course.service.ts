@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { programCourses, ProgramCourse, NewProgramCourse } from "@/features/course-design/models/program-course.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import * as XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@/features/course-design/models/stream.model.js";
@@ -11,6 +11,22 @@ import { affiliationModel } from "@/features/course-design/models/affiliation.mo
 import { regulationTypeModel } from "@/features/course-design/models/regulation-type.model.js";
 
 export async function createProgramCourse(data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) {
+    const [existingProgramCourse] = await db
+        .select()
+        .from(programCourses)
+        .where(
+            and(
+                eq(programCourses.streamId, data.streamId!),
+                eq(programCourses.courseId, data.courseId!),
+                eq(programCourses.courseTypeId, data.courseTypeId!),
+                eq(programCourses.courseLevelId, data.courseLevelId!),
+                eq(programCourses.affiliationId, data.affiliationId!),
+                eq(programCourses.regulationTypeId, data.regulationTypeId!),
+            )
+        );
+
+    if (existingProgramCourse) return null;
+    
     const [created] = await db.insert(programCourses).values(data).returning();
     return created;
 }
@@ -87,7 +103,11 @@ export interface BulkUploadResult {
   };
 }
 
-export const bulkUploadProgramCourses = async (filePath: string): Promise<BulkUploadResult> => {
+export const bulkUploadProgramCourses = async (
+    filePath: string,
+    io?: any,
+    uploadSessionId?: string
+): Promise<BulkUploadResult> => {
   const workbook = XLSX.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -168,12 +188,19 @@ export const bulkUploadProgramCourses = async (filePath: string): Promise<BulkUp
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       errors.push({ row: i + 2, data: row, error: errorMessage });
     }
+    if (io && uploadSessionId) {
+        io.to(uploadSessionId).emit("bulk-upload-progress", {
+            processed: i,
+            total: dataRows.length - 1,
+            percent: Math.round((i / (dataRows.length - 1)) * 100)
+        });
+    }
   }
 
   // Clean up file
   fs.unlinkSync(filePath);
 
-  return {
+  const result: BulkUploadResult = {
     success,
     errors,
     unprocessedData,
@@ -184,4 +211,14 @@ export const bulkUploadProgramCourses = async (filePath: string): Promise<BulkUp
       unprocessed: unprocessedData.length,
     },
   };
+
+  if (io && uploadSessionId) {
+    if (result.errors.length > 0) {
+      io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+    } else {
+      io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+    }
+  }
+
+  return result;
 };

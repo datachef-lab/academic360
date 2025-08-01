@@ -1,17 +1,18 @@
 import { ResultStatus } from "@/types/enums";
 import { Address } from "@/types/resources/address";
-import { AnnualIncome } from "@/types/resources/annual-income";
-import { BoardUniversity } from "@/types/resources/board-university";
-import { Category } from "@/types/resources/category";
-import { Degree } from "@/types/resources/degree";
-import { Institution } from "@/types/resources/institution";
-import { Religion } from "@/types/resources/religion";
+import { AnnualIncome } from "@/types/resources/annual-income.types";
+import { BoardUniversity } from "@/types/resources/board-university.types";
+import { Category } from "@/types/resources/category.types";
+import { Degree } from "@/types/resources/degree.types";
+import { Institution } from "@/types/resources/institution.types";
+import { Religion } from "@/types/resources/religion.types";
 import { AcademicHistory } from "@/types/user/academic-history";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Accommodation } from "@/types/user/accommodation";
 import { EmergencyContact } from "@/types/user/emergency-contact";
+import { Family } from "@/types/user/family";
 import { Health } from "@/types/user/health";
-import { Parent } from "@/types/user/family";
+
 import { PersonalDetails } from "@/types/user/personal-details";
 import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
@@ -267,7 +268,7 @@ export const getAllMarksheet = async (filters: marksheetFilters = {}) => {
   return response.data.payload;
 };
 
-export const createFamilyDetails = async (formData: Parent) => {
+export const createFamilyDetails = async (formData: Family) => {
   const response = await axiosInstance.post(`/api/parents`, formData, {
     headers: {
       Authorization: `Bearer ${localStorage.getItem("token")}`,

@@ -56,6 +56,7 @@ export function CourseLevelForm({
       shortName: data.shortName || null,
       sequence: data.sequence || null,
       disabled: data.disabled,
+      
     };
     await onSubmit(courseLevelData);
   };

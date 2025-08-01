@@ -122,7 +122,7 @@ export default function AcademicHistoryForm({ onSubmit, initialData = {} }: Acad
             Last Result
           </Label>
           <Select
-            value={formData.lastResult || ""}
+            // value={formData.lastResult || ""}
             onValueChange={(value) => handleChange({ target: { name: "lastResult", value } } as React.ChangeEvent<HTMLInputElement>)}
           >
             <SelectTrigger>

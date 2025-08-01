@@ -1,7 +1,7 @@
-import { db } from "@/db";
-import { ExamComponent, examComponentModel } from "../models/exam-component.model";
+import { db } from "@/db/index.js";
+import { ExamComponent, examComponentModel } from "../models/exam-component.model.js";
 import { eq } from "drizzle-orm";
-import { ExamComponentSchema } from "@/types/course-design";
+import { ExamComponentSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 
 const defaultExamComponents: ExamComponent[] = [
@@ -63,7 +63,7 @@ export const getAllExamComponents = async () => {
 };
 
 // Get exam component by ID
-export const getExamComponentById = async (id: string) => {
+export const findExamComponentById = async (id: string) => {
   const examComponent = await db
     .select()
     .from(examComponentModel)

@@ -16,17 +16,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 // import { getAllAcademicYears, createAcademicYear, updateAcademicYearById } from "@/services/academic-identifiers.service";
 import { AcademicYear } from "@/types/academics/academic-year";
-import { Session } from "@/types/academics/session";
 import { createAcademicYear, getAllAcademicYears, updateAcademicYearById } from "@/services/academic-year-api";
 
-const defaultSession: Session = { id: 1, name: "", from: new Date(), to: new Date(), isCurrentSession: true, codePrefix: "DEF", sequence: 1, disabled: false };
 
 const AcademicYearPage: React.FC = () => {
   const [data, setData] = useState<AcademicYear[]>([]);
   const [filteredData, setFilteredData] = useState<AcademicYear[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<AcademicYear | null>(null);
-  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true, session: { ...defaultSession } });
+  const [form, setForm] = useState<AcademicYear>({ id: 0, year: "", isCurrentYear: true, });
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
@@ -39,7 +37,6 @@ const AcademicYearPage: React.FC = () => {
           id: item.id,
           year: item.year,
           isCurrentYear: item.isCurrentYear,
-          session: item.session || { ...defaultSession },
         }));
         setData(mapped);
         setFilteredData(mapped);
@@ -83,26 +80,19 @@ const AcademicYearPage: React.FC = () => {
       alert("Year must be a four-digit number.");
       return;
     }
-    // Validate session fields
-    if (!form.session.name.trim() || !form.session.from || !form.session.to) {
-      alert("Please fill all session fields.");
-      return;
-    }
     try {
       if (editingItem) {
         const updated = {
           year: form.year,
           isCurrentYear: form.isCurrentYear,
-          session: form.session,
         };
         await updateAcademicYearById(editingItem.id!, updated);
       } else {
         const newAcademicYear = {
           year: form.year,
           isCurrentYear: form.isCurrentYear,
-          session: form.session,
         };
-        await createAcademicYear(newAcademicYear, form.session);
+        await createAcademicYear(newAcademicYear);
       }
       // Always re-fetch the list after create/edit
       const res = await getAllAcademicYears();
@@ -110,7 +100,6 @@ const AcademicYearPage: React.FC = () => {
         id: item.id,
         year: item.year,
         isCurrentYear: item.isCurrentYear,
-        session: item.session || { ...defaultSession },
       }));
       setData(mapped);
       setFilteredData(mapped);
@@ -124,7 +113,7 @@ const AcademicYearPage: React.FC = () => {
   const handleClose = () => {
     setShowModal(false);
     setEditingItem(null);
-    setForm({ id: 0, year: "", isCurrentYear: true, session: { ...defaultSession } });
+    setForm({ id: 0, year: "", isCurrentYear: true });
   };
 
   const handleEdit = (item: AcademicYear) => {
@@ -282,9 +271,6 @@ const AcademicYearPage: React.FC = () => {
               <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">#</TableHead>
               <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Academic Year</TableHead>
               <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Session</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">From</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">To</TableHead>
               <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -300,15 +286,6 @@ const AcademicYearPage: React.FC = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item.isCurrentYear ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
                       {item.isCurrentYear ? "Active" : "Inactive"}
                     </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                  {item.session.name}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                  {new Date(item.session.from).toISOString()}
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                  {new Date(item.session.to).toISOString()}
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                     <button onClick={() => handleEdit(item)} className="text-purple-600 hover:text-purple-800">Edit</button>
@@ -348,33 +325,6 @@ const AcademicYearPage: React.FC = () => {
                   setForm({ ...form, year: val });
                 }}
                 placeholder="e.g., 2025"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="sessionName">Session Name</Label>
-              <Input
-                id="sessionName"
-                value={form.session.name}
-                onChange={e => setForm({ ...form, session: { ...form.session, name: e.target.value } })}
-                placeholder={`e.g., ${new Date().getFullYear()}-${(new Date().getFullYear() % 100) + 1}`}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="sessionFrom">Session Start Date</Label>
-              <Input
-                id="sessionFrom"
-                type="date"
-                value={form.session.from ? new Date(form.session.from).toISOString().slice(0, 10) : ""}
-                onChange={e => setForm({ ...form, session: { ...form.session, from: new Date(e.target.value) } })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="sessionTo">Session End Date</Label>
-              <Input
-                id="sessionTo"
-                type="date"
-                value={form.session.to ? new Date(form.session.to).toISOString().slice(0, 10) : ""}
-                onChange={e => setForm({ ...form, session: { ...form.session, to: new Date(e.target.value) } })}
               />
             </div>
             <div className="flex items-center justify-between">

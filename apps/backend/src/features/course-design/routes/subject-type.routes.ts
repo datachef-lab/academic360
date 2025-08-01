@@ -6,9 +6,9 @@ import {
   updateSubjectType,
   deleteSubjectType,
   bulkUploadSubjectTypesHandler
-} from "../controllers/subject-type.controller";
+} from "../controllers/subject-type.controller.js";
 import { RequestHandler } from "express";
-import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 

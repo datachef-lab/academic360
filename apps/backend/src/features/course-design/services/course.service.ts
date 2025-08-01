@@ -12,6 +12,70 @@ import { academicIdentifierModel } from "@/features/user/models/academicIdentifi
 import { OldStudent } from "@/types/old-student.js";
 import { Degree } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
+import * as XLSX from "xlsx";
+import fs from "fs";
+
+export interface BulkUploadResult {
+  success: Course[];
+  errors: Array<{ row: number; data: unknown[]; error: string }>;
+}
+
+export const bulkUploadCourses = async (
+  filePath: string,
+  io?: any,
+  uploadSessionId?: string
+): Promise<BulkUploadResult> => {
+  const result: BulkUploadResult = { success: [], errors: [] };
+  try {
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as any[];
+      const rowNumber = i + 1;
+      try {
+        const courseData = {
+          name: row[0]?.toString()?.trim(),
+          code: row[1]?.toString()?.trim(),
+          shortName: row[2]?.toString()?.trim() || null,
+          sequence: row[3] ? parseInt(row[3].toString()) : null,
+          degreeId: row[4] ? parseInt(row[4].toString()) : null,
+          disabled: row[5]?.toString()?.toLowerCase() === 'inactive' || row[5]?.toString()?.toLowerCase() === 'false',
+        };
+        if (!courseData.name) {
+          result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
+          continue;
+        }
+        // Insert the course
+        const [newCourse] = await db.insert(courseModel).values(courseData).returning();
+        result.success.push(newCourse);
+      } catch (error: unknown) {
+        result.errors.push({ row: rowNumber, data: row, error: error instanceof Error ? error.message : "Unknown error" });
+      }
+      if (io && uploadSessionId) {
+        io.to(uploadSessionId).emit("bulk-upload-progress", {
+          processed: i,
+          total: data.length - 1,
+          percent: Math.round((i / (data.length - 1)) * 100)
+        });
+      }
+    }
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (io && uploadSessionId) {
+      if (result.errors.length > 0) {
+        io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+      } else {
+        io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+      }
+    }
+    return result;
+  } catch (error: unknown) {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    throw new Error(`Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
+  }
+};
 
 export async function findAllCourses(): Promise<CourseDto[]> {
     const courses = await db
@@ -36,13 +100,26 @@ export async function findCourseById(id: number): Promise<CourseDto | null> {
     return formattedCourse;
 }
 
-export async function createCourse(course: CourseDto): Promise<CourseDto> {
+export async function createCourse(course: CourseDto): Promise<CourseDto | null> {
     const { degree, id, createdAt, updatedAt, ...props } = course;
     console.log("in create course in service, course:", course);
     const courseData: Course = {
         ...props,
         degreeId: degree?.id,
     }
+
+    const [existingCourse] = await db
+        .select()
+        .from(courseModel)
+        .where(
+            and(
+                ilike(courseModel.name, courseData.name.trim()),
+                eq(courseModel.degreeId, courseData.degreeId!),
+            )
+        );
+
+    if (existingCourse) return null;
+
     const [newCourse] = await db
         .insert(courseModel)
         .values(courseData)

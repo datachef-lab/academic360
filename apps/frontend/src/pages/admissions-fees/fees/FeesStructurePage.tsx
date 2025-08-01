@@ -1,4 +1,4 @@
-  import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Banknote,
   PlusCircle,
@@ -16,7 +16,7 @@ import FeeStructureForm from "@/components/fees/fee-structure-form/FeeStructureF
 // import { getAllCourses } from "../../services/course-api";
 import { Course } from "@/types/course-design";
 import { FeesStructureDto, FeesSlabMapping, FeesSlab, CreateFeesStructureDto } from "@/types/fees";
-import {AcademicYear} from "@/types/academics/academic-year"
+import { AcademicYear } from "@/types/academics/academic-year";
 import { useFeesStructures, useAcademicYearsFromFeesStructures, useCoursesFromFeesStructures } from "@/hooks/useFees";
 import { useFeesSlabMappings, useFeesReceiptTypes } from "@/hooks/useFees";
 import { checkSlabsExistForAcademicYear, getFeesStructuresByAcademicYearAndCourse } from "@/services/fees-api";
@@ -67,15 +67,14 @@ const FeesStructurePage: React.FC = () => {
   // When academic year or course changes, reset selected class
   useEffect(() => {
     setSelectedClass(null);
-  }, [selectedAcademicYear, selectedCourse]);
+  }, [selectedAcademicYear, selectedCourse, setSelectedClass]);
 
   // Optionally, filter classes by course/academic year if needed
   // For now, use all classes
 
   useEffect(() => {
-    getAllClasses()
-      .then(data => setClasses(data.payload));
-  }, [])
+    getAllClasses().then((data) => setClasses(data));
+  }, [setClasses]);
 
   useEffect(() => {
     const checkSlabsExist = async () => {
@@ -94,7 +93,7 @@ const FeesStructurePage: React.FC = () => {
     };
 
     checkSlabsExist();
-  }, [selectedAcademicYear]);
+  }, [selectedAcademicYear, setSlabsExistForYear]);
 
   const fetchSlabs = async () => {
     try {
@@ -147,7 +146,7 @@ const FeesStructurePage: React.FC = () => {
     const availableShifts = feesStructures
       .filter((fs) => fs.feesReceiptTypeId === id && fs.shift)
       .map((fs) => fs.shift)
-      .filter((shift, idx, arr) => shift && arr.findIndex(s => s?.id === shift?.id) === idx);
+      .filter((shift, idx, arr) => shift && arr.findIndex((s) => s?.id === shift?.id) === idx);
 
     if (availableShifts.length > 0) {
       setSelectedShift(availableShifts[0] ?? null);
@@ -192,26 +191,26 @@ const FeesStructurePage: React.FC = () => {
     setAvailableCourses(filtered);
   };
 
-  const handleFeeStructureSubmit = async (givenFeesStructure: FeesStructureDto | CreateFeesStructureDto, formType: "ADD" | "EDIT") => {
+  const handleFeeStructureSubmit = async (
+    givenFeesStructure: FeesStructureDto | CreateFeesStructureDto,
+    formType: "ADD" | "EDIT",
+  ) => {
     console.log("Fee Structure Form Data:", givenFeesStructure);
     try {
       // Duplicate check (for create only)
       if (!currentFeesStructure?.id) {
-        const duplicate = filteredFeesStructures.find(
-          (fs) => {
-            // Type guard for course/courses
-            const givenCourseId = 'course' in givenFeesStructure
-              ? givenFeesStructure.course?.id
-              : givenFeesStructure.courses[0]?.id;
-            return (
-              fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
-              fs.course?.id === givenCourseId &&
-              fs.class.id === givenFeesStructure.class.id &&
-              fs.shift?.id === givenFeesStructure.shift?.id &&
-              fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId
-            );
-          }
-        );
+        const duplicate = filteredFeesStructures.find((fs) => {
+          // Type guard for course/courses
+          const givenCourseId =
+            "course" in givenFeesStructure ? givenFeesStructure.course?.id : givenFeesStructure.courses[0]?.id;
+          return (
+            fs.academicYear?.id === givenFeesStructure.academicYear?.id &&
+            fs.course?.id === givenCourseId &&
+            fs.class.id === givenFeesStructure.class.id &&
+            fs.shift?.id === givenFeesStructure.shift?.id &&
+            fs.feesReceiptTypeId === givenFeesStructure.feesReceiptTypeId
+          );
+        });
         if (duplicate) {
           alert(
             "A fee structure with the same Academic Year, Course, Semester, Shift, and Receipt Type already exists.",
@@ -321,7 +320,7 @@ const FeesStructurePage: React.FC = () => {
   //   }
   // };
 
-  const fetchFeesStructures = async () => {
+  const fetchFeesStructures = useCallback(async () => {
     if (!selectedAcademicYear?.id || !selectedCourse?.id) {
       setFilteredFeesStructures([]);
       return;
@@ -354,7 +353,7 @@ const FeesStructurePage: React.FC = () => {
       console.log(error);
       setFilteredFeesStructures([]);
     }
-  };
+  }, [selectedAcademicYear, selectedCourse, feesReceiptTypes]);
 
   useEffect(() => {
     if (selectedAcademicYear?.id && selectedCourse?.id) {
@@ -362,7 +361,7 @@ const FeesStructurePage: React.FC = () => {
     } else {
       setFilteredFeesStructures([]);
     }
-  }, [selectedAcademicYear, selectedCourse]);
+  }, [selectedAcademicYear, selectedCourse, fetchFeesStructures]);
 
   const handleSlabModalClose = () => {
     setShowSlabModal(false);
@@ -569,11 +568,11 @@ const FeesStructurePage: React.FC = () => {
                 {filteredFeesStructures
                   .sort((a, b) => {
                     if (!a.class?.name || !b.class?.name) return 0;
-                    const getNum = (name: string) => parseInt(name.replace(/[^0-9]/g, ''), 10) || 0;
+                    const getNum = (name: string) => parseInt(name.replace(/[^0-9]/g, ""), 10) || 0;
                     return getNum(a.class.name) - getNum(b.class.name);
                   })
                   .map((fs) => {
-                    const className = fs.class?.name || '-';
+                    const className = fs.class?.name || "-";
                     const baseAmount = fs.components.reduce((sum, comp) => sum + (comp.baseAmount ?? 0), 0);
                     const numInstalments = fs.numberOfInstalments || 0;
                     return (
@@ -773,7 +772,7 @@ const FeesStructurePage: React.FC = () => {
             onSubmit={handleFeeStructureSubmit}
             fieldsDisabled={modalFieldsDisabled}
             disabledSteps={[1, 2, 3]}
-            formType={currentFeesStructure ? 'EDIT' : 'ADD'}
+            formType={currentFeesStructure ? "EDIT" : "ADD"}
             selectedAcademicYear={selectedAcademicYear}
             selectedCourse={selectedCourse}
             initialStep={initialStep}

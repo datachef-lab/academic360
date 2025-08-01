@@ -9,10 +9,15 @@ import {
   deleteRegulationType, 
   bulkUploadRegulationTypes 
 } from "@/features/course-design/services/regulation-type.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createRegulationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createRegulationType(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Regulation type already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Regulation type created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -72,10 +77,11 @@ export const bulkUploadRegulationTypesHandler = async (req: Request, res: Respon
     if (!req.file || !req.file.path) {
       return res.status(400).json({ error: "No file uploaded" });
     }
-    const result = await bulkUploadRegulationTypes(req.file.path);
+    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const io = socketService.getIO();
+    const result = await bulkUploadRegulationTypes(req.file.path, io, uploadSessionId);
     res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     handleError(error, res, next);
   }
 };

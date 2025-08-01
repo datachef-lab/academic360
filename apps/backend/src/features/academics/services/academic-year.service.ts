@@ -5,12 +5,11 @@ import {
 } from "../models/academic-year.model.js";
 import { eq, and, desc } from "drizzle-orm";
 import { Session, sessionModel } from "../models/session.model.js";
-import { AcademicYearDto } from "@/types/academics/academic-year.type.js";
 
 export async function createAcademicYear(
     academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
     session: Omit<Session, "id" | "createdAt" | "updatedAt">,
-): Promise<AcademicYearDto | null> {
+): Promise<AcademicYear | null> {
     let [existingSession] = await db
         .select()
         .from(sessionModel)
@@ -38,33 +37,30 @@ export async function createAcademicYear(
         )[0];
     }
 
-    academicYear.sessionId = existingSession.id;
     const [newAcademicYear] = await db
         .insert(academicYearModel)
         .values(academicYear)
         .returning();
 
-    return await modelToDto(newAcademicYear);
+    return await newAcademicYear;
 }
 
-export async function findAllAcademicYears(): Promise<AcademicYearDto[]> {
+export async function findAllAcademicYears(): Promise<AcademicYear[]> {
     const academicYears = await db
         .select()
         .from(academicYearModel)
         .orderBy(desc(academicYearModel.year));
-    return (
-        await Promise.all(academicYears.map((year) => modelToDto(year)))
-    ).filter((year): year is AcademicYearDto => year !== null);
+    return academicYears.filter((year) => year !== null);
 }
 
 export async function findAcademicYearById(
     id: number,
-): Promise<AcademicYearDto | null> {
+): Promise<AcademicYear | null> {
     const [academicYear] = await db
         .select()
         .from(academicYearModel)
         .where(eq(academicYearModel.id, id));
-    return await modelToDto(academicYear);
+    return academicYear;
 }
 
 export async function findCurrentAcademicYear(): Promise<AcademicYear | null> {
@@ -77,7 +73,7 @@ export async function findCurrentAcademicYear(): Promise<AcademicYear | null> {
 
 export async function updateAcademicYear(
     id: number,
-    academicYear: Partial<AcademicYearDto>,
+    academicYear: Partial<AcademicYear>,
 ): Promise<AcademicYear | null> {
     const [updatedAcademicYear] = await db
         .update(academicYearModel)
@@ -85,12 +81,12 @@ export async function updateAcademicYear(
         .where(eq(academicYearModel.id, id))
         .returning();
 
-    return await modelToDto(updatedAcademicYear);
+    return await updatedAcademicYear;
 }
 
 export async function deleteAcademicYear(
     id: number,
-): Promise<AcademicYearDto | null> {
+): Promise<AcademicYear | null> {
     //   const [deletedAcademicYear] = await db
     //     .delete(academicYearModel)
     //     .where(eq(academicYearModel.id, id))
@@ -132,23 +128,5 @@ export async function findAcademicYearByYearRange(
             ),
         );
 
-    return await modelToDto(academicYear);
-}
-
-async function modelToDto(
-    model: AcademicYear,
-): Promise<AcademicYearDto | null> {
-    if (!model.sessionId) {
-        return null;
-    }
-
-    const session = await db
-        .select()
-        .from(sessionModel)
-        .where(eq(sessionModel.id, model.sessionId!))
-        .then((rows) => rows[0]);
-    return {
-        ...model,
-        session,
-    };
+    return academicYear;
 }

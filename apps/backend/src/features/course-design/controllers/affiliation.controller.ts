@@ -2,10 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliation, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createAffiliation(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Affiliation already exists"));
+            return
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Affiliation created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -61,15 +66,16 @@ export const deleteAffiliationHandler = async (req: Request, res: Response, next
 };
 
 export const bulkUploadAffiliationsHandler = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    if (!req.file || !req.file.path) {
-      return res.status(400).json({ error: "No file uploaded" });
+    try {
+        if (!req.file || !req.file.path) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+        const result = await bulkUploadAffiliations(req.file.path, io, uploadSessionId);
+        res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
+        return;
+    } catch (error: unknown) {
+        handleError(error, res, next);
     }
-    const result = await bulkUploadAffiliations(req.file.path);
-    res.status(200).json(new ApiResponse(200, "SUCCESS", result, "Bulk upload completed"));
-    return 
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    handleError(error, res, next);
-  }
 }; 

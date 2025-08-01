@@ -1,4 +1,4 @@
-import { Degree } from "../resources/degree";
+import { Degree } from "../resources/degree.types";
 
 export interface Course {
     readonly id?: number;
@@ -85,7 +85,31 @@ export interface PaperComponent {
 
 export interface Paper {
     readonly id?: number;
-    subjectPaperId: number;
+    subjectId: number;
+    affiliationId: number;
+    regulationTypeId: number;
+    academicYearId: number;
+    subjectTypeId: number;
+    courseId: number;
+    classId: number;
+    name: string;
+    code: string;
+    isOptional: boolean;
+    sequence: number | null;
+    disabled: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+    components: PaperComponent[];
+    topics: Topic[];
+}
+
+// Enhanced paper type for detailed paper response with direct foreign key relationships and class details
+export interface PaperWithDetails {
+    readonly id?: number;
+    subjectId: number;
+    affiliationId: number;
+    regulationTypeId: number;
+    academicYearId: number;
     subjectTypeId: number;
     courseId: number;
     classId: number;
@@ -96,7 +120,25 @@ export interface Paper {
     disabled: boolean;
     createdAt?: Date;
     updatedAt?: Date;
-    components: PaperComponent[];
+    
+    // Class details (from join)
+    className: string;
+    
+    // Enhanced paper components with exam component details
+    paperComponents: Array<{
+        id?: number;
+        paperId: number;
+        examComponentId: number;
+        fullMarks: number;
+        credit: number;
+        createdAt?: Date;
+        updatedAt?: Date;
+        
+        // Exam component details
+        examComponentName: string;
+        examComponentShortName: string | null;
+        examComponentCode: string | null;
+    }>;
 }
 
 export interface ProgramCourse {
@@ -144,17 +186,7 @@ export interface Stream {
     updatedAt?: Date;
 }
 
-export interface SubjectPaper {
-    readonly id?: number;
-    subjectId: number;
-    affiliationId: number;
-    regulationTypeId: number;
-    academicYearId: number;
-    sequence: number | null;
-    disabled: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
+
 
 export interface SubjectType {
     readonly id?: number;

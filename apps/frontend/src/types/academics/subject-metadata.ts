@@ -1,5 +1,5 @@
 import { Framework, ProgrammeType, SubjectCategory } from "../enums";
-import { Degree } from "../resources/degree";
+import { Degree } from "../resources/degree.types";
 import { Specialization } from "../resources/specialization";
 import { Class } from "./class";
 

@@ -8,7 +8,7 @@ import {
   deleteBatchStudentMapping,
   getBatchStudentMappingsByBatchId,
   getBatchStudentMappingsByStudentId,
-} from "../services/batch-student-mapping.service";
+} from "../services/batch-student-mapping.service.js";
 
 // Create a new batch-student mapping
 export const createBatchStudentMappingController = async (

@@ -297,7 +297,7 @@ export default function AccommodationForm({ studentId }: AccommodationFormProps)
                     <SelectTrigger><SelectValue placeholder={isLoadingData ? "Loading..." : "Select country"} /></SelectTrigger>
                     <SelectContent>
                       {countries.map((country) => (
-                        <SelectItem key={country.id} value={country.id.toString()}>{country.name}</SelectItem>
+                        <SelectItem key={country.id} value={country.id!.toString()}>{country.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

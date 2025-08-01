@@ -3,7 +3,6 @@ import { AcademicYear } from '@/types/academics/academic-year';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 import { Shift } from '@/types/academics/shift';
-import { Session } from '@/types/academics/session';
 import { createAcademicYear, deleteAcademicYearById, getAllAcademicYears, updateAcademicYearById } from '@/services/academic-year-api';
 import { getAllShifts } from '@/services/academic';
 
@@ -23,8 +22,8 @@ export const useCreateAcademicYear = () => {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: async ({ academicYear, session }: { academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>; session: Session }) => {
-            const response = await createAcademicYear(academicYear, session);
+        mutationFn: async ({ academicYear }: { academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>; }) => {
+            const response = await createAcademicYear(academicYear);
             return response.payload;
         },
         onSuccess: () => {

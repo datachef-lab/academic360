@@ -1,5 +1,5 @@
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model";
+import { paperModel } from "./paper.model.js";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

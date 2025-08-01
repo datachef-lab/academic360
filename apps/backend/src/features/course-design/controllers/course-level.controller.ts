@@ -7,11 +7,16 @@ import {
   updateCourseLevel as updateCourseLevelService,
   deleteCourseLevel as deleteCourseLevelService,
   bulkUploadCourseLevels as bulkUploadCourseLevelsService,
-} from "../services/course-level.service";
+} from "../services/course-level.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createCourseLevel = async (req: Request, res: Response) => {
   try {
     const newCourseLevel = await createCourseLevelService(req.body);
+    if (!newCourseLevel) {
+      res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Course level already exists"));
+      return 
+    }
     res.status(201).json(new ApiResponse(201, "SUCCESS", newCourseLevel, "Course level created successfully!"));
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
@@ -24,9 +29,9 @@ export const bulkUploadCourseLevels = async (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
     }
-
-    const result = await bulkUploadCourseLevelsService(req.file.path);
-    
+    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const io = socketService.getIO();
+    const result = await bulkUploadCourseLevelsService(req.file.path, io, uploadSessionId);
     const response = {
       success: result.success,
       errors: result.errors,
@@ -36,11 +41,9 @@ export const bulkUploadCourseLevels = async (req: Request, res: Response) => {
         failed: result.errors.length
       }
     };
-
     res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json(new ApiResponse(500, "ERROR", null, errorMessage));
+    res.status(500).json(new ApiResponse(500, "ERROR", null, error instanceof Error ? error.message : "Unknown error"));
   }
 };
 

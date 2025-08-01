@@ -68,7 +68,7 @@ const CourseLevelsPage = () => {
     try {
       if (selectedCourseLevel) {
         // Update
-        await updateCourseLevel(selectedCourseLevel.id, data);
+        await updateCourseLevel(selectedCourseLevel.id!, data);
         toast.success("Course level updated successfully");
       } else {
         // Create
@@ -388,7 +388,7 @@ const CourseLevelsPage = () => {
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => handleDelete(level.id)}
+                              onClick={() => handleDelete(level.id!)}
                               className="h-5 w-5 p-0"
                             >
                               <Trash2 className="h-4 w-4" />

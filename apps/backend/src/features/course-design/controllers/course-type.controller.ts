@@ -2,10 +2,15 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { createCourseType, getCourseTypeById, getAllCourseTypes, updateCourseType, deleteCourseType, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
+import { socketService } from "@/services/socketService.js";
 
 export const createCourseTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const created = await createCourseType(req.body);
+        if (!created) {
+            res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Course type already exists"));
+            return 
+        }
         res.status(201).json(new ApiResponse(201, "SUCCESS", created, "Course type created successfully!"));
     } catch (error) {
         handleError(error, res, next);
@@ -18,9 +23,9 @@ export const bulkUploadCourseTypesHandler = async (req: Request, res: Response, 
             res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
             return;
         }
-
-        const result = await bulkUploadCourseTypes(req.file.path);
-        
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+        const result = await bulkUploadCourseTypes(req.file.path, io, uploadSessionId);
         const response = {
             success: result.success,
             errors: result.errors,
@@ -30,7 +35,6 @@ export const bulkUploadCourseTypesHandler = async (req: Request, res: Response, 
                 failed: result.errors.length
             }
         };
-
         res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
     } catch (error) {
         handleError(error, res, next);

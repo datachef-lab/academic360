@@ -7,7 +7,7 @@ import {
   updateMarksheetPaperMapping,
   deleteMarksheetPaperMapping,
   getMarksheetPaperMappingsByMarksheetId,
-} from "../services/marksheet-paper-mapping.service";
+} from "../services/marksheet-paper-mapping.service.js";
 
 // Create a new marksheet-paper mapping
 export const createMarksheetPaperMappingController = async (

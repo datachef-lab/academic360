@@ -24,6 +24,7 @@ import {
   batchStudentMappingRouter,
   marksheetPaperMappingRouter,
   marksheetPaperComponentMappingRouter,
+  sessionRouter,
 } from "@/features/academics/routes/index.js";
 import { userModel, User } from "./features/user/models/user.model.js";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
@@ -87,14 +88,21 @@ import {
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
-import { streamRouter, courseTypeRouter, subjectRouter, subjectPaperRouter, paperRouter, topicRouter, affiliationRouter, 
+import {
+  streamRouter,
+  courseTypeRouter,
+  subjectRouter,
+  paperRouter,
+  topicRouter,
+  affiliationRouter,
   courseLevelRouter,
   subjectTypeRouter,
   affiliationTypeRouter,
   regulationTypeRouter,
   programCourseRouter,
   examComponentRouter,
-  } from "@/features/course-design/routes/index.js";
+  cascadingDropdownsRouter,
+} from "@/features/course-design/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -219,6 +227,7 @@ app.use(
 // app.use("/api/batch-papers/old-data", batchPaperRouter);
 
 app.use("/api/users", userRouter);
+app.use("/api/sessions", sessionRouter);
 
 app.use("/api/personal-details", personalDetailsRouter);
 
@@ -338,11 +347,10 @@ app.use("/api/v1/course-design/program-courses", programCourseRouter);
 
 app.use(errorHandler);
 
-
 // Register course-design routes
 app.use("/api/course-design/courses", courseRouter);
 app.use("/api/course-design/subjects", subjectRouter);
-app.use("/api/course-design/subject-papers", subjectPaperRouter);
+// app.use("/api/course-design/subject-papers", subjectPaperRouter);
 app.use("/api/course-design/subject-types", subjectTypeRouter);
 app.use("/api/course-design/papers", paperRouter);
 app.use("/api/course-design/topics", topicRouter);
@@ -355,6 +363,7 @@ app.use("/api/course-design/course-types", courseTypeRouter);
 app.use("/api/course-design/course-levels", courseLevelRouter);
 app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
+app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404);

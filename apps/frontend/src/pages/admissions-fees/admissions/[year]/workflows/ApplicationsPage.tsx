@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   Search,
@@ -12,17 +12,6 @@ import {
   Trash2,
   IndianRupee,
   SlidersHorizontal,
-  // HomeIcon,
-  // GraduationCap,
-  // Landmark,
-  // BookCheck,
-  // BookOpen,
-  // DollarSign,
-  // ClipboardList,
-  // Clock,
-  // Brain,
-  // FileCog,
-  // IdCard,
 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -41,14 +30,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationFormProvider } from "../../components/ApplicationFormProvider";
 import type { Admission, ApplicationFormDto } from "@/types/admissions";
-import type { AdmissionSummary } from "../../types";
 import AdmissionForm from "../../components/AdmissionForm";
-import {
-  fetchAdmissionSummaries,
-  findAdmissionById,
-} from "@/services/admissions.service";
-import axios from "axios";
-// import MasterLayout, { LinkType, NavItem } from "@/components/layouts/MasterLayout";
 
 interface ApplicationFormStats {
   totalApplications: number;
@@ -60,25 +42,321 @@ interface ApplicationFormStats {
   paymentDue: number;
 }
 
+// Dummy data
+const dummyAdmission: Admission = {
+  id: 1,
+  academicYear: {
+    id: 1,
+    year: "2024",
+    isCurrentYear: true,
+    createdAt: new Date("2024-01-15"),
+    updatedAt: new Date("2024-07-10"),
+  },
+  admissionCode: "ADM2024",
+  isClosed: false,
+  startDate: new Date("2024-06-01"),
+  lastDate: new Date("2024-08-31"),
+  isArchived: false,
+  createdAt: new Date("2024-01-15"),
+  updatedAt: new Date("2024-07-10"),
+  remarks: "Admission process for the academic year 2024-25",
+  courses: [],
+};
+
+const dummyStats: ApplicationFormStats = {
+  totalApplications: 150,
+  paymentsDone: 95,
+  drafts: 25,
+  submitted: 120,
+  approved: 85,
+  rejected: 15,
+  paymentDue: 30,
+};
+
+const dummyApplications: ApplicationFormDto[] = [
+  {
+    id: 1,
+    admissionId: 1,
+    applicationNumber: "APP001",
+    formStatus: "SUBMITTED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-01"),
+    updatedAt: new Date("2024-07-05"),
+    remarks: "Application submitted successfully",
+    generalInfo: {
+      applicationFormId: 1,
+      firstName: "Rahul",
+      middleName: "",
+      lastName: "Sharma",
+      dateOfBirth: new Date("2000-05-15"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: true,
+      categoryId: 1,
+      religionId: 1,
+      gender: "MALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 98765 43210",
+      mobileNumber: "+91 98765 43210",
+      email: "rahul.sharma@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 2,
+    admissionId: 1,
+    applicationNumber: "APP002",
+    formStatus: "APPROVED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-02"),
+    updatedAt: new Date("2024-07-06"),
+    remarks: "Application approved",
+    generalInfo: {
+      applicationFormId: 2,
+      firstName: "Priya",
+      middleName: "",
+      lastName: "Patel",
+      dateOfBirth: new Date("2001-03-20"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: true,
+      categoryId: 3,
+      religionId: 1,
+      gender: "FEMALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 87654 32109",
+      mobileNumber: "+91 87654 32109",
+      email: "priya.patel@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 3,
+    admissionId: 1,
+    applicationNumber: "APP003",
+    formStatus: "DRAFT",
+    admissionStep: "GENERAL_INFORMATION",
+    createdAt: new Date("2024-07-03"),
+    updatedAt: new Date("2024-07-03"),
+    remarks: "Draft application",
+    generalInfo: {
+      applicationFormId: 3,
+      firstName: "Amit",
+      middleName: "",
+      lastName: "Kumar",
+      dateOfBirth: new Date("2000-08-10"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: false,
+      categoryId: 2,
+      religionId: 1,
+      gender: "MALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 76543 21098",
+      mobileNumber: "+91 76543 21098",
+      email: "amit.kumar@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 1,
+  },
+  {
+    id: 4,
+    admissionId: 1,
+    applicationNumber: "APP004",
+    formStatus: "PAYMENT_DUE",
+    admissionStep: "PAYMENT",
+    createdAt: new Date("2024-07-04"),
+    updatedAt: new Date("2024-07-07"),
+    remarks: "Payment pending",
+    generalInfo: {
+      applicationFormId: 4,
+      firstName: "Neha",
+      middleName: "",
+      lastName: "Singh",
+      dateOfBirth: new Date("2001-12-05"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: false,
+      categoryId: 1,
+      religionId: 4,
+      gender: "FEMALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 65432 10987",
+      mobileNumber: "+91 65432 10987",
+      email: "neha.singh@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 4,
+  },
+  {
+    id: 5,
+    admissionId: 1,
+    applicationNumber: "APP005",
+    formStatus: "REJECTED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-05"),
+    updatedAt: new Date("2024-07-08"),
+    remarks: "Application rejected",
+    generalInfo: {
+      applicationFormId: 5,
+      firstName: "Vikram",
+      middleName: "",
+      lastName: "Mehta",
+      dateOfBirth: new Date("2000-07-22"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: true,
+      categoryId: 1,
+      religionId: 1,
+      gender: "MALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 54321 09876",
+      mobileNumber: "+91 54321 09876",
+      email: "vikram.mehta@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 6,
+    admissionId: 1,
+    applicationNumber: "APP006",
+    formStatus: "PAYMENT_SUCCESS",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-06"),
+    updatedAt: new Date("2024-07-09"),
+    remarks: "Payment successful",
+    generalInfo: {
+      applicationFormId: 6,
+      firstName: "Sneha",
+      middleName: "",
+      lastName: "Reddy",
+      dateOfBirth: new Date("2001-04-18"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: false,
+      categoryId: 4,
+      religionId: 3,
+      gender: "FEMALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 43210 98765",
+      mobileNumber: "+91 43210 98765",
+      email: "sneha.reddy@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 7,
+    admissionId: 1,
+    applicationNumber: "APP007",
+    formStatus: "SUBMITTED",
+    admissionStep: "SUBMITTED",
+    createdAt: new Date("2024-07-07"),
+    updatedAt: new Date("2024-07-10"),
+    remarks: "Application submitted",
+    generalInfo: {
+      applicationFormId: 7,
+      firstName: "Rajesh",
+      middleName: "",
+      lastName: "Verma",
+      dateOfBirth: new Date("2000-11-30"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: true,
+      categoryId: 2,
+      religionId: 2,
+      gender: "MALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 32109 87654",
+      mobileNumber: "+91 32109 87654",
+      email: "rajesh.verma@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 5,
+  },
+  {
+    id: 8,
+    admissionId: 1,
+    applicationNumber: "APP008",
+    formStatus: "DRAFT",
+    admissionStep: "GENERAL_INFORMATION",
+    createdAt: new Date("2024-07-08"),
+    updatedAt: new Date("2024-07-08"),
+    remarks: "Draft application",
+    generalInfo: {
+      applicationFormId: 8,
+      firstName: "Anjali",
+      middleName: "",
+      lastName: "Desai",
+      dateOfBirth: new Date("2001-09-12"),
+      nationalityId: 1,
+      otherNationality: null,
+      isGujarati: true,
+      categoryId: 1,
+      religionId: 1,
+      gender: "FEMALE",
+      degreeLevel: "UNDER_GRADUATE",
+      password: "password123",
+      whatsappNumber: "+91 21098 76543",
+      mobileNumber: "+91 21098 76543",
+      email: "anjali.desai@email.com",
+      residenceOfKolkata: false,
+    },
+    academicInfo: null,
+    courseApplication: null,
+    additionalInfo: null,
+    paymentInfo: null,
+    currentStep: 1,
+  },
+];
+
 export default function ApplicationsPage() {
   const { year } = useParams<{ year: string }>();
-  const [admission, setAdmission] = useState<Admission | null>(null);
-  const defaultStats: ApplicationFormStats = {
-    totalApplications: 0,
-    paymentsDone: 0,
-    drafts: 0,
-    submitted: 0,
-    approved: 0,
-    rejected: 0,
-    paymentDue: 0,
-  };
-  const [stats, setStats] = useState<ApplicationFormStats>(defaultStats);
-  const [applications, setApplications] = useState<ApplicationFormDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true); 
+  const [admission] = useState<Admission | null>(dummyAdmission);
+  const [stats] = useState<ApplicationFormStats>(dummyStats);
+  const [applications] = useState<ApplicationFormDto[]>(dummyApplications);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalItems, setTotalItems] = useState(0);
+  const [totalItems] = useState(dummyApplications.length);
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -97,66 +375,6 @@ export default function ApplicationsPage() {
 
   const [tempFilters, setTempFilters] = useState(filters);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      let admissionData = null;
-      if (year) {
-        const summaries: AdmissionSummary[] = await fetchAdmissionSummaries();
-        const found = summaries.find(
-          (a) => String(a.admissionYear) === String(year)
-        );
-        if (found && found.id) {
-          const admissionId = Number(found.id);
-          admissionData = await findAdmissionById(admissionId);
-          setAdmission(admissionData.payload);
-          // Build query params for pagination, search, and filters
-          const params = {
-            page: currentPage,
-            size: itemsPerPage,
-            search: searchTerm,
-            ...filters,
-          };
-          const res = await axios.get(`/api/admissions/${year}/applications`, { params });
-          const data = res.data;
-          if (data && data.status === 'SUCCESS' && data.data) {
-            setApplications(data.data.applications || []);
-            setStats({
-              totalApplications: data.data.totalItems ?? 0,
-              paymentsDone: data.data.stats?.paymentsDone ?? 0,
-              drafts: data.data.stats?.drafts ?? 0,
-              submitted: data.data.stats?.submitted ?? 0,
-              approved: data.data.stats?.approved ?? 0,
-              rejected: data.data.stats?.rejected ?? 0,
-              paymentDue: data.data.stats?.paymentDue ?? 0,
-            });
-            setTotalItems(data.data.totalItems ?? 0);
-          } else {
-            setApplications([]);
-            setStats(defaultStats);
-            setTotalItems(0);
-          }
-        } else {
-          setAdmission(null);
-          setApplications([]);
-          setStats(defaultStats);
-          setTotalItems(0);
-        }
-      }
-    } catch (err) {
-      setAdmission(null);
-      setApplications([]);
-      setStats(defaultStats);
-      setTotalItems(0);
-      console.error(err);
-    }
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [year, currentPage, itemsPerPage, searchTerm, filters]);
-
   const handleFilterChange = (field: string, value: string) => {
     setTempFilters((prev) => ({ ...prev, [field]: value === "all" ? "" : value }));
   };
@@ -164,7 +382,6 @@ export default function ApplicationsPage() {
   const applyFilters = () => {
     setFilters(tempFilters);
     setCurrentPage(1);
-    fetchData();
     setIsFilterOpen(false);
   };
 
@@ -240,28 +457,11 @@ export default function ApplicationsPage() {
     alert(`Successfully ${action.toLowerCase()}ed selected applications`);
     setSelectedRows([]);
     setSelectAll(false);
-    fetchData();
   };
 
   const getActiveFilterCount = () => {
     return Object.values(filters).filter((value) => value !== "" && value !== "all").length;
   };
-
-  if (isLoading) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading admission details...</div>
-      </div>
-    );
-  }
-
-  if (!admission) {
-    return (
-      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-lg text-red-600">Admission details not found for year {year}.</div>
-      </div>
-    );
-  }
 
   const formStatusOptions = ["DRAFT", "PAYMENT_DUE", "PAYMENT_SUCCESS", "SUBMITTED", "APPROVED", "REJECTED"];
   const genderOptions = ["MALE", "FEMALE", "TRANSGENDER"];
@@ -275,7 +475,7 @@ export default function ApplicationsPage() {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission.academicYear?.year ?? ''}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission?.academicYear?.year ?? year}</h1>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => alert("Downloading report...")}>
               <FileText className="w-4 h-4 mr-2" />
@@ -283,7 +483,7 @@ export default function ApplicationsPage() {
             </Button>
             <Dialog open={isAddApplicationOpen} onOpenChange={setIsAddApplicationOpen}>
               <DialogTrigger asChild>
-                {/* <Button disabled={new Date().getFullYear() != Number(year)}>Add Application</Button> */}
+                <Button>Add Application</Button>
               </DialogTrigger>
               <DialogContent className="w-screen h-screen max-w-none p-0">
                 <div className="flex flex-col h-full">
@@ -697,14 +897,8 @@ export default function ApplicationsPage() {
         </div>
       </div>
     </div>
-    
   );
 }
-
-
-
-
-
 
 const StatCard = ({
   label,

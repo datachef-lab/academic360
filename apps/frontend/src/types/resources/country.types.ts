@@ -13,12 +13,12 @@
  * Main Country interface that mirrors the backend model
  */
 export interface Country {
-  id: number;
+    readonly id?: number;
   name: string;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================

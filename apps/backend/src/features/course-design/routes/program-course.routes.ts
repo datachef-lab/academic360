@@ -6,8 +6,8 @@ import {
   getProgramCourseByIdHandler,
   updateProgramCourseHandler,
   bulkUploadProgramCoursesHandler
-} from "../controllers/program-course.controller";
-import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware";
+} from "../controllers/program-course.controller.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 

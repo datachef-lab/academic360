@@ -3,6 +3,7 @@ import { Course } from "@/types/course-design";
 import { Admission } from "@/types/admissions";
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
+import { AdmissionSummary } from "@/pages/admissions-fees/admissions/types";
 // import {Admission} from "@/types/admissions"
 
 export interface AdmissionUpdatePayload {
@@ -11,17 +12,21 @@ export interface AdmissionUpdatePayload {
 }
 
 // API helpers using axios
-export async function fetchAdmissions() {
-    const res = await axiosInstance.get("/api/admissions/");
-    return res.data.data;
+export async function fetchAdmissions(): Promise<ApiResonse<AdmissionSummary[]>> {
+    const res = await axiosInstance.get<ApiResonse<AdmissionSummary[]>>("/api/admissions");
+    console.log('fetchAdmissions response:', res.data);
+    
+    return res.data;
   }
 export async function fetchAdmissionStats() {
     const res = await axiosInstance.get("/api/admissions/stats");
+    console.log('fetchAdmissionStats response:', res.data);
     return res.data.data;
   }
 
 export async function fetchStatsSummary() {
   const res = await axiosInstance.get("/api/admissions/stats-summary");
+  console.log('fetchStatsSummary response:', res.data);
   return res.data.data;
 }
 
@@ -31,7 +36,7 @@ export async function fetchAdmissionSummaries() {
 }
 
 export async function createAdmission(admission: Admission) {
-  const res = await axiosInstance.post("/api/admissions/", admission);
+  const res = await axiosInstance.post("/api/admissions", admission);
   return res.data;
 }
 

@@ -7,7 +7,7 @@ import {
   updateMarksheetPaperComponentMappingController,
   deleteMarksheetPaperComponentMappingController,
   getMarksheetPaperComponentMappingsByMarksheetPaperMappingIdController,
-} from "../controllers/marksheet-paper-component-mapping.controller";
+} from "../controllers/marksheet-paper-component-mapping.controller.js";
 
 const router = express.Router();
 

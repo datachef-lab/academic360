@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 // import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Course } from "@/types/course-design";
-import { Degree } from "@/types/resources/degree";
+import { Degree } from "@/types/resources/degree.types";
 import { findAllDegrees } from "@/services/degree.service";
 import { useEffect, useState } from "react";
 import {

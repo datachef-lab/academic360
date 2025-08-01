@@ -25,14 +25,14 @@ export enum BoardResultType {
  * Main Board Result Status interface that mirrors the backend model
  */
 export interface BoardResultStatus {
-  id: number;
+    readonly id?: number;
   name: string;
   spclType: string;
   result: BoardResultType;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================

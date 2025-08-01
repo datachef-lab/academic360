@@ -18,6 +18,11 @@ class SocketService {
   private io: Server<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any> | null = null;
   private activeConnections: Map<string, Set<string>> = new Map(); // userId -> set of socket IDs
 
+  // Add this method
+  public getIO() {
+    return this.io;
+  }
+
   // Initialize with Socket.IO server instance
   initialize(ioServer: Server) {
     try {

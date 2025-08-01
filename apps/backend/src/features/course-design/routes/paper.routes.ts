@@ -1,20 +1,35 @@
-import { Router } from "express";
+import express from "express";
 import {
   createPaperHandler,
-  getAllPapersHandler,
   getPaperByIdHandler,
+  getAllPapersHandler,
   updatePaperHandler,
   deletePaperHandler,
+  updatePaperWithComponentsHandler,
 } from "../controllers/paper.controller.js";
-import { RequestHandler } from "express";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
-const router = Router();
+const router = express.Router();
 
-// Paper routes
-router.post("/", createPaperHandler as RequestHandler);
-router.get("/", getAllPapersHandler as RequestHandler);
-router.get("/:id", getPaperByIdHandler as RequestHandler);
-router.put("/:id", updatePaperHandler as RequestHandler);
-router.delete("/:id", deletePaperHandler as RequestHandler);
+// Apply JWT verification to all routes
+router.use(verifyJWT);
+
+// Create a new paper
+router.post("/", createPaperHandler);
+
+// Get a paper by ID
+router.get("/:id", getPaperByIdHandler);
+
+// Get all papers
+router.get("/", getAllPapersHandler);
+
+// Update a paper
+router.put("/:id", updatePaperHandler);
+
+// Update a paper with components
+router.put("/:id/with-components", updatePaperWithComponentsHandler);
+
+// Delete a paper
+router.delete("/:id", deletePaperHandler);
 
 export default router;

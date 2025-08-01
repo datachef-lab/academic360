@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Marksheet } from "@/types/academics/marksheet";
 import { ApiResonse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
+import { DegreeLevel } from "@/types/resources/degree.types";
 // import { Subject } from "@/types/academics/subject";
 
 // const ROWS_PER_PAGE = 10;
@@ -72,19 +73,7 @@ const dummyApiResponse: ApiResonse<PaginatedResponse<Marksheet>> = {
           id: 1,
           year: "2023-2024",
           isCurrentYear: true,
-          session: {
-            id: 1,
-            name: "2023-2024",
-            from: new Date("2023-04-01"),
-            to: new Date("2024-03-31"),
-            isCurrentSession: true,
-            codePrefix: "2023",
-            sequence: 1,
-            disabled: false,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-          creaytedAt: new Date(),
+          createdAt: new Date(),
           updatedAt: new Date(),
         },
         sgpa: 8.5,
@@ -123,7 +112,8 @@ const dummyApiResponse: ApiResonse<PaginatedResponse<Marksheet>> = {
         academicIdentifier: {
           id: 1,
           studentId: 1,
-          frameworkType: "CCF",
+          framework: "CCF",
+          shift: null,
           rfid: null,
           course: null,
           cuFormNumber: null,
@@ -151,11 +141,9 @@ const dummyApiResponse: ApiResonse<PaginatedResponse<Marksheet>> = {
               degree: {
                 id: 1,
                 name: "BSc Physics",
-                level: "UNDER_GRADUATE",
+                level: DegreeLevel.UNDER_GRADUATE,
                 sequence: 1,
                 disabled: false,
-                createdAt: new Date(),
-                updatedAt: new Date(),
               },
               programmeType: "HONOURS",
               framework: "CCF",

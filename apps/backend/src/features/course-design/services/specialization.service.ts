@@ -1,7 +1,7 @@
 import { db } from "@/db";
-import { Specialization, specializationModel } from "../models/specialization.model";
+import { Specialization, specializationModel } from "../models/specialization.model.js";
 import { eq } from "drizzle-orm";
-import { SpecializationSchema } from "@/types/course-design";
+import { SpecializationSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 
 // Types

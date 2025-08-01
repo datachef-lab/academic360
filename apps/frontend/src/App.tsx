@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import { HomePage, LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
+import {  LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -45,6 +45,18 @@ import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
 import { NoticeMaster } from "./pages/notices";
 import { AcademicYearPage } from "./pages/admissions-fees/fees";
 import Dashboard from "./pages/dashboard/Dashboard";
+import PreAdmissionQueriesPage from "./pages/admissions-fees/admissions/[year]/workflows/PreAdmissionQueriesPage";
+import ApplicationsPage from "./pages/admissions-fees/admissions/[year]/workflows/ApplicationsPage";
+// import GenerateMeritPage from "./pages/admissions-fees/admissions/[year]/workflows/GenerateMeritPage";
+import FeePaymentReviewPage from "./pages/admissions-fees/admissions/[year]/workflows/FeePaymentReviewPage";
+import DocumentVerificationPage from "./pages/admissions-fees/admissions/[year]/workflows/DocumentVerificationPage";
+import IdCardGeneratorPage from "./pages/admissions-fees/admissions/[year]/workflows/IdCardGeneratorPage";
+import FinalAdmissionPushPage from "./pages/admissions-fees/admissions/[year]/workflows/FinalAdmissionPushPage";
+import GenerateMeritListPage from "./pages/admissions-fees/admissions/[year]/workflows/GenerateMeritListPage";
+import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workflows/StaffAssignmentPage";
+import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
+import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
+import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -78,7 +90,21 @@ const router = createBrowserRouter([
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
         ],
       },
-      { path: "admissions-fees/admissions/:year", element: <admissionFeesModule.AdmissionDetailsPage /> },
+      { path: "admissions-fees/admissions/:year", element: <Outlet />, children: [
+        {path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
+        {path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },
+              {path: "applications", element: <ApplicationsPage /> }, 
+              {path: "generate-merit", element: <GenerateMeritListPage /> },
+              {path: "fee-payment-review", element: <FeePaymentReviewPage /> },
+              {path: "document-verification", element: <DocumentVerificationPage /> },
+              {path: "id-card-generator", element: <IdCardGeneratorPage /> },
+              {path: "final-admission-push", element: <FinalAdmissionPushPage /> },
+              {path: "staff-assignment", element: <StaffAssignmentPage /> },
+              {path: "eligibility-rules", element: <EligibilityPage /> },
+              {path: "merit-criteria", element: <MeritCriteriaPage /> },
+              {path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
+
+      ] },
       {
         path: "admissions-fees",
         element: <admissionFeesModule.AdmissionsFeesMaster />,
@@ -90,7 +116,7 @@ const router = createBrowserRouter([
             element: <Outlet />,
             children: [
               { path: "", element: <admissionFeesModule.AdmissionsPage /> },
-              
+                            
             ],
           },
           {
@@ -143,7 +169,7 @@ const router = createBrowserRouter([
         path: "students",
         element: <studentModule.StudentMaster />,
         children: [
-          { path: "", element: <HomePage /> },
+          { path: "", element: <studentModule.DashboardStats /> },
 
           //   {
           //     path: "search",

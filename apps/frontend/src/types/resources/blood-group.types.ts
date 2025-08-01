@@ -13,12 +13,12 @@
  * Main Blood Group interface that mirrors the backend model
  */
 export interface BloodGroup {
-  id: number;
+    readonly id?: number;
   type: string;
   sequence?: number | null;
   disabled: boolean;
-  createdAt: string; // ISO date string
-  updatedAt: string; // ISO date string
+  createdAt?: string; // ISO date string
+  updatedAt?: string; // ISO date string
 }
 
 // ============================================================================
