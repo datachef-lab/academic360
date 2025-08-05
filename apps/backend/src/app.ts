@@ -67,7 +67,7 @@ import {
   personRouter,
 } from "@/features/index.js";
 import { annualIncomeRouter } from "./features/resources/routes/index.js";
-import courseRouter from "@/features/course-design/routes/course.route.js";
+import courseRouter from "@/features/course-design/routes/course.routes.js";
 import { shiftRouter } from "@/features/academics/routes/index.js";
 import feesSlabRouter from "@/features/fees/routes/index.js";
 import feesStructureRouter from "./features/fees/routes/fees-structure.route.js";

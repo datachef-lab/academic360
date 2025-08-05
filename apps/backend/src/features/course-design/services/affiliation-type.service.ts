@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { affiliationTypeModel, AffiliationType, NewAffiliationType } from "@/features/course-design/models/affiliation-type.model.js";
+import { affiliationTypeModel, AffiliationType } from "@/features/course-design/models/affiliation-type.model.js";
 import { eq } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 
 export async function createAffiliationType(data: NewAffiliationType) {

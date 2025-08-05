@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { programCourses, ProgramCourse, NewProgramCourse } from "@/features/course-design/models/program-course.model.js";
 import { and, eq, ilike } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@/features/course-design/models/stream.model.js";
 import { courseModel } from "@/features/course-design/models/course.model.js";

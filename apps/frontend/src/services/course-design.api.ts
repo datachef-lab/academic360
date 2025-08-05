@@ -84,6 +84,19 @@ export const createCourse = (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'
 export const updateCourse = (id: number, data: Partial<Course>) => axiosInstance.put<Course>(`${BASE}/courses/${id}`, data);
 export const deleteCourse = (id: number) => axiosInstance.delete<Course>(`${BASE}/courses/${id}`);
 
+// Bulk upload courses
+export const bulkUploadCourses = async (file: File): Promise<BulkUploadResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/courses/bulk-upload`, formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return res.data.payload;
+};
+
 // Course Types
 export const getCourseTypes = async () => {
     const res = await axiosInstance.get<ApiResonse<CourseType[]>>(`${BASE}/course-types`);

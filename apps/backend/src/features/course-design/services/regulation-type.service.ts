@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { regulationTypeModel, RegulationType } from "@/features/course-design/models/regulation-type.model.js";
 import { eq, ilike } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 
 export async function createRegulationType(data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) {

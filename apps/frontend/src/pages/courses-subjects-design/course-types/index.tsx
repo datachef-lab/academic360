@@ -15,14 +15,7 @@ import { CourseTypeForm } from "./course-type-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-  TableHead,
-} from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,8 +23,7 @@ import {
   getCourseTypes,
   createCourseType,
   updateCourseType,
-  
-  // bulkUploadCourseTypes,
+  bulkUploadCourseTypes,
   BulkUploadResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
@@ -45,20 +37,20 @@ const CourseTypesPage = () => {
   const [selectedCourseType, setSelectedCourseType] = React.useState<CourseType | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
-  const setBulkFile = React.useState<File | null>(null)[1];
-  const [bulkUploadResult, ] = React.useState<BulkUploadResult | null>(null);
-  // const  setIsBulkUploading = React.useState(false)[1];
+  const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
+  const [isBulkUploading, setIsBulkUploading] = React.useState(false);
 
   React.useEffect(() => {
     setLoading(true);
     getCourseTypes()
-      .then(res => {
+      .then((res) => {
         const courseTypesData = Array.isArray(res) ? res : [];
         setCourseTypes(courseTypesData);
         setError(null);
       })
       .catch((error) => {
-        console.error('Error fetching course types:', error);
+        console.error("Error fetching course types:", error);
         setError("Failed to fetch course types");
         setCourseTypes([]);
       })
@@ -80,7 +72,7 @@ const CourseTypesPage = () => {
   //   }
   // };
 
-  const handleSubmit = async (data: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSubmit = async (data: Omit<CourseType, "id" | "createdAt" | "updatedAt">) => {
     setIsSubmitting(true);
     try {
       if (selectedCourseType?.id) {
@@ -112,31 +104,30 @@ const CourseTypesPage = () => {
     setIsFormOpen(true);
   };
 
-  // const handleBulkUpload = async () => {
-  //   if (!bulkFile) return;
-    
-  //   setIsBulkUploading(true);
-  //   try {
-  //     const result = await bulkUploadCourseTypes(bulkFile);
-  //     setBulkUploadResult(result);
-      
-  //     if (result.summary.successful > 0) {
-  //       toast.success(`Successfully uploaded ${result.summary.successful} course types`);
-  //       // Re-fetch the list to show new data
-  //       const freshCourseTypes = await getCourseTypes();
-  //       setCourseTypes(Array.isArray(freshCourseTypes) ? freshCourseTypes : []);
-  //     }
-      
-  //     if (result.summary.failed > 0) {
-  //       toast.error(`${result.summary.failed} course types failed to upload`);
-  //     }
-      
-  //   } catch (error: any) {
-  //     toast.error(`Bulk upload failed: ${error.message || 'Unknown error'}`);
-  //   } finally {
-  //     setIsBulkUploading(false);
-  //   }
-  // };
+  const handleBulkUpload = async () => {
+    if (!bulkFile) return;
+
+    setIsBulkUploading(true);
+    try {
+      const result = await bulkUploadCourseTypes(bulkFile);
+      setBulkUploadResult(result);
+
+      if (result.summary.successful > 0) {
+        toast.success(`Successfully uploaded ${result.summary.successful} course types`);
+        // Re-fetch the list to show new data
+        const freshCourseTypes = await getCourseTypes();
+        setCourseTypes(Array.isArray(freshCourseTypes) ? freshCourseTypes : []);
+      }
+
+      if (result.summary.failed > 0) {
+        toast.error(`${result.summary.failed} course types failed to upload`);
+      }
+    } catch (error: unknown) {
+      toast.error(`Bulk upload failed: ${error.message || "Unknown error"}`);
+    } finally {
+      setIsBulkUploading(false);
+    }
+  };
 
   const handleDownloadTemplate = () => {
     // Create template data
@@ -145,16 +136,16 @@ const CourseTypesPage = () => {
         Name: "Regular",
         "Short Name": "Reg",
         Sequence: 1,
-        Status: "Active"
+        Status: "Active",
       },
       {
-        Name: "Distance Learning", 
+        Name: "Distance Learning",
         "Short Name": "DL",
         Sequence: 2,
-        Status: "Active"
-      }
+        Status: "Active",
+      },
     ];
-    
+
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Course Types Template");
@@ -164,14 +155,14 @@ const CourseTypesPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getCourseTypes();
-      const data = res.map(courseType => ({
+      const data = res.map((courseType) => ({
         ID: courseType.id,
         Name: courseType.name,
         "Short Name": courseType.shortName || "-",
         Sequence: courseType.sequence || "-",
         Status: courseType.disabled ? "Inactive" : "Active",
-        "Created At": courseType.createdAt,
-        "Updated At": courseType.updatedAt,
+        "Created At": course.createdAt,
+        "Updated At": course.updatedAt,
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();
@@ -182,11 +173,11 @@ const CourseTypesPage = () => {
     }
   };
 
-  // const handleCloseBulkUpload = () => {
-  //   setIsBulkUploadOpen(false);
-  //   setBulkFile(null);
-  //   setBulkUploadResult(null);
-  // };
+  const handleCloseBulkUpload = () => {
+    setIsBulkUploadOpen(false);
+    setBulkFile(null);
+    setBulkUploadResult(null);
+  };
 
   const handleDownloadFailedData = () => {
     if (!bulkUploadResult || bulkUploadResult.errors.length === 0) {
@@ -200,27 +191,28 @@ const CourseTypesPage = () => {
         "Row Number": error.row,
         "Error Message": error.error,
         "Original Data": JSON.stringify(error.data),
-        "Name": error.data[0] || "",
+        Name: error.data[0] || "",
         "Short Name": error.data[1] || "",
-        "Sequence": error.data[2] || "",
-        "Status": error.data[3] || ""
+        Sequence: error.data[2] || "",
+        Status: error.data[3] || "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Course Types");
       XLSX.writeFile(wb, "failed-course-types-upload.xlsx");
-      
+
       toast.success("Failed data downloaded successfully");
     } catch {
       toast.error("Failed to download error data");
     }
   };
 
-  const filteredCourseTypes = (Array.isArray(courseTypes) ? courseTypes : []).filter((courseType) =>
-    (courseType.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (courseType.shortName ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (courseType.sequence?.toString() ?? '').includes(searchText.toLowerCase())
+  const filteredCourseTypes = (Array.isArray(courseTypes) ? courseTypes : []).filter(
+    (courseType) =>
+      (courseType.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (courseType.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (courseType.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
 
   return (
@@ -235,77 +227,80 @@ const CourseTypesPage = () => {
             <div className="text-muted-foreground">A list of all course types.</div>
           </div>
           <div className="flex items-center gap-2">
-                          <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline">
-                    <Upload className="mr-2 h-4 w-4" />
-                    Bulk Upload
+            <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Bulk Upload
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Bulk Upload Course Types</DialogTitle>
+                </DialogHeader>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={handleDownloadTemplate}>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Template
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Download the template to see the required format
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Upload Excel File</label>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                      className="w-full p-2 border rounded"
+                    />
+                  </div>
+                  {bulkUploadResult && (
+                    <div className="space-y-4 p-4 border rounded">
+                      <h4 className="font-medium">Upload Results</h4>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                        </div>
+                        <div className="text-green-600">
+                          <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                        </div>
+                        <div className="text-red-600">
+                          <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                        </div>
+                      </div>
+
+                      {bulkUploadResult.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium text-red-600">Errors:</h5>
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
+                              <Download className="mr-1 h-3 w-3" />
+                              Download Failed Data
+                            </Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {bulkUploadResult.errors.map((error, index) => (
+                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                <span className="font-medium">Row {error.row}:</span> {error.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={handleCloseBulkUpload}>
+                    Cancel
                   </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>Bulk Upload Course Types</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" onClick={handleDownloadTemplate}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download Template
-                      </Button>
-                      <span className="text-sm text-muted-foreground">
-                        Download the template to see the required format
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Upload Excel File</label>
-                      <input
-                        type="file"
-                        accept=".xlsx,.xls,.csv"
-                        onChange={e => setBulkFile(e.target.files?.[0] || null)}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                                     {bulkUploadResult && (
-                     <div className="space-y-4 p-4 border rounded">
-                       <h4 className="font-medium">Upload Results</h4>
-                       <div className="grid grid-cols-3 gap-4 text-sm">
-                         <div>
-                           <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
-                         </div>
-                         <div className="text-green-600">
-                           <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
-                         </div>
-                         <div className="text-red-600">
-                           <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
-                         </div>
-                       </div>
-                       
-                       {bulkUploadResult.errors.length > 0 && (
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <h5 className="font-medium text-red-600">Errors:</h5>
-                             <Button 
-                               variant="outline" 
-                               size="sm" 
-                               onClick={handleDownloadFailedData}
-                               className="text-xs"
-                             >
-                               <Download className="mr-1 h-3 w-3" />
-                               Download Failed Data
-                             </Button>
-                           </div>
-                           <div className="max-h-40 overflow-y-auto space-y-1">
-                             {bulkUploadResult.errors.map((error, index) => (
-                               <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                 <span className="font-medium">Row {error.row}:</span> {error.error}
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   )}
+                  <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading}>
+                    {isBulkUploading ? "Uploading..." : "Upload"}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -336,33 +331,44 @@ const CourseTypesPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>ID</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 200, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                      <TableCell colSpan={6} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
                     </TableRow>
                   ) : filteredCourseTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No course types found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        No course types found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredCourseTypes.map((courseType) => (
@@ -388,7 +394,6 @@ const CourseTypesPage = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                     
                           </div>
                         </TableCell>
                       </TableRow>

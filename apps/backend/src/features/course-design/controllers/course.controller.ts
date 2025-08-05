@@ -1,7 +1,32 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse } from "@/features/course-design/services/course.service.js";
+import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse, bulkUploadCourses } from "@/features/course-design/services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
+import { socketService } from "@/services/socketService.js";
+
+export async function bulkUploadCoursesHandler(req: Request, res: Response): Promise<void> {
+    try {
+        if (!req.file) {
+            res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
+            return;
+        }
+        const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+        const io = socketService.getIO();
+        const result = await bulkUploadCourses(req.file.path, io, uploadSessionId);
+        const response = {
+            success: result.success,
+            errors: result.errors,
+            summary: {
+                total: result.success.length + result.errors.length,
+                successful: result.success.length,
+                failed: result.errors.length
+            }
+        };
+        res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
+    } catch (error: unknown) {
+        res.status(500).json(new ApiResponse(500, "ERROR", null, error instanceof Error ? error.message : "Unknown error"));
+    }
+}
 
 export async function getAllCoursesHandler(req: Request, res: Response): Promise<void> {
     try {

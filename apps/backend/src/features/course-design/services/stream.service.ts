@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { streamModel, createStreamModel, Stream } from "@/features/course-design/models/stream.model.js";
-import { eq } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import { Stream, streamModel } from "../models/stream.model.js";
+import { eq, ilike } from "drizzle-orm";
+import XLSX from "xlsx";
 import fs from "fs";
 
 // Bulk upload interface

@@ -5,13 +5,16 @@ import {
   getSubjectByIdHandler,
   updateSubjectHandler,
   deleteSubjectHandler,
+  bulkUploadSubjectsHandler,
 } from "../controllers/subject.controller.js";
 import { RequestHandler } from "express";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = Router();
 
 // Subject routes
 router.post("/", createSubjectHandler as RequestHandler);
+router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadSubjectsHandler as RequestHandler);
 router.get("/", getAllSubjectsHandler as RequestHandler);
 router.get("/:id", getSubjectByIdHandler as RequestHandler);
 router.put("/:id", updateSubjectHandler as RequestHandler);

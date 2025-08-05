@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { subjectModel, createSubjectSchema, Subject } from "@/features/course-design/models/subject.model.js";
-import { and, eq, ilike } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import { Subject, subjectModel } from "../models/subject.model.js";
+import { eq, ilike } from "drizzle-orm";
+import XLSX from "xlsx";
 import fs from "fs";
 
 // Bulk upload interface

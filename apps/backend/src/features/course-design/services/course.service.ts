@@ -12,12 +12,17 @@ import { academicIdentifierModel } from "@/features/user/models/academicIdentifi
 import { OldStudent } from "@/types/old-student.js";
 import { Degree } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 
 export interface BulkUploadResult {
   success: Course[];
   errors: Array<{ row: number; data: unknown[]; error: string }>;
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
 }
 
 export const bulkUploadCourses = async (
@@ -25,12 +30,18 @@ export const bulkUploadCourses = async (
   io?: any,
   uploadSessionId?: string
 ): Promise<BulkUploadResult> => {
-  const result: BulkUploadResult = { success: [], errors: [] };
+  const result: BulkUploadResult = { 
+    success: [], 
+    errors: [], 
+    summary: { total: 0, successful: 0, failed: 0 } 
+  };
   try {
     const workbook = XLSX.readFile(filePath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    result.summary.total = data.length - 1;
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i] as any[];
@@ -46,13 +57,17 @@ export const bulkUploadCourses = async (
         };
         if (!courseData.name) {
           result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
+          result.summary.failed++;
           continue;
         }
         // Insert the course
         const [newCourse] = await db.insert(courseModel).values(courseData).returning();
         result.success.push(newCourse);
+        result.summary.successful++;
       } catch (error: unknown) {
+        console.error(`Error processing row ${rowNumber}:`, error);
         result.errors.push({ row: rowNumber, data: row, error: error instanceof Error ? error.message : "Unknown error" });
+        result.summary.failed++;
       }
       if (io && uploadSessionId) {
         io.to(uploadSessionId).emit("bulk-upload-progress", {

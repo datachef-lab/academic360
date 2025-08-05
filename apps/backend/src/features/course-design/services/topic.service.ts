@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { topicModel, createTopicSchema, Topic } from "@/features/course-design/models/topic.model.js";
-import { and, eq, ilike } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import { Topic, topicModel } from "../models/topic.model.js";
+import { eq } from "drizzle-orm";
+import XLSX from "xlsx";
 import fs from "fs";
 
 export interface BulkUploadResult {

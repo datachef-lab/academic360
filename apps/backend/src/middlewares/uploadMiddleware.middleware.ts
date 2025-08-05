@@ -2,13 +2,20 @@ import multer from "multer";
 import path from "path";
 import { Request, Response, NextFunction } from "express";
 import { fileURLToPath } from "url";
+import fs from "fs";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
+
+const tempDir = path.join(directoryName, "../../public/temp");
+
+if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+}
 
 // Define storage settings
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, path.join(directoryName, "../../public/temp")); // Save files in /public/temp
+        cb(null, tempDir); // Save files in /public/temp
     },
     filename: (req, file, cb) => {
         const ext = path.extname(file.originalname);

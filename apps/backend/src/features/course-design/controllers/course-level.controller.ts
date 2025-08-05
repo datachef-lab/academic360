@@ -29,6 +29,7 @@ export const bulkUploadCourseLevels = async (req: Request, res: Response) => {
     if (!req.file) {
       return res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
     }
+    console.log("Uploaded file path:", req.file.path);
     const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
     const io = socketService.getIO();
     const result = await bulkUploadCourseLevelsService(req.file.path, io, uploadSessionId);

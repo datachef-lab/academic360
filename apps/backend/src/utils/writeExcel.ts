@@ -1,6 +1,7 @@
-import * as XLSX from "xlsx";
-import * as fs from "fs";
-import * as path from "path";
+import XLSX from "xlsx";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 
 interface ExcelRow {
     error?: string;

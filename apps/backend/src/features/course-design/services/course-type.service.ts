@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { courseTypeModel, createCourseTypeModel, CourseType } from "@/features/course-design/models/course-type.model.js";
+import { CourseType, courseTypeModel } from "../models/course-type.model.js";
 import { eq, ilike } from "drizzle-orm";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 
 // Bulk upload interface

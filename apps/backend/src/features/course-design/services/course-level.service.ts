@@ -3,7 +3,7 @@ import { CourseLevel, courseLevelModel } from "../models/course-level.model.js";
 import { eq, ilike } from "drizzle-orm";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";
-import * as XLSX from "xlsx";
+import XLSX from "xlsx";
 import fs from "fs";
 
 // Types
