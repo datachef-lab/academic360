@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle, Layers, Download, Upload } from "lucide-react";
 import React from "react";
 // import { CustomPaginationState } from "@/components/settings/SettingsContent";
+import { ProgressBar } from "@/components/common/Progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -40,6 +41,7 @@ const CourseTypesPage = () => {
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   React.useEffect(() => {
     setLoading(true);
@@ -108,8 +110,9 @@ const CourseTypesPage = () => {
     if (!bulkFile) return;
 
     setIsBulkUploading(true);
+    setUploadProgress(0);
     try {
-      const result = await bulkUploadCourseTypes(bulkFile);
+      const result = await bulkUploadCourseTypes(bulkFile, setUploadProgress);
       setBulkUploadResult(result);
 
       if (result.summary.successful > 0) {
@@ -258,6 +261,7 @@ const CourseTypesPage = () => {
                       className="w-full p-2 border rounded"
                     />
                   </div>
+                  {isBulkUploading && <ProgressBar progress={uploadProgress} />}
                   {bulkUploadResult && (
                     <div className="space-y-4 p-4 border rounded">
                       <h4 className="font-medium">Upload Results</h4>

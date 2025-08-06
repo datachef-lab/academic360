@@ -85,13 +85,19 @@ export const updateCourse = (id: number, data: Partial<Course>) => axiosInstance
 export const deleteCourse = (id: number) => axiosInstance.delete<Course>(`${BASE}/courses/${id}`);
 
 // Bulk upload courses
-export const bulkUploadCourses = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadCourses = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
 
     const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/courses/bulk-upload`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onUploadProgress(percentCompleted);
+            }
         },
     });
     return res.data.payload;
@@ -108,13 +114,19 @@ export const updateCourseType = (id: number, data: Partial<Omit<CourseType, 'id'
 export const deleteCourseType = (id: number) => axiosInstance.delete<CourseType>(`${BASE}/course-types/${id}`);
 
 // Bulk upload course types
-export const bulkUploadCourseTypes = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadCourseTypes = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
 
     const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/course-types/bulk-upload`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onUploadProgress(percentCompleted);
+            }
         },
     });
     return res.data.payload;
@@ -153,12 +165,18 @@ export const updateAffiliation = (id: number, data: Partial<Affiliation>) => axi
 export const deleteAffiliation = (id: number) => axiosInstance.delete<Affiliation>(`${BASE}/affiliations/${id}`);
 
 // Bulk upload affiliations
-export const bulkUploadAffiliations = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadAffiliations = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
     const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/affiliations/bulk-upload`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onUploadProgress(percentCompleted);
+            }
         },
     });
     return res.data.payload;
@@ -175,12 +193,18 @@ export const updateAffiliationType = (id: number, data: Partial<AffiliationType>
 export const deleteAffiliationType = (id: number) => axiosInstance.delete<AffiliationType>(`${BASE}/affiliation-types/${id}`);
 
 // Bulk upload affiliation types
-export const bulkUploadAffiliationTypes = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadAffiliationTypes = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
     const formData = new FormData();
     formData.append('file', file);
     const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/affiliation-types/bulk-upload`, formData, {
         headers: {
             'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+                const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                onUploadProgress(percentCompleted);
+            }
         },
     });
     return res.data.payload;

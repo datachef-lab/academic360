@@ -8,6 +8,7 @@ import { PlusCircle, Sliders, Download, Upload, Edit, Trash2 } from "lucide-reac
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import { ProgressBar } from "@/components/common/Progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -16,7 +17,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { CourseLevel, getAllCourseLevels, createCourseLevel, updateCourseLevel, deleteCourseLevel, bulkUploadCourseLevels, BulkUploadResult } from "@/services/course-level.api";
+import {
+  CourseLevel,
+  getAllCourseLevels,
+  createCourseLevel,
+  updateCourseLevel,
+  deleteCourseLevel,
+  bulkUploadCourseLevels,
+  BulkUploadResult,
+} from "@/services/course-level.api";
 import * as XLSX from "xlsx";
 
 const CourseLevelsPage = () => {
@@ -31,17 +40,18 @@ const CourseLevelsPage = () => {
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   React.useEffect(() => {
     setLoading(true);
     getAllCourseLevels()
-      .then(res => {
+      .then((res) => {
         const courseLevelsData = Array.isArray(res) ? res : [];
         setCourseLevels(courseLevelsData);
         setError(null);
       })
       .catch((error) => {
-        console.error('Error fetching course levels:', error);
+        console.error("Error fetching course levels:", error);
         setError("Failed to fetch course levels");
         setCourseLevels([]);
       })
@@ -56,7 +66,7 @@ const CourseLevelsPage = () => {
   const handleDelete = async (id: number) => {
     try {
       await deleteCourseLevel(id);
-      setCourseLevels(prev => prev.filter(cl => cl.id !== id));
+      setCourseLevels((prev) => prev.filter((cl) => cl.id !== id));
       toast.success("Course level deleted successfully");
     } catch {
       toast.error("Failed to delete course level");
@@ -97,25 +107,25 @@ const CourseLevelsPage = () => {
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
-    
+
     setIsBulkUploading(true);
+    setUploadProgress(0);
     try {
-      const result = await bulkUploadCourseLevels(bulkFile);
+      const result = await bulkUploadCourseLevels(bulkFile, setUploadProgress);
       setBulkUploadResult(result);
-      
+
       if (result.summary.successful > 0) {
         toast.success(`Successfully uploaded ${result.summary.successful} course levels`);
         // Re-fetch the list to show new data
         const freshCourseLevels = await getAllCourseLevels();
         setCourseLevels(Array.isArray(freshCourseLevels) ? freshCourseLevels : []);
       }
-      
+
       if (result.summary.failed > 0) {
         toast.error(`${result.summary.failed} course levels failed to upload`);
       }
-      
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -129,16 +139,16 @@ const CourseLevelsPage = () => {
         Name: "Bachelor of Science",
         "Short Name": "BSc",
         Sequence: 1,
-        Status: "Active"
+        Status: "Active",
       },
       {
-        Name: "Master of Science", 
+        Name: "Master of Science",
         "Short Name": "MSc",
         Sequence: 2,
-        Status: "Active"
-      }
+        Status: "Active",
+      },
     ];
-    
+
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Course Levels Template");
@@ -148,7 +158,7 @@ const CourseLevelsPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getAllCourseLevels();
-      const data = res.map(level => ({
+      const data = res.map((level) => ({
         ID: level.id,
         Name: level.name,
         "Short Name": level.shortName || "-",
@@ -184,27 +194,28 @@ const CourseLevelsPage = () => {
         "Row Number": error.row,
         "Error Message": error.error,
         "Original Data": JSON.stringify(error.data),
-        "Name": (error.data as unknown as string[])[0] || "",
+        Name: (error.data as unknown as string[])[0] || "",
         "Short Name": (error.data as unknown as string[])[1] || "",
-        "Sequence": (error.data as unknown as string[])[2] || "",
-        "Status": (error.data as unknown as string[])[3] || ""
+        Sequence: (error.data as unknown as string[])[2] || "",
+        Status: (error.data as unknown as string[])[3] || "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Course Levels");
       XLSX.writeFile(wb, "failed-course-levels-upload.xlsx");
-      
+
       toast.success("Failed data downloaded successfully");
     } catch {
       toast.error("Failed to download error data");
     }
   };
 
-  const filteredCourseLevels = (Array.isArray(courseLevels) ? courseLevels : []).filter((level) =>
-    (level.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (level.shortName ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (level.sequence?.toString() ?? '').includes(searchText.toLowerCase())
+  const filteredCourseLevels = (Array.isArray(courseLevels) ? courseLevels : []).filter(
+    (level) =>
+      (level.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (level.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (level.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
 
   return (
@@ -240,16 +251,18 @@ const CourseLevelsPage = () => {
                       Download the template to see the required format
                     </span>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Upload Excel File</label>
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full p-2 border rounded"
                     />
                   </div>
+
+                  {isBulkUploading && <ProgressBar progress={uploadProgress} />}
 
                   {bulkUploadResult && (
                     <div className="space-y-4 p-4 border rounded">
@@ -265,39 +278,30 @@ const CourseLevelsPage = () => {
                           <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
                         </div>
                       </div>
-                      
-                                             {bulkUploadResult.errors.length > 0 && (
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <h5 className="font-medium text-red-600">Errors:</h5>
-                             <Button 
-                               variant="outline" 
-                               size="sm" 
-                               onClick={handleDownloadFailedData}
-                               className="text-xs"
-                             >
-                               <Download className="mr-1 h-3 w-3" />
-                               Download Failed Data
-                             </Button>
-                           </div>
-                           <div className="max-h-40 overflow-y-auto space-y-1">
-                             {bulkUploadResult.errors.map((error, index) => (
-                               <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                 <span className="font-medium">Row {error.row}:</span> {error.error}
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       )}
+
+                      {bulkUploadResult.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium text-red-600">Errors:</h5>
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
+                              <Download className="mr-1 h-3 w-3" />
+                              Download Failed Data
+                            </Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {bulkUploadResult.errors.map((error, index) => (
+                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                <span className="font-medium">Row {error.row}:</span> {error.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button variant="outline" onClick={handleCloseBulkUpload}>
@@ -316,7 +320,9 @@ const CourseLevelsPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedCourseLevel ? "Edit Course Level" : "Add New Course Level"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedCourseLevel ? "Edit Course Level" : "Add New Course Level"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <CourseLevelForm
                   initialData={selectedCourseLevel}
@@ -330,36 +336,47 @@ const CourseLevelsPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>ID</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 200, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                      <TableCell colSpan={6} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
                     </TableRow>
                   ) : filteredCourseLevels.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No course levels found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        No course levels found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredCourseLevels.map((level) => (

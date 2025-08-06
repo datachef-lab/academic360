@@ -54,13 +54,19 @@ export const deleteCourseLevel = async (id: number): Promise<{ success: boolean 
   return res.data;
 };
 
-export const bulkUploadCourseLevels = async (file: File): Promise<BulkUploadResult> => {
+export const bulkUploadCourseLevels = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append('file', file);
   
   const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
+    },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onUploadProgress(percentCompleted);
+      }
     },
   });
   return res.data.payload;

@@ -88,6 +88,7 @@ import {
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
+import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
 import {
   streamRouter,
   courseTypeRouter,
@@ -364,6 +365,7 @@ app.use("/api/course-design/course-levels", courseLevelRouter);
 app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
 app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+app.use("/api/bulk-upload", bulkUploadRouter);
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404);

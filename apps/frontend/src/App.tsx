@@ -1,6 +1,7 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import {  LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
+import { LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
+import BulkUploadPage from "@/pages/BulkUpload";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -282,6 +283,7 @@ const router = createBrowserRouter([
       { path: "settings", element: <SettingsMasterPage /> },
 
       { path: "profile", element: <UserProfilePage /> },
+      { path: "bulk-upload", element: <BulkUploadPage /> },
     ],
   },
   { path: "*", element: <NotFoundPage /> },

@@ -10,6 +10,7 @@
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Download, Upload, Library } from "lucide-react";
 import React from "react";
+import { ProgressBar } from "@/components/common/Progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -46,6 +47,7 @@ const CoursesPage = () => {
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   React.useEffect(() => {
     setLoading(true);

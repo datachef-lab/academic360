@@ -7,6 +7,7 @@ import { PlusCircle, Landmark, Download, Upload, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import { ProgressBar } from "@/components/common/Progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -31,6 +32,7 @@ const AffiliationTypesPage = () => {
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
 
   React.useEffect(() => {
     fetchAffiliationTypes();
@@ -90,8 +92,9 @@ const AffiliationTypesPage = () => {
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
     setIsBulkUploading(true);
+    setUploadProgress(0);
     try {
-      const result = await bulkUploadAffiliationTypes(bulkFile);
+      const result = await bulkUploadAffiliationTypes(bulkFile, setUploadProgress);
       setBulkUploadResult(result);
       if (result.summary.successful > 0) {
         toast.success(`Successfully uploaded ${result.summary.successful} affiliation types`);
@@ -237,6 +240,7 @@ const AffiliationTypesPage = () => {
                       className="w-full p-2 border rounded"
                     />
                   </div>
+                  {isBulkUploading && <ProgressBar progress={uploadProgress} />}
                   {bulkUploadResult && (
                     <div className="space-y-4 p-4 border rounded">
                       <h4 className="font-medium">Upload Results</h4>
