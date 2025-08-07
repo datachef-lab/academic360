@@ -1,16 +1,18 @@
 import bcrypt from "bcrypt";
-import { eq, count, desc, or, ilike } from "drizzle-orm";
+import { eq, count, desc, or, ilike, and } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { User, userModel } from "../models/user.model.js";
 import { PayloadType, UserType } from "@/types/user/user.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { findStudentById, findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
+import { userTypeEnum } from "../models/helper.js";
+import { number } from "zod";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database
     let hashedPassword = await bcrypt.hash(user.password, 10)
-    
+
     user.password = hashedPassword;
 
     // Create a new user
@@ -22,38 +24,46 @@ export async function addUser(user: User) {
 }
 
 export async function findAllUsers(
-    page: number = 1, 
+    page: number = 1,
     pageSize: number = 10,
-    isAdminCheck: boolean = false
+    isAdminCheck: boolean = false,
+    type?: typeof userTypeEnum.enumValues[number]
 ): Promise<PaginatedResponse<UserType>> {
     // Use proper Drizzle eq condition
-    const whereCondition = isAdminCheck ? eq(userModel.type, "ADMIN") : undefined;
+    const whereCondition = [];
 
-    const usersResponse = await findAll<UserType>(
-        userModel, 
-        page, 
-        pageSize,
-        "id", 
-        whereCondition 
-    );
+    if (type) {
+        whereCondition.push(eq(userModel.type, type));
+    }
+
+    if (isAdminCheck) {
+        whereCondition.push(eq(userModel.type, "ADMIN"));
+    };
+
+    const usersResponse = await db
+        .select()
+        .from(userModel)
+        .where(and(...whereCondition))
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
 
     // Await Promise.all to resolve async operations
-    const content = await Promise.all(usersResponse.content.map(async (user) => {
+    const content = await Promise.all(usersResponse.map(async (user) => {
         return await userResponseFormat(user);
     })) as UserType[];
 
     // Count should use the same where condition
-    const countQuery = whereCondition
-        ? db.select({ count: count() }).from(userModel).where(whereCondition)
-        : db.select({ count: count() }).from(userModel);
-    const [{ count: countRows }] = await countQuery;
+    // const countQuery = whereCondition
+    //     ? db.select({ count: count() }).from(userModel).where(...whereCondition)
+    //     : db.select({ count: count() }).from(userModel);
+    // const [{ count: countRows }] = await countQuery;
 
     return {
         content,
         page,
         pageSize,
-        totalElements: Number(countRows),
-        totalPages: Math.ceil(Number(countRows) / pageSize)
+        totalElements: 0,
+        totalPages: Math.ceil(Number(0) / pageSize)
     };
 }
 

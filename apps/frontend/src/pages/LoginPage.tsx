@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import bhawanipurImg from "@/assets/bhawanipurImg.jpeg";
 // import bescLogo from "@/assets/logo.png";
 // import bescLogo from "@/assets/logo.png";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { login } from "@/services/auth";
@@ -50,6 +50,8 @@ const LoginPage = () => {
 
     loginMutation.mutate(credential);
   };
+
+  const handleGoogleLogin = async () => {};
 
   return (
     <div className="h-screen flex items-center justify-center">
@@ -182,19 +184,23 @@ const LoginPage = () => {
               <p>Or</p>
               <DottedSeparator />
             </div>
-            <Button variant="outline" className="cursor-pointer w-full">
-              <FcGoogle />
+            <a
+              href={`${import.meta.env.VITE_APP_BACKEND_URL!}/auth/google`}
+              className="cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center border p-2"
+              onClick={handleGoogleLogin}
+            >
+              <FcGoogle className="size-8" />
               Continue with Google
-            </Button>
+            </a>
 
             <p className="text-sm text-center text-purple-200 md:text-gray-500 lg:text-gray-500">
               Don't have an account?{" "}
-              <a
-                href="#"
+              <Link
+                to="#"
                 className="text-white hover:text-purple-200 lg:text-purple-600 lg:hover:text-purple-700 md:text-purple-600 md:hover:text-purple-700 transition-colors"
               >
                 Contact administration
-              </a>
+              </Link>
             </p>
           </div>
         </Card>

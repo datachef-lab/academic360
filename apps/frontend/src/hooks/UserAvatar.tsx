@@ -25,9 +25,9 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
 
     <Avatar className={`${sizeClasses[size]}  drop-shadow-xl overflow-hidden ${className}`}>
-      {user?.avatar ? (
+      {user?.image ? (
         <AvatarImage 
-          src={user.avatar} 
+          src={user.image} 
           alt={user.name || 'User avatar'}
           className="object-cover transition-transform duration-200 hover:scale-105" // ✅ smooth hover effect
         />
