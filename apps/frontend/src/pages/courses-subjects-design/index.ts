@@ -3,7 +3,6 @@ import StreamsPage from "./streams";
 import CoursesPage from "./courses";
 import CourseTypesPage from "./course-types";
 import CourseLevelsPage from "./course-levels";
-import AffiliationTypesPage from "./affiliation-types";
 import RegulationTypesPage from "./regulation-types";
 import SubjectsPage from "./subjects";
 import SubjectCategoriesPage from "./subject-categories";
@@ -19,7 +18,7 @@ export {
     CoursesPage,
     CourseTypesPage,
     CourseLevelsPage,
-    AffiliationTypesPage,
+
     RegulationTypesPage,
     SubjectsPage,
     SubjectCategoriesPage,

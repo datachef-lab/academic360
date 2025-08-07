@@ -83,7 +83,6 @@ const router = createBrowserRouter([
           { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
           { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
           { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
-          { path: "affiliation-types", element: <courseSubjectModule.AffiliationTypesPage /> },
           { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
           { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
           { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },

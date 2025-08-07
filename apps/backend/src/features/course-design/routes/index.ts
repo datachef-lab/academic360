@@ -5,7 +5,6 @@ import paperRouter from "./paper.route.js";
 import topicRouter from "./topic.route.js";
 import streamRouter from "./stream.routes.js";
 import affiliationRouter from "./affiliation.routes.js";
-import affiliationTypeRouter from "./affiliation-type.routes.js";
 import regulationTypeRouter from "./regulation-type.routes.js";
 import programCourseRouter from "./program-course.routes.js";
 import courseTypeRouter from "./course-type.route.js";
@@ -22,7 +21,7 @@ export {
   streamRouter,
   subjectTypeRouter,
   affiliationRouter,
-  affiliationTypeRouter,
+
   regulationTypeRouter,
   programCourseRouter,
   courseTypeRouter,

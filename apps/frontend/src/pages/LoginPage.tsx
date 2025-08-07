@@ -12,6 +12,8 @@ import { motion } from "framer-motion";
 import { login } from "@/services/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import DottedSeparator from "@/components/ui/dotted-separator";
+import { FcGoogle } from "react-icons/fc";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -51,33 +53,7 @@ const LoginPage = () => {
 
   return (
     <div className="h-screen flex items-center justify-center">
-      <div className="w-1/2 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900 h-full relative shadow-2xl overflow-hidden flex flex-col gap-3 items-center">
-        <div className="absolute inset-0">
-          <motion.div
-            animate={{
-              scale: [1, 1.1, 1],
-              rotate: [0, 180, 360],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-full blur-2xl"
-          />
-          <motion.div
-            animate={{
-              scale: [1, 0.9, 1],
-              rotate: [360, 180, 0],
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            className="absolute bottom-32 left-20 w-24 h-24 bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-full blur-2xl"
-          />
-        </div>
+      <div className="w-1/2 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900 h-full relative shadow-2xl overflow-hidden flex flex-col gap-8 items-center">
         <div className="flex gap-4 bg w-full">
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
@@ -99,7 +75,7 @@ const LoginPage = () => {
             </div>
           </motion.div>
         </div>
-        <Card className="w-3/4">
+        <Card className="w-[70%]">
           <CardHeader>
             <CardTitle>
               <div className="flex items-center justify-center gap-3 mb-4">
@@ -119,10 +95,11 @@ const LoginPage = () => {
               </div>
             </CardTitle>
             <h3 className="font-extrabold text-center text-3xl">Welcome Back!</h3>
-            <p>Please login to continue</p>
+            <p className="text-center">Please login to continue</p>
+            <DottedSeparator />
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-rows-[auto_auto_1fr_auto] gap-6">
+          <CardContent className="">
+            <form onSubmit={handleSubmit} className="grid gap-6">
               <div className="grid gap-5">
                 <div className="space-y-2">
                   <label htmlFor="email" className="text-sm font-medium text-white lg:text-gray-700">
@@ -143,7 +120,6 @@ const LoginPage = () => {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <div className="flex justify-between items-center mb-2">
                     <label
@@ -198,19 +174,32 @@ const LoginPage = () => {
                   {loginMutation.isLoading ? "Signing in..." : "Sign in"}
                 </Button>
               </div>
-
-              <p className="text-sm text-center text-purple-200 md:text-gray-500 lg:text-gray-500">
-                Don't have an account?{" "}
-                <a
-                  href="#"
-                  className="text-white hover:text-purple-200 lg:text-purple-600 lg:hover:text-purple-700 md:text-purple-600 md:hover:text-purple-700 transition-colors"
-                >
-                  Contact administration
-                </a>
-              </p>
             </form>
           </CardContent>
+          <div className="w-full flex flex-col items-center gap-6 pb-6 px-7">
+            <div className="flex">
+              <DottedSeparator />
+              <p>Or</p>
+              <DottedSeparator />
+            </div>
+            <Button variant="outline" className="cursor-pointer w-full">
+              <FcGoogle />
+              Continue with Google
+            </Button>
+
+            <p className="text-sm text-center text-purple-200 md:text-gray-500 lg:text-gray-500">
+              Don't have an account?{" "}
+              <a
+                href="#"
+                className="text-white hover:text-purple-200 lg:text-purple-600 lg:hover:text-purple-700 md:text-purple-600 md:hover:text-purple-700 transition-colors"
+              >
+                Contact administration
+              </a>
+            </p>
+          </div>
         </Card>
+
+        <p className="text-white absolute bottom-0 pb-4">All Rights Reserved. @2025</p>
       </div>
       <div className="w-1/2 h-full">
         <img src={bhawanipurImg} alt="Background" className="w-full h-full object-cover" />

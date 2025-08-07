@@ -38,7 +38,7 @@ export async function createPaper(data: PaperDto) {
             and(
                 eq(paperModel.code, data.code),
                 eq(paperModel.subjectId, data.subjectId!),
-                eq(paperModel.courseId, data.courseId!),
+                eq(paperModel.programCourseId, data.programCourseId!),
                 eq(paperModel.classId, data.classId!),
                 eq(paperModel.affiliationId, data.affiliationId),
                 eq(paperModel.regulationTypeId, data.regulationTypeId),
@@ -55,7 +55,7 @@ export async function createPaper(data: PaperDto) {
                 affiliationId: data.affiliationId,
                 regulationTypeId: data.regulationTypeId,
                 academicYearId: data.academicYearId!,
-                courseId: data.courseId!,
+                programCourseId: data.programCourseId!,
                 classId: data.classId!,
             })
             .returning();
@@ -85,7 +85,7 @@ export async function createPapers(data: PaperDto[]) {
                 and(
                     eq(paperModel.code, paper.code),
                     eq(paperModel.subjectId, paper.subjectId!),
-                    eq(paperModel.courseId, paper.courseId!),
+                    eq(paperModel.programCourseId, paper.programCourseId!),
                     eq(paperModel.classId, paper.classId!),
                     eq(paperModel.affiliationId, paper.affiliationId),
                     eq(paperModel.regulationTypeId, paper.regulationTypeId),
@@ -180,7 +180,7 @@ export async function updatePaperWithComponents(id: number, data: Omit<PaperDto,
             regulationTypeId: data.regulationTypeId,
             academicYearId: data.academicYearId,
             subjectTypeId: data.subjectTypeId,
-            courseId: data.courseId,
+            programCourseId: data.programCourseId,
             classId: classRecord.id,
             disabled: data.disabled,
         })

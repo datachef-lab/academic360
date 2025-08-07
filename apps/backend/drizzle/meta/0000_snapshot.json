@@ -1,5 +1,5 @@
 {
-  "id": "9a8eb3fe-ccd7-42fb-9684-0ce01c20c4e1",
+  "id": "d81b126a-72f0-4a61-917e-9af0624a3962",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -3210,8 +3210,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "course_id_fk": {
-          "name": "course_id_fk",
+        "programe_course_id_fk": {
+          "name": "programe_course_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -3336,12 +3336,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "papers_course_id_fk_courses_id_fk": {
-          "name": "papers_course_id_fk_courses_id_fk",
+        "papers_programe_course_id_fk_program_courses_id_fk": {
+          "name": "papers_programe_course_id_fk_program_courses_id_fk",
           "tableFrom": "papers",
-          "tableTo": "courses",
+          "tableTo": "program_courses",
           "columnsFrom": [
-            "course_id_fk"
+            "programe_course_id_fk"
           ],
           "columnsTo": [
             "id"

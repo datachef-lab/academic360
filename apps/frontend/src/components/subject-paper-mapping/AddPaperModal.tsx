@@ -1,5 +1,13 @@
 import { Class } from "@/types/academics/class";
-import { Affiliation, Course, ExamComponent, Paper, RegulationType, Subject, SubjectType } from "@/types/course-design";
+import {
+  Affiliation,
+  ExamComponent,
+  Paper,
+  ProgramCourse,
+  RegulationType,
+  Subject,
+  SubjectType,
+} from "@/types/course-design";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -22,7 +30,7 @@ interface AddModalProps {
     subjectTypes: SubjectType[];
     examComponents: ExamComponent[];
     academicYears: AcademicYear[];
-    courses: Course[];
+    programCourses: ProgramCourse[];
     classes: Class[];
   };
 }
@@ -38,7 +46,7 @@ export default function AddPaperModal({
     subjectTypes,
     examComponents,
     academicYears,
-    courses,
+    programCourses,
     classes,
   },
 }: AddModalProps) {
@@ -49,8 +57,8 @@ export default function AddPaperModal({
     regulationTypeId: 0, // No default value
     subjectTypeId: 0, // No default value
     academicYearId: 0, // No default value
-    courseId: 0, // No default value
-    classIds: [], // Allow multiple semesters/classes
+    programCourseId: 0, // No default value
+    classId: 0, // Allow multiple semesters/classes
     components: examComponents.map((examComponent) => ({
       paperId: 0, // This will be set when the paper is created
       examComponent,
@@ -83,8 +91,9 @@ export default function AddPaperModal({
       const paper = papers[i];
       if (
         !paper.subjectTypeId ||
-        !paper.courseId ||
-        !paper.classIds || paper.classIds.length === 0 ||
+        !paper.programCourseId ||
+        !paper.classId ||
+        paper.classId === 0 ||
         !paper.name ||
         paper.name?.trim() === "" ||
         !paper.code ||
@@ -248,10 +257,14 @@ export default function AddPaperModal({
             className="ml-2"
             onClick={handleAddPaper}
             disabled={
-              !papers[0].subjectId || papers[0].subjectId === 0 ||
-              !papers[0].affiliationId || papers[0].affiliationId === 0 ||
-              !papers[0].regulationTypeId || papers[0].regulationTypeId === 0 ||
-              !papers[0].academicYearId || papers[0].academicYearId === 0
+              !papers[0].subjectId ||
+              papers[0].subjectId === 0 ||
+              !papers[0].affiliationId ||
+              papers[0].affiliationId === 0 ||
+              !papers[0].regulationTypeId ||
+              papers[0].regulationTypeId === 0 ||
+              !papers[0].academicYearId ||
+              papers[0].academicYearId === 0
             }
           >
             Add Paper
@@ -372,38 +385,39 @@ export default function AddPaperModal({
 
                 <div className="w-48 p-2 border-r border-black">
                   <Select
-                    value={field.courseId ? field.courseId.toString() : ""}
+                    value={field.programCourseId ? field.programCourseId.toString() : ""}
                     onValueChange={(value) => {
-                      update(paperIndex, { ...field, courseId: Number(value) });
+                      update(paperIndex, { ...field, programCourseId: Number(value) });
                     }}
                   >
                     <SelectTrigger className="w-full border-0 p-1 h-8 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500">
                       <SelectValue placeholder="Select Course" />
                     </SelectTrigger>
                     <SelectContent>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id!.toString()}>
-                          {course.name}
+                      {programCourses.map((programCourse) => (
+                        <SelectItem key={programCourse.id} value={programCourse.id!.toString()}>
+                          {programCourse.courseId}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="w-24 max-w-[120px] p-2 border-r border-black flex items-center justify-center overflow-hidden">
+                <div className="w-24 p-1 border-r border-black flex items-center justify-center overflow-hidden">
                   <MultiSelect
                     options={classes.map((classItem) => ({
                       label: classItem.name,
                       value: classItem.id?.toString() || "",
                     }))}
-                    value={field.classIds ? field.classIds.map(String) : []}
-                    onValueChange={(selected: string[]) => {
-                      update(paperIndex, {
-                        ...field,
-                        classIds: selected.map(Number),
-                      });
-                    }}
-                    placeholder="Select Semester"
+                    value={field.classId ? field.classId : ""}
+                    // onValueChange={(selected: string[]) => {
+                    //   update(paperIndex, {
+                    //     ...field,
+                    //     classId: 0,
+                    //   });
+                    // }}
+                    onValueChange={() => {}}
+                    placeholder="Select Sems."
                   />
                 </div>
 
@@ -416,7 +430,7 @@ export default function AddPaperModal({
                     placeholder="Paper Name"
                     rows={1}
                     className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words"
-                    style={{ minHeight: '2rem', maxHeight: '6rem', overflow: 'auto' }}
+                    style={{ minHeight: "2rem", maxHeight: "6rem", overflow: "auto" }}
                   />
                 </div>
 
@@ -520,7 +534,11 @@ export default function AddPaperModal({
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700" disabled={isLoading || papers.length === 0}>
+        <Button
+          type="submit"
+          className="bg-blue-600 text-white hover:bg-blue-700"
+          disabled={isLoading || papers.length === 0}
+        >
           {isLoading ? "Saving..." : "Save Mapping"}
         </Button>
       </div>

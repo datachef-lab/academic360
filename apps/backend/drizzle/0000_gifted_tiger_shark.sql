@@ -453,7 +453,7 @@ CREATE TABLE "papers" (
 	"regulation_type_id_fk" integer NOT NULL,
 	"academic_year_id_fk" integer NOT NULL,
 	"subject_type_id_fk" integer NOT NULL,
-	"course_id_fk" integer NOT NULL,
+	"programe_course_id_fk" integer NOT NULL,
 	"class_id_fk" integer NOT NULL,
 	"name" varchar(500) NOT NULL,
 	"code" varchar(255) NOT NULL,
@@ -1134,7 +1134,7 @@ ALTER TABLE "papers" ADD CONSTRAINT "papers_affiliation_id_fk_affiliations_id_fk
 ALTER TABLE "papers" ADD CONSTRAINT "papers_regulation_type_id_fk_regulation_types_id_fk" FOREIGN KEY ("regulation_type_id_fk") REFERENCES "public"."regulation_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_subject_type_id_fk_subject_types_id_fk" FOREIGN KEY ("subject_type_id_fk") REFERENCES "public"."subject_types"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "papers" ADD CONSTRAINT "papers_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "papers" ADD CONSTRAINT "papers_programe_course_id_fk_program_courses_id_fk" FOREIGN KEY ("programe_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "program_courses" ADD CONSTRAINT "program_courses_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

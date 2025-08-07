@@ -54,11 +54,6 @@ const masterLinks = [
     icon: Shield, 
   },
   {
-    title: "Affiliation Types",
-    url: "/dashboard/courses-subjects-design/affiliation-types",
-    icon: Shield,
-  },
-  {
     title: "Regulation Types",
     url: "/dashboard/courses-subjects-design/regulation-types",
     icon: GraduationCap,

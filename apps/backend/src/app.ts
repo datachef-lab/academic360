@@ -97,7 +97,6 @@ import {
   affiliationRouter,
   courseLevelRouter,
   subjectTypeRouter,
-  affiliationTypeRouter,
   regulationTypeRouter,
   programCourseRouter,
   examComponentRouter,
@@ -356,7 +355,6 @@ app.use("/api/course-design/papers", paperRouter);
 app.use("/api/course-design/topics", topicRouter);
 app.use("/api/course-design/streams", streamRouter);
 app.use("/api/course-design/affiliations", affiliationRouter);
-app.use("/api/course-design/affiliation-types", affiliationTypeRouter);
 app.use("/api/course-design/regulation-types", regulationTypeRouter);
 app.use("/api/course-design/program-courses", programCourseRouter);
 app.use("/api/course-design/course-types", courseTypeRouter);

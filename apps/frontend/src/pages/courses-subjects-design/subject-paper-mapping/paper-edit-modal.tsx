@@ -93,7 +93,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           affiliationId: undefined,
           regulationTypeId: undefined,
           academicYearId: undefined,
-          courseId: undefined,
+          programCourseId: undefined,
           subjectTypeId: undefined,
           classId: undefined,
           code: "",
@@ -300,8 +300,8 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                   <div>
                     <Label htmlFor="courseId">Course</Label>
                     <Select
-                      value={form.courseId !== undefined && form.courseId !== null ? form.courseId.toString() : ""}
-                      onValueChange={(value) => handleChange("courseId", Number(value))}
+                      value={form.programCourseId !== undefined && form.programCourseId !== null ? form.programCourseId.toString() : ""}
+                      onValueChange={(value) => handleChange("programCourseId", Number(value))}
                     >
                       <SelectTrigger className="mt-1">
                         <SelectValue placeholder="Select course" />

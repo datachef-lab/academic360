@@ -6,10 +6,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 export async function getAllCoursesHandler(req: Request, res: Response): Promise<void> {
     try {
         const courses = await findAllCourses();
-        if (!courses || courses.length === 0) {
-            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "No courses found"));
-            return;
-        }
+        
         res.status(200).json(new ApiResponse(200, "SUCCESS", courses, "Courses fetched successfully"));
         return;
     } catch (error) {

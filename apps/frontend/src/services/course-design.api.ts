@@ -2,7 +2,7 @@
 import axiosInstance from '@/utils/api';
 import {
     Paper,
-        // PaperWithDetails,
+    // PaperWithDetails,
     PaperComponent,
     Subject,
     Course,
@@ -244,7 +244,7 @@ export const updatePaperWithComponents = (paperId: number, data: {
     affiliationId: number;
     regulationTypeId: number;
     academicYearId: number;
-    courseId: number;
+    programCourseId: number;
     subjectTypeId: number;
     classId: number;
     code: string;
