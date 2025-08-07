@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { User } from "@/types/user/user";
-import { Pencil } from "lucide-react";
 import { FaEdit } from "react-icons/fa";
 
 interface Props {

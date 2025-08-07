@@ -69,7 +69,8 @@ export function AddUserModal({ onAdd }: AddUserModalProps) {
               key={field}
               placeholder={field}
               name={field}
-              value={(formData as any)[field]}
+              value={formData && typeof formData === 'object' && field in formData ? (formData as Record<string, string | number | null>)[field] ?? '' : ''}
+
               onChange={handleChange}
             />
           ))}

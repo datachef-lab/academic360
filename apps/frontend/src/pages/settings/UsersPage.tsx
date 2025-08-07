@@ -20,7 +20,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     findAllUsers(page, 10, "ADMIN").then((data) => setUsers(data.payload.content));
-  }, []);
+  }, [page]);
 
   const handleAddUser = (newUserData: Omit<User, "id" | "createdAt" | "updatedAt" | "disabled">) => {
     const newUser: User = {
