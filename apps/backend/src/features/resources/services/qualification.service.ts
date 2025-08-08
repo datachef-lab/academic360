@@ -1,6 +1,36 @@
 import { db } from "@/db/index.js";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { Qualification, qualificationModel } from "@/features/resources/models/qualification.model.js";
+
+export const loadQualifications = async () => {
+    const qualifications = [
+      { name: "Graduate", sequence: 1 },
+      { name: "Professional Graduate (like MBA/BE/MBBS/LLB/CA/CS)", sequence: 2 },
+      { name: "Under Graduate", sequence: 3 },
+      { name: "Post Graduate", sequence: 4 },
+      { name: "Professional Post-graduate (like M.Tech/MD/PhD)", sequence: 5 },
+      { name: "Other", sequence: 6 },
+      { name: "Class VIII", sequence: 7 },
+      { name: "Class X Passed", sequence: 8 },
+      { name: "Class XII Passed", sequence: 9 },
+    ];
+  
+    for (const qual of qualifications) {
+      const existing = await db
+        .select()
+        .from(qualificationModel)
+        .where(ilike(qualificationModel.name, qual.name));
+  
+      if (!existing.length) {
+        await db.insert(qualificationModel).values({
+          name: qual.name,
+          sequence: qual.sequence,
+        });
+      }
+    }
+  
+    console.log("Qualifications loaded successfully.");
+  };
 
 export async function addQualification(qualification: Qualification): Promise<Qualification | null> {
     const [newQualification] = await db.insert(qualificationModel).values(qualification).returning();

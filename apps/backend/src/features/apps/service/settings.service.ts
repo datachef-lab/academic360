@@ -1,6 +1,6 @@
 import { db } from "@/db/index";
 import { Settings, settingsModel } from "../models/settings.model";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, asc,  eq, ilike } from "drizzle-orm";
 import { settingsVariantEnum } from "@/features/user/models/helper";
 
 const SETTINGS_PATH= process.env.SETTINGS_PATH!;
@@ -45,7 +45,7 @@ export async function findAll(variant?: typeof settingsVariantEnum.enumValues[nu
         )
     }
 
-    return await db.select().from(settingsModel).where(and(...whereConditions));
+    return await db.select().from(settingsModel).where(and(...whereConditions)).orderBy(asc(settingsModel.id));
 }
 
 export async function findById(id: number) {
@@ -130,9 +130,10 @@ export async function getSettingFileService(idOrName: string) {
     if (!setting || setting.type !== "FILE") {
       return null;
     }
-  
-    const ext = path.extname(setting.name);
-    const filePath = path.join("uploads", `${setting.name}${ext}`);
+
+    const filePath = path.join(SETTINGS_PATH, `${setting.name}.jpeg`);
+
+    console.log(filePath);
     const contentType = mime.lookup(filePath) || "application/octet-stream";
   
     if (!fs.existsSync(filePath)) return null;

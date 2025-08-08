@@ -3,10 +3,11 @@ export type User = {
     name: string;
     email: string;
     phone: string;
+    password: string;
     whatsappNumber: string | undefined;
-    image: string | undefined;
-    type: "ADMIN" | "TEACHER" | "STUDENT";
+    image: string | null;
+    type: 'ADMIN' | 'STUDENT' | 'FACULTY' | 'STAFF' | 'PARENTS';
     disabled: boolean;
-    createdAt: Date | undefined;
-    updatedAt: Date | undefined;
+    createdAt?: Date | string;
+    updatedAt?: Date | string;
 }

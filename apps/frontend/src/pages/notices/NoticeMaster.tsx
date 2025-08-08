@@ -13,10 +13,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { QueryObserverResult } from "@tanstack/react-query";
 
 // Academic years for dropdown
-const academicYears = [
-  "2022-2023",
-  "2023-2024",
-  "2024-2025",
+const academicYears: string[] = [
+//   "2022-2023",
+//   "2023-2024",
+//   "2024-2025",
 ];
 
 type NoticeType = "EXAM" | "FEE" | "EVENT" | "HOLIDAY";
@@ -48,70 +48,70 @@ const typeColors: Record<NoticeType, string> = {
 };
 
 const initialNotices: Notice[] = [
-  {
-    id: 1,
-    title: "Spring Semester Final Exams",
-    description: "Final exams for the spring semester will be held from May 10 to May 20. Please check the schedule and prepare accordingly.",
-    type: "EXAM",
-    audience: "STUDENTS",
-    startDate: "2024-05-10",
-    endDate: "2024-05-20",
-    academicYear: "2023-2024",
-    pinned: false,
-    attachments: [
-      { type: "file", url: "/files/exam-schedule.pdf", name: "Exam Schedule.pdf" },
-    ],
-  },
-  {
-    id: 2,
-    title: "Tuition Payment Deadline",
-    description: "The last date to pay tuition fees is April 15. Late payments will incur a penalty.",
-    type: "FEE",
-    audience: "STUDENTS",
-    startDate: "2024-04-01",
-    endDate: "2024-04-15",
-    academicYear: "2023-2024",
-    pinned: false,
-    attachments: [
-      { type: "link", url: "https://payment.example.com", name: "Pay Online" },
-    ],
-  },
-  {
-    id: 3,
-    title: "Science Fair",
-    description: "Annual science fair for students and faculty. Submit your projects by March 1.",
-    type: "EVENT",
-    audience: "STUDENTS, FACULTY",
-    startDate: "2024-03-05",
-    endDate: "2024-03-05",
-    academicYear: "2023-2024",
-    pinned: true,
-    attachments: [
-      { type: "image", url: "/images/science-fair.jpg", name: "Poster" },
-    ],
-  },
-  {
-    id: 4,
-    title: "Summer Break Announcement",
-    description: "Summer break will be from July 1 to July 31. Enjoy your holidays!",
-    type: "HOLIDAY",
-    audience: "STUDENTS",
-    startDate: "2023-07-01",
-    endDate: "2023-07-31",
-    academicYear: "2022-2023",
-    pinned: false,
-  },
-  {
-    id: 5,
-    title: "Exam Schedule for Midterms",
-    description: "Midterm exams are scheduled from February 15 to February 25. Check the timetable for details.",
-    type: "EXAM",
-    audience: "STUDENTS",
-    startDate: "2023-02-15",
-    endDate: "2023-02-25",
-    academicYear: "2022-2023",
-    pinned: false,
-  },
+//   {
+//     id: 1,
+//     title: "Spring Semester Final Exams",
+//     description: "Final exams for the spring semester will be held from May 10 to May 20. Please check the schedule and prepare accordingly.",
+//     type: "EXAM",
+//     audience: "STUDENTS",
+//     startDate: "2024-05-10",
+//     endDate: "2024-05-20",
+//     academicYear: "2023-2024",
+//     pinned: false,
+//     attachments: [
+//       { type: "file", url: "/files/exam-schedule.pdf", name: "Exam Schedule.pdf" },
+//     ],
+//   },
+//   {
+//     id: 2,
+//     title: "Tuition Payment Deadline",
+//     description: "The last date to pay tuition fees is April 15. Late payments will incur a penalty.",
+//     type: "FEE",
+//     audience: "STUDENTS",
+//     startDate: "2024-04-01",
+//     endDate: "2024-04-15",
+//     academicYear: "2023-2024",
+//     pinned: false,
+//     attachments: [
+//       { type: "link", url: "https://payment.example.com", name: "Pay Online" },
+//     ],
+//   },
+//   {
+//     id: 3,
+//     title: "Science Fair",
+//     description: "Annual science fair for students and faculty. Submit your projects by March 1.",
+//     type: "EVENT",
+//     audience: "STUDENTS, FACULTY",
+//     startDate: "2024-03-05",
+//     endDate: "2024-03-05",
+//     academicYear: "2023-2024",
+//     pinned: true,
+//     attachments: [
+//       { type: "image", url: "/images/science-fair.jpg", name: "Poster" },
+//     ],
+//   },
+//   {
+//     id: 4,
+//     title: "Summer Break Announcement",
+//     description: "Summer break will be from July 1 to July 31. Enjoy your holidays!",
+//     type: "HOLIDAY",
+//     audience: "STUDENTS",
+//     startDate: "2023-07-01",
+//     endDate: "2023-07-31",
+//     academicYear: "2022-2023",
+//     pinned: false,
+//   },
+//   {
+//     id: 5,
+//     title: "Exam Schedule for Midterms",
+//     description: "Midterm exams are scheduled from February 15 to February 25. Check the timetable for details.",
+//     type: "EXAM",
+//     audience: "STUDENTS",
+//     startDate: "2023-02-15",
+//     endDate: "2023-02-25",
+//     academicYear: "2022-2023",
+//     pinned: false,
+//   },
 ];
 
 function getStatus(notice: Notice): string {

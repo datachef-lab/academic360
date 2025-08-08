@@ -1,7 +1,36 @@
 import { db } from "@/db/index.js";
 import { BloodGroup, bloodGroupModel } from "@/features/resources/models/bloodGroup.model.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
-import { count, desc, eq } from "drizzle-orm";
+import { count, desc, eq, ilike } from "drizzle-orm";
+
+export const loadBloodGroups = async () => {
+    const bloodGroups = [
+        { name: "A+" },
+        { name: "A-" },
+        { name: "B+" },
+        { name: "B-" },
+        { name: "AB+" },
+        { name: "AB-" },
+        { name: "O+" },
+        { name: "O-" },
+    ];
+
+    for (const group of bloodGroups) {
+        const exists = await db
+            .select()
+            .from(bloodGroupModel)
+            .where(ilike(bloodGroupModel.type, group.name));
+
+        if (!exists.length) {
+            await db.insert(bloodGroupModel).values({
+                type: group.name,
+            });
+        }
+    }
+
+    console.log("Blood groups loaded successfully.");
+};
+
 
 export async function findBloodGroupById(id: number): Promise<BloodGroup | null> {
     const [foundBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.id, id));

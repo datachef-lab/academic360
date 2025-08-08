@@ -1,6 +1,43 @@
 import { db } from "@/db/index.js";
 import { Nationality, nationalityModel } from "@/features/resources/models/nationality.model.js";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
+
+export const loadNationalities = async () => {
+    const nationalities = [
+        { name: "Indian", sequence: 1, code: 101 },
+        { name: "Bangladeshi", sequence: 2, code: 999 },
+        { name: "Bhutanese", sequence: 3, code: 999 },
+        { name: "Nepalese", sequence: 4, code: 999 },
+        { name: "Chinese", sequence: 5, code: 999 },
+        { name: "Others", sequence: 6, code: 999 },
+        { name: "Indonesian", sequence: 7, code: 999 },
+        { name: "Iranian", sequence: 8, code: 999 },
+        { name: "Iraqi", sequence: 9, code: 999 },
+        { name: "Japanese", sequence: 10, code: 999 },
+        { name: "Jordanian", sequence: 11, code: 999 },
+        { name: "Malaysian", sequence: 12, code: 999 },
+        { name: "Nigerian", sequence: 13, code: 999 },
+        { name: "Sri Lankan", sequence: 14, code: 999 },
+        { name: "Dutch", sequence: 15, code: 999 },
+    ];
+
+    for (const nationality of nationalities) {
+        const existing = await db
+            .select()
+            .from(nationalityModel)
+            .where(ilike(nationalityModel.name, nationality.name));
+
+        if (!existing.length) {
+            await db.insert(nationalityModel).values({
+                name: nationality.name,
+                sequence: nationality.sequence,
+                code: nationality.code,
+            });
+        }
+    }
+
+    console.log("Nationalities loaded successfully.");
+};
 
 export async function addNationality(nationality: Nationality): Promise<Nationality | null> {
     const [newNationality] = await db.insert(nationalityModel).values(nationality).returning();
@@ -25,7 +62,7 @@ export async function createNationality(data: Omit<Nationality, 'id' | 'createdA
             updatedAt: new Date()
         })
         .returning();
-    
+
     return newNationality;
 }
 
@@ -38,7 +75,7 @@ export async function updateNationality(id: number, data: Partial<Omit<Nationali
         })
         .where(eq(nationalityModel.id, id))
         .returning();
-    
+
     return updatedNationality || null;
 }
 
@@ -47,7 +84,7 @@ export async function deleteNationality(id: number): Promise<Nationality | null>
         .delete(nationalityModel)
         .where(eq(nationalityModel.id, id))
         .returning();
-    
+
     return deletedNationality || null;
 }
 

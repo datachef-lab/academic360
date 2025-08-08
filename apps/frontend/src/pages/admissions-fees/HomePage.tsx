@@ -1,31 +1,64 @@
 "use client";
-import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAcademicYears } from '@/hooks/useAcademicYears';
-import { GraduationCap, IndianRupee, Clock, Ban } from 'lucide-react';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAcademicYears } from "@/hooks/useAcademicYears";
+import { GraduationCap, IndianRupee, Clock, Ban } from "lucide-react";
 import {
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, Pie, PieChart, Cell } from 'recharts';
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Line, LineChart, Pie, PieChart, Cell } from "recharts";
 
 // Stat cards data
-const statCards = [
-  { label: 'Total Admissions', value: 320, icon: <GraduationCap className="text-purple-600 w-7 h-7" />, bg: 'bg-purple-100/60' },
-  { label: 'Total Fees Collected', value: '₹12,50,000', icon: <IndianRupee className="text-green-600 w-7 h-7" />, bg: 'bg-green-100/60' },
-  { label: 'Pending Admissions', value: 24, icon: <Clock className="text-yellow-600 w-7 h-7" />, bg: 'bg-yellow-100/60' },
-  { label: 'Unpaid Fees', value: '₹1,10,000', icon: <Ban className="text-red-600 w-7 h-7" />, bg: 'bg-red-100/60' },
+const statCards: (
+  | {
+      label: string;
+      value: number;
+      icon: JSX.Element;
+      bg: string;
+    }
+  | {
+      label: string;
+      value: string;
+      icon: JSX.Element;
+      bg: string;
+    }
+)[] = [
+  {
+    label: "Total Admissions",
+    value: 0,
+    icon: <GraduationCap className="text-purple-600 w-7 h-7" />,
+    bg: "bg-purple-100/60",
+  },
+  {
+    label: "Total Fees Collected",
+    value: "₹ 0",
+    icon: <IndianRupee className="text-green-600 w-7 h-7" />,
+    bg: "bg-green-100/60",
+  },
+  {
+    label: "Pending Admissions",
+    value: 0,
+    icon: <Clock className="text-yellow-600 w-7 h-7" />,
+    bg: "bg-yellow-100/60",
+  },
+  { label: "Unpaid Fees", value: "₹ 0", icon: <Ban className="text-red-600 w-7 h-7" />, bg: "bg-red-100/60" },
 ];
 
-const recentActivities = [
-  { name: 'John Doe', type: 'Admission', status: 'Paid', date: '2024-04-10' },
-  { name: 'Jane Smith', type: 'Fee Payment', status: 'Unpaid', date: '2024-04-09' },
-  { name: 'Alice Brown', type: 'Admission', status: 'Pending', date: '2024-04-08' },
+const recentActivities: {
+  name: string;
+  type: string;
+  status: string;
+  date: string;
+}[] = [
+//   { name: "John Doe", type: "Admission", status: "Paid", date: "2024-04-10" },
+//   { name: "Jane Smith", type: "Fee Payment", status: "Unpaid", date: "2024-04-09" },
+//   { name: "Alice Brown", type: "Admission", status: "Pending", date: "2024-04-08" },
 ];
 
 function getAcademicYearLabel(startYear: number) {
@@ -33,40 +66,47 @@ function getAcademicYearLabel(startYear: number) {
 }
 
 // --- shadcn/ui + Recharts Chart Components ---
-const barChartData = [
-  { month: 'Jul', admissions: 30, fees: 120 },
-  { month: 'Aug', admissions: 40, fees: 150 },
-  { month: 'Sep', admissions: 35, fees: 130 },
-  { month: 'Oct', admissions: 50, fees: 180 },
-  { month: 'Nov', admissions: 45, fees: 170 },
-  { month: 'Dec', admissions: 38, fees: 140 },
-  { month: 'Jan', admissions: 42, fees: 160 },
-  { month: 'Feb', admissions: 36, fees: 135 },
-  { month: 'Mar', admissions: 48, fees: 175 },
-  { month: 'Apr', admissions: 41, fees: 155 },
-  { month: 'May', admissions: 39, fees: 145 },
-  { month: 'Jun', admissions: 44, fees: 165 },
+const barChartData: {
+  month: string;
+  admissions: number;
+  fees: number;
+}[] = [
+  //   { month: 'Jul', admissions: 30, fees: 120 },
+  //   { month: 'Aug', admissions: 40, fees: 150 },
+  //   { month: 'Sep', admissions: 35, fees: 130 },
+  //   { month: 'Oct', admissions: 50, fees: 180 },
+  //   { month: 'Nov', admissions: 45, fees: 170 },
+  //   { month: 'Dec', admissions: 38, fees: 140 },
+  //   { month: 'Jan', admissions: 42, fees: 160 },
+  //   { month: 'Feb', admissions: 36, fees: 135 },
+  //   { month: 'Mar', admissions: 48, fees: 175 },
+  //   { month: 'Apr', admissions: 41, fees: 155 },
+  //   { month: 'May', admissions: 39, fees: 145 },
+  //   { month: 'Jun', admissions: 44, fees: 165 },
 ];
 const barChartConfig = {
-  admissions: { label: 'Admissions', color: '#a78bfa' },
-  fees: { label: 'Fees Collected (k)', color: '#34d399' },
+  admissions: { label: "Admissions", color: "#a78bfa" },
+  fees: { label: "Fees Collected (k)", color: "#34d399" },
 };
 
-const lineChartData = [
-  { year: 2020, admissions: 320 },
-  { year: 2021, admissions: 350 },
-  { year: 2022, admissions: 370 },
-  { year: 2023, admissions: 400 },
-  { year: 2024, admissions: 420 },
+const lineChartData: {
+  year: number;
+  admissions: number;
+}[] = [
+  //   { year: 2020, admissions: 320 },
+  //   { year: 2021, admissions: 350 },
+  //   { year: 2022, admissions: 370 },
+  //   { year: 2023, admissions: 400 },
+  //   { year: 2024, admissions: 420 },
 ];
 const lineChartConfig = {
-  admissions: { label: 'Admissions', color: '#a78bfa' },
+  admissions: { label: "Admissions", color: "#a78bfa" },
 };
 
 const pieChartData = [
-  { name: 'Paid', value: 70, color: '#34d399' },
-  { name: 'Partially Paid', value: 15, color: '#fbbf24' },
-  { name: 'Unpaid', value: 15, color: '#f87171' },
+  { name: "Paid", value: 0, color: "#34d399" },
+  { name: "Partially Paid", value: 0, color: "#fbbf24" },
+  { name: "Unpaid", value: 0, color: "#f87171" },
 ];
 
 function BarChartSection() {
@@ -92,7 +132,14 @@ function LineChartSection() {
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis dataKey="year" tickLine={false} axisLine={false} tickMargin={10} />
         <YAxis tickLine={false} axisLine={false} tickMargin={8} />
-        <Line type="monotone" dataKey="admissions" stroke="var(--color-admissions)" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
+        <Line
+          type="monotone"
+          dataKey="admissions"
+          stroke="var(--color-admissions)"
+          strokeWidth={3}
+          dot={{ r: 6 }}
+          activeDot={{ r: 8 }}
+        />
         <ChartTooltip content={<ChartTooltipContent />} />
         <ChartLegend content={<ChartLegendContent />} />
       </LineChart>
@@ -120,9 +167,7 @@ function PieChartSection() {
           ))}
         </Pie>
         <ChartLegend
-          content={<ChartLegendContent
-            payload={pieChartData.map((d) => ({ value: d.name, color: d.color }))}
-          />}
+          content={<ChartLegendContent payload={pieChartData.map((d) => ({ value: d.name, color: d.color }))} />}
         />
         <ChartTooltip content={<ChartTooltipContent />} />
       </PieChart>
@@ -132,12 +177,12 @@ function PieChartSection() {
 
 export default function HomePage() {
   const { data: academicYears = [] } = useAcademicYears();
-  const [selectedYear, setSelectedYear] = useState<number | ''>('');
+  const [selectedYear, setSelectedYear] = useState<number | "">("");
 
   React.useEffect(() => {
     if (academicYears.length > 0) {
       const current = academicYears.find((y) => y.isCurrentYear);
-      setSelectedYear(current?.id ?? academicYears[0].id ?? '');
+      setSelectedYear(current?.id ?? academicYears[0].id ?? "");
     }
   }, [academicYears]);
 
@@ -153,7 +198,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <span className="font-medium text-sm text-muted-foreground mr-2">Academic Year:</span>
             <Select
-              value={selectedYear ? selectedYear.toString() : ''}
+              value={selectedYear ? selectedYear.toString() : ""}
               onValueChange={(val) => setSelectedYear(Number(val))}
             >
               <SelectTrigger className="w-40 bg-white border border-gray-300">
@@ -165,7 +210,7 @@ export default function HomePage() {
                     <SelectItem key={year.id} value={year.id.toString()}>
                       {getAcademicYearLabel(+year.year)}
                     </SelectItem>
-                  ) : null
+                  ) : null,
                 )}
               </SelectContent>
             </Select>
@@ -238,9 +283,13 @@ export default function HomePage() {
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold
-                            ${activity.status === 'Paid' ? 'bg-green-100 text-green-700' :
-                              activity.status === 'Unpaid' ? 'bg-red-100 text-red-700' :
-                                'bg-yellow-100 text-yellow-700'}`}
+                            ${
+                              activity.status === "Paid"
+                                ? "bg-green-100 text-green-700"
+                                : activity.status === "Unpaid"
+                                  ? "bg-red-100 text-red-700"
+                                  : "bg-yellow-100 text-yellow-700"
+                            }`}
                         >
                           {activity.status}
                         </span>

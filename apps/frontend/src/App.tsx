@@ -1,17 +1,20 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import { LoginPage, NotFoundPage, 
-    SettingsPage, 
-    // SettingsPage,
-     UserProfilePage } from "@/pages";
+import {
+  LoginPage,
+  NotFoundPage,
+  SettingsPage,
+  // SettingsPage,
+  UserProfilePage,
+} from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 // import StudentPage from "./pages/students/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
-import LibFineManagement from "./components/LibManagement/LibFines";
-import LibReport from "./components/LibManagement/LibReport";
+// import LibFineManagement from "./components/LibManagement/LibFines";
+// import LibReport from "./components/LibManagement/LibReport";
 
 import ManageMarksheetPage from "./pages/students/ManageMarksheetPage";
 // import StudentMarksheetsPage from "./pages/students/StudentMarksheetsPage";
@@ -110,6 +113,8 @@ const router = createBrowserRouter([
           { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
           { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+          { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+          { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
         ],
       },
       {
@@ -233,8 +238,8 @@ const router = createBrowserRouter([
           { path: "archived", element: <div>TODO: Archived Books</div> },
           { path: "catalog", element: <BookCatalog /> },
           { path: "issued", element: <IssueRetun /> },
-          { path: "fine-management", element: <LibFineManagement /> },
-          { path: "lib-report", element: <LibReport /> },
+          //   { path: "fine-management", element: <LibFineManagement /> },
+          //   { path: "lib-report", element: <LibReport /> },
         ],
       },
 

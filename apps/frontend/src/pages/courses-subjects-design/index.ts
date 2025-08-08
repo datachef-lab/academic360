@@ -9,8 +9,13 @@ import SubjectCategoriesPage from "./subject-categories";
 import CoursesSubjectsMaster from "./CoursesSubjectsMaster";
 import AffiliationsPage from "./affiliations";
 import ProgramCoursesPage from "./program-course";
+import ClassesPage from "./classes/ClassesPage";
+import ExamComponentesPage from "./exam-component";
+
 
 export {
+    ExamComponentesPage,
+    ClassesPage,
     ProgramCoursesPage,
     AffiliationsPage,
     SubjectPaperMappingPage,

@@ -66,6 +66,7 @@ export const createExamComponent = async (examComponentData: ExamComponent) => {
 // Get all exam components
 export const getAllExamComponents = async () => {
     const allExamComponents = await db.select().from(examComponentModel);
+    console.log("allExamComponents:", allExamComponents);
     return allExamComponents;
 };
 

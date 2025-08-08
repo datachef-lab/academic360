@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import BookCard from "./BookCard";
 import { Input } from "@/components/ui/input";
@@ -15,97 +14,97 @@ interface Book {
 }
 
 const dummyBooks: Book[] = [
-    {
-        title: "The Great Gatsby",
-        author: "F. Scott Fitzgerald",
-        isbn: "978-0743273565",
-        category: "Classic",
-        total_copies: 10,
-        available_copies: 3,
-        added_at: "2024-02-10",
-      },
-      {
-        title: "To Kill a Mockingbird",
-        author: "Harper Lee",
-        isbn: "978-0061120084",
-        category: "Fiction",
-        total_copies: 8,
-        available_copies: 1,
-        added_at: "2024-01-15",
-      },
-      {
-        title: "1984",
-        author: "George Orwell",
-        isbn: "978-0451524935",
-        category: "Dystopian",
-        total_copies: 12,
-        available_copies: 5,
-        added_at: "2024-03-05",
-      },
-      {
-        title: "Moby Dick",
-        author: "Herman Melville",
-        isbn: "978-1503280786",
-        category: "Adventure",
-        total_copies: 6,
-        available_copies: 0,
-        added_at: "2024-02-28",
-      },
-      {
-        title: "To Kill a Mockingbird",
-        author: "Harper Lee",
-        isbn: "978-0061120084",
-        category: "Fiction",
-        total_copies: 8,
-        available_copies: 1,
-        added_at: "2024-01-15",
-      },
-      {
-        title: "1984",
-        author: "George Orwell",
-        isbn: "978-0451524935",
-        category: "Dystopian",
-        total_copies: 12,
-        available_copies: 5,
-        added_at: "2024-03-05",
-      },
-      {
-        title: "Moby Dick",
-        author: "Herman Melville",
-        isbn: "978-1503280786",
-        category: "Adventure",
-        total_copies: 6,
-        available_copies: 0,
-        added_at: "2024-02-28",
-      },
-      {
-        title: "To Kill a Mockingbird",
-        author: "Harper Lee",
-        isbn: "978-0061120084",
-        category: "Fiction",
-        total_copies: 8,
-        available_copies: 1,
-        added_at: "2024-01-15",
-      },
-      {
-        title: "1984",
-        author: "George Orwell",
-        isbn: "978-0451524935",
-        category: "Dystopian",
-        total_copies: 12,
-        available_copies: 5,
-        added_at: "2024-03-05",
-      },
-      {
-        title: "Moby Dick",
-        author: "Herman Melville",
-        isbn: "978-1503280786",
-        category: "Adventure",
-        total_copies: 6,
-        available_copies: 0,
-        added_at: "2024-02-28",
-      },
-    ];
+  // {
+  //     title: "The Great Gatsby",
+  //     author: "F. Scott Fitzgerald",
+  //     isbn: "978-0743273565",
+  //     category: "Classic",
+  //     total_copies: 10,
+  //     available_copies: 3,
+  //     added_at: "2024-02-10",
+  //   },
+  //   {
+  //     title: "To Kill a Mockingbird",
+  //     author: "Harper Lee",
+  //     isbn: "978-0061120084",
+  //     category: "Fiction",
+  //     total_copies: 8,
+  //     available_copies: 1,
+  //     added_at: "2024-01-15",
+  //   },
+  //   {
+  //     title: "1984",
+  //     author: "George Orwell",
+  //     isbn: "978-0451524935",
+  //     category: "Dystopian",
+  //     total_copies: 12,
+  //     available_copies: 5,
+  //     added_at: "2024-03-05",
+  //   },
+  //   {
+  //     title: "Moby Dick",
+  //     author: "Herman Melville",
+  //     isbn: "978-1503280786",
+  //     category: "Adventure",
+  //     total_copies: 6,
+  //     available_copies: 0,
+  //     added_at: "2024-02-28",
+  //   },
+  //   {
+  //     title: "To Kill a Mockingbird",
+  //     author: "Harper Lee",
+  //     isbn: "978-0061120084",
+  //     category: "Fiction",
+  //     total_copies: 8,
+  //     available_copies: 1,
+  //     added_at: "2024-01-15",
+  //   },
+  //   {
+  //     title: "1984",
+  //     author: "George Orwell",
+  //     isbn: "978-0451524935",
+  //     category: "Dystopian",
+  //     total_copies: 12,
+  //     available_copies: 5,
+  //     added_at: "2024-03-05",
+  //   },
+  //   {
+  //     title: "Moby Dick",
+  //     author: "Herman Melville",
+  //     isbn: "978-1503280786",
+  //     category: "Adventure",
+  //     total_copies: 6,
+  //     available_copies: 0,
+  //     added_at: "2024-02-28",
+  //   },
+  //   {
+  //     title: "To Kill a Mockingbird",
+  //     author: "Harper Lee",
+  //     isbn: "978-0061120084",
+  //     category: "Fiction",
+  //     total_copies: 8,
+  //     available_copies: 1,
+  //     added_at: "2024-01-15",
+  //   },
+  //   {
+  //     title: "1984",
+  //     author: "George Orwell",
+  //     isbn: "978-0451524935",
+  //     category: "Dystopian",
+  //     total_copies: 12,
+  //     available_copies: 5,
+  //     added_at: "2024-03-05",
+  //   },
+  //   {
+  //     title: "Moby Dick",
+  //     author: "Herman Melville",
+  //     isbn: "978-1503280786",
+  //     category: "Adventure",
+  //     total_copies: 6,
+  //     available_copies: 0,
+  //     added_at: "2024-02-28",
+  //   },
+];
 
 const BookCatalog: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -114,14 +113,13 @@ const BookCatalog: React.FC = () => {
   const filteredBooks = dummyBooks.filter(
     (book) =>
       book.title.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (selectedCategory === "All" || book.category === selectedCategory)
+      (selectedCategory === "All" || book.category === selectedCategory),
   );
 
   const categories = ["All", ...new Set(dummyBooks.map((book) => book.category))];
 
   return (
     <div className="w-full h-full mx-auto p-6">
-      
       {/* Search and Filter Bar */}
       <div className=" flex flex-col md:flex-row justify-end gap-4 mb-6">
         <Input
@@ -131,7 +129,7 @@ const BookCatalog: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-        
+
         <Select onValueChange={setSelectedCategory}>
           <SelectTrigger className="w-full border border-gray-500  md:w-[10%]">
             <SelectValue placeholder="Filter by category" />
@@ -146,7 +144,6 @@ const BookCatalog: React.FC = () => {
         </Select>
       </div>
       <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">Book Catalog</h1>
-
 
       {/* Book Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-10 place-items-center">

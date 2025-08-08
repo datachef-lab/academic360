@@ -2,6 +2,33 @@ import { db } from "@/db/index.js";
 import { Degree, degreeModel } from "@/features/resources/models/degree.model.js";
 import { eq } from "drizzle-orm";
 
+const degrees: Degree[] = [
+    { name: "Class X", level: "SECONDARY", sequence: 1 },
+    { name: "Class XII", level: "HIGHER_SECONDARY", sequence: 2 },
+    { name: "Graduation", level: "UNDER_GRADUATE", sequence: 3 },
+    { name: "Post Graduation", level: "POST_GRADUATE", sequence: 4 },
+    { name: "Ph.D / D.Phil", level: "DOCTORATE", sequence: 5 },
+    { name: "M.Phil", level: "POST_GRADUATE", sequence: 6 },
+    { name: "Graduation With Spl Honours", level: "UNDER_GRADUATE", sequence: 7 },
+    { name: "B. Com Honours with Accounts & Finance", level: "UNDER_GRADUATE", sequence: 8 },
+    { name: "B. Com Honours with Marketing", level: "UNDER_GRADUATE", sequence: 9 },
+    { name: "B. Com Honours with Taxation", level: "UNDER_GRADUATE", sequence: 10 },
+    { name: "B. Com Honours with E-Business", level: "UNDER_GRADUATE", sequence: 11 },
+    { name: "B.A. English Honours", level: "UNDER_GRADUATE", sequence: 12 },
+];
+
+export async function loadDegree() {
+    for (let i = 0; i < degrees.length; i++) {
+        const [existingDegree] = await db
+            .select()
+            .from(degreeModel)
+            .where(eq(degreeModel.name, degrees[i].name));
+        if (!existingDegree) {
+            await db.insert(degreeModel).values(degrees[i]);
+        }
+    }
+}
+
 export async function addDegree(name: string): Promise<Degree | null> {
     const [foundDegree] = await db.insert(degreeModel).values({
         name
@@ -29,7 +56,7 @@ export async function createDegree(data: Omit<Degree, 'id' | 'createdAt' | 'upda
             updatedAt: new Date()
         })
         .returning();
-    
+
     return newDegree;
 }
 
@@ -42,7 +69,7 @@ export async function updateDegree(id: number, data: Partial<Omit<Degree, 'id' |
         })
         .where(eq(degreeModel.id, id))
         .returning();
-    
+
     return updatedDegree || null;
 }
 
@@ -51,7 +78,7 @@ export async function deleteDegree(id: number): Promise<Degree | null> {
         .delete(degreeModel)
         .where(eq(degreeModel.id, id))
         .returning();
-    
+
     return deletedDegree || null;
 }
 

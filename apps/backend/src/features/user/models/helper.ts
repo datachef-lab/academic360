@@ -28,6 +28,7 @@ export const degreeLevelTypeEnum = pgEnum('degree_level_type', [
     "HIGHER_SECONDARY",
     "UNDER_GRADUATE",
     "POST_GRADUATE",
+    "DOCTORATE",
 ]);
 
 export const parentTypeEnum = pgEnum("parent_type", [

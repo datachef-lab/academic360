@@ -7,10 +7,12 @@ import { MyLineChart } from "@/components/home/MyLineChart";
 import { GraduationBarChart } from "@/components/home/GraduationBarChart";
 // import { MyPieChart } from "@/components/home/MyPieChart";
 
-const academicYears = ["2023-24", "2022-23", "2021-22", "2020-21"];
+const academicYears: string[] = [
+    // "2023-24", "2022-23", "2021-22", "2020-21"
+];
 
 export default function DashboardStats() {
-  const [year, setYear] = useState(academicYears[0]);
+  const [year, setYear] = useState(academicYears[0] ?? null);
 
   // Example: You would filter your data based on the selected year
   // For now, just pass the year to children as a prop if needed

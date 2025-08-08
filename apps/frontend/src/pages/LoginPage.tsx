@@ -1,11 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Eye, EyeOff, Lock, User } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import bhawanipurImg from "@/assets/bhawanipurImg.jpeg";
-// import bescLogo from "@/assets/logo.png";
-// import bescLogo from "@/assets/logo.png";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -14,11 +11,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import DottedSeparator from "@/components/ui/dotted-separator";
 import { FcGoogle } from "react-icons/fc";
+import { Settings } from "@/types/settings.type";
+import { findAllSettings } from "@/services/settings.service";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [credential, setCredential] = useState({ email: "", password: "" });
+  const [settings, setSettings] = useState<Settings[]>([]);
+
+  useEffect(() => {
+    findAllSettings().then((data) => {
+      setSettings(data.payload);
+      console.log("Settings: ", data.payload);
+    });
+  }, []);
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -64,16 +71,21 @@ const LoginPage = () => {
             className="inline-flex items-center space-x-4 w-full  bg-white/10 backdrop-blur-xl p-6 shadow-2xl shadow-blue-500/20 border border-white/10"
           >
             <Avatar className="h-16 w-16 shadow-lg ">
-              <AvatarImage src="/logo.jpeg" alt="BESC Logo" />
+              <AvatarImage
+                src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
+                alt="BESC Logo"
+              />
               <AvatarFallback className="text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-                BESC
+                {settings?.find((ele) => ele.name === "College Abbreviation")?.value}
               </AvatarFallback>
             </Avatar>
             <div className="text-left">
               <Badge variant="outline" className="text-sm font-bold text-blue-900 bg-blue-50 border-blue-200 mb-2">
-                BESC
+                {settings.find((ele) => ele.name === "College Abbreviation")?.value}
               </Badge>
-              <h1 className="text-3xl font-bold text-white leading-tight">The Bhawanipur Education Society College</h1>
+              <h1 className="text-3xl font-bold text-white leading-tight">
+                {settings.find((ele) => ele.name === "College Name")?.value}
+              </h1>
             </div>
           </motion.div>
         </div>
@@ -178,37 +190,47 @@ const LoginPage = () => {
               </div>
             </form>
           </CardContent>
-          <div className="w-full flex flex-col items-center gap-6 pb-6 px-7">
-            <div className="flex">
-              <DottedSeparator />
-              <p>Or</p>
-              <DottedSeparator />
-            </div>
-            <a
-              href={`${import.meta.env.VITE_APP_BACKEND_URL!}/auth/google`}
-              className="cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center border p-2"
-              onClick={handleGoogleLogin}
-            >
-              <FcGoogle className="size-8" />
-              Continue with Google
-            </a>
-
-            <p className="text-sm text-center text-purple-200 md:text-gray-500 lg:text-gray-500">
-              Don't have an account?{" "}
-              <Link
-                to="#"
-                className="text-white hover:text-purple-200 lg:text-purple-600 lg:hover:text-purple-700 md:text-purple-600 md:hover:text-purple-700 transition-colors"
+          {
+            <div className="w-full flex flex-col items-center gap-6 pb-6 px-7">
+              <div className="flex">
+                <DottedSeparator />
+                <p>Or</p>
+                <DottedSeparator />
+              </div>
+              <a
+                href={
+                  settings.find((ele) => ele.name === "GOOGLE_CLIENT_ID")?.value
+                    ? `${import.meta.env.VITE_APP_BACKEND_URL!}/auth/google`
+                    : "#"
+                }
+                className="cursor-pointer hover:bg-gray-100 w-full flex justify-center gap-3 items-center border p-2"
+                onClick={handleGoogleLogin}
               >
-                Contact administration
-              </Link>
-            </p>
-          </div>
+                <FcGoogle className="size-8" />
+                Continue with Google
+              </a>
+
+              <p className="text-sm text-center text-purple-200 md:text-gray-500 lg:text-gray-500">
+                Don't have an account?{" "}
+                <Link
+                  to="#"
+                  className="text-white hover:text-purple-200 lg:text-purple-600 lg:hover:text-purple-700 md:text-purple-600 md:hover:text-purple-700 transition-colors"
+                >
+                  Contact administration
+                </Link>
+              </p>
+            </div>
+          }
         </Card>
 
         <p className="text-white absolute bottom-0 pb-4">All Rights Reserved. @2025</p>
       </div>
       <div className="w-1/2 h-full">
-        <img src={bhawanipurImg} alt="Background" className="w-full h-full object-cover" />
+        <img
+          src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "Login Screen Image")?.id}`}
+          alt="Background"
+          className="w-full h-full object-cover"
+        />
       </div>
     </div>
   );

@@ -7,12 +7,12 @@ import { Settings } from "../models/settings.model.js";
 import path from "path";
 import fs from "fs";
 
-const SETTINGS_PATH= process.env.SETTINGS_PATH!;
+const SETTINGS_PATH = process.env.SETTINGS_PATH!;
 
 export const getAllSettingsHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const settings = await findAll(req.query.variant as typeof settingsVariantEnum.enumValues[number]);    
-        res.status(200).json(settings);
+        const settings = await findAll(req.query.variant as typeof settingsVariantEnum.enumValues[number]);
+        res.status(200).json(new ApiResponse(200, "OK", settings));
     } catch (error) {
         handleError(error, res, next);
     }
@@ -23,7 +23,7 @@ export const getSettingsByIdHandler = async (req: Request, res: Response, next: 
         if (req.params.id) {
             res.status(400).json(new ApiResponse(400, "BAD_REQUEST", "id required for fetching setiing"));
         }
-        const settings = await findById(Number(req.params.id));    
+        const settings = await findById(Number(req.params.id));
         if (!settings || settings.length === 0) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", "Setting not found"));
             return;
@@ -41,7 +41,7 @@ export const updateSettingByIdHandler = async (req: Request, res: Response, next
 
         if (!id) {
             res.status(400).json(new ApiResponse(400, "BAD_REQUEST", "ID is required for updating setting"));
-            return 
+            return
         }
 
         const file = req.file; // multer handles this
@@ -59,10 +59,10 @@ export const updateSettingByIdHandler = async (req: Request, res: Response, next
         const [updated] = await save(Number(id), settingData as Settings & { file?: Express.Multer.File });
 
         res.status(200).json(
-            
+
             new ApiResponse(200, "SUCCESS", updated, "Setting updated successfully")
         );
-        return 
+        return
     } catch (error) {
         handleError(error, res, next);
     }
@@ -102,20 +102,20 @@ export const downloadSettingFileHandler = async (req: Request, res: Response, ne
 
 export async function getSettingFileController(req: Request, res: Response) {
     try {
-      const { idOrName } = req.params;
-      const fileStreamData = await getSettingFileService(idOrName);
-  
-      if (!fileStreamData) {
-        res.status(404).json({ message: "Setting file not found" });
-        return 
-      }
-  
-      const { stream, contentType } = fileStreamData;
-  
-      res.setHeader("Content-Type", contentType);
-      stream.pipe(res);
+        const { idOrName } = req.params;
+        const fileStreamData = await getSettingFileService(idOrName);
+
+        if (!fileStreamData) {
+            res.status(404).json({ message: "Setting file not found" });
+            return
+        }
+
+        const { stream, contentType } = fileStreamData;
+
+        res.setHeader("Content-Type", contentType);
+        stream.pipe(res);
     } catch (error) {
-      console.error("Error sending file:", error);
-      res.status(500).json({ message: "Internal server error" });
+        console.error("Error sending file:", error);
+        res.status(500).json({ message: "Internal server error" });
     }
-  }
+}

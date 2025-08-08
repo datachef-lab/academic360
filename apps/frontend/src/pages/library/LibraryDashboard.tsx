@@ -1,6 +1,18 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { BookOpen, Users, Clock, Bookmark, Search, Bell, User, ChevronRight, Star, TrendingUp, BookText, BookOpenIcon } from 'lucide-react';
+import React from "react";
+import { motion } from "framer-motion";
+import {
+  BookOpen,
+  Users,
+  Clock,
+  Bookmark,
+  Search,
+  User,
+  ChevronRight,
+  Star,
+  TrendingUp,
+  BookText,
+  BookOpenIcon,
+} from "lucide-react";
 
 const LibraryDashboard: React.FC = () => {
   return (
@@ -41,36 +53,33 @@ const LibraryDashboard: React.FC = () => {
             </motion.div>
           </div>
         </motion.div> */}
-         <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-3 sm:p-3"
-                  >
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-4 drop-shadow-xl">
-                      <motion.div
-                      
-                        whileHover={{ scale: 1.05, rotate: -5 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="bg-gradient-to-br from-purple-400 to-purple-600 p-3 rounded-xl shadow-xl"
-                      >
-                        <BookOpenIcon className="h-8 w-8 drop-shadow-xl text-white" />
-                      </motion.div>
-                      <div>
-                        <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Library Management  </h2>
-                        <p className="text-sm text-purple-600 font-medium">Track, manage and analyze your library resources</p>
-                      </div>
-                    </div>
-            
-                   
-            
-                  <motion.div
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: 1 }}
-                      transition={{ duration: 0.5, delay: 0.2 }}
-                      className="h-1 bg-gradient-to-r mt-2 mb-5 from-purple-400 via-purple-500 to-purple-400 rounded-full origin-left col-span-full"
-                    />
-                  </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-4 p-3 sm:p-3"
+        >
+          <div className="grid grid-cols-[auto_1fr] items-center gap-4 drop-shadow-xl">
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: -5 }}
+              whileTap={{ scale: 0.95 }}
+              className="bg-gradient-to-br from-purple-400 to-purple-600 p-3 rounded-xl shadow-xl"
+            >
+              <BookOpenIcon className="h-8 w-8 drop-shadow-xl text-white" />
+            </motion.div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800">Library Management </h2>
+              <p className="text-sm text-purple-600 font-medium">Track, manage and analyze your library resources</p>
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="h-1 bg-gradient-to-r mt-2 mb-5 from-purple-400 via-purple-500 to-purple-400 rounded-full origin-left col-span-full"
+          />
+        </motion.div>
 
         {/* Quick Stats Section */}
         <motion.div
@@ -80,10 +89,30 @@ const LibraryDashboard: React.FC = () => {
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {[
-            { icon: <BookOpen className="h-6 w-6" />, title: "Total Books", value: "2,543", color: "from-indigo-500 to-purple-600" },
-            { icon: <Users className="h-6 w-6" />, title: "Active Members", value: "1,234", color: "from-cyan-500 to-blue-600" },
-            { icon: <Clock className="h-6 w-6" />, title: "Overdue Books", value: "23", color: "from-rose-500 to-pink-600" },
-            { icon: <Bookmark className="h-6 w-6" />, title: "Reserved Books", value: "45", color: "from-amber-500 to-orange-600" },
+            {
+              icon: <BookOpen className="h-6 w-6" />,
+              title: "Total Books",
+              value: "0",
+              color: "from-indigo-500 to-purple-600",
+            },
+            {
+              icon: <Users className="h-6 w-6" />,
+              title: "Active Members",
+              value: "0",
+              color: "from-cyan-500 to-blue-600",
+            },
+            {
+              icon: <Clock className="h-6 w-6" />,
+              title: "Overdue Books",
+              value: "0",
+              color: "from-rose-500 to-pink-600",
+            },
+            {
+              icon: <Bookmark className="h-6 w-6" />,
+              title: "Reserved Books",
+              value: "0",
+              color: "from-amber-500 to-orange-600",
+            },
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -137,11 +166,7 @@ const LibraryDashboard: React.FC = () => {
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[1, 2].map((item) => (
-                  <motion.div
-                    key={item}
-                    whileHover={{ scale: 1.02 }}
-                    className="bg-white/80 p-4 rounded-xl shadow-sm"
-                  >
+                  <motion.div key={item} whileHover={{ scale: 1.02 }} className="bg-white/80 p-4 rounded-xl shadow-sm">
                     <div className="flex gap-4">
                       <div className="w-20 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <BookText className="h-8 w-8 text-white" />
@@ -164,7 +189,7 @@ const LibraryDashboard: React.FC = () => {
             <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
               <div className="space-y-4">
-                {[1, 2, 3].map((item) => (
+                {/* {[1, 2, 3].map((item) => (
                   <motion.div
                     key={item}
                     whileHover={{ scale: 1.01 }}
@@ -178,7 +203,8 @@ const LibraryDashboard: React.FC = () => {
                       <p className="text-xs text-gray-500">2 hours ago</p>
                     </div>
                   </motion.div>
-                ))}
+                ))} */}
+                <p>No Content</p>
               </div>
             </div>
           </motion.div>
@@ -191,16 +217,20 @@ const LibraryDashboard: React.FC = () => {
             className="space-y-6"
           >
             {/* Reading Progress */}
-            <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm">
+            {/* <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Reading Progress</h2>
               <div className="space-y-4">
+
                 <div className="bg-white/80 p-4 rounded-xl">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-700">Atomic Habits</span>
                     <span className="text-sm text-gray-500">65%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full" style={{ width: '65%' }}></div>
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full"
+                      style={{ width: "65%" }}
+                    ></div>
                   </div>
                 </div>
                 <div className="bg-white/80 p-4 rounded-xl">
@@ -209,11 +239,14 @@ const LibraryDashboard: React.FC = () => {
                     <span className="text-sm text-gray-500">30%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full" style={{ width: '30%' }}></div>
+                    <div
+                      className="bg-gradient-to-r from-indigo-500 to-purple-600 h-2 rounded-full"
+                      style={{ width: "30%" }}
+                    ></div>
                   </div>
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Quick Actions */}
             <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm">
@@ -239,13 +272,13 @@ const LibraryDashboard: React.FC = () => {
             </div>
 
             {/* Trending Books */}
-            <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm">
+            <div className="bg-white/50 rounded-2xl p-6 shadow-lg backdrop-blur-sm pb-10">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold text-gray-800">Trending Books</h2>
                 <TrendingUp className="h-5 w-5 text-indigo-600" />
               </div>
               <div className="space-y-4">
-                {[1, 2, 3].map((item) => (
+                {/* {[1, 2, 3].map((item) => (
                   <motion.div
                     key={item}
                     whileHover={{ scale: 1.01 }}
@@ -259,7 +292,8 @@ const LibraryDashboard: React.FC = () => {
                       <p className="text-xs text-gray-500">Author Name</p>
                     </div>
                   </motion.div>
-                ))}
+                ))} */}
+                <p>No Content</p>
               </div>
             </div>
           </motion.div>
@@ -269,4 +303,4 @@ const LibraryDashboard: React.FC = () => {
   );
 };
 
-export default LibraryDashboard; 
+export default LibraryDashboard;

@@ -3,7 +3,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { findAllSettings } from "@/services/settings.service";
+import { Settings } from "@/types/settings.type";
 
 export default function ApiConfigurationPage() {
   const [formData, setFormData] = useState({
@@ -15,6 +17,13 @@ export default function ApiConfigurationPage() {
     ZEPTO_FROM: "",
     ZEPTO_TOKEN: "",
   });
+  const [settings, setSettings] = useState<Settings[]>([]);
+
+  useEffect(() => {
+    findAllSettings().then((data) => {
+      setSettings(data.payload.filter((ele) => ele.variant === "API_CONFIG"));
+    });
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,15 +68,15 @@ export default function ApiConfigurationPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(formData).map(([key, value]) => (
-                <div key={key} className="flex flex-col space-y-1.5">
-                  <Label htmlFor={key}>{key.replace(/_/g, " ")}</Label>
+              {settings.map((settingItem) => (
+                <div key={settingItem.id} className="flex flex-col space-y-1.5">
+                  <Label htmlFor={settingItem.name}>{settingItem.name}</Label>
                   <Input
-                    id={key}
-                    name={key}
-                    value={value}
+                    id={settingItem.name}
+                    name={settingItem.name}
+                    value={settingItem.value}
                     onChange={handleChange}
-                    placeholder={`Enter ${key.replace(/_/g, " ")}`}
+                    placeholder={`Enter ${settingItem.name}`}
                   />
                 </div>
               ))}

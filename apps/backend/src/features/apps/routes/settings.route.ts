@@ -16,6 +16,6 @@ const upload = multer(); // Use memory storage for files
 router.get("/", getAllSettingsHandler);
 router.get("/:id", getSettingsByIdHandler);
 router.put("/:id", upload.single("file"), updateSettingByIdHandler); // ✅ Add this
-router.get("/settings/file/:idOrName", getSettingFileController);
+router.get("/file/:idOrName", getSettingFileController);
 
 export default router;

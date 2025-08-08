@@ -2,18 +2,13 @@ import React from "react";
 import { BookOpen, Clock, AlertTriangle, Archive } from "lucide-react";
 import { DataTable } from "../reports/DataTable";
 import { IssuedBookColumns } from "../tables/resources/IssuedBookColumn";
-import { IssueBookData } from "@/lib/Data";
-
-
-
-
 
 const IssueRetun: React.FC = () => {
   const stats = [
-    { title: "Books Issued", value: 3, icon: <BookOpen size={28} className="text-blue-500" />, bgColor: "bg-blue-600", gradient: "bg-gradient-to-r from-blue-400 to-blue-800" },
-    { title: "Books Due Soon", value: 1, icon: <Clock size={28} className="text-yellow-500" />, bgColor: "bg-yellow-500", gradient: "bg-gradient-to-r from-yellow-400 to-yellow-500" },
-    { title: "Overdue & Fine", value: "₹110", icon: <AlertTriangle size={28} className="text-red-500" />, bgColor: "bg-red-600", gradient: "bg-gradient-to-r from-red-400 to-red-800" },
-    { title: "Total Borrowed", value: 15, icon: <Archive size={28} className="text-green-500" />, bgColor: "bg-green-600", gradient: "bg-gradient-to-r from-green-400 to-green-800" },
+    { title: "Books Issued", value: 0, icon: <BookOpen size={28} className="text-blue-500" />, bgColor: "bg-blue-600", gradient: "bg-gradient-to-r from-blue-400 to-blue-800" },
+    { title: "Books Due Soon", value: 0, icon: <Clock size={28} className="text-yellow-500" />, bgColor: "bg-yellow-500", gradient: "bg-gradient-to-r from-yellow-400 to-yellow-500" },
+    { title: "Overdue & Fine", value: "₹ 0", icon: <AlertTriangle size={28} className="text-red-500" />, bgColor: "bg-red-600", gradient: "bg-gradient-to-r from-red-400 to-red-800" },
+    { title: "Total Borrowed", value: 0, icon: <Archive size={28} className="text-green-500" />, bgColor: "bg-green-600", gradient: "bg-gradient-to-r from-green-400 to-green-800" },
   ];
 
 
@@ -40,7 +35,7 @@ const IssueRetun: React.FC = () => {
         <h2 className="text-xl font-semibold mb-6">Student Borrowed Books Record</h2>
       <DataTable 
         columns={IssuedBookColumns} 
-        data={IssueBookData} 
+        data={[]} 
         pageCount={10} 
         onPaginationChange={(page) => console.log("Page changed to:", page)} 
         pagination={{ pageIndex: 0, pageSize: 10 }} 

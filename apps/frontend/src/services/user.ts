@@ -19,3 +19,9 @@ export async function findAllUsers(page: number, pageSize: number, type?: "ADMIN
     console.log(response.data);
     return response.data;
 }
+
+// services/user.ts
+export async function addUser(user: Omit<User, "id" | "createdAt" | "updatedAt" | "disabled">): Promise<ApiResonse<User>> {
+    const response = await axiosInstance.post("/auth", user);
+    return response.data;
+}

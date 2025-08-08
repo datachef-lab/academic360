@@ -5,6 +5,15 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 import { initializeClasses } from "@/features/academics/services/class.service.js";
 import { loadDefaultSettings } from "@/features/apps/service/settings.service";
+import { loadDegree } from "@/features/resources/services/degree.service";
+import { loadCategory } from "@/features/resources/services/category.service";
+import { loadReligions } from "@/features/resources/services/religion.service";
+import { loadLanguages } from "@/features/resources/services/languageMedium.service";
+import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service";
+import { loadOccupations } from "@/features/resources/services/occupation.service";
+import { loadQualifications } from "@/features/resources/services/qualification.service";
+import { loadNationalities } from "@/features/resources/services/nationality.service";
+import { loadShifts } from "@/features/academics/services/shift.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -22,9 +31,18 @@ export const connectToDatabase = async () => {
         console.log("[backend] - Connected to the database successfully. 🎉");
         client.release(); // Release the connection back to the pool
 
-        await createDefaultExamComponents();
-        await initializeClasses();
-        await loadDefaultSettings();
+        createDefaultExamComponents();
+        initializeClasses();
+        loadDefaultSettings();
+        loadDegree();
+        loadShifts()
+        loadCategory();
+        loadReligions();
+        loadLanguages();
+        loadBloodGroups();
+        loadOccupations();
+        loadQualifications();
+        loadNationalities();
     } catch (error) {
         console.log(process.env.DATABASE_URL);
         console.error("[backend] - Failed to connect to the database: ⚠", error);

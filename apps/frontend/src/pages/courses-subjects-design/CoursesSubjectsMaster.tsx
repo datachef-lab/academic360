@@ -19,6 +19,16 @@ const nestedHomeLinks = [
 
 const masterLinks = [
   {
+    title: "Classes",
+    url: "/dashboard/courses-subjects-design/classes",
+    icon: Library,
+  },
+  {
+    title: "Paper/Exam Components",
+    url: "/dashboard/courses-subjects-design/paper-components",
+    icon: Library,
+  },
+  {
     title: "Courses",
     url: "/dashboard/courses-subjects-design/courses",
     icon: Library,

@@ -88,8 +88,8 @@ export default function AppMaster() {
                   </TableCell>
                   <TableCell className="font-semibold text-purple-700 text-base">{app.name}</TableCell>
                   <TableCell>
-                    <Button asChild variant="outline" size="sm" disabled={!app.enabled}>
-                      <a href={app.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                    <Button asChild variant="outline" size="sm" disabled={false}>
+                      <a href={"#"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
                         <ExternalLink className="h-4 w-4" /> Visit
                       </a>
                     </Button>
@@ -100,14 +100,14 @@ export default function AppMaster() {
                       size="sm"
                       onClick={() => navigate(app.baseName)}
                       className="flex items-center gap-1"
-                      disabled={!app.enabled}
+                      disabled={true}
                     >
                       <Settings className="h-4 w-4" /> Settings
                     </Button>
                   </TableCell>
                   <TableCell>
                     <Switch
-                      checked={app.enabled}
+                      checked={false}
                       onCheckedChange={() => handleToggle(idx)}
                       className="data-[state=checked]:bg-purple-500"
                     />
