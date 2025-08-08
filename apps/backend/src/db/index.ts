@@ -4,6 +4,7 @@ import { createConnection } from "mysql2/promise"; // For MySQL
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 import { initializeClasses } from "@/features/academics/services/class.service.js";
+import { loadDefaultSettings } from "@/features/apps/service/settings.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -23,6 +24,7 @@ export const connectToDatabase = async () => {
 
         await createDefaultExamComponents();
         await initializeClasses();
+        await loadDefaultSettings();
     } catch (error) {
         console.log(process.env.DATABASE_URL);
         console.error("[backend] - Failed to connect to the database: ⚠", error);

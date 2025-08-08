@@ -42,7 +42,7 @@ export function NavUser() {
             >
               <Avatar className="ml-1 h-8 w-8 rounded-lg flex justify-center">
                 <AvatarImage src={user?.image} alt={user?.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+                <AvatarFallback className="rounded-lg ">{user?.name[0]}</AvatarFallback>
               </Avatar>
               {/* <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">{user?.name}</span>

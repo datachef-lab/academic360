@@ -229,6 +229,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       };
     }, []);
 
+    // React.useEffect(() => {
+    //   console.log(selectedValues);
+    // }, [selectedValues]);
+
     const getResponsiveSettings = () => {
       if (!responsive) {
         return { maxCount, hideIcons: false, compactMode: false };
@@ -631,12 +635,12 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                 onValueChange={setSearchValue}
               />
             )}
-            <CommandList
-              className={cn(
-                "max-h-[40vh] overflow-y-auto multiselect-scrollbar",
-                screenSize === "mobile" && "max-h-[50vh]",
-                "overscroll-behavior-y-contain",
-              )}
+                          <CommandList
+                className={cn(
+                  "max-h-[35vh] overflow-y-auto multiselect-scrollbar",
+                  screenSize === "mobile" && "max-h-[45vh]",
+                  "overscroll-behavior-y-contain",
+                )}
             >
               <CommandEmpty>{emptyIndicator || "No results found."}</CommandEmpty>{" "}
               {!hideSelectAll && !searchValue && (

@@ -34,6 +34,8 @@ out/
 build
 dist
 
+/settings
+
 
 # Debug
 npm-debug.log*

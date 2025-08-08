@@ -130,7 +130,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
                     return;
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
+                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
                 res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Token refreshed"));
             });

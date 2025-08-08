@@ -14,7 +14,7 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
-
+import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 
 import { generateToken } from "./utils/index.js";
@@ -336,6 +336,7 @@ app.use("/api/admissions/academic-subject", academicSubjectRouter);
 // app.use("/api/study-materials", studyMaterialRouter);
 
 app.use("/api/v1/sections", sectionRoutes);
+app.use("/api/v1/settings", settingsRouter);
 
 // Course Design routes
 app.use("/api/v1/course-design/streams", streamRouter);

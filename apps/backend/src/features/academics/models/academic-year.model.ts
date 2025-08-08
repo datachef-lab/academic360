@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const academicYearModel = pgTable("academic_years", {
     id: serial().primaryKey(),
-    year: varchar({ length: 4 }).notNull(),
+    year: varchar({ length: 255 }).notNull(),
     isCurrentYear: boolean("is_current_year").notNull().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

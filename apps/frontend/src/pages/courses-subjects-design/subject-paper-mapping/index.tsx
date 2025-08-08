@@ -349,6 +349,7 @@ const SubjectPaperMappingPage = () => {
 
       // Transform the data to match the API expected format
       const updateData = {
+        classId: data.classId,
         name: data.name,
         subjectId: data.subjectId,
         affiliationId: data.affiliationId,
@@ -356,7 +357,6 @@ const SubjectPaperMappingPage = () => {
         academicYearId: data.academicYearId,
         programCourseId: data.programCourseId,
         subjectTypeId: data.subjectTypeId,
-        classId: 0,
         code: data.code,
         isOptional: data.isOptional,
         disabled: data.disabled,
@@ -937,7 +937,7 @@ const SubjectPaperMappingPage = () => {
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "10%" }}
                       >
-                        {/* {classes.find((cls) => cls.id === sp.classIds[0])?.name.split(" ")[1] ?? "-"} */}
+                        {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r" style={{ width: "21%" }}>
                         {/* Display exam component names */}
@@ -1040,7 +1040,7 @@ const SubjectPaperMappingPage = () => {
           examComponents={examComponents}
           academicYears={academicYears}
           //   programCourses={programCourses}
-          courses={[]}
+          courses={courses}
           classes={classes}
           paperId={selectedPaperForEdit?.id}
         />

@@ -79,7 +79,7 @@ export default function AddPaperModal({
     disabled: false,
     topics: [],
   });
-  const [papers, setPapers] = useState<Paper[]>([defaultPaper]);
+  const  setPapers = useState<Paper[]>([defaultPaper])[1];
   const [inputPaper, setInputPaper] = useState<InputPaper[]>([
     {
       name: "",
@@ -105,18 +105,40 @@ export default function AddPaperModal({
   ]);
 
   const handleAddPaper = () => {
-    setPapers((prevPapers) => [...prevPapers, { ...defaultPaper }]);
+    setInputPaper((prevPapers) => [...prevPapers, { ...inputPaper[0], subjectTypeId: 0, programCourses: [], classes: [], components: examComponents.map((examComponent) => ({
+      paperId: 0, // This will be set when the paper is created
+      examComponent,
+      fullMarks: 0,
+      credit: 0,
+    })) }]);
   };
 
   const removePaper = (removeIndex: number) => {
-    if (papers.length > 1) {
-      setPapers(papers.filter((_, i) => i !== removeIndex));
+    if (inputPaper.length > 1) {
+      setInputPaper((prevPapers) => prevPapers.filter((_, i) => i !== removeIndex));
     }
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Submitting papers:", papers);
+
+    const papers: Paper[] = [];
+    console.log(papers);
+    for (const paper of inputPaper) {
+      for (const programCourseId of paper.programCourses) {
+        for (const classId of paper.classes) {
+          const { programCourses, classes, ...rest } = paper;
+          console.log(classes, programCourses)
+          papers.push({
+            ...rest,
+            programCourseId: programCourseId,
+            classId: classId,
+          });
+        }
+      }
+    }
+    console.log("Papers:", papers);
+
     const formattedPapers = [];
     for (let i = 0; i < papers.length; i++) {
       const paper = papers[i];
@@ -174,7 +196,7 @@ export default function AddPaperModal({
     field: "fullMarks" | "credit",
     value: number,
   ) => {
-    setPapers((prevPapers) => {
+    setInputPaper((prevPapers) => {
       const updatedPapers = [...prevPapers];
       const updatedComponents = [...updatedPapers[paperIndex].components];
       if (updatedComponents[componentIndex]) {
@@ -191,18 +213,20 @@ export default function AddPaperModal({
     });
   };
 
+
+
   return (
     <form onSubmit={handleFormSubmit}>
       <div className="flex mb-5 gap-2 items-center">
         <div className="flex w-[95%] gap-2 items-center">
           <Select
-            value={papers[0].subjectId ? papers[0].subjectId.toString() : ""}
+            value={inputPaper[0].subjectId ? inputPaper[0].subjectId.toString() : ""}
             onValueChange={(value) => {
-              const newPapers = papers.map((paper) => ({
+              const newPapers = inputPaper.map((paper) => ({
                 ...paper,
                 subjectId: Number(value),
               }));
-              setPapers(newPapers);
+              setInputPaper(newPapers);
             }}
           >
             <SelectTrigger>
@@ -217,13 +241,13 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={papers[0].affiliationId ? papers[0].affiliationId.toString() : ""}
+            value={inputPaper[0].affiliationId ? inputPaper[0].affiliationId.toString() : ""}
             onValueChange={(value) => {
-              const newPapers = papers.map((paper) => ({
+              const newPapers = inputPaper.map((paper) => ({
                 ...paper,
                 affiliationId: Number(value),
               }));
-              setPapers(newPapers);
+              setInputPaper(newPapers);
             }}
           >
             <SelectTrigger>
@@ -238,13 +262,13 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={papers[0].regulationTypeId ? papers[0].regulationTypeId.toString() : ""}
+            value={inputPaper[0].regulationTypeId ? inputPaper[0].regulationTypeId.toString() : ""}
             onValueChange={(value) => {
-              const newPapers = papers.map((paper) => ({
+              const newPapers = inputPaper.map((paper) => ({
                 ...paper,
                 regulationTypeId: Number(value),
               }));
-              setPapers(newPapers);
+              setInputPaper(newPapers);
             }}
           >
             <SelectTrigger>
@@ -259,13 +283,13 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={papers[0].academicYearId ? papers[0].academicYearId.toString() : ""}
+            value={inputPaper[0].academicYearId ? inputPaper[0].academicYearId.toString() : ""}
             onValueChange={(value) => {
-              const newPapers = papers.map((paper) => ({
+              const newPapers = inputPaper.map((paper) => ({
                 ...paper,
                 academicYearId: Number(value),
               }));
-              setPapers(newPapers);
+              setInputPaper(newPapers);
             }}
           >
             <SelectTrigger>
@@ -288,14 +312,14 @@ export default function AddPaperModal({
             className="ml-2"
             onClick={handleAddPaper}
             disabled={
-              !papers[0].subjectId ||
-              papers[0].subjectId === 0 ||
-              !papers[0].affiliationId ||
-              papers[0].affiliationId === 0 ||
-              !papers[0].regulationTypeId ||
-              papers[0].regulationTypeId === 0 ||
-              !papers[0].academicYearId ||
-              papers[0].academicYearId === 0
+              !inputPaper[0].subjectId ||
+              inputPaper[0].subjectId === 0 ||
+              !inputPaper[0].affiliationId ||
+              inputPaper[0].affiliationId === 0 ||
+              !inputPaper[0].regulationTypeId ||
+              inputPaper[0].regulationTypeId === 0 ||
+              !inputPaper[0].academicYearId ||
+              inputPaper[0].academicYearId === 0
             }
           >
             Add Paper
@@ -420,14 +444,27 @@ export default function AddPaperModal({
                       label: courses.find((crs) => crs.id == programCourseItem.courseId)?.name ?? "",
                       value: programCourseItem.id?.toString() || "",
                     }))}
-                    value={field.classes.map((cls) => cls.toString())}
+                    defaultValue={field.programCourses.map((prog) => prog.toString())}
                     onValueChange={(selected: string[]) => {
+                      const selectedCourses = selected.map(Number);
+                      let updatedClasses = [...field.classes];
+                    
+                      if (selectedCourses.length > 1 && field.classes.length > 1) {
+                        toast.warning("Multiple courses selected. Restricting classes.");
+                        updatedClasses = []; // force one class
+                      }
+                    
                       update(paperIndex, {
                         ...field,
-                        classes: selected.map((ele) => Number(ele)),
+                        programCourses: selectedCourses,
+                        classes: updatedClasses,
                       });
                     }}
-                    placeholder="Select Sems."
+                    
+                    
+                    
+                    placeholder="Select Courses"
+                    modalPopover={true}
                   />
                   {/* <Select
                     value={field.programCourseId ? field.programCourseId.toString() : ""}
@@ -448,21 +485,33 @@ export default function AddPaperModal({
                   </Select> */}
                 </div>
 
-                <div className="w-24 p-1 border-r border-black flex items-center justify-center overflow-hidden">
+                <div className="w-24 p-1 border-r border-black flex items-center justify-center">
                   <MultiSelect
-                    // disabled={field.programCourses.length > 0}
                     options={classes.map((classItem) => ({
                       label: classItem.name,
                       value: classItem.id?.toString() || "",
                     }))}
-                    value={field.classes.map((cls) => cls.toString())}
+                    defaultValue={field.classes.map((cls) => cls.toString())}
                     onValueChange={(selected: string[]) => {
+                      const selectedClasses = selected.map(Number);
+                      let updatedProgramCourses = [...field.programCourses];
+                    
+                      if (selectedClasses.length > 1 && field.programCourses.length > 1) {
+                        toast.warning("Multiple classes selected. Restricting courses.");
+                        updatedProgramCourses = [] // force one course
+                      }
+                    
                       update(paperIndex, {
                         ...field,
-                        classes: selected.map((ele) => Number(ele)),
+                        classes: selectedClasses,
+                        programCourses: updatedProgramCourses,
                       });
                     }}
+                    
+                    
+                    
                     placeholder="Select Sems."
+                    modalPopover={true}
                   />
                 </div>
 
@@ -582,7 +631,7 @@ export default function AddPaperModal({
         <Button
           type="submit"
           className="bg-blue-600 text-white hover:bg-blue-700"
-          disabled={isLoading || papers.length === 0}
+          disabled={isLoading || inputPaper.length === 0}
         >
           {isLoading ? "Saving..." : "Save Mapping"}
         </Button>

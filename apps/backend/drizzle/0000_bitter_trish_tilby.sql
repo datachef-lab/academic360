@@ -22,13 +22,15 @@ CREATE TYPE "public"."payment_status" AS ENUM('PENDING', 'COMPLETED', 'FAILED', 
 CREATE TYPE "public"."person_title_type" AS ENUM('MR', 'MRS', 'MS', 'DR', 'PROF', 'REV', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."place_of_stay_type" AS ENUM('OWN', 'HOSTEL', 'FAMILY_FRIENDS', 'PAYING_GUEST', 'RELATIVES');--> statement-breakpoint
 CREATE TYPE "public"."programme_type" AS ENUM('HONOURS', 'GENERAL');--> statement-breakpoint
+CREATE TYPE "public"."settings_input_type" AS ENUM('NUMBER', 'TEXT', 'FILE', 'EMAIL');--> statement-breakpoint
+CREATE TYPE "public"."settings_variant_type" AS ENUM('GENERAL', 'API_CONFIG');--> statement-breakpoint
 CREATE TYPE "public"."sports_level" AS ENUM('NATIONAL', 'STATE', 'DISTRICT', 'OTHERS');--> statement-breakpoint
 CREATE TYPE "public"."stream_type" AS ENUM('SCIENCE', 'COMMERCE', 'HUMANITIES', 'ARTS');--> statement-breakpoint
 CREATE TYPE "public"."student_fees_mapping_type" AS ENUM('FULL', 'INSTALMENT');--> statement-breakpoint
 CREATE TYPE "public"."study_material_availability_type" AS ENUM('ALWAYS', 'CURRENT_SESSION_ONLY', 'COURSE_LEVEL', 'BATCH_LEVEL');--> statement-breakpoint
 CREATE TYPE "public"."study_meta_type" AS ENUM('RESOURCE', 'WORKSHEET', 'ASSIGNMENT', 'PROJECT');--> statement-breakpoint
 CREATE TYPE "public"."subject_category_type" AS ENUM('SPECIAL', 'COMMON', 'HONOURS', 'GENERAL', 'ELECTIVE');--> statement-breakpoint
-CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'TEACHER');--> statement-breakpoint
+CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'FACULTY', 'STAFF', 'PARENTS');--> statement-breakpoint
 CREATE TABLE "academic_years" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"year" varchar(4) NOT NULL,
@@ -350,6 +352,17 @@ CREATE TABLE "apps" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "settings" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"variant" "settings_variant_type" DEFAULT 'GENERAL' NOT NULL,
+	"type" "settings_input_type" DEFAULT 'TEXT' NOT NULL,
+	"name" varchar(700) NOT NULL,
+	"value" varchar(700),
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "settings_name_unique" UNIQUE("name")
+);
+--> statement-breakpoint
 CREATE TABLE "otps" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"otp" varchar(6) NOT NULL,
@@ -358,16 +371,6 @@ CREATE TABLE "otps" (
 	"expires_at" timestamp NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "affiliation_types" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"sequence" integer DEFAULT 0,
-	"disabled" boolean DEFAULT false,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "affiliations" (

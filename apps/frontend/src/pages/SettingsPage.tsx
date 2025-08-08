@@ -88,9 +88,9 @@ export default function Settings() {
       </motion.div> */}
 
       {/* content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full border border-red-500 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full overflow-hidden">
         {/* Left Section */}
-        <div className="w-[80%] lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr] h-full">
+        <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr] h-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

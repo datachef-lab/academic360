@@ -156,3 +156,26 @@ html {
   white-space: nowrap;
 }
 
+/* Multi-select dropdown scrollbar styles */
+.multiselect-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground)) transparent;
+}
+
+.multiselect-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.multiselect-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.multiselect-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+.multiselect-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--foreground));
+}
+

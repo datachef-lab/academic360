@@ -55,7 +55,7 @@ const LoginPage = () => {
 
   return (
     <div className="h-screen flex items-center justify-center">
-      <div className="w-1/2 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900 h-full relative shadow-2xl overflow-hidden flex flex-col gap-8 items-center">
+      <div className="w-1/2 bg-gradient-to-br from-gray-900 overflow-y-auto via-slate-800 to-indigo-900 h-full relative shadow-2xl overflow-hidden flex flex-col gap-8 items-center">
         <div className="flex gap-4 bg w-full">
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
