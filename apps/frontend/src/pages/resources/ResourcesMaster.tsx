@@ -1,6 +1,6 @@
 import MasterLayout from "@/components/layouts/MasterLayout";
 import {
-  HomeIcon,
+
   SchoolIcon,
   TagIcon,
   GraduationCapIcon,
@@ -16,8 +16,8 @@ import {
 import { Outlet } from "react-router-dom";
 
 const subLinks = [
-  { icon: HomeIcon, title: "Board Universities & Subjects", url: "/dashboard/resources" },
-  { icon: SchoolIcon, title: "Institutions", url: "/dashboard/resources/institutions" },
+  //   { icon: HomeIcon, title: "Board Universities & Subjects", url: "/dashboard/resources" },
+  { icon: SchoolIcon, title: "Institutions", url: "/dashboard/resources" },
   { icon: TagIcon, title: "Categories", url: "/dashboard/resources/categories" },
   { icon: GraduationCapIcon, title: "Degree", url: "/dashboard/resources/degree" },
   { icon: HeartIcon, title: "Religion", url: "/dashboard/resources/religion" },

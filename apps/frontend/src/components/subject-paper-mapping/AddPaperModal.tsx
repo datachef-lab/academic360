@@ -1,6 +1,7 @@
 import { Class } from "@/types/academics/class";
 import {
   Affiliation,
+  Course,
   ExamComponent,
   Paper,
   ProgramCourse,
@@ -19,6 +20,11 @@ import { createPaper } from "@/services/course-design.api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { MultiSelect } from "@/components/ui/AdvancedMultiSelect";
 
+interface InputPaper extends Omit<Paper, "programCourseId" | "classId"> {
+  programCourses: number[];
+  classes: number[];
+}
+
 interface AddModalProps {
   fetchData: () => Promise<void>;
   onCancel: () => void;
@@ -28,6 +34,7 @@ interface AddModalProps {
     affiliations: Affiliation[];
     regulationTypes: RegulationType[];
     subjectTypes: SubjectType[];
+    courses: Course[];
     examComponents: ExamComponent[];
     academicYears: AcademicYear[];
     programCourses: ProgramCourse[];
@@ -45,6 +52,7 @@ export default function AddPaperModal({
     regulationTypes,
     subjectTypes,
     examComponents,
+    courses,
     academicYears,
     programCourses,
     classes,
@@ -72,6 +80,29 @@ export default function AddPaperModal({
     topics: [],
   });
   const [papers, setPapers] = useState<Paper[]>([defaultPaper]);
+  const [inputPaper, setInputPaper] = useState<InputPaper[]>([
+    {
+      name: "",
+      subjectId: 0, // No default value
+      affiliationId: 0, // No default value
+      regulationTypeId: 0, // No default value
+      subjectTypeId: 0, // No default value
+      academicYearId: 0, // No default value
+      programCourses: [], // No default value
+      classes: [], // Allow multiple semesters/classes
+      components: examComponents.map((examComponent) => ({
+        paperId: 0, // This will be set when the paper is created
+        examComponent,
+        fullMarks: null,
+        credit: null,
+      })),
+      code: "",
+      isOptional: false,
+      sequence: null,
+      disabled: false,
+      topics: [],
+    },
+  ]);
 
   const handleAddPaper = () => {
     setPapers((prevPapers) => [...prevPapers, { ...defaultPaper }]);
@@ -129,8 +160,8 @@ export default function AddPaperModal({
     // onCancel();
   };
 
-  const update = (index: number, newData: Paper) => {
-    setPapers((prevPapers) => {
+  const update = (index: number, newData: InputPaper) => {
+    setInputPaper((prevPapers) => {
       const updatedPapers = [...prevPapers];
       updatedPapers[index] = newData;
       return updatedPapers;
@@ -361,7 +392,7 @@ export default function AddPaperModal({
           </div>
 
           <div className="bg-white">
-            {papers.map((field, paperIndex) => (
+            {inputPaper.map((field, paperIndex) => (
               <div key={field.id} className="flex border-b border-black hover:bg-gray-50">
                 <div className="w-32 p-2 border-r border-black flex items-center justify-center">
                   <Select
@@ -384,7 +415,21 @@ export default function AddPaperModal({
                 </div>
 
                 <div className="w-48 p-2 border-r border-black">
-                  <Select
+                  <MultiSelect
+                    options={programCourses.map((programCourseItem) => ({
+                      label: courses.find((crs) => crs.id == programCourseItem.courseId)?.name ?? "",
+                      value: programCourseItem.id?.toString() || "",
+                    }))}
+                    value={field.classes.map((cls) => cls.toString())}
+                    onValueChange={(selected: string[]) => {
+                      update(paperIndex, {
+                        ...field,
+                        classes: selected.map((ele) => Number(ele)),
+                      });
+                    }}
+                    placeholder="Select Sems."
+                  />
+                  {/* <Select
                     value={field.programCourseId ? field.programCourseId.toString() : ""}
                     onValueChange={(value) => {
                       update(paperIndex, { ...field, programCourseId: Number(value) });
@@ -400,23 +445,23 @@ export default function AddPaperModal({
                         </SelectItem>
                       ))}
                     </SelectContent>
-                  </Select>
+                  </Select> */}
                 </div>
 
                 <div className="w-24 p-1 border-r border-black flex items-center justify-center overflow-hidden">
                   <MultiSelect
+                    // disabled={field.programCourses.length > 0}
                     options={classes.map((classItem) => ({
                       label: classItem.name,
                       value: classItem.id?.toString() || "",
                     }))}
-                    value={field.classId ? field.classId : ""}
-                    // onValueChange={(selected: string[]) => {
-                    //   update(paperIndex, {
-                    //     ...field,
-                    //     classId: 0,
-                    //   });
-                    // }}
-                    onValueChange={() => {}}
+                    value={field.classes.map((cls) => cls.toString())}
+                    onValueChange={(selected: string[]) => {
+                      update(paperIndex, {
+                        ...field,
+                        classes: selected.map((ele) => Number(ele)),
+                      });
+                    }}
                     placeholder="Select Sems."
                   />
                 </div>

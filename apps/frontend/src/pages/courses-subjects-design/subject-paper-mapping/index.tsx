@@ -31,6 +31,7 @@ import {
   BulkUploadRow,
   BulkUploadError,
   updatePaperWithComponents,
+  getCourses,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 // import { useAuth } from "@/hooks/useAuth";
@@ -45,6 +46,7 @@ import type {
   ExamComponent,
   PaperComponent,
   ProgramCourse,
+  Course,
 } from "@/types/course-design";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
@@ -86,6 +88,7 @@ const SubjectPaperMappingPage = () => {
   const [academicYears, setAcademicYears] = React.useState<AcademicYear[]>([]);
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
   const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
+  const [courses, setCourses] = React.useState<Course[]>([]);
   const [classes, setClasses] = React.useState<Class[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -219,6 +222,7 @@ const SubjectPaperMappingPage = () => {
         academicYearsRes,
         programCourseRes,
         classesRes,
+        courseRes,
       ] = await Promise.all([
         getSubjects(),
         getAffiliations(),
@@ -229,19 +233,20 @@ const SubjectPaperMappingPage = () => {
         getAcademicYears(),
         getProgramCourses(),
         getAllClasses(),
+        getCourses(),
       ]);
 
-      console.log("API Responses:", {
-        subjects: subjectsRes,
-        affiliations: affiliationsRes,
-        regulationTypes: regulationTypesRes,
-        subjectTypes: subjectTypesRes,
-        examComponents: examComponentsRes,
-        academicYears: academicYearsRes,
-        programCourses: programCourseRes,
-        classes: classesRes,
-        sessions: academicYearRes,
-      });
+    //   console.log("API Responses:", {
+    //     subjects: subjectsRes,
+    //     affiliations: affiliationsRes,
+    //     regulationTypes: regulationTypesRes,
+    //     subjectTypes: subjectTypesRes,
+    //     examComponents: examComponentsRes,
+    //     academicYears: academicYearsRes,
+    //     programCourses: programCourseRes,
+    //     classes: classesRes,
+    //     sessions: academicYearRes,
+    //   });
 
       console.log("SubjectTypes response details:", {
         isArray: Array.isArray(subjectTypesRes),
@@ -257,6 +262,7 @@ const SubjectPaperMappingPage = () => {
       setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
       setAcademicYears(Array.isArray(academicYearRes) ? academicYearRes : []);
       setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
+      setCourses(Array.isArray(courseRes) ? courseRes : []);
       setClasses(
         Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
       );
@@ -720,6 +726,7 @@ const SubjectPaperMappingPage = () => {
                   dropdownData={{
                     subjectTypes,
                     subjects,
+                    courses: courses,
                     affiliations,
                     regulationTypes,
                     examComponents,

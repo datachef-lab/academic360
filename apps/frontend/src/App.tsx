@@ -1,6 +1,8 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import { LoginPage, NotFoundPage,  UserProfilePage } from "@/pages";
+import { LoginPage, NotFoundPage, 
+    // SettingsPage,
+     UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -72,13 +74,13 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: "", element: <Dashboard /> },
-      //   { path: "resources", element: <SettingsPage /> },
+      // { path: "resources", element: <SettingsPage /> },
       {
         path: "resources",
         element: <resourceModule.ResourcesMaster />,
         children: [
-          { path: "", element: <resourceModule.BoardUniversitiesPage /> },
-          { path: "institutions", element: <resourceModule.InstitutionsPage /> },
+        //   { path: "", element: <resourceModule.BoardUniversitiesPage /> },
+          { path: "", element: <resourceModule.InstitutionsPage /> },
           { path: "categories", element: <resourceModule.CategoriesPage /> },
           { path: "religion", element: <resourceModule.ReligionPage /> },
           { path: "degree", element: <resourceModule.DegreePage /> },
@@ -91,6 +93,7 @@ const router = createBrowserRouter([
           { path: "annual-income", element: <resourceModule.AnnualIncomePage /> },
         ],
       },
+
       {
         path: "courses-subjects-design",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
