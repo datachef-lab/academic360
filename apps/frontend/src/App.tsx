@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import { LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
+import { LoginPage, NotFoundPage,  UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -57,6 +57,7 @@ import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workf
 import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
 import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
 import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
+import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -71,7 +72,25 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: "", element: <Dashboard /> },
-      { path: "resources", element: <SettingsPage /> },
+      //   { path: "resources", element: <SettingsPage /> },
+      {
+        path: "resources",
+        element: <resourceModule.ResourcesMaster />,
+        children: [
+          { path: "", element: <resourceModule.BoardUniversitiesPage /> },
+          { path: "institutions", element: <resourceModule.InstitutionsPage /> },
+          { path: "categories", element: <resourceModule.CategoriesPage /> },
+          { path: "religion", element: <resourceModule.ReligionPage /> },
+          { path: "degree", element: <resourceModule.DegreePage /> },
+          { path: "language-medium", element: <resourceModule.LanguageMediumPage /> },
+          { path: "documents", element: <resourceModule.DocumentPage /> },
+          { path: "blood-group", element: <resourceModule.BloodGroupPage /> },
+          { path: "occupations", element: <resourceModule.OccupationsPage /> },
+          { path: "qualifications", element: <resourceModule.QualificationsPage /> },
+          { path: "nationalities", element: <resourceModule.NationalitiesPage /> },
+          { path: "annual-income", element: <resourceModule.AnnualIncomePage /> },
+        ],
+      },
       {
         path: "courses-subjects-design",
         element: <courseSubjectModule.CoursesSubjectsMaster />,

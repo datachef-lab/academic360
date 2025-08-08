@@ -3,20 +3,18 @@ import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+// import {
+//   DropdownMenu,
+//   DropdownMenuContent,
+//   DropdownMenuItem,
+//   DropdownMenuTrigger,
+// } from "@/components/ui/dropdown-menu";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  User,
+//   User,
   Settings,
-  
-  ChevronDown,
-
+//   ChevronDown,
   Home,
-  LogOut,
+//   LogOut,
   Boxes,
   LayoutList,
   BadgeIndianRupee,
@@ -26,16 +24,18 @@ import {
   Library,
   CalendarClock,
   PartyPopper,
-
   LayoutDashboard,
   Megaphone,
   UserCog,
 } from "lucide-react";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/providers/AuthProvider";
-import { UserAvatar } from "@/hooks/UserAvatar";
+// import { UserAvatar } from "@/hooks/UserAvatar";
 import { SearchStudentModal } from "./SearchStudentModal";
+import DottedSeparator from "../ui/dotted-separator";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Badge } from "../ui/badge";
 
 // Navigation data
 const data = {
@@ -108,8 +108,8 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const currentPath = location.pathname;
-  const { user, logout, accessToken, displayFlag } = useAuth();
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const { user,  accessToken, displayFlag } = useAuth();
+//   const setIsLoggingOut = React.useState(false)[1];
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
@@ -118,18 +118,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
   }
 
-  const handleLogout = async () => {
-    try {
-      setIsLoggingOut(true);
-      await logout();
-      toast.success("Logged out successfully");
-    } catch (error) {
-      console.error("Logout failed:", error);
-      toast.error("Logout failed. Please try again.");
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
+//   const handleLogout = async () => {
+//     try {
+//       setIsLoggingOut(true);
+//       await logout();
+//       toast.success("Logged out successfully");
+//     } catch (error) {
+//       console.error("Logout failed:", error);
+//       toast.error("Logout failed. Please try again.");
+//     } finally {
+//       setIsLoggingOut(false);
+//     }
+//   };
 
   if (!displayFlag || !user || !accessToken) {
     return null;
@@ -138,20 +138,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
-        <SidebarHeader className="p-6 border-none border-purple-500 bg-purple-800/95">
-          <Link to="/dashboard" className="flex items-center gap-3">
-            <div className="flex items-center justify-center p-3 drop-shadow-lg rounded-lg bg-purple-500">
-              <GalleryVerticalEnd className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-white">Academic360</h1>
-              <p className="text-xs text-purple-100">Education Management</p>
+        <SidebarHeader className="p-2 py-[11px] border-none hover:bg-purple-900 border-purple-500 bg-purple-900/95">
+          <Link to="/dashboard" className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center drop-shadow-lg rounded-lg">
+                <Avatar>
+                  <AvatarImage src="/logo.jpeg" alt="college-logo" width={24} height={24} />
+                  <AvatarFallback>
+                    <GalleryVerticalEnd className="h-6 w-6 text-white" />
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <h1 className="text-lg font-semibold text-white">BESC Console</h1>
             </div>
           </Link>
         </SidebarHeader>
 
+        <DottedSeparator color="bg-purple-800/95" />
         <SidebarContent className="p-0 border-none bg-purple-800/95">
-          <div className="mt-2 mb-4 flex flex-col justify-between ">
+          <div className="mb-4 flex flex-col justify-between ">
             <div>
               {/* Dashboard Link */}
               <div className="mb-4">
@@ -164,8 +169,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       !isSearchActive &&
                       (item.url === "/dashboard"
                         ? currentPath === "/dashboard"
-                        : isSidebarActive(currentPath, item.url)
-                      )
+                        : isSidebarActive(currentPath, item.url))
                     }
                   >
                     <span className="text-lg">{item.title}</span>
@@ -199,30 +203,30 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   const url = item.url ?? "";
                   const isActive = !isSearchActive && isSidebarActive(currentPath, url);
 
-                //   if (item.isModal) {
-                //     return (
-                //       <div
-                //         key={item.title}
-                //         onClick={() => {
-                //           setIsSearchModalOpen(true);
-                //           setIsSearchActive(true);
-                //         }}
-                //         className={cn(
-                //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                //           isSearchActive
-                //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                //             : "text-white hover:text-white",
-                //         )}
-                //       >
-                //         <div className="flex items-center gap-3">
-                //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                //             {item.icon && <item.icon className="h-5 w-5" />}
-                //           </span>
-                //           <span className="text-base">{item.title}</span>
-                //         </div>
-                //       </div>
-                //     );
-                //   }
+                  //   if (item.isModal) {
+                  //     return (
+                  //       <div
+                  //         key={item.title}
+                  //         onClick={() => {
+                  //           setIsSearchModalOpen(true);
+                  //           setIsSearchActive(true);
+                  //         }}
+                  //         className={cn(
+                  //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                  //           isSearchActive
+                  //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                  //             : "text-white hover:text-white",
+                  //         )}
+                  //       >
+                  //         <div className="flex items-center gap-3">
+                  //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                  //             {item.icon && <item.icon className="h-5 w-5" />}
+                  //           </span>
+                  //           <span className="text-base">{item.title}</span>
+                  //         </div>
+                  //       </div>
+                  //     );
+                  //   }
 
                   return (
                     <NavItem
@@ -241,7 +245,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarContent>
 
         <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">
-          <DropdownMenu>
+          {/* <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className="p-1 cursor-pointer transition-colors duration-200">
                 <div className="flex items-center gap-3">
@@ -268,7 +272,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <span>Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
+          <div className="font-bold">
+            <p className="text-xs text-center text-purple-100 space-x-1">
+              <Badge variant="secondary" className="">
+                academic360
+              </Badge>
+              <Badge variant="secondary">v1.0.0</Badge>
+            </p>
+          </div>
         </SidebarFooter>
       </Sidebar>
 
@@ -301,7 +313,7 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
         " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
         isActive
           ? "bg-white hover:text-purple-600 font-semibold text-purple-600 shadow-lg"
-          : "text-white hover:bg-purple-700/80 hover:text-white"
+          : "text-white hover:bg-purple-700/80 hover:text-white",
       )}
     >
       <div className="flex items-center gap-3 w-full">
@@ -313,4 +325,3 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
     </Link>
   );
 }
-
