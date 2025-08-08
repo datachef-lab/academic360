@@ -24,3 +24,35 @@ export const getAllSessionsHandler = async (_req: Request, res: Response, next: 
         handleError(error, res, next);
     }
 };
+
+export const updateSessionHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const sessionId = parseInt(req.params.id);
+        const updatedSession = await sessionService.update(sessionId, req.body);
+
+        if (!updatedSession) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Session not found"));
+            return;
+        }
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", updatedSession, "Session updated successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};
+
+export const deleteSessionHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const sessionId = parseInt(req.params.id);
+        const deletedSession = await sessionService.deleteById(sessionId);
+
+        if (!deletedSession) {
+            res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Session not found"));
+            return;
+        }
+
+        res.status(200).json(new ApiResponse(200, "SUCCESS", null, "Session deleted successfully"));
+    } catch (error) {
+        handleError(error, res, next);
+    }
+};

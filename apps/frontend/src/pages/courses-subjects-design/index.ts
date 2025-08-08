@@ -10,6 +10,7 @@ import SubjectCategoriesPage from "./subject-categories";
 import CoursesSubjectsMaster from "./CoursesSubjectsMaster";
 import AffiliationsPage from "./affiliations";
 import ProgramCoursesPage from "./program-course";
+import SessionsPage from "./sessions";
 
 export {
     ProgramCoursesPage,
@@ -24,4 +25,5 @@ export {
     SubjectsPage,
     SubjectCategoriesPage,
     CoursesSubjectsMaster,
+    SessionsPage,
 }

@@ -1,6 +1,6 @@
 import { verifyJWT } from '@/middlewares/index.js';
 import express from 'express';
-import { createSessionHandler, getAllSessionsHandler } from '../controllers/session.controller.js';
+import { createSessionHandler, getAllSessionsHandler, updateSessionHandler, deleteSessionHandler } from '../controllers/session.controller.js';
 
 const router = express.Router();
 
@@ -9,6 +9,8 @@ router.use(verifyJWT);
 
 router.get('/', getAllSessionsHandler);
 router.post('/', createSessionHandler);
+router.put('/:id', updateSessionHandler);
+router.delete('/:id', deleteSessionHandler);
 
 
 export default router;

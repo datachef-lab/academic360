@@ -38,3 +38,22 @@ export async function create(sessionData: Omit<typeof sessionModel.$inferInsert,
 
     return newSession;
 }
+
+export async function update(id: number, sessionData: Partial<Omit<typeof sessionModel.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>>) {
+    const [updatedSession] = await db
+        .update(sessionModel)
+        .set(sessionData)
+        .where(eq(sessionModel.id, id))
+        .returning();
+
+    return updatedSession || null;
+}
+
+export async function deleteById(id: number) {
+    const [deletedSession] = await db
+        .delete(sessionModel)
+        .where(eq(sessionModel.id, id))
+        .returning();
+
+    return deletedSession || null;
+}

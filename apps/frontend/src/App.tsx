@@ -1,6 +1,6 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import {  LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
+import { LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
@@ -87,24 +87,28 @@ const router = createBrowserRouter([
           { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
           { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
           { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
+          { path: "sessions", element: <courseSubjectModule.SessionsPage /> },
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
         ],
       },
-      { path: "admissions-fees/admissions/:year", element: <Outlet />, children: [
-        {path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
-        {path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },
-              {path: "applications", element: <ApplicationsPage /> }, 
-              {path: "generate-merit", element: <GenerateMeritListPage /> },
-              {path: "fee-payment-review", element: <FeePaymentReviewPage /> },
-              {path: "document-verification", element: <DocumentVerificationPage /> },
-              {path: "id-card-generator", element: <IdCardGeneratorPage /> },
-              {path: "final-admission-push", element: <FinalAdmissionPushPage /> },
-              {path: "staff-assignment", element: <StaffAssignmentPage /> },
-              {path: "eligibility-rules", element: <EligibilityPage /> },
-              {path: "merit-criteria", element: <MeritCriteriaPage /> },
-              {path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
-
-      ] },
+      {
+        path: "admissions-fees/admissions/:year",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
+          { path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },
+          { path: "applications", element: <ApplicationsPage /> },
+          { path: "generate-merit", element: <GenerateMeritListPage /> },
+          { path: "fee-payment-review", element: <FeePaymentReviewPage /> },
+          { path: "document-verification", element: <DocumentVerificationPage /> },
+          { path: "id-card-generator", element: <IdCardGeneratorPage /> },
+          { path: "final-admission-push", element: <FinalAdmissionPushPage /> },
+          { path: "staff-assignment", element: <StaffAssignmentPage /> },
+          { path: "eligibility-rules", element: <EligibilityPage /> },
+          { path: "merit-criteria", element: <MeritCriteriaPage /> },
+          { path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
+        ],
+      },
       {
         path: "admissions-fees",
         element: <admissionFeesModule.AdmissionsFeesMaster />,
@@ -114,10 +118,7 @@ const router = createBrowserRouter([
           {
             path: "admissions",
             element: <Outlet />,
-            children: [
-              { path: "", element: <admissionFeesModule.AdmissionsPage /> },
-                            
-            ],
+            children: [{ path: "", element: <admissionFeesModule.AdmissionsPage /> }],
           },
           {
             path: "fees",
@@ -228,9 +229,12 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
-      { path: "marksheets", element: <marksheetModule.MarksheetMaster />, children: [
-        { path: "", element: <marksheetModule.HomePage /> },
-        { path: "reports", element: <studentModule.GetReportsPage /> },
+      {
+        path: "marksheets",
+        element: <marksheetModule.MarksheetMaster />,
+        children: [
+          { path: "", element: <marksheetModule.HomePage /> },
+          { path: "reports", element: <studentModule.GetReportsPage /> },
           {
             path: "add",
             element: <Outlet />,
@@ -253,7 +257,8 @@ const router = createBrowserRouter([
               },
             ],
           },
-      ] },
+        ],
+      },
       {
         path: "apps",
         element: <Outlet />,
