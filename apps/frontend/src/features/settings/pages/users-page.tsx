@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { User as LucideUser } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AddUserModal } from "./add-user-modal";
+import { AddUserModal } from "../components/add-user-modal";
 import { Button } from "@/components/ui/button";
 import { User } from "@/types/user/user"; // adjust path
 import { findAllUsers } from "@/services/user";
 import { UserAvatar } from "@/hooks/UserAvatar";
 import { Badge } from "@/components/ui/badge";
-import EditUserModal from "./edit-user-modal";
+import EditUserModal from "../components/edit-user-modal";
 
 const usersPerPage = 5;
 

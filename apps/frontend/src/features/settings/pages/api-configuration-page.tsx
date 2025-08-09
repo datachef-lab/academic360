@@ -4,8 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { KeyRound } from "lucide-react";
 import { useEffect, useState } from "react";
-import { findAllSettings } from "@/services/settings.service";
-import { Settings } from "@/types/settings.type";
+import { findAllSettings } from "@/features/settings/services/settings-service";
+import { Settings } from "@/features/settings/types/settings.type";
 
 export default function ApiConfigurationPage() {
   const [formData, setFormData] = useState({

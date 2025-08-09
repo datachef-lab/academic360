@@ -1,4 +1,4 @@
-import { GetReportsPage, SearchStudentPage } from "..";
+import { GetReportsPage, SearchStudentPage } from "../../features/settings";
 import AddStudentPage from "./AddStudentPage";
 import DashboardStats from "./DashboardStats";
 import ManageMarksheetPage from "./ManageMarksheetPage";

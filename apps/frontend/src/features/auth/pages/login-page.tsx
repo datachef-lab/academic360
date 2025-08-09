@@ -232,13 +232,6 @@
 
 // export default LoginPage;
 
-
-
-
-
-
-
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -247,12 +240,12 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { login } from "@/services/auth";
+import { login } from "@/features/auth/services/auth-service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import DottedSeparator from "@/components/ui/dotted-separator";
 import { FcGoogle } from "react-icons/fc";
-import { useSettings } from "@/providers/SettingsProvider";
+import { useSettings } from "@/features/settings/providers/settings-provider";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -297,7 +290,6 @@ const LoginPage = () => {
     <div className="h-screen flex flex-col md:flex-row items-center justify-center">
       {/* Left Section */}
       <div className="w-full md:w-1/2 bg-gradient-to-br from-gray-900 via-slate-800 to-indigo-900 h-full relative shadow-2xl flex flex-col gap-8 items-center overflow-y-auto">
-        
         {/* Logo & Title */}
         <div className="flex gap-4 w-full">
           <motion.div
@@ -332,13 +324,16 @@ const LoginPage = () => {
             <CardTitle>
               <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="bg-purple-600/80 p-2 rounded-xl shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" viewBox="0 0 20 20" fill="currentColor">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-white"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
                     <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838l-2.727 1.17 1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
                   </svg>
                 </div>
-                <span className="text-xl sm:text-2xl font-extrabold text-purple-600">
-                  academic360
-                </span>
+                <span className="text-xl sm:text-2xl font-extrabold text-purple-600">academic360</span>
               </div>
             </CardTitle>
             <h3 className="font-extrabold text-center text-2xl md:text-3xl">Welcome Back!</h3>
@@ -349,7 +344,9 @@ const LoginPage = () => {
             <form onSubmit={handleSubmit} className="grid gap-6">
               {/* Email */}
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-white">Email</label>
+                <label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-white">
+                  Email
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <User className="h-4 w-4 text-gray-400 dark:text-purple-200" />
@@ -368,7 +365,9 @@ const LoginPage = () => {
 
               {/* Password */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-white">Password</label>
+                <label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-white">
+                  Password
+                </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Lock className="h-4 w-4 text-gray-400 dark:text-purple-200" />
@@ -434,9 +433,7 @@ const LoginPage = () => {
         </Card>
 
         {/* Footer */}
-        <p className="text-white text-xs md:text-sm absolute bottom-0 pb-4">
-          All Rights Reserved. @2025
-        </p>
+        <p className="text-white text-xs md:text-sm absolute bottom-0 pb-4">All Rights Reserved. @2025</p>
       </div>
 
       {/* Right Section (Image) */}

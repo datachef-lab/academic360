@@ -8,7 +8,7 @@ import { useParams } from "react-router-dom";
 import Footer from "./Footer";
 import { Input } from "@/components/ui/input";
 import { Marksheet } from "@/types/academics/marksheet";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import { User } from "@/types/user/user";
 import { Subject } from "@/types/academics/subject";
 import InputInitials from "./InputInitials";
@@ -198,7 +198,7 @@ const MarksheetCCF = () => {
                 <div className="border-r border-gray-300">
                   <div className="text-left h-full">
                     <p className="flex items-center px-2 h-1/3">Theory</p>
-                    
+
                     {subject.subjectMetadata.fullMarksPractical && (
                       <p className="flex items-center px-2 h-1/3 border-t border-b border-gray-300">Practical</p>
                     )}
@@ -232,14 +232,13 @@ const MarksheetCCF = () => {
                       <InputBox fullMarks={subject.subjectMetadata.fullMarksTheory} />
                     </div>
                   )}
-                  
+
                   {subject.subjectMetadata.fullMarksPractical && (
                     <div className="border-t border-b h-1/3 w-full">
                       <InputBox fullMarks={subject.subjectMetadata.fullMarksPractical} />
                     </div>
                   )}
-                  
-                  
+
                   <p className="flex items-center justify-center font-semibold px-2 h-1/3 text-right">0</p>
                 </div>
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { socketService, Notification } from "../services/socketService";
-import { AuthContext } from "../providers/AuthProvider";
+import { AuthContext } from "../features/auth/providers/auth-provider";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -52,19 +52,13 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
   // Mark notification as read
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, read: true }
-          : notification
-      )
+      prev.map((notification) => (notification.id === notificationId ? { ...notification, read: true } : notification)),
     );
   };
 
   // Mark all notifications as read
   const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
-    );
+    setNotifications((prev) => prev.map((notification) => ({ ...notification, read: true })));
   };
 
   // Clear all notifications
@@ -80,9 +74,5 @@ export const NotificationProvider = ({ children }: NotificationProviderProps) =>
     clearNotifications,
   };
 
-  return (
-    <NotificationContext.Provider value={value}>
-      {children}
-    </NotificationContext.Provider>
-  );
-}; 
+  return <NotificationContext.Provider value={value}>{children}</NotificationContext.Provider>;
+};

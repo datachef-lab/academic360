@@ -29,13 +29,13 @@ import {
 } from "lucide-react";
 // import { toast } from "sonner";
 import { GalleryVerticalEnd } from "lucide-react";
-import { useAuth } from "@/providers/AuthProvider";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 // import { UserAvatar } from "@/hooks/UserAvatar";
 import { SearchStudentModal } from "./SearchStudentModal";
 import DottedSeparator from "../ui/dotted-separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
-import { useSettings } from "@/providers/SettingsProvider";
+import { useSettings } from "@/features/settings/providers/settings-provider";
 
 // Navigation data
 const data = {

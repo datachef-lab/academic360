@@ -1,6 +1,6 @@
-import React, { useState, ReactNode, createContext, useContext, useEffect } from "react";
-import { Settings } from "@/types/settings.type";
-import { findAllSettings } from "@/services/settings.service";
+import React, { useState, ReactNode, createContext, useEffect } from "react";
+import { Settings } from "@/features/settings/types/settings.type";
+import { findAllSettings } from "@/features/settings/services/settings-service";
 
 export interface SettingsContextType {
   settings: Settings[];
@@ -9,14 +9,6 @@ export interface SettingsContextType {
 }
 
 export const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
-
-export const useSettings = () => {
-  const context = useContext(SettingsContext);
-  if (context === undefined) {
-    throw new Error("useSettings must be used within an SettingsProvider");
-  }
-  return context;
-};
 
 interface SettingsProviderProps {
   children: ReactNode;

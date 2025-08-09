@@ -20,7 +20,7 @@ import {
   LibraryGenreBarChart,
   AttendanceLineChart,
   EventParticipationStackedBar,
-} from "./ChartsDemo";
+} from "../components/charts-demo";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { FaRupeeSign } from "react-icons/fa";
 // import { ChartBarStacked } from './ChartBarStacked';

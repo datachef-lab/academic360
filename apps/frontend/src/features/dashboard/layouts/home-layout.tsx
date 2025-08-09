@@ -30,7 +30,7 @@ import {
   UserCog,
   Settings,
 } from "lucide-react";
-import { NavUser } from "../globals/NavUser";
+import { NavUser } from "../../../components/globals/NavUser";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {

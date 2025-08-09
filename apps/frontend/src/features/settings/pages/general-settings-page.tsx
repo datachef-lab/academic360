@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { findAllSettings, updateSetting } from "@/services/settings.service";
-import { useSettings } from "@/providers/SettingsProvider";
+import { findAllSettings, updateSetting } from "@/features/settings/services/settings-service";
+import { useSettings } from "@/features/settings/providers/settings-provider";
 
 export default function GeneralSettingsPage() {
   const { settings, setSettings } = useSettings();
