@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { Topic, topicModel } from "../models/topic.model.js";
-import { eq } from "drizzle-orm";
+import { and, eq, ilike } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
 

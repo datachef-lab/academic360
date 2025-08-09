@@ -24,7 +24,7 @@ tmp.txt
 report.servicecopy.ts
 # Turbo
 .turbo
-
+/.env.example
 # Vercel
 .vercel
 

@@ -125,8 +125,8 @@ const CourseTypesPage = () => {
       if (result.summary.failed > 0) {
         toast.error(`${result.summary.failed} course types failed to upload`);
       }
-    } catch (error: unknown) {
-      toast.error(`Bulk upload failed: ${error.message || "Unknown error"}`);
+    } catch {
+      toast.error(`Bulk upload failed: ${ "Unknown error"}`);
     } finally {
       setIsBulkUploading(false);
     }
@@ -164,8 +164,8 @@ const CourseTypesPage = () => {
         "Short Name": courseType.shortName || "-",
         Sequence: courseType.sequence || "-",
         Status: courseType.disabled ? "Inactive" : "Active",
-        "Created At": course.createdAt,
-        "Updated At": course.updatedAt,
+        "Created At": courseType.createdAt,
+        "Updated At": courseType.updatedAt,
       }));
       const ws = XLSX.utils.json_to_sheet(data);
       const wb = XLSX.utils.book_new();

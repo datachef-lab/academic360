@@ -66,7 +66,8 @@ import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workf
 import BulkUploadPage from "./pages/BulkUpload";
 // import * as resourceModule from "@/pages/resources";
 
-const router = createBrowserRouter([
+const router = createBrowserRouter(
+    [
   { path: "/", element: <LoginPage /> },
   {
     path: "/dashboard",
@@ -327,7 +328,7 @@ const router = createBrowserRouter([
     ],
   },
   { path: "*", element: <NotFoundPage /> },
-]);
+], {basename: import.meta.env.VITE_APP_PREFIX || ''});
 
 const App = () => {
   return (

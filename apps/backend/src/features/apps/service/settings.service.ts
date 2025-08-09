@@ -1,7 +1,7 @@
-import { db } from "@/db/index";
-import { Settings, settingsModel } from "../models/settings.model";
+import { db } from "@/db/index.js";
+import { Settings, settingsModel } from "../models/settings.model.js";
 import { and, asc,  eq, ilike } from "drizzle-orm";
-import { settingsVariantEnum } from "@/features/user/models/helper";
+import { settingsVariantEnum } from "@/features/user/models/helper.js";
 
 const SETTINGS_PATH= process.env.SETTINGS_PATH!;
 

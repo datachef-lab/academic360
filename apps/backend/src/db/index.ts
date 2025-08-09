@@ -4,16 +4,16 @@ import { createConnection } from "mysql2/promise"; // For MySQL
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createDefaultExamComponents } from "@/features/course-design/services/exam-component.service.js";
 import { initializeClasses } from "@/features/academics/services/class.service.js";
-import { loadDefaultSettings } from "@/features/apps/service/settings.service";
-import { loadDegree } from "@/features/resources/services/degree.service";
-import { loadCategory } from "@/features/resources/services/category.service";
-import { loadReligions } from "@/features/resources/services/religion.service";
-import { loadLanguages } from "@/features/resources/services/languageMedium.service";
-import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service";
-import { loadOccupations } from "@/features/resources/services/occupation.service";
-import { loadQualifications } from "@/features/resources/services/qualification.service";
-import { loadNationalities } from "@/features/resources/services/nationality.service";
-import { loadShifts } from "@/features/academics/services/shift.service";
+import { loadDefaultSettings } from "@/features/apps/service/settings.service.js";
+import { loadDegree } from "@/features/resources/services/degree.service.js";
+import { loadCategory } from "@/features/resources/services/category.service.js";
+import { loadReligions } from "@/features/resources/services/religion.service.js";
+import { loadLanguages } from "@/features/resources/services/languageMedium.service.js";
+import { loadBloodGroups } from "@/features/resources/services/bloodGroup.service.js";
+import { loadOccupations } from "@/features/resources/services/occupation.service.js";
+import { loadQualifications } from "@/features/resources/services/qualification.service.js";
+import { loadNationalities } from "@/features/resources/services/nationality.service.js";
+import { loadShifts } from "@/features/academics/services/shift.service.js";
 
 // Create a connection pool
 const pool = new pg.Pool({
