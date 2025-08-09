@@ -48,29 +48,34 @@ class SocketService {
 
   // Connect to the socket server
   connect() {
-    // Check if we're already connected
     if (this.socket && this.connected) return;
-
-    const serverUrl = `${import.meta.env.VITE_APP_BACKEND_URL!}/api`;
-    
+  
+    const backendUrl = import.meta.env.VITE_APP_BACKEND_URL!; // e.g. https://academic360.app/besc/api
+    const urlObj = new URL(backendUrl);
+  
+    // Host without path
+    const serverOrigin = `${urlObj.protocol}//${urlObj.host}`;
+    // Path for Socket.IO
+    const socketPath = `${urlObj.pathname.replace(/\/$/, '')}/socket.io/`;
+  
     try {
-      this.socket = io(serverUrl, {
+      this.socket = io(serverOrigin, {
         withCredentials: true,
         transports: ['websocket', 'polling'],
-        path: '/socket.io/'
+        path: socketPath
       });
-
-      // Set up event listeners
+  
       this.socket.on('connect', this.handleConnect);
       this.socket.on('disconnect', this.handleDisconnect);
       this.socket.on('notification', this.handleNotification);
       this.socket.on('connect_error', this.handleError);
-
-      console.log('[SocketService] Attempting to connect to server...');
+  
+      console.log(`[SocketService] Connecting to ${serverOrigin} with path ${socketPath}`);
     } catch (error) {
       console.error('[SocketService] Error initializing socket:', error);
     }
   }
+  
 
   // Check if socket is currently connected
   isConnected(): boolean {
