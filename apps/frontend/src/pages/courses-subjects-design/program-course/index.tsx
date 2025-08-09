@@ -15,12 +15,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@/types/course-design";
-import { 
-  getProgramCourses, 
-  createProgramCourse, 
-  updateProgramCourse, 
-  deleteProgramCourse, 
+import {
+  ProgramCourse,
+  Stream,
+  Course,
+  CourseType,
+  CourseLevel,
+  Affiliation,
+  RegulationType,
+} from "@/types/course-design";
+import {
+  getProgramCourses,
+  createProgramCourse,
+  updateProgramCourse,
+  deleteProgramCourse,
   bulkUploadProgramCourses,
   getStreams,
   getCourses,
@@ -30,7 +38,7 @@ import {
   getRegulationTypes,
   BulkUploadResult,
   BulkUploadError,
-  BulkUploadRow
+  BulkUploadRow,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
@@ -57,66 +65,87 @@ const ProgramCoursesPage = () => {
 
   // Create lookup objects
   const streamsLookup: Record<number, string> = React.useMemo(() => {
-    return streams.reduce((acc, stream) => {
-      if (stream.id) {
-        acc[stream.id] = stream.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return streams.reduce(
+      (acc, stream) => {
+        if (stream.id) {
+          acc[stream.id] = stream.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [streams]);
 
   const coursesLookup: Record<number, string> = React.useMemo(() => {
-    return courses.reduce((acc, course) => {
-      if (course.id) {
-        acc[course.id] = course.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return courses.reduce(
+      (acc, course) => {
+        if (course.id) {
+          acc[course.id] = course.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [courses]);
 
   const courseTypesLookup: Record<number, string> = React.useMemo(() => {
-    return courseTypes.reduce((acc, courseType) => {
-      if (courseType.id) {
-        acc[courseType.id] = courseType.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return courseTypes.reduce(
+      (acc, courseType) => {
+        if (courseType.id) {
+          acc[courseType.id] = courseType.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [courseTypes]);
 
   const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
-    return courseTypes.reduce((acc, courseType) => {
-      if (courseType.id) {
-        acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return courseTypes.reduce(
+      (acc, courseType) => {
+        if (courseType.id) {
+          acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [courseTypes]);
 
   const courseLevelsLookup: Record<number, string> = React.useMemo(() => {
-    return courseLevels.reduce((acc, courseLevel) => {
-      if (courseLevel.id) {
-        acc[courseLevel.id] = courseLevel.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return courseLevels.reduce(
+      (acc, courseLevel) => {
+        if (courseLevel.id) {
+          acc[courseLevel.id] = courseLevel.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [courseLevels]);
 
   const affiliationsLookup: Record<number, string> = React.useMemo(() => {
-    return affiliations.reduce((acc, affiliation) => {
-      if (affiliation.id) {
-        acc[affiliation.id] = affiliation.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return affiliations.reduce(
+      (acc, affiliation) => {
+        if (affiliation.id) {
+          acc[affiliation.id] = affiliation.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [affiliations]);
 
   const regulationTypesLookup: Record<number, string> = React.useMemo(() => {
-    return regulationTypes.reduce((acc, regulationType) => {
-      if (regulationType.id) {
-        acc[regulationType.id] = regulationType.name;
-      }
-      return acc;
-    }, {} as Record<number, string>);
+    return regulationTypes.reduce(
+      (acc, regulationType) => {
+        if (regulationType.id) {
+          acc[regulationType.id] = regulationType.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
   }, [regulationTypes]);
 
   React.useEffect(() => {
@@ -126,15 +155,16 @@ const ProgramCoursesPage = () => {
 
   const fetchLookupData = async () => {
     try {
-      const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] = await Promise.all([
-        getStreams(),
-        getCourses(),
-        getCourseTypes(),
-        getCourseLevels(),
-        getAffiliations(),
-        getRegulationTypes(),
-      ]);
-      
+      const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] =
+        await Promise.all([
+          getStreams(),
+          getCourses(),
+          getCourseTypes(),
+          getCourseLevels(),
+          getAffiliations(),
+          getRegulationTypes(),
+        ]);
+
       setStreams((streamsData as Stream[]) || []);
       setCourses((coursesData as Course[]) || []);
       setCourseTypes((courseTypesData as CourseType[]) || []);
@@ -142,7 +172,7 @@ const ProgramCoursesPage = () => {
       setAffiliations((affiliationsData as Affiliation[]) || []);
       setRegulationTypes((regulationTypesData as RegulationType[]) || []);
     } catch {
-      console.error('Error fetching lookup data');
+      console.error("Error fetching lookup data");
     }
   };
 
@@ -183,7 +213,7 @@ const ProgramCoursesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleFormSubmit = async (data: Omit<ProgramCourse, "id" | "createdAt" | "updatedAt">) => {
     setIsFormSubmitting(true);
     try {
       if (selectedProgramCourse) {
@@ -197,7 +227,7 @@ const ProgramCoursesPage = () => {
       fetchProgramCourses();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to ${selectedProgramCourse ? 'update' : 'create'} program course: ${errorMessage}`);
+      toast.error(`Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`);
     } finally {
       setIsFormSubmitting(false);
     }
@@ -208,20 +238,26 @@ const ProgramCoursesPage = () => {
     setSelectedProgramCourse(null);
   };
 
-  const validateBulkUploadData = async (file: File): Promise<{ isValid: boolean; errors: Array<{ message: string; row?: number }>; warnings: Array<{ message: string; row?: number }> }> => {
+  const validateBulkUploadData = async (
+    file: File,
+  ): Promise<{
+    isValid: boolean;
+    errors: Array<{ message: string; row?: number }>;
+    warnings: Array<{ message: string; row?: number }>;
+  }> => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
           const rowsArr = Array.isArray(rows) ? rows : [];
           const [header, ...dataRows] = rowsArr;
-console.log(header)
+          console.log(header);
           if (!Array.isArray(dataRows)) {
             resolve({ isValid: false, errors: [{ message: "Invalid file format" }], warnings: [] });
             return;
@@ -232,41 +268,77 @@ console.log(header)
           const warnings: Array<{ message: string; row?: number }> = [];
 
           // Create reverse lookup objects for validation
-          const streamsByName = streams.reduce((acc, stream) => {
-            acc[stream.name.toLowerCase()] = stream;
-            return acc;
-          }, {} as Record<string, Stream>);
+          const streamsByName = streams.reduce(
+            (acc, stream) => {
+              acc[stream.name.toLowerCase()] = stream;
+              return acc;
+            },
+            {} as Record<string, Stream>,
+          );
 
-          const coursesByName = courses.reduce((acc, course) => {
-            acc[course.name.toLowerCase()] = course;
-            return acc;
-          }, {} as Record<string, Course>);
+          const coursesByName = courses.reduce(
+            (acc, course) => {
+              acc[course.name.toLowerCase()] = course;
+              return acc;
+            },
+            {} as Record<string, Course>,
+          );
 
-          const courseTypesByName = courseTypes.reduce((acc, courseType) => {
-            acc[courseType.name.toLowerCase()] = courseType;
-            return acc;
-          }, {} as Record<string, CourseType>);
+          const courseTypesByName = courseTypes.reduce(
+            (acc, courseType) => {
+              acc[courseType.name.toLowerCase()] = courseType;
+              return acc;
+            },
+            {} as Record<string, CourseType>,
+          );
 
-          const courseLevelsByName = courseLevels.reduce((acc, courseLevel) => {
-            acc[courseLevel.name.toLowerCase()] = courseLevel;
-            return acc;
-          }, {} as Record<string, CourseLevel>);
+          const courseLevelsByName = courseLevels.reduce(
+            (acc, courseLevel) => {
+              acc[courseLevel.name.toLowerCase()] = courseLevel;
+              return acc;
+            },
+            {} as Record<string, CourseLevel>,
+          );
 
-          const affiliationsByName = affiliations.reduce((acc, affiliation) => {
-            acc[affiliation.name.toLowerCase()] = affiliation;
-            return acc;
-          }, {} as Record<string, Affiliation>);
+          const affiliationsByName = affiliations.reduce(
+            (acc, affiliation) => {
+              acc[affiliation.name.toLowerCase()] = affiliation;
+              return acc;
+            },
+            {} as Record<string, Affiliation>,
+          );
 
-          const regulationTypesByName = regulationTypes.reduce((acc, regulationType) => {
-            acc[regulationType.name.toLowerCase()] = regulationType;
-            return acc;
-          }, {} as Record<string, RegulationType>);
+          const regulationTypesByName = regulationTypes.reduce(
+            (acc, regulationType) => {
+              acc[regulationType.name.toLowerCase()] = regulationType;
+              return acc;
+            },
+            {} as Record<string, RegulationType>,
+          );
 
           for (let i = 0; i < rowsArray.length; i++) {
             const row = rowsArray[i];
-            const [streamName, courseName, courseTypeName, courseLevelName, duration, totalSemesters, affiliationName, regulationTypeName] = row;
-            
-            if (!streamName || !courseName || !courseTypeName || !courseLevelName || !duration || !totalSemesters || !affiliationName || !regulationTypeName) {
+            const [
+              streamName,
+              courseName,
+              courseTypeName,
+              courseLevelName,
+              duration,
+              totalSemesters,
+              affiliationName,
+              regulationTypeName,
+            ] = row;
+
+            if (
+              !streamName ||
+              !courseName ||
+              !courseTypeName ||
+              !courseLevelName ||
+              !duration ||
+              !totalSemesters ||
+              !affiliationName ||
+              !regulationTypeName
+            ) {
               errors.push({ row: i + 2, message: "All required fields must be provided." });
               continue;
             }
@@ -301,7 +373,7 @@ console.log(header)
           }
 
           resolve({ isValid: errors.length === 0, errors, warnings });
-          } catch {
+        } catch {
           resolve({ isValid: false, errors: [{ message: "Error reading file" }], warnings: [] });
         }
       };
@@ -311,13 +383,13 @@ console.log(header)
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
-    
+
     // First validate the data
     const validation = await validateBulkUploadData(bulkFile);
-    
+
     if (!validation.isValid) {
       // Show validation errors
-      const errorMessages = validation.errors.map(err => `Row ${err.row}: ${err.message}`).join('\n');
+      const errorMessages = validation.errors.map((err) => `Row ${err.row}: ${err.message}`).join("\n");
       toast.error(`Validation failed:\n${errorMessages}`, {
         duration: 10000,
       });
@@ -336,7 +408,7 @@ console.log(header)
         toast.error(`${result.summary.failed} program courses failed to upload`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -346,9 +418,15 @@ console.log(header)
   const handleDownloadTemplate = () => {
     // Create template data using names instead of IDs
     const templateData = [];
-    
-    if (streams.length > 0 && courses.length > 0 && courseTypes.length > 0 && 
-        courseLevels.length > 0 && affiliations.length > 0 && regulationTypes.length > 0) {
+
+    if (
+      streams.length > 0 &&
+      courses.length > 0 &&
+      courseTypes.length > 0 &&
+      courseLevels.length > 0 &&
+      affiliations.length > 0 &&
+      regulationTypes.length > 0
+    ) {
       // Use first available names from each category
       templateData.push({
         Stream: streams[0].name,
@@ -359,12 +437,18 @@ console.log(header)
         TotalSemesters: 6,
         Affiliation: affiliations[0].name,
         RegulationType: regulationTypes[0].name,
-        Disabled: true
+        Disabled: true,
       });
-      
+
       // Add a second example if we have multiple items
-      if (streams.length > 1 && courses.length > 1 && courseTypes.length > 1 && 
-          courseLevels.length > 1 && affiliations.length > 1 && regulationTypes.length > 1) {
+      if (
+        streams.length > 1 &&
+        courses.length > 1 &&
+        courseTypes.length > 1 &&
+        courseLevels.length > 1 &&
+        affiliations.length > 1 &&
+        regulationTypes.length > 1
+      ) {
         templateData.push({
           Stream: streams[1].name,
           Course: courses[1].name,
@@ -374,7 +458,7 @@ console.log(header)
           TotalSemesters: 4,
           Affiliation: affiliations[1].name,
           RegulationType: regulationTypes[1].name,
-          Disabled: true
+          Disabled: true,
         });
       }
     } else {
@@ -388,10 +472,10 @@ console.log(header)
         TotalSemesters: 6,
         Affiliation: "University of Example",
         RegulationType: "CBCS",
-        Disabled: true
+        Disabled: true,
       });
     }
-    
+
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Program Courses Template");
@@ -419,7 +503,7 @@ console.log(header)
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Program Courses");
       XLSX.writeFile(wb, "program-courses.xlsx");
-      } catch {
+    } catch {
       toast.error("Failed to download program courses");
     }
   };
@@ -442,7 +526,7 @@ console.log(header)
         TotalSemesters: (error.data as unknown as string[])[5] || "",
         Affiliation: (error.data as unknown as string[])[6] || "",
         RegulationType: (error.data as unknown as string[])[7] || "",
-        Disabled: (error.data as unknown as string[])[8] || ""
+        Disabled: (error.data as unknown as string[])[8] || "",
       }));
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
@@ -462,7 +546,7 @@ console.log(header)
     try {
       const unprocessedData = bulkUploadResult.unprocessedData.map((item: BulkUploadRow, index: number) => ({
         "Row Number": index + 1,
-        "Reason": "Not processed",
+        Reason: "Not processed",
         "Original Data": JSON.stringify(item),
         Stream: (item as unknown as string[])[0] || "",
         Course: (item as unknown as string[])[1] || "",
@@ -472,7 +556,7 @@ console.log(header)
         TotalSemesters: (item as unknown as string[])[5] || "",
         Affiliation: (item as unknown as string[])[6] || "",
         RegulationType: (item as unknown as string[])[7] || "",
-          Disabled: (item as unknown as string[])[8] || ""
+        Disabled: (item as unknown as string[])[8] || "",
       }));
       const ws = XLSX.utils.json_to_sheet(unprocessedData);
       const wb = XLSX.utils.book_new();
@@ -495,7 +579,7 @@ console.log(header)
     })
       .join(" ")
       .toLowerCase()
-      .includes(searchText.toLowerCase())
+      .includes(searchText.toLowerCase()),
   );
 
   if (loading) {
@@ -555,62 +639,59 @@ console.log(header)
                       Download the template to see the required format
                     </span>
                   </div>
-                                     <div className="space-y-2">
-                     <label className="text-sm font-medium">Upload Excel File</label>
-                     <input
-                       type="file"
-                       accept=".xlsx,.xls,.csv"
-                       onChange={e => setBulkFile(e.target.files?.[0] || null)}
-                       className="w-full p-2 border rounded"
-                     />
-                     {bulkFile && (
-                       <Button 
-                         variant="outline" 
-                         size="sm" 
-                         onClick={async () => {
-                           const validation = await validateBulkUploadData(bulkFile);
-                           if (validation.isValid) {
-                             toast.success("File validation passed! All data is valid.");
-                           } else {
-                             const errorMessages = validation.errors.map(err => `Row ${err.row}: ${err.message}`).join('\n');
-                             toast.error(`Validation failed:\n${errorMessages}`, {
-                               duration: 10000,
-                             });
-                           }
-                         }}
-                         className="w-full"
-                       >
-                         Validate File
-                       </Button>
-                     )}
-                   </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Upload Excel File</label>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                      className="w-full p-2 border rounded"
+                    />
+                    {bulkFile && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const validation = await validateBulkUploadData(bulkFile);
+                          if (validation.isValid) {
+                            toast.success("File validation passed! All data is valid.");
+                          } else {
+                            const errorMessages = validation.errors
+                              .map((err) => `Row ${err.row}: ${err.message}`)
+                              .join("\n");
+                            toast.error(`Validation failed:\n${errorMessages}`, {
+                              duration: 10000,
+                            });
+                          }
+                        }}
+                        className="w-full"
+                      >
+                        Validate File
+                      </Button>
+                    )}
+                  </div>
                   {bulkUploadResult && (
                     <div className="space-y-4 p-4 border rounded">
                       <h4 className="font-medium">Upload Results</h4>
-                                             <div className="grid grid-cols-4 gap-4 text-sm">
-                         <div>
-                           <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
-                         </div>
-                         <div className="text-green-600">
-                           <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
-                         </div>
-                         <div className="text-red-600">
-                           <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
-                         </div>
-                         <div className="text-orange-600">
-                           <span className="font-medium">Unprocessed:</span> {bulkUploadResult.summary.unprocessed || 0}
-                         </div>
-                       </div>
+                      <div className="grid grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium">Total:</span> {bulkUploadResult.summary.total}
+                        </div>
+                        <div className="text-green-600">
+                          <span className="font-medium">Successful:</span> {bulkUploadResult.summary.successful}
+                        </div>
+                        <div className="text-red-600">
+                          <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
+                        </div>
+                        <div className="text-orange-600">
+                          <span className="font-medium">Unprocessed:</span> {bulkUploadResult.summary.unprocessed || 0}
+                        </div>
+                      </div>
                       {bulkUploadResult.errors && bulkUploadResult.errors.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleDownloadFailedData}
-                              className="text-xs"
-                            >
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
@@ -621,43 +702,46 @@ console.log(header)
                                 <span className="font-medium">Row {error.row}:</span> {error.error}
                               </div>
                             ))}
-                                                     </div>
-                         </div>
-                       )}
-                       {bulkUploadResult.unprocessedData && bulkUploadResult.unprocessedData.length > 0 && (
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <h5 className="font-medium text-orange-600">Unprocessed Data:</h5>
-                             <Button 
-                               variant="outline" 
-                               size="sm" 
-                               onClick={handleDownloadUnprocessedData}
-                               className="text-xs"
-                             >
-                               <Download className="mr-1 h-3 w-3" />
-                               Download Unprocessed Data
-                             </Button>
-                           </div>
-                           <div className="max-h-40 overflow-y-auto space-y-1">
-                             {bulkUploadResult.unprocessedData.map((_item: BulkUploadRow, index: number) => (
-                               <div key={index} className="text-xs p-2 bg-orange-50 border border-orange-200 rounded">
-                                 <span className="font-medium">Row {index + 1}:</span> Not processed
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       )}
-                     </div>
+                          </div>
+                        </div>
+                      )}
+                      {bulkUploadResult.unprocessedData && bulkUploadResult.unprocessedData.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium text-orange-600">Unprocessed Data:</h5>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDownloadUnprocessedData}
+                              className="text-xs"
+                            >
+                              <Download className="mr-1 h-3 w-3" />
+                              Download Unprocessed Data
+                            </Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {bulkUploadResult.unprocessedData.map((_item: BulkUploadRow, index: number) => (
+                              <div key={index} className="text-xs p-2 bg-orange-50 border border-orange-200 rounded">
+                                <span className="font-medium">Row {index + 1}:</span> Not processed
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkFile(null); setBulkUploadResult(null); }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsBulkUploadOpen(false);
+                        setBulkFile(null);
+                        setBulkUploadResult(null);
+                      }}
+                    >
                       Close
                     </Button>
                   </div>
@@ -677,7 +761,9 @@ console.log(header)
               </AlertDialogTrigger>
               <AlertDialogContent className="max-w-2xl w-full">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedProgramCourse ? "Edit Program Course" : "Add New Program Course"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedProgramCourse ? "Edit Program Course" : "Add New Program Course"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <ProgramCourseForm
                   initialData={selectedProgramCourse}
@@ -691,16 +777,21 @@ console.log(header)
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" onClick={handleDownloadAll}>
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[600px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[600px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead style={{ width: 40 }}>#</TableHead>
                     <TableHead style={{ width: 90 }}>Stream</TableHead>
@@ -715,7 +806,9 @@ console.log(header)
                 <TableBody>
                   {filteredProgramCourses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">No program courses found.</TableCell>
+                      <TableCell colSpan={8} className="text-center">
+                        No program courses found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredProgramCourses.map((pc, idx) => (
@@ -740,12 +833,7 @@ console.log(header)
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(pc)}
-                              className="h-5 w-5 p-0"
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(pc)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button

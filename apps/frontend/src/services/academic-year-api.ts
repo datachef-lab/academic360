@@ -22,7 +22,7 @@ export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' |
 
 // Update academic year
 export async function updateAcademicYearById(id: number, academicYear: Partial<AcademicYear>): Promise<ApiResonse<AcademicYear>> {
-  const response = await axiosInstance.put(`/api/v1/academics/academic-years/${id}`, academicYear);
+  const response = await axiosInstance.put(`/api/v1/academics/${id}`, academicYear);
   return response.data;
 }
 

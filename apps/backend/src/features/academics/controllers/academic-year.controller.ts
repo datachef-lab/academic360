@@ -71,6 +71,7 @@ export const getCurrentAcademicYearHandler = async (req: Request, res: Response,
 export const updateAcademicYearHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
+        console.log("in update academic year:", id);
         const updatedAcademicYear = await updateAcademicYear(Number(id), req.body as Partial<AcademicYear>);
         
         if (!updatedAcademicYear) {

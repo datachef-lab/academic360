@@ -17,13 +17,11 @@ const defaultClasses: Class[] = [
 ]
 
 export async function initializeClasses() {
-    const existingClasses = await db.select().from(classModel);
-    if (existingClasses.length === 0) {
-        console.log("No classes found, initializing default classes...");
-        const insertedClasses = await db.insert(classModel).values(defaultClasses).returning();
-        console.log("Default classes initialized:", insertedClasses);
-    } else {
-        console.log("Classes already initialized, skipping...");
+    for (const cls of defaultClasses) {
+        const existingClass = await db.select().from(classModel).where(eq(classModel.name, cls.name));
+        if (existingClass.length === 0) {
+            await db.insert(classModel).values(cls).returning();
+        }
     }
 }
 

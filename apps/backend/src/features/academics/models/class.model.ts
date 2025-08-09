@@ -6,6 +6,7 @@ import { z } from "zod";
 export const classModel = pgTable('classes', {
     id: serial().primaryKey(),
     name: varchar({ length: 500 }).notNull(),
+    shortName: varchar({ length: 255 }),
     type: classTypeEnum().notNull(),
     sequence: integer().unique(),
     disabled: boolean().default(false),

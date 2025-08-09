@@ -2,7 +2,7 @@ export interface AuthUser {
     id: string;
     name: string;
     email: string;
-    avatar?: string | null;
+    image?: string | null;
     roles?: string[];
     // Add other user properties as needed
   }

@@ -1,15 +1,20 @@
 import { createBrowserRouter, Outlet, RouterProvider } from "react-router-dom";
 import HomeLayout from "@/components/layouts/HomeLayout";
-import { LoginPage, NotFoundPage, SettingsPage, UserProfilePage } from "@/pages";
-import BulkUploadPage from "@/pages/BulkUpload";
+import {
+  LoginPage,
+  NotFoundPage,
+  SettingsPage,
+  // SettingsPage,
+  UserProfilePage,
+} from "@/pages";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./providers/AuthProvider";
 import { NotificationProvider } from "./providers/NotificationProvider";
 // import StudentPage from "./pages/students/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
-import LibFineManagement from "./components/LibManagement/LibFines";
-import LibReport from "./components/LibManagement/LibReport";
+// import LibFineManagement from "./components/LibManagement/LibFines";
+// import LibReport from "./components/LibManagement/LibReport";
 
 import ManageMarksheetPage from "./pages/students/ManageMarksheetPage";
 // import StudentMarksheetsPage from "./pages/students/StudentMarksheetsPage";
@@ -42,7 +47,7 @@ import * as libraryModule from "@/pages/library";
 import * as appModule from "./pages/apps";
 import * as facultiesStaffsModule from "./pages/faculties-staffs";
 import * as marksheetModule from "@/pages/marksheets";
-import SettingsMasterPage from "./pages/settings/SettingsMasterPage";
+import * as settingsModule from "./pages/settings";
 import { NoticeMaster } from "./pages/notices";
 import { AcademicYearPage } from "./pages/admissions-fees/fees";
 import Dashboard from "./pages/dashboard/Dashboard";
@@ -58,6 +63,8 @@ import StaffAssignmentPage from "./pages/admissions-fees/admissions/[year]/workf
 import EligibilityPage from "./pages/admissions-fees/admissions/[year]/workflows/EligibilityPage";
 import MeritCriteriaPage from "./pages/admissions-fees/admissions/[year]/workflows/MeritCriteriaPage";
 import FeesSlabMappingPage from "./pages/admissions-fees/admissions/[year]/workflows/FeesSlabMappingPage";
+import BulkUploadPage from "./pages/BulkUpload";
+// import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter([
   { path: "/", element: <LoginPage /> },
@@ -73,6 +80,25 @@ const router = createBrowserRouter([
     children: [
       { path: "", element: <Dashboard /> },
       { path: "resources", element: <SettingsPage /> },
+      // {
+      //   path: "resources",
+      //   element: <resourceModule.ResourcesMaster />,
+      //   children: [
+      //   //   { path: "", element: <resourceModule.BoardUniversitiesPage /> },
+      //     { path: "", element: <resourceModule.InstitutionsPage /> },
+      //     { path: "categories", element: <resourceModule.CategoriesPage /> },
+      //     { path: "religion", element: <resourceModule.ReligionPage /> },
+      //     { path: "degree", element: <resourceModule.DegreePage /> },
+      //     { path: "language-medium", element: <resourceModule.LanguageMediumPage /> },
+      //     { path: "documents", element: <resourceModule.DocumentPage /> },
+      //     { path: "blood-group", element: <resourceModule.BloodGroupPage /> },
+      //     { path: "occupations", element: <resourceModule.OccupationsPage /> },
+      //     { path: "qualifications", element: <resourceModule.QualificationsPage /> },
+      //     { path: "nationalities", element: <resourceModule.NationalitiesPage /> },
+      //     { path: "annual-income", element: <resourceModule.AnnualIncomePage /> },
+      //   ],
+      // },
+
       {
         path: "courses-subjects-design",
         element: <courseSubjectModule.CoursesSubjectsMaster />,
@@ -84,41 +110,42 @@ const router = createBrowserRouter([
           { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
           { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
           { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
-          { path: "affiliation-types", element: <courseSubjectModule.AffiliationTypesPage /> },
           { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
           { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
           { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+          { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+          { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
+          { path: "academic-years", element: <AcademicYearPage /> },
         ],
       },
-      { path: "admissions-fees/admissions/:year", element: <Outlet />, children: [
-        {path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
-        {path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },
-              {path: "applications", element: <ApplicationsPage /> }, 
-              {path: "generate-merit", element: <GenerateMeritListPage /> },
-              {path: "fee-payment-review", element: <FeePaymentReviewPage /> },
-              {path: "document-verification", element: <DocumentVerificationPage /> },
-              {path: "id-card-generator", element: <IdCardGeneratorPage /> },
-              {path: "final-admission-push", element: <FinalAdmissionPushPage /> },
-              {path: "staff-assignment", element: <StaffAssignmentPage /> },
-              {path: "eligibility-rules", element: <EligibilityPage /> },
-              {path: "merit-criteria", element: <MeritCriteriaPage /> },
-              {path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
-
-      ] },
+      {
+        path: "admissions-fees/admissions/:year",
+        element: <Outlet />,
+        children: [
+          { path: "", element: <admissionFeesModule.AdmissionDetailsPage /> },
+          { path: "pre-admission-queries", element: <PreAdmissionQueriesPage /> },
+          { path: "applications", element: <ApplicationsPage /> },
+          { path: "generate-merit", element: <GenerateMeritListPage /> },
+          { path: "fee-payment-review", element: <FeePaymentReviewPage /> },
+          { path: "document-verification", element: <DocumentVerificationPage /> },
+          { path: "id-card-generator", element: <IdCardGeneratorPage /> },
+          { path: "final-admission-push", element: <FinalAdmissionPushPage /> },
+          { path: "staff-assignment", element: <StaffAssignmentPage /> },
+          { path: "eligibility-rules", element: <EligibilityPage /> },
+          { path: "merit-criteria", element: <MeritCriteriaPage /> },
+          { path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
+        ],
+      },
       {
         path: "admissions-fees",
         element: <admissionFeesModule.AdmissionsFeesMaster />,
         children: [
           { path: "", element: <admissionFeesModule.HomePage /> },
-          { path: "academic-years", element: <AcademicYearPage /> },
           {
             path: "admissions",
             element: <Outlet />,
-            children: [
-              { path: "", element: <admissionFeesModule.AdmissionsPage /> },
-                            
-            ],
+            children: [{ path: "", element: <admissionFeesModule.AdmissionsPage /> }],
           },
           {
             path: "fees",
@@ -212,8 +239,8 @@ const router = createBrowserRouter([
           { path: "archived", element: <div>TODO: Archived Books</div> },
           { path: "catalog", element: <BookCatalog /> },
           { path: "issued", element: <IssueRetun /> },
-          { path: "fine-management", element: <LibFineManagement /> },
-          { path: "lib-report", element: <LibReport /> },
+          //   { path: "fine-management", element: <LibFineManagement /> },
+          //   { path: "lib-report", element: <LibReport /> },
         ],
       },
 
@@ -229,9 +256,12 @@ const router = createBrowserRouter([
       //       },
       //     ],
       //   },
-      { path: "marksheets", element: <marksheetModule.MarksheetMaster />, children: [
-        { path: "", element: <marksheetModule.HomePage /> },
-        { path: "reports", element: <studentModule.GetReportsPage /> },
+      {
+        path: "marksheets",
+        element: <marksheetModule.MarksheetMaster />,
+        children: [
+          { path: "", element: <marksheetModule.HomePage /> },
+          { path: "reports", element: <studentModule.GetReportsPage /> },
           {
             path: "add",
             element: <Outlet />,
@@ -254,7 +284,8 @@ const router = createBrowserRouter([
               },
             ],
           },
-      ] },
+        ],
+      },
       {
         path: "apps",
         element: <Outlet />,
@@ -280,7 +311,16 @@ const router = createBrowserRouter([
         ],
       },
       { path: "notices", element: <NoticeMaster /> },
-      { path: "settings", element: <SettingsMasterPage /> },
+      {
+        path: "settings",
+        element: <settingsModule.SettingsMasterLayoutPage />,
+        children: [
+          { path: "", element: <settingsModule.GeneralSettingsPage /> },
+          { path: "users", element: <settingsModule.UsersPage /> },
+          { path: "api-config", element: <settingsModule.ApiConfigurationPage /> },
+          { path: "departments", element: <settingsModule.DepartmentsPage /> },
+        ],
+      },
 
       { path: "profile", element: <UserProfilePage /> },
       { path: "bulk-upload", element: <BulkUploadPage /> },

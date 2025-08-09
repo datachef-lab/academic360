@@ -90,8 +90,8 @@ export interface Paper {
     regulationTypeId: number;
     academicYearId: number;
     subjectTypeId: number;
-    courseId: number;
-    classId: number;
+    programCourseId: number;
+    classId: number; // changed from classId: number
     name: string;
     code: string;
     isOptional: boolean;
@@ -112,7 +112,7 @@ export interface PaperWithDetails {
     academicYearId: number;
     subjectTypeId: number;
     courseId: number;
-    classId: number;
+    classIds: number[]; // changed from classId: number
     name: string;
     code: string | null;
     isOptional: boolean;

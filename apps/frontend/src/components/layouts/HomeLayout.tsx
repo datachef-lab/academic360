@@ -11,7 +11,7 @@ import {
 import { AppSidebar } from "@/components/globals/AppSidebar";
 // import { ModeToggle } from "@/components/globals/ModeToggle";
 import styles from "@/styles/HomeLayout.module.css";
-import NotifcationPanel from "../globals/NotifcationPanel";
+// import NotifcationPanel from "../globals/NotifcationPanel";
 // import GlobalSearch from "../globals/GlobalSearch";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import {
@@ -30,6 +30,7 @@ import {
   UserCog,
   Settings,
 } from "lucide-react";
+import { NavUser } from "../globals/NavUser";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -104,9 +105,10 @@ export default function HomeLayout() {
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <div className="flex items-center mr-3 gap-2">
+            <div className="flex items-center mr-2 gap-2">
               {/* <GlobalSearch /> */}
-              <NotifcationPanel />  
+              <NavUser />
+              {/* <NotifcationPanel /> */}
               {/* <ModeToggle /> */}
             </div>
           </header>

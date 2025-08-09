@@ -10,7 +10,7 @@
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit, Download, Upload, Library } from "lucide-react";
 import React from "react";
-import { ProgressBar } from "@/components/common/Progress";
+// import { ProgressBar } from "@/components/common/Progress";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -47,7 +47,7 @@ const CoursesPage = () => {
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
-  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const  setUploadProgress = React.useState(0)[1];
 
   React.useEffect(() => {
     setLoading(true);
@@ -116,7 +116,7 @@ const CoursesPage = () => {
 
     setIsBulkUploading(true);
     try {
-      const result = await bulkUploadCourses(bulkFile);
+      const result = await bulkUploadCourses(bulkFile, (uploadProgress) => {setUploadProgress(uploadProgress)});
       setBulkUploadResult(result);
 
       if (result.summary.successful > 0) {
@@ -129,8 +129,8 @@ const CoursesPage = () => {
       if (result.summary.failed > 0) {
         toast.error(`${result.summary.failed} courses failed to upload`);
       }
-    } catch (error: unknown) {
-      toast.error(`Bulk upload failed: ${error.message || "Unknown error"}`);
+    } catch {
+      toast.error(`Bulk upload failed: ${"Unknown error"}`);
     } finally {
       setIsBulkUploading(false);
     }

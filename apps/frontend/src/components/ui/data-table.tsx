@@ -16,7 +16,7 @@ import {
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataTablePagination } from "../globals/DataTablePagination";
-import { DataTableToolbar } from "../tables/components/DataTableToolBar";
+// import { DataTableToolbar } from "../tables/components/DataTableToolBar";
 import { CustomPaginationState } from "../settings/SettingsContent";
 import { Skeleton } from "./skeleton";
 import { QueryObserverResult, RefetchOptions } from "@tanstack/react-query";
@@ -44,13 +44,13 @@ export function DataTable<TData, TValue>({
   pagination,
   isLoading,
   setPagination,
-  searchText,
-  setSearchText,
+//   searchText,
+//   setSearchText,
   viewDataToolbar = true,
   optionalTools,
 
 //   setDataLength,
-  refetch,
+//   refetch,
   onRowClick,
 }: DataTableProps<TData, TValue>) {
   const location = useLocation();
@@ -101,7 +101,7 @@ export function DataTable<TData, TValue>({
     <div className="space-y-3">
         <div>
         {location.pathname !== '/home/downloads' && viewDataToolbar &&  (<>
-        <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} />
+        {/* <DataTableToolbar  table={table} searchText={searchText} setSearchText={setSearchText} refetch={refetch} /> */}
         {optionalTools}
         </>)}
         </div>

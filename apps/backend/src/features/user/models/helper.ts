@@ -28,6 +28,7 @@ export const degreeLevelTypeEnum = pgEnum('degree_level_type', [
     "HIGHER_SECONDARY",
     "UNDER_GRADUATE",
     "POST_GRADUATE",
+    "DOCTORATE",
 ]);
 
 export const parentTypeEnum = pgEnum("parent_type", [
@@ -58,7 +59,9 @@ export const communityTypeEnum = pgEnum("community_type", [
 export const userTypeEnum = pgEnum('user_type', [
     "ADMIN",
     "STUDENT",
-    "TEACHER",
+    "FACULTY",
+    "STAFF",
+    "PARENTS",
 ]);
 
 export const subjectCategoryTypeEnum = pgEnum("subject_category_type", [
@@ -214,3 +217,15 @@ export const noticeVariantEnum = pgEnum("notice_variant", [
     "FEE",
     "EVENT",
 ]);
+
+export const settingsTypeInputEnum = pgEnum("settings_input_type", [
+    "NUMBER",
+    "TEXT",
+    "FILE",
+    "EMAIL",
+]);
+
+export const settingsVariantEnum = pgEnum("settings_variant_type", [
+    "GENERAL",
+    "API_CONFIG",
+])

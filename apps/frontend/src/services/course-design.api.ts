@@ -2,7 +2,7 @@
 import axiosInstance from '@/utils/api';
 import {
     Paper,
-        // PaperWithDetails,
+    // PaperWithDetails,
     PaperComponent,
     Subject,
     Course,
@@ -281,7 +281,7 @@ export const updatePaperWithComponents = (paperId: number, data: {
     affiliationId: number;
     regulationTypeId: number;
     academicYearId: number;
-    courseId: number;
+    programCourseId: number;
     subjectTypeId: number;
     classId: number;
     code: string;
@@ -321,6 +321,7 @@ export const deleteExamComponent = (id: number) => axiosInstance.delete<ExamComp
 // Academic Years
 export const getAcademicYears = async () => {
     const res = await axiosInstance.get<ApiResonse<AcademicYear[]>>('/api/v1/academics/all');
+    console.log("in getAcademicYears()", res.data);
     return res.data.payload;
 };
 

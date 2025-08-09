@@ -10,33 +10,6 @@ export async function createAcademicYear(
     academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
     session: Omit<Session, "id" | "createdAt" | "updatedAt">,
 ): Promise<AcademicYear | null> {
-    let [existingSession] = await db
-        .select()
-        .from(sessionModel)
-        .where(
-            and(
-                eq(sessionModel.name, session.name),
-                eq(sessionModel.from, session.from),
-                eq(sessionModel.to, session.to),
-            ),
-        );
-    if (!existingSession) {
-        console.log("session:", session);
-
-        existingSession = (
-            await db
-                .insert(sessionModel)
-                .values({
-                    name: session.name,
-                    from: session.from,
-                    to: session.to,
-                    isCurrentSession: session.isCurrentSession || false,
-                    codePrefix: session.codePrefix || null,
-                })
-                .returning()
-        )[0];
-    }
-
     const [newAcademicYear] = await db
         .insert(academicYearModel)
         .values(academicYear)

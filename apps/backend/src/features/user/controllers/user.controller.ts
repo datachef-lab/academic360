@@ -7,15 +7,17 @@ import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
 import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
+import { userTypeEnum } from "../models/helper.js";
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { page,isAdmin, pageSize } = req.query;
+        const { page,isAdmin, pageSize, type } = req.query;
         const pageParsed = Math.max(Number(page)||1,1);
         const pageSizeParsed =Math.max(Math.min(Number(pageSize)||10,100),1);
         const isAdminCheck = String(isAdmin).toLowerCase() === "true";
 
-        const users = await findAllUsers(Number(pageParsed), Number(pageSizeParsed),isAdminCheck);
+
+        const users = await findAllUsers(Number(pageParsed), Number(pageSizeParsed),isAdminCheck, type as typeof userTypeEnum.enumValues[number]);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {

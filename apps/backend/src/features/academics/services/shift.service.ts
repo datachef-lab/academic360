@@ -2,6 +2,28 @@ import { db } from "@/db/index.js";
 import { Shift, shiftModel } from "../models/shift.model.js";
 import { eq } from "drizzle-orm";
 
+export const loadShifts = async () => {
+    const shifts: Shift[] = [
+        { name: "Morning", codePrefix: "01", sequence: 1 },
+        { name: "Evening", codePrefix: "03", sequence: 2 },
+        { name: "Afternoon", codePrefix: "02", sequence: 3 },
+        { name: "Day", codePrefix: "04", sequence: 4 },
+    ];
+
+    for (const shift of shifts) {
+        const existing = await db
+            .select()
+            .from(shiftModel)
+            .where(eq(shiftModel.name, shift.name));
+
+        if (!existing.length) {
+            await db.insert(shiftModel).values(shift);
+        }
+    }
+
+    console.log("Shifts loaded successfully.");
+};
+
 export async function getAllShifts(): Promise<Shift[]> {
     return db.select().from(shiftModel);
 }

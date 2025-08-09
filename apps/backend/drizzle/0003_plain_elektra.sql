@@ -1,0 +1,1 @@
+ALTER TYPE "public"."degree_level_type" ADD VALUE 'DOCTORATE';

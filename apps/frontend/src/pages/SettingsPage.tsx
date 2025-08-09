@@ -46,7 +46,7 @@ export default function Settings() {
   const [activeResourceSection, setActiveResourceSection] = useState("");
 
   const handleResourceSectionChange = (section: string) => {
-    const foundTab = settingsCategories[0].tabs.find(tab => tab.label === section);
+    const foundTab = settingsCategories[0].tabs.find((tab) => tab.label === section);
     if (foundTab) {
       setActiveSetting(foundTab);
       setActiveResourceSection(section);
@@ -57,7 +57,7 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-white items-center justify-center px-2 py-3 sm:px-2 lg:px-2">
-      <motion.div
+      {/* <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -85,12 +85,12 @@ export default function Settings() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="h-1 bg-gradient-to-r mt-2 from-purple-400 via-purple-500 to-purple-400 rounded-full origin-left col-span-full"
         />
-      </motion.div>
+      </motion.div> */}
 
       {/* content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-full overflow-hidden">
         {/* Left Section */}
-        <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr]">
+        <div className="lg:col-span-3 bg-white/30 shadow-lg rounded-lg border border-gray-200/70 grid grid-rows-[auto_1fr] h-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -106,9 +106,7 @@ export default function Settings() {
                 <Boxes className="h-8 w-8 drop-shadow-xl text-white" />
               </motion.div>
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white">
-                  [ {activeSetting.label} ]
-                </h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">{activeSetting.label}</h2>
                 <p className="text-sm text-white/80 font-medium">
                   Customize your preferences and manage configurations effortlessly.
                 </p>
@@ -129,10 +127,7 @@ export default function Settings() {
 
         {/* Right Section: Replace with ResourceNavigationSidebar */}
         <div className="flex flex-col items-stretch">
-          <ResourceSidebar
-            activeSection={activeResourceSection}
-            onSectionChange={handleResourceSectionChange}
-          />
+          <ResourceSidebar activeSection={activeResourceSection} onSectionChange={handleResourceSectionChange} />
         </div>
       </div>
     </div>

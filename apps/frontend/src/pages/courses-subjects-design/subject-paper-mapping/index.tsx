@@ -26,11 +26,12 @@ import {
   getSubjectTypes,
   bulkUploadSubjectPapers,
   getAcademicYears,
-  getCourses,
+  getProgramCourses,
   getPapers,
   BulkUploadRow,
   BulkUploadError,
   updatePaperWithComponents,
+  getCourses,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 // import { useAuth } from "@/hooks/useAuth";
@@ -39,11 +40,13 @@ import type {
   Affiliation,
   RegulationType,
   SubjectType,
-  Course,
+
   // ExamComponent,
   Paper,
   ExamComponent,
   PaperComponent,
+  ProgramCourse,
+  Course,
 } from "@/types/course-design";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
@@ -84,6 +87,7 @@ const SubjectPaperMappingPage = () => {
   const [subjectTypes, setSubjectTypes] = React.useState<SubjectType[]>([]);
   const [academicYears, setAcademicYears] = React.useState<AcademicYear[]>([]);
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
+  const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
   const [courses, setCourses] = React.useState<Course[]>([]);
   const [classes, setClasses] = React.useState<Class[]>([]);
 
@@ -99,7 +103,7 @@ const SubjectPaperMappingPage = () => {
   const [papers, setPapers] = React.useState<Paper[]>([]);
   //   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
 
-  //   const [courses, setCourses] = React.useState<Course[]>([]);
+  //   const [programCourses, setProgramCourses] = React.useState<Course[]>([]);
   //   const [classes, setClasses] = React.useState<Class[]>([]);
 
   const fetchFilteredData = React.useCallback(async () => {
@@ -122,34 +126,38 @@ const SubjectPaperMappingPage = () => {
       if (Array.isArray(result)) {
         // Apply client-side filtering
         let filteredPapers = result as Paper[];
-        
+
         // Filter by subject
         if (filtersObj.subjectId) {
-          filteredPapers = filteredPapers.filter(paper => paper.subjectId === filtersObj.subjectId);
+          filteredPapers = filteredPapers.filter((paper) => paper.subjectId === filtersObj.subjectId);
         }
-        
+
         // Filter by affiliation
         if (filtersObj.affiliationId) {
-          filteredPapers = filteredPapers.filter(paper => paper.affiliationId === filtersObj.affiliationId);
+          filteredPapers = filteredPapers.filter((paper) => paper.affiliationId === filtersObj.affiliationId);
         }
-        
+
         // Filter by regulation type
         if (filtersObj.regulationTypeId) {
-          filteredPapers = filteredPapers.filter(paper => paper.regulationTypeId === filtersObj.regulationTypeId);
+          filteredPapers = filteredPapers.filter((paper) => paper.regulationTypeId === filtersObj.regulationTypeId);
         }
-        
+
         // Filter by academic year
         if (filtersObj.academicYearId) {
-          filteredPapers = filteredPapers.filter(paper => paper.academicYearId === filtersObj.academicYearId);
+          filteredPapers = filteredPapers.filter((paper) => paper.academicYearId === filtersObj.academicYearId);
         }
-        
+
         // Filter by search text
         if (searchText) {
           const searchLower = searchText.toLowerCase();
-          filteredPapers = filteredPapers.filter(paper => 
-            paper.name?.toLowerCase().includes(searchLower) ||
-            paper.code?.toLowerCase().includes(searchLower) ||
-            subjects.find(s => s.id === paper.subjectId)?.name?.toLowerCase().includes(searchLower)
+          filteredPapers = filteredPapers.filter(
+            (paper) =>
+              paper.name?.toLowerCase().includes(searchLower) ||
+              paper.code?.toLowerCase().includes(searchLower) ||
+              subjects
+                .find((s) => s.id === paper.subjectId)
+                ?.name?.toLowerCase()
+                .includes(searchLower),
           );
         }
 
@@ -192,7 +200,7 @@ const SubjectPaperMappingPage = () => {
     searchText,
     currentPage,
     itemsPerPage,
-    courses.length,
+    programCourses.length,
     classes.length,
     subjects.length,
     affiliations.length,
@@ -212,8 +220,9 @@ const SubjectPaperMappingPage = () => {
         academicYearRes,
         examComponentsRes,
         academicYearsRes,
-        coursesRes,
+        programCourseRes,
         classesRes,
+        courseRes,
       ] = await Promise.all([
         getSubjects(),
         getAffiliations(),
@@ -222,21 +231,22 @@ const SubjectPaperMappingPage = () => {
         getAcademicYears(),
         getExamComponents(),
         getAcademicYears(),
-        getCourses(),
+        getProgramCourses(),
         getAllClasses(),
+        getCourses(),
       ]);
 
-      console.log("API Responses:", {
-        subjects: subjectsRes,
-        affiliations: affiliationsRes,
-        regulationTypes: regulationTypesRes,
-        subjectTypes: subjectTypesRes,
-        examComponents: examComponentsRes,
-        academicYears: academicYearsRes,
-        courses: coursesRes,
-        classes: classesRes,
-        sessions: academicYearRes,
-      });
+    //   console.log("API Responses:", {
+    //     subjects: subjectsRes,
+    //     affiliations: affiliationsRes,
+    //     regulationTypes: regulationTypesRes,
+    //     subjectTypes: subjectTypesRes,
+    //     examComponents: examComponentsRes,
+    //     academicYears: academicYearsRes,
+    //     programCourses: programCourseRes,
+    //     classes: classesRes,
+    //     sessions: academicYearRes,
+    //   });
 
       console.log("SubjectTypes response details:", {
         isArray: Array.isArray(subjectTypesRes),
@@ -251,7 +261,8 @@ const SubjectPaperMappingPage = () => {
       setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
       setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
       setAcademicYears(Array.isArray(academicYearRes) ? academicYearRes : []);
-      setCourses(Array.isArray(coursesRes) ? coursesRes : []);
+      setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
+      setCourses(Array.isArray(courseRes) ? courseRes : []);
       setClasses(
         Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
       );
@@ -268,10 +279,10 @@ const SubjectPaperMappingPage = () => {
       );
 
       setFiltersObj({
-        subjectId: subjectsRes[0].id || null,
-        affiliationId: affiliationsRes[0].id || null,
-        regulationTypeId: regulationTypesRes[0].id || null,
-        academicYearId: academicYearsRes[0].id || null,
+        subjectId: subjectsRes[0]?.id || null,
+        affiliationId: affiliationsRes[0]?.id || null,
+        regulationTypeId: regulationTypesRes[0]?.id || null,
+        academicYearId: academicYearsRes[0]?.id || null,
         searchText: "",
         page: 1,
         limit: 10,
@@ -310,7 +321,7 @@ const SubjectPaperMappingPage = () => {
       setSubjectTypes([]);
       setExamComponents([]);
       setAcademicYears([]);
-      setCourses([]);
+      setProgramCourses([]);
       setClasses([]);
     } finally {
       setLoading(false);
@@ -338,26 +349,27 @@ const SubjectPaperMappingPage = () => {
 
       // Transform the data to match the API expected format
       const updateData = {
+        classId: data.classId,
         name: data.name,
         subjectId: data.subjectId,
         affiliationId: data.affiliationId,
         regulationTypeId: data.regulationTypeId,
         academicYearId: data.academicYearId,
-        courseId: data.courseId,
+        programCourseId: data.programCourseId,
         subjectTypeId: data.subjectTypeId,
-        classId: data.classId,
         code: data.code,
         isOptional: data.isOptional,
         disabled: data.disabled,
-        components: data.components
-          ?.filter(comp => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
-          .map(comp => ({
-            examComponent: {
-              id: comp.examComponent.id!,
-            },
-            fullMarks: comp.fullMarks!,
-            credit: comp.credit!,
-          })) || [],
+        components:
+          data.components
+            ?.filter((comp) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
+            .map((comp) => ({
+              examComponent: {
+                id: comp.examComponent.id!,
+              },
+              fullMarks: comp.fullMarks!,
+              credit: comp.credit!,
+            })) || [],
       };
 
       await updatePaperWithComponents(selectedPaperForEdit.id, updateData);
@@ -399,7 +411,7 @@ const SubjectPaperMappingPage = () => {
   //       {
   //         Subject: "",
   //         "Subject Type": "",
-  //         "Applicable Courses": "",
+  //         "Applicable programCourses": "",
   //         Affiliation: "",
   //         Regulation: "",
   //         "Academic Year": "",
@@ -424,7 +436,7 @@ const SubjectPaperMappingPage = () => {
   //     const colWidths = [
   //       { wch: 20 }, // Subject
   //       { wch: 15 }, // Subject Type
-  //       { wch: 25 }, // Applicable Courses
+  //       { wch: 25 }, // Applicable programCourses
   //       { wch: 20 }, // Affiliation
   //       { wch: 15 }, // Regulation
   //       { wch: 15 }, // Academic Year
@@ -634,7 +646,7 @@ const SubjectPaperMappingPage = () => {
               <FileText className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
               Subject Paper Mapping
             </CardTitle>
-            <div className="text-muted-foreground">Map subject papers to courses.</div>
+            <div className="text-muted-foreground">Map subject papers to programCourses.</div>
           </div>
           <div className="flex items-center gap-2">
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
@@ -695,7 +707,7 @@ const SubjectPaperMappingPage = () => {
                     year: ay.year,
                     isActive: ay.isActive,
                   }))}
-                  courses={courses.map((course) => ({
+                  programCourses={programCourses.map((course) => ({
                     id: course.id || 0,
                     name: course.name,
                     shortName: course.shortName,
@@ -714,11 +726,12 @@ const SubjectPaperMappingPage = () => {
                   dropdownData={{
                     subjectTypes,
                     subjects,
+                    courses: courses,
                     affiliations,
                     regulationTypes,
                     examComponents,
                     academicYears,
-                    courses,
+                    programCourses,
                     classes,
                   }}
                   fetchData={fetchData}
@@ -899,13 +912,12 @@ const SubjectPaperMappingPage = () => {
                         {idx + 1}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        {courses.find((ele) => ele.id == sp.courseId)?.name ?? "-"}
+                        {programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
                         <p>
-
-                        {sp.name ?? "-"}
-                        {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
+                          {sp.name ?? "-"}
+                          {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
                         </p>
                         <p>({subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"})</p>
                       </div>
@@ -1011,7 +1023,7 @@ const SubjectPaperMappingPage = () => {
       )}
 
       {/* Paper Edit Modal */}
-      {(
+      {
         <PaperEditModal
           isOpen={isPaperEditModalOpen}
           onClose={() => {
@@ -1027,11 +1039,12 @@ const SubjectPaperMappingPage = () => {
           subjectTypes={subjectTypes}
           examComponents={examComponents}
           academicYears={academicYears}
+          //   programCourses={programCourses}
           courses={courses}
           classes={classes}
           paperId={selectedPaperForEdit?.id}
         />
-      )}
+      }
     </div>
   );
 };

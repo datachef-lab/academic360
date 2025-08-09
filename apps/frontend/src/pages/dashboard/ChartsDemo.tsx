@@ -1,27 +1,34 @@
-"use client"
+"use client";
 
 // import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Bar, BarChart, Line, LineChart } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, Bar, BarChart, Line, LineChart } from "recharts";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-} from "@/components/ui/card"
-import {
-  ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent,
-} from "@/components/ui/chart"
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 // 1. Area Chart: Admissions Over Time
-const admissionsData = [
-  { date: "2024-01", ug: 120, pg: 40 },
-  { date: "2024-02", ug: 180, pg: 60 },
-  { date: "2024-03", ug: 200, pg: 80 },
-  { date: "2024-04", ug: 250, pg: 100 },
-  { date: "2024-05", ug: 300, pg: 120 },
-  { date: "2024-06", ug: 350, pg: 140 },
-]
+const admissionsData: {
+  date: string;
+  ug: number;
+  pg: number;
+}[] = [
+  //   { date: "2024-01", ug: 120, pg: 40 },
+  //   { date: "2024-02", ug: 180, pg: 60 },
+  //   { date: "2024-03", ug: 200, pg: 80 },
+  //   { date: "2024-04", ug: 250, pg: 100 },
+  //   { date: "2024-05", ug: 300, pg: 120 },
+  //   { date: "2024-06", ug: 350, pg: 140 },
+];
 const admissionsConfig = {
   ug: { label: "UG Admissions", color: "var(--chart-1)" },
   pg: { label: "PG Admissions", color: "var(--chart-2)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 export function AdmissionsAreaChart() {
   return (
     <Card>
@@ -53,20 +60,23 @@ export function AdmissionsAreaChart() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // 2. Bar Chart: Library Book Issues by Genre
-const genreData = [
-  { genre: "Fiction", count: 320 },
-  { genre: "Non-Fiction", count: 210 },
-  { genre: "Science", count: 180 },
-  { genre: "History", count: 140 },
-  { genre: "Comics", count: 90 },
-]
+const genreData: {
+  genre: string;
+  count: number;
+}[] = [
+  //   { genre: "Fiction", count: 320 },
+  //   { genre: "Non-Fiction", count: 210 },
+  //   { genre: "Science", count: 180 },
+  //   { genre: "History", count: 140 },
+  //   { genre: "Comics", count: 90 },
+];
 const genreConfig = {
   count: { label: "Books Issued", color: "var(--chart-1)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 export function LibraryGenreBarChart() {
   return (
     <Card>
@@ -86,22 +96,26 @@ export function LibraryGenreBarChart() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // 3. Line Chart: Student Attendance Trend
-const attendanceData = [
-  { week: "W1", present: 95, absent: 5 },
-  { week: "W2", present: 92, absent: 8 },
-  { week: "W3", present: 97, absent: 3 },
-  { week: "W4", present: 93, absent: 7 },
-  { week: "W5", present: 96, absent: 4 },
-  { week: "W6", present: 94, absent: 6 },
-]
+const attendanceData: {
+  week: string;
+  present: number;
+  absent: number;
+}[] = [
+  //   { week: "W1", present: 95, absent: 5 },
+  //   { week: "W2", present: 92, absent: 8 },
+  //   { week: "W3", present: 97, absent: 3 },
+  //   { week: "W4", present: 93, absent: 7 },
+  //   { week: "W5", present: 96, absent: 4 },
+  //   { week: "W6", present: 94, absent: 6 },
+];
 const attendanceConfig = {
   present: { label: "Present (%)", color: "var(--chart-1)" },
   absent: { label: "Absent (%)", color: "var(--chart-2)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 export function AttendanceLineChart() {
   return (
     <Card>
@@ -122,20 +136,24 @@ export function AttendanceLineChart() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // 4. Stacked Bar Chart: Event Participation
-const eventData = [
-  { event: "Sports", students: 120, staff: 15 },
-  { event: "Cultural", students: 90, staff: 10 },
-  { event: "Tech Fest", students: 110, staff: 12 },
-  { event: "Seminar", students: 80, staff: 8 },
-]
+const eventData: {
+  event: string;
+  students: number;
+  staff: number;
+}[] = [
+  //   { event: "Sports", students: 120, staff: 15 },
+  //   { event: "Cultural", students: 90, staff: 10 },
+  //   { event: "Tech Fest", students: 110, staff: 12 },
+  //   { event: "Seminar", students: 80, staff: 8 },
+];
 const eventConfig = {
   students: { label: "Students", color: "var(--chart-1)" },
   staff: { label: "Staff", color: "var(--chart-2)" },
-} satisfies ChartConfig
+} satisfies ChartConfig;
 export function EventParticipationStackedBar() {
   return (
     <Card>
@@ -154,7 +172,7 @@ export function EventParticipationStackedBar() {
         </ChartContainer>
       </CardContent>
     </Card>
-  )
+  );
 }
 
 // Demo page export (optional)
@@ -166,5 +184,5 @@ export default function ChartsDemo() {
       <AttendanceLineChart />
       <EventParticipationStackedBar />
     </div>
-  )
-} 
+  );
+}

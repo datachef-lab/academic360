@@ -2,8 +2,9 @@ export interface Class {
     readonly id?: number;
     name: string;
     type: "YEAR" | "SEMESTER";
-    sequence: number;
+    shortName: string | null;
+    sequence?: number;
     disabled: boolean;
-    creaytedAt?: Date;
+    createdAt?: Date;
     updatedAt?: Date;
 }

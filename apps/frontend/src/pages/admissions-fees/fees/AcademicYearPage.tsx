@@ -75,11 +75,6 @@ const AcademicYearPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // Validate year is a four-digit number
-    if (!/^[0-9]{4}$/.test(form.year)) {
-      alert("Year must be a four-digit number.");
-      return;
-    }
     try {
       if (editingItem) {
         const updated = {
@@ -315,14 +310,10 @@ const AcademicYearPage: React.FC = () => {
               <Label htmlFor="year">Year</Label>
               <Input
                 id="year"
-                type="number"
-                min={1900}
-                max={2099}
+                type="text"
                 value={form.year}
                 onChange={e => {
-                  // Only allow 4 digits
-                  const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                  setForm({ ...form, year: val });
+                  setForm({ ...form, year: e.target.value });
                 }}
                 placeholder="e.g., 2025"
               />

@@ -1,7 +1,18 @@
 // import { NavItem } from "@/components/globals/AppSidebar";
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { useLocation } from "react-router-dom";
-import { Book, Bookmark, Layers, Library, FileText, Shield, GitBranch, Type, GraduationCap } from "lucide-react";
+import {
+  Book,
+  Bookmark,
+  Layers,
+  Library,
+  FileText,
+  Shield,
+  GitBranch,
+  Type,
+  GraduationCap,
+  UserCheck,
+} from "lucide-react";
 import { Outlet } from "react-router-dom";
 
 const nestedHomeLinks = [
@@ -18,6 +29,21 @@ const nestedHomeLinks = [
 ];
 
 const masterLinks = [
+  {
+    title: "Academic Years",
+    url: "/dashboard/courses-subjects-design/academic-years",
+    icon: UserCheck, // represents student admission
+  },
+  {
+    title: "Classes",
+    url: "/dashboard/courses-subjects-design/classes",
+    icon: Library,
+  },
+  {
+    title: "Paper/Exam Components",
+    url: "/dashboard/courses-subjects-design/paper-components",
+    icon: Library,
+  },
   {
     title: "Courses",
     url: "/dashboard/courses-subjects-design/courses",
@@ -51,11 +77,6 @@ const masterLinks = [
   {
     title: "Affiliations",
     url: "/dashboard/courses-subjects-design/affiliations",
-    icon: Shield, 
-  },
-  {
-    title: "Affiliation Types",
-    url: "/dashboard/courses-subjects-design/affiliation-types",
     icon: Shield,
   },
   {
@@ -79,13 +100,13 @@ const CoursesSubjectsMaster = () => {
       </ul>
       <div>
         <h3 className="text-lg mx-4 mb-1 font-bold border-b">Masters</h3>
-      <ul>
-        {masterLinks.map((link) => (
-          <NavItem key={link.url} href={link.url} icon={<link.icon />} isActive={currentPath.startsWith(link.url)}>
-            {link.title}
-          </NavItem>
-        ))}
-      </ul>
+        <ul>
+          {masterLinks.map((link) => (
+            <NavItem key={link.url} href={link.url} icon={<link.icon />} isActive={currentPath.startsWith(link.url)}>
+              {link.title}
+            </NavItem>
+          ))}
+        </ul>
       </div>
     </div>
   );
