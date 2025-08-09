@@ -51,7 +51,7 @@ class SocketService {
     // Check if we're already connected
     if (this.socket && this.connected) return;
 
-    const serverUrl = import.meta.env.VITE_APP_BACKEND_URL || 'http://localhost:8080';
+    const serverUrl = `${import.meta.env.VITE_APP_BACKEND_URL!}/api`;
     
     try {
       this.socket = io(serverUrl, {
