@@ -6,6 +6,7 @@ import { ErrorProvider } from "./providers/ErrorProvider";
 import { Toaster } from "sonner";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SettingsProvider } from "./providers/SettingsProvider";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -25,7 +26,9 @@ root.render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <ErrorProvider>
-        <App />
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
       </ErrorProvider>
       <Toaster />
     </QueryClientProvider>

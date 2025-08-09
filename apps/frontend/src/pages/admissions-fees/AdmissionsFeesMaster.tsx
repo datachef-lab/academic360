@@ -9,11 +9,6 @@ const subLinks: LinkType[] = [
     icon: LayoutDashboard, // dashboard/home
   },
   {
-    title: "Academic Years",
-    url: "/dashboard/admissions-fees/academic-years",
-    icon: UserCheck, // represents student admission
-  },
-  {
     title: "Admissions",
     url: "/dashboard/admissions-fees/admissions",
     icon: UserCheck, // represents student admission

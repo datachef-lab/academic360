@@ -115,6 +115,7 @@ const router = createBrowserRouter([
           { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
           { path: "classes", element: <courseSubjectModule.ClassesPage /> },
           { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
+          { path: "academic-years", element: <AcademicYearPage /> },
         ],
       },
       {
@@ -140,7 +141,6 @@ const router = createBrowserRouter([
         element: <admissionFeesModule.AdmissionsFeesMaster />,
         children: [
           { path: "", element: <admissionFeesModule.HomePage /> },
-          { path: "academic-years", element: <AcademicYearPage /> },
           {
             path: "admissions",
             element: <Outlet />,

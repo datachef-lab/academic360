@@ -6,11 +6,11 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { findAllSettings, updateSetting } from "@/services/settings.service";
-import { Settings } from "@/types/settings.type";
+import { useSettings } from "@/providers/SettingsProvider";
 
 export default function GeneralSettingsPage() {
+  const { settings, setSettings } = useSettings();
   const [updatedSettings, setUpdatedSettings] = useState<Record<number, string | File>>({});
-  const [settings, setSettings] = useState<Settings[]>([]);
   const [previewImages, setPreviewImages] = useState<Record<number, string>>({});
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
@@ -27,7 +27,7 @@ export default function GeneralSettingsPage() {
       });
       setPreviewImages(filePreviews);
     });
-  }, []);
+  }, [setSettings]);
 
   const handleInputChange = (settingId: number, value: string | File) => {
     setUpdatedSettings((prev) => ({ ...prev, [settingId]: value }));

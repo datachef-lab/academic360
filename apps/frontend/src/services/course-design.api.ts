@@ -284,6 +284,7 @@ export const deleteExamComponent = (id: number) => axiosInstance.delete<ExamComp
 // Academic Years
 export const getAcademicYears = async () => {
     const res = await axiosInstance.get<ApiResonse<AcademicYear[]>>('/api/v1/academics/all');
+    console.log("in getAcademicYears()", res.data);
     return res.data.payload;
 };
 

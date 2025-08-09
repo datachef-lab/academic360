@@ -10,19 +10,18 @@ import { cn } from "@/lib/utils";
 //   DropdownMenuTrigger,
 // } from "@/components/ui/dropdown-menu";
 import {
-//   User,
+  //   User,
   Settings,
-//   ChevronDown,
+  //   ChevronDown,
   Home,
-//   LogOut,
+  //   LogOut,
   Boxes,
   LayoutList,
   BadgeIndianRupee,
-//   ClipboardList,
-//   Layers3,
+  //   ClipboardList,
+  //   Layers3,
   Users,
   Library,
-
   PartyPopper,
   LayoutDashboard,
   Megaphone,
@@ -36,6 +35,7 @@ import { SearchStudentModal } from "./SearchStudentModal";
 import DottedSeparator from "../ui/dotted-separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
+import { useSettings } from "@/providers/SettingsProvider";
 
 // Navigation data
 const data = {
@@ -107,29 +107,32 @@ const data = {
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
+  const { settings } = useSettings();
   const currentPath = location.pathname;
-  const { user,  accessToken, displayFlag } = useAuth();
-//   const setIsLoggingOut = React.useState(false)[1];
+  const { user, accessToken, displayFlag } = useAuth();
+  //   const setIsLoggingOut = React.useState(false)[1];
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
+
+  React.useEffect(() => {}, [settings]);
 
   // Helper to check if sidebar item is active
   function isSidebarActive(currentPath: string, itemUrl: string) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
   }
 
-//   const handleLogout = async () => {
-//     try {
-//       setIsLoggingOut(true);
-//       await logout();
-//       toast.success("Logged out successfully");
-//     } catch (error) {
-//       console.error("Logout failed:", error);
-//       toast.error("Logout failed. Please try again.");
-//     } finally {
-//       setIsLoggingOut(false);
-//     }
-//   };
+  //   const handleLogout = async () => {
+  //     try {
+  //       setIsLoggingOut(true);
+  //       await logout();
+  //       toast.success("Logged out successfully");
+  //     } catch (error) {
+  //       console.error("Logout failed:", error);
+  //       toast.error("Logout failed. Please try again.");
+  //     } finally {
+  //       setIsLoggingOut(false);
+  //     }
+  //   };
 
   if (!displayFlag || !user || !accessToken) {
     return null;
@@ -143,13 +146,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center drop-shadow-lg rounded-lg">
                 <Avatar>
-                  <AvatarImage src="/logo.jpeg" alt="college-logo" width={24} height={24} />
+                  <AvatarImage
+                    src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
+                    alt="college-logo"
+                    width={24}
+                    height={24}
+                  />
                   <AvatarFallback>
                     <GalleryVerticalEnd className="h-6 w-6 text-white" />
                   </AvatarFallback>
                 </Avatar>
               </div>
-              <h1 className="text-lg font-semibold text-white">BESC Console</h1>
+              <h1 className="text-lg font-semibold text-white">
+                {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console
+              </h1>
             </div>
           </Link>
         </SidebarHeader>
