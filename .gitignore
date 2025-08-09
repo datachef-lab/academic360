@@ -17,7 +17,7 @@ frontend.env
 .env.development.local
 .env.test.local
 .env.production.local
-
+/settings
 # Testing
 coverage
 tmp.txt
