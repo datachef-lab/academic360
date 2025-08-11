@@ -1,0 +1,29 @@
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    image: myorg/backend:latest
+    env_file:
+      - apps/backend/.env
+    networks:
+      - appnet
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    image: myorg/frontend:latest
+    env_file:
+      - apps/frontend/.env
+    networks:
+      - appnet
+    ports:
+      - "3000:3000"
+
+networks:
+  appnet:
+    driver: bridge

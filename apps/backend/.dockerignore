@@ -1,0 +1,26 @@
+# Node modules & logs
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Env files (never copy secrets into image)
+.env
+.env.*.local
+
+# Build cache & temp files
+dist
+coverage
+.tmp
+.cache
+
+# Git & editor stuff
+.git
+.gitignore
+.vscode
+.idea
+
+# OS-specific files
+.DS_Store
+Thumbs.db

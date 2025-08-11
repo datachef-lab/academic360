@@ -75,6 +75,7 @@
         "jwt-decode": "^4.0.0",
         "lodash": "^4.17.21",
         "lucide-react": "^0.503.0",
+        "mime-types": "^3.0.1",
         "multer": "^2.0.2",
         "npm": "^11.2.0",
         "react-day-picker": "^9.5.1",
