@@ -10,5 +10,4 @@ RUN npm run build
 # Install a static file server
 RUN npm install -g serve
 
-EXPOSE 3000
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["serve", "-s", "dist"]
