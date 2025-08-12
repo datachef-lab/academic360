@@ -18,12 +18,12 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            if [ ! -d "/workspace/academic360/.git" ]; then
+            if [ ! -d "/home/ubuntu/workspace/academic360/.git" ]; then
               echo "Repo not found, cloning..."
               git clone -b aws_deployment https://github.com/datachef-lab/academic360
             fi
 
-            cd /workspace/academic360
+            cd /home/ubuntu/workspace/academic360
             git fetch --all
             git reset --hard origin/aws_deployment
 
