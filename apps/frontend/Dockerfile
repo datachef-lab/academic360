@@ -70,7 +70,7 @@ RUN npm install -g serve
 COPY --from=builder /repo/apps/frontend/dist ./dist
 
 # non-root
-RUN sudo addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S app -G app
 USER app
 
 EXPOSE 3000

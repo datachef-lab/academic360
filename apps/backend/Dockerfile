@@ -68,7 +68,7 @@ COPY --from=builder /repo/node_modules ./node_modules
 COPY --from=builder /repo/apps/backend/node_modules ./apps/backend/node_modules
 
 # Drop privileges
-RUN sudo addgroup -S app && adduser -S app -G app
+RUN addgroup -S app && adduser -S app -G app
 USER app
 
 EXPOSE 8080
