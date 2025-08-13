@@ -21,14 +21,14 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 
 # Copy package.json first for better caching
-COPY apps/backend/package*.json ./apps/backend/
+COPY apps/frontend/package*.json ./apps/frontend/
 
 # Install deps
-WORKDIR /app/apps/backend
+WORKDIR /app/apps/frontend
 RUN npm install
 
 # Copy backend source AFTER installing deps
-COPY apps/backend ./
+COPY apps/frontend ./
 
 # Now build
 RUN npm run build
