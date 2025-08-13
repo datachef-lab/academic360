@@ -1,7 +1,7 @@
 FROM node:22-alpine
 
 WORKDIR /app
-COPY apps/frontend/package*.json ./
+COPY apps/frontend/package*.json ./apps/frontend/
 # RUN npm ci --only=production
 RUN npm install
 COPY apps/frontend ./
