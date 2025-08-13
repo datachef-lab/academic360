@@ -1,34 +1,86 @@
+# name: CI/CD Monorepo Production
+
+# on:
+#   push:
+#     branches:
+#       - aws_deployment  # Deploy only on aws_deployment branch push
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Deploy to Server
+#         uses: appleboy/ssh-action@v1.0.0
+#         with:
+#           host: ${{ secrets.SERVER_HOST_ACADEMIC_360_INSTANCE_2 }}
+#           username: ${{ secrets.SERVER_USER_ACADEMIC_360_INSTANCE_2 }}
+#           key: ${{ secrets.SSH_PRIVATE_KEY_ACADEMIC_360_INSTANCE_2 }}
+#           script: |
+#             set -e
+#             if [ ! -d "/home/ubuntu/workspace/academic360/.git" ]; then
+#               echo "Repo not found, cloning..."
+#               git clone -b aws_deployment https://github.com/datachef-lab/academic360
+#             fi
+
+#             cd /home/ubuntu/workspace/academic360
+#             git fetch --all
+#             git reset --hard origin/aws_deployment
+
+#             echo "Rebuilding & restarting services..."
+#             sudo docker compose -f docker-compose.yml up -d --remove-orphans
+
+#             echo "Cleaning unused images..."
+#             sudo docker image prune -f
+
+
+
+
+
 name: CI/CD Monorepo Production
 
 on:
   push:
     branches:
-      - aws_deployment  # Deploy only on aws_deployment branch push
+      - aws_deployment
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Server
+      - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.SERVER_HOST_ACADEMIC_360_INSTANCE_2 }}
-          username: ${{ secrets.SERVER_USER_ACADEMIC_360_INSTANCE_2 }}
-          key: ${{ secrets.SSH_PRIVATE_KEY_ACADEMIC_360_INSTANCE_2 }}
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            if [ ! -d "/home/ubuntu/workspace/academic360/.git" ]; then
+
+            # Adjust this to your user/home
+            APP_HOME="/home/${USER}/workspace/academic360"
+
+            if [ ! -d "${APP_HOME}/.git" ]; then
               echo "Repo not found, cloning..."
-              git clone -b aws_deployment https://github.com/datachef-lab/academic360
+              mkdir -p "$(dirname "${APP_HOME}")"
+              git clone -b aws_deployment https://github.com/datachef-lab/academic360.git "${APP_HOME}"
             fi
 
-            cd /home/ubuntu/workspace/academic360
+            cd "${APP_HOME}"
             git fetch --all
             git reset --hard origin/aws_deployment
 
-            echo "Rebuilding & restarting services..."
-            sudo docker compose -f docker-compose.yml up -d --remove-orphans
+            echo "Ensuring Docker is usable..."
+            if ! groups | grep -q docker; then
+              echo "You may need sudo for docker commands..."
+            fi
 
-            echo "Cleaning unused images..."
+            echo "Building images on server..."
+            sudo docker compose build --pull
+
+            echo "Starting/Updating services..."
+            sudo docker compose up -d --remove-orphans
+
+            echo "Pruning unused images..."
             sudo docker image prune -f

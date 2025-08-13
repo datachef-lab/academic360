@@ -2,11 +2,14 @@
     "name": "academic360",
     "private": true,
     "scripts": {
-        "build": "turbo build",
+        "build-old": "turbo build",
         "dev": "turbo dev",
         "lint": "turbo lint",
         "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-        "prepare": "husky"
+        "prepare": "husky",
+        "build": "npm run --workspaces --if-present build",
+        "build:backend": "npm run --workspace apps/backend build",
+        "build:frontend": "npm run --workspace apps/frontend build"
     },
     "husky": {
         "hooks": {
