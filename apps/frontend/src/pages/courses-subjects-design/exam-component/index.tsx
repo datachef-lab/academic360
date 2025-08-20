@@ -167,7 +167,7 @@ const ExamComponentesPage = () => {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>
-                    {selectedExamComponent ? "Edit examComponent" : "Add New examComponent"}
+                    {selectedExamComponent ? "Edit Exam Component" : "Add New Exam Component"}
                   </AlertDialogTitle>
                 </AlertDialogHeader>
                 <ExamComponentForm

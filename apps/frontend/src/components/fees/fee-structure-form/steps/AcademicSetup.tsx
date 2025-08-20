@@ -69,7 +69,7 @@ export const AcademicSetup: React.FC<AcademicSetupProps> = (props) => {
             >
               {academicYears.map(ay => (
                 <Select.Option key={ay.id} value={ay.id!}>
-                  {`${new Date(ay.year).getFullYear()}`}
+                  {ay.year}
                 </Select.Option>
               ))}
             </Select>

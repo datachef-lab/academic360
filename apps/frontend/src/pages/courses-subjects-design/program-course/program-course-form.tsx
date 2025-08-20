@@ -125,7 +125,7 @@ export function ProgramCourseForm({
         totalSemesters: 6,
         affiliationId: 0,
         regulationTypeId: 0,
-        disabled: true,
+        disabled: false,
       });
     }
   }, [initialData, form]);

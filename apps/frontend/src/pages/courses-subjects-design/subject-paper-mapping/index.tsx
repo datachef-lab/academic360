@@ -236,17 +236,17 @@ const SubjectPaperMappingPage = () => {
         getCourses(),
       ]);
 
-    //   console.log("API Responses:", {
-    //     subjects: subjectsRes,
-    //     affiliations: affiliationsRes,
-    //     regulationTypes: regulationTypesRes,
-    //     subjectTypes: subjectTypesRes,
-    //     examComponents: examComponentsRes,
-    //     academicYears: academicYearsRes,
-    //     programCourses: programCourseRes,
-    //     classes: classesRes,
-    //     sessions: academicYearRes,
-    //   });
+      //   console.log("API Responses:", {
+      //     subjects: subjectsRes,
+      //     affiliations: affiliationsRes,
+      //     regulationTypes: regulationTypesRes,
+      //     subjectTypes: subjectTypesRes,
+      //     examComponents: examComponentsRes,
+      //     academicYears: academicYearsRes,
+      //     programCourses: programCourseRes,
+      //     classes: classesRes,
+      //     sessions: academicYearRes,
+      //   });
 
       console.log("SubjectTypes response details:", {
         isArray: Array.isArray(subjectTypesRes),
@@ -830,7 +830,7 @@ const SubjectPaperMappingPage = () => {
             </Button>
           </div>
           <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full border rounded-md">
+            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
               {/* Fixed Header */}
               <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "950px" }}>
                 <div className="flex">
@@ -912,7 +912,9 @@ const SubjectPaperMappingPage = () => {
                         {idx + 1}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        {programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId ?? "-"}
+                        {courses.find(
+                          (crs) => crs.id === programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId,
+                        )?.name ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
                         <p>

@@ -79,7 +79,7 @@ export default function AddPaperModal({
     disabled: false,
     topics: [],
   });
-  const  setPapers = useState<Paper[]>([defaultPaper])[1];
+  const setPapers = useState<Paper[]>([defaultPaper])[1];
   const [inputPaper, setInputPaper] = useState<InputPaper[]>([
     {
       name: "",
@@ -105,12 +105,24 @@ export default function AddPaperModal({
   ]);
 
   const handleAddPaper = () => {
-    setInputPaper((prevPapers) => [...prevPapers, { ...inputPaper[0], subjectTypeId: 0, programCourses: [], classes: [], components: examComponents.map((examComponent) => ({
-      paperId: 0, // This will be set when the paper is created
-      examComponent,
-      fullMarks: 0,
-      credit: 0,
-    })) }]);
+    setInputPaper((prevPapers) => [
+      ...prevPapers,
+      {
+        ...inputPaper[0],
+        name: "",
+        code: "",
+        subjectTypeId: 0,
+        isOptional: false,
+        programCourses: [],
+        classes: [],
+        components: examComponents.map((examComponent) => ({
+          paperId: 0, // This will be set when the paper is created
+          examComponent,
+          fullMarks: 0,
+          credit: 0,
+        })),
+      },
+    ]);
   };
 
   const removePaper = (removeIndex: number) => {
@@ -128,7 +140,7 @@ export default function AddPaperModal({
       for (const programCourseId of paper.programCourses) {
         for (const classId of paper.classes) {
           const { programCourses, classes, ...rest } = paper;
-          console.log(classes, programCourses)
+          console.log(classes, programCourses);
           papers.push({
             ...rest,
             programCourseId: programCourseId,
@@ -212,8 +224,6 @@ export default function AddPaperModal({
       return updatedPapers;
     });
   };
-
-
 
   return (
     <form onSubmit={handleFormSubmit}>
@@ -448,21 +458,18 @@ export default function AddPaperModal({
                     onValueChange={(selected: string[]) => {
                       const selectedCourses = selected.map(Number);
                       let updatedClasses = [...field.classes];
-                    
+
                       if (selectedCourses.length > 1 && field.classes.length > 1) {
                         toast.warning("Multiple courses selected. Restricting classes.");
                         updatedClasses = []; // force one class
                       }
-                    
+
                       update(paperIndex, {
                         ...field,
                         programCourses: selectedCourses,
                         classes: updatedClasses,
                       });
                     }}
-                    
-                    
-                    
                     placeholder="Select Courses"
                     modalPopover={true}
                   />
@@ -495,21 +502,18 @@ export default function AddPaperModal({
                     onValueChange={(selected: string[]) => {
                       const selectedClasses = selected.map(Number);
                       let updatedProgramCourses = [...field.programCourses];
-                    
+
                       if (selectedClasses.length > 1 && field.programCourses.length > 1) {
                         toast.warning("Multiple classes selected. Restricting courses.");
-                        updatedProgramCourses = [] // force one course
+                        updatedProgramCourses = []; // force one course
                       }
-                    
+
                       update(paperIndex, {
                         ...field,
                         classes: selectedClasses,
                         programCourses: updatedProgramCourses,
                       });
                     }}
-                    
-                    
-                    
                     placeholder="Select Sems."
                     modalPopover={true}
                   />

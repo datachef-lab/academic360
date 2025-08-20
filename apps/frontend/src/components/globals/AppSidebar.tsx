@@ -35,7 +35,9 @@ import { SearchStudentModal } from "./SearchStudentModal";
 import DottedSeparator from "../ui/dotted-separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
-import { useSettings } from "@/features/settings/providers/settings-provider";
+import { useSettings } from "@/features/settings/hooks/use-settings";
+// import { useSettings } from "@/features/settings/providers/settings-provider";
+
 
 // Navigation data
 const data = {

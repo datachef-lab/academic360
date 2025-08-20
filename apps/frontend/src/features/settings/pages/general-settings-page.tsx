@@ -6,7 +6,9 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Library } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { findAllSettings, updateSetting } from "@/features/settings/services/settings-service";
-import { useSettings } from "@/features/settings/providers/settings-provider";
+import { useSettings } from "../hooks/use-settings";
+// import { useSettings } from "@/features/settings/providers/settings-provider";
+
 
 export default function GeneralSettingsPage() {
   const { settings, setSettings } = useSettings();

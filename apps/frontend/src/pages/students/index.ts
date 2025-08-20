@@ -1,4 +1,5 @@
-import { GetReportsPage, SearchStudentPage } from "../../features/settings";
+// import { GetReportsPage, SearchStudentPage } from "../../features/settings";
+import { GetReportsPage, SearchStudentPage } from "..";
 import AddStudentPage from "./AddStudentPage";
 import DashboardStats from "./DashboardStats";
 import ManageMarksheetPage from "./ManageMarksheetPage";
@@ -8,6 +9,7 @@ import StudentMarksheetsPage from "./StudentMarksheetsPage";
 import StudentMaster from "./StudentMaster";
 import StudentPage from "./StudentPage";
 import StudentViewPage from "./StudentViewPage";
+
 export {
     DashboardStats,
     AddStudentPage,

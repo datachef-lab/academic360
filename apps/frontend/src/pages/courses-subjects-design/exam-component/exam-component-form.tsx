@@ -33,8 +33,8 @@ type ExamComponentFormValues = z.infer<typeof formSchema>;
 export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmitting }: ExamComponentFormProps) {
   const defaultValues: ExamComponentFormValues = {
     name: initialData?.name || "",
-    code: null,
-    shortName: null,
+    code: initialData?.code || "",
+    shortName: initialData?.shortName || "",
     sequence: initialData?.sequence || 0,
     disabled: initialData?.disabled || false,
   };
