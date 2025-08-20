@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, countDistinct } from "drizzle-orm";
 import { Paper, paperModel } from "../models/paper.model.js";
 import { PaperDto } from "@/types/course-design/index.type.js";
 import {
@@ -12,6 +12,9 @@ import { createTopic, getTopicsByPaperId, updateTopic } from "./topic.service.js
 import { paperComponentModel } from "../models/paper-component.model.js";
 import { examComponentModel } from "../models/exam-component.model.js";
 import { classModel } from "@/features/academics/models/class.model.js";
+import { topicModel } from "../models/topic.model.js";
+import { marksheetPaperMappingModel } from "@/features/academics/models/marksheet-paper-mapping.model.js";
+import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
 // import { findCourseById } from "./course.service";
 // import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
 // import { findClassById } from "@/features/academics/services/class.service";
@@ -230,6 +233,51 @@ export async function deletePaper(id: number) {
         .returning();
 
     return await modelToDto(deleted);
+}
+
+export async function deletePaperSafe(id: number) {
+    const [found] = await db.select().from(paperModel).where(eq(paperModel.id, id));
+    if (!found) return null;
+
+    const [{ mksMapCount }] = await db
+        .select({ mksMapCount: countDistinct(marksheetPaperMappingModel.id) })
+        .from(marksheetPaperMappingModel)
+        .leftJoin(batchStudentPaperModel, eq(batchStudentPaperModel.id, marksheetPaperMappingModel.batchStudentPaperId))
+        .where(eq(batchStudentPaperModel.paperId, id));
+
+    const [{ bspCount }] = await db
+        .select({ bspCount: countDistinct(batchStudentPaperModel.id) })
+        .from(batchStudentPaperModel)
+        .where(eq(batchStudentPaperModel.paperId, id));
+
+    const [{ topicCount }] = await db
+        .select({ topicCount: countDistinct(topicModel.id) })
+        .from(topicModel)
+        .where(eq(topicModel.paperId, id));
+
+    const [{ componentCount }] = await db
+        .select({ componentCount: countDistinct(paperComponentModel.id) })
+        .from(paperComponentModel)
+        .where(eq(paperComponentModel.paperId, id));
+
+    if (mksMapCount > 0 || bspCount > 0 || topicCount > 0 || componentCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete paper. It is associated with other records.",
+            records: [
+                { count: mksMapCount, type: "Mks-paper-mapping" },
+                { count: bspCount, type: "Batch-student-paper" },
+                { count: componentCount, type: "Paper-component" },
+                { count: topicCount, type: "Topic" },
+            ],
+        };
+    }
+
+    const [deleted] = await db.delete(paperModel).where(eq(paperModel.id, id)).returning();
+    if (deleted) {
+        return { success: true, message: "Paper deleted successfully.", records: [] };
+    }
+    return { success: false, message: "Failed to delete paper.", records: [] };
 }
 
 

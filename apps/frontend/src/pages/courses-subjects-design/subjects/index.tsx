@@ -4,21 +4,22 @@ import { SubjectForm } from "./subject-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, BookOpen, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, BookOpen, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import {
   AlertDialog,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  // AlertDialogHeader,
+  // AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Subject } from "@/types/course-design";
 import { getAllSubjects, createSubject, updateSubject, bulkUploadSubjects, BulkUploadResult } from "@/services/subject.api";
+import { deleteSubject, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
 const SubjectsPage = () => {
@@ -92,6 +93,25 @@ const SubjectsPage = () => {
   const handleAddNew = () => {
     setSelectedSubject(null);
     setIsFormOpen(true);
+  };
+
+  const onDelete = async (id: number) => {
+    try {
+      const result: DeleteResult = await deleteSubject(id);
+      if (result.success) {
+        toast.success(result.message || "Subject deleted successfully");
+        const fresh = await getAllSubjects();
+        setSubjects(Array.isArray(fresh) ? fresh : []);
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch {
+      toast.error("Failed to delete subject");
+    }
   };
 
   const handleBulkUpload = async () => {
@@ -314,9 +334,9 @@ const SubjectsPage = () => {
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedSubject ? "Edit Subject" : "Add New Subject"}</AlertDialogTitle>
-                </AlertDialogHeader>
+                <DialogHeader>
+                  <DialogTitle>{selectedSubject ? "Edit Subject" : "Add New Subject"}</DialogTitle>
+                </DialogHeader>
                 <SubjectForm
                   initialData={selectedSubject}
                   onSubmit={handleSubmit}
@@ -344,7 +364,7 @@ const SubjectsPage = () => {
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -374,7 +394,7 @@ const SubjectsPage = () => {
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           )}
                         </TableCell>
-                        <TableCell style={{ width: 120 }}>
+                        <TableCell style={{ width: 140 }}>
                           <div className="flex space-x-2">
                             <Button
                               variant="outline"
@@ -384,7 +404,14 @@ const SubjectsPage = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => onDelete(subject.id!)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>

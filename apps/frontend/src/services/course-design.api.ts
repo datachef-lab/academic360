@@ -45,6 +45,12 @@ export interface BulkUploadResult {
 
 const BASE = '/api/course-design';
 
+export type DeleteResult = {
+    success: boolean;
+    message: string;
+    records: Array<{ count: number; type: string }>;
+};
+
 // Papers
 export const getPapers = async () => {
     const res = await axiosInstance.get<ApiResonse<Paper[]>>(`${BASE}/papers`);
@@ -54,14 +60,20 @@ export const getPaper = (id: number) => axiosInstance.get<Paper>(`${BASE}/papers
 export const getPaperById = (id: number) => axiosInstance.get<ApiResonse<Paper | null>>(`${BASE}/papers/query?id=${id}`);
 export const createPaper = (data: Omit<Paper, 'id' | 'createdAt' | 'updatedAt'>[]) => axiosInstance.post<ApiResonse<Paper[] | null>>(`${BASE}/papers`, { arr: data });
 export const updatePaper = (id: number, data: Partial<Paper>) => axiosInstance.put<Paper>(`${BASE}/papers/${id}`, data);
-export const deletePaper = (id: number) => axiosInstance.delete<Paper>(`${BASE}/papers/${id}`);
+export const deletePaper = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/papers/${id}`);
+    return res.data.payload;
+};
 
 // Paper Components
 export const getPaperComponents = () => axiosInstance.get<PaperComponent[]>(`${BASE}/paper-components`);
 export const getPaperComponent = (id: number) => axiosInstance.get<PaperComponent>(`${BASE}/paper-components/${id}`);
 export const createPaperComponent = (data: Omit<PaperComponent, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<PaperComponent>(`${BASE}/paper-components`, data);
 export const updatePaperComponent = (id: number, data: Partial<PaperComponent>) => axiosInstance.put<PaperComponent>(`${BASE}/paper-components/${id}`, data);
-export const deletePaperComponent = (id: number) => axiosInstance.delete<PaperComponent>(`${BASE}/paper-components/${id}`);
+export const deletePaperComponent = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/paper-components/${id}`);
+    return res.data.payload;
+};
 
 // Subjects
 export const getSubjects = async () => {
@@ -71,7 +83,10 @@ export const getSubjects = async () => {
 export const getSubject = (id: number) => axiosInstance.get<Subject>(`${BASE}/subjects/${id}`);
 export const createSubject = (data: Omit<Subject, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Subject>(`${BASE}/subjects`, data);
 export const updateSubject = (id: number, data: Partial<Subject>) => axiosInstance.put<Subject>(`${BASE}/subjects/${id}`, data);
-export const deleteSubject = (id: number) => axiosInstance.delete<Subject>(`${BASE}/subjects/${id}`);
+export const deleteSubject = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/subjects/${id}`);
+    return res.data.payload;
+};
 
 // Courses
 export const getCourses = async () => {
@@ -82,7 +97,10 @@ export const getCourses = async () => {
 export const getCourse = (id: number) => axiosInstance.get<Course>(`${BASE}/courses/${id}`);
 export const createCourse = (data: Omit<Course, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Course>(`${BASE}/courses`, data);
 export const updateCourse = (id: number, data: Partial<Course>) => axiosInstance.put<Course>(`${BASE}/courses/${id}`, data);
-export const deleteCourse = (id: number) => axiosInstance.delete<Course>(`${BASE}/courses/${id}`);
+export const deleteCourse = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/courses/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload courses
 export const bulkUploadCourses = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
@@ -111,7 +129,10 @@ export const getCourseTypes = async () => {
 export const getCourseType = (id: number) => axiosInstance.get<CourseType>(`${BASE}/course-types/${id}`);
 export const createCourseType = (data: Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<CourseType>(`${BASE}/course-types`, data);
 export const updateCourseType = (id: number, data: Partial<Omit<CourseType, 'id' | 'createdAt' | 'updatedAt'>>) => axiosInstance.put<CourseType>(`${BASE}/course-types/${id}`, data);
-export const deleteCourseType = (id: number) => axiosInstance.delete<CourseType>(`${BASE}/course-types/${id}`);
+export const deleteCourseType = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/course-types/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload course types
 export const bulkUploadCourseTypes = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
@@ -140,7 +161,10 @@ export const getSubjectTypes = async () => {
 export const getSubjectType = (id: number) => axiosInstance.get<SubjectType>(`${BASE}/subject-types/${id}`);
 export const createSubjectType = (data: Omit<SubjectType, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<SubjectType>(`${BASE}/subject-types`, data);
 export const updateSubjectType = (id: number, data: Partial<SubjectType>) => axiosInstance.put<SubjectType>(`${BASE}/subject-types/${id}`, data);
-export const deleteSubjectType = (id: number) => axiosInstance.delete<SubjectType>(`${BASE}/subject-types/${id}`);
+export const deleteSubjectType = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/subject-types/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload subject types
 export const bulkUploadSubjectTypes = async (file: File): Promise<BulkUploadResult> => {
@@ -162,7 +186,10 @@ export const getAffiliations = async () => {
 export const getAffiliation = (id: number) => axiosInstance.get<Affiliation>(`${BASE}/affiliations/${id}`);
 export const createAffiliation = (data: Omit<Affiliation, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Affiliation>(`${BASE}/affiliations`, data);
 export const updateAffiliation = (id: number, data: Partial<Affiliation>) => axiosInstance.put<Affiliation>(`${BASE}/affiliations/${id}`, data);
-export const deleteAffiliation = (id: number) => axiosInstance.delete<Affiliation>(`${BASE}/affiliations/${id}`);
+export const deleteAffiliation = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/affiliations/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload affiliations
 export const bulkUploadAffiliations = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
@@ -218,7 +245,10 @@ export const getRegulationTypes = async () => {
 export const getRegulationType = (id: number) => axiosInstance.get<RegulationType>(`${BASE}/regulation-types/${id}`);
 export const createRegulationType = (data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<RegulationType>(`${BASE}/regulation-types`, data);
 export const updateRegulationType = (id: number, data: Partial<RegulationType>) => axiosInstance.put<RegulationType>(`${BASE}/regulation-types/${id}`, data);
-export const deleteRegulationType = (id: number) => axiosInstance.delete<RegulationType>(`${BASE}/regulation-types/${id}`);
+export const deleteRegulationType = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/regulation-types/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload regulation types
 export const bulkUploadRegulationTypes = async (file: File): Promise<BulkUploadResult> => {
@@ -240,7 +270,10 @@ export const getProgramCourses = async () => {
 export const getProgramCourse = (id: number) => axiosInstance.get<ProgramCourse>(`${BASE}/program-courses/${id}`);
 export const createProgramCourse = (data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<ProgramCourse>(`${BASE}/program-courses`, data);
 export const updateProgramCourse = (id: number, data: Partial<ProgramCourse>) => axiosInstance.put<ProgramCourse>(`${BASE}/program-courses/${id}`, data);
-export const deleteProgramCourse = (id: number) => axiosInstance.delete<ProgramCourse>(`${BASE}/program-courses/${id}`);
+export const deleteProgramCourse = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/program-courses/${id}`);
+    return res.data.payload;
+};
 
 // Bulk upload program courses
 export const bulkUploadProgramCourses = async (file: File): Promise<BulkUploadResult> => {
@@ -262,7 +295,10 @@ export const getStreams = async () => {
 export const getStream = (id: number) => axiosInstance.get<Stream>(`${BASE}/streams/${id}`);
 export const createStream = (data: Omit<Stream, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<Stream>(`${BASE}/streams`, data);
 export const updateStream = (id: number, data: Partial<Stream>) => axiosInstance.put<Stream>(`${BASE}/streams/${id}`, data);
-export const deleteStream = (id: number) => axiosInstance.delete<Stream>(`${BASE}/streams/${id}`);
+export const deleteStream = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/streams/${id}`);
+    return res.data.payload;
+};
 
 // Course Levels
 export const getCourseLevels = async () => {
@@ -272,7 +308,10 @@ export const getCourseLevels = async () => {
 export const getCourseLevel = (id: number) => axiosInstance.get<CourseLevel>(`${BASE}/course-levels/${id}`);
 export const createCourseLevel = (data: Omit<CourseLevel, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<CourseLevel>(`${BASE}/course-levels`, data);
 export const updateCourseLevel = (id: number, data: Partial<CourseLevel>) => axiosInstance.put<CourseLevel>(`${BASE}/course-levels/${id}`, data);
-export const deleteCourseLevel = (id: number) => axiosInstance.delete<CourseLevel>(`${BASE}/course-levels/${id}`);
+export const deleteCourseLevel = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/course-levels/${id}`);
+    return res.data.payload;
+};
 
 // Update a paper with components
 export const updatePaperWithComponents = (paperId: number, data: {
@@ -316,7 +355,10 @@ export const getExamComponents = async () => {
 export const getExamComponent = (id: number) => axiosInstance.get<ExamComponent>(`${BASE}/exam-components/${id}`);
 export const createExamComponent = (data: Omit<ExamComponent, 'id' | 'createdAt' | 'updatedAt'>) => axiosInstance.post<ExamComponent>(`${BASE}/exam-components`, data);
 export const updateExamComponent = (id: number, data: Partial<ExamComponent>) => axiosInstance.put<ExamComponent>(`${BASE}/exam-components/${id}`, data);
-export const deleteExamComponent = (id: number) => axiosInstance.delete<ExamComponent>(`${BASE}/exam-components/${id}`);
+export const deleteExamComponent = async (id: number) => {
+    const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/exam-components/${id}`);
+    return res.data.payload;
+};
 
 // Academic Years
 export const getAcademicYears = async () => {

@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Layers, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, Layers, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Stream } from "@/types/course-design";
 import { getAllStreams, createStream, updateStream, bulkUploadStreams, BulkUploadResult } from "@/services/stream.api";
+import { deleteStream, DeleteResult } from "@/services/course-design.api";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { StreamForm } from "./stream-form";
@@ -54,15 +55,23 @@ const StreamsPage = () => {
     setIsFormOpen(true);
   };
 
-  // const handleDelete = async (id: number) => {
-  //   try {
-  //     await deleteStream(id);
-  //     setStreams(prev => prev.filter(s => s.id !== id));
-  //     toast.success("Stream deleted successfully");
-  //   } catch (error) {
-  //     toast.error("Failed to delete stream");
-  //   }
-  // };
+  const handleDelete = async (id: number) => {
+    try {
+      const result: DeleteResult = await deleteStream(id);
+      if (result.success) {
+        setStreams(prev => prev.filter(s => s.id !== id));
+        toast.success(result.message || "Stream deleted successfully");
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch  {
+      toast.error("Failed to delete stream");
+    }
+  };
 
   const handleSubmit = async (data: { name: string; code: string; shortName?: string | null; sequence?: number | null; disabled: boolean }) => {
     setIsSubmitting(true);
@@ -371,7 +380,7 @@ const StreamsPage = () => {
                     <TableHead style={{ width: 150, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -411,6 +420,14 @@ const StreamsPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(stream.id!)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

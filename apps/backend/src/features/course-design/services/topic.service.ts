@@ -1,6 +1,9 @@
 import { db } from "@/db/index.js";
 import { Topic, topicModel } from "../models/topic.model.js";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, countDistinct, eq, ilike } from "drizzle-orm";
+import { marksheetPaperMappingModel } from "@/features/academics/models/marksheet-paper-mapping.model.js";
+import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
+import { paperModel } from "../models/paper.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -105,3 +108,29 @@ export async function deleteTopic(id: number) {
     const [deleted] = await db.delete(topicModel).where(eq(topicModel.id, id)).returning();
     return deleted;
 } 
+
+export async function deleteTopicSafe(id: number) {
+    const [found] = await db.select().from(topicModel).where(eq(topicModel.id, id));
+    if (!found) return null;
+
+    // Only dependency is indirectly via paper -> batches/marksheets; topic itself has no direct mappings
+    // But we can ensure the parent paper isn't mapped; otherwise allow delete as it's usually safe
+    const [{ mksMapCount }] = await db
+        .select({ mksMapCount: countDistinct(marksheetPaperMappingModel.id) })
+        .from(marksheetPaperMappingModel)
+        .leftJoin(batchStudentPaperModel, eq(batchStudentPaperModel.id, marksheetPaperMappingModel.batchStudentPaperId))
+        .leftJoin(paperModel, eq(paperModel.id, batchStudentPaperModel.paperId))
+        .where(eq(paperModel.id, found.paperId));
+
+    if (mksMapCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete topic. It is associated with other records via paper mappings.",
+            records: [{ count: mksMapCount, type: "Mks-paper-mapping" }],
+        };
+    }
+
+    const [deleted] = await db.delete(topicModel).where(eq(topicModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Topic deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete topic.", records: [] };
+}

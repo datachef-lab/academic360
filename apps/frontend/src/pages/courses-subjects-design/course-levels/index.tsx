@@ -22,10 +22,10 @@ import {
   getAllCourseLevels,
   createCourseLevel,
   updateCourseLevel,
-  deleteCourseLevel,
   bulkUploadCourseLevels,
   BulkUploadResult,
 } from "@/services/course-level.api";
+import { deleteCourseLevel, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
 const CourseLevelsPage = () => {
@@ -65,9 +65,17 @@ const CourseLevelsPage = () => {
 
   const handleDelete = async (id: number) => {
     try {
-      await deleteCourseLevel(id);
-      setCourseLevels((prev) => prev.filter((cl) => cl.id !== id));
-      toast.success("Course level deleted successfully");
+      const result: DeleteResult = await deleteCourseLevel(id);
+      if (result.success) {
+        setCourseLevels((prev) => prev.filter((cl) => cl.id !== id));
+        toast.success(result.message || "Course level deleted successfully");
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
     } catch {
       toast.error("Failed to delete course level");
     }

@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { ExamComponent, examComponentModel } from "../models/exam-component.model.js";
-import { eq } from "drizzle-orm";
+import { countDistinct, eq } from "drizzle-orm";
+import { paperComponentModel } from "../models/paper-component.model.js";
 import { ExamComponentSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 
@@ -97,4 +98,31 @@ export const deleteExamComponent = async (id: string) => {
         .where(eq(examComponentModel.id, +id))
         .returning();
     return deletedExamComponent.length > 0 ? deletedExamComponent[0] : null;
+};
+
+export const deleteExamComponentSafe = async (id: string) => {
+    const [found] = await db.select().from(examComponentModel).where(eq(examComponentModel.id, +id));
+    if (!found) return null;
+
+    const [{ dependencyCount }] = await db
+        .select({ dependencyCount: countDistinct(paperComponentModel.id) })
+        .from(paperComponentModel)
+        .where(eq(paperComponentModel.examComponentId, +id));
+
+    if (dependencyCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete exam-component. It is associated with other records.",
+            records: [{ count: dependencyCount, type: "Paper-component" }],
+        };
+    }
+
+    const deletedExamComponent = await db
+        .delete(examComponentModel)
+        .where(eq(examComponentModel.id, +id))
+        .returning();
+    if (deletedExamComponent.length > 0) {
+        return { success: true, message: "Exam-component deleted successfully.", records: [] };
+    }
+    return { success: false, message: "Failed to delete exam-component.", records: [] };
 };

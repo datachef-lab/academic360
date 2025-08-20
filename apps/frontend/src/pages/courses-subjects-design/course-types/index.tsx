@@ -1,7 +1,7 @@
 // import { UserDataTable } from "@/pages/DataTableTest";
 import { CourseType } from "@/types/course-design";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Layers, Download, Upload } from "lucide-react";
+import { PlusCircle, Layers, Download, Upload, Trash2 } from "lucide-react";
 import React from "react";
 // import { CustomPaginationState } from "@/components/settings/SettingsContent";
 import { ProgressBar } from "@/components/common/Progress";
@@ -24,8 +24,10 @@ import {
   getCourseTypes,
   createCourseType,
   updateCourseType,
+  deleteCourseType,
   bulkUploadCourseTypes,
   BulkUploadResult,
+  DeleteResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
@@ -64,15 +66,23 @@ const CourseTypesPage = () => {
     setIsFormOpen(true);
   };
 
-  // const handleDelete = async (id: number) => {
-  //   try {
-  //     await deleteCourseType(id);
-  //     setCourseTypes(prev => prev.filter(ct => ct.id !== id));
-  //     toast.success("Course type deleted successfully");
-  //   } catch (error) {
-  //     toast.error("Failed to delete course type");
-  //   }
-  // };
+  const handleDelete = async (id: number) => {
+    try {
+      const result: DeleteResult = await deleteCourseType(id);
+      if (result.success) {
+        setCourseTypes(prev => prev.filter(ct => ct.id !== id));
+        toast.success(result.message || "Course type deleted successfully");
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch  {
+      toast.error("Failed to delete course type");
+    }
+  };
 
   const handleSubmit = async (data: Omit<CourseType, "id" | "createdAt" | "updatedAt">) => {
     setIsSubmitting(true);
@@ -352,7 +362,7 @@ const CourseTypesPage = () => {
                     <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
                     <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
                     <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -397,6 +407,14 @@ const CourseTypesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(courseType.id!)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Subject, subjectModel } from "../models/subject.model.js";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, countDistinct, eq, ilike } from "drizzle-orm";
+import { paperModel } from "../models/paper.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -183,3 +184,39 @@ export async function deleteSubject(id: number) {
     const [deleted] = await db.delete(subjectModel).where(eq(subjectModel.id, id)).returning();
     return deleted;
 } 
+
+export async function deleteSubjectSafe(id: number) {
+    const [found] = await db.select().from(subjectModel).where(eq(subjectModel.id, id));
+    if (!found) {
+        return null;
+    }
+
+    const [{ paperCount }] = await db
+        .select({ paperCount: countDistinct(paperModel.id) })
+        .from(paperModel)
+        .where(eq(paperModel.subjectId, id));
+
+    if (paperCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete subject. It is associated with other records.",
+            records: [
+                { count: paperCount, type: "Papers" },
+            ],
+        };
+    }
+
+    const [deleted] = await db.delete(subjectModel).where(eq(subjectModel.id, id)).returning();
+    if (deleted) {
+        return {
+            success: true,
+            message: "Subject deleted successfully.",
+            records: [],
+        };
+    }
+    return {
+        success: false,
+        message: "Failed to delete subject.",
+        records: [],
+    };
+}

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { db } from "@/db/index.js";
 import { specializationModel, createSpecializationSchema } from "@/features/course-design/models/specialization.model.js";
+import { deleteSpecializationSafe } from "@/features/course-design/services/specialization.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { eq } from "drizzle-orm";
@@ -79,17 +80,12 @@ export const updateSpecialization = async (req: Request, res: Response, next: Ne
 export const deleteSpecialization = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.query;
-
-        const [deletedSpecialization] = await db
-            .delete(specializationModel)
-            .where(eq(specializationModel.id, Number(id)))
-            .returning();
-
-        if (!deletedSpecialization) {
+        const result = await deleteSpecializationSafe(String(id));
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Specialization not found"));
+            return;
         }
-
-        res.status(200).json(new ApiResponse(200, "DELETED", deletedSpecialization, "Specialization deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

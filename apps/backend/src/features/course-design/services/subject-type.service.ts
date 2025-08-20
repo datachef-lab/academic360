@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { SubjectType, subjectTypeModel } from "../models/subject-type.model.js";
-import { eq } from "drizzle-orm";
+import { countDistinct, eq } from "drizzle-orm";
+import { paperModel } from "../models/paper.model.js";
 import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 import XLSX from "xlsx";
@@ -56,6 +57,33 @@ export const deleteSubjectType = async (id: string) => {
         .where(eq(subjectTypeModel.id, +id))
         .returning();
     return deletedSubjectType.length > 0 ? deletedSubjectType[0] : null;
+};
+
+export const deleteSubjectTypeSafe = async (id: string) => {
+    const [found] = await db.select().from(subjectTypeModel).where(eq(subjectTypeModel.id, +id));
+    if (!found) return null;
+
+    const [{ paperCount }] = await db
+        .select({ paperCount: countDistinct(paperModel.id) })
+        .from(paperModel)
+        .where(eq(paperModel.subjectTypeId, +id));
+
+    if (paperCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete subject-type. It is associated with other records.",
+            records: [{ count: paperCount, type: "Paper" }],
+        };
+    }
+
+    const deletedSubjectType = await db
+        .delete(subjectTypeModel)
+        .where(eq(subjectTypeModel.id, +id))
+        .returning();
+    if (deletedSubjectType.length > 0) {
+        return { success: true, message: "Subject-type deleted successfully.", records: [] };
+    }
+    return { success: false, message: "Failed to delete subject-type.", records: [] };
 };
 
 export interface BulkUploadResult {

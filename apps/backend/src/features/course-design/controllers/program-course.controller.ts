@@ -6,7 +6,7 @@ import {
   getProgramCourseById, 
   getAllProgramCourses, 
   updateProgramCourse, 
-  deleteProgramCourse, 
+  deleteProgramCourseSafe, 
   bulkUploadProgramCourses 
 } from "@/features/course-design/services/program-course.service.js";
 import { socketService } from "@/services/socketService.js";
@@ -61,12 +61,12 @@ export const updateProgramCourseHandler = async (req: Request, res: Response, ne
 export const deleteProgramCourseHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const deleted = await deleteProgramCourse(id);
-        if (!deleted) {
+        const result = await deleteProgramCourseSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Program course not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Program course deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

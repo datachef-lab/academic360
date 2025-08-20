@@ -1,8 +1,9 @@
 import { db } from "@/db/index.js";
 import { PaperComponent, paperComponentModel } from "../models/paper-component.model.js";
-import { and, eq } from "drizzle-orm";
+import { and, countDistinct, eq } from "drizzle-orm";
 import { PaperComponentDto } from "@/types/course-design/index.type";
 import { findExamComponentById } from "./exam-component.service.js";
+import { marksheetPaperComponentMappingModel } from "@/features/academics/models/marksheet-paper-component-mapping.model.js";
 
 // Create a new paper component
 export const createPaperComponent = async (paperComponentData: PaperComponentDto) => {
@@ -66,6 +67,32 @@ export const deletePaperComponent = async (id: string) => {
         .where(eq(paperComponentModel.id, +id))
         .returning();
     return deletedPaperComponent.length > 0 ? deletedPaperComponent[0] : null;
+};
+
+export const deletePaperComponentSafe = async (id: string) => {
+    const [found] = await db.select().from(paperComponentModel).where(eq(paperComponentModel.id, +id));
+    if (!found) return null;
+    const [{ mksCompCount }] = await db
+        .select({ mksCompCount: countDistinct(marksheetPaperComponentMappingModel.id) })
+        .from(marksheetPaperComponentMappingModel)
+        .where(eq(marksheetPaperComponentMappingModel.paperComponentId, +id));
+
+    if (mksCompCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete paper-component. It is associated with other records.",
+            records: [{ count: mksCompCount, type: "Mks-paper-component" }],
+        };
+    }
+
+    const deletedPaperComponent = await db
+        .delete(paperComponentModel)
+        .where(eq(paperComponentModel.id, +id))
+        .returning();
+    if (deletedPaperComponent.length > 0) {
+        return { success: true, message: "Paper-component deleted successfully.", records: [] };
+    }
+    return { success: false, message: "Failed to delete paper-component.", records: [] };
 };
 
 

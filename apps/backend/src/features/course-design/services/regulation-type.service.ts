@@ -1,6 +1,8 @@
 import { db } from "@/db/index.js";
 import { regulationTypeModel, RegulationType } from "@/features/course-design/models/regulation-type.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { countDistinct, eq, ilike } from "drizzle-orm";
+import { programCourses } from "../models/program-course.model.js";
+import { paperModel } from "../models/paper.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -32,6 +34,35 @@ export async function updateRegulationType(id: number, data: Partial<RegulationT
 export async function deleteRegulationType(id: number) {
     const [deleted] = await db.delete(regulationTypeModel).where(eq(regulationTypeModel.id, id)).returning();
     return deleted;
+}
+
+export async function deleteRegulationTypeSafe(id: number) {
+    const [found] = await db.select().from(regulationTypeModel).where(eq(regulationTypeModel.id, id));
+    if (!found) return null;
+
+    const [{ paperCount }] = await db
+        .select({ paperCount: countDistinct(paperModel.id) })
+        .from(paperModel)
+        .where(eq(paperModel.regulationTypeId, id));
+    const [{ programCourseCount }] = await db
+        .select({ programCourseCount: countDistinct(programCourses.id) })
+        .from(programCourses)
+        .where(eq(programCourses.regulationTypeId, id));
+
+    if (paperCount > 0 || programCourseCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete regulation-type. It is associated with other records.",
+            records: [
+                { count: paperCount, type: "Paper" },
+                { count: programCourseCount, type: "Program-course" },
+            ],
+        };
+    }
+
+    const [deleted] = await db.delete(regulationTypeModel).where(eq(regulationTypeModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Regulation-type deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete regulation-type.", records: [] };
 }
 
 export interface BulkUploadResult {

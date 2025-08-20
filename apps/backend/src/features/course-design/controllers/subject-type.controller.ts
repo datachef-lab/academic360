@@ -4,7 +4,7 @@ import {
   getAllSubjectTypes as getAllSubjectTypesService,
   getSubjectTypeById as getSubjectTypeByIdService,
   updateSubjectType as updateSubjectTypeService,
-  deleteSubjectType as deleteSubjectTypeService,
+  deleteSubjectTypeSafe as deleteSubjectTypeService,
   bulkUploadSubjectTypes as bulkUploadSubjectTypesService
 } from "../services/subject-type.service.js";
 import * as XLSX from "xlsx";
@@ -65,12 +65,12 @@ export const updateSubjectType = async (req: Request, res: Response) => {
 
 export const deleteSubjectType = async (req: Request, res: Response) => {
   try {
-    const deletedSubjectType = await deleteSubjectTypeService(req.params.id);
-    if (!deletedSubjectType) {
+    const result = await deleteSubjectTypeService(req.params.id);
+    if (!result) {
       res.status(404).json({ error: "Subject Type not found" });
       return;
     }
-    res.json({ message: "Subject Type deleted successfully" });
+    res.json(result);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });

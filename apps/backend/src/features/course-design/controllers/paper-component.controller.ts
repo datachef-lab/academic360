@@ -4,7 +4,7 @@ import {
   getAllPaperComponents as getAllPaperComponentsService,
   getPaperComponentById as getPaperComponentByIdService,
   updatePaperComponent as updatePaperComponentService,
-  deletePaperComponent as deletePaperComponentService,
+  deletePaperComponentSafe as deletePaperComponentService,
 } from "../services/paper-component.service.js";
 
 export const createPaperComponent = async (req: Request, res: Response) => {
@@ -62,12 +62,12 @@ export const updatePaperComponent = async (req: Request, res: Response) => {
 
 export const deletePaperComponent = async (req: Request, res: Response) => {
   try {
-    const deletedPaperComponent = await deletePaperComponentService(req.params.id);
-    if (!deletedPaperComponent) {
+    const result = await deletePaperComponentService(req.params.id);
+    if (!result) {
       res.status(404).json({ error: "Paper Component not found" });
       return;
     }
-    res.json({ message: "Paper Component deleted successfully" });
+    res.json(result);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });

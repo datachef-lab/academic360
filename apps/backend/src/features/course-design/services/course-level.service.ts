@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { CourseLevel, courseLevelModel } from "../models/course-level.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { countDistinct, eq, ilike } from "drizzle-orm";
+import { programCourses } from "../models/program-course.model.js";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";
 import XLSX from "xlsx";
@@ -174,4 +175,31 @@ export const deleteCourseLevel = async (id: string) => {
         .where(eq(courseLevelModel.id, +id))
         .returning();
     return deletedCourseLevel.length > 0 ? deletedCourseLevel[0] : null;
+};
+
+export const deleteCourseLevelSafe = async (id: string) => {
+    const [found] = await db.select().from(courseLevelModel).where(eq(courseLevelModel.id, +id));
+    if (!found) return null;
+
+    const [{ programCourseCount }] = await db
+        .select({ programCourseCount: countDistinct(programCourses.id) })
+        .from(programCourses)
+        .where(eq(programCourses.courseLevelId, +id));
+
+    if (programCourseCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete course-level. It is associated with other records.",
+            records: [{ count: programCourseCount, type: "Program-course" }],
+        };
+    }
+
+    const deletedCourseLevel = await db
+        .delete(courseLevelModel)
+        .where(eq(courseLevelModel.id, +id))
+        .returning();
+    if (deletedCourseLevel.length > 0) {
+        return { success: true, message: "Course-level deleted successfully.", records: [] };
+    }
+    return { success: false, message: "Failed to delete course-level.", records: [] };
 };

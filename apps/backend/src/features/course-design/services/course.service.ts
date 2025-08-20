@@ -1,7 +1,7 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import { CourseDto } from "@/types/course-design/index.type.js";
 import { Course, courseModel, createCourseModel } from "../../course-design/models/course.model.js";
-import { and, count, eq, ilike, sql } from "drizzle-orm";
+import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 // import { StreamType } from "@/types/academics/stream.js";
 // import { findStreamById } from "./stream.service.js";
 // import { streamModel } from "../models/stream.model.js";
@@ -12,6 +12,12 @@ import { academicIdentifierModel } from "@/features/user/models/academicIdentifi
 import { OldStudent } from "@/types/old-student.js";
 import { Degree } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
+import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
+import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
+import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
+import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
+import { programCourses } from "@/features/course-design/models/program-course.model.js";
+import { batchModel } from "@/features/academics/models/batch.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -172,6 +178,64 @@ export async function deleteCourse(id: number): Promise<CourseDto | null> {
     const formattedCourse = await courseFormatResponse(deletedCourse);
 
     return formattedCourse;
+}
+
+export async function deleteCourseSafe(id: number) {
+    const [found] = await db.select().from(courseModel).where(eq(courseModel.id, id));
+    if (!found) return null;
+
+    const [
+        [{ batchCount }],
+        [{ studyMaterialCount }],
+        [{ admAcademicInfoCount }],
+        [{ admCourseAppCount }],
+        [{ admCourseCount }],
+        [{ programCourseCount }],
+        [{ feesStructureCount }],
+        [{ academicIdentifierCount }],
+    ] = await Promise.all([
+        db.select({ batchCount: countDistinct(batchModel.id) }).from(batchModel).where(eq(batchModel.courseId, id)),
+        db.select({ studyMaterialCount: sql<number>`0` }).from(courseModel).where(eq(courseModel.id, id)),
+        db.select({ admAcademicInfoCount: countDistinct(admissionAcademicInfoModel.id) }).from(admissionAcademicInfoModel).where(eq(admissionAcademicInfoModel.previouslyRegisteredCourseId, id)),
+        db.select({ admCourseAppCount: countDistinct(admissionCourseApplication.id) })
+            .from(admissionCourseApplication)
+            .leftJoin(admissionCourseModel, eq(admissionCourseModel.id, admissionCourseApplication.admissionCourseId))
+            .where(eq(admissionCourseModel.courseId, id)),
+        db.select({ admCourseCount: countDistinct(admissionCourseModel.id) }).from(admissionCourseModel).where(eq(admissionCourseModel.courseId, id)),
+        db.select({ programCourseCount: countDistinct(programCourses.id) }).from(programCourses).where(eq(programCourses.courseId, id)),
+        db.select({ feesStructureCount: countDistinct(feesStructureModel.id) }).from(feesStructureModel).where(eq(feesStructureModel.courseId, id)),
+        db.select({ academicIdentifierCount: countDistinct(academicIdentifierModel.id) }).from(academicIdentifierModel).where(eq(academicIdentifierModel.courseId, id)),
+    ]);
+
+    if (
+        batchCount > 0 ||
+        studyMaterialCount > 0 ||
+        admAcademicInfoCount > 0 ||
+        admCourseAppCount > 0 ||
+        admCourseCount > 0 ||
+        programCourseCount > 0 ||
+        feesStructureCount > 0 ||
+        academicIdentifierCount > 0
+    ) {
+        return {
+            success: false,
+            message: "Cannot delete course. It is associated with other records.",
+            records: [
+                { count: batchCount, type: "Batch" },
+                { count: studyMaterialCount, type: "Study-material" },
+                { count: admAcademicInfoCount, type: "Adm-academic-info" },
+                { count: admCourseAppCount, type: "Adm-course-app" },
+                { count: admCourseCount, type: "Adm-course" },
+                { count: programCourseCount, type: "Program-course" },
+                { count: feesStructureCount, type: "Fees-structure" },
+                { count: academicIdentifierCount, type: "Academic-identifier" },
+            ],
+        };
+    }
+
+    const [deleted] = await db.delete(courseModel).where(eq(courseModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Course deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete course.", records: [] };
 }
 
 export async function searchCourses(query: string): Promise<CourseDto[]> {

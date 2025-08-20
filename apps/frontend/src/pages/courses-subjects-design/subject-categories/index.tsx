@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Tag, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, Tag, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { SubjectCategoryForm } from "./subject-category-form";
 import { SubjectType } from "@/types/course-design";
-import { getSubjectTypes, createSubjectType, updateSubjectType, bulkUploadSubjectTypes } from "@/services/course-design.api";
+import { getSubjectTypes, createSubjectType, updateSubjectType, deleteSubjectType, bulkUploadSubjectTypes, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -55,6 +55,25 @@ const SubjectCategoriesPage = () => {
   const handleEdit = (category: SubjectType): void => {
     setSelectedCategory(category);
     setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id: number | undefined) => {
+    if (!id) return;
+    try {
+      const result: DeleteResult = await deleteSubjectType(id);
+      if (result.success) {
+        toast.success(result.message || "Subject category deleted successfully");
+        fetchCategories();
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch {
+      toast.error("Failed to delete subject category");
+    }
   };
 
   const handleAddNew = () => {
@@ -304,7 +323,7 @@ const SubjectCategoriesPage = () => {
                     <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -342,6 +361,14 @@ const SubjectCategoriesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(category.id)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

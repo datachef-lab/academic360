@@ -12,14 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Download, Edit, Library, PlusCircle, Upload } from "lucide-react";
+import { Download, Edit, Library, PlusCircle, Upload, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 import { ExamComponentForm } from "./exam-component-form";
 import { ExamComponent } from "@/types/course-design";
 import { getAllExamComponent } from "@/services/exam-component.service";
-import { createExamComponent, updateExamComponent } from "@/services/course-design.api";
+import { createExamComponent, updateExamComponent, deleteExamComponent, DeleteResult } from "@/services/course-design.api";
 
 const ExamComponentesPage = () => {
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
@@ -100,6 +100,26 @@ const ExamComponentesPage = () => {
   const handleEdit = (comp: ExamComponent) => {
     setSelectedExamComponent(comp);
     setIsFormOpen(true);
+  };
+
+  const handleDelete = async (id: number | undefined) => {
+    if (!id) return;
+    try {
+      const result: DeleteResult = await deleteExamComponent(id);
+      if (result.success) {
+        toast.success(result.message || "Exam component deleted successfully");
+        const refreshed = await getAllExamComponent();
+        setExamComponents(Array.isArray(refreshed.payload) ? refreshed.payload : []);
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch {
+      toast.error("Failed to delete exam component");
+    }
   };
 
   const handleAddNew = () => {
@@ -204,7 +224,7 @@ const ExamComponentesPage = () => {
                     <TableHead style={{ width: 320 }}>Code</TableHead>
                     <TableHead style={{ width: 140 }}>Short Name</TableHead>
                     <TableHead style={{ width: 100 }}>Status</TableHead>
-                    <TableHead style={{ width: 120 }}>Actions</TableHead>
+                    <TableHead style={{ width: 140 }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -249,6 +269,14 @@ const ExamComponentesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(comp.id)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
