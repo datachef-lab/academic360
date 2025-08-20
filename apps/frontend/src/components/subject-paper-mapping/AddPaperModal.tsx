@@ -450,10 +450,17 @@ export default function AddPaperModal({
 
                 <div className="w-48 p-2 border-r border-black">
                   <MultiSelect
-                    options={programCourses.map((programCourseItem) => ({
-                      label: courses.find((crs) => crs.id == programCourseItem.courseId)?.name ?? "",
-                      value: programCourseItem.id?.toString() || "",
-                    }))}
+                    options={
+                      programCourses
+                        .map(
+                          (programCourseItem) =>
+                            programCourseItem.regulationTypeId === field.regulationTypeId && {
+                              label: courses.find((crs) => crs.id == programCourseItem.courseId)?.name ?? "",
+                              value: programCourseItem.id?.toString() || "",
+                            },
+                        )
+                        .filter(Boolean) as { label: string; value: string }[]
+                    }
                     defaultValue={field.programCourses.map((prog) => prog.toString())}
                     onValueChange={(selected: string[]) => {
                       const selectedCourses = selected.map(Number);

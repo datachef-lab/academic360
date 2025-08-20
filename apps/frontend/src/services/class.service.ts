@@ -24,12 +24,15 @@ export async function addClass(newClass: Class): Promise<ApiResonse<Class>> {
 // Delete a Class
 export async function deleteClass(ClassId: number): Promise<ApiResonse<void>> {
     const response = await axiosInstance.delete(`/api/v1/classes/${ClassId}`);
+    console.log(response.data);
     return response.data;
 }
 
 // Update a Class
 export async function updateClass(ClassId: number, Class: Partial<Class>): Promise<ApiResonse<Class>> {
     console.log("in fe, Class:", Class);
-    const response = await axiosInstance.put(`/api/v1/classes/${ClassId}`, Class);
+
+    const response = await axiosInstance.put(`/api/classes/${ClassId}`, Class);
+    console.log(response.data);
     return response.data;
 } 

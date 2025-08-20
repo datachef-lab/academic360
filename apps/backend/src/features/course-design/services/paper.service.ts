@@ -8,6 +8,8 @@ import {
     // deletePaperComponent,
     findPaperComponentsByPaperId,
 } from "./paper-component.service.js";
+import XLSX from "xlsx";
+import fs from "fs";
 import { createTopic, getTopicsByPaperId, updateTopic } from "./topic.service.js";
 import { paperComponentModel } from "../models/paper-component.model.js";
 import { examComponentModel } from "../models/exam-component.model.js";
@@ -23,6 +25,16 @@ import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
 // import { getRegulationTypeById } from "./regulation-type.service";
 // import { getSubjectTypeById } from "./subject-type.service";
 // import { getPaperComponentById } from "../controllers/paper-component.controller";
+
+export interface BulkUploadResult {
+  success: Paper[];
+  errors: Array<{ row: number; data: unknown[]; error: string }>;
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+  };
+}
 
 export async function createPaper(data: PaperDto) {
     const {
@@ -292,3 +304,68 @@ export async function modelToDto(paper: Paper): Promise<PaperDto | null> {
         components,
     };
 }
+
+
+
+// export const bulkUploadCourses = async (
+//   filePath: string,
+//   io?: any,
+//   uploadSessionId?: string
+// ): Promise<BulkUploadResult> => {
+//   const result: BulkUploadResult = { 
+//     success: [], 
+//     errors: [], 
+//     summary: { total: 0, successful: 0, failed: 0 } 
+//   };
+//   try {
+//     const workbook = XLSX.readFile(filePath);
+//     const sheetName = workbook.SheetNames[0];
+//     const worksheet = workbook.Sheets[sheetName];
+//     const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+//     result.summary.total = data.length - 1;
+
+//     for (let i = 1; i < data.length; i++) {
+//       const row = data[i] as any[];
+//       const rowNumber = i + 1;
+//       try {
+//         const paperData: Paper = {
+//           name: row[0]?.toString()?.trim(),
+//           code: row[7]?.toString()?.trim(),
+//         };
+//         if (!paperData.name) {
+//           result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
+//           result.summary.failed++;
+//           continue;
+//         }
+//         // Insert the paper
+//         const [newPaper] = await db.insert(paperModel).values(paperData).returning();
+//         result.success.push(newPaper);
+//         result.summary.successful++;
+//       } catch (error: unknown) {
+//         console.error(`Error processing row ${rowNumber}:`, error);
+//         result.errors.push({ row: rowNumber, data: row, error: error instanceof Error ? error.message : "Unknown error" });
+//         result.summary.failed++;
+//       }
+//       if (io && uploadSessionId) {
+//         io.to(uploadSessionId).emit("bulk-upload-progress", {
+//           processed: i,
+//           total: data.length - 1,
+//           percent: Math.round((i / (data.length - 1)) * 100)
+//         });
+//       }
+//     }
+//     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+//     if (io && uploadSessionId) {
+//       if (result.errors.length > 0) {
+//         io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+//       } else {
+//         io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+//       }
+//     }
+//     return result;
+//   } catch (error: unknown) {
+//     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+//     throw new Error(`Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
+//   }
+// };
