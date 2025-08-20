@@ -245,7 +245,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import DottedSeparator from "@/components/ui/dotted-separator";
 import { FcGoogle } from "react-icons/fc";
-import { useSettings } from "@/features/settings/providers/settings-provider";
+import { useSettings } from "@/features/settings/hooks/use-settings";
 
 const LoginPage = () => {
   const navigate = useNavigate();
