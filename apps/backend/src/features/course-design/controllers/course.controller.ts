@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { createCourse, deleteCourse, findAllCourses, findCourseById, searchCourses, updateCourse, bulkUploadCourses } from "@/features/course-design/services/course.service.js";
+import { createCourse, deleteCourseSafe, findAllCourses, findCourseById, searchCourses, updateCourse, bulkUploadCourses } from "@/features/course-design/services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { socketService } from "@/services/socketService.js";
 
@@ -115,14 +115,14 @@ export async function deleteCourseHandler(req: Request, res: Response): Promise<
             return;
         }
 
-        const deletedCourse = await deleteCourse(id);
-
-        if (!deletedCourse) {
+        const result = await deleteCourseSafe(id);
+        
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
             return;
         }
-
-        res.status(200).json(new ApiResponse(200, "DELETED", deletedCourse, "Course deleted successfully"));
+        
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
         return;
     } catch (error) {
         console.error(`Error deleting course with ID ${req.params.id}:`, error);

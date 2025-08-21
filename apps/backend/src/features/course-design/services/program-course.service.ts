@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { programCourses, ProgramCourse, NewProgramCourse } from "@/features/course-design/models/program-course.model.js";
-import { and, eq, ilike } from "drizzle-orm";
+import { and, countDistinct, eq, ilike } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@/features/course-design/models/stream.model.js";
@@ -9,6 +9,7 @@ import { courseTypeModel } from "@/features/course-design/models/course-type.mod
 import { courseLevelModel } from "@/features/course-design/models/course-level.model.js";
 import { affiliationModel } from "@/features/course-design/models/affiliation.model.js";
 import { regulationTypeModel } from "@/features/course-design/models/regulation-type.model.js";
+import { paperModel } from "../models/paper.model.js";
 
 export async function createProgramCourse(data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) {
     const [existingProgramCourse] = await db
@@ -49,6 +50,29 @@ export async function updateProgramCourse(id: number, data: Partial<ProgramCours
 export async function deleteProgramCourse(id: number) {
     const [deleted] = await db.delete(programCourses).where(eq(programCourses.id, id)).returning();
     return deleted;
+}
+
+export async function deleteProgramCourseSafe(id: number) {
+    const [found] = await db.select().from(programCourses).where(eq(programCourses.id, id));
+    if (!found) return null;
+
+    // Check dependent papers
+    const [{ paperCount }] = await db
+        .select({ paperCount: countDistinct(paperModel.id) })
+        .from(paperModel)
+        .where(eq(paperModel.programCourseId, id));
+
+    if (paperCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete program-course. It is associated with other records.",
+            records: [{ count: paperCount, type: "Paper" }],
+        };
+    }
+
+    const [deleted] = await db.delete(programCourses).where(eq(programCourses.id, id)).returning();
+    if (deleted) return { success: true, message: "Program course deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete program course.", records: [] };
 }
 
 // Helper functions to find IDs by name

@@ -4,21 +4,14 @@ import { Button } from "@/components/ui/button";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { SubjectType } from "@/types/course-design";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Category name must be at least 2 characters." }),
   code: z.string().nullable().optional(),
-  sequence: z.number().nullable().optional(),
+  sequence: z.coerce.number().nullable().optional(),
   disabled: z.boolean().default(false),
 });
 
@@ -26,7 +19,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface SubjectCategoryFormProps {
   initialData?: SubjectType | null;
-  onSubmit: (data: Omit<SubjectType, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<SubjectType, "id" | "createdAt" | "updatedAt">) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
@@ -110,7 +103,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
             <FormItem>
               <FormLabel>Sequence</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="Enter sequence" {...field} value={field.value ?? ""} />
+                <Input type="number" placeholder="Enter sequence" {...field} value={Number(field.value)} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -122,12 +115,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
           render={({ field }) => (
             <FormItem className="flex flex-row items-center space-x-2">
               <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  id="disabled"
-                  disabled={isLoading}
-                />
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} id="disabled" disabled={isLoading} />
               </FormControl>
               <FormLabel htmlFor="disabled">Disabled</FormLabel>
             </FormItem>

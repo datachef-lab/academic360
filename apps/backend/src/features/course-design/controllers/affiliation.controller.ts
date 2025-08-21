@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliation, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
+import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliationSafe, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
 import { socketService } from "@/services/socketService.js";
 
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -54,12 +54,12 @@ export const updateAffiliationHandler = async (req: Request, res: Response, next
 export const deleteAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const deleted = await deleteAffiliation(id);
-        if (!deleted) {
+        const result = await deleteAffiliationSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Affiliation not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Affiliation deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

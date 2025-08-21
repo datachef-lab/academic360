@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Stream, streamModel } from "../models/stream.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { countDistinct, eq, ilike } from "drizzle-orm";
+import { programCourses } from "../models/program-course.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -128,3 +129,25 @@ export async function deleteStream(id: number) {
     const [deleted] = await db.delete(streamModel).where(eq(streamModel.id, id)).returning();
     return deleted;
 } 
+
+export async function deleteStreamSafe(id: number) {
+    const [found] = await db.select().from(streamModel).where(eq(streamModel.id, id));
+    if (!found) return null;
+
+    const [{ programCourseCount }] = await db
+        .select({ programCourseCount: countDistinct(programCourses.id) })
+        .from(programCourses)
+        .where(eq(programCourses.streamId, id));
+
+    if (programCourseCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete stream. It is associated with other records.",
+            records: [{ count: programCourseCount, type: "Program-course" }],
+        };
+    }
+
+    const [deleted] = await db.delete(streamModel).where(eq(streamModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Stream deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete stream.", records: [] };
+}

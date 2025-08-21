@@ -20,7 +20,7 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   shortName: z.string().nullable(),
   type: z.enum(["YEAR", "SEMESTER"]),
-  sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
+  sequence: z.coerce.number().min(0, "Sequence must be a positive number").nullable().optional(),
   disabled: z.boolean().default(false),
 });
 
@@ -30,7 +30,7 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
   const defaultValues: ClassFormValues = {
     name: initialData?.name || "",
     type: "SEMESTER",
-    shortName: null,
+    shortName: initialData?.shortName ?? "",
     sequence: initialData?.sequence || 0,
     disabled: initialData?.disabled || false,
   };
@@ -46,12 +46,11 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
   });
 
   const handleFormSubmit = (data: ClassFormValues) => {
-
     onSubmit({
-        disabled: data.disabled,
-        name: data.name,
-        type: data.type,
-        shortName: data.shortName
+      disabled: data.disabled,
+      name: data.name,
+      type: data.type,
+      shortName: data.shortName,
     });
   };
 
@@ -78,8 +77,6 @@ export function ClassForm({ initialData, onSubmit, onCancel, isSubmitting }: Cla
         />
         {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
-
-
 
       <div className="space-y-2">
         <Label htmlFor="sequence">Sequence</Label>

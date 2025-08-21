@@ -4,7 +4,7 @@ import {
     getAllExamComponents as getAllExamComponentsService,
     findExamComponentById as getExamComponentByIdService,
     updateExamComponent as updateExamComponentService,
-    deleteExamComponent as deleteExamComponentService,
+    deleteExamComponentSafe as deleteExamComponentService,
 } from "../services/exam-component.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
@@ -57,12 +57,12 @@ export const updateExamComponent = async (req: Request, res: Response) => {
 
 export const deleteExamComponent = async (req: Request, res: Response) => {
     try {
-        const deletedExamComponent = await deleteExamComponentService(req.params.id);
-        if (!deletedExamComponent) {
+        const result = await deleteExamComponentService(req.params.id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "FAIL", null, "Exam Component not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "SUCCESS", { message: "Exam Component deleted successfully" }, "Exam Component deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "SUCCESS", result as any, (result as any).message ?? ""));
     } catch (error: unknown) {
         handleError(error, res);
     }

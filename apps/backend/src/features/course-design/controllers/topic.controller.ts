@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createTopic, getTopicById, getAllTopics, updateTopic, deleteTopic } from "@/features/course-design/services/topic.service.js";
+import { createTopic, getTopicById, getAllTopics, updateTopic, deleteTopicSafe } from "@/features/course-design/services/topic.service.js";
 
 export const createTopicHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -52,12 +52,12 @@ export const updateTopicHandler = async (req: Request, res: Response, next: Next
 export const deleteTopicHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const deleted = await deleteTopic(id);
-        if (!deleted) {
+        const result = await deleteTopicSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Topic not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Topic deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

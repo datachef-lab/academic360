@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaper, updatePaperWithComponents, createPapers } from "@/features/course-design/services/paper.service.js";
+import { createPaper, getPaperById, getAllPapers, updatePaper, deletePaperSafe, updatePaperWithComponents, createPapers } from "@/features/course-design/services/paper.service.js";
 import { PaperDto } from "@/types/course-design/index.type.js";
+import { socketService } from "@/services/socketService";
+import { bulkUploadCourses } from "../services/course.service";
 
 export const createPaperHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -54,12 +56,12 @@ export const updatePaperHandler = async (req: Request, res: Response, next: Next
 export const deletePaperHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const deleted = await deletePaper(id);
-        if (!deleted) {
+        const result = await deletePaperSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Paper not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Paper deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }
@@ -76,3 +78,27 @@ export const updatePaperWithComponentsHandler = async (req: Request, res: Respon
         return
     }
 }; 
+
+// export async function bulkUploadCoursesHandler(req: Request, res: Response): Promise<void> {
+//     try {
+//         if (!req.file) {
+//             res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
+//             return;
+//         }
+//         const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+//         const io = socketService.getIO();
+//         const result = await bulkUploadPapers(req.file.path, io, uploadSessionId);
+//         const response = {
+//             success: result.success,
+//             errors: result.errors,
+//             summary: {
+//                 total: result.success.length + result.errors.length,
+//                 successful: result.success.length,
+//                 failed: result.errors.length
+//             }
+//         };
+//         res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
+//     } catch (error: unknown) {
+//         res.status(500).json(new ApiResponse(500, "ERROR", null, error instanceof Error ? error.message : "Unknown error"));
+//     }
+// }

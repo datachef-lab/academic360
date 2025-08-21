@@ -8,7 +8,7 @@
 // )
 
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Download, Upload, Library } from "lucide-react";
+import { PlusCircle, Edit, Download, Upload, Library, Trash2 } from "lucide-react";
 import React from "react";
 // import { ProgressBar } from "@/components/common/Progress";
 import {
@@ -30,8 +30,10 @@ import {
   getCourses,
   createCourse,
   updateCourse,
+  deleteCourse,
   bulkUploadCourses,
   BulkUploadResult,
+  DeleteResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
@@ -182,6 +184,25 @@ const CoursesPage = () => {
     }
   };
 
+  const handleDelete = async (id: number) => {
+    try {
+      const result: DeleteResult = await deleteCourse(id);
+      if (result.success) {
+        toast.success(result.message || "Course deleted successfully");
+        const fresh = await getCourses();
+        setCourses(Array.isArray(fresh) ? fresh : []);
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch  {
+      toast.error("Failed to delete course");
+    }
+  };
+
   // const allSelected =
   //   filteredCourses.length > 0 &&
   //   filteredCourses.every((course) => selectedRows.includes(course.id ?? -1));
@@ -320,7 +341,7 @@ const CoursesPage = () => {
                     <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
                     <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Degree</TableHead>
                     <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -365,6 +386,14 @@ const CoursesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(course.id!)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

@@ -3,7 +3,7 @@ import { RegulationTypeForm } from "./regulation-type-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Scale, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, Scale, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { RegulationType } from "@/types/course-design";
-import { getRegulationTypes, createRegulationType, updateRegulationType, bulkUploadRegulationTypes, BulkUploadResult } from "@/services/course-design.api";
+import { getRegulationTypes, createRegulationType, updateRegulationType, deleteRegulationType, bulkUploadRegulationTypes, BulkUploadResult, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
 const RegulationTypesPage = () => {
@@ -56,16 +56,25 @@ const RegulationTypesPage = () => {
     setIsFormOpen(true);
   };
 
-  // const handleDelete = async (id: number | undefined) => {
-  //   if (!id) return;
-  //   try {
-  //     await deleteRegulationType(id);
-  //     toast.success("Regulation type deleted successfully");
-  //     fetchRegulationTypes();
-  //   } catch (error: any) {
-  //     toast.error(`Failed to delete regulation type: ${error.message}`);
-  //   }
-  // };
+  const handleDelete = async (id: number | undefined) => {
+    if (!id) return;
+    try {
+      const result: DeleteResult = await deleteRegulationType(id);
+      if (result.success) {
+        toast.success(result.message || "Regulation type deleted successfully");
+        fetchRegulationTypes();
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete regulation type: ${errorMessage}`);
+    }
+  };
 
   const handleAddNew = () => {
     setSelectedRegulationType(null);
@@ -343,7 +352,7 @@ const RegulationTypesPage = () => {
                     <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
                     <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -373,6 +382,14 @@ const RegulationTypesPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(type.id)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

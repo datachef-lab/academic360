@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createCourseType, getCourseTypeById, getAllCourseTypes, updateCourseType, deleteCourseType, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
+import { createCourseType, getCourseTypeById, getAllCourseTypes, updateCourseType, deleteCourseTypeSafe, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
 import { socketService } from "@/services/socketService.js";
 
 export const createCourseTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -81,12 +81,12 @@ export const updateCourseTypeHandler = async (req: Request, res: Response, next:
 export const deleteCourseTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const deleted = await deleteCourseType(id);
-        if (!deleted) {
+        const result = await deleteCourseTypeSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course type not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Course type deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

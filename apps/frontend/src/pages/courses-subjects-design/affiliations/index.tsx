@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Landmark, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, Landmark, Download, Upload, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Affiliation } from "@/types/course-design";
-import { getAffiliations, createAffiliation, updateAffiliation, bulkUploadAffiliations, BulkUploadResult } from "@/services/course-design.api";
+import { getAffiliations, createAffiliation, updateAffiliation, deleteAffiliation, BulkUploadResult, bulkUploadAffiliations, DeleteResult } from "@/services/course-design.api";
 import { AffiliationForm } from "./affiliation-form";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -58,16 +58,25 @@ const AffiliationsPage = () => {
     setIsFormOpen(true);
   };
 
-  // const handleDelete = async (id: number | undefined) => {
-  //   if (!id) return;
-  //   try {
-  //     await deleteAffiliation(id);
-  //     toast.success("Affiliation deleted successfully");
-  //     fetchAffiliations();
-  //   } catch (error: any) {
-  //     toast.error(`Failed to delete affiliation: ${error.message}`);
-  //   }
-  // };
+  const handleDelete = async (id: number | undefined) => {
+    if (!id) return;
+    try {
+      const result: DeleteResult = await deleteAffiliation(id);
+      if (result.success) {
+        toast.success(result.message || "Affiliation deleted successfully");
+        fetchAffiliations();
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to delete affiliation: ${errorMessage}`);
+    }
+  };
 
   const handleAddNew = () => {
     setSelectedAffiliation(null);
@@ -347,7 +356,7 @@ const AffiliationsPage = () => {
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
                     <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Remarks</TableHead>
                     <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -378,6 +387,14 @@ const AffiliationsPage = () => {
                               className="h-5 w-5 p-0"
                             >
                               <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDelete(aff.id)}
+                              className="h-5 w-5 p-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

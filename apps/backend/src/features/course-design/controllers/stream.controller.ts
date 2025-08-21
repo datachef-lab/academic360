@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createStream, getStreamById, getAllStreams, updateStream, deleteStream, bulkUploadStreams } from "@/features/course-design/services/stream.service.js";
+import { createStream, getStreamById, getAllStreams, updateStream, deleteStreamSafe, bulkUploadStreams } from "@/features/course-design/services/stream.service.js";
 
 export const createStreamHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -81,12 +81,12 @@ export const updateStreamHandler = async (req: Request, res: Response, next: Nex
 export const deleteStreamHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const deleted = await deleteStream(id);
-        if (!deleted) {
+        const result = await deleteStreamSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Stream not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Stream deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

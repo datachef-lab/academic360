@@ -24,14 +24,15 @@ import {
   getRegulationTypes,
   getExamComponents,
   getSubjectTypes,
-  bulkUploadSubjectPapers,
+  //   bulkUploadSubjectPapers,
   getAcademicYears,
   getProgramCourses,
   getPapers,
-  BulkUploadRow,
-  BulkUploadError,
+//   BulkUploadRow,
+//   BulkUploadError,
   updatePaperWithComponents,
   getCourses,
+//   createPaper,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 // import { useAuth } from "@/hooks/useAuth";
@@ -236,17 +237,17 @@ const SubjectPaperMappingPage = () => {
         getCourses(),
       ]);
 
-    //   console.log("API Responses:", {
-    //     subjects: subjectsRes,
-    //     affiliations: affiliationsRes,
-    //     regulationTypes: regulationTypesRes,
-    //     subjectTypes: subjectTypesRes,
-    //     examComponents: examComponentsRes,
-    //     academicYears: academicYearsRes,
-    //     programCourses: programCourseRes,
-    //     classes: classesRes,
-    //     sessions: academicYearRes,
-    //   });
+      //   console.log("API Responses:", {
+      //     subjects: subjectsRes,
+      //     affiliations: affiliationsRes,
+      //     regulationTypes: regulationTypesRes,
+      //     subjectTypes: subjectTypesRes,
+      //     examComponents: examComponentsRes,
+      //     academicYears: academicYearsRes,
+      //     programCourses: programCourseRes,
+      //     classes: classesRes,
+      //     sessions: academicYearRes,
+      //   });
 
       console.log("SubjectTypes response details:", {
         isArray: Array.isArray(subjectTypesRes),
@@ -405,213 +406,379 @@ const SubjectPaperMappingPage = () => {
   //     }
   //   };
 
-  //   const handleDownloadTemplate = () => {
-  //     // Create template data with headers
-  //     const templateData = [
-  //       {
-  //         Subject: "",
-  //         "Subject Type": "",
-  //         "Applicable programCourses": "",
-  //         Affiliation: "",
-  //         Regulation: "",
-  //         "Academic Year": "",
-  //         "Paper Code": "",
-  //         "Paper Name": "",
-  //         "Is Optional": "",
-  //         ...examComponents.reduce(
-  //           (acc, component) => {
-  //             acc[`Full Marks ${component.code}`] = "";
-  //             acc[`Credit ${component.code}`] = "";
-  //             return acc;
-  //           },
-  //           {} as Record<string, string>,
-  //         ),
-  //       },
-  //     ];
+  const handleDownloadTemplate = () => {
+    // Create template data with headers
+    const templateData = [
+      {
+        Subject: "",
+        "Subject Type": "",
+        "Applicable programCourses": "",
+        Affiliation: "",
+        Regulation: "",
+        "Academic Year": "",
+        "Course Type": "",
+        Class: "",
+        "Paper Code": "",
+        "Paper Name": "",
+        "Is Optional": "",
+        ...examComponents.reduce(
+          (acc, component) => {
+            acc[`Full Marks ${component.code}`] = "";
+            acc[`Credit ${component.code}`] = "";
+            return acc;
+          },
+          {} as Record<string, string>,
+        ),
+      },
+    ];
 
-  //     // Create workbook and worksheet const wb = XLSX.utils.book_new();
-  //     const ws = XLSX.utils.json_to_sheet(templateData);
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(templateData);
 
-  //     // Set column widths
-  //     const colWidths = [
-  //       { wch: 20 }, // Subject
-  //       { wch: 15 }, // Subject Type
-  //       { wch: 25 }, // Applicable programCourses
-  //       { wch: 20 }, // Affiliation
-  //       { wch: 15 }, // Regulation
-  //       { wch: 15 }, // Academic Year
-  //       { wch: 15 }, // Paper Code
-  //       { wch: 25 }, // Paper Name
-  //       { wch: 12 }, // Is Optional
-  //       ...examComponents.flatMap(() => [
-  //         { wch: 15 }, // Full Marks
-  //         { wch: 12 }, // Credit
-  //       ]),
-  //     ];
-  //     ws["!cols"] = colWidths;
+    // Set column widths
+    const colWidths = [
+      { wch: 20 }, // Subject
+      { wch: 15 }, // Subject Type
+      { wch: 25 }, // Applicable programCourses
+      { wch: 20 }, // Affiliation
+      { wch: 15 }, // Regulation
+      { wch: 15 }, // Academic Year
+      { wch: 15 }, // Paper Code
+      { wch: 25 }, // Paper Name
+      { wch: 12 }, // Is Optional
+      ...examComponents.flatMap(() => [
+        { wch: 15 }, // Full Marks
+        { wch: 12 }, // Credit
+      ]),
+    ];
+    ws["!cols"] = colWidths;
 
-  //     // Add worksheet to workbook
-  //     XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping Template");
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping Template");
 
-  //     // Download the file
-  //     XLSX.writeFile(wb, "subject-paper-mapping-template.xlsx");
+    // Download the file
+    XLSX.writeFile(wb, "subject-paper-mapping-template.xlsx");
+  };
+
+  //   const validateBulkUploadData = (data: BulkUploadRow[]) => {
+  //     const errors: BulkUploadError[] = [];
+  //     const unprocessedData: BulkUploadRow[] = [];
+  //     const paperCodes = new Set<string>();
+
+  //     data.map((row, index) => {
+  //       const rowNumber = index + 2; // Excel rows start from 1, and we have header at row 1
+  //       const rowErrors: string[] = [];
+
+  //       // Check if subject exists
+  //       const subject = subjects.find((s) => s.name.toLowerCase() === ((row.Subject as string) || "").toLowerCase());
+  //       if (!subject) {
+  //         rowErrors.push("Subject not found");
+  //       }
+
+  //       // Check if subject type exists
+  //       const subjectType = subjectTypes.find((st) => {
+  //         if (
+  //           st.name.toLowerCase() === ((row["Subject Type"] as string) || "").toLowerCase() ||
+  //           (st.code && st.code.toLowerCase() === ((row["Subject Type"] as string) || "").toLowerCase())
+  //         ) {
+  //           return true;
+  //         }
+  //       });
+  //       if (!subjectType) {
+  //         rowErrors.push("Subject Type not found");
+  //       }
+
+  //       // Check if affiliation exists
+  //       const affiliation = affiliations.find(
+  //         (a) => a.name.toLowerCase() === ((row.Affiliation as string) || "").toLowerCase(),
+  //       );
+  //       if (!affiliation) {
+  //         rowErrors.push("Affiliation not found");
+  //       }
+
+  //       // Check if regulation type exists
+  //       const regulationType = regulationTypes.find(
+  //         (rt) => rt.name.toLowerCase() === ((row.Regulation as string) || "").toLowerCase(),
+  //       );
+  //       if (!regulationType) {
+  //         rowErrors.push("Regulation not found");
+  //       }
+
+  //       //   // Check if academic year exists (if provided)
+  //       //   let session = null;
+  //       //   if (row["Session"]) {
+  //       //     session = sessions.find(
+  //       //       (sess) => sess.year.toLowerCase() === ((row["Academic Year"] as string) || "").toLowerCase(),
+  //       //     );
+  //       //     if (!academicYear) {
+  //       //       rowErrors.push("Academic Year not found");
+  //       //     }
+  //       //   }
+
+  //       // Check if paper code is unique
+  //       const paperCode = (row["Paper Code"] as string)?.toString().trim();
+  //       if (paperCode) {
+  //         if (paperCodes.has(paperCode)) {
+  //           rowErrors.push("Paper Code must be unique");
+  //         } else {
+  //           paperCodes.add(paperCode);
+  //         }
+  //       } else {
+  //         rowErrors.push("Paper Code is required");
+  //       }
+
+  //       // Check if all exam components are present and valid
+  //       examComponents.forEach((component) => {
+  //         const fullMarksField = `Full Marks ${component.code}`;
+  //         const creditField = `Credit ${component.code}`;
+
+  //         if (!row[fullMarksField] && row[fullMarksField] !== 0) {
+  //           rowErrors.push(`${fullMarksField} is required`);
+  //         }
+
+  //         if (!row[creditField] && row[creditField] !== 0) {
+  //           rowErrors.push(`${creditField} is required`);
+  //         }
+
+  //         // Validate that full marks and credit are numbers
+  //         if (row[fullMarksField] && isNaN(Number(row[fullMarksField]))) {
+  //           rowErrors.push(`${fullMarksField} must be a number`);
+  //         }
+
+  //         if (row[creditField] && isNaN(Number(row[creditField]))) {
+  //           rowErrors.push(`${creditField} must be a number`);
+  //         }
+  //       });
+
+  //       if (rowErrors.length > 0) {
+  //         errors.push({
+  //           row: rowNumber,
+  //           data: row,
+  //           error: rowErrors.join(", "),
+  //         });
+  //       } else {
+  //         // If no validation errors, add to unprocessed data for backend processing
+  //         unprocessedData.push(row);
+  //       }
+  //     });
+
+  //     return { errors, unprocessedData };
   //   };
 
-  const validateBulkUploadData = (data: BulkUploadRow[]) => {
-    const errors: BulkUploadError[] = [];
-    const unprocessedData: BulkUploadRow[] = [];
-    const paperCodes = new Set<string>();
+  //   const validateBulkUploadData = (data: BulkUploadRow[]) => {
+  //     const errors: BulkUploadError[] = [];
+  //     const unprocessedData: BulkUploadRow[] = [];
+  //     const paperCodes = new Set<string>();
+  //     const dtos: Paper[] = [];
 
-    data.forEach((row, index) => {
-      const rowNumber = index + 2; // Excel rows start from 1, and we have header at row 1
-      const rowErrors: string[] = [];
+  //     data.forEach((row, index) => {
+  //       const rowNumber = index + 2; // Excel rows start from 1, header at row 1
+  //       const rowErrors: string[] = [];
 
-      // Check if subject exists
-      const subject = subjects.find((s) => s.name.toLowerCase() === ((row.Subject as string) || "").toLowerCase());
-      if (!subject) {
-        rowErrors.push("Subject not found");
-      }
+  //       // Academic Year
+  //       const academicYear = academicYears.find(
+  //         (a) => a.year.toLowerCase() === ((row["Academic Year"] as string) || "").toLowerCase(),
+  //       );
+  //       if (!academicYear) {
+  //         rowErrors.push("Academic Year not found");
+  //       }
 
-      // Check if subject type exists
-      const subjectType = subjectTypes.find(
-        (st) => st.name.toLowerCase() === ((row["Subject Type"] as string) || "").toLowerCase(),
-      );
-      if (!subjectType) {
-        rowErrors.push("Subject Type not found");
-      }
+  //       // Program Course
+  //       const programCourse = programCourses.find(
+  //         (pc) =>
+  //           (
 
-      // Check if affiliation exists
-      const affiliation = affiliations.find(
-        (a) => a.name.toLowerCase() === ((row.Affiliation as string) || "").toLowerCase(),
-      );
-      if (!affiliation) {
-        rowErrors.push("Affiliation not found");
-      }
+  //           )
+  //       );
+  //       if (!programCourse) {
+  //         rowErrors.push("Program Course not found");
+  //       }
 
-      // Check if regulation type exists
-      const regulationType = regulationTypes.find(
-        (rt) => rt.name.toLowerCase() === ((row.Regulation as string) || "").toLowerCase(),
-      );
-      if (!regulationType) {
-        rowErrors.push("Regulation not found");
-      }
+  //       // Class
+  //       const aClass = classes.find((c) => {
+  //         if (
+  //           c?.name.toLowerCase() === ((row["Class"] as string) || "").toLowerCase().trim() ||
+  //           (c?.shortName && c?.shortName.toLowerCase() === ((row["Class"] as string) || "").toLowerCase().trim())
+  //         ) {
+  //           return true;
+  //         }
+  //       });
+  //       if (!aClass) {
+  //         rowErrors.push("Class not found");
+  //       }
 
-      //   // Check if academic year exists (if provided)
-      //   let session = null;
-      //   if (row["Session"]) {
-      //     session = sessions.find(
-      //       (sess) => sess.year.toLowerCase() === ((row["Academic Year"] as string) || "").toLowerCase(),
-      //     );
-      //     if (!academicYear) {
-      //       rowErrors.push("Academic Year not found");
-      //     }
-      //   }
+  //       // === Subject ===
+  //       const subject = subjects.find((s) => s.name.toLowerCase() === ((row.Subject as string) || "").toLowerCase());
+  //       if (!subject) {
+  //         rowErrors.push("Subject not found");
+  //       }
 
-      // Check if paper code is unique
-      const paperCode = (row["Paper Code"] as string)?.toString().trim();
-      if (paperCode) {
-        if (paperCodes.has(paperCode)) {
-          rowErrors.push("Paper Code must be unique");
-        } else {
-          paperCodes.add(paperCode);
-        }
-      } else {
-        rowErrors.push("Paper Code is required");
-      }
+  //       // === Subject Type ===
+  //       const subjectType = subjectTypes.find((st) => {
+  //         const val = (row["Subject Type"] as string) || "";
+  //         return st.name.toLowerCase() === val.toLowerCase() || (st.code && st.code.toLowerCase() === val.toLowerCase());
+  //       });
+  //       if (!subjectType) {
+  //         rowErrors.push("Subject Type not found");
+  //       }
 
-      // Check if all exam components are present and valid
-      examComponents.forEach((component) => {
-        const fullMarksField = `Full Marks ${component.code}`;
-        const creditField = `Credit ${component.code}`;
+  //       // === Affiliation ===
+  //       const affiliation = affiliations.find(
+  //         (a) => a.name.toLowerCase() === ((row.Affiliation as string) || "").toLowerCase(),
+  //       );
+  //       if (!affiliation) {
+  //         rowErrors.push("Affiliation not found");
+  //       }
 
-        if (!row[fullMarksField] && row[fullMarksField] !== 0) {
-          rowErrors.push(`${fullMarksField} is required`);
-        }
+  //       // === Regulation Type ===
+  //       const regulationType = regulationTypes.find(
+  //         (rt) => rt.name.toLowerCase() === ((row.Regulation as string) || "").toLowerCase(),
+  //       );
+  //       if (!regulationType) {
+  //         rowErrors.push("Regulation not found");
+  //       }
 
-        if (!row[creditField] && row[creditField] !== 0) {
-          rowErrors.push(`${creditField} is required`);
-        }
+  //       // === Paper Code uniqueness ===
+  //       const paperCode = (row["Paper Code"] as string)?.toString().trim();
+  //       if (paperCode) {
+  //         if (paperCodes.has(paperCode)) {
+  //           rowErrors.push("Paper Code must be unique");
+  //         } else {
+  //           paperCodes.add(paperCode);
+  //         }
+  //       } else {
+  //         rowErrors.push("Paper Code is required");
+  //       }
 
-        // Validate that full marks and credit are numbers
-        if (row[fullMarksField] && isNaN(Number(row[fullMarksField]))) {
-          rowErrors.push(`${fullMarksField} must be a number`);
-        }
+  //       // === Exam Components ===
+  //       const paperComponents: PaperComponent[] = [];
+  //       examComponents.forEach((component) => {
+  //         const fullMarksField = `Full Marks ${component.code}`;
+  //         const creditField = `Credit ${component.code}`;
 
-        if (row[creditField] && isNaN(Number(row[creditField]))) {
-          rowErrors.push(`${creditField} must be a number`);
-        }
-      });
+  //         const fullMarks = row[fullMarksField];
+  //         const credit = row[creditField];
 
-      if (rowErrors.length > 0) {
-        errors.push({
-          row: rowNumber,
-          data: row,
-          error: rowErrors.join(", "),
-        });
-      } else {
-        // If no validation errors, add to unprocessed data for backend processing
-        unprocessedData.push(row);
-      }
-    });
+  //         if (fullMarks === undefined || fullMarks === null || fullMarks === "") {
+  //           rowErrors.push(`${fullMarksField} is required`);
+  //         } else if (isNaN(Number(fullMarks))) {
+  //           rowErrors.push(`${fullMarksField} must be a number`);
+  //         }
 
-    return { errors, unprocessedData };
-  };
+  //         if (credit === undefined || credit === null || credit === "") {
+  //           rowErrors.push(`${creditField} is required`);
+  //         } else if (isNaN(Number(credit))) {
+  //           rowErrors.push(`${creditField} must be a number`);
+  //         }
 
-  const handleBulkUpload = async () => {
-    if (!bulkFile) return;
+  //         if (!rowErrors.length) {
+  //           paperComponents.push({
+  //             paperId: 0, // backend will assign after insert
+  //             examComponent: component,
+  //             fullMarks: fullMarks ? Number(fullMarks) : null,
+  //             credit: credit ? Number(credit) : null,
+  //           });
+  //         }
+  //       });
 
-    try {
-      const data = await new Promise<BulkUploadRow[]>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const workbook = XLSX.read(e.target?.result, { type: "binary" });
-            const sheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[sheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet);
-            resolve(jsonData as BulkUploadRow[]);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.readAsBinaryString(bulkFile);
-      });
+  //       // === Handle validation result ===
+  //       if (rowErrors.length > 0) {
+  //         errors.push({
+  //           row: rowNumber,
+  //           data: row,
+  //           error: rowErrors.join(", "),
+  //         });
+  //       } else {
+  //         unprocessedData.push(row);
 
-      // Validate the data
-      const { errors, unprocessedData } = validateBulkUploadData(data);
+  //         // Build DTO
+  //         const dto: Paper = {
+  //           subjectId: subject!.id!,
+  //           affiliationId: affiliation!.id!,
+  //           regulationTypeId: regulationType!.id!,
+  //           academicYearId: academicYear!.id!, // Map if available in row
+  //           subjectTypeId: subjectType!.id!,
+  //           programCourseId: programCourse!.id!, // Derive/match if available
+  //           classId: aClass!.id!, // Map if available
+  //           name: row.Subject as string,
+  //           code: paperCode!,
+  //           isOptional: !!row["Is Optional"], // Decide based on row if optional
+  //           sequence: null,
+  //           disabled: false,
+  //           createdAt: new Date(),
+  //           updatedAt: new Date(),
+  //           components: paperComponents,
+  //           topics: [],
+  //         };
 
-      if (errors.length > 0) {
-        toast.error(`Validation failed: ${errors.length} rows have errors`);
-        // TODO: Show errors in a modal or download error file
-        return;
-      }
+  //         dtos.push(dto);
+  //       }
+  //     });
 
-      if (unprocessedData.length === 0) {
-        toast.error("No valid data to upload");
-        return;
-      }
+  //     return { errors, unprocessedData, dtos };
+  //   };
 
-      // Call backend API for bulk upload
-      try {
-        const result = await bulkUploadSubjectPapers(bulkFile);
-        toast.success(
-          `Bulk upload completed: ${result.summary.successful} successful, ${result.summary.failed} failed, ${result.summary.unprocessed} unprocessed`,
-        );
+  //   const handleBulkUpload = async () => {
+  //     if (!bulkFile) return;
 
-        if (result.summary.successful > 0) {
-          fetchData(); // Refresh the data
-        }
+  //     try {
+  //       const data = await new Promise<BulkUploadRow[]>((resolve, reject) => {
+  //         const reader = new FileReader();
+  //         reader.onload = (e) => {
+  //           try {
+  //             const workbook = XLSX.read(e.target?.result, { type: "binary" });
+  //             const sheetName = workbook.SheetNames[0];
+  //             const worksheet = workbook.Sheets[sheetName];
+  //             const jsonData = XLSX.utils.sheet_to_json(worksheet);
+  //             resolve(jsonData as BulkUploadRow[]);
+  //           } catch (error) {
+  //             reject(error);
+  //           }
+  //         };
+  //         reader.readAsBinaryString(bulkFile);
+  //       });
 
-        setIsBulkUploadOpen(false);
-        setBulkFile(null);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Bulk upload failed";
-        toast.error(`Bulk upload failed: ${errorMessage}`);
-      }
-    } catch {
-      toast.error("Failed to process file");
-    }
-  };
+  //       // Validate the data
+  //       const { errors, unprocessedData, dtos } = validateBulkUploadData(data);
+
+  //       if (errors.length > 0) {
+  //         toast.error(`Validation failed: ${errors.length} rows have errors`);
+  //         // TODO: Show errors in a modal or download error file
+  //         alert(
+  //           `Validation failed for ${errors.length} rows:\n${errors
+  //             .map((err) => `Row ${err.row}: ${err.error}`)
+  //             .join("\n")}`,
+  //         );
+  //         console.error("Validation errors:", errors);
+  //         setBulkFile(null); // Clear the file after processing
+
+  //         return;
+  //       }
+
+  //       if (unprocessedData.length === 0) {
+  //         toast.error("No valid data to upload");
+  //         return;
+  //       }
+
+  //       // Call backend API for bulk upload
+  //       try {
+  //         // const result = await bulkUploadSubjectPapers(bulkFile);
+  //         const result = await createPaper(dtos);
+  //         toast.success(`Bulk upload completed: ${result.data.payload?.length} successful`);
+
+  //         fetchData(); // Refresh the data
+
+  //         setIsBulkUploadOpen(false);
+  //         setBulkFile(null);
+  //       } catch (error: unknown) {
+  //         const errorMessage = error instanceof Error ? error.message : "Bulk upload failed";
+  //         toast.error(`Bulk upload failed: ${errorMessage}`);
+  //       }
+  //     } catch {
+  //       toast.error("Failed to process file");
+  //     }
+  //   };
 
   if (loading) {
     return (
@@ -664,18 +831,18 @@ const SubjectPaperMappingPage = () => {
                   <input
                     type="file"
                     accept=".xlsx,.xls,.csv"
-                    // onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                   />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
+                  <Button
+                    //   onClick={handleBulkUpload}
+                    disabled={!bulkFile}
+                  >
                     Upload
                   </Button>
                 </div>
               </DialogContent>
             </Dialog>
-            <Button
-              variant="outline"
-              // onClick={handleDownloadTemplate}
-            >
+            <Button variant="outline" onClick={handleDownloadTemplate}>
               <Download className="mr-2 h-4 w-4" />
               Download Template
             </Button>
@@ -830,7 +997,7 @@ const SubjectPaperMappingPage = () => {
             </Button>
           </div>
           <div className="relative z-50 bg-white" style={{ height: "600px" }}>
-            <div className="overflow-y-auto overflow-x-auto h-full border rounded-md">
+            <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
               {/* Fixed Header */}
               <div className="sticky top-0 z-50 text-gray-500 bg-gray-100 border-b" style={{ minWidth: "950px" }}>
                 <div className="flex">
@@ -912,7 +1079,9 @@ const SubjectPaperMappingPage = () => {
                         {idx + 1}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        {programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId ?? "-"}
+                        {courses.find(
+                          (crs) => crs.id === programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId,
+                        )?.name ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
                         <p>

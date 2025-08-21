@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { CourseType, courseTypeModel } from "../models/course-type.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { countDistinct, eq, ilike } from "drizzle-orm";
+import { programCourses } from "../models/program-course.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -156,3 +157,25 @@ export async function deleteCourseType(id: number) {
     const [deleted] = await db.delete(courseTypeModel).where(eq(courseTypeModel.id, id)).returning();
     return deleted;
 } 
+
+export async function deleteCourseTypeSafe(id: number) {
+    const [found] = await db.select().from(courseTypeModel).where(eq(courseTypeModel.id, id));
+    if (!found) return null;
+
+    const [{ programCourseCount }] = await db
+        .select({ programCourseCount: countDistinct(programCourses.id) })
+        .from(programCourses)
+        .where(eq(programCourses.courseTypeId, id));
+
+    if (programCourseCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete course-type. It is associated with other records.",
+            records: [{ count: programCourseCount, type: "Program-course" }],
+        };
+    }
+
+    const [deleted] = await db.delete(courseTypeModel).where(eq(courseTypeModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Course-type deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete course-type.", records: [] };
+}

@@ -39,6 +39,7 @@ import {
   BulkUploadResult,
   BulkUploadError,
   BulkUploadRow,
+  DeleteResult,
 } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
@@ -199,9 +200,17 @@ const ProgramCoursesPage = () => {
   const handleDelete = async (id: number | undefined) => {
     if (!id) return;
     try {
-      await deleteProgramCourse(id);
-      toast.success("Program course deleted successfully");
-      fetchProgramCourses();
+      const result: DeleteResult = await deleteProgramCourse(id);
+      if (result.success) {
+        toast.success(result.message || "Program course deleted successfully");
+        fetchProgramCourses();
+      } else {
+        const details = (result.records || [])
+          .filter(r => r.count > 0)
+          .map(r => `${r.type}: ${r.count}`)
+          .join(", ");
+        toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
+      }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to delete program course: ${errorMessage}`);

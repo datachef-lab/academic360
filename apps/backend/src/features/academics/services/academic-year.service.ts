@@ -3,8 +3,13 @@ import {
     academicYearModel,
     AcademicYear,
 } from "../models/academic-year.model.js";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, or, count, countDistinct } from "drizzle-orm";
 import { Session, sessionModel } from "../models/session.model.js";
+import { marksheetPaperMappingModel } from "../models/marksheet-paper-mapping.model.js";
+import { noticeModel } from "../models/notice.model.js";
+import { admissionModel } from "@/features/admissions/models/admission.model.js";
+import { paperModel } from "@/features/course-design/models/paper.model.js";
+import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
 
 export async function createAcademicYear(
     academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
@@ -59,13 +64,101 @@ export async function updateAcademicYear(
 
 export async function deleteAcademicYear(
     id: number,
-): Promise<AcademicYear | null> {
-    //   const [deletedAcademicYear] = await db
-    //     .delete(academicYearModel)
-    //     .where(eq(academicYearModel.id, id))
-    //     .returning();
+) {
+    const foundAcademicYear = await findAcademicYearById(id);
+    if (!foundAcademicYear) {
+        return null;
+    }
 
-    return null;
+
+    const [{ mksCount }] = await db
+        .select({
+            mksCount: countDistinct(marksheetPaperMappingModel.marksheetId),
+        })
+        .from(marksheetPaperMappingModel)
+        .where(
+            or(
+                eq(marksheetPaperMappingModel.yearOfAppearanceId, id),
+                eq(marksheetPaperMappingModel.yearOfPassingId, id),
+            )
+        );
+
+    const [{ noticeCount }] = await db
+        .select({
+            noticeCount: countDistinct(noticeModel.id),
+        })
+        .from(noticeModel)
+        .where(eq(noticeModel.academicYearId, id));
+
+    const [{ sessionCount }] = await db
+        .select({
+            sessionCount: countDistinct(sessionModel.id),
+        })
+        .from(sessionModel)
+        .where(eq(sessionModel.academicYearId, id));
+
+    const [{ admissionCount }] = await db
+        .select({
+            admissionCount: countDistinct(admissionModel.id),
+        })
+        .from(admissionModel)
+        .where(eq(admissionModel.academicYearId, id));
+
+    const [{ paperCount }] = await db
+        .select({
+            paperCount: countDistinct(paperModel.id),
+        })
+        .from(paperModel)
+        .where(eq(paperModel.academicYearId, id));
+
+    const [{ feesStructureCount }] = await db
+        .select({
+            feesStructureCount: countDistinct(feesStructureModel.id),
+        })
+        .from(feesStructureModel)
+        .where(eq(feesStructureModel.academicYearId, id));
+
+    // Check if the academic year is associated with any records
+    if (
+        mksCount > 0 ||
+        noticeCount > 0 ||
+        sessionCount > 0 ||
+        admissionCount > 0 ||
+        paperCount > 0 ||
+        feesStructureCount > 0
+    ) {
+        return {
+            success: false,
+            message: "Cannot delete academic year. It is associated with other records.",
+            records: [
+                { count: mksCount, type: "Marksheets" },
+                { count: noticeCount, type: "Notices" },
+                { count: sessionCount, type: "Sessions" },
+                { count: admissionCount, type: "Admissions" },
+                { count: paperCount, type: "Papers" },
+                { count: feesStructureCount, type: "Fees Structures" },
+            ]
+        }
+    }
+
+    // If no associations, proceed with deletion
+    const [deletedAcademicYear] = await db
+        .delete(academicYearModel)
+        .where(eq(academicYearModel.id, id))
+        .returning();
+    if (deletedAcademicYear) {
+        return {
+            success: true,
+            message: "Academic year deleted successfully.",
+            records: []
+        };
+    }
+
+    return {
+        success: false,
+        message: "Failed to delete academic year.",
+        records: []
+    };
 }
 
 export async function setCurrentAcademicYear(

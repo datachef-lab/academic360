@@ -6,7 +6,7 @@ import {
   getRegulationTypeById, 
   getAllRegulationTypes, 
   updateRegulationType, 
-  deleteRegulationType, 
+  deleteRegulationTypeSafe, 
   bulkUploadRegulationTypes 
 } from "@/features/course-design/services/regulation-type.service.js";
 import { socketService } from "@/services/socketService.js";
@@ -61,12 +61,12 @@ export const updateRegulationTypeHandler = async (req: Request, res: Response, n
 export const deleteRegulationTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const deleted = await deleteRegulationType(id);
-        if (!deleted) {
+        const result = await deleteRegulationTypeSafe(id);
+        if (!result) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Regulation type not found"));
             return;
         }
-        res.status(200).json(new ApiResponse(200, "DELETED", deleted, "Regulation type deleted successfully"));
+        res.status(200).json(new ApiResponse(200, "DELETED", result as any, (result as any).message ?? ""));
     } catch (error) {
         handleError(error, res, next);
     }

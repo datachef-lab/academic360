@@ -1,8 +1,10 @@
-import { db } from "@/db";
+import { db } from "@/db/index.js";
 import { Specialization, specializationModel } from "../models/specialization.model.js";
-import { eq } from "drizzle-orm";
+import { countDistinct, eq } from "drizzle-orm";
 import { SpecializationSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
+import { studentModel } from "@/features/user/models/student.model.js";
+import { academicHistoryModel } from "@/features/user/models/academicHistory.model.js";
 
 // Types
 export type SpecializationData = z.infer<typeof SpecializationSchema>;
@@ -47,4 +49,39 @@ export const deleteSpecialization = async (id: string) => {
     .where(eq(specializationModel.id, +id))
     .returning();
   return deletedSpecialization.length > 0 ? deletedSpecialization[0] : null;
+};
+
+export const deleteSpecializationSafe = async (id: string) => {
+  const [found] = await db.select().from(specializationModel).where(eq(specializationModel.id, +id));
+  if (!found) return null;
+
+  const [{ studentCount }] = await db
+    .select({ studentCount: countDistinct(studentModel.id) })
+    .from(studentModel)
+    .where(eq(studentModel.specializationId, +id));
+
+  const [{ academicHistoryCount }] = await db
+    .select({ academicHistoryCount: countDistinct(academicHistoryModel.id) })
+    .from(academicHistoryModel)
+    .where(eq(academicHistoryModel.specializationId, +id));
+
+  if (studentCount > 0 || academicHistoryCount > 0) {
+    return {
+      success: false,
+      message: "Cannot delete specialization. It is associated with other records.",
+      records: [
+        { count: studentCount, type: "Student" },
+        { count: academicHistoryCount, type: "Academic-history" },
+      ],
+    };
+  }
+
+  const deletedSpecialization = await db
+    .delete(specializationModel)
+    .where(eq(specializationModel.id, +id))
+    .returning();
+  if (deletedSpecialization.length > 0) {
+    return { success: true, message: "Specialization deleted successfully.", records: [] };
+  }
+  return { success: false, message: "Failed to delete specialization.", records: [] };
 };

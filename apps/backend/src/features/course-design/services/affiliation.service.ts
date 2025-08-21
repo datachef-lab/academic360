@@ -1,6 +1,8 @@
 import { db } from "@/db/index.js";
 import { affiliationModel, createAffiliationModel, Affiliation } from "@/features/course-design/models/affiliation.model.js";
-import { eq, ilike } from "drizzle-orm";
+import { countDistinct, eq, ilike } from "drizzle-orm";
+import { paperModel } from "../models/paper.model.js";
+import { programCourses } from "../models/program-course.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -36,6 +38,36 @@ export async function updateAffiliation(id: number, data: Partial<Affiliation>) 
 export async function deleteAffiliation(id: number) {
     const [deleted] = await db.delete(affiliationModel).where(eq(affiliationModel.id, id)).returning();
     return deleted;
+}
+
+export async function deleteAffiliationSafe(id: number) {
+    const [found] = await db.select().from(affiliationModel).where(eq(affiliationModel.id, id));
+    if (!found) return null;
+
+    const [{ paperCount }] = await db
+        .select({ paperCount: countDistinct(paperModel.id) })
+        .from(paperModel)
+        .where(eq(paperModel.affiliationId, id));
+
+    const [{ programCourseCount }] = await db
+        .select({ programCourseCount: countDistinct(programCourses.id) })
+        .from(programCourses)
+        .where(eq(programCourses.affiliationId, id));
+
+    if (paperCount > 0 || programCourseCount > 0) {
+        return {
+            success: false,
+            message: "Cannot delete affiliation. It is associated with other records.",
+            records: [
+                { count: paperCount, type: "Paper" },
+                { count: programCourseCount, type: "Program-course" },
+            ],
+        };
+    }
+
+    const [deleted] = await db.delete(affiliationModel).where(eq(affiliationModel.id, id)).returning();
+    if (deleted) return { success: true, message: "Affiliation deleted successfully.", records: [] };
+    return { success: false, message: "Failed to delete affiliation.", records: [] };
 }
 
 export interface BulkUploadResult {
