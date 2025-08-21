@@ -1,4 +1,4 @@
-import { db } from "@/db";
+import { db } from "@/db/index.js";
 import { Specialization, specializationModel } from "../models/specialization.model.js";
 import { countDistinct, eq } from "drizzle-orm";
 import { SpecializationSchema } from "@/types/course-design/index.js";
