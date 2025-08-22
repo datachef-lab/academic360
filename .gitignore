@@ -12,7 +12,6 @@
 .env
 backend.env
 db.env
-frontend.env
 .env.local
 .env.development.local
 .env.test.local
@@ -33,7 +32,7 @@ report.servicecopy.ts
 out/
 build
 dist
-
+/academic360-docs
 /settings
 
 
