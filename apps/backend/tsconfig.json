@@ -7,20 +7,30 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "outDir": "./dist", // Output directory for compiled files
+    // "rootDir": ".",
     "strict": true, // Enable strict type-checking options
     "skipLibCheck": true, // Skip type checking of declaration files
     "resolveJsonModule": true, // Include JSON imports
     "forceConsistentCasingInFileNames": true,
     "noEmit": false, // Allow emitting output
+    "allowImportingTsExtensions": false,
     "isolatedModules": true, // Required for using ESM modules
     // "baseUrl": ".", // Allow absolute imports relative to project root
 
     "baseUrl": ".", // Set base URL for resolving paths
     "paths": {
-      "@/db/*": ["./src/db/*"], // Explicit path for @/db
-      "@/*": ["./src/*"] // General path for other imports
+      //   "@/db/*": ["./src/db/*"], // Explicit path for @/db
+      //   "@/*": ["./src/*"] // General path for other imports
+      "@repo/db/*": ["../../packages/db/src/*"],
+      "@/*": ["./src/*", "../../packages/db/src/*"]
     }
   },
-  "include": ["./drizzle.config.js", "./src/**/*", "./src/**/*.js"],
+  "include": [
+    "../../packages/db/src/**/*",
+    "./drizzle.config.js",
+    "./src/**/*",
+    "./src/**/*.js",
+    "./views/**/*"
+  ],
   "exclude": ["dist", "node_modules"]
 }

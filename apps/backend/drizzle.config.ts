@@ -1,12 +1,11 @@
 import "dotenv/config";
-import { schemaPaths } from "./dist/db/schema";
 import { defineConfig } from "drizzle-kit";
 
-console.log(schemaPaths);
+// console.log(schemaPaths);
 
 export default defineConfig({
     out: "./drizzle",
-    schema: schemaPaths,
+    schema: "./dist/db/schema.js",
     dialect: "postgresql",
     dbCredentials: {
         url: process.env.DATABASE_URL!,

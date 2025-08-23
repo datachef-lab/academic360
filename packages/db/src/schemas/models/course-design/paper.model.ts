@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
 import {
     boolean,
     integer,
@@ -6,16 +8,15 @@ import {
     timestamp,
     varchar,
 } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-import { subjectTypeModel } from "./subject-type.model.js";
-import { courseModel } from "./course.model.js";
-import { classModel } from "@/features/academics/models/class.model.js";
-import { subjectModel } from "./subject.model.js";
-import { affiliationModel } from "./affiliation.model.js";
-import { regulationTypeModel } from "./regulation-type.model.js";
-import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
-import { programCourses } from "./program-course.model.js";
+
+import { academicYearModel, classModel } from "@/schemas/models/academics";
+import {
+    subjectTypeModel,
+    subjectModel,
+    affiliationModel,
+    regulationTypeModel,
+    programCourses,
+} from "@/schemas/models/course-design";
 
 export const paperModel = pgTable("papers", {
     id: serial().primaryKey(),

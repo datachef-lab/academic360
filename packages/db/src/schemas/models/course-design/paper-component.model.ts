@@ -1,8 +1,8 @@
-import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model.js";
-import { examComponentModel } from "./exam-component.model.js";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+
+import { paperModel, examComponentModel } from "@/schemas/models/course-design";
 
 export const paperComponentModel = pgTable("paper_components", {
     id: serial().primaryKey(),

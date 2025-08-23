@@ -6,7 +6,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./apps/frontend/src/*"],
-      "@packages/db/*": ["./packages/db/src/*"],
+      "@repo/db/*": ["../../packages/db/src/*"]
     },
     "strict": true,
     "skipLibCheck": true,

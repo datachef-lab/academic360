@@ -1,3 +1,6 @@
 packages:
-  - "apps/*"
-  - "packages/*" # if we later add shared libs
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - bcrypt

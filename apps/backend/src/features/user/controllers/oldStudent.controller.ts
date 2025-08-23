@@ -1,6 +1,6 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import * as path from "path";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { OldStudent } from "@/types/old-data/old-student.js";
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import type { StringValue } from "ms";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
 import { userModel, User } from "@/features/user/models/user.model.js";

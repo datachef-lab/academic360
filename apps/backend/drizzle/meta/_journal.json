@@ -29,6 +29,13 @@
       "when": 1754657126043,
       "tag": "0003_plain_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1755886142219,
+      "tag": "0004_freezing_sway",
+      "breakpoints": true
     }
   ]
 }

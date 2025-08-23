@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 
 const directoryName = path.dirname(fileURLToPath(import.meta.url));
 
-// Function to dynamically find all schema files in a directory
+// Function to dynamically find all  schema files in a directory
 const getSchemaFiles = (dir: string, baseDir: string): string[] => {
     const schemaFiles: string[] = [];
     const files = fs.readdirSync(dir);
@@ -16,7 +16,7 @@ const getSchemaFiles = (dir: string, baseDir: string): string[] => {
         const stat = fs.statSync(fullPath);
         if (stat.isDirectory()) {
             schemaFiles.push(...getSchemaFiles(fullPath, baseDir)); // Recursively search in subdirectories
-        } else if (file.endsWith(".model.js") || file.endsWith(".model.js") || file.endsWith("helper.js")) {
+        } else if (file.endsWith(".model.ts") || file.endsWith(".model.js") || file.endsWith("helper.js") || file.endsWith("helper.ts")) {
             const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, "/");
             schemaFiles.push(`./${relativePath}`);
         }

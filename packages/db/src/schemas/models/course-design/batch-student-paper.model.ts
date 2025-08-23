@@ -1,8 +1,9 @@
-import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model.js";
-import { batchStudentMappingModel } from "@/features/academics/models/batch-student-mapping.model.js";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+
+import { paperModel } from "@/schemas/models/course-design";
+import { batchStudentMappingModel } from "@/schemas/models/academics";
 
 export const batchStudentPaperModel = pgTable("batch_student_papers", {
     id: serial().primaryKey(),

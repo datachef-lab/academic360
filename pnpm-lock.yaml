@@ -196,15 +196,21 @@ importers:
 
   apps/backend:
     dependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@types/socket.io':
         specifier: ^3.0.1
         version: 3.0.2
       axios:
-        specifier: ^1.6.0
+        specifier: ^1.11.0
         version: 1.11.0
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
+      bcryptjs:
+        specifier: ^3.0.2
+        version: 3.0.2
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -215,49 +221,58 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0
       dotenv:
-        specifier: ^16.4.7
+        specifier: ^16.6.1
         version: 16.6.1
       drizzle-orm:
-        specifier: ^0.38.3
+        specifier: ^0.38.4
         version: 0.38.4(@types/pg@8.15.5)(@types/react@18.3.23)(mysql2@3.14.3)(pg@8.16.3)(react@19.1.1)
       drizzle-zod:
-        specifier: ^0.6.0
+        specifier: ^0.6.1
         version: 0.6.1(drizzle-orm@0.38.4(@types/pg@8.15.5)(@types/react@18.3.23)(mysql2@3.14.3)(pg@8.16.3)(react@19.1.1))(zod@3.25.76)
       express:
         specifier: ^4.21.2
         version: 4.21.2
       express-rate-limit:
-        specifier: ^7.5.0
+        specifier: ^7.5.1
         version: 7.5.1(express@4.21.2)
       express-session:
-        specifier: ^1.18.1
+        specifier: ^1.18.2
         version: 1.18.2
       jsonwebtoken:
         specifier: ^9.0.2
         version: 9.0.2
+      mime-type:
+        specifier: ^5.0.3
+        version: 5.0.3
+      mime-types:
+        specifier: ^3.0.1
+        version: 3.0.1
       module-alias:
         specifier: ^2.2.3
         version: 2.2.3
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
       multer:
-        specifier: ^1.4.5-lts.1
+        specifier: 1.4.5-lts.2
         version: 1.4.5-lts.2
       mysql2:
-        specifier: ^3.12.0
+        specifier: ^3.14.3
         version: 3.14.3
-      passport:
-        specifier: ^0.7.0
-        version: 0.7.0
+      node-fetch:
+        specifier: ^3.3.2
+        version: 3.3.2
       passport-google-oauth20:
         specifier: ^2.0.0
         version: 2.0.0
       pg:
-        specifier: ^8.13.1
+        specifier: ^8.16.3
         version: 8.16.3
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
       uuid:
-        specifier: ^11.0.3
+        specifier: ^11.1.0
         version: 11.1.0
       xlsx:
         specifier: ^0.18.5
@@ -266,7 +281,7 @@ importers:
         specifier: ^6.2.1
         version: 6.2.1
       zod:
-        specifier: ^3.24.1
+        specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
       '@types/axios':
@@ -293,15 +308,24 @@ importers:
       '@types/mime-types':
         specifier: ^3.0.1
         version: 3.0.1
+      '@types/ms':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^22.10.2
         version: 22.17.2
+      '@types/passport':
+        specifier: ^1.0.17
+        version: 1.0.17
       '@types/passport-google-oauth20':
         specifier: ^2.0.16
         version: 2.0.16
       '@types/pg':
         specifier: ^8.11.10
         version: 8.15.5
+      cross-env:
+        specifier: ^10.0.0
+        version: 10.0.0
       drizzle-kit:
         specifier: ^0.30.1
         version: 0.30.6
@@ -314,9 +338,18 @@ importers:
       nodemon:
         specifier: ^3.1.9
         version: 3.1.10
+      passport:
+        specifier: ^0.7.0
+        version: 0.7.0
       prettier:
         specifier: ^3.4.2
         version: 3.6.2
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      ts-add-js-extension:
+        specifier: ^1.6.6
+        version: 1.6.6
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.17.2)(typescript@5.9.2)
@@ -544,6 +577,22 @@ importers:
       drizzle-zod:
         specifier: ^0.6.1
         version: 0.6.1(drizzle-orm@0.38.4(@types/pg@8.15.5)(@types/react@18.3.23)(mysql2@3.14.3)(pg@8.16.3)(react@19.1.1))(zod@3.25.76)
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      ts-add-js-extension:
+        specifier: ^1.6.6
+        version: 1.6.6
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@24.3.0)(typescript@5.5.4)
+      tsx:
+        specifier: ^4.20.4
+        version: 4.20.4
+    devDependencies:
+      tsc-alias:
+        specifier: ^1.8.16
+        version: 1.8.16
 
 packages:
 
@@ -728,6 +777,9 @@ packages:
 
   '@emotion/unitless@0.7.5':
     resolution: {integrity: sha512-OWORNpfjMsSSUBVrRBVGECkhWcULOAJz9ZW8uK9qgxD+87M7jHRcvh/A96XXNhXTLmKcoYSQtBEX7lHMO7YRwg==}
+
+  '@epic-web/invariant@1.0.0':
+    resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
@@ -1268,6 +1320,14 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@isaacs/balanced-match@4.0.1':
+    resolution: {integrity: sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ==}
+    engines: {node: 20 || >=22}
+
+  '@isaacs/brace-expansion@5.0.0':
+    resolution: {integrity: sha512-ZT55BDLV0yv0RBm2czMiZ+SqCGO7AvmOM3G/w2xhVPH+te0aKgFjmBvGlL1dH+ql2tgGO3MVrbb3jCKyvpgnxA==}
+    engines: {node: 20 || >=22}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -2550,6 +2610,10 @@ packages:
     resolution: {integrity: sha512-AGBHOG5hPYZ5Xl9KXzU5iKq9516yEmvCKDg3ecP5kX2aB6UqTeXZxk2ELnDgDm6BQSMlLt9rDB4LoSMx0rYwww==}
     engines: {node: '>= 10.0.0'}
 
+  bcryptjs@3.0.2:
+    resolution: {integrity: sha512-k38b3XOZKv60C4E2hVsXTolJWfkGRMbILBIe2IBITXciy5bOsTKot5kDrf3ZfufQtQOUN5mXceUEpU1rTl9Uog==}
+    hasBin: true
+
   beeper@1.1.1:
     resolution: {integrity: sha512-3vqtKL1N45I5dV0RdssXZG7X6pCqQrWPNOlBPZPrd+QkE2HEhR57Z04m0KtpbsZH73j+a3F8UD1TQnn+ExTvIA==}
     engines: {node: '>=0.10.0'}
@@ -2846,6 +2910,11 @@ packages:
 
   create-require@1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
+
+  cross-env@10.0.0:
+    resolution: {integrity: sha512-aU8qlEK/nHYtVuN4p7UQgAwVljzMg8hB4YK5ThRqD2l/ziSnryncPNn7bMLt5cFYsKVKBh8HqLqyCoTupEUu7Q==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -3669,6 +3738,11 @@ packages:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
     hasBin: true
 
+  glob@11.0.3:
+    resolution: {integrity: sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==}
+    engines: {node: 20 || >=22}
+    hasBin: true
+
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
     deprecated: Glob versions prior to v9 are no longer supported
@@ -3822,6 +3896,10 @@ packages:
   inflight@1.0.6:
     resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
     deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+
+  inherits-ex@2.1.0:
+    resolution: {integrity: sha512-lvIiDNc3vA/RjtYmXSNYaJU4z2JYijO90V0MDC63mDoCuwjGok67u1Cl6vN5xgYkY5m6sOzo3fCKRqSXLq00zA==}
+    engines: {node: '>=12'}
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -4027,6 +4105,10 @@ packages:
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
+
+  jackspeak@4.1.1:
+    resolution: {integrity: sha512-zptv57P3GpL+O0I7VdMJNBZCu+BPHVQUk55Ft8/QCJjTVxrnJHuVuX/0Bl2A6/+2oyR/ZMEuFKwmzqqZ/U5nPQ==}
+    engines: {node: 20 || >=22}
 
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
@@ -4238,6 +4320,10 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
+  lru-cache@11.1.0:
+    resolution: {integrity: sha512-QIXZUBJUx+2zHUdQujWejBkcD9+cs94tLn0+YL8UrCh+D5sCXZ4c7LaEH48pNwRY3MLDgqUFyhlCyjJPf1WP0A==}
+    engines: {node: 20 || >=22}
+
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
@@ -4308,6 +4394,10 @@ packages:
     resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
     engines: {node: '>= 0.6'}
 
+  mime-type@5.0.3:
+    resolution: {integrity: sha512-GR1ptYpYx+Z0orOFlIZXZrMvDxUAvOwquNt1Bymon+cw7yYf1z5WipyzsNv0rhQ18lj+F688Yet8qD+rrKRIHw==}
+    engines: {node: '>= 8.6'}
+
   mime-types@2.1.35:
     resolution: {integrity: sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==}
     engines: {node: '>= 0.6'}
@@ -4332,6 +4422,10 @@ packages:
   mimic-function@5.0.1:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
     engines: {node: '>=18'}
+
+  minimatch@10.0.3:
+    resolution: {integrity: sha512-IPZ167aShDZZUMdRk66cyQAW3qr0WzbHkPdMYa8bzZhlHhO3jALbKdxcaak7W9FfT2rZNpQuUu4Od7ILEpXSaw==}
+    engines: {node: 20 || >=22}
 
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
@@ -4715,6 +4809,10 @@ packages:
     resolution: {integrity: sha512-Xa4Nw17FS9ApQFJ9umLiJS4orGjm7ZzwUrwamcGQuHSzDyth9boKDaycYdDcZDuqYATXw4HFXgaqWTctW/v1HA==}
     engines: {node: '>=16 || 14 >=14.18'}
 
+  path-scurry@2.0.0:
+    resolution: {integrity: sha512-ypGJsmGtdXUOeM5u93TyeIEfEhM6s+ljAhrk5vAvSx8uyY/02OvrZnA0YNGUrPXfpJMgI1ODd3nwz8Npx4O4cg==}
+    engines: {node: 20 || >=22}
+
   path-to-regexp@0.1.12:
     resolution: {integrity: sha512-RA1GjUVMnvYFxuqovrEqZoxxW5NUZqbwKtYz/Tt7nXerk0LbLblQmrsgdeOxV5SFHf0UDggjS/bSeOZwt1pmEQ==}
 
@@ -4725,6 +4823,9 @@ packages:
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
+
+  path.js@2.0.1:
+    resolution: {integrity: sha512-vMXZqQ9i6dAS9sU9lYqxtsc9HCY3i+Ca523+DWEp0nIRNQvRzMpoyMSu9lejp0lv4DLF0jsVpRVljnQ1zaqmGA==}
 
   pause@0.0.1:
     resolution: {integrity: sha512-KG8UEiEVkR3wGEb4m5yZkVCzigAD+cVEJck2CzYZO37ZGJfctvVptVO192MwrtPhzONn6go8ylnOdMhKqi4nfg==}
@@ -5417,6 +5518,11 @@ packages:
     deprecated: Rimraf versions prior to v4 are no longer supported
     hasBin: true
 
+  rimraf@6.0.1:
+    resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
+    engines: {node: 20 || >=22}
+    hasBin: true
+
   rollup@4.47.1:
     resolution: {integrity: sha512-iasGAQoZ5dWDzULEUX3jiW0oB1qyFOepSyDyoU6S/OhVlDIwj5knI5QBa5RRQ0sK7OE0v+8VIi2JuV+G+3tfNg==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -5865,6 +5971,10 @@ packages:
     resolution: {integrity: sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==}
     engines: {node: '>=18'}
 
+  ts-add-js-extension@1.6.6:
+    resolution: {integrity: sha512-rPOBNrOULi/CjVHraGrDa0vuWDmuMszmIXGNaGe2UGfrBH0/bZWTTsh82uQ+INKp9cJYziKNTCG2knzBlWvW4A==}
+    hasBin: true
+
   ts-api-utils@2.1.0:
     resolution: {integrity: sha512-CUgTZL1irw8u29bzrOD/nH85jqyc74D6SshFgujOIA7osm2Rz7dYH77agkx7H4FBNxDq7Cjf+IjaX/8zwFW+ZQ==}
     engines: {node: '>=18.12'}
@@ -6067,6 +6177,10 @@ packages:
 
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
+
+  util-ex@2.3.0:
+    resolution: {integrity: sha512-Tdp/cRu29WkhLIQfbgOLtBfT4CAj1fnyYpjGfzKSuZKodyxLE/wMsimzRy/Y+CXtZeUrFzuE/5cejZWYx3dQIw==}
+    engines: {node: '>=8'}
 
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
@@ -6511,6 +6625,8 @@ snapshots:
 
   '@emotion/unitless@0.7.5': {}
 
+  '@epic-web/invariant@1.0.0': {}
+
   '@esbuild-kit/core-utils@3.3.2':
     dependencies:
       esbuild: 0.18.20
@@ -6843,6 +6959,12 @@ snapshots:
   '@humanwhocodes/retry@0.3.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@isaacs/balanced-match@4.0.1': {}
+
+  '@isaacs/brace-expansion@5.0.0':
+    dependencies:
+      '@isaacs/balanced-match': 4.0.1
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -8110,7 +8232,6 @@ snapshots:
   '@types/node@24.3.0':
     dependencies:
       undici-types: 7.10.0
-    optional: true
 
   '@types/oauth@0.9.6':
     dependencies:
@@ -8575,6 +8696,8 @@ snapshots:
       - encoding
       - supports-color
 
+  bcryptjs@3.0.2: {}
+
   beeper@1.1.1: {}
 
   binary-extensions@2.3.0: {}
@@ -8885,6 +9008,11 @@ snapshots:
   crc-32@1.2.2: {}
 
   create-require@1.1.1: {}
+
+  cross-env@10.0.0:
+    dependencies:
+      '@epic-web/invariant': 1.0.0
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:
@@ -9948,6 +10076,15 @@ snapshots:
       package-json-from-dist: 1.0.1
       path-scurry: 1.11.1
 
+  glob@11.0.3:
+    dependencies:
+      foreground-child: 3.3.1
+      jackspeak: 4.1.1
+      minimatch: 10.0.3
+      minipass: 7.1.2
+      package-json-from-dist: 1.0.1
+      path-scurry: 2.0.0
+
   glob@7.2.3:
     dependencies:
       fs.realpath: 1.0.0
@@ -10104,6 +10241,8 @@ snapshots:
     dependencies:
       once: 1.4.0
       wrappy: 1.0.2
+
+  inherits-ex@2.1.0: {}
 
   inherits@2.0.4: {}
 
@@ -10313,6 +10452,10 @@ snapshots:
       '@isaacs/cliui': 8.0.2
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
+
+  jackspeak@4.1.1:
+    dependencies:
+      '@isaacs/cliui': 8.0.2
 
   jiti@1.21.7: {}
 
@@ -10548,6 +10691,8 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
+  lru-cache@11.1.0: {}
+
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
@@ -10595,6 +10740,12 @@ snapshots:
 
   mime-db@1.54.0: {}
 
+  mime-type@5.0.3:
+    dependencies:
+      path.js: 2.0.1
+      picomatch: 4.0.3
+      util-ex: 2.3.0
+
   mime-types@2.1.35:
     dependencies:
       mime-db: 1.52.0
@@ -10610,6 +10761,10 @@ snapshots:
   mimic-fn@4.0.0: {}
 
   mimic-function@5.0.1: {}
+
+  minimatch@10.0.3:
+    dependencies:
+      '@isaacs/brace-expansion': 5.0.0
 
   minimatch@3.1.2:
     dependencies:
@@ -10928,11 +11083,21 @@ snapshots:
       lru-cache: 10.4.3
       minipass: 7.1.2
 
+  path-scurry@2.0.0:
+    dependencies:
+      lru-cache: 11.1.0
+      minipass: 7.1.2
+
   path-to-regexp@0.1.12: {}
 
   path-to-regexp@8.2.0: {}
 
   path-type@4.0.0: {}
+
+  path.js@2.0.1:
+    dependencies:
+      inherits-ex: 2.1.0
+      util-ex: 2.3.0
 
   pause@0.0.1: {}
 
@@ -11765,6 +11930,11 @@ snapshots:
     dependencies:
       glob: 7.2.3
 
+  rimraf@6.0.1:
+    dependencies:
+      glob: 11.0.3
+      package-json-from-dist: 1.0.1
+
   rollup@4.47.1:
     dependencies:
       '@types/estree': 1.0.8
@@ -12360,6 +12530,10 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
+  ts-add-js-extension@1.6.6:
+    dependencies:
+      typescript: 5.9.2
+
   ts-api-utils@2.1.0(typescript@5.6.3):
     dependencies:
       typescript: 5.6.3
@@ -12420,7 +12594,6 @@ snapshots:
       typescript: 5.5.4
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
-    optional: true
 
   tsc-alias@1.8.16:
     dependencies:
@@ -12564,8 +12737,7 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici-types@7.10.0:
-    optional: true
+  undici-types@7.10.0: {}
 
   universalify@2.0.1: {}
 
@@ -12624,6 +12796,10 @@ snapshots:
       os-homedir: 1.0.2
 
   util-deprecate@1.0.2: {}
+
+  util-ex@2.3.0:
+    dependencies:
+      inherits-ex: 2.1.0
 
   utils-merge@1.0.1: {}
 

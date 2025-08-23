@@ -1,7 +1,8 @@
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { degreeModel } from "@/features/resources/models/degree.model.js";
+import { createInsertSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+
+import { degreeModel } from "@/schemas/models/resources/degree.model";
 
 export const courseModel = pgTable('courses', {
     id: serial().primaryKey(),

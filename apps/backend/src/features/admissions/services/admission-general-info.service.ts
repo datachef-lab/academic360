@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import { admissionGeneralInfoModel, AdmissionGeneralInfo } from "../models/admission-general-info.model.js";
 import { applicationFormModel } from "../models/application-form.model.js";
 import { and, eq, ilike } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { findAdmissionById } from "./admission.service.js";
 import { findApplicationFormById } from "./application-form.service.js";
 import { sendZeptoMail } from "@/notifications/zepto-mailer.js";

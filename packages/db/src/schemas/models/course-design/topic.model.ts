@@ -1,7 +1,8 @@
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { paperModel } from "./paper.model.js";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { createInsertSchema } from "drizzle-zod";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+
+import { paperModel } from "@/schemas/models/course-design";
 
 export const topicModel = pgTable("topics", {
     id: serial().primaryKey(),

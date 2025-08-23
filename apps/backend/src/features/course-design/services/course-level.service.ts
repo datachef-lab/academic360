@@ -1,11 +1,17 @@
 import { db } from "@/db/index.js";
-import { CourseLevel, courseLevelModel } from "../models/course-level.model.js";
+// import { CourseLevel, courseLevelModel } from "../models/course-level.model.js";
+
+// import { courseLevelModel, CourseLevel } from "@repo/db/schemas/models";
+
+
+
 import { countDistinct, eq, ilike } from "drizzle-orm";
 import { programCourses } from "../models/program-course.model.js";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";
 import XLSX from "xlsx";
 import fs from "fs";
+import { courseLevelModel, CourseLevel } from "@repo/db/schemas/models/course-design";
 
 // Types
 // export type CourseLevelData = z.infer<typeof insertCourseLevelSchema>;
