@@ -6,9 +6,7 @@
     "type": "module",
     "scripts": {
         "clean": "rimraf dist",
-        "build:ts": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-        "build:add-js": "ts-add-js-extension --dir=dist",
-        "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+        
 
         "test": "echo \"Error: no test specified\" && exit 1"
     },
