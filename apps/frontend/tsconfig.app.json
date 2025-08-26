@@ -1,5 +1,5 @@
 {
-  "extends": "../../packages/typescript-config/react-library.json",
+  "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.jsbuildinfo",
     "target": "ES2020",
@@ -8,7 +8,8 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@repo/db/*": ["../../packages/db/src/*"],
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
