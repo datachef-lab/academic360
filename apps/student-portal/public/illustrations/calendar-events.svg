@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <g clip-path="url(#clip0_1_2)">
+    <path d="M250 500C388.071 500 500 388.071 500 250C500 111.929 388.071 0 250 0C111.929 0 0 111.929 0 250C0 388.071 111.929 500 250 500Z" fill="#F3F4F6" opacity="0.4"/>
+    <rect x="150" y="130" width="200" height="250" rx="20" fill="#2DD4BF" opacity="0.3"/>
+    <rect x="170" y="150" width="160" height="210" rx="10" fill="#CCFBF1"/>
+    <rect x="180" y="180" width="30" height="30" rx="5" fill="#0D9488" opacity="0.8"/>
+    <rect x="220" y="180" width="30" height="30" rx="5" fill="#0D9488" opacity="0.5"/>
+    <rect x="260" y="180" width="30" height="30" rx="5" fill="#0D9488" opacity="0.3"/>
+    <rect x="180" y="220" width="30" height="30" rx="5" fill="#0D9488" opacity="0.3"/>
+    <rect x="220" y="220" width="30" height="30" rx="5" fill="#0D9488" opacity="0.8"/>
+    <rect x="260" y="220" width="30" height="30" rx="5" fill="#0D9488" opacity="0.5"/>
+    <rect x="180" y="260" width="30" height="30" rx="5" fill="#0D9488" opacity="0.5"/>
+    <rect x="220" y="260" width="30" height="30" rx="5" fill="#0D9488" opacity="0.3"/>
+    <rect x="260" y="260" width="30" height="30" rx="5" fill="#0D9488" opacity="0.8"/>
+    <rect x="180" y="300" width="110" height="20" rx="5" fill="#14B8A6" opacity="0.6"/>
+    <path d="M180 130V100" stroke="#0D9488" stroke-width="6" stroke-linecap="round"/>
+    <path d="M320 130V100" stroke="#0D9488" stroke-width="6" stroke-linecap="round"/>
+    <path d="M170 160H330" stroke="#14B8A6" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="320" cy="340" r="30" fill="#0D9488" opacity="0.4"/>
+    <circle cx="320" cy="340" r="20" fill="#2DD4BF" opacity="0.7"/>
+    <path d="M310 340L320 350L330 330" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_1_2">
+      <rect width="500" height="500" fill="white"/>
+    </clipPath>
+  </defs>
+</svg> 

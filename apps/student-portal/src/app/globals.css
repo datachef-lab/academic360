@@ -1,0 +1,325 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Main background - using a deeper blue for better contrast */
+    --background: 220 30% 95%;
+    --foreground: 224 80% 10%;
+
+    /* Cards with crisp white background */
+    --card: 0 0% 100%;
+    --card-foreground: 224 80% 10%;
+
+    /* Popover styling */
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 80% 10%;
+
+    /* Primary: Deep Indigo - richer and more impactful */
+    --primary: 245 70% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Vibrant Teal - stronger contrast with primary */
+    --secondary: 180 80% 35%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted elements with deeper blue */
+    --muted: 220 30% 90%;
+    --muted-foreground: 215 25% 30%;
+
+    /* Accent: Vibrant Magenta - bold accent that stands out */
+    --accent: 330 85% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: Deeper red for better visibility */
+    --destructive: 0 90% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs - stronger for better definition */
+    --border: 220 30% 85%;
+    --input: 220 30% 85%;
+    --ring: 245 70% 50%;
+
+    /* Chart colors - more saturated and distinct */
+    --chart-1: 245 70% 50%;
+    --chart-2: 180 80% 35%;
+    --chart-3: 330 85% 55%;
+    --chart-4: 25 95% 50%;
+    --chart-5: 275 90% 50%;
+
+    --radius: 0.75rem;
+
+    /* Sidebar styling - purple theme matching welcome header (#925FE2) */
+    --sidebar-background: 263 80% 60%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 263 80% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 263 80% 70%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 263 80% 50%;
+    --sidebar-ring: 263 80% 70%;
+
+    /* Notification color filters for SVG icons */
+    --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg)
+      brightness(101%) contrast(101%);
+    --emerald-filter: invert(42%) sepia(82%) saturate(1704%) hue-rotate(122deg)
+      brightness(101%) contrast(101%);
+    --amber-filter: invert(70%) sepia(97%) saturate(1242%) hue-rotate(352deg)
+      brightness(100%) contrast(101%);
+    --rose-filter: invert(34%) sepia(53%) saturate(3043%) hue-rotate(318deg)
+      brightness(102%) contrast(101%);
+    --indigo-filter: invert(24%) sepia(96%) saturate(1335%) hue-rotate(229deg)
+      brightness(88%) contrast(94%);
+    --violet-filter: invert(29%) sepia(92%) saturate(1269%) hue-rotate(248deg)
+      brightness(89%) contrast(93%);
+    --red-filter: invert(28%) sepia(92%) saturate(7117%) hue-rotate(344deg)
+      brightness(101%) contrast(118%);
+  }
+
+  .dark {
+    /* Rich dark background - deeper for better contrast */
+    --background: 224 50% 8%;
+    --foreground: 210 40% 98%;
+
+    /* Dark cards with better separation */
+    --card: 224 50% 12%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover styling */
+    --popover: 224 50% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Primary: Vibrant Electric Blue */
+    --primary: 220 100% 60%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: Bright Teal */
+    --secondary: 175 90% 40%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted elements */
+    --muted: 223 47% 15%;
+    --muted-foreground: 215 20% 80%;
+
+    /* Accent: Vivid Pink */
+    --accent: 330 95% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: Bright Red */
+    --destructive: 0 95% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs - more visible in dark mode */
+    --border: 223 47% 20%;
+    --input: 223 47% 20%;
+    --ring: 220 100% 60%;
+
+    /* Chart colors - brighter in dark mode */
+    --chart-1: 220 100% 60%;
+    --chart-2: 175 90% 40%;
+    --chart-3: 330 95% 60%;
+    --chart-4: 25 95% 60%;
+    --chart-5: 275 95% 60%;
+
+    /* Sidebar styling - dark purple theme matching welcome header (#925FE2) */
+    --sidebar-background: 263 80% 60%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 263 80% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 263 80% 70%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 263 80% 50%;
+    --sidebar-ring: 263 80% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Add more custom utility classes */
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r;
+  }
+
+  .text-gradient-primary {
+    @apply text-gradient from-primary via-accent to-secondary;
+  }
+
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .glass-card {
+    @apply glass-effect shadow-lg;
+  }
+
+  .hover-scale {
+    @apply transition-all duration-300 hover:scale-105;
+  }
+}
+
+/* Apply color filters to SVG icons in notifications */
+.notification-blue img {
+  filter: var(--blue-filter);
+}
+
+.notification-emerald img {
+  filter: var(--emerald-filter);
+}
+
+.notification-amber img {
+  filter: var(--amber-filter);
+}
+
+.notification-rose img {
+  filter: var(--rose-filter);
+}
+
+.notification-indigo img {
+  filter: var(--indigo-filter);
+}
+
+.notification-violet img {
+  filter: var(--violet-filter);
+}
+
+.notification-red img {
+  filter: var(--red-filter);
+}
+
+.notification-empty img {
+  filter: invert(84%) sepia(0%) saturate(0%) hue-rotate(228deg) brightness(100%)
+    contrast(84%);
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+/* Profile page SVG icon filters */
+.text-blue-700 img {
+  filter: invert(33%) sepia(76%) saturate(1113%) hue-rotate(199deg)
+    brightness(93%) contrast(105%);
+}
+
+.text-indigo-700 img {
+  filter: invert(26%) sepia(77%) saturate(1267%) hue-rotate(227deg)
+    brightness(98%) contrast(98%);
+}
+
+.text-purple-700 img {
+  filter: invert(29%) sepia(79%) saturate(2084%) hue-rotate(256deg)
+    brightness(89%) contrast(91%);
+}
+
+.text-emerald-700 img {
+  filter: invert(45%) sepia(76%) saturate(650%) hue-rotate(118deg)
+    brightness(96%) contrast(90%);
+}
+
+.text-green-700 img {
+  filter: invert(42%) sepia(72%) saturate(675%) hue-rotate(105deg)
+    brightness(93%) contrast(91%);
+}
+
+.text-amber-700 img {
+  filter: invert(70%) sepia(72%) saturate(5266%) hue-rotate(1deg)
+    brightness(102%) contrast(101%);
+}
+
+.text-rose-700 img {
+  filter: invert(34%) sepia(37%) saturate(2733%) hue-rotate(317deg)
+    brightness(106%) contrast(100%);
+}
+
+.text-white img {
+  filter: invert(100%) sepia(100%) saturate(0%) hue-rotate(297deg)
+    brightness(103%) contrast(102%);
+}
+
+/* Override filter for images that should not have filters applied */
+.no-filter img {
+  filter: none !important;
+}
+
+/* Add custom styles for active sidebar items */
+@layer components {
+  /* Override all border styles for active sidebar items */
+  .group\/collapsible[data-state="open"] {
+    background-color: #eff1f7 !important;
+    border: none !important;
+    border-right: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Target the specific active menu item */
+  [data-active="true"] {
+    background-color: #eff1f7 !important;
+    color: #7e22ce !important;
+    font-weight: bold !important;
+    border: none !important;
+    border-right: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Make sure all children also have no borders */
+  [data-active="true"] * {
+    --sidebar-accent-foreground: #7e22ce !important;
+    border: none !important;
+    border-right: 0 !important;
+    outline: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure menu items don't have borders */
+  [data-sidebar="menu-item"] {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Handle any possible element that might have a border */
+  .Collapsible[open] {
+    border: none !important;
+    box-shadow: none !important;
+  }
+}
+
+.html {
+  overflow: hidden;
+}
+
+/* Very thin custom scrollbar for modal scroll areas */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 3px;
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #bdbdbd;
+  border-radius: 4px;
+}
+.thin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #bdbdbd transparent;
+}

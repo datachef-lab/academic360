@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <g clip-path="url(#clip0_1_2)">
+    <path d="M250 500C388.071 500 500 388.071 500 250C500 111.929 388.071 0 250 0C111.929 0 0 111.929 0 250C0 388.071 111.929 500 250 500Z" fill="#F3F4F6" opacity="0.4"/>
+    <path d="M250 120C214.101 120 185 149.101 185 185V240L175 290L165 310C165 310 170 330 185 330H315C330 330 335 310 335 310L325 290L315 240V185C315 149.101 285.899 120 250 120Z" fill="#E879F9" opacity="0.4"/>
+    <path d="M250 120C227.909 120 210 137.909 210 160V250L200 300H300L290 250V160C290 137.909 272.091 120 250 120Z" fill="#F0ABFC" opacity="0.6"/>
+    <path d="M200 300H300C300 322.091 277.614 340 250 340C222.386 340 200 322.091 200 300Z" fill="#D946EF" opacity="0.7"/>
+    <circle cx="250" cy="150" r="20" fill="#C026D3"/>
+    <circle cx="320" cy="170" r="30" fill="#D946EF" opacity="0.4"/>
+    <circle cx="320" cy="170" r="20" fill="#FB7185" opacity="0.7"/>
+    <circle cx="320" cy="170" r="10" fill="white"/>
+    <path d="M240 340V350C240 355.523 244.477 360 250 360C255.523 360 260 355.523 260 350V340" stroke="#D946EF" stroke-width="10" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_1_2">
+      <rect width="500" height="500" fill="white"/>
+    </clipPath>
+  </defs>
+</svg> 

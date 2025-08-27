@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <g clip-path="url(#clip0_1_2)">
+    <path d="M250 500C388.071 500 500 388.071 500 250C500 111.929 388.071 0 250 0C111.929 0 0 111.929 0 250C0 388.071 111.929 500 250 500Z" fill="#F3F4F6" opacity="0.4"/>
+    <rect x="150" y="150" width="60" height="60" rx="10" fill="#60A5FA" opacity="0.8"/>
+    <rect x="220" y="150" width="60" height="60" rx="10" fill="#34D399" opacity="0.8"/>
+    <rect x="290" y="150" width="60" height="60" rx="10" fill="#8B5CF6" opacity="0.8"/>
+    <rect x="150" y="220" width="60" height="60" rx="10" fill="#F59E0B" opacity="0.8"/>
+    <rect x="220" y="220" width="60" height="60" rx="10" fill="#EC4899" opacity="0.8"/>
+    <rect x="290" y="220" width="60" height="60" rx="10" fill="#10B981" opacity="0.8"/>
+    <rect x="150" y="290" width="60" height="60" rx="10" fill="#6366F1" opacity="0.8"/>
+    <rect x="220" y="290" width="60" height="60" rx="10" fill="#F97316" opacity="0.8"/>
+    <rect x="290" y="290" width="60" height="60" rx="10" fill="#0EA5E9" opacity="0.8"/>
+    <path d="M165 170L195 190L165 210" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M235 170L265 190L235 210" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M305 170L335 190L305 210" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="180" cy="250" r="10" fill="white"/>
+    <circle cx="250" cy="250" r="10" fill="white"/>
+    <circle cx="320" cy="250" r="10" fill="white"/>
+    <path d="M165 310H195" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M165 320H195" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M165 330H195" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M235 310H265" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M235 320H265" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M235 330H265" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M305 310H335" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M305 320H335" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <path d="M305 330H335" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_1_2">
+      <rect width="500" height="500" fill="white"/>
+    </clipPath>
+  </defs>
+</svg> 

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <g clip-path="url(#clip0_1_2)">
+    <path d="M250 500C388.071 500 500 388.071 500 250C500 111.929 388.071 0 250 0C111.929 0 0 111.929 0 250C0 388.071 111.929 500 250 500Z" fill="#F3F4F6" opacity="0.7"/>
+    <path d="M170 190C170 168.402 187.402 151 209 151H291C312.598 151 330 168.402 330 190V242C330 263.598 312.598 281 291 281H209C187.402 281 170 263.598 170 242V190Z" fill="#C7D2FE" opacity="0.6"/>
+    <circle cx="250" cy="180" r="40" fill="#6366F1"/>
+    <path d="M170 245H330V290C330 311.598 312.598 329 291 329H209C187.402 329 170 311.598 170 290V245Z" fill="#818CF8" opacity="0.6"/>
+    <path d="M220 225C220 213.954 228.954 205 240 205H260C271.046 205 280 213.954 280 225V300C280 311.046 271.046 320 260 320H240C228.954 320 220 311.046 220 300V225Z" fill="#6366F1"/>
+    <circle cx="250" cy="180" r="25" fill="#E0E7FF"/>
+    <path d="M220 320H280V350C280 361.046 271.046 370 260 370H240C228.954 370 220 361.046 220 350V320Z" fill="#4F46E5"/>
+    <rect x="205" y="370" width="90" height="20" rx="10" fill="#4F46E5"/>
+    <path d="M230 205L250 225L270 205" stroke="#4F46E5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <defs>
+    <clipPath id="clip0_1_2">
+      <rect width="500" height="500" fill="white"/>
+    </clipPath>
+  </defs>
+</svg> 
