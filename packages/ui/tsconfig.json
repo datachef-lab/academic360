@@ -1,0 +1,19 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+      "baseUrl": "src",   // 👈 important
+      "paths": {
+        "@/*": ["*"],
+
+      },
+      "outDir": "dist",
+      "rootDir": "src",
+      "moduleResolution": "node",
+      "esModuleInterop": true,
+      "resolveJsonModule": true,
+      "skipLibCheck": true,
+      "strict": true
+    },
+    "include": ["src"]
+  }
+  

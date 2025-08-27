@@ -2,7 +2,7 @@ import { DbStudent, Student } from "@/types/academics/student";
 import { RowDataPacket } from "mysql2";
 import { findNationalityById } from "./nationality.service";
 import { query } from "@/db";
-import { handleAccessControlStatus } from "./access-control.service";
+
 
 export async function findAllStudents(page: number = 1, size: number = 10): Promise<DbStudent[]> {
     const rows = await query<RowDataPacket[]>(`
@@ -34,12 +34,7 @@ export async function findStudentByEmail(email: string): Promise<Student | null>
         const formattedStudent = await formatResponse(rows[0] as DbStudent);
 
 
-        await handleAccessControlStatus({
-            id: formattedStudent?.id,
-            alumni: formattedStudent?.alumni,
-            active: formattedStudent?.active,
-            leavingdate: formattedStudent?.leavingdate as string ?? undefined
-        });
+       
 
 
         return formattedStudent;
@@ -76,13 +71,7 @@ export async function findStudentByUid(uid: string): Promise<Student | null> {
 
         const formattedStudent = await formatResponse(tmp);
 
-        await handleAccessControlStatus({
-            id: formattedStudent?.id,
-            alumni: formattedStudent?.alumni,
-            active: formattedStudent?.active,
-            leavingdate: formattedStudent?.leavingdate as string ?? undefined
-        });
-
+       
         return formattedStudent;
     } catch (error) {
         console.error("Error finding student by UID:", error);
@@ -110,12 +99,7 @@ export async function findStudentByUidAndContact(uid: string, contactNo: string)
 
         const formattedStudent = await formatResponse(rows[0] as DbStudent);
 
-        await handleAccessControlStatus({
-            id: formattedStudent?.id,
-            alumni: formattedStudent?.alumni,
-            active: formattedStudent?.active,
-            leavingdate: formattedStudent?.leavingdate as string ?? undefined
-        });
+     
 
         return formattedStudent;
     } catch (error) {

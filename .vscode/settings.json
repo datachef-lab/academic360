@@ -1,0 +1,17 @@
+{
+  "eslint.run": "onSave",
+  "eslint.lintTask.enable": true,
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.turbo/**": true,
+    "**/build/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/build": true
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096
+}

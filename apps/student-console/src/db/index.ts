@@ -3,11 +3,12 @@ import { drizzle } from 'drizzle-orm/mysql2';
 import { createPool, type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
 import { drizzle as drizzlePostgres, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from "./schema"; // Import your schema
-// import {db} from "@repo/db/connection"; 
+import { db as dbWorkspace } from "@repo/db/connection";
+import { migrate } from 'drizzle-orm/postgres-js/migrator'; // Ensure migrations are applied
+
 // Load environment variables
 dotenv.config({ path: '.env.local' });
-
-const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(process.env.DATABASE_URL!, { schema, logger: false });
+const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(process.env.DATABASE_URL!, { schema });
 
 // Connection configuration for MySQL (assuming it's still used elsewhere)
 const dbConfig = {

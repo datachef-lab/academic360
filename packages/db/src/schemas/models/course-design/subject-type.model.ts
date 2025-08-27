@@ -4,6 +4,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 export const subjectTypeModel = pgTable("subject_types", {
     id: serial().primaryKey(),
+    legacySubjectTypeId: integer("legacy_subject_type_id"),
     name: varchar({ length: 255 }),
     code: varchar({ length: 255 }),
     sequence: integer().unique(),
