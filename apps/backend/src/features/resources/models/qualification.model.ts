@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const qualificationModel = pgTable("qualifications", {
     id: serial().primaryKey(),
+    legacyQualificationId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),

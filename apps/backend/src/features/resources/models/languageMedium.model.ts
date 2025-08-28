@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const languageMediumModel = pgTable("language_medium", {
     id: serial().primaryKey(),
+    legacyLanguageMediumId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),

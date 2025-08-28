@@ -6,9 +6,29 @@ import { programCourses } from "../models/program-course.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
+const defaultAffiliation: Affiliation[] = [
+    {
+        name: "Calcutta University",
+        shortName: "CU",
+        disabled: false,
+    }
+]
+export async function loadAffiliation() {
+    for (const affiliation of defaultAffiliation) {
+        const [existingAffiliation] = await db
+            .select()
+            .from(affiliationModel)
+            .where(ilike(affiliationModel.name, affiliation.name.trim()));
+        if (existingAffiliation) continue;
+
+        const [created] = await db.insert(affiliationModel).values(affiliation).returning();
+
+    }
+}
+
 export async function createAffiliation(data: Affiliation) {
     const { id, createdAt, updatedAt, ...props } = data;
-    
+
     const [existingAffiliation] = await db
         .select()
         .from(affiliationModel)

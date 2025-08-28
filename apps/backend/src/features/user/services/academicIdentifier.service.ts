@@ -23,14 +23,14 @@ function validateAcademicIdentifierInput(data: Omit<AcademicIdentifierType, 'id'
 export async function addAcademicIdentifier(
     academicIdentifier: AcademicIdentifierType
   ): Promise<AcademicIdentifierType | null> {
-    const { id, section, shift, courseId, ...rest } = academicIdentifier;
-    validateAcademicIdentifierInput({ ...rest, section, shift, courseId });
+    const { id, section, shift, programCourseId, ...rest } = academicIdentifier;
+    validateAcademicIdentifierInput({ ...rest, section, shift, programCourseId });
   
     const insertData = {
       ...rest,
       sectionId: section?.id ?? null,
       shiftId: shift?.id ?? null,
-      courseId: courseId ?? null,
+      programCourseId: programCourseId ?? null,
     };
   
     const [inserted] = await db
@@ -75,7 +75,7 @@ export async function saveAcademicIdentifier(
       updatedAt,
       section,
       shift,
-      courseId,
+      programCourseId,
       ...props
     } = dataToValidate;
   
@@ -83,7 +83,7 @@ export async function saveAcademicIdentifier(
       ...props,
       sectionId: section?.id ?? null,
       shiftId: shift?.id ?? null,
-      courseId: courseId ?? null,
+      programCourseId: programCourseId ?? null,
     };
   
     const [updated] = await db
@@ -129,11 +129,9 @@ export async function academicIdentifierResponseFormat(academicIdentifier: Acade
     if (!academicIdentifier) {
         return null;
     }
-    const { shiftId, sectionId, ...props } = academicIdentifier;
+    const { sectionId, ...props } = academicIdentifier;
     let shift: Shift | null = null;
-    if (shiftId) {
-        shift = await getShiftById(shiftId as number);
-    }
+    
     let section: Section | null = null;
     if (sectionId) {
         section = await findSectionById(sectionId as number);

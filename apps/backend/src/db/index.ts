@@ -14,6 +14,10 @@ import { loadOccupations } from "@/features/resources/services/occupation.servic
 import { loadQualifications } from "@/features/resources/services/qualification.service.js";
 import { loadNationalities } from "@/features/resources/services/nationality.service.js";
 import { loadShifts } from "@/features/academics/services/shift.service.js";
+import { loadAffiliation } from "@/features/course-design/services/affiliation.service";
+import { loadCourseLevel } from "@/features/course-design/services/course-level.service";
+import { loadCourseType } from "@/features/course-design/services/course-type.service";
+import { loadRegulationType } from "@/features/course-design/services/regulation-type.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -35,14 +39,18 @@ export const connectToDatabase = async () => {
         initializeClasses();
         loadDefaultSettings();
         loadDegree();
-        loadShifts()
-        loadCategory();
-        loadReligions();
+        // loadShifts()
+        // loadCategory();
+        // loadReligions();
         loadLanguages();
         loadBloodGroups();
         loadOccupations();
         loadQualifications();
         loadNationalities();
+        loadAffiliation()
+        loadCourseLevel()
+        loadCourseType()
+        loadRegulationType()
     } catch (error) {
         console.log(process.env.DATABASE_URL);
         console.error("[backend] - Failed to connect to the database: ⚠", error);

@@ -6,6 +6,32 @@ import { paperModel } from "../models/paper.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
 
+const defaultRegulationType: RegulationType[] = [
+    {
+        name: "CBCS",
+        shortName: "CBCS",
+        disabled: false,
+    },
+    {
+        name: "CCF",
+        shortName: "CCF",
+        disabled: false,
+    },
+]
+
+export async function loadRegulationType() {
+    for (const regulationType of defaultRegulationType) {
+        const [existingRegulationType] = await db
+            .select()
+            .from(regulationTypeModel)
+            .where(ilike(regulationTypeModel.name, regulationType.name.trim()));
+        if (existingRegulationType) continue;
+
+        const [created] = await db.insert(regulationTypeModel).values(regulationType).returning();
+
+    }
+}
+
 export async function createRegulationType(data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) {
     const [existingRegulationType] = await db
         .select()

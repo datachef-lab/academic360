@@ -6,6 +6,7 @@ import { relations } from "drizzle-orm";
 
 export const stateModel = pgTable("states", {
     id: serial().primaryKey(),
+    legacyStateId: integer(),
     countryId: integer().notNull().references(() => countryModel.id),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),

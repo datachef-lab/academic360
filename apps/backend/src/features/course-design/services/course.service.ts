@@ -8,7 +8,7 @@ import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 import { OldCourse } from "@/types/old-data/old-course.js";
 // import { processCourse } from "./batch.service.js";
 import { studentModel } from "@/features/user/models/student.model.js";
-import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
+
 import { OldStudent } from "@/types/old-student.js";
 import { Degree } from "@/features/resources/models/degree.model.js";
 import { findDegreeById } from "@/features/resources/services/degree.service.js";
@@ -20,6 +20,7 @@ import { programCourses } from "@/features/course-design/models/program-course.m
 import { batchModel } from "@/features/academics/models/batch.model.js";
 import XLSX from "xlsx";
 import fs from "fs";
+import { academicIdentifierModel } from "@repo/db/schemas/index.js";
 
 export interface BulkUploadResult {
   success: Course[];
@@ -192,7 +193,7 @@ export async function deleteCourseSafe(id: number) {
         [{ admCourseCount }],
         [{ programCourseCount }],
         [{ feesStructureCount }],
-        [{ academicIdentifierCount }],
+
     ] = await Promise.all([
         db.select({ batchCount: countDistinct(batchModel.id) }).from(batchModel).where(eq(batchModel.courseId, id)),
         db.select({ studyMaterialCount: sql<number>`0` }).from(courseModel).where(eq(courseModel.id, id)),
@@ -204,7 +205,7 @@ export async function deleteCourseSafe(id: number) {
         db.select({ admCourseCount: countDistinct(admissionCourseModel.id) }).from(admissionCourseModel).where(eq(admissionCourseModel.courseId, id)),
         db.select({ programCourseCount: countDistinct(programCourses.id) }).from(programCourses).where(eq(programCourses.courseId, id)),
         db.select({ feesStructureCount: countDistinct(feesStructureModel.id) }).from(feesStructureModel).where(eq(feesStructureModel.courseId, id)),
-        db.select({ academicIdentifierCount: countDistinct(academicIdentifierModel.id) }).from(academicIdentifierModel).where(eq(academicIdentifierModel.courseId, id)),
+
     ]);
 
     if (
@@ -214,8 +215,7 @@ export async function deleteCourseSafe(id: number) {
         admCourseAppCount > 0 ||
         admCourseCount > 0 ||
         programCourseCount > 0 ||
-        feesStructureCount > 0 ||
-        academicIdentifierCount > 0
+        feesStructureCount > 0
     ) {
         return {
             success: false,
@@ -228,7 +228,6 @@ export async function deleteCourseSafe(id: number) {
                 { count: admCourseCount, type: "Adm-course" },
                 { count: programCourseCount, type: "Program-course" },
                 { count: feesStructureCount, type: "Fees-structure" },
-                { count: academicIdentifierCount, type: "Academic-identifier" },
             ],
         };
     }

@@ -4,6 +4,7 @@ import { z } from "zod";
 
 export const occupationModel = pgTable("occupations", {
     id: serial().primaryKey(),
+    legacyOccupationId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),

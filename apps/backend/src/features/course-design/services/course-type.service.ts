@@ -15,9 +15,35 @@ export interface BulkUploadResult {
     }>;
 }
 
+const defaultCourseType: CourseType[] = [
+    {
+        name: "Honours",
+        shortName: "H",
+        disabled: false,
+    },
+    {
+        name: "General",
+        shortName: "G",
+        disabled: false,
+    }
+]
+
+export async function loadCourseType() {
+    for (const courseType of defaultCourseType) {
+        const [existingCourseType] = await db
+            .select()
+            .from(courseTypeModel)
+            .where(ilike(courseTypeModel.name, courseType.name.trim()));
+        if (existingCourseType) continue;
+
+        const [created] = await db.insert(courseTypeModel).values(courseType).returning();
+
+    }
+}
+
 export async function createCourseType(data: CourseType) {
     const { id, createdAt, updatedAt, ...props } = data;
-    
+
     const [existingCourseType] = await db
         .select()
         .from(courseTypeModel)
@@ -156,7 +182,7 @@ export async function updateCourseType(id: number, data: Partial<CourseType>) {
 export async function deleteCourseType(id: number) {
     const [deleted] = await db.delete(courseTypeModel).where(eq(courseTypeModel.id, id)).returning();
     return deleted;
-} 
+}
 
 export async function deleteCourseTypeSafe(id: number) {
     const [found] = await db.select().from(courseTypeModel).where(eq(courseTypeModel.id, id));

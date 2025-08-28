@@ -7,6 +7,7 @@ import { relations } from "drizzle-orm";
 
 export const boardUniversityModel = pgTable("board_universities", {
     id: serial().primaryKey(),
+    legacyBoardUniversityId: integer(),
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().references(() => degreeModel.id),
     passingMarks: integer(),

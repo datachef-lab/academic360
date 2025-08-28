@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const degreeModel = pgTable("degree", {
     id: serial().primaryKey(),
+    legacyDegreeId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     level: degreeLevelTypeEnum(),
     sequence: integer().unique(),

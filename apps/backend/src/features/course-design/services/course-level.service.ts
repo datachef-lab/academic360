@@ -26,6 +26,33 @@ export interface BulkUploadResult {
     }>;
 }
 
+const defaultCourseLevel: CourseLevel[] = [
+    {
+        name: "Undergraduate",
+        shortName: "UG",
+        disabled: false,
+    },
+    {
+        name: "Postgraduate",
+        shortName: "PG",
+        disabled: false,
+    }
+]
+
+export async function loadCourseLevel() {
+
+    for (const courseLevel of defaultCourseLevel) {
+        const [existingCourseLevel] = await db
+            .select()
+            .from(courseLevelModel)
+            .where(ilike(courseLevelModel.name, courseLevel.name.trim()));
+        if (existingCourseLevel) continue;
+
+        const [created] = await db.insert(courseLevelModel).values(courseLevel).returning();
+        
+    }
+}
+
 // Create a new courseLevel
 export const createCourseLevel = async (courseLevelData: CourseLevel) => {
     const { id, createdAt, updatedAt, ...props } = courseLevelData;

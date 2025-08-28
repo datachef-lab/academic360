@@ -6,6 +6,7 @@ export const boardResultTypeEnum = pgEnum("board_result_type", ["FAIL", "PASS"])
 
 export const boardResultStatusModel = pgTable("board_result_status", {
     id: serial().primaryKey(),
+    legacyBoardResultStatusId: integer(),
     name: varchar({ length: 255 }).notNull(),
     spclType: varchar({ length: 255 }).notNull(),
     result: boardResultTypeEnum(),

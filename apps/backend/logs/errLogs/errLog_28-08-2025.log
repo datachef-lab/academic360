@@ -1,0 +1,4 @@
+28-08-2025	22:52:58	44e602c9-656b-4231-b7fe-ddf492aff543	Error: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'LIMIT 500
+            OFFSET 0' at line 3	GET	/api/students/old-data	undefined
+28-08-2025	22:52:23	2be53281-b1e5-4f10-af41-77a0caaf1dce	Error: Unknown column 'shifid' in 'where clause'	GET	/api/students/old-data	undefined
+28-08-2025	22:27:31	1117ce9a-3ab6-4db7-a26b-cb9b9d1472cf	Error: Can't add new command when connection is in closed state	GET	/api/students/old-data	undefined

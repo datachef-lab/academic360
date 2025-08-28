@@ -5,18 +5,16 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sectionModel } from "@/features/academics/models/section.model.js";
-import { shiftModel } from "@/features/academics/models/shift.model.js";
-import { courseModel } from "@/features/course-design/models/course.model.js";
-import { frameworkTypeEnum } from "./helper.js";
+// import { shiftModel } from "@/features/academics/models/shift.model.js";
+// import { courseModel } from "@/features/course-design/models/course.model.js";
+// import { frameworkTypeEnum } from "./helper.js";
+import { programCourseModel } from "@repo/db/schemas/index.js";
 
 export const academicIdentifierModel = pgTable("academic_identifiers", {
     id: serial().primaryKey(),
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     rfid: varchar({ length: 255 }),
-    // streamId: integer("stream_id_fk").references(() => streamModel.id),
-    framework: frameworkTypeEnum(),
-    courseId: integer("course_id_fk").references(() => courseModel.id),
-    shiftId: integer("shift_id_fk").references(() => shiftModel.id),
+    programCourseId: integer("program_course_id_fk").references(() => programCourseModel.id),
     cuFormNumber: varchar({ length: 255 }),
     uid: varchar({ length: 255 }),
     oldUid: varchar({ length: 255 }),

@@ -5,6 +5,7 @@ import { int } from "drizzle-orm/mysql-core";
 
 export const countryModel = pgTable("countries", {
     id: serial().primaryKey(),
+    legacyCountryId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),
