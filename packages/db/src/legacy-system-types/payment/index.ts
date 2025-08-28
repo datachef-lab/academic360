@@ -1,9 +1,9 @@
-export interface Bank {
+export interface OldBank {
     readonly id: number;
     bankName: string;
 }
 
-export interface BankBranch {
+export interface OldBankBranch {
     id: number;
     bankid: number;
     name: string;

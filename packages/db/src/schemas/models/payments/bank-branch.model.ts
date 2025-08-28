@@ -1,5 +1,7 @@
-import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { bankModel } from "./bank.model";
+import { createInsertSchema } from "drizzle-zod";
+import z from "zod";
 
 export const bankBranchModel = pgTable("bank_branches", {
     id: serial("id").primaryKey(),
@@ -7,7 +9,11 @@ export const bankBranchModel = pgTable("bank_branches", {
     bankId: integer("bank_id_fk")
         .references(() => bankModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
-    name: integer("name").notNull(),
+    name: varchar({ length: 255 }).notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
+
+export const createBankBranchSchema = createInsertSchema(bankBranchModel);
+
+export type BankBranch = z.infer<typeof createBankBranchSchema>;

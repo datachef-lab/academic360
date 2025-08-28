@@ -11,7 +11,7 @@ import {
     regulationTypeModel,
 } from "@/schemas/models/course-design";
 
-export const programCourses = pgTable("program_courses", {
+export const programCourseModel = pgTable("program_courses", {
     id: serial().primaryKey(),
     streamId: integer("stream_id_fk").references(() => streamModel.id),
     courseId: integer("course_id_fk").references(() => courseModel.id),
@@ -27,7 +27,7 @@ export const programCourses = pgTable("program_courses", {
 });
 
 // Zod Schemas for validation
-export const insertProgramCourseSchema = createInsertSchema(programCourses);
-export const selectProgramCourseSchema = createSelectSchema(programCourses);
+export const insertProgramCourseSchema = createInsertSchema(programCourseModel);
+export const selectProgramCourseSchema = createSelectSchema(programCourseModel);
 export type ProgramCourse = z.infer<typeof selectProgramCourseSchema>;
 export type NewProgramCourse = z.infer<typeof insertProgramCourseSchema>;

@@ -21,7 +21,7 @@ export interface Class {
     type: string | null;
 }
 
-export interface EligibilityCriteria {
+export interface OldEligibilityCriteria {
     readonly id: number;
     courseId: number;
     classId: number;

@@ -19,6 +19,11 @@
             "eslint --fix"
         ]
     },
+    "pnpm": {
+        "overrides": {
+            "drizzle-orm": "0.44.5"
+        }
+    },
     "devDependencies": {
         "@types/file-saver": "^2.0.7",
         "@types/js-cookie": "^3.0.6",
@@ -65,7 +70,7 @@
         "country-state-city": "^3.2.1",
         "date-fns": "^4.1.0",
         "date-fns-tz": "^3.2.0",
-        "drizzle-orm": "^0.38.3",
+        "drizzle-orm": "0.44.5",
         "express-rate-limit": "^7.5.0",
         "file-saver": "^2.0.5",
         "framer-motion": "^11.18.0",

@@ -1,7 +1,7 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { studentModel } from "../user";
 import { paperModel } from "../course-design";
-import { admissionCourseDetails } from "./adm-course-details.model";
+import { admissionCourseDetailsModel } from "./adm-course-details.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
@@ -11,7 +11,7 @@ export const paperSelectionModel = pgTable("paper_selections", {
         .references(() => studentModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
     admissionCourseDetailsId: integer("admission_course_details_id_fk")
-        .references(() => admissionCourseDetails.id, { onDelete: "cascade", onUpdate: "cascade" })
+        .references(() => admissionCourseDetailsModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
     paperId: integer("paper_id_fk")
         .references(() => paperModel.id, { onDelete: "cascade", onUpdate: "cascade" })

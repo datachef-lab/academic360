@@ -127,20 +127,20 @@ export interface Shift {
     codeprefix: string;
 }
 
-export interface MeritList {
+export interface OldMeritList {
     readonly id: number
     name: string;
     description: string;
     checkauto: boolean | 1 | 0;
 }
 
-export interface Category {
+export interface OldStudentCategory {
     readonly id: number;
-    category: string;
-    mainid: number | null;
-    flag: boolean | 1 | 0;
-    docneeded: boolean;
-    code: string;
+    studentCName: string;
+    document: boolean | 1 | 0;
+    courseId: number;
+    classId: number;    
+    flgyes: string;
 }
 
 export interface FreeshipMain {
@@ -173,7 +173,7 @@ export interface FreeshipMain {
     apprdt: Date | string | null;
 }
 
-export interface CvSubjectSelection {
+export interface OldCvSubjectSelection {
     readonly id: number;
     index_col: number | null;
     parent_id: number;

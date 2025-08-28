@@ -4,7 +4,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 import { frameworkTypeEnum } from "@/schemas/enums";
 import { studentModel } from "@/schemas/models/user";
-import { courseModel } from "@/schemas/models/course-design";
+import { courseModel, programCourseModel } from "@/schemas/models/course-design";
 import { sectionModel, shiftModel } from "@/schemas/models/academics";
 
 export const academicIdentifierModel = pgTable("academic_identifiers", {
@@ -12,9 +12,8 @@ export const academicIdentifierModel = pgTable("academic_identifiers", {
     studentId: integer("student_id_fk").notNull().unique().references(() => studentModel.id),
     rfid: varchar({ length: 255 }),
     // streamId: integer("stream_id_fk").references(() => streamModel.id),
-    framework: frameworkTypeEnum(),
-    courseId: integer("course_id_fk").references(() => courseModel.id),
-    shiftId: integer("shift_id_fk").references(() => shiftModel.id),
+    programCourseId: integer("program_course_id_fk").references(() => programCourseModel.id),
+    
     cuFormNumber: varchar({ length: 255 }),
     uid: varchar({ length: 255 }),
     oldUid: varchar({ length: 255 }),

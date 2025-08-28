@@ -15,7 +15,7 @@ import {
     subjectModel,
     affiliationModel,
     regulationTypeModel,
-    programCourses,
+    programCourseModel,
 } from "@/schemas/models/course-design";
 
 export const paperModel = pgTable("papers", {
@@ -36,7 +36,7 @@ export const paperModel = pgTable("papers", {
         .references(() => subjectTypeModel.id)
         .notNull(),
     programCourseId: integer("programe_course_id_fk")
-        .references(() => programCourses.id)
+        .references(() => programCourseModel.id)
         .notNull(),
     classId: integer("class_id_fk")
         .references(() => classModel.id)

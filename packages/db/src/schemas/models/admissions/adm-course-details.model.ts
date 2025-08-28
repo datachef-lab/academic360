@@ -1,6 +1,6 @@
 import { doublePrecision, boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { studentModel } from "../user";
-import { programCourses, specializationModel, streamModel } from "../course-design";
+import { programCourseModel, specializationModel, streamModel } from "../course-design";
 import { classModel, shiftModel } from "../academics";
 import { eligibilityCriteriaModel } from "./eligibility-criteria.model";
 import { studentCategoryModel } from "./adm-student-category.model";
@@ -8,9 +8,11 @@ import { bankBranchModel } from "../payments/bank-branch.model";
 import { bankModel } from "../payments/bank.model";
 import { meritListModel } from "./merit-list.model";
 import { cancelSourceModel } from "./cancel-source.model";
+import { createInsertSchema } from "drizzle-zod";
+import z from "zod";
 
 
-export const admissionCourseDetails = pgTable("admission_course_details", {
+export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     id: serial().primaryKey(),
     legacyCourseDetailsId: integer("legacy_course_details_id"),
     studentId: integer("student_id_fk")
@@ -20,7 +22,7 @@ export const admissionCourseDetails = pgTable("admission_course_details", {
         .references(() => streamModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
     programCourseId: integer("program_course_id_fk")
-        .references(() => programCourses.id, { onDelete: "cascade", onUpdate: "cascade" })
+        .references(() => programCourseModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
     classId: integer("class_id_fk")
         .references(() => classModel.id, { onDelete: "cascade", onUpdate: "cascade" })
@@ -147,3 +149,7 @@ export const admissionCourseDetails = pgTable("admission_course_details", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
+
+export const createAdmissionCourseDetails = createInsertSchema(admissionCourseDetailsModel);
+
+export type AdmissionCourseDetails = z.infer<typeof createAdmissionCourseDetails>;
