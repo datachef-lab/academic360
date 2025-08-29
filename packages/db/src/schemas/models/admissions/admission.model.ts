@@ -32,3 +32,5 @@ export const admissionModel = pgTable("admissions", {
 export const createAdmissionSchema = createInsertSchema(admissionModel);
 
 export type Admission = z.infer<typeof createAdmissionSchema>;
+
+export type AdmissionT = typeof createAdmissionSchema._type;

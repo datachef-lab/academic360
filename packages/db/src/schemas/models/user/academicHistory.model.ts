@@ -47,3 +47,5 @@ export const academicHistoryRelations = relations(academicHistoryModel, ({ one }
 export const createAcademicHistorySchema = createInsertSchema(academicHistoryModel);
 
 export type AcademicHistory = z.infer<typeof createAcademicHistorySchema>;
+
+export type AcademicHistoryT = typeof createAcademicHistorySchema._type;

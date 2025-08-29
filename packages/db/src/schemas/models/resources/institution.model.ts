@@ -8,6 +8,7 @@ import { degreeModel } from "@/schemas/models/resources";
 
 export const institutionModel = pgTable("institutions", {
     id: serial().primaryKey(),
+    legacyInstitutionId: integer(),
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().notNull().references(() => degreeModel.id),
     addressId: integer().references(() => addressModel.id),
@@ -31,3 +32,5 @@ export const degreeRelations = relations(institutionModel, ({ one }) => ({
 export const createInstitutionSchema = createInsertSchema(institutionModel);
 
 export type Institution = z.infer<typeof createInstitutionSchema>;
+
+export type InstitutionT = typeof createInstitutionSchema._type;

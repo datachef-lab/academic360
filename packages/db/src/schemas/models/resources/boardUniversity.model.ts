@@ -8,6 +8,7 @@ import { degreeModel } from "@/schemas/models/resources";
 
 export const boardUniversityModel = pgTable("board_universities", {
     id: serial().primaryKey(),
+    legacyBoardUniversityId: integer(),
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().references(() => degreeModel.id),
     passingMarks: integer(),
@@ -33,3 +34,5 @@ export const createLastBoardUniversityRelations = relations(boardUniversityModel
 export const createBoardUniversitySchema = createInsertSchema(boardUniversityModel);
 
 export type BoardUniversity = z.infer<typeof createBoardUniversitySchema>;
+
+export type BoardUniversityT = typeof createBoardUniversitySchema._type;

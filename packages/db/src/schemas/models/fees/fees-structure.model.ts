@@ -35,3 +35,5 @@ export const feesStructureModel = pgTable("fees_structures", {
 export const createFeesStructureSchema = createInsertSchema(feesStructureModel);
 
 export type FeesStructure = z.infer<typeof createFeesStructureSchema>;
+
+export type FeesStructureT = typeof createFeesStructureSchema._type;

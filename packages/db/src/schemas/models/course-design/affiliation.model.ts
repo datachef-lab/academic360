@@ -14,4 +14,7 @@ export const affiliationModel = pgTable('affiliations', {
 });
 
 export const createAffiliationModel = createInsertSchema(affiliationModel);
+
 export type Affiliation = z.infer<typeof createAffiliationModel>;
+
+export type AffiliationT = typeof createAffiliationModel._type;

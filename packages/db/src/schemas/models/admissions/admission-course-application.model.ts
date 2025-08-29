@@ -19,3 +19,5 @@ export const admissionCourseApplication = pgTable("admission_course_applications
 export const createAdmissionCourseApplicationSchema = createInsertSchema(admissionCourseApplication);
 
 export type AdmissionCourseApplication = z.infer<typeof createAdmissionCourseApplicationSchema>;
+
+export type AdmissionCourseApplicationT = typeof createAdmissionCourseApplicationSchema._type;

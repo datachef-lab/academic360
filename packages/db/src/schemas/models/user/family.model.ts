@@ -45,3 +45,5 @@ export const parentRelations = relations(familyModel, ({ one }) => ({
 export const createFamilySchema = createInsertSchema(familyModel);
 
 export type Family = z.infer<typeof createFamilySchema>;
+
+export type FamilyT = typeof createFamilySchema._type;

@@ -26,3 +26,5 @@ export const admSubjectPaperSelectionModel = pgTable("adm_subject_paper_selectio
 export const createAdmSubjectPaperSelectionModel = createInsertSchema(admSubjectPaperSelectionModel);
 
 export type AdmSubjectPaperSelection = z.infer<typeof createAdmSubjectPaperSelectionModel>;
+
+export type AdmSubjectPaperSelectionT = typeof createAdmSubjectPaperSelectionModel._type;

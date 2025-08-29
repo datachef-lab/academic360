@@ -27,3 +27,5 @@ export const emergencyContactRelations = relations(emergencyContactModel, ({ one
 export const createEmergencyContactSchema = createInsertSchema(emergencyContactModel);
 
 export type EmergencyContact = z.infer<typeof createEmergencyContactSchema>;
+
+export type EmergencyContactT = typeof createEmergencyContactSchema._type;

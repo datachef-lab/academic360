@@ -16,3 +16,5 @@ export const examComponentModel = pgTable("exam_components", {
 export const createExamComponentSchema = createInsertSchema(examComponentModel);
 
 export type ExamComponent = z.infer<typeof createExamComponentSchema>;
+
+export type ExamComponentT = typeof createExamComponentSchema._type;

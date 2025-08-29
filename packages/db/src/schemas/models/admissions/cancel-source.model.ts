@@ -13,3 +13,5 @@ export const cancelSourceModel = pgTable("cancel_sources", {
 export const createCancelSourceSchema = createInsertSchema(cancelSourceModel);
 
 export type CancelSource = z.infer<typeof createCancelSourceSchema>;        
+
+export type CancelSourceT = typeof createCancelSourceSchema._type;   

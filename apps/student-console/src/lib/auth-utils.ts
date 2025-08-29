@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { verifyAccessToken } from "./services/auth";
+import { verifyAccessToken } from "./services/auth.service";
 
 /**
  * Validates if the current user is an admin

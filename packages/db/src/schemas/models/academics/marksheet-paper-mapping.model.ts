@@ -31,3 +31,5 @@ export const marksheetPaperMappingModel = pgTable("marksheet_paper_mapping", {
 export const createMarksheetPaperMappingSchema = createInsertSchema(marksheetPaperMappingModel);
 
 export type MarksheetPaperMapping = z.infer<typeof createMarksheetPaperMappingSchema>;
+
+export type MarksheetPaperMappingT = typeof createMarksheetPaperMappingSchema._type;

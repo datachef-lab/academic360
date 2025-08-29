@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const addonModel = pgTable("addons", {
     id: serial().primaryKey(),
+    legacyAddonId: integer(),
     name: varchar({ length: 255 }).notNull(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
@@ -12,3 +13,5 @@ export const addonModel = pgTable("addons", {
 export const createAddOnSchema = createInsertSchema(addonModel);
 
 export type AddOn = z.infer<typeof createAddOnSchema>;
+
+export type AddOnT = typeof createAddOnSchema._type;

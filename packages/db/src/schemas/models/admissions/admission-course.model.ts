@@ -24,3 +24,5 @@ export const admissionCourseModel = pgTable("admission_courses", {
 export const createAdmissionCourseSchema = createInsertSchema(admissionCourseModel);
 
 export type AdmissionCourse = z.infer<typeof createAdmissionCourseSchema>;
+
+export type AdmissionCourseT = typeof createAdmissionCourseSchema._type;

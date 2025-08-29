@@ -26,3 +26,5 @@ export const noticeModel = pgTable("notices", {
 export const createNoticeSchema = createInsertSchema(noticeModel);
 
 export type Notice = z.infer<typeof createNoticeSchema>;
+
+export type NoticeT = typeof createNoticeSchema._type;

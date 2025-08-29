@@ -13,3 +13,5 @@ export const sportsCategoryModel = pgTable("sports_categories", {
 export const createSportsCategorySchema = createInsertSchema(sportsCategoryModel);
 
 export type SportsCategory = z.infer<typeof createSportsCategorySchema>;
+
+export type SportsCategoryT = typeof createSportsCategorySchema._type;

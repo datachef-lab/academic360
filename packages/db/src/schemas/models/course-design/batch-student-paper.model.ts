@@ -20,3 +20,5 @@ export const batchStudentPaperModel = pgTable("batch_student_papers", {
 export const createBatchStudentPaperSchema = createInsertSchema(batchStudentPaperModel);
 
 export type BatchStudentPaper = z.infer<typeof createBatchStudentPaperSchema>;
+
+export type BatchStudentPaperT = typeof createBatchStudentPaperSchema._type;

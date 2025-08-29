@@ -21,3 +21,5 @@ export const paperComponentModel = pgTable("paper_components", {
 export const createPaperComponentSchema = createInsertSchema(paperComponentModel);
 
 export type PaperComponent = z.infer<typeof createPaperComponentSchema>;
+
+export type PaperComponentT = typeof createPaperComponentSchema._type;

@@ -4,6 +4,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 export const categoryModel = pgTable("categories", {
     id: serial().primaryKey(),
+    legacyCategoryId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     documentRequired: boolean(),
     code: varchar({ length: 10 }).notNull().unique(),
@@ -16,3 +17,5 @@ export const categoryModel = pgTable("categories", {
 export const createCategorySchema = createInsertSchema(categoryModel);
 
 export type Category = z.infer<typeof createCategorySchema>;
+
+export type CategoryT = typeof createCategorySchema._type;

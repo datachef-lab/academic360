@@ -23,3 +23,5 @@ export const paperSelectionModel = pgTable("paper_selections", {
 export const createPaperSelectionSchema = createInsertSchema(paperSelectionModel);
 
 export type SubjectPaperSelection = z.infer<typeof createPaperSelectionSchema>;
+
+export type SubjectPaperSelectionT = typeof createPaperSelectionSchema._type;

@@ -16,3 +16,5 @@ export const subjectTypeModel = pgTable("subject_types", {
 export const createSubjectTypeSchema = createInsertSchema(subjectTypeModel);
 
 export type SubjectType = z.infer<typeof createSubjectTypeSchema>;
+
+export type SubjectTypeT = typeof createSubjectTypeSchema._type;

@@ -61,3 +61,5 @@ export const createAdmissionAcademicInfoSchema = createInsertSchema(
 export type AdmissionAcademicInfo = z.infer<
     typeof createAdmissionAcademicInfoSchema
 >;
+
+export type AdmissionAcademicInfoT = typeof createAdmissionAcademicInfoSchema._type;

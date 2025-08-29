@@ -16,3 +16,5 @@ export const shiftModel = pgTable('shifts', {
 export const createShiftModel = createInsertSchema(shiftModel);
 
 export type Shift = z.infer<typeof createShiftModel>;
+
+export type ShiftT = typeof createShiftModel._type;

@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApplicationForm, deleteApplicationForm, findApplicationFormById, findApplicationFormsByAdmissionId, updateApplicationForm } from "@/lib/services/application-form.service";
 import { ApplicationForm, AdmissionGeneralInfo } from "@/db/schema";
 import { ApplicationFormDto } from "@/types/admissions";
-import { generateApplicationFormToken, setApplicationFormCookies } from "@/lib/services/auth";
+import { generateApplicationFormToken, setApplicationFormCookies } from "@/lib/services/auth.service";
 
 async function tmp(applicationForm: ApplicationFormDto) {
     try {
 
-        let response: NextResponse<unknown> | undefined;        
+        let response: NextResponse<unknown> | undefined;
         const token = generateApplicationFormToken(applicationForm!);
         response = setApplicationFormCookies(token);
         return NextResponse.json({ applicationForm }, response);
-        
+
 
     } catch (error) {
         console.error("Error during adm-create-login:", error);
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { form, generalInfo } = body;
-console.log(body);
+        console.log(body);
         if (!form || !generalInfo) {
             return NextResponse.json(
                 { message: "Form and general info are required" },
@@ -31,7 +31,7 @@ console.log(body);
         }
 
         const result = await createApplicationForm(form as ApplicationForm, generalInfo as AdmissionGeneralInfo);
-        
+
         if (!result.applicationForm) {
             return NextResponse.json(
                 { message: result.message },
@@ -39,7 +39,7 @@ console.log(body);
             );
         }
 
-        let response: NextResponse<unknown> | undefined;        
+        let response: NextResponse<unknown> | undefined;
         const token = generateApplicationFormToken(result.applicationForm as ApplicationFormDto);
         response = setApplicationFormCookies(token);
 

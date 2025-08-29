@@ -13,4 +13,7 @@ export const regulationTypeModel = pgTable('regulation_types', {
 });
 
 export const createRegulationTypeModel = createInsertSchema(regulationTypeModel);
+
 export type RegulationType = z.infer<typeof createRegulationTypeModel>; 
+
+export type RegulationTypeT = typeof createRegulationTypeModel._type;

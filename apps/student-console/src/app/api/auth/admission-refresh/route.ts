@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { generateTokens, verifyApplicationForm, setAuthCookies, setApplicationFormCookies, generateApplicationFormToken } from '@/lib/services/auth';
+import { generateTokens, verifyApplicationForm, setAuthCookies, setApplicationFormCookies, generateApplicationFormToken } from '@/lib/services/auth.service';
 import { Student } from '@/types/academics/student';
 import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
 import { ApplicationForm } from '@/db/schema';

@@ -32,3 +32,5 @@ export const academicIdentifierModel = pgTable("academic_identifiers", {
 export const createAcademicIdentifierSchema = createInsertSchema(academicIdentifierModel);
 
 export type AcademicIdentifier = z.infer<typeof createAcademicIdentifierSchema>;
+
+export type AcademicIdentifierT = typeof createAcademicIdentifierSchema._type;

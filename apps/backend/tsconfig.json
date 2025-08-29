@@ -22,6 +22,7 @@
       //   "@/db/*": ["./src/db/*"], // Explicit path for @/db
       //   "@/*": ["./src/*"] // General path for other imports
       "@repo/db/*": ["../../packages/db/src/*"],
+      "@repo/utils/*": ["../../packages/utils/src/*"],
       "@/*": ["./src/*", "../../packages/db/src/*"]
     }
   },

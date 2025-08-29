@@ -3,7 +3,8 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const countryModel = pgTable("countries", {
-    id: serial().primaryKey(),
+    id: serial().primaryKey(),  
+    legacyCountryId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),
@@ -14,3 +15,5 @@ export const countryModel = pgTable("countries", {
 export const createCountrySchema = createInsertSchema(countryModel);
 
 export type Country = z.infer<typeof createCountrySchema>;
+
+export type CountryT = typeof createCountrySchema._type;

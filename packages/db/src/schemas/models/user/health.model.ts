@@ -36,3 +36,5 @@ export const healthRelations = relations(healthModel, ({ one }) => ({
 export const createHealthSchema = createInsertSchema(healthModel);
 
 export type Health = z.infer<typeof createHealthSchema>;
+
+export type HealthT = typeof createHealthSchema._type;

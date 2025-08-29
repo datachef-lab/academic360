@@ -45,3 +45,5 @@ export const batchRelations = relations(batchModel, ({ one }) => ({
 export const createBatchSchema = createInsertSchema(batchModel);
 
 export type Batch = z.infer<typeof createBatchSchema>;
+
+export type BatchT = typeof createBatchSchema._type;

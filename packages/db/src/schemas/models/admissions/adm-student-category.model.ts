@@ -22,3 +22,5 @@ export const studentCategoryModel = pgTable("student_category", {
 export const createStudentCategorySchema = createInsertSchema(studentCategoryModel);
 
 export type StudentCategory = z.infer<typeof createStudentCategorySchema>;
+
+export type StudentCategoryT = typeof createStudentCategorySchema._type;

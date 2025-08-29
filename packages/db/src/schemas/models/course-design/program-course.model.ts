@@ -31,3 +31,5 @@ export const insertProgramCourseSchema = createInsertSchema(programCourseModel);
 export const selectProgramCourseSchema = createSelectSchema(programCourseModel);
 export type ProgramCourse = z.infer<typeof selectProgramCourseSchema>;
 export type NewProgramCourse = z.infer<typeof insertProgramCourseSchema>;
+
+export type ProgramCourseT = typeof insertProgramCourseSchema._type;

@@ -22,3 +22,5 @@ export const marksheetPaperComponentMappingModel = pgTable("marksheet_paper_comp
 export const createMarksheetPaperComponentMappingSchema = createInsertSchema(marksheetPaperComponentMappingModel);
 
 export type MarksheetPaperComponentMapping = z.infer<typeof createMarksheetPaperComponentMappingSchema>;
+
+export type MarksheetPaperComponentMappingT = typeof createMarksheetPaperComponentMappingSchema._type;

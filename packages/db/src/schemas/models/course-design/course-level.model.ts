@@ -13,4 +13,7 @@ export const courseLevelModel = pgTable('course_levels', {
 });
 
 export const createCourseLevelModel = createInsertSchema(courseLevelModel);
+
 export type CourseLevel = z.infer<typeof createCourseLevelModel>;
+
+export type CourseLevelT = typeof createCourseLevelModel._type;

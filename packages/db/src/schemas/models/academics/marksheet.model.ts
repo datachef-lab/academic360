@@ -44,3 +44,5 @@ export const marksheetModel = pgTable("marksheets", {
 export const createMarksheetModel = createInsertSchema(marksheetModel);
 
 export type Marksheet = z.infer<typeof createMarksheetModel>;
+
+export type MarksheetT = typeof createMarksheetModel._type;

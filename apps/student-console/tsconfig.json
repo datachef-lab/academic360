@@ -7,8 +7,9 @@
     "strict": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "preserveSymlinks": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -19,8 +20,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*", "../../packages/db/src/*"],
       "@repo/db/*": ["../../packages/db/src/*"],
+      "@repo/utils/*": ["../../packages/utils/src/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"]
     }
   },
@@ -29,7 +31,8 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/app/(console)/settings/masters/board-universities"
+    "src/app/(console)/settings/masters/board-universities",
+    "../../packages/db/src/**/*"
   ],
   "exclude": ["node_modules"]
 }

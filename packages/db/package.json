@@ -1,11 +1,48 @@
 {
     "name": "@repo/db",
     "version": "1.0.0",
-    "description": "",
-    "exports": "./src/**",
+    "description": "Database schemas, models, DTOs, and types for Academic360",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./schemas": {
+            "types": "./dist/schemas/index.d.ts",
+            "import": "./dist/schemas/index.js"
+        },
+        "./dtos": {
+            "types": "./dist/dtos/index.d.ts",
+            "import": "./dist/dtos/index.js"
+        },
+        "./dtos/user": {
+            "types": "./dist/dtos/user/index.d.ts",
+            "import": "./dist/dtos/user/index.js"
+        },
+        "./dtos/admissions": {
+            "types": "./dist/dtos/admissions/index.d.ts",
+            "import": "./dist/dtos/admissions/index.js"
+        },
+        "./dtos/course-design": {
+            "types": "./dist/dtos/course-design/index.d.ts",
+            "import": "./dist/dtos/course-design/index.js"
+        },
+        "./dtos/resources": {
+            "types": "./dist/dtos/resources/index.d.ts",
+            "import": "./dist/dtos/resources/index.js"
+        },
+        "./enums": {
+            "types": "./dist/schemas/enums/index.d.ts",
+            "import": "./dist/schemas/enums/index.js"
+        }
+    },
     "type": "module",
     "scripts": {
         "clean": "rimraf dist",
+        "build": "tsc && tsc-alias",
+        "dev": "tsc --watch",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [

@@ -20,3 +20,5 @@ export const noticeAttachmentModel = pgTable("notice_attachments", {
 export const createNoticeAttachmentSchema = createInsertSchema(noticeAttachmentModel);
 
 export type NoticeAttachment = z.infer<typeof createNoticeAttachmentSchema>;
+
+export type NoticeAttachmentT = typeof createNoticeAttachmentSchema._type;

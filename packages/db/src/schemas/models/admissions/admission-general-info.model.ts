@@ -34,3 +34,5 @@ export const admissionGeneralInfoModel = pgTable("admission_general_info", {
 export const createAdmissionGeneralInfoSchema = createInsertSchema(admissionGeneralInfoModel);
 
 export type AdmissionGeneralInfo = z.infer<typeof createAdmissionGeneralInfoSchema>;
+
+export type AdmissionGeneralInfoT = typeof createAdmissionGeneralInfoSchema._type;

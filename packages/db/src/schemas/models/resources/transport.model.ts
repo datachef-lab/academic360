@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgEnum, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const transportTypeEnum = pgEnum("transport_type", ["BUS", "TRAIN", "METRO", "AUTO", "TAXI", "CYCLE", "WALKING", "OTHER"]);
 
 export const transportModel = pgTable("transport", {
     id: serial().primaryKey(),
+    legacyTransportId: integer(),
     routeName: varchar({ length: 255 }),
     mode: transportTypeEnum().notNull().default("OTHER"),
     vehicleNumber: varchar({ length: 255 }),
@@ -18,3 +19,5 @@ export const transportModel = pgTable("transport", {
 export const createTransportSchema = createInsertSchema(transportModel);
 
 export type Transport = z.infer<typeof createTransportSchema>;
+
+export type TransportT = typeof createTransportSchema._type;

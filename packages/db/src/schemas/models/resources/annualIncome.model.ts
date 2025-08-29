@@ -14,3 +14,5 @@ export const annualIncomeModel = pgTable("annual_incomes", {
 export const createAnnualIncomeSchema = createInsertSchema(annualIncomeModel);
 
 export type AnnualIncome = z.infer<typeof createAnnualIncomeSchema>;
+
+export type AnnualIncomeT = typeof createAnnualIncomeSchema._type;

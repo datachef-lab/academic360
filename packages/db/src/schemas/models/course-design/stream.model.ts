@@ -16,3 +16,5 @@ export const streamModel = pgTable('streams', {
 export const createStreamModel = createInsertSchema(streamModel);
 
 export type Stream = z.infer<typeof createStreamModel>;
+
+export type StreamT = typeof createStreamModel._type;

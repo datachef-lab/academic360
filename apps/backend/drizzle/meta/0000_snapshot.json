@@ -1,5 +1,5 @@
 {
-  "id": "6c7ae791-f10a-472d-ae63-513064de45c4",
+  "id": "246c048a-823e-43ce-b9aa-bb8b262a6a68",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -5285,6 +5285,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_addon_id": {
+          "name": "legacy_addon_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -5421,6 +5427,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_fees_head_id": {
+          "name": "legacy_fees_head_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -5479,6 +5491,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_fees_receipt_type_id": {
+          "name": "legacy_fees_receipt_type_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -5658,6 +5676,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_fees_slab_id": {
+          "name": "legacy_fees_slab_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -6490,6 +6514,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_blood_group_id": {
+          "name": "legacy_blood_group_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "type": {
           "name": "type",
           "type": "varchar(255)",
@@ -6556,6 +6586,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_board_result_status_id": {
+          "name": "legacy_board_result_status_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -6629,6 +6665,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_board_university_id": {
+          "name": "legacy_board_university_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -6748,6 +6790,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_category_id": {
+          "name": "legacy_category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -6833,6 +6881,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_city_id": {
+          "name": "legacy_city_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "state_id": {
           "name": "state_id",
@@ -6941,6 +6995,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_country_id": {
+          "name": "legacy_country_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -7007,6 +7067,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_degree_id": {
+          "name": "legacy_degree_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -7081,6 +7147,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_institution_id": {
+          "name": "legacy_institution_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -7188,6 +7260,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_language_medium_id": {
+          "name": "legacy_language_medium_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -7255,6 +7333,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_nationality_id": {
+          "name": "legacy_nationality_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -7320,6 +7404,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_occupation_id": {
+          "name": "legacy_occupation_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -7388,6 +7478,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_pickup_point_id": {
+          "name": "legacy_pickup_point_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -7426,6 +7522,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_qualification_id": {
+          "name": "legacy_qualification_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -7494,6 +7596,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_religion_id": {
+          "name": "legacy_religion_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -7560,6 +7668,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_state_id": {
+          "name": "legacy_state_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "country_id": {
           "name": "country_id",
@@ -7647,6 +7761,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_transport_id": {
+          "name": "legacy_transport_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "route_name": {
           "name": "route_name",
@@ -7804,6 +7924,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_student_id": {
+          "name": "legacy_student_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "user_id_fk": {
           "name": "user_id_fk",
@@ -8486,6 +8612,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_department_id": {
+          "name": "legacy_department_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(900)",
@@ -8551,6 +8683,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_disability_code_id": {
+          "name": "legacy_disability_code_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "code": {
           "name": "code",

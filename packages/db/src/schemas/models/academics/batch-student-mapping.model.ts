@@ -20,3 +20,5 @@ export const batchStudentMappingModel = pgTable("batch_student_mappings", {
 export const createBatchStudentMappingSchema = createInsertSchema(batchStudentMappingModel);
 
 export type BatchStudentMapping = z.infer<typeof createBatchStudentMappingSchema>;
+
+export type BatchStudentMappingT = typeof createBatchStudentMappingSchema._type;

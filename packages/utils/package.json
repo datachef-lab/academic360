@@ -1,0 +1,19 @@
+{
+    "name": "@repo/utils",
+    "version": "1.0.0",
+    "description": "",
+    "exports": "./src/**",
+    "type": "module",
+    "keywords": [
+        "utils"
+    ],
+    "author": "",
+    "license": "ISC",
+    "packageManager": "pnpm@10.15.0",
+    "dependencies": {
+        "@repo/db": "workspace:*"
+    },
+    "devDependencies": {
+        "tsx": "^4.20.4"
+    }
+}

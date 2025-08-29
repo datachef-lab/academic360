@@ -3,24 +3,23 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Mail,
-  Phone,
-  User,
-  Users,
-  BookText,
-  Award,
-  Clock,
-  GraduationCap,
-} from "lucide-react";
+import { Mail, Phone, User, Users, BookText, Award, Clock, GraduationCap } from "lucide-react";
 import Image from "next/image";
 import { useStudent } from "@/providers/student-provider";
+import { useAuth } from "@/hooks/use-auth";
+import { AcademicIdentifierDto, StudentDto } from "@/dtos/user";
 
 export default function ProfileContent() {
+  const { user } = useAuth();
   const { student, batches } = useStudent();
   const [activeTab, setActiveTab] = useState("basic");
 
   if (!student) return <div className="p-6">Student data not found</div>;
+
+  // Extract nested objects with proper type checking for better IntelliSense
+  const personalDetails = student.personalDetails;
+  const academicIdentifier = student.academicIdentifier;
+  const admissionCourseDetails = student.admissionCourseDetails;
 
   // Helper function to format date
   const formatDate = (date: Date | undefined) => {
@@ -30,6 +29,42 @@ export default function ProfileContent() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Helper function to get student image URL
+  const getStudentImageUrl = (uid?: string) => {
+    if (!uid) return null;
+    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${uid}.jpg`;
+  };
+
+  // Helper function to get student image with fallback
+  const getStudentImage = (uid?: string) => {
+    const imageUrl = getStudentImageUrl(uid);
+
+    if (!imageUrl) {
+      return (
+        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full flex items-center justify-center">
+          <User className="h-14 w-14 text-white" strokeWidth={1.5} />
+        </div>
+      );
+    }
+
+    return (
+      <Image
+        src={imageUrl}
+        alt={`${student.name || "Student"} profile image`}
+        className="h-full w-full object-cover"
+        width={128}
+        height={128}
+        onError={(e) => {
+          // Fallback to default avatar if image fails to load
+          const target = e.target as HTMLImageElement;
+          target.style.display = "none";
+          const fallback = target.nextElementSibling as HTMLElement;
+          if (fallback) fallback.classList.remove("hidden");
+        }}
+      />
+    );
   };
 
   const renderContent = () => {
@@ -51,38 +86,24 @@ export default function ProfileContent() {
                 <p className="font-medium text-lg">{student.name}</p>
               </div>
               <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">
-                  Date of Birth
-                </p>
+                <p className="text-sm font-medium text-amber-600">Date of Birth</p>
                 <p className="font-medium text-lg">
-                  {formatDate(student.dateOfBirth)}
+                  {formatDate(
+                    student.personalDetails?.dateOfBirth ? new Date(student.personalDetails.dateOfBirth) : undefined,
+                  )}
                 </p>
               </div>
               <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
                 <p className="text-sm font-medium text-indigo-600">Gender</p>
-                <p className="font-medium text-lg">
-                  {student.sexId === 1
-                    ? "Male"
-                    : student.sexId === 2
-                    ? "Female"
-                    : "Not Specified"}
-                </p>
+                <p className="font-medium text-lg">{student.personalDetails?.gender || "Not Specified"}</p>
               </div>
               <div className="space-y-1.5 bg-emerald-50 p-4 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-all">
-                <p className="text-sm font-medium text-emerald-600">
-                  Nationality
-                </p>
-                <p className="font-medium text-lg">
-                  {student?.nationalityName?.trim() || "Not Specified"}
-                </p>
+                <p className="text-sm font-medium text-emerald-600">Nationality</p>
+                <p className="font-medium text-lg">{student.personalDetails?.nationality?.name || "Not Specified"}</p>
               </div>
               <div className="space-y-1.5 bg-rose-50 p-4 rounded-lg border border-rose-100 hover:bg-rose-100 transition-all md:col-span-2">
-                <p className="text-sm font-medium text-rose-600">
-                  Aadhar Card Number
-                </p>
-                <p className="font-medium text-lg">
-                  {student.aadharcardno || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-rose-600">Aadhar Card Number</p>
+                <p className="font-medium text-lg">{student.personalDetails?.aadhaarCardNumber || "Not Provided"}</p>
               </div>
             </CardContent>
           </Card>
@@ -100,52 +121,28 @@ export default function ProfileContent() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
               <div className="space-y-1.5 bg-purple-50 p-4 rounded-lg border border-purple-100 hover:bg-purple-100 transition-all">
-                <p className="text-sm font-medium text-purple-600">
-                  Father&apos;s Name
-                </p>
-                <p className="font-medium text-lg">
-                  {student.fatherName || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-purple-600">Father&apos;s Name</p>
+                <p className="font-medium text-lg">{student.familyDetails?.father?.name || "Not Provided"}</p>
               </div>
               <div className="space-y-1.5 bg-blue-50 p-4 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all">
-                <p className="text-sm font-medium text-blue-600">
-                  Father&apos;s Contact
-                </p>
-                <p className="font-medium text-lg">
-                  {student.fatherMobNo || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-blue-600">Father&apos;s Contact</p>
+                <p className="font-medium text-lg">{student.familyDetails?.father?.phone || "Not Provided"}</p>
               </div>
               <div className="space-y-1.5 bg-pink-50 p-4 rounded-lg border border-pink-100 hover:bg-pink-100 transition-all">
-                <p className="text-sm font-medium text-pink-600">
-                  Mother&apos;s Name
-                </p>
-                <p className="font-medium text-lg">
-                  {student.motherName || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-pink-600">Mother&apos;s Name</p>
+                <p className="font-medium text-lg">{student.familyDetails?.mother?.name || "Not Provided"}</p>
               </div>
               <div className="space-y-1.5 bg-rose-50 p-4 rounded-lg border border-rose-100 hover:bg-rose-100 transition-all">
-                <p className="text-sm font-medium text-rose-600">
-                  Mother&apos;s Contact
-                </p>
-                <p className="font-medium text-lg">
-                  {student.motherMobNo || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-rose-600">Mother&apos;s Contact</p>
+                <p className="font-medium text-lg">{student.familyDetails?.mother?.phone || "Not Provided"}</p>
               </div>
               <div className="space-y-1.5 bg-violet-50 p-4 rounded-lg border border-violet-100 hover:bg-violet-100 transition-all">
-                <p className="text-sm font-medium text-violet-600">
-                  Guardian&apos;s Name
-                </p>
-                <p className="font-medium text-lg">
-                  {student.guardianName || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-violet-600">Guardian&apos;s Name</p>
+                <p className="font-medium text-lg">{student.familyDetails?.guardian?.name || "Not Provided"}</p>
               </div>
               <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
-                <p className="text-sm font-medium text-indigo-600">
-                  Guardian&apos;s Contact
-                </p>
-                <p className="font-medium text-lg">
-                  {student.guardianMobNo || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-indigo-600">Guardian&apos;s Contact</p>
+                <p className="font-medium text-lg">{student.familyDetails?.guardian?.phone || "Not Provided"}</p>
               </div>
             </CardContent>
           </Card>
@@ -163,49 +160,42 @@ export default function ProfileContent() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
               <div className="space-y-1.5 bg-emerald-50 p-4 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-all">
-                <p className="text-sm font-medium text-emerald-600">Course</p>
+                <p className="text-sm font-medium text-emerald-600">Programme Course</p>
                 <p className="font-medium text-lg">
-                  {(batches && batches[batches.length - 1]?.coursename) ||
-                    "Not Available"}
+                  {admissionCourseDetails?.programCourse?.course?.name +
+                    " (" +
+                    admissionCourseDetails?.programCourse?.courseType?.shortName +
+                    ")" || "Not Available"}
                 </p>
               </div>
               <div className="space-y-1.5 bg-teal-50 p-4 rounded-lg border border-teal-100 hover:bg-teal-100 transition-all">
                 <p className="text-sm font-medium text-teal-600">Section</p>
-                <p className="font-medium text-lg">
-                  {(batches && batches[batches.length - 1]?.sectionName) ||
-                    "Not Available"}
-                </p>
+                <p className="font-medium text-lg">{academicIdentifier?.section?.name || "Not Available"}</p>
               </div>
               <div className="space-y-1.5 bg-blue-50 p-4 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all">
-                <p className="text-sm font-medium text-blue-600">
-                  Class Roll Number
-                </p>
-                <p className="font-medium text-lg">
-                  {student.rollNumber || "Not Assigned"}
-                </p>
+                <p className="text-sm font-medium text-blue-600">Class Roll Number</p>
+                <p className="font-medium text-lg">{academicIdentifier?.rollNumber || "Not Assigned"}</p>
               </div>
               <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
                 <p className="text-sm font-medium text-indigo-600">UID</p>
-                <p className="font-medium text-lg">
-                  {student.codeNumber || "Not Assigned"}
-                </p>
+                <p className="font-medium text-lg">{student.academicIdentifier?.uid || "Not Assigned"}</p>
               </div>
               <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">
-                  Admission Year
-                </p>
+                <p className="text-sm font-medium text-amber-600">Admission Year</p>
                 <p className="font-medium text-lg">
-                  {student.admissiondate
-                    ? new Date(student.admissiondate).getFullYear()
+                  {admissionCourseDetails?.applicationTimestamp
+                    ? new Date(admissionCourseDetails.applicationTimestamp).getFullYear()
                     : "Not Available"}
                 </p>
               </div>
               <div className="space-y-1.5 bg-orange-50 p-4 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all">
-                <p className="text-sm font-medium text-orange-600">
-                  Admission Date
-                </p>
+                <p className="text-sm font-medium text-orange-600">Admission Date</p>
                 <p className="font-medium text-lg">
-                  {formatDate(student.admissiondate)}
+                  {formatDate(
+                    admissionCourseDetails?.applicationTimestamp
+                      ? new Date(admissionCourseDetails.applicationTimestamp)
+                      : undefined,
+                  )}
                 </p>
               </div>
             </CardContent>
@@ -224,30 +214,22 @@ export default function ProfileContent() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
               <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">
-                  Last Institution Name
-                </p>
+                <p className="text-sm font-medium text-amber-600">Last Institution Name</p>
                 <p className="font-medium text-lg">
-                  {student.lastInstitution || "Not Provided"}
+                  {student.lastAcademicInfo?.lastInstitution?.name || "Not Provided"}
                 </p>
               </div>
               <div className="space-y-1.5 bg-orange-50 p-4 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all">
-                <p className="text-sm font-medium text-orange-600">
-                  Last Board/University
-                </p>
+                <p className="text-sm font-medium text-orange-600">Last Board/University</p>
                 <p className="font-medium text-lg">
-                  {student.lastBoardUniversity
-                    ? `ID: ${student.lastBoardUniversity}`
+                  {student.lastAcademicInfo?.lastBoardUniversity?.name
+                    ? `ID: ${student.lastAcademicInfo?.lastInstitution?.name}`
                     : "Not Provided"}
                 </p>
               </div>
               <div className="space-y-1.5 bg-yellow-50 p-4 rounded-lg border border-yellow-100 hover:bg-yellow-100 transition-all md:col-span-2">
-                <p className="text-sm font-medium text-yellow-600">
-                  Passed Year
-                </p>
-                <p className="font-medium text-lg">
-                  {student.lspassedyr || "Not Provided"}
-                </p>
+                <p className="text-sm font-medium text-yellow-600">Passed Year</p>
+                <p className="font-medium text-lg">{student.lastPassedYear || "Not Provided"}</p>
               </div>
             </CardContent>
           </Card>
@@ -261,14 +243,18 @@ export default function ProfileContent() {
     <div className="p-6 bg-white">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold text-blue-700">Student Profile</h1>
-        {student.leavingdate && (
+        {student.leavingDate && academicIdentifier?.uid && (
           <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 py-1.5 px-3 text-white">
             <Image
-              src="/illustrations/profile/badge.svg"
+              src={getStudentImageUrl(academicIdentifier.uid) || ""}
               alt="Graduate Badge"
               width={16}
               height={16}
               className="mr-2 filter invert"
+              onError={(e) => {
+                // Hide image if it fails to load
+                (e.target as HTMLImageElement).style.display = "none";
+              }}
             />
             Graduated
           </Badge>
@@ -288,32 +274,17 @@ export default function ProfileContent() {
               </div>
               <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16">
                 <div className="w-32 h-32 rounded-full border-4 border-white bg-white shadow-xl flex items-center justify-center overflow-hidden">
-                  {student?.imgFile ? (
-                    <Image
-                      src={`https://74.207.233.48:8443/hrclIRP/studentimages/${student?.imgFile}`}
-                      alt={student?.name || "student-profile-image"}
-                      className="h-full w-full object-cover"
-                      width={128}
-                      height={128}
-                    />
-                  ) : (
-                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full flex items-center justify-center">
-                      <User
-                        className="h-14 w-14 text-white"
-                        strokeWidth={1.5}
-                      />
-                    </div>
-                  )}
+                  {getStudentImage(academicIdentifier?.uid || "")}
+                  {/* Fallback avatar (hidden by default, shown on image error) */}
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full items-center justify-center hidden">
+                    <User className="h-14 w-14 text-white" strokeWidth={1.5} />
+                  </div>
                 </div>
               </div>
             </div>
             <div className="pt-20 pb-6 px-6 text-center">
-              <h2 className="text-2xl font-bold text-gray-800">
-                {student.name}
-              </h2>
-              <p className="text-indigo-600 font-medium">
-                UID: {student.codeNumber}
-              </p>
+              <h2 className="text-2xl font-bold text-gray-800">{student.name}</h2>
+              <p className="text-indigo-600 font-medium">UID: {academicIdentifier?.uid || "Not Available"}</p>
             </div>
           </Card>
 
@@ -325,9 +296,7 @@ export default function ProfileContent() {
               </div>
               <div>
                 <span className="text-xs text-blue-600 font-medium">Email</span>
-                <p className="text-gray-800 font-medium truncate">
-                  {student.institutionalemail || student.email || "N/A"}
-                </p>
+                <p className="text-gray-800 font-medium truncate">{user?.email || "N/A"}</p>
               </div>
             </div>
             <div className="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-4">
@@ -335,12 +304,8 @@ export default function ProfileContent() {
                 <Phone className="h-6 w-6 text-white" />
               </div>
               <div>
-                <span className="text-xs text-green-600 font-medium">
-                  Phone
-                </span>
-                <p className="text-gray-800 font-medium">
-                  {student.phoneMobileNo || student.contactNo || "N/A"}
-                </p>
+                <span className="text-xs text-green-600 font-medium">Phone</span>
+                <p className="text-gray-800 font-medium">{user?.phone || "N/A"}</p>
               </div>
             </div>
             <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 flex items-center gap-4">
@@ -348,11 +313,9 @@ export default function ProfileContent() {
                 <GraduationCap className="h-6 w-6 text-white" />
               </div>
               <div>
-                <span className="text-xs text-purple-600 font-medium">
-                  Framework
-                </span>
+                <span className="text-xs text-purple-600 font-medium">Regulation Type</span>
                 <p className="text-gray-800 font-medium">
-                  {student.coursetype || "N/A"}
+                  {admissionCourseDetails?.programCourse?.regulationType?.name || "N/A"}
                 </p>
               </div>
             </div>
@@ -361,11 +324,11 @@ export default function ProfileContent() {
                 <Clock className="h-6 w-6 text-white" />
               </div>
               <div>
-                <span className="text-xs text-amber-600 font-medium">
-                  Date of Birth
-                </span>
+                <span className="text-xs text-amber-600 font-medium">Date of Birth</span>
                 <p className="text-gray-800 font-medium">
-                  {formatDate(student.dateOfBirth)}
+                  {formatDate(
+                    student.personalDetails?.dateOfBirth ? new Date(student.personalDetails.dateOfBirth) : undefined,
+                  )}
                 </p>
               </div>
             </div>

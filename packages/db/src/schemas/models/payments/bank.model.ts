@@ -18,3 +18,5 @@ export const bankModel = pgTable("banks", {
 export const createBankSchema = createInsertSchema(bankModel);
 
 export type Bank = z.infer<typeof createBankSchema>;
+
+export type BankT = typeof createBankSchema._type;

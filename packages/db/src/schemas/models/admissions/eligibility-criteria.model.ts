@@ -26,3 +26,5 @@ export const eligibilityCriteriaModel = pgTable("eligibility_criteria", {
 export const eligibilityCriteriaSchema = createInsertSchema(eligibilityCriteriaModel);
 
 export type EligibilityCriteria = z.infer<typeof eligibilityCriteriaSchema>;
+
+export type EligibilityCriteriaT = typeof eligibilityCriteriaSchema._type;   

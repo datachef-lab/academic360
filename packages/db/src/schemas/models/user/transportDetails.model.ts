@@ -36,3 +36,5 @@ export const transportDetailsRelations = relations(transportDetailsModel, ({ one
 export const createTransportDetailsSchema = createInsertSchema(transportDetailsModel);
 
 export type TransportDetails = z.infer<typeof createTransportDetailsSchema>;
+
+export type TransportDetailsT = typeof createTransportDetailsSchema._type;

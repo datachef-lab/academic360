@@ -24,3 +24,5 @@ export const feesComponentModel = pgTable("fees_components", {
 export const createFeesComponentSchema = createInsertSchema(feesComponentModel);
 
 export type FeesComponent = z.infer<typeof createFeesComponentSchema>;
+
+export type FeesComponentT = typeof createFeesComponentSchema._type;

@@ -7,6 +7,7 @@ import { countryModel } from "@/schemas/models/resources";
 
 export const stateModel = pgTable("states", {
     id: serial().primaryKey(),
+    legacyStateId: integer(),
     countryId: integer().notNull().references(() => countryModel.id),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
@@ -25,3 +26,5 @@ export const stateRelations = relations(stateModel, ({ one }) => ({
 export const createStateSchema = createInsertSchema(stateModel);
 
 export type State = z.infer<typeof createStateSchema>;
+
+export type StateT = typeof createStateSchema._type;

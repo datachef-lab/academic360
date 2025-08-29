@@ -13,4 +13,7 @@ export const courseTypeModel = pgTable('course_types', {
 });
 
 export const createCourseTypeModel = createInsertSchema(courseTypeModel);
+
 export type CourseType = z.infer<typeof createCourseTypeModel>;
+
+export type CourseTypeT = typeof createCourseTypeModel._type;

@@ -20,3 +20,5 @@ export const feesSlabMappingModel = pgTable("fees_slab_mapping", {
 export const createFeesSlabMappingSchema = createInsertSchema(feesSlabMappingModel);
 
 export type FeesSlabMapping = z.infer<typeof createFeesSlabMappingSchema>;
+
+export type FeesSlabMappingT = typeof createFeesSlabMappingSchema._type;

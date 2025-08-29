@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { generateToken } from "@/utils/generateToken.js";
-import { addUser, findUserByEmail } from "@/features/user/services/user.service.js";
+import { addUser, findUserByEmail, userResponseFormat } from "@/features/user/services/user.service.js";
 import { userTypeEnum } from "@/features/user/models/helper.js";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
@@ -35,13 +35,19 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
-        console.log(email, password);
+        console.log("🔑 Login attempt for:", email);
+
+        console.log("📋 Looking up user by email...");
         const foundUser = await findUserByEmail(email);
+        console.log("📋 User lookup result:", foundUser ? "Found" : "Not found");
+
         if (!foundUser) {
+            console.log("❌ User not found, returning 401");
             res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
             return;
         }
 
+        console.log("Checking if user is disabled?");
         if (foundUser.disabled) {
             res.status(403).json(new ApiError(403, "Your account is disabled. Please contact support."));
             return;
@@ -49,6 +55,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const isPasswordMatch = await bcrypt.compare(password, foundUser.password as string);
 
+        console.log("Checking if password is correct?");
         if (!isPasswordMatch) {
             res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
             return;
@@ -58,6 +65,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const refreshToken = generateToken({ id: foundUser.id as number, type: foundUser.type }, process.env.REFRESH_TOKEN_SECRET!, process.env.REFRESH_TOKEN_EXPIRY! as StringValue);
 
+        console.log("Creating secure cookie with refresh token");
         // Create secure cookie with refresh token
         res.cookie("jwt", refreshToken, {
             httpOnly: true, // Accessible only by the web server
@@ -66,9 +74,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
             maxAge: 1000 * 60 * 60 * 24, // 1 day
         });
 
+
         // Log cookies before sending response
         console.log("Cookies set in response:", res.getHeaders()["set-cookie"]);
 
+        console.log("Sending response");
         res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Login successful"));
 
     } catch (error) {
@@ -124,13 +134,20 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
                     return;
                 }
 
-                const [foundUser] = await db.select().from(userModel).where(eq(userModel.id, user.id));
-                if (!foundUser) {
+                const [rawUser] = await db.select().from(userModel).where(eq(userModel.id, user.id));
+                if (!rawUser) {
                     res.status(401).json(new ApiError(404, "Unauthorized"));
                     return;
                 }
 
-                const accessToken = generateToken({ id: foundUser.id, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
+                // Format user with payload (student data)
+                const foundUser = await userResponseFormat(rawUser);
+                if (!foundUser) {
+                    res.status(401).json(new ApiError(404, "User formatting failed"));
+                    return;
+                }
+
+                const accessToken = generateToken({ id: foundUser.id!, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
 
                 res.status(200).json(new ApiResponse(200, "SUCCESS", { accessToken, user: foundUser }, "Token refreshed"));
             });

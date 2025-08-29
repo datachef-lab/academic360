@@ -70,3 +70,5 @@ export const personalDetailsRelations = relations(personalDetailsModel, ({ one }
 export const createPersonalDetailsSchema = createInsertSchema(personalDetailsModel);
 
 export type PersonalDetails = z.infer<typeof createPersonalDetailsSchema>;
+
+export type PersonalDetailsT = typeof createPersonalDetailsSchema._type;

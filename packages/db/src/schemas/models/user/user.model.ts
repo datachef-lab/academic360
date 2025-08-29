@@ -21,3 +21,5 @@ export const userModel = pgTable('users', {
 export const createUserSchema = createInsertSchema(userModel);
 
 export type User = z.infer<typeof createUserSchema>;
+
+export type UserT = typeof createUserSchema._type;

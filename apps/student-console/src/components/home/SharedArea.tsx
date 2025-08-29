@@ -13,7 +13,7 @@ export default function SharedArea({ children }: SharedAreaProps) {
 
   if (!user) return null;
 
-  if (loading || !student || !accessControl) {
+  if (loading) {
     return (
       <LoadingIndicator
         message="Loading your dashboard..."

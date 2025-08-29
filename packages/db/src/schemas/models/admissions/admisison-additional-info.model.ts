@@ -48,3 +48,5 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
 export const createAdmissionAdditionalInfoSchema = createInsertSchema(admissionAdditionalInfoModel);
 
 export type AdmissionAdditionalInfo = z.infer<typeof createAdmissionAdditionalInfoSchema>;
+
+export type AdmissionAdditionalInfoT = typeof createAdmissionAdditionalInfoSchema._type;

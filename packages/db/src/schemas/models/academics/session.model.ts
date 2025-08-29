@@ -21,3 +21,5 @@ export const sessionModel = pgTable("sessions", {
 const createSessionSchema = createInsertSchema(sessionModel);
 
 export type Session = z.infer<typeof createSessionSchema>;
+
+export type SessionT = typeof createSessionSchema._type;

@@ -39,3 +39,5 @@ export const personRelations = relations(personModel, ({ one }) => ({
 export const createPersonSchema = createInsertSchema(personModel);
 
 export type Person = z.infer<typeof createPersonSchema>;
+
+export type PersonT = typeof createPersonSchema._type;

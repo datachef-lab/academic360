@@ -6,6 +6,7 @@ import { addonModel } from "@/schemas/models/fees";
 
 export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
     id: serial().primaryKey(),
+    legacyFeesReceiptTypeId: integer(),
     name: varchar({ length: 255 }).notNull(),
     chk: varchar({ length: 255 }),
     chkMisc: varchar({ length: 255 }),
@@ -22,3 +23,5 @@ export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
 export const createFeesReceiptTypeSchema = createInsertSchema(feesReceiptTypeModel);
 
 export type FeesReceiptType = z.infer<typeof createFeesReceiptTypeSchema>;
+
+export type FeesReceiptTypeT = typeof createFeesReceiptTypeSchema._type;

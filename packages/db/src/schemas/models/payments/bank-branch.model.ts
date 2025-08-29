@@ -17,3 +17,5 @@ export const bankBranchModel = pgTable("bank_branches", {
 export const createBankBranchSchema = createInsertSchema(bankBranchModel);
 
 export type BankBranch = z.infer<typeof createBankBranchSchema>;
+
+export type BankBranchT = typeof createBankBranchSchema._type;

@@ -1,16 +1,7 @@
 "use client";
 
 import * as React from "react";
-import {
-  BookOpen,
-  House,
-  IndianRupee,
-  Library,
-  NotebookPen,
-  ScrollText,
-  Settings2,
-  ListChecks,
-} from "lucide-react";
+import { BookOpen, House, IndianRupee, Library, NotebookPen, ScrollText, Settings2, ListChecks } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/sidebar/nav-main";
@@ -48,6 +39,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard/attendance",
       icon: ListChecks,
       isActive: pathname === "/dashboard/attendance",
+    },
+    {
+      title: "Subject Selection",
+      url: "/dashboard/subject-selection",
+      icon: BookOpen,
+      isActive: pathname === "/dashboard/subject-selection",
     },
     accessControl?.access_exams && {
       title: "Exams",
@@ -92,23 +89,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              size="xl"
-              className="cursor-default hover:bg-transparent"
-            >
+            <SidebarMenuButton size="xl" className="cursor-default hover:bg-transparent">
               <div className="flex aspect-square w-8 h-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <Image
                   width={32}
                   height={32}
-                  src={"/besc-logo.jpeg"}
-                  alt={"The Bhawanipur Education Society College Logo"}
+                  src={"/logo.jpeg"}
+                  alt={"BESC Logo"}
                   className="w-8 h-8 rounded-lg object-cover"
                 />
               </div>
               <div className="grid flex-1 text-left text-sm">
-                <span className="truncate font-semibold text-wrap">
-                  The Bhawanipur Education Society College
-                </span>
+                <span className="truncate font-semibold text-wrap">BESC | Student Console</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

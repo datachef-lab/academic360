@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateApplicationFormToken, generateTokens, setApplicationFormCookies, setAuthCookies } from '@/lib/services/auth';
+import { generateApplicationFormToken, generateTokens, setApplicationFormCookies, setAuthCookies } from '@/lib/services/auth.service';
 import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
 import { findStudentByApplicationId } from '@/lib/services/student.service';
 import { findByLoginIdAndPassword } from '@/lib/services/adm-general-info.service';
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
             console.log("Login successful for applicant:", applicationForm?.generalInfo!.firstName);
 
             let response: NextResponse<unknown> | undefined;
-            
+
             if (applicationForm?.formStatus === "APPROVED") {
                 const user = await findStudentByApplicationId(applicationForm.id!);
                 if (user) {

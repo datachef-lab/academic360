@@ -21,3 +21,5 @@ export const sportsInfoModel = pgTable("sports_info", {
 export const createSportsInfoSchema = createInsertSchema(sportsInfoModel);
 
 export type SportsInfo = z.infer<typeof createSportsInfoSchema>;
+
+export type SportsInfoT = typeof createSportsInfoSchema._type;

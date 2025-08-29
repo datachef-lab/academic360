@@ -15,3 +15,5 @@ export const meritListModel = pgTable("merit_lists", {
 export const createMeritListSchema = createInsertSchema(meritListModel);
 
 export type MeritList = z.infer<typeof createMeritListSchema>;
+
+export type MeritListT = typeof createMeritListSchema._type;

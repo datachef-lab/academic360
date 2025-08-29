@@ -4,6 +4,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 export const languageMediumModel = pgTable("language_medium", {
     id: serial().primaryKey(),
+    legacyLanguageMediumId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
     disabled: boolean().default(false),
@@ -14,3 +15,5 @@ export const languageMediumModel = pgTable("language_medium", {
 export const createLanguageSchema = createInsertSchema(languageMediumModel);
 
 export type LanguageMedium = z.infer<typeof createLanguageSchema>;
+
+export type LanguageMediumT = typeof createLanguageSchema._type;

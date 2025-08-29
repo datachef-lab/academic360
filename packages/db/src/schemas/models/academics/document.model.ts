@@ -15,3 +15,5 @@ export const documentModel = pgTable("documents", {
 export const createDocumentModel = createInsertSchema(documentModel);
 
 export type Document = z.infer<typeof createDocumentModel>;
+
+export type DocumentT = typeof createDocumentModel._type;

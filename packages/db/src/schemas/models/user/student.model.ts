@@ -10,6 +10,7 @@ import { applicationFormModel } from "@/schemas/models/admissions";
 
 export const studentModel = pgTable("students", {
     id: serial().primaryKey(),
+    legacyStudentId: integer(),
     userId: integer("user_id_fk").notNull().references(() => userModel.id),
     applicationId: integer("application_id_fk")
         .references(() => applicationFormModel.id),
@@ -40,4 +41,7 @@ export const studentRelations = relations(studentModel, ({ one }) => ({
 
 export const createStudentSchema = createInsertSchema(studentModel);
 
-export type Student = z.infer<typeof createStudentSchema>;
+export type StudentT = typeof createStudentSchema._type;
+// z.infer<typeof createStudentSchema>;
+
+

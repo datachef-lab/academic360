@@ -6,6 +6,7 @@ import { degreeLevelTypeEnum } from "@/schemas/enums";
 
 export const degreeModel = pgTable("degree", {
     id: serial().primaryKey(),
+    legacyDegreeId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     level: degreeLevelTypeEnum(),
     sequence: integer().unique(),
@@ -17,3 +18,5 @@ export const degreeModel = pgTable("degree", {
 export const createDegreeSchema = createInsertSchema(degreeModel);
 
 export type Degree = z.infer<typeof createDegreeSchema>;
+
+export type DegreeT = typeof createDegreeSchema._type;

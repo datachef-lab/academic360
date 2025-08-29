@@ -29,3 +29,5 @@ export const paymentModel = pgTable("payments", {
 export const createPaymentSchema = createInsertSchema(paymentModel);
 
 export type Payment = z.infer<typeof createPaymentSchema>;
+
+export type PaymentT = typeof createPaymentSchema._type;

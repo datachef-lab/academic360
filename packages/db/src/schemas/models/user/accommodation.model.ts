@@ -38,4 +38,7 @@ export const updateAccommodationSchema = createAccommodationSchema.omit({
 });
 
 export type Accommodation = z.infer<typeof createAccommodationSchema>;
+
 export type AccommodationUpdate = z.infer<typeof updateAccommodationSchema>;
+
+export type AccommodationT = typeof createAccommodationSchema._type;

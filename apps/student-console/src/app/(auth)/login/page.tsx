@@ -8,10 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { axiosInstance } from "@/lib/utils";
+import { doLogin } from "@/lib/services/auth.service";
+import { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {
-  const [uid, setUid] = useState("");
-  const [password, setPassword] = useState("");
+  const [credentials, setCredentials] = useState<{ email: string; password: string }>({
+    email: "",
+    password: "",
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -28,22 +33,20 @@ export default function SignInPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ uid, password }),
-      });
+      const response = await doLogin(credentials.email, credentials.password);
 
-      const data = await response.json();
+      if (response.httpStatusCode === 200) {
+        const payload = response.payload as { accessToken: string; user: UserDto; redirectTo?: string };
+        console.log("Login payload:", payload);
+        login(payload.accessToken, payload.user);
 
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed");
+        // Add a small delay to ensure auth state is updated before redirect
+        setTimeout(() => {
+          router.push(payload.redirectTo || "/dashboard");
+        }, 100);
+      } else {
+        throw new Error(response.message || "Login failed");
       }
-
-      login(data.accessToken, data.user);
-      router.push(data.redirectTo || "/dashboard");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Login failed");
     } finally {
@@ -71,12 +74,7 @@ export default function SignInPage() {
         <div className="w-full bg-white p-8 md:w-1/2 md:p-12">
           <div className="mb-8 flex items-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-600 text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-7 w-7"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
                 <path d="M11.7 2.805a.75.75 0 01.6 0A60.65 60.65 0 0122.83 8.72a.75.75 0 01-.231 1.337 49.949 49.949 0 00-9.902 3.912l-.003.002-.34.18a.75.75 0 01-.707 0A50.009 50.009 0 007.5 12.174v-.224c0-.131.067-.248.172-.311a54.614 54.614 0 014.653-2.52.75.75 0 00-.65-1.352 56.129 56.129 0 00-4.78 2.589 1.858 1.858 0 00-.859 1.228 49.803 49.803 0 00-4.634-1.527.75.75 0 01-.231-1.337A60.653 60.653 0 0111.7 2.805z" />
                 <path d="M13.06 15.473a48.45 48.45 0 017.666-3.282c.134 1.414.22 2.843.255 4.285a.75.75 0 01-.46.71 47.878 47.878 0 00-8.105 4.342.75.75 0 01-.832 0 47.877 47.877 0 00-8.104-4.342.75.75 0 01-.461-.71c.035-1.442.121-2.87.255-4.286A48.4 48.4 0 016 13.18v1.27a1.5 1.5 0 00-.14 2.508c-.09.38-.222.753-.397 1.11.452.213.901.434 1.346.661a6.729 6.729 0 00.551-1.608 1.5 1.5 0 00.14-2.67v-.645a48.549 48.549 0 013.44 1.668 2.25 2.25 0 002.12 0z" />
                 <path d="M4.462 19.462c.42-.419.753-.89 1-1.394.453.213.902.434 1.347.661a6.743 6.743 0 01-1.286 1.794.75.75 0 11-1.06-1.06z" />
@@ -91,12 +89,8 @@ export default function SignInPage() {
           </div>
 
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-              Sign in to your account
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Enter your credentials below to access the portal
-            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+            <p className="mt-2 text-sm text-gray-600">Enter your credentials below to access the portal</p>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-6">
@@ -117,20 +111,12 @@ export default function SignInPage() {
 
             <div className="space-y-4">
               <div>
-                <Label
-                  htmlFor="uid"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <Label htmlFor="uid" className="block text-sm font-medium text-gray-700">
                   UID
                 </Label>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
@@ -141,8 +127,8 @@ export default function SignInPage() {
                   <Input
                     id="uid"
                     placeholder="Enter your UID"
-                    value={uid}
-                    onChange={(e) => setUid(e.target.value)}
+                    value={credentials.email}
+                    onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
                     className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -151,10 +137,7 @@ export default function SignInPage() {
 
               <div>
                 <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor="password"
-                    className="block text-sm font-medium text-gray-700"
-                  >
+                  <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
                     Password
                   </Label>
                   <Link
@@ -166,12 +149,7 @@ export default function SignInPage() {
                 </div>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path
                         fillRule="evenodd"
                         d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
@@ -183,8 +161,8 @@ export default function SignInPage() {
                     id="password"
                     type="password"
                     placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    value={credentials.password}
+                    onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
                     className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     required
                   />
@@ -227,10 +205,7 @@ export default function SignInPage() {
 
           <p className="mt-4 text-center text-sm text-gray-600">
             Don&apos;t have an account?{" "}
-            <Link
-              href="/contact"
-              className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-            >
+            <Link href="/contact" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
               Contact administration
             </Link>
           </p>
@@ -239,11 +214,7 @@ export default function SignInPage() {
         {/* Right section */}
         <div className="hidden w-1/2 bg-indigo-600 md:block">
           <div className="relative h-full w-full">
-            <img
-              src="/hero-image.jpeg"
-              alt="Descriptive alt text"
-              className="object-cover w-full h-full"
-            />
+            <img src="/hero-image.jpeg" alt="Descriptive alt text" className="object-cover w-full h-full" />
           </div>
         </div>
       </motion.div>

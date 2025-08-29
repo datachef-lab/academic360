@@ -21,3 +21,5 @@ export const applicationFormModel = pgTable("application_forms", {
 export const createApplicationFormSchema = createInsertSchema(applicationFormModel);
 
 export type ApplicationForm = z.infer<typeof createApplicationFormSchema>;
+
+export type ApplicationFormT = typeof createApplicationFormSchema._type;

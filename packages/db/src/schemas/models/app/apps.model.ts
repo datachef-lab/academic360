@@ -18,3 +18,5 @@ export const appsModel = pgTable("apps", {
 export const createAppsSchema = createInsertSchema(appsModel);
 
 export type Apps = z.infer<typeof createAppsSchema>;
+
+export type AppsT = typeof createAppsSchema._type;   

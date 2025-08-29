@@ -45,4 +45,7 @@ export const updateAddressSchema = createAddressSchema.omit({
 });
 
 export type Address = z.infer<typeof createAddressSchema>;
+
 export type AddressUpdate = z.infer<typeof updateAddressSchema>;
+
+export type AddressT = typeof createAddressSchema._type;

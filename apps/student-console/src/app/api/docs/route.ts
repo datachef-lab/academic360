@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 import { scanDocs, getFile } from '@/lib/services/docs.service';
-import { verifyAccessToken } from '@/lib/services/auth';
+import { verifyAccessToken } from '@/lib/services/auth.service';
 
 // Utility function to verify if a path is within allowed directories
 function isPathSafe(filePath: string): boolean {

@@ -54,4 +54,7 @@ export const paperModel = pgTable("papers", {
 });
 
 export const createPaperModel = createInsertSchema(paperModel);
+
 export type Paper = z.infer<typeof createPaperModel>;
+
+export type PaperT = typeof createPaperModel._type;

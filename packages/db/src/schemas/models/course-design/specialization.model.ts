@@ -15,3 +15,5 @@ export const specializationModel = pgTable("specializations", {
 export const createSpecializationSchema = createInsertSchema(specializationModel);
 
 export type Specialization = z.infer<typeof createSpecializationSchema>;
+
+export type SpecializationT = typeof createSpecializationSchema._type;

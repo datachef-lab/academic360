@@ -19,3 +19,5 @@ export const topicModel = pgTable("topics", {
 export const createTopicSchema = createInsertSchema(topicModel);
 
 export type Topic = z.infer<typeof createTopicSchema>;
+
+export type TopicT = typeof createTopicSchema._type;

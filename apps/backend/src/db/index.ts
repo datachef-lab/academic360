@@ -38,15 +38,15 @@ export const connectToDatabase = async () => {
         createDefaultExamComponents();
         initializeClasses();
         loadDefaultSettings();
-        loadDegree();
+        // loadDegree();
         // loadShifts()
         // loadCategory();
         // loadReligions();
-        loadLanguages();
-        loadBloodGroups();
-        loadOccupations();
-        loadQualifications();
-        loadNationalities();
+        // loadLanguages();
+        // loadBloodGroups();
+        // loadOccupations();
+        // loadQualifications();
+        // loadNationalities();
         loadAffiliation()
         loadCourseLevel()
         loadCourseType()

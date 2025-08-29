@@ -18,3 +18,5 @@ export const classModel = pgTable('classes', {
 export const createClassModel = createInsertSchema(classModel);
 
 export type Class = z.infer<typeof createClassModel>;
+
+export type ClassT = typeof createClassModel._type;

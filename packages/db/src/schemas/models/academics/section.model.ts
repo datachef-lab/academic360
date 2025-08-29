@@ -14,3 +14,5 @@ export const sectionModel =  pgTable('sections', {
 export const createSectionModel = createInsertSchema(sectionModel);
 
 export type Section = z.infer<typeof createSectionModel>;
+
+export type SectionT = typeof createSectionModel._type;

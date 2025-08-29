@@ -33,3 +33,5 @@ export const studentFeesMappingModel = pgTable("student_fees_mappings", {
 export const createStudentFeesMappingSchema = createInsertSchema(studentFeesMappingModel);
 
 export type StudentFeesMapping = z.infer<typeof createStudentFeesMappingSchema>;
+
+export type StudentFeesMappingT = typeof createStudentFeesMappingSchema._type;

@@ -17,3 +17,5 @@ export const otpModel = pgTable("otps", {
 export const createOtpSchema = createInsertSchema(otpModel);
 
 export type Otp = z.infer<typeof createOtpSchema>;
+
+export type OtpT = typeof createOtpSchema._type;

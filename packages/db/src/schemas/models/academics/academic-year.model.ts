@@ -13,3 +13,5 @@ export const academicYearModel = pgTable("academic_years", {
 export const createAcademicYearSchema = createInsertSchema(academicYearModel);
 
 export type AcademicYear = z.infer<typeof createAcademicYearSchema>;
+
+export type AcademicYearT = typeof createAcademicYearSchema._type;

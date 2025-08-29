@@ -17,3 +17,5 @@ export const settingsModel = pgTable("settings", {
 export const createSettingsSchema = createInsertSchema(settingsModel);
 
 export type Settings = z.infer<typeof createSettingsSchema>;
+
+export type SettingsT = typeof createSettingsSchema._type;

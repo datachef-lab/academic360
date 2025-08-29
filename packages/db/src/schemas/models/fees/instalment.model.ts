@@ -22,3 +22,5 @@ export const instalmentModel = pgTable("instalments", {
 export const createInstalmentSchema = createInsertSchema(instalmentModel);
 
 export type Instalment = z.infer<typeof createInstalmentSchema>; 
+
+export type InstalmentT = typeof createInstalmentSchema._type;

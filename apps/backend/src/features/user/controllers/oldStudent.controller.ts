@@ -106,40 +106,41 @@ type DbType = NodePgDatabase<Record<string, never>> & {
     $client: Pool;
 }
 
-export async function addOccupation(name: string, db: DbType, legacyOccupationId?: number) {
+export async function addOccupation(name: string, db: DbType, legacyOccupationId: number) {
     const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim().toUpperCase()));
     if (existingOccupation) {
         return existingOccupation;
     }
     const [newOccupation] = await db.insert(occupationModel).values({
         name: name.trim().toUpperCase(),
-        legacyOccupationId
+        legacyOccupationId: legacyOccupationId,
+
     }).returning();
 
     return newOccupation;
 }
 
-export async function addBloodGroup(type: string, db: DbType) {
+export async function addBloodGroup(type: string, db: DbType, legacyBloodGroupId: number) {
     const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim().toUpperCase()));
     if (existingBloodGroup) {
         return existingBloodGroup;
     }
-    const [newBloodGroup] = await db.insert(bloodGroupModel).values({ type: type.trim().toUpperCase() }).returning();
+    const [newBloodGroup] = await db.insert(bloodGroupModel).values({ legacyBloodGroupId: legacyBloodGroupId, type: type.trim().toUpperCase() }).returning();
 
     return newBloodGroup;
 }
 
-export async function addNationality(name: string, code: number | undefined | null, db: DbType) {
+export async function addNationality(name: string, code: number | undefined | null, db: DbType, legacyNationalityId?: number) {
     const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim().toUpperCase()));
     if (existingNationality) {
         return existingNationality;
     }
-    const [newNationality] = await db.insert(nationalityModel).values({ name: name.trim().toUpperCase(), code }).returning();
+    const [newNationality] = await db.insert(nationalityModel).values({ legacyNationalityId: legacyNationalityId, name: name.trim().toUpperCase(), code }).returning();
 
     return newNationality;
 }
 
-export async function addCategory(name: string, code: string, documentRequired: boolean | undefined, db: DbType) {
+export async function addCategory(name: string, code: string, documentRequired: boolean | undefined, db: DbType, legacyCategoryId: number) {
     // Check if category exists by name OR code
     const [existingCategory] = await db.select().from(categoryModel).where(
         or(
@@ -150,37 +151,37 @@ export async function addCategory(name: string, code: string, documentRequired: 
     if (existingCategory) {
         return existingCategory;
     }
-    const [newCategory] = await db.insert(categoryModel).values({ name: name.trim().toUpperCase(), code, documentRequired }).returning();
+    const [newCategory] = await db.insert(categoryModel).values({ legacyCategoryId: legacyCategoryId, name: name.trim().toUpperCase(), code, documentRequired }).returning();
 
     return newCategory;
 }
 
-export async function addReligion(name: string, db: DbType) {
+export async function addReligion(name: string, db: DbType, legacyReligionId: number) {
     const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim().toUpperCase()));
     if (existingReligion) {
         return existingReligion;
     }
-    const [newReligion] = await db.insert(religionModel).values({ name: name.trim().toUpperCase() }).returning();
+    const [newReligion] = await db.insert(religionModel).values({ legacyReligionId: legacyReligionId, name: name.trim().toUpperCase() }).returning();
 
     return newReligion;
 }
 
-export async function addLanguageMedium(name: string, db: DbType) {
+export async function addLanguageMedium(name: string, db: DbType, legacyLanguageMediumId: number) {
     const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim().toUpperCase()));
     if (existingLanguage) {
         return existingLanguage;
     }
-    const [newLanguage] = await db.insert(languageMediumModel).values({ name: name.trim().toUpperCase() }).returning();
+    const [newLanguage] = await db.insert(languageMediumModel).values({ legacyLanguageMediumId: legacyLanguageMediumId, name: name.trim().toUpperCase() }).returning();
 
     return newLanguage;
 }
 
-export async function addSpecialization(name: string) {
+export async function addSpecialization(name: string, db: DbType, legacySpecializationId: number) {
     const [existingSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.name, name.trim().toUpperCase()));
     if (existingSpecialization) {
         return existingSpecialization;
     }
-    const [newSpecialization] = await db.insert(specializationModel).values({ name: name.trim().toUpperCase() }).returning();
+    const [newSpecialization] = await db.insert(specializationModel).values({ legacySpecializationId: legacySpecializationId, name: name.trim().toUpperCase() }).returning();
 
     return newSpecialization;
 }
@@ -251,6 +252,7 @@ export async function addStudent(oldStudent: OldStudent, user: User, db: DbType)
 
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
+        legacyStudentId: oldStudent.id,
         applicationId: null,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         handicapped: !!oldStudent.handicapped,
@@ -378,7 +380,7 @@ export async function addFamily(oldStudent: OldStudent, student: Student) {
     if (oldStudent.fatherOccupation) {
         const [fatherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.fatherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (fatherOccupationResult.length > 0) {
-            fatherOccupation = await addOccupation(fatherOccupationResult[0].occupationName, db);
+            fatherOccupation = await addOccupation(fatherOccupationResult[0].occupationName, db, oldStudent.fatherOccupation);
         }
     }
 
@@ -396,7 +398,7 @@ export async function addFamily(oldStudent: OldStudent, student: Student) {
     if (oldStudent.motherOccupation) {
         const [motherOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.motherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (motherOccupationResult.length > 0) {
-            motherOccupation = await addOccupation(motherOccupationResult[0].occupationName, db);
+            motherOccupation = await addOccupation(motherOccupationResult[0].occupationName, db, oldStudent.motherOccupation);
         }
     }
 
@@ -415,7 +417,7 @@ export async function addFamily(oldStudent: OldStudent, student: Student) {
     if (oldStudent.guardianOccupation) {
         const [guardianOccupationResult] = await mysqlConnection.query(`SELECT * FROM parentoccupation WHERE id = ${oldStudent.fatherOccupation}`) as [{ id: number, occupationName: string }[], any];
         if (guardianOccupationResult.length > 0) {
-            guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName, db);
+            guardianOccupation = await addOccupation(guardianOccupationResult[0].occupationName, db, oldStudent.guardianOccupation);
         }
     }
 
@@ -453,7 +455,7 @@ export async function addHealth(oldStudent: OldStudent, student: Student) {
     if (oldStudent.bloodGroup) {
         const [bloodGroupResult] = await mysqlConnection.query(`SELECT * FROM bloodgroup WHERE id = ${oldStudent.bloodGroup}`) as [{ id: number, name: string }[], any];
         if (bloodGroupResult.length > 0) {
-            bloodGroup = await addBloodGroup(bloodGroupResult[0].name, db);
+            bloodGroup = await addBloodGroup(bloodGroupResult[0].name, db, oldStudent.bloodGroup);
         }
     }
 
@@ -516,7 +518,7 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     if (oldStudent.nationalityId) {
         const [nationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.nationalityId}`) as [{ id: number, nationalityName: string, code: number }[], any];
         if (nationalityResult.length > 0) {
-            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code, db);
+            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code, db, oldStudent.nationalityId);
         }
     }
     let otherNationality: Nationality | undefined;
@@ -530,21 +532,21 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     if (oldStudent.studentCategoryId) {
         const [categoryResult] = await mysqlConnection.query(`SELECT * FROM category WHERE id = ${oldStudent.studentCategoryId}`) as [{ id: number, category: string, code: string, docneeded: boolean | undefined }[], any];
         if (categoryResult.length > 0) {
-            category = await addCategory(categoryResult[0].category, categoryResult[0].code, categoryResult[0].docneeded, db);
+            category = await addCategory(categoryResult[0].category, categoryResult[0].code, categoryResult[0].docneeded, db, oldStudent.studentCategoryId);
         }
     }
     let religion: Religion | undefined;
     if (oldStudent.religionId) {
         const [religionResult] = await mysqlConnection.query(`SELECT * FROM religion WHERE id = ${oldStudent.religionId}`) as [{ id: number, religionName: string }[], any];
         if (religionResult.length > 0) {
-            religion = await addReligion(religionResult[0].religionName, db);
+            religion = await addReligion(religionResult[0].religionName, db, oldStudent.religionId);
         }
     }
     let motherTongue: LanguageMedium | undefined;
     if (oldStudent.motherTongueId) {
         const [motherTongueResult] = await mysqlConnection.query(`SELECT * FROM mothertongue WHERE id = ${oldStudent.motherTongueId}`) as [{ id: number, mothertongueName: string }[], any];
         if (motherTongueResult.length > 0) {
-            motherTongue = await addLanguageMedium(motherTongueResult[0].mothertongueName, db);
+            motherTongue = await addLanguageMedium(motherTongueResult[0].mothertongueName, db, oldStudent.motherTongueId);
         }
     }
 
