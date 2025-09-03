@@ -1,9 +1,9 @@
-export interface Student {
+export interface OldStudent {
     readonly id: number
     mailingPinNo: string | null
     resiPinNo: string | null
     admissionYear: number | null
-    codeNumber: string | null
+    codeNumber: string;
     oldcodeNumber: string | null
     password: string | null
     securityQ: string | null
@@ -278,4 +278,114 @@ export interface Student {
     creationdt: Date | string | null
     modifydt: Date | string | null
     alternateemail: string | null
+}
+
+export interface OldStaff {
+    readonly id: number | null;
+    mailingPinNo: string | null;
+    resiPinNo: string | null;
+    admissionYear: number | null;
+    password: string | null;
+    uid: number | null;
+    codeNumber: string;
+    name: string | null;
+    email: string | null;
+    active: boolean;
+    contactNo: string | null;
+    imgFile: string | null;
+    isTeacher: boolean;
+    applicantSignature: string | null;
+    sexId: number | null;
+    mailingAddress: string | null;
+    phoneMobileNo: string | null;
+    residentialAddress: string | null;
+    resiPhoneMobileNo: string | null;
+    religionId: number | null;
+    studentCategoryId: number | null;
+    motherTongueId: number | null;
+    address: string | null;
+    dateOfBirth: Date | string | null;
+    nationalityId: number | null;
+    securityQ: string | null;
+    answer: string | null;
+    height: number | null;
+    weight: number | null;
+    bloodGroup: number | null;
+    eyePowerLeft: string | null;
+    eyePowerRight: string | null;
+    identificationMark: string | null;
+    maritalStatus: number | null;
+    medicalHistory: string | null;
+    bankAccNo: string | null;
+    providentFundAccNo: string | null;
+    panNo: string | null;
+    comleterete: string | null;
+    computeroperationknown: string | null;
+    lastschoolattend: string | null;
+    medium1: string | null;
+    medium2: string | null;
+    lastcollegeattend: string | null;
+    board: string | null;
+    university: string | null;
+    emergencyname: string | null;
+    emergencyrelationship: string | null;
+    emergencytellandno: string | null;
+    emergencytelmobile: string | null;
+    initialname: string | null;
+    locationId: number | null;
+    privilegeGroupId: number | null;
+    staffAttendanceCode: string | null;
+    esiNo: string | null;
+    impNo: string | null;
+    clinicAddress: string | null;
+    paySortOrder: number | null;
+    empShiftId: number | null;
+    gratuityno: string | null;
+    libgrupid: number | null;
+    courseid: number | null;
+    pfnomination: boolean;
+    gratuitynominationdt: Date | string | null;
+    univAccNo: string | null;
+    bankid: number | null;
+    memprofbodies: string | null;
+    childrens: string | null;
+    mcountryid: number | null;
+    mstateid: number | null;
+    mcityid: number | null;
+    mothstate: string | null;
+    mothcity: string | null;
+    rcountryid: number | null;
+    rstateid: number | null;
+    rcityid: number | null;
+    rothstate: string | null;
+    rothcity: string | null;
+    mediclaimid: string | null;
+    mediclaimprovider: string | null;
+    mediclaimproviderno: string | null;
+    mediclaimfilename: string | null;
+    voterIdNo: string | null;
+    passportNo: string | null;
+    aadharNo: string | null;
+    majorChildName: string | null;
+    majorChildContactNo: string | null;
+    otherengagements: string | null;
+    nomineename: string | null;
+    nomineedob: string | null;
+    nomineeaddrs: string | null;
+    privempnm: string | null;
+    privempaddrs: string | null;
+    privempleavingdt: string | null;
+    bankifsccode: string | null;
+    bankbranchname: string | null;
+    bankacctype: string | null;
+    panFileName: string | null;
+    aadharFileName: string | null;
+    fathername: string | null;
+    mothername: string | null;
+    spousename: string | null;
+    aouthToken: string | null;
+    udid: string | null;
+    stuperuser: number | null;
+    dateofconfirmation: Date | string | null;
+    dateofprobation: Date | string | null;
 }

@@ -3,6 +3,7 @@ export type OldStudent = {
     mailingPinNo: string | undefined;
     resiPinNo: string | undefined;
     admissionYear: number | undefined;
+    admissionId: number | undefined;
     codeNumber: string;
     oldcodeNumber: string | undefined;
     name: string;

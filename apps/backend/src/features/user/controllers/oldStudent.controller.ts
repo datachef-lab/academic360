@@ -1,12 +1,12 @@
-import { db, mysqlConnection } from "@/db/index.js";
-import * as path from "path";
+import { Pool } from "pg";
 import bcrypt from "bcryptjs";
+import { NextFunction, Request, Response } from "express";
+import { NodePgDatabase } from "drizzle-orm/node-postgres";
+
+import { db, mysqlConnection } from "@/db/index.js";
 
 import { handleError } from "@/utils/handleError.js";
-import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
 import {
     occupationModel,
     bloodGroupModel,
@@ -24,8 +24,6 @@ import {
     annualIncomeModel,
     academicYearModel,
     User,
-    Specialization,
-    Student,
     Occupation,
     healthModel,
     BloodGroup,
@@ -37,13 +35,12 @@ import {
     Category,
     Religion,
     LanguageMedium,
-    BoardUniversity,
-    boardUniversityModel,
+    Board,
+    boardModel,
     degreeModel,
     BoardResultStatus,
     boardResultStatusModel,
-    academicHistoryModel,
-    academicIdentifierModel,
+
     transportDetailsModel,
     admissionCourseDetailsModel,
     Stream,
@@ -66,19 +63,10 @@ import {
     Course,
 } from "@repo/db/schemas/models";
 import { OldStudentCategory } from "@repo/db/legacy-system-types/admissions";
-// interface OldStudentCategory {
-//     id: number;
-//     category: string;
-//     courseid: number;
-//     classid: number;
-//     mainid?: number;
-//     code: string;
-//     docneeded: number;
-//     flag: number;
-// }
+
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { and, eq, ilike, or } from "drizzle-orm";
-import { OldStudent } from "@/types/old-student";
+
 import { formatAadhaarCardNumber } from "@/utils";
 import { OldBoard } from "@/types/old-board";
 import { OldBoardStatus } from "@/types/old-board-status";
@@ -96,9 +84,10 @@ import { eligibilityCriteriaModel } from "@repo/db/schemas/models/admissions/eli
 import { studentCategoryModel } from "@repo/db/schemas/models/admissions/adm-student-category.model";
 import { OldClass } from "@/types/old-data/old-class";
 import { OldEligibilityCriteria } from "@repo/db/legacy-system-types/course-design";
-// import { findStreamByNameAndProgrammee } from "@/features/academics/services/stream.service.js";
-// import { loadOlderBatches } from "@/features/academics/services/batch.service.js";
-// import { loadPaperSubjects } from "@/features/academics/services/batchPaper.service.js";
+import { userTypeEnum } from "@repo/db/schemas";
+import { staffModel } from "@repo/db/schemas/models/user/staff.model";
+import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
+
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -186,7 +175,7 @@ export async function addSpecialization(name: string, db: DbType, legacySpeciali
     return newSpecialization;
 }
 
-export async function addUser(oldStudent: OldStudent, db: DbType) {
+export async function addUser(oldStudent: OldStudent, db: DbType, type: typeof userTypeEnum.enumValues[number]) {
     const cleanString = (value: unknown): string | undefined => {
         if (typeof value === 'string') {
             return value.replace(/[\s\-\/]/g, '').trim();
@@ -211,11 +200,48 @@ export async function addUser(oldStudent: OldStudent, db: DbType) {
         email: email.trim().toLowerCase(),
         password: hashedPassword,
         phone: oldStudent.contactNo?.trim()?.toUpperCase(),
-        type: "STUDENT",
+        type,
         whatsappNumber: oldStudent.whatsappno?.trim()?.toUpperCase(),
     }).returning();
 
+    if (type === "ADMIN" || type === "STAFF" || type === "FACULTY") {
+        await addStaff(oldStudent, newUser);
+    }
+
     return newUser;
+}
+
+export async function addStaff(oldStaffId: number, user: User) {
+    const [existingStaff] = await db.select().from(staffModel).where(eq(staffModel.userId, user.id as number));
+    if (existingStaff) {
+        return existingStaff;
+    }
+
+    const [[oldStaff]] = await mysqlConnection.query(`
+        SELECT *
+        FROM staffpesonaldetails
+        WHERE id = ${oldStaffId}
+        `) as [OldStaff[], any];
+
+    if (!oldStaff) {
+        return null;
+    }
+
+    const shift = await addShift(oldStaff.empShiftId);
+
+    if (!shift) {
+        console.log(`Shift not found for old staff ${oldStaffId}`);
+        throw Error(`Shift not found for old staff ${oldStaffId}, i n addStaff()`);
+    }
+
+    const personalDetails = await addPersonalDetails(oldStaff, user);
+
+    const [newStaff] = await db.insert(staffModel).values({
+        userId: user.id as number,
+
+    }).returning();
+
+    return newStaff;
 }
 
 export async function addStudent(oldStudent: OldStudent, user: User, db: DbType) {
@@ -262,12 +288,8 @@ export async function addStudent(oldStudent: OldStudent, user: User, db: DbType)
 }
 
 
-export async function addAccommodation(oldStudent: OldStudent, student: Student) {
-    const [existingAccommodation] = await db.select().from(accommodationModel).where(eq(accommodationModel.studentId, student.id as number));
-    if (existingAccommodation) {
-        return existingAccommodation;
-    }
-    let placeOfStay: "OWN" | "HOSTEL" | "RELATIVES" | "FAMILY_FRIENDS" | "PAYING_GUEST" | null;
+export async function addAccommodation(oldStudent: OldStudent ) {
+   let placeOfStay: "OWN" | "HOSTEL" | "RELATIVES" | "FAMILY_FRIENDS" | "PAYING_GUEST" | null;
     switch (oldStudent.placeofstay) {
         case "Own":
             placeOfStay = "OWN";
@@ -289,13 +311,14 @@ export async function addAccommodation(oldStudent: OldStudent, student: Student)
     }
 
     const [address] = await db.insert(addressModel).values({
+
         addressLine: oldStudent.placeofstayaddr?.toUpperCase()?.trim(),
         localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
         phone: oldStudent.placeofstaycontactno?.trim()?.toUpperCase()
     }).returning();
 
     const [newAccommodation] = await db.insert(accommodationModel).values({
-        studentId: student.id as number,
+       
         placeOfStay,
         addressId: address.id
     }).returning();
@@ -487,38 +510,41 @@ export async function addEmergencyContact(oldStudent: OldStudent, student: Stude
     return newEmergencyContact;
 }
 
-export async function addPersonalDetails(oldStudent: OldStudent, student: Student) {
-    const [existingPersonalDetails] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, student.id as number));
-    if (existingPersonalDetails) {
-        return existingPersonalDetails;
+export async function addPersonalDetails(oldDetails: OldStudent | OldStaff, user: User) {
+    if (typeof oldDe) {
+
+    } else if (oldDetails instanceof OldStaff) {
+
+    } else {
+        throw new Error("Invalid old details type");
     }
 
     let mailingAddress: Address | undefined;
-    if (oldStudent.mailingAddress || oldStudent.mailingPinNo) {
+    if (oldDetails.mailingAddress || oldDetails.mailingPinNo) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.mailingAddress?.trim()?.toUpperCase(),
-            localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
-            pincode: oldStudent.mailingPinNo?.trim()?.toUpperCase()
+            addressLine: oldDetails.mailingAddress?.trim()?.toUpperCase(),
+            localityType: oldDetails.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldDetails.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
+            pincode: oldDetails.mailingPinNo?.trim()?.toUpperCase()
         }).returning();
         mailingAddress = address;
     }
 
     let residentialAddress: Address | undefined;
-    if (oldStudent.mailingAddress || oldStudent.mailingPinNo) {
+    if (oldDetails.mailingAddress || oldDetails.mailingPinNo) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: oldStudent.residentialAddress?.trim()?.toUpperCase(),
-            phone: oldStudent.resiPhoneMobileNo?.trim()?.toUpperCase(),
-            localityType: oldStudent.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldStudent.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
-            pincode: oldStudent.resiPinNo?.trim()?.toUpperCase()
+            addressLine: oldDetails.residentialAddress?.trim()?.toUpperCase(),
+            phone: oldDetails.resiPhoneMobileNo?.trim()?.toUpperCase(),
+            localityType: oldDetails.localitytyp?.toUpperCase() === "URBAN" ? "URBAN" : (oldDetails.localitytyp?.toUpperCase() === "RURAL" ? "RURAL" : null),
+            pincode: oldDetails.resiPinNo?.trim()?.toUpperCase()
         }).returning();
         residentialAddress = address;
     }
 
     let nationality: Nationality | undefined;
-    if (oldStudent.nationalityId) {
+    if (oldDetails.nationalityId) {
         const [nationalityResult] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldStudent.nationalityId}`) as [{ id: number, nationalityName: string, code: number }[], any];
         if (nationalityResult.length > 0) {
-            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code, db, oldStudent.nationalityId);
+            nationality = await addNationality(nationalityResult[0].nationalityName, nationalityResult[0].code, db, oldDetails.nationalityId);
         }
     }
     let otherNationality: Nationality | undefined;
@@ -551,7 +577,7 @@ export async function addPersonalDetails(oldStudent: OldStudent, student: Studen
     }
 
     const [newPersonalDetails] = await db.insert(personalDetailsModel).values({
-        studentId: student.id as number,
+
         dateOfBirth: oldStudent.dateOfBirth ? oldStudent.dateOfBirth.toISOString() : undefined,
         gender: oldStudent.sexId === 0 ? undefined : (oldStudent.sexId === 1 ? "MALE" : "FEMALE"),
         nationalityId: nationality ? nationality.id : undefined,
@@ -1640,3 +1666,21 @@ export async function loadStudentsV2() {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

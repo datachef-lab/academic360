@@ -19,6 +19,7 @@ export const addressModel = pgTable("address", {
     otherCity: varchar({ length: 255 }),
 
     districtId: integer("district_id_fk").references(() => districtModel.id),
+    otherDistrict: varchar({ length: 255 }),
     
     addressLine: varchar({ length: 1000 }),
     landmark: varchar({ length: 255 }),
