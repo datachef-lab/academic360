@@ -1,14 +1,11 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel } from "./student.model.js";
-import { relations } from "drizzle-orm";
+import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const emergencyContactModel = pgTable("emergency_contacts", {
     id: serial().primaryKey(),
-    studentId: integer("student_id_fk").references(() => studentModel.id),
     personName: varchar({ length: 255 }),
-    relationToStudent: varchar({ length: 255 }),
+    havingRelationAs: varchar({ length: 255 }),
     email: varchar({ length: 255 }),
     phone: varchar({ length: 255 }),
     officePhone: varchar({ length: 255 }),
@@ -16,13 +13,6 @@ export const emergencyContactModel = pgTable("emergency_contacts", {
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
-
-export const emergencyContactRelations = relations(emergencyContactModel, ({ one }) => ({
-    student: one(studentModel, {
-        fields: [emergencyContactModel.studentId],
-        references: [studentModel.id]
-    }),
-}));
 
 export const createEmergencyContactSchema = createInsertSchema(emergencyContactModel);
 

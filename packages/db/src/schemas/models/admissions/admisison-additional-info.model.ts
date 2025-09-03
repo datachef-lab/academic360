@@ -2,10 +2,12 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { departmentModel } from "@/schemas/models/user";
+import { departmentModel, familyModel } from "@/schemas/models/user";
 import { disabilityTypeEnum, personTitleType } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
-import { annualIncomeModel,bloodGroupModel, categoryModel, religionModel } from "@/schemas/models/resources";
+import { annualIncomeModel, bloodGroupModel, categoryModel, religionModel } from "@/schemas/models/resources";
+import { bankBranchModel } from "../payments";
+import { programCourseModel } from "../course-design";
 
 export const admissionAdditionalInfoModel = pgTable("admission_additional_info", {
     id: serial("id").primaryKey(),
@@ -13,32 +15,41 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
         .references(() => applicationFormModel.id)
         .notNull(),
     alternateMobileNumber: varchar("alternate_mobile_number", { length: 255 }),
-    bloodGroupId: integer("blood_group_id_fk")
-        .references(() => bloodGroupModel.id)
-        .notNull(),
-    religionId: integer("religion_id_fk")
-        .references(() => religionModel.id)
-        .notNull(),
-    categoryId: integer("category_id_fk")
-        .references(() => categoryModel.id)
-        .notNull(),
+
     isPhysicallyChallenged: boolean("is_physically_challenged").default(false),
     disabilityType: disabilityTypeEnum("disability_type"),
+
     isSingleParent: boolean("is_single_parent").default(false),
-    fatherTitle: personTitleType("father_title"),
-    fatherName: varchar("father_name", { length: 255 }),
-    motherTitle: personTitleType("mother_title"),
-    motherName: varchar("mother_name", { length: 255 }),
+
+    familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
+
     isEitherParentStaff: boolean("is_either_parent_staff").default(false),
+
     nameOfStaffParent: varchar("name_of_staff_parent", { length: 255 }),
     departmentOfStaffParent: integer("department_of_staff_parent_fk")
         .references(() => departmentModel.id),
+
+    hasFamilyExStudent: boolean("has_family_ex_student").default(false),
+
+    familyExStudentRelation: varchar("family_ex_student_relation", { length: 255 }),
+
+    familyExStudentName: varchar("family_ex_student_name", { length: 255 }),
+
+    familyExStudentProgramCourseId: integer("family_ex_student_program_course_id_fk")
+        .references(() => programCourseModel.id),
+
+    familyExStudentYearOfPassing: integer("family_ex_student_year_of_passing"),
+
     hasSmartphone: boolean("has_smartphone").default(false),
     hasLaptopOrDesktop: boolean("has_laptop_or_desktop").default(false),
     hasInternetAccess: boolean("has_internet_access").default(false),
+
     annualIncomeId: integer("annual_income_id_fk")
         .references(() => annualIncomeModel.id)
         .notNull(),
+
+   
+
     applyUnderNCCCategory: boolean("apply_under_ncc_category").default(false),
     applyUnderSportsCategory: boolean("apply_under_sports_category").default(false),
 

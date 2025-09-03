@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, varchar, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
+import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),
@@ -12,8 +13,8 @@ export const userModel = pgTable('users', {
     phone: varchar({ length: 255 }),
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
-    type: userTypeEnum().default("STUDENT"),
-    disabled: boolean().default(false),
+    type: userTypeEnum().notNull(),
+    isActive: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

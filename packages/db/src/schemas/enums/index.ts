@@ -128,6 +128,11 @@ export const admissionFormStatus = pgEnum("admission_form_status", [
     'DOCUMENTS_VERIFIED',
     'DOCUMENTS_PENDING',
     'DOCUMENTS_REJECTED',
+    "MERIT_LISTED",
+    "WAITING_FOR_ADMISSION",
+    "ADMITTED",
+    "MERIT_LISTED",
+    "SUBJECT_PAPER_SELECTION",
 ])
 
 export const admissionSteps = pgEnum("admission_steps", [
@@ -229,3 +234,19 @@ export const settingsVariantEnum = pgEnum("settings_variant_type", [
     "GENERAL",
     "API_CONFIG",
 ])
+
+export const maritalStatusTypeEnum = pgEnum("marital_status_type", [
+    "SINGLE",
+    "MARRIED",
+    "WIDOWED",
+    "DIVORCED",
+    "SEPARATED",
+])
+
+export const bankAccountTypeEnum = pgEnum("bank_account_type", [
+    "SAVINGS",
+    "CURRENT",
+    "FIXED_DEPOSIT",
+    "RECURRING_DEPOSIT",
+    "OTHER",
+]);

@@ -5,15 +5,31 @@ import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-cor
 
 import { localityTypeEnum } from "@/schemas/enums";
 import { cityModel, countryModel, stateModel } from "@/schemas/models/resources";
+import { districtModel } from "../resources/district.model";
 
 export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
     countryId: integer("country_id_fk").references(() => countryModel.id),
+    otherCountry: varchar({ length: 255 }),
+    
     stateId: integer("state_id_fk").references(() => stateModel.id),
+    otherState: varchar({ length: 255 }),
+
     cityId: integer("city_id_fk").references(() => cityModel.id),
+    otherCity: varchar({ length: 255 }),
+
+    districtId: integer("district_id_fk").references(() => districtModel.id),
+    
     addressLine: varchar({ length: 1000 }),
     landmark: varchar({ length: 255 }),
     localityType: localityTypeEnum(),
+
+    postofficeId: integer("postoffice_id"),
+    otherPostoffice: varchar({ length: 2000 }),
+
+    policeStationId: integer("police_station_id"),
+    otherPoliceStation: varchar({ length: 2000 }),
+    
     phone: varchar({ length: 255 }),
     pincode: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),

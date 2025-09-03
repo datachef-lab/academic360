@@ -1,7 +1,5 @@
 export * from "./user.model";
 export * from "./student.model";
-export * from "./academicHistory.model";
-export * from "./academicIdentifier.model";
 export * from "./accommodation.model";
 export * from "./address.model";
 export * from "./department.model";

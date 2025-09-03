@@ -6,9 +6,9 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 import { addressModel } from "@/schemas/models/user";
 import { degreeModel } from "@/schemas/models/resources";
 
-export const boardUniversityModel = pgTable("board_universities", {
+export const boardModel = pgTable("boards", {
     id: serial().primaryKey(),
-    legacyBoardUniversityId: integer(),
+    legacyBoardId: integer(),
     name: varchar({ length: 700 }).notNull().unique(),
     degreeId: integer().references(() => degreeModel.id),
     passingMarks: integer(),
@@ -20,19 +20,8 @@ export const boardUniversityModel = pgTable("board_universities", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createLastBoardUniversityRelations = relations(boardUniversityModel, ({ one }) => ({
-    degree: one(degreeModel, {
-        fields: [boardUniversityModel.degreeId],
-        references: [degreeModel.id]
-    }),
-    address: one(addressModel, {
-        fields: [boardUniversityModel.addressId],
-        references: [addressModel.id]
-    }),
-}));
+export const createBoardSchema = createInsertSchema(boardModel);
 
-export const createBoardUniversitySchema = createInsertSchema(boardUniversityModel);
+export type Board = z.infer<typeof createBoardSchema>;
 
-export type BoardUniversity = z.infer<typeof createBoardUniversitySchema>;
-
-export type BoardUniversityT = typeof createBoardUniversitySchema._type;
+export type BoardT = typeof createBoardSchema._type;

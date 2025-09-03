@@ -5,18 +5,25 @@ import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-cor
 
 import { addressModel } from "@/schemas/models/user";
 import { occupationModel, qualificationModel } from "@/schemas/models/resources";
+import { genderTypeEnum, maritalStatusTypeEnum, personTitleType } from "@/schemas/enums";
 
 export const personModel = pgTable("person", {
     id: serial().primaryKey(),
+    title: personTitleType("person_title_type"),
     name: varchar({ length: 255 }),
     email: varchar({ length: 255 }),
     phone: varchar({ length: 255 }),
     aadhaarCardNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
+    gender: genderTypeEnum(),
+
+    maritalStatus: maritalStatusTypeEnum("marital_status"),
+
     qualificationId: integer("qualification_id_fk").references(() => qualificationModel.id),
     occupationId: integer("occupation_id_fk").references(() => occupationModel.id),
+
     officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
-    officePhone: varchar({ length: 255 }),
+    
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

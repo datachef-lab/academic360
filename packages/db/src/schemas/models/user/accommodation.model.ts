@@ -4,11 +4,10 @@ import { createInsertSchema } from "drizzle-zod";
 import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { placeOfStayTypeEnum } from "@/schemas/enums";
-import { addressModel, studentModel } from "@/schemas/models/user";
+import { addressModel } from "@/schemas/models/user";
 
 export const accommodationModel = pgTable("accommodation", {
     id: serial().primaryKey(),
-    studentId: integer("student_id_fk").unique().references(() => studentModel.id),
     placeOfStay: placeOfStayTypeEnum(),
     addressId: integer("address_id_fk").references(() => addressModel.id),
     startDate: date(),
@@ -16,17 +15,6 @@ export const accommodationModel = pgTable("accommodation", {
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
-
-export const accommodationRelations = relations(accommodationModel, ({ one }) => ({
-    student: one(studentModel, {
-        fields: [accommodationModel.studentId],
-        references: [studentModel.id]
-    }),
-    address: one(addressModel, {
-        fields: [accommodationModel.addressId],
-        references: [addressModel.id]
-    }),
-}));
 
 export const createAccommodationSchema = createInsertSchema(accommodationModel);
 

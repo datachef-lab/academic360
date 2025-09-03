@@ -7,6 +7,7 @@ import { academicYearModel } from "@/schemas/models/academics";
 
 export const sessionModel = pgTable("sessions", {
     id: serial().primaryKey(),
+    legacySessionId: integer(),
     academicYearId: integer("academic_id_fk")
         .references(() => academicYearModel.id),
     name: varchar({ length: 255 }).notNull(),

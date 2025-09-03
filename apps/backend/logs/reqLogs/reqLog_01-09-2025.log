@@ -1,0 +1,4 @@
+01-09-2025	09:49:54	c3b24588-9f61-4628-baac-0ef5556dd44d	GET	/auth/refresh	http://localhost:5173
+01-09-2025	09:49:54	9124cf20-e2ef-4111-ada5-f0effcf8474d	GET	/auth/refresh	http://localhost:5173
+01-09-2025	09:49:52	9fa9d59a-03e4-4016-9ded-10e83d5fcc40	GET	/api/v1/settings	http://localhost:5173
+01-09-2025	09:49:51	9947f5fd-5305-4a0e-8274-274c3e2c03e1	GET	/api/v1/settings	http://localhost:5173

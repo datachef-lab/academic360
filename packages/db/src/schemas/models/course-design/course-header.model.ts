@@ -2,18 +2,18 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-export const degreeModel = pgTable("degree", {
+export const courseHeaderModel = pgTable('course_headers', {
     id: serial().primaryKey(),
-    legacyDegreeId: integer(),
-    name: varchar({ length: 255 }).notNull().unique(),
+    legacyCourseHeaderId: integer("legacy_course_header_id"),
+    name: varchar({ length: 500 }).notNull(),
     sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDegreeSchema = createInsertSchema(degreeModel);
+export const createCourseHeaderSchema = createInsertSchema(courseHeaderModel);
 
-export type Degree = z.infer<typeof createDegreeSchema>;
+export type CourseHeader = z.infer<typeof createCourseHeaderSchema>;
 
-export type DegreeT = typeof createDegreeSchema._type;
+export type CourseHeaderT = typeof createCourseHeaderSchema._type;

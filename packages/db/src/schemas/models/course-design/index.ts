@@ -1,5 +1,6 @@
 export * from "./affiliation.model";
 export * from "./batch-student-paper.model";
+export * from "./course-header.model";
 export * from "./course-level.model";
 export * from "./course-type.model";
 export * from "./course.model";

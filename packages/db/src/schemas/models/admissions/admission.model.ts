@@ -11,13 +11,15 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 
-import { academicYearModel } from "@/schemas/models/academics";
+import { sessionModel } from "@/schemas/models/academics";
+import { admissionFormStatus } from "@/schemas/enums";
 
 export const admissionModel = pgTable("admissions", {
   id: serial().primaryKey().notNull(),
-  academicYearId: integer("academic_year_id_fk")
-    .references(() => academicYearModel.id)
+  sessionId: integer("session_id_fk")
+    .references(() => sessionModel.id)
     .notNull(),
+  status: admissionFormStatus("status").notNull(),
   admissionCode: varchar({ length: 255 }),
   isClosed: boolean("is_closed").default(false).notNull(),
   startDate: date("start_date"),

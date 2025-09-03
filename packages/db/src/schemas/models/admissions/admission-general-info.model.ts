@@ -2,31 +2,60 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { applicationFormModel } from "@/schemas/models/admissions";
-import { degreeLevelTypeEnum, genderTypeEnum } from "@/schemas/enums";
-import { categoryModel, nationalityModel, religionModel } from "@/schemas/models/resources";
+import { applicationFormModel, eligibilityCriteriaModel, studentCategoryModel } from "@/schemas/models/admissions";
+import { accommodationModel, emergencyContactModel, healthModel, personalDetailsModel, transportDetailsModel } from "../user";
+import { bankBranchModel } from "../payments";
 
 export const admissionGeneralInfoModel = pgTable("admission_general_info", {
     id: serial("id").primaryKey(),
+    legacyPersonalDetailsId: integer("legacy_personal_details_id"),
     applicationFormId: integer("application_form_id_fk")
         .references(() => applicationFormModel.id)
         .notNull(),
-    firstName: varchar("first_name", { length: 255 }).notNull(),
-    middleName: varchar("middle_name", { length: 255 }),
-    lastName: varchar("last_name", { length: 255 }),
-    dateOfBirth: date("date_of_birth").notNull(),
-    nationalityId: integer("nationality_id_fk").references(() => nationalityModel.id),
-    otherNationality: varchar("other_nationality", { length: 255 }),
-    isGujarati: boolean("is_gujarati").default(false),
-    categoryId: integer("category_id_fk").references(() => categoryModel.id),
-    religionId: integer("religion_id_fk").references(() => religionModel.id),
-    gender: genderTypeEnum().default("MALE"),
-    degreeLevel: degreeLevelTypeEnum().default("UNDER_GRADUATE").notNull(),
-    password: varchar("password", { length: 255 }).notNull(),
-    whatsappNumber: varchar("whatsapp_number", { length: 15 }),
-    mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
+
     email: varchar("email", { length: 255 }).notNull(),
+
+    password: varchar("password", { length: 255 }).notNull(),
+
+    eligibilityCriteriaId: integer("eligibility_criteria_id_fk").references(() => eligibilityCriteriaModel.id),
+
+    studentCategoryId: integer("student_category_id_fk").references(() => studentCategoryModel.id),
+
+    personalDetailsId: integer("personal_details_id_fk").references(() => personalDetailsModel.id),
+
+    isMinority: boolean("is_minority").default(false),
+
+    dtls: varchar("dtls", { length: 255 }),
+
+    gujaratiClass: integer("gujarati_class"),
+
+    clubAId: integer("club_a_id"),
+
+    clubBId: integer("club_b_id"),
+
+    tshirtSize: varchar("tshirt_size", { length: 255 }),
+
+    spqtaApprovedBy: integer("spqta_approved_by"), // TODO: Add user model
+
+    spqtaApprovedDate: date("spqta_approved_date"),
+
+    separated: boolean("separated").default(false),
+
+    chkFlats: varchar("chk_flats", { length: 255 }),
+
+    backDoorFlag: integer("back_door_flag"),
+
+    healthId: integer("health_id_fk").references(() => healthModel.id),
+
+    accommodationId: integer("accommodation_id_fk").references(() => accommodationModel.id),
+
+    emergencyContactId: integer("emergency_contact_id_fk").references(() => emergencyContactModel.id),
+
     residenceOfKolkata: boolean("residence_of_kolkata").notNull(),
+
+    bankBranchId: integer("bank_branch_id_fk").references(() => bankBranchModel.id),
+
+    transportDetailsId: integer("transport_details_id_fk").references(() => transportDetailsModel.id),
 
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
