@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Address, addressModel, createAddressSchema, updateAddressSchema, AddressUpdate } from "../models/address.model.js";
+import { Address, addressModel, createAddressSchema, updateAddressSchema, AddressUpdate } from "@repo/db/schemas/models/user";
 import { countryModel, Country } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
 import { stateModel, State } from "@/features/resources/models/state.model.js";

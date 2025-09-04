@@ -1,10 +1,11 @@
 import { db } from "@/db/index.js";
-import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
-import { eq, and } from "drizzle-orm";
-import { regulationTypeModel } from "../models/regulation-type.model.js";
-import { subjectModel } from "../models/subject.model.js";
-import { affiliationModel } from "../models/affiliation.model.js";
-import { paperModel } from "../models/paper.model.js";
+import { academicYearModel } from "@repo/db/schemas/models/academics";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
+import { regulationTypeModel } from "@repo/db/schemas";
+import { subjectModel } from "@repo/db/schemas";
+import { affiliationModel } from "@repo/db/schemas";
+import { paperModel } from "@repo/db/schemas";
+import { and, eq } from "drizzle-orm";
 
 // Get academic years based on affiliation
 export async function getAcademicYearsByAffiliation(affiliationId: number) {

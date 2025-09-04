@@ -1,7 +1,7 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { admissionAdditionalInfoModel } from "./admisison-additional-info.model.js";
-import { sportsCategoryModel } from "./sports-category.model.js";
-import { sportsLevelType } from "@/features/user/models/helper.js";
+import { admissionAdditionalInfoModel } from "@repo/db/schemas/models/admissions";
+import { sportsCategoryModel } from "@repo/db/schemas/models/admissions";
+import { sportsLevelType } from "@repo/db/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 

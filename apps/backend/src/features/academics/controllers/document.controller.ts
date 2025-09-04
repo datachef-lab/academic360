@@ -1,6 +1,6 @@
 import { handleError } from "@/utils/handleError.js";
 import { NextFunction, Request, Response } from "express";
-import { documentModel } from "@/features/academics/models/document.model.js";
+import { documentModel } from "@repo/db/schemas/models/academics";
 import { db } from "@/db/index.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { eq } from "drizzle-orm";

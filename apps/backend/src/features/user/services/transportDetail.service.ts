@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { transportDetailsModel, createTransportDetailsSchema, TransportDetails } from "../models/transportDetails.model.js";
+import { transportDetailsModel, createTransportDetailsSchema, TransportDetails } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -28,8 +28,8 @@ export async function findTransportDetailsById(id: number): Promise<TransportDet
 }
 
 export async function findTransportDetailsByStudentId(studentId: number): Promise<TransportDetails | null> {
-    const [foundTransportDetail] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId));
-    return foundTransportDetail || null;
+    // const [foundTransportDetail] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId));
+    return null;
 }
 
 export async function updateTransportDetails(id: number, transportDetails: TransportDetails): Promise<TransportDetails | null> {
@@ -56,15 +56,15 @@ export async function removeTransportDetails(id: number): Promise<boolean | null
 }
 
 export async function removeTransportDetailsByStudentId(studentId: number): Promise<boolean | null> {
-    const [foundTransportDetail] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId));
-    if (!foundTransportDetail) {
-        return null; // No Content
-    }
-    const [deletedTransportDetail] = await db.delete(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId)).returning();
-    if (!deletedTransportDetail) {
-        return false; // Failure!
-    }
-    return true; // Success!
+    // const [foundTransportDetail] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId));
+    // if (!foundTransportDetail) {
+    //     return null; // No Content
+    // }
+    // const [deletedTransportDetail] = await db.delete(transportDetailsModel).where(eq(transportDetailsModel.studentId, studentId)).returning();
+    // if (!deletedTransportDetail) {
+    //     return false; // Failure!
+    // }
+    return false; // Success!
 }
 
 export async function getAllTransportDetails(): Promise<TransportDetails[]> {

@@ -26,7 +26,7 @@ import {
     marksheetPaperComponentMappingRouter,
     sessionRouter,
 } from "@/features/academics/routes/index.js";
-import { userModel, User } from "./features/user/models/user.model.js";
+import { userModel, User } from "@repo/db/schemas/models/user";
 import boardResultStatusRouter from "./features/resources/routes/boardResultStatus.routes.js";
 import {
     documentRouter,
@@ -45,8 +45,8 @@ import {
     studentRouter,
     nationalityRouter,
     religionRouter,
-    academicHistoryRouter,
-    academicIdentifierRouter,
+    // academicHistoryRouter,
+    // academicIdentifierRouter,
     accommodationRouter,
     stateRouter,
     degreeRouter,
@@ -292,9 +292,7 @@ app.use("/api/occupations", occupationRouter);
 
 app.use("/api/annual-incomes", annualIncomeRouter);
 
-app.use("/api/academic-identifiers", academicIdentifierRouter);
 
-app.use("/api/academic-history", academicHistoryRouter);
 
 app.use("/api/accommodations", accommodationRouter);
 

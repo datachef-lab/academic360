@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createEmergencyContactSchema, EmergencyContact } from "../models/emergencyContact.model.js";
+import { createEmergencyContactSchema, EmergencyContact } from "@repo/db/schemas/models/user";
 import {
   addEmergencyContact,
   findEmergencyContactById,

@@ -1,11 +1,11 @@
-import { AcademicYear } from "@/features/academics/models/academic-year.model.js";
-import { Class } from "@/features/academics/models/class.model.js";
-import { Course } from "@/features/course-design/models/course.model.js";
-import { Shift } from "@/features/academics/models/shift.model.js";
-import { FeesComponent } from "@/features/fees/models/fees-component.model.js";
-import { FeesSlabMapping } from "@/features/fees/models/fees-slab-mapping.model.js";
+import { AcademicYear } from "@repo/db/schemas/models/academics";
+import { Class } from "@repo/db/schemas/models/academics";
+import { Course } from "@repo/db/schemas/models/course-design";
+import { Shift } from "@repo/db/schemas/models/academics";
+import { FeesComponent } from "@repo/db/schemas/models/fees";
+import { FeesSlabMapping } from "@repo/db/schemas/models/fees";
 import { FeesStructure } from "@/features/fees/models/fees-structure.model.js";
-import { Instalment } from "@/features/fees/models/instalment.model.js";
+import { Instalment } from "@repo/db/schemas/models/fees";
 
 export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {
     shift?: Shift;

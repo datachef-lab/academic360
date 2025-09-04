@@ -1,9 +1,9 @@
 import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { feesSlabModel } from "./fees-slab.model.js";
-import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
+import { academicYearModel } from "@repo/db/schemas/models/academics";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { feesStructureModel } from "./fees-structure.model.js";
+import { feesStructureModel } from "@repo/db/schemas/models/fees";
 
 export const feesSlabMappingModel = pgTable("fees_slab_mapping", {
     id: serial().primaryKey(),

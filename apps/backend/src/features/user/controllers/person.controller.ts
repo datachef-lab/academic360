@@ -1,9 +1,9 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createPersonSchema } from "../models/person.model.js";
+import { createPersonSchema } from "@repo/db/schemas/models/user";
 import { addPerson, findPersonById, savePerson, removePerson, getAllPersons } from "../services/person.service.js";
-import { Person } from "../models/person.model.js";
+import { Person } from "@repo/db/schemas/models/user";
 
 export const createPerson = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

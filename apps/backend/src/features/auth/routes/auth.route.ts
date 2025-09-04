@@ -3,7 +3,7 @@ import { createUser, login, logout, postGoogleLogin, refresh } from "../controll
 
 import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
 import { validateData } from "@/middlewares/validation.middleware.js";
-import { createUserSchema } from "@/features/user/models/user.model.js";
+import { createUserSchema } from "@repo/db/schemas/models/user";
 import passport from "passport";
 
 const router = express.Router();

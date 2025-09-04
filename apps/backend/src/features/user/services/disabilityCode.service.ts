@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { disabilityCodeModel } from "../models/disabilityCode.model";
+import { disabilityCodeModel } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 
 /**

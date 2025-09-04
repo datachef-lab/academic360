@@ -1,10 +1,9 @@
 import { db } from "@/db/index.js";
-import { Specialization, specializationModel } from "../models/specialization.model.js";
+import { Specialization, specializationModel } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq } from "drizzle-orm";
 import { SpecializationSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
-import { studentModel } from "@/features/user/models/student.model.js";
-import { academicHistoryModel } from "@/features/user/models/academicHistory.model.js";
+import { studentModel } from "@repo/db/schemas/models/user";
 
 // Types
 export type SpecializationData = z.infer<typeof SpecializationSchema>;
@@ -60,18 +59,14 @@ export const deleteSpecializationSafe = async (id: string) => {
     .from(studentModel)
     .where(eq(studentModel.specializationId, +id));
 
-  const [{ academicHistoryCount }] = await db
-    .select({ academicHistoryCount: countDistinct(academicHistoryModel.id) })
-    .from(academicHistoryModel)
-    .where(eq(academicHistoryModel.specializationId, +id));
 
-  if (studentCount > 0 || academicHistoryCount > 0) {
+
+  if (studentCount > 0) {
     return {
       success: false,
       message: "Cannot delete specialization. It is associated with other records.",
       records: [
         { count: studentCount, type: "Student" },
-        { count: academicHistoryCount, type: "Academic-history" },
       ],
     };
   }

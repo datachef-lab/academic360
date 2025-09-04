@@ -1,4 +1,4 @@
-import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
+import { academicYearModel } from "@repo/db/schemas/models/academics";
 import {
   boolean,
   date,

@@ -35,7 +35,7 @@ export async function findAdmCourseDetailsByStudentId(studentId: number): Promis
         .select()
         .from(admissionCourseDetailsModel)
         .where(
-            eq(admissionCourseDetailsModel.studentId, studentId)
+            eq(admissionCourseDetailsModel.applicationFormId, 0)
         );
 
     if (!foundAdmCourseDetails) {
@@ -46,13 +46,14 @@ export async function findAdmCourseDetailsByStudentId(studentId: number): Promis
 }
 
 async function modelToDto(model: AdmissionCourseDetails): Promise<AdmissionCourseDetailsDto> {
-    const { studentId, streamId, programCourseId, classId, shiftId, eligibilityCriteriaId, studentCategoryId, ...rest } = model;
+    const {  streamId, classId, shiftId, eligibilityCriteriaId, studentCategoryId, ...rest } = model;
 
     const formattedAdmCourseDetails: AdmissionCourseDetailsDto = {
         ...rest,
-        studentId: studentId,
+        programCourse: null,
+
         stream: streamId ? await findStreamById(streamId) : null,
-        programCourse: programCourseId ? await findProgramCourseById(programCourseId) : null,
+        // programCourse: programCourseId ? await findProgramCourseById(programCourseId) : null,
         class: classId ? await findClassById(classId) : null,
         shift: shiftId ? await findShiftById(shiftId) : null,
         eligibilityCriteria: eligibilityCriteriaId ? await findEligibilityCriteriaById(eligibilityCriteriaId) : null,

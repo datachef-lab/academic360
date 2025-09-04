@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Shift, shiftModel } from "../models/shift.model.js";
+import { Shift, shiftModel } from "@repo/db/schemas/models/academics";
 import { eq } from "drizzle-orm";
 
 export const loadShifts = async () => {

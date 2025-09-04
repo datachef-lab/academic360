@@ -131,7 +131,7 @@ export const admissionFormStatus = pgEnum("admission_form_status", [
     "MERIT_LISTED",
     "WAITING_FOR_ADMISSION",
     "ADMITTED",
-    "MERIT_LISTED",
+
     "SUBJECT_PAPER_SELECTION",
 ])
 

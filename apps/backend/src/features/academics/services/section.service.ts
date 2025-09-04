@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Section, sectionModel } from "../models/section.model.js";
+import { Section, sectionModel } from "@repo/db/schemas/models/academics";
 import { eq } from "drizzle-orm";
 
 export async function findSectionById(id: number): Promise<Section | null> {

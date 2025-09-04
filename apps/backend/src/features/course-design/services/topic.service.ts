@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
-import { Topic, topicModel } from "../models/topic.model.js";
+import { Topic, topicModel } from "@repo/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike } from "drizzle-orm";
-import { marksheetPaperMappingModel } from "@/features/academics/models/marksheet-paper-mapping.model.js";
-import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
-import { paperModel } from "../models/paper.model.js";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
+import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
+import { paperModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 

@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { marksheetPaperComponentMappingModel } from "../models/marksheet-paper-component-mapping.model.js";
-import { marksheetPaperMappingModel } from "../models/marksheet-paper-mapping.model.js";
-import { paperComponentModel } from "@/features/course-design/models/paper-component.model.js";
+import { marksheetPaperComponentMappingModel } from "@repo/db/schemas/models/academics";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
+import { paperComponentModel } from "@repo/db/schemas/models/course-design";
 import { eq, and, desc, count } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 

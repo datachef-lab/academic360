@@ -1,10 +1,9 @@
 import { db } from "@/db/index.js";
-import { affiliationModel, createAffiliationModel, Affiliation } from "@/features/course-design/models/affiliation.model.js";
-import { countDistinct, eq, ilike } from "drizzle-orm";
-import { paperModel } from "../models/paper.model.js";
-import { programCourses } from "../models/program-course.model.js";
+
 import XLSX from "xlsx";
 import fs from "fs";
+import { Affiliation, affiliationModel, paperModel, programCourseModel } from "@repo/db/schemas";
+import { countDistinct, eq, ilike } from "drizzle-orm";
 
 const defaultAffiliation: Affiliation[] = [
     {
@@ -70,9 +69,9 @@ export async function deleteAffiliationSafe(id: number) {
         .where(eq(paperModel.affiliationId, id));
 
     const [{ programCourseCount }] = await db
-        .select({ programCourseCount: countDistinct(programCourses.id) })
-        .from(programCourses)
-        .where(eq(programCourses.affiliationId, id));
+        .select({ programCourseCount: countDistinct(programCourseModel.id) })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.affiliationId, id));
 
     if (paperCount > 0 || programCourseCount > 0) {
         return {

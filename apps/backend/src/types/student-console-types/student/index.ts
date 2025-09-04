@@ -1,15 +1,15 @@
 // import { AcademicHistory, Address, City, Country, FamilyDetail,Occupation,Person,PersonalDetail, Qualification, State } from "@/db/schema";
-import { Address } from "@/features/user/models/address.model";
+import { Address } from "@repo/db/schemas/models/user";
 import { BatchDto } from "../batches";
 import { Country } from "@/features/resources/models/country.model";
-import { State } from "@/features/resources/models/state.model";
-import { City } from "@/features/resources/models/city.model";
-import { Person } from "@/features/user/models/person.model";
-import { Qualification } from "@/features/resources/models/qualification.model";
+    import { State } from "@repo/db/schemas/models/resources";
+import { City } from "@repo/db/schemas/models/resources";
+import { Person } from "@repo/db/schemas/models/user";
+    import { Qualification } from "@repo/db/schemas/models/resources";
 import { Occupation } from "@/features/resources/models/occupation.model";
-import { Family } from "@/features/user/models/family.model";
-import { PersonalDetails } from "@/features/user/models/personalDetails.model";
-import { AcademicHistory } from "@/features/user/models/academicHistory.model";
+import { Family } from "@repo/db/schemas/models/user";
+import { PersonalDetails } from "@repo/db/schemas/models/user";
+// import { AcademicHistory } from "@repo/db/schemas/models/user";
 
 export interface AddressDto extends Omit<Address, "countryId" | "stateId" | "cityId"> {
     country: Country | null;
@@ -36,5 +36,5 @@ export interface BasicInfo {
 export interface ProfileInfo {
     personalDetails: PersonalDetails | null;
     familyDetails: FamilyDetailDto | null;
-    lastAcademicInfo: AcademicHistory | null;
+   
 }

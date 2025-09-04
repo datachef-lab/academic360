@@ -1,5 +1,5 @@
 {
-  "id": "246c048a-823e-43ce-b9aa-bb8b262a6a68",
+  "id": "67d6321a-85da-41c5-855b-d31825f6a81d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -13,6 +13,12 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "legacy_academic_year_id": {
+          "name": "legacy_academic_year_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         },
         "year": {
           "name": "year",
@@ -1028,6 +1034,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_session_id": {
+          "name": "legacy_session_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "academic_id_fk": {
           "name": "academic_id_fk",
           "type": "integer",
@@ -1174,8 +1186,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.academic_subjects": {
-      "name": "academic_subjects",
+    "public.board_subjects": {
+      "name": "board_subjects",
       "schema": "",
       "columns": {
         "id": {
@@ -1184,21 +1196,45 @@
           "primaryKey": true,
           "notNull": true
         },
-        "board_university_id_fk": {
-          "name": "board_university_id_fk",
+        "legacy_board_subject_mapping_sub_id": {
+          "name": "legacy_board_subject_mapping_sub_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "board_id_fk": {
+          "name": "board_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "name": "name",
-          "type": "varchar(500)",
+        "subject_id_fk": {
+          "name": "subject_id_fk",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "passing_marks": {
-          "name": "passing_marks",
-          "type": "integer",
+        "full_marks_theory": {
+          "name": "full_marks_theory",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "passing_marks_theory": {
+          "name": "passing_marks_theory",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "full_marks_practical": {
+          "name": "full_marks_practical",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "passing_marks_practical": {
+          "name": "passing_marks_practical",
+          "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
@@ -1226,196 +1262,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "academic_subjects_board_university_id_fk_board_universities_id_fk": {
-          "name": "academic_subjects_board_university_id_fk_board_universities_id_fk",
-          "tableFrom": "academic_subjects",
-          "tableTo": "board_universities",
+        "board_subjects_board_id_fk_boards_id_fk": {
+          "name": "board_subjects_board_id_fk_boards_id_fk",
+          "tableFrom": "board_subjects",
+          "tableTo": "boards",
           "columnsFrom": [
-            "board_university_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admission_additional_info": {
-      "name": "admission_additional_info",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "application_form_id_fk": {
-          "name": "application_form_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "alternate_mobile_number": {
-          "name": "alternate_mobile_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "blood_group_id_fk": {
-          "name": "blood_group_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "religion_id_fk": {
-          "name": "religion_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "category_id_fk": {
-          "name": "category_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_physically_challenged": {
-          "name": "is_physically_challenged",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "disability_type": {
-          "name": "disability_type",
-          "type": "disability_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_single_parent": {
-          "name": "is_single_parent",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "father_title": {
-          "name": "father_title",
-          "type": "person_title_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "father_name": {
-          "name": "father_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mother_title": {
-          "name": "mother_title",
-          "type": "person_title_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mother_name": {
-          "name": "mother_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_either_parent_staff": {
-          "name": "is_either_parent_staff",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "name_of_staff_parent": {
-          "name": "name_of_staff_parent",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "department_of_staff_parent_fk": {
-          "name": "department_of_staff_parent_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "has_smartphone": {
-          "name": "has_smartphone",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "has_laptop_or_desktop": {
-          "name": "has_laptop_or_desktop",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "has_internet_access": {
-          "name": "has_internet_access",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "annual_income_id_fk": {
-          "name": "annual_income_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "apply_under_ncc_category": {
-          "name": "apply_under_ncc_category",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "apply_under_sports_category": {
-          "name": "apply_under_sports_category",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admission_additional_info_application_form_id_fk_application_forms_id_fk": {
-          "name": "admission_additional_info_application_form_id_fk_application_forms_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "application_forms",
-          "columnsFrom": [
-            "application_form_id_fk"
+            "board_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -1423,1037 +1275,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "admission_additional_info_blood_group_id_fk_blood_group_id_fk": {
-          "name": "admission_additional_info_blood_group_id_fk_blood_group_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "blood_group",
+        "board_subjects_subject_id_fk_subjects_id_fk": {
+          "name": "board_subjects_subject_id_fk_subjects_id_fk",
+          "tableFrom": "board_subjects",
+          "tableTo": "subjects",
           "columnsFrom": [
-            "blood_group_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_additional_info_religion_id_fk_religion_id_fk": {
-          "name": "admission_additional_info_religion_id_fk_religion_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "religion",
-          "columnsFrom": [
-            "religion_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_additional_info_category_id_fk_categories_id_fk": {
-          "name": "admission_additional_info_category_id_fk_categories_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_additional_info_department_of_staff_parent_fk_departments_id_fk": {
-          "name": "admission_additional_info_department_of_staff_parent_fk_departments_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "departments",
-          "columnsFrom": [
-            "department_of_staff_parent_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk": {
-          "name": "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk",
-          "tableFrom": "admission_additional_info",
-          "tableTo": "annual_incomes",
-          "columnsFrom": [
-            "annual_income_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admission_course_applications": {
-      "name": "admission_course_applications",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "application_form_id_fk": {
-          "name": "application_form_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "admission_course_id_fk": {
-          "name": "admission_course_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admission_course_applications_application_form_id_fk_application_forms_id_fk": {
-          "name": "admission_course_applications_application_form_id_fk_application_forms_id_fk",
-          "tableFrom": "admission_course_applications",
-          "tableTo": "application_forms",
-          "columnsFrom": [
-            "application_form_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_course_applications_admission_course_id_fk_admission_courses_id_fk": {
-          "name": "admission_course_applications_admission_course_id_fk_admission_courses_id_fk",
-          "tableFrom": "admission_course_applications",
-          "tableTo": "admission_courses",
-          "columnsFrom": [
-            "admission_course_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admission_courses": {
-      "name": "admission_courses",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "admission_id_fk": {
-          "name": "admission_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "course_id_fk": {
-          "name": "course_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 750
-        },
-        "disabled": {
-          "name": "disabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "is_closed": {
-          "name": "is_closed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admission_courses_admission_id_fk_admissions_id_fk": {
-          "name": "admission_courses_admission_id_fk_admissions_id_fk",
-          "tableFrom": "admission_courses",
-          "tableTo": "admissions",
-          "columnsFrom": [
-            "admission_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_courses_course_id_fk_courses_id_fk": {
-          "name": "admission_courses_course_id_fk_courses_id_fk",
-          "tableFrom": "admission_courses",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "course_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admission_general_info": {
-      "name": "admission_general_info",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "application_form_id_fk": {
-          "name": "application_form_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "first_name": {
-          "name": "first_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "middle_name": {
-          "name": "middle_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_name": {
-          "name": "last_name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "date_of_birth": {
-          "name": "date_of_birth",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "nationality_id_fk": {
-          "name": "nationality_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "other_nationality": {
-          "name": "other_nationality",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_gujarati": {
-          "name": "is_gujarati",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "category_id_fk": {
-          "name": "category_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "religion_id_fk": {
-          "name": "religion_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "gender": {
-          "name": "gender",
-          "type": "gender_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'MALE'"
-        },
-        "degree_level": {
-          "name": "degree_level",
-          "type": "degree_level_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'UNDER_GRADUATE'"
-        },
-        "password": {
-          "name": "password",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "whatsapp_number": {
-          "name": "whatsapp_number",
-          "type": "varchar(15)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mobile_number": {
-          "name": "mobile_number",
-          "type": "varchar(15)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "email": {
-          "name": "email",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "residence_of_kolkata": {
-          "name": "residence_of_kolkata",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admission_general_info_application_form_id_fk_application_forms_id_fk": {
-          "name": "admission_general_info_application_form_id_fk_application_forms_id_fk",
-          "tableFrom": "admission_general_info",
-          "tableTo": "application_forms",
-          "columnsFrom": [
-            "application_form_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_general_info_nationality_id_fk_nationality_id_fk": {
-          "name": "admission_general_info_nationality_id_fk_nationality_id_fk",
-          "tableFrom": "admission_general_info",
-          "tableTo": "nationality",
-          "columnsFrom": [
-            "nationality_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_general_info_category_id_fk_categories_id_fk": {
-          "name": "admission_general_info_category_id_fk_categories_id_fk",
-          "tableFrom": "admission_general_info",
-          "tableTo": "categories",
-          "columnsFrom": [
-            "category_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_general_info_religion_id_fk_religion_id_fk": {
-          "name": "admission_general_info_religion_id_fk_religion_id_fk",
-          "tableFrom": "admission_general_info",
-          "tableTo": "religion",
-          "columnsFrom": [
-            "religion_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admissions": {
-      "name": "admissions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "academic_year_id_fk": {
-          "name": "academic_year_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "admission_code": {
-          "name": "admission_code",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_closed": {
-          "name": "is_closed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "start_date": {
-          "name": "start_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_date": {
-          "name": "last_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admissions_academic_year_id_fk_academic_years_id_fk": {
-          "name": "admissions_academic_year_id_fk_academic_years_id_fk",
-          "tableFrom": "admissions",
-          "tableTo": "academic_years",
-          "columnsFrom": [
-            "academic_year_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.application_forms": {
-      "name": "application_forms",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "admission_id_fk": {
-          "name": "admission_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "application_number": {
-          "name": "application_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "form_status": {
-          "name": "form_status",
-          "type": "admission_form_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "admission_step": {
-          "name": "admission_step",
-          "type": "admission_steps",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "application_forms_admission_id_fk_admissions_id_fk": {
-          "name": "application_forms_admission_id_fk_admissions_id_fk",
-          "tableFrom": "application_forms",
-          "tableTo": "admissions",
-          "columnsFrom": [
-            "admission_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.sports_categories": {
-      "name": "sports_categories",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "disabled": {
-          "name": "disabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.sports_info": {
-      "name": "sports_info",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "additional_info_id_fk": {
-          "name": "additional_info_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "sports_category_id_fk": {
-          "name": "sports_category_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "level": {
-          "name": "level",
-          "type": "sports_level",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "sports_info_additional_info_id_fk_admission_additional_info_id_fk": {
-          "name": "sports_info_additional_info_id_fk_admission_additional_info_id_fk",
-          "tableFrom": "sports_info",
-          "tableTo": "admission_additional_info",
-          "columnsFrom": [
-            "additional_info_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "sports_info_sports_category_id_fk_sports_categories_id_fk": {
-          "name": "sports_info_sports_category_id_fk_sports_categories_id_fk",
-          "tableFrom": "sports_info",
-          "tableTo": "sports_categories",
-          "columnsFrom": [
-            "sports_category_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.student_academic_subjects": {
-      "name": "student_academic_subjects",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "admission_academic_info_id_fk": {
-          "name": "admission_academic_info_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "academic_subject_id_fk": {
-          "name": "academic_subject_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "full_marks": {
-          "name": "full_marks",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "total_marks": {
-          "name": "total_marks",
-          "type": "numeric(10, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "result_status": {
-          "name": "result_status",
-          "type": "board_result_status_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk": {
-          "name": "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk",
-          "tableFrom": "student_academic_subjects",
-          "tableTo": "admission_academic_info",
-          "columnsFrom": [
-            "admission_academic_info_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "student_academic_subjects_academic_subject_id_fk_academic_subjects_id_fk": {
-          "name": "student_academic_subjects_academic_subject_id_fk_academic_subjects_id_fk",
-          "tableFrom": "student_academic_subjects",
-          "tableTo": "academic_subjects",
-          "columnsFrom": [
-            "academic_subject_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.admission_academic_info": {
-      "name": "admission_academic_info",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "application_form_id_fk": {
-          "name": "application_form_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "board_university_id_fk": {
-          "name": "board_university_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "board_result_status": {
-          "name": "board_result_status",
-          "type": "board_result_status_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "roll_number": {
-          "name": "roll_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "school_number": {
-          "name": "school_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "center_number": {
-          "name": "center_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "admit_card_id": {
-          "name": "admit_card_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "institute_id_fk": {
-          "name": "institute_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "other_institute": {
-          "name": "other_institute",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "language_medium_id_fk": {
-          "name": "language_medium_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "year_of_passing": {
-          "name": "year_of_passing",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stream_type": {
-          "name": "stream_type",
-          "type": "stream_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "is_registered_for_ug_in_cu": {
-          "name": "is_registered_for_ug_in_cu",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "cu_registration_number": {
-          "name": "cu_registration_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "previously_registered_course_id_fk": {
-          "name": "previously_registered_course_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "other_previously_registered_course": {
-          "name": "other_previously_registered_course",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "previous_college_id_fk": {
-          "name": "previous_college_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "other_college": {
-          "name": "other_college",
-          "type": "varchar(500)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "admission_academic_info_application_form_id_fk_application_forms_id_fk": {
-          "name": "admission_academic_info_application_form_id_fk_application_forms_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "application_forms",
-          "columnsFrom": [
-            "application_form_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_academic_info_board_university_id_fk_board_universities_id_fk": {
-          "name": "admission_academic_info_board_university_id_fk_board_universities_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "board_universities",
-          "columnsFrom": [
-            "board_university_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_academic_info_institute_id_fk_institutions_id_fk": {
-          "name": "admission_academic_info_institute_id_fk_institutions_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "institutions",
-          "columnsFrom": [
-            "institute_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_academic_info_language_medium_id_fk_language_medium_id_fk": {
-          "name": "admission_academic_info_language_medium_id_fk_language_medium_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "language_medium",
-          "columnsFrom": [
-            "language_medium_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_academic_info_previously_registered_course_id_fk_courses_id_fk": {
-          "name": "admission_academic_info_previously_registered_course_id_fk_courses_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "courses",
-          "columnsFrom": [
-            "previously_registered_course_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "admission_academic_info_previous_college_id_fk_institutions_id_fk": {
-          "name": "admission_academic_info_previous_college_id_fk_institutions_id_fk",
-          "tableFrom": "admission_academic_info",
-          "tableTo": "institutions",
-          "columnsFrom": [
-            "previous_college_id_fk"
+            "subject_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -2484,20 +1311,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
+        "is_transferred": {
+          "name": "is_transferred",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "application_form_id_fk": {
+          "name": "application_form_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission_program_course_id_fk": {
+          "name": "admission_program_course_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
         "stream_id_fk": {
           "name": "stream_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "program_course_id_fk": {
-          "name": "program_course_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -2526,8 +1360,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "roll_number": {
-          "name": "roll_number",
+        "rfid_number": {
+          "name": "rfid_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "class_roll_number": {
+          "name": "class_roll_number",
           "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
@@ -2603,8 +1443,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "verified_by": {
-          "name": "verified_by",
+        "verified_by_user_id_fk": {
+          "name": "verified_by_user_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2615,14 +1455,21 @@
           "primaryKey": false,
           "notNull": false
         },
+        "is_freeship_applied": {
+          "name": "is_freeship_applied",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "freeship_date": {
           "name": "freeship_date",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "freeship_approved_by": {
-          "name": "freeship_approved_by",
+        "freeship_approved_by_user_id_fk": {
+          "name": "freeship_approved_by_user_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2638,13 +1485,6 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
-        },
-        "is_freeship_applied": {
-          "name": "is_freeship_applied",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         },
         "freeship_perc_applied": {
           "name": "freeship_perc_applied",
@@ -2754,20 +1594,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "chk_anti_rag_student": {
-          "name": "chk_anti_rag_student",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "chk_anti_rag_parent": {
-          "name": "chk_anti_rag_parent",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "last_date_document_pending": {
           "name": "last_date_document_pending",
           "type": "timestamp",
@@ -2782,7 +1608,7 @@
         },
         "adm_frm_dwnl_id_entry_date": {
           "name": "adm_frm_dwnl_id_entry_date",
-          "type": "varchar(5)",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -2835,13 +1661,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "is_transferred": {
-          "name": "is_transferred",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "specialization_id_fk": {
           "name": "specialization_id_fk",
           "type": "integer",
@@ -2874,8 +1693,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "merit_list_id": {
-          "name": "merit_list_id",
+        "merit_list_id_fk": {
+          "name": "merit_list_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -2892,8 +1711,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "merit_list_by": {
-          "name": "merit_list_by",
+        "merit_list_by_user_id_fk": {
+          "name": "merit_list_by_user_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3069,8 +1888,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "cancel_user_id": {
-          "name": "cancel_user_id",
+        "cancel_by_user_id_fk": {
+          "name": "cancel_by_user_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -3098,18 +1917,31 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "admission_course_details_student_id_fk_students_id_fk": {
-          "name": "admission_course_details_student_id_fk_students_id_fk",
+        "admission_course_details_application_form_id_fk_application_forms_id_fk": {
+          "name": "admission_course_details_application_form_id_fk_application_forms_id_fk",
           "tableFrom": "admission_course_details",
-          "tableTo": "students",
+          "tableTo": "application_forms",
           "columnsFrom": [
-            "student_id_fk"
+            "application_form_id_fk"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_course_details_admission_program_course_id_fk_admission_program_courses_id_fk": {
+          "name": "admission_course_details_admission_program_course_id_fk_admission_program_courses_id_fk",
+          "tableFrom": "admission_course_details",
+          "tableTo": "admission_program_courses",
+          "columnsFrom": [
+            "admission_program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
         "admission_course_details_stream_id_fk_streams_id_fk": {
           "name": "admission_course_details_stream_id_fk_streams_id_fk",
@@ -3117,19 +1949,6 @@
           "tableTo": "streams",
           "columnsFrom": [
             "stream_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        },
-        "admission_course_details_program_course_id_fk_program_courses_id_fk": {
-          "name": "admission_course_details_program_course_id_fk_program_courses_id_fk",
-          "tableFrom": "admission_course_details",
-          "tableTo": "program_courses",
-          "columnsFrom": [
-            "program_course_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3189,6 +2008,32 @@
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
+        "admission_course_details_verified_by_user_id_fk_users_id_fk": {
+          "name": "admission_course_details_verified_by_user_id_fk_users_id_fk",
+          "tableFrom": "admission_course_details",
+          "tableTo": "users",
+          "columnsFrom": [
+            "verified_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_course_details_freeship_approved_by_user_id_fk_users_id_fk": {
+          "name": "admission_course_details_freeship_approved_by_user_id_fk_users_id_fk",
+          "tableFrom": "admission_course_details",
+          "tableTo": "users",
+          "columnsFrom": [
+            "freeship_approved_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "admission_course_details_fees_payment_bank_branch_id_fk_bank_branches_id_fk": {
           "name": "admission_course_details_fees_payment_bank_branch_id_fk_bank_branches_id_fk",
           "tableFrom": "admission_course_details",
@@ -3228,12 +2073,12 @@
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
-        "admission_course_details_merit_list_id_merit_lists_id_fk": {
-          "name": "admission_course_details_merit_list_id_merit_lists_id_fk",
+        "admission_course_details_merit_list_id_fk_merit_lists_id_fk": {
+          "name": "admission_course_details_merit_list_id_fk_merit_lists_id_fk",
           "tableFrom": "admission_course_details",
           "tableTo": "merit_lists",
           "columnsFrom": [
-            "merit_list_id"
+            "merit_list_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3241,12 +2086,129 @@
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
+        "admission_course_details_merit_list_by_user_id_fk_users_id_fk": {
+          "name": "admission_course_details_merit_list_by_user_id_fk_users_id_fk",
+          "tableFrom": "admission_course_details",
+          "tableTo": "users",
+          "columnsFrom": [
+            "merit_list_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "admission_course_details_cancel_source_id_cancel_sources_id_fk": {
           "name": "admission_course_details_cancel_source_id_cancel_sources_id_fk",
           "tableFrom": "admission_course_details",
           "tableTo": "cancel_sources",
           "columnsFrom": [
             "cancel_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "admission_course_details_cancel_by_user_id_fk_users_id_fk": {
+          "name": "admission_course_details_cancel_by_user_id_fk_users_id_fk",
+          "tableFrom": "admission_course_details",
+          "tableTo": "users",
+          "columnsFrom": [
+            "cancel_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.student_category": {
+      "name": "student_category",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_student_category_id": {
+          "name": "legacy_student_category_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_required": {
+          "name": "document_required",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "course_id_fk": {
+          "name": "course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_id_fk": {
+          "name": "class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "student_category_course_id_fk_courses_id_fk": {
+          "name": "student_category_course_id_fk_courses_id_fk",
+          "tableFrom": "student_category",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "student_category_class_id_fk_classes_id_fk": {
+          "name": "student_category_class_id_fk_classes_id_fk",
+          "tableFrom": "student_category",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -3352,6 +2314,1305 @@
           "onUpdate": "cascade"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admission_additional_info": {
+      "name": "admission_additional_info",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "application_form_id_fk": {
+          "name": "application_form_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alternate_mobile_number": {
+          "name": "alternate_mobile_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_physically_challenged": {
+          "name": "is_physically_challenged",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "disability_type": {
+          "name": "disability_type",
+          "type": "disability_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_single_parent": {
+          "name": "is_single_parent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "family_details_id_fk": {
+          "name": "family_details_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_either_parent_staff": {
+          "name": "is_either_parent_staff",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "name_of_staff_parent": {
+          "name": "name_of_staff_parent",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "department_of_staff_parent_fk": {
+          "name": "department_of_staff_parent_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_family_ex_student": {
+          "name": "has_family_ex_student",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "family_ex_student_relation": {
+          "name": "family_ex_student_relation",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_ex_student_name": {
+          "name": "family_ex_student_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_ex_student_program_course_id_fk": {
+          "name": "family_ex_student_program_course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_ex_student_year_of_passing": {
+          "name": "family_ex_student_year_of_passing",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_smartphone": {
+          "name": "has_smartphone",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "has_laptop_or_desktop": {
+          "name": "has_laptop_or_desktop",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "has_internet_access": {
+          "name": "has_internet_access",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "annual_income_id_fk": {
+          "name": "annual_income_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apply_under_ncc_category": {
+          "name": "apply_under_ncc_category",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "apply_under_sports_category": {
+          "name": "apply_under_sports_category",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "admission_additional_info_application_form_id_fk_application_forms_id_fk": {
+          "name": "admission_additional_info_application_form_id_fk_application_forms_id_fk",
+          "tableFrom": "admission_additional_info",
+          "tableTo": "application_forms",
+          "columnsFrom": [
+            "application_form_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_additional_info_family_details_id_fk_family_details_id_fk": {
+          "name": "admission_additional_info_family_details_id_fk_family_details_id_fk",
+          "tableFrom": "admission_additional_info",
+          "tableTo": "family_details",
+          "columnsFrom": [
+            "family_details_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_additional_info_department_of_staff_parent_fk_departments_id_fk": {
+          "name": "admission_additional_info_department_of_staff_parent_fk_departments_id_fk",
+          "tableFrom": "admission_additional_info",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "department_of_staff_parent_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_additional_info_family_ex_student_program_course_id_fk_program_courses_id_fk": {
+          "name": "admission_additional_info_family_ex_student_program_course_id_fk_program_courses_id_fk",
+          "tableFrom": "admission_additional_info",
+          "tableTo": "program_courses",
+          "columnsFrom": [
+            "family_ex_student_program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk": {
+          "name": "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk",
+          "tableFrom": "admission_additional_info",
+          "tableTo": "annual_incomes",
+          "columnsFrom": [
+            "annual_income_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admission_academic_info": {
+      "name": "admission_academic_info",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_academic_info_id": {
+          "name": "legacy_academic_info_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "application_form_id_fk": {
+          "name": "application_form_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "board_id_fk": {
+          "name": "board_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "other_board": {
+          "name": "other_board",
+          "type": "varchar(755)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "board_result_status": {
+          "name": "board_result_status",
+          "type": "board_result_status_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "percentage_of_marks": {
+          "name": "percentage_of_marks",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "division": {
+          "name": "division",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rank": {
+          "name": "rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_points": {
+          "name": "total_points",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aggregate": {
+          "name": "aggregate",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "subject_studied": {
+          "name": "subject_studied",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_school_id_fk": {
+          "name": "last_school_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_school_name": {
+          "name": "last_school_name",
+          "type": "varchar(755)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_school_address_id_fk": {
+          "name": "last_school_address_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "index_number_1": {
+          "name": "index_number_1",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "index_number_2": {
+          "name": "index_number_2",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "roll_number": {
+          "name": "roll_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "school_number": {
+          "name": "school_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "center_number": {
+          "name": "center_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admit_card_id": {
+          "name": "admit_card_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "language_medium_id_fk": {
+          "name": "language_medium_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "year_of_passing": {
+          "name": "year_of_passing",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "studied_up_to_class": {
+          "name": "studied_up_to_class",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "specialization_id": {
+          "name": "specialization_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "best_of_four": {
+          "name": "best_of_four",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "total_score": {
+          "name": "total_score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "old_best_of_four": {
+          "name": "old_best_of_four",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "old_total_score": {
+          "name": "old_total_score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_registered_for_ug_in_cu": {
+          "name": "is_registered_for_ug_in_cu",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "cu_registration_number": {
+          "name": "cu_registration_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previously_registered_program_course_id_fk": {
+          "name": "previously_registered_program_course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_previously_registered_program_course": {
+          "name": "other_previously_registered_program_course",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_institute_id_fk": {
+          "name": "previous_institute_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_previous_institute": {
+          "name": "other_previous_institute",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "admission_academic_info_application_form_id_fk_application_forms_id_fk": {
+          "name": "admission_academic_info_application_form_id_fk_application_forms_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "application_forms",
+          "columnsFrom": [
+            "application_form_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_board_id_fk_boards_id_fk": {
+          "name": "admission_academic_info_board_id_fk_boards_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "boards",
+          "columnsFrom": [
+            "board_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_last_school_id_fk_institutions_id_fk": {
+          "name": "admission_academic_info_last_school_id_fk_institutions_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "institutions",
+          "columnsFrom": [
+            "last_school_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_last_school_address_id_fk_address_id_fk": {
+          "name": "admission_academic_info_last_school_address_id_fk_address_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "address",
+          "columnsFrom": [
+            "last_school_address_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_language_medium_id_fk_language_medium_id_fk": {
+          "name": "admission_academic_info_language_medium_id_fk_language_medium_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "language_medium",
+          "columnsFrom": [
+            "language_medium_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_specialization_id_specializations_id_fk": {
+          "name": "admission_academic_info_specialization_id_specializations_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "specializations",
+          "columnsFrom": [
+            "specialization_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_previously_registered_program_course_id_fk_program_courses_id_fk": {
+          "name": "admission_academic_info_previously_registered_program_course_id_fk_program_courses_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "program_courses",
+          "columnsFrom": [
+            "previously_registered_program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_academic_info_previous_institute_id_fk_institutions_id_fk": {
+          "name": "admission_academic_info_previous_institute_id_fk_institutions_id_fk",
+          "tableFrom": "admission_academic_info",
+          "tableTo": "institutions",
+          "columnsFrom": [
+            "previous_institute_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admission_program_courses": {
+      "name": "admission_program_courses",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "admission_id_fk": {
+          "name": "admission_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "program_course_id_fk": {
+          "name": "program_course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount": {
+          "name": "amount",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 750
+        },
+        "shift_id_fk": {
+          "name": "shift_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "class_id_fk": {
+          "name": "class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_closed": {
+          "name": "is_closed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "admission_program_courses_admission_id_fk_admissions_id_fk": {
+          "name": "admission_program_courses_admission_id_fk_admissions_id_fk",
+          "tableFrom": "admission_program_courses",
+          "tableTo": "admissions",
+          "columnsFrom": [
+            "admission_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_program_courses_program_course_id_fk_program_courses_id_fk": {
+          "name": "admission_program_courses_program_course_id_fk_program_courses_id_fk",
+          "tableFrom": "admission_program_courses",
+          "tableTo": "program_courses",
+          "columnsFrom": [
+            "program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_program_courses_shift_id_fk_shifts_id_fk": {
+          "name": "admission_program_courses_shift_id_fk_shifts_id_fk",
+          "tableFrom": "admission_program_courses",
+          "tableTo": "shifts",
+          "columnsFrom": [
+            "shift_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_program_courses_class_id_fk_classes_id_fk": {
+          "name": "admission_program_courses_class_id_fk_classes_id_fk",
+          "tableFrom": "admission_program_courses",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admission_general_info": {
+      "name": "admission_general_info",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_personal_details_id": {
+          "name": "legacy_personal_details_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "application_form_id_fk": {
+          "name": "application_form_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password": {
+          "name": "password",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eligibility_criteria_id_fk": {
+          "name": "eligibility_criteria_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "student_category_id_fk": {
+          "name": "student_category_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "personal_details_id_fk": {
+          "name": "personal_details_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_minority": {
+          "name": "is_minority",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "dtls": {
+          "name": "dtls",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gujarati_class": {
+          "name": "gujarati_class",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "club_a_id": {
+          "name": "club_a_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "club_b_id": {
+          "name": "club_b_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tshirt_size": {
+          "name": "tshirt_size",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spqta_approved_by_user_id_fk": {
+          "name": "spqta_approved_by_user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spqta_approved_date": {
+          "name": "spqta_approved_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "separated": {
+          "name": "separated",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "chk_flats": {
+          "name": "chk_flats",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "back_door_flag": {
+          "name": "back_door_flag",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "health_id_fk": {
+          "name": "health_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accommodation_id_fk": {
+          "name": "accommodation_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "emergency_contact_id_fk": {
+          "name": "emergency_contact_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "residence_of_kolkata": {
+          "name": "residence_of_kolkata",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bank_branch_id_fk": {
+          "name": "bank_branch_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "transport_details_id_fk": {
+          "name": "transport_details_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "admission_general_info_application_form_id_fk_application_forms_id_fk": {
+          "name": "admission_general_info_application_form_id_fk_application_forms_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "application_forms",
+          "columnsFrom": [
+            "application_form_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_eligibility_criteria_id_fk_eligibility_criteria_id_fk": {
+          "name": "admission_general_info_eligibility_criteria_id_fk_eligibility_criteria_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "eligibility_criteria",
+          "columnsFrom": [
+            "eligibility_criteria_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_student_category_id_fk_student_category_id_fk": {
+          "name": "admission_general_info_student_category_id_fk_student_category_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "student_category",
+          "columnsFrom": [
+            "student_category_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_personal_details_id_fk_personal_details_id_fk": {
+          "name": "admission_general_info_personal_details_id_fk_personal_details_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "personal_details",
+          "columnsFrom": [
+            "personal_details_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_spqta_approved_by_user_id_fk_users_id_fk": {
+          "name": "admission_general_info_spqta_approved_by_user_id_fk_users_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "users",
+          "columnsFrom": [
+            "spqta_approved_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_health_id_fk_health_id_fk": {
+          "name": "admission_general_info_health_id_fk_health_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "health",
+          "columnsFrom": [
+            "health_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_accommodation_id_fk_accommodation_id_fk": {
+          "name": "admission_general_info_accommodation_id_fk_accommodation_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "accommodation",
+          "columnsFrom": [
+            "accommodation_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_emergency_contact_id_fk_emergency_contacts_id_fk": {
+          "name": "admission_general_info_emergency_contact_id_fk_emergency_contacts_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "emergency_contacts",
+          "columnsFrom": [
+            "emergency_contact_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_bank_branch_id_fk_bank_branches_id_fk": {
+          "name": "admission_general_info_bank_branch_id_fk_bank_branches_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "bank_branches",
+          "columnsFrom": [
+            "bank_branch_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "admission_general_info_transport_details_id_fk_transport_details_id_fk": {
+          "name": "admission_general_info_transport_details_id_fk_transport_details_id_fk",
+          "tableFrom": "admission_general_info",
+          "tableTo": "transport_details",
+          "columnsFrom": [
+            "transport_details_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admissions": {
+      "name": "admissions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "session_id_fk": {
+          "name": "session_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "admission_form_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission_code": {
+          "name": "admission_code",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_closed": {
+          "name": "is_closed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_date": {
+          "name": "last_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archived": {
+          "name": "archived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "admissions_session_id_fk_sessions_id_fk": {
+          "name": "admissions_session_id_fk_sessions_id_fk",
+          "tableFrom": "admissions",
+          "tableTo": "sessions",
+          "columnsFrom": [
+            "session_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.application_forms": {
+      "name": "application_forms",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "admission_id_fk": {
+          "name": "admission_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "degree_level_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UNDER_GRADUATE'"
+        },
+        "application_number": {
+          "name": "application_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "changed_application_number": {
+          "name": "changed_application_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "form_status": {
+          "name": "form_status",
+          "type": "admission_form_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "admission_step": {
+          "name": "admission_step",
+          "type": "admission_steps",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "adm_approved_by_user_id_fk": {
+          "name": "adm_approved_by_user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adm_approved_date": {
+          "name": "adm_approved_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verify_type": {
+          "name": "verify_type",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verify_remarks": {
+          "name": "verify_remarks",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "remarks": {
+          "name": "remarks",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "application_forms_admission_id_fk_admissions_id_fk": {
+          "name": "application_forms_admission_id_fk_admissions_id_fk",
+          "tableFrom": "application_forms",
+          "tableTo": "admissions",
+          "columnsFrom": [
+            "admission_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "application_forms_adm_approved_by_user_id_fk_users_id_fk": {
+          "name": "application_forms_adm_approved_by_user_id_fk_users_id_fk",
+          "tableFrom": "application_forms",
+          "tableTo": "users",
+          "columnsFrom": [
+            "adm_approved_by_user_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.cancel_sources": {
+      "name": "cancel_sources",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_cancel_source_id": {
+          "name": "legacy_cancel_source_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -3467,6 +3728,115 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.grade": {
+      "name": "grade",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_grade_id": {
+          "name": "legacy_grade_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "course_id_fk": {
+          "name": "course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_id_fk": {
+          "name": "class_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category_id_fk": {
+          "name": "category_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "general_instruction": {
+          "name": "general_instruction",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "grade_course_id_fk_courses_id_fk": {
+          "name": "grade_course_id_fk_courses_id_fk",
+          "tableFrom": "grade",
+          "tableTo": "courses",
+          "columnsFrom": [
+            "course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "grade_class_id_fk_classes_id_fk": {
+          "name": "grade_class_id_fk_classes_id_fk",
+          "tableFrom": "grade",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "grade_category_id_fk_categories_id_fk": {
+          "name": "grade_category_id_fk_categories_id_fk",
+          "tableFrom": "grade",
+          "tableTo": "categories",
+          "columnsFrom": [
+            "category_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.merit_lists": {
       "name": "merit_lists",
       "schema": "",
@@ -3501,51 +3871,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.cancel_sources": {
-      "name": "cancel_sources",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "legacy_cancel_source_id": {
-          "name": "legacy_cancel_source_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -3661,8 +3986,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.student_category": {
-      "name": "student_category",
+    "public.sports_categories": {
+      "name": "sports_categories",
       "schema": "",
       "columns": {
         "id": {
@@ -3671,34 +3996,68 @@
           "primaryKey": true,
           "notNull": true
         },
-        "legacy_student_category_id": {
-          "name": "legacy_student_category_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "document_required": {
-          "name": "document_required",
+        "disabled": {
+          "name": "disabled",
           "type": "boolean",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "default": false
         },
-        "course_id_fk": {
-          "name": "course_id_fk",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.sports_info": {
+      "name": "sports_info",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "additional_info_id_fk": {
+          "name": "additional_info_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "class_id_fk": {
-          "name": "class_id_fk",
+        "sports_category_id_fk": {
+          "name": "sports_category_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "sports_level",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -3719,31 +4078,156 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "student_category_course_id_fk_courses_id_fk": {
-          "name": "student_category_course_id_fk_courses_id_fk",
-          "tableFrom": "student_category",
-          "tableTo": "courses",
+        "sports_info_additional_info_id_fk_admission_additional_info_id_fk": {
+          "name": "sports_info_additional_info_id_fk_admission_additional_info_id_fk",
+          "tableFrom": "sports_info",
+          "tableTo": "admission_additional_info",
           "columnsFrom": [
-            "course_id_fk"
+            "additional_info_id_fk"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         },
-        "student_category_class_id_fk_classes_id_fk": {
-          "name": "student_category_class_id_fk_classes_id_fk",
-          "tableFrom": "student_category",
-          "tableTo": "classes",
+        "sports_info_sports_category_id_fk_sports_categories_id_fk": {
+          "name": "sports_info_sports_category_id_fk_sports_categories_id_fk",
+          "tableFrom": "sports_info",
+          "tableTo": "sports_categories",
           "columnsFrom": [
-            "class_id_fk"
+            "sports_category_id_fk"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.student_academic_subjects": {
+      "name": "student_academic_subjects",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_subject_details_id": {
+          "name": "legacy_subject_details_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "admission_academic_info_id_fk": {
+          "name": "admission_academic_info_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "board_subject_id_fk": {
+          "name": "board_subject_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "theory_marks": {
+          "name": "theory_marks",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "practical_marks": {
+          "name": "practical_marks",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "total_marks": {
+          "name": "total_marks",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "grade_id_fk": {
+          "name": "grade_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result_status": {
+          "name": "result_status",
+          "type": "board_result_status_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk": {
+          "name": "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk",
+          "tableFrom": "student_academic_subjects",
+          "tableTo": "admission_academic_info",
+          "columnsFrom": [
+            "admission_academic_info_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_academic_subjects_board_subject_id_fk_board_subjects_id_fk": {
+          "name": "student_academic_subjects_board_subject_id_fk_board_subjects_id_fk",
+          "tableFrom": "student_academic_subjects",
+          "tableTo": "board_subjects",
+          "columnsFrom": [
+            "board_subject_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "student_academic_subjects_grade_id_fk_grade_id_fk": {
+          "name": "student_academic_subjects_grade_id_fk_grade_id_fk",
+          "tableFrom": "student_academic_subjects",
+          "tableTo": "grade",
+          "columnsFrom": [
+            "grade_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -4099,6 +4583,72 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.course_headers": {
+      "name": "course_headers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "legacy_course_header_id": {
+          "name": "legacy_course_header_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disabled": {
+          "name": "disabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "course_headers_sequence_unique": {
+          "name": "course_headers_sequence_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "sequence"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.course_levels": {
       "name": "course_levels",
       "schema": "",
@@ -4247,8 +4797,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "degree_id_fk": {
-          "name": "degree_id_fk",
+        "course_header_id_fk": {
+          "name": "course_header_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -4295,12 +4845,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "courses_degree_id_fk_degree_id_fk": {
-          "name": "courses_degree_id_fk_degree_id_fk",
+        "courses_course_header_id_fk_course_headers_id_fk": {
+          "name": "courses_course_header_id_fk_course_headers_id_fk",
           "tableFrom": "courses",
-          "tableTo": "degree",
+          "tableTo": "course_headers",
           "columnsFrom": [
-            "degree_id_fk"
+            "course_header_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -6656,8 +7206,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.board_universities": {
-      "name": "board_universities",
+    "public.boards": {
+      "name": "boards",
       "schema": "",
       "columns": {
         "id": {
@@ -6666,8 +7216,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "legacy_board_university_id": {
-          "name": "legacy_board_university_id",
+        "legacy_board_id": {
+          "name": "legacy_board_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -6732,9 +7282,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "board_universities_degree_id_degree_id_fk": {
-          "name": "board_universities_degree_id_degree_id_fk",
-          "tableFrom": "board_universities",
+        "boards_degree_id_degree_id_fk": {
+          "name": "boards_degree_id_degree_id_fk",
+          "tableFrom": "boards",
           "tableTo": "degree",
           "columnsFrom": [
             "degree_id"
@@ -6745,9 +7295,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "board_universities_address_id_address_id_fk": {
-          "name": "board_universities_address_id_address_id_fk",
-          "tableFrom": "board_universities",
+        "boards_address_id_address_id_fk": {
+          "name": "boards_address_id_address_id_fk",
+          "tableFrom": "boards",
           "tableTo": "address",
           "columnsFrom": [
             "address_id"
@@ -6761,15 +7311,15 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "board_universities_name_unique": {
-          "name": "board_universities_name_unique",
+        "boards_name_unique": {
+          "name": "boards_name_unique",
           "nullsNotDistinct": false,
           "columns": [
             "name"
           ]
         },
-        "board_universities_sequence_unique": {
-          "name": "board_universities_sequence_unique",
+        "boards_sequence_unique": {
+          "name": "boards_sequence_unique",
           "nullsNotDistinct": false,
           "columns": [
             "sequence"
@@ -6882,14 +7432,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "legacy_city_id": {
-          "name": "legacy_city_id",
+        "legacy_district_id": {
+          "name": "legacy_district_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "state_id": {
-          "name": "state_id",
+        "city_id": {
+          "name": "city_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -6897,19 +7447,6 @@
         "name": {
           "name": "name",
           "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_required": {
-          "name": "document_required",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "code": {
-          "name": "code",
-          "type": "varchar(10)",
           "primaryKey": false,
           "notNull": true
         },
@@ -6943,12 +7480,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "cities_state_id_states_id_fk": {
-          "name": "cities_state_id_states_id_fk",
+        "cities_city_id_cities_id_fk": {
+          "name": "cities_city_id_cities_id_fk",
           "tableFrom": "cities",
-          "tableTo": "states",
+          "tableTo": "cities",
           "columnsFrom": [
-            "state_id"
+            "city_id"
           ],
           "columnsTo": [
             "id"
@@ -6964,13 +7501,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "name"
-          ]
-        },
-        "cities_code_unique": {
-          "name": "cities_code_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "code"
           ]
         },
         "cities_sequence_unique": {
@@ -7079,13 +7609,6 @@
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
-        },
-        "level": {
-          "name": "level",
-          "type": "degree_level_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
         },
         "sequence": {
           "name": "sequence",
@@ -7874,11 +8397,10 @@
           "type": "user_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'STUDENT'"
+          "notNull": true
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
@@ -7943,6 +8465,78 @@
           "primaryKey": false,
           "notNull": false
         },
+        "program_course_id_fk": {
+          "name": "program_course_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "specialization_id_fk": {
+          "name": "specialization_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rfid": {
+          "name": "rfid",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cu_form_number": {
+          "name": "cu_form_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "registration_number": {
+          "name": "registration_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "roll_number": {
+          "name": "roll_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "section_id_fk": {
+          "name": "section_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "class_roll_number": {
+          "name": "class_roll_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "apaar_id": {
+          "name": "apaar_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "abc_id": {
+          "name": "abc_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "apprid": {
+          "name": "apprid",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "check_repeat": {
+          "name": "check_repeat",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
         "community": {
           "name": "community",
           "type": "community_type",
@@ -7956,12 +8550,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
-        },
-        "specialization_id_fk": {
-          "name": "specialization_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "last_passed_year": {
           "name": "last_passed_year",
@@ -8049,6 +8637,19 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "students_program_course_id_fk_program_courses_id_fk": {
+          "name": "students_program_course_id_fk_program_courses_id_fk",
+          "tableFrom": "students",
+          "tableTo": "program_courses",
+          "columnsFrom": [
+            "program_course_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "students_specialization_id_fk_specializations_id_fk": {
           "name": "students_specialization_id_fk_specializations_id_fk",
           "tableFrom": "students",
@@ -8061,301 +8662,10 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.academic_history": {
-      "name": "academic_history",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_institution_id_fk": {
-          "name": "last_institution_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_board_university_id_fk": {
-          "name": "last_board_university_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "studied_up_to_class": {
-          "name": "studied_up_to_class",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "passed_year": {
-          "name": "passed_year",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "specialization_id": {
-          "name": "specialization_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_result_id_fk": {
-          "name": "last_result_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "remarks": {
-          "name": "remarks",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "academic_history_student_id_fk_students_id_fk": {
-          "name": "academic_history_student_id_fk_students_id_fk",
-          "tableFrom": "academic_history",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_history_last_institution_id_fk_institutions_id_fk": {
-          "name": "academic_history_last_institution_id_fk_institutions_id_fk",
-          "tableFrom": "academic_history",
-          "tableTo": "institutions",
-          "columnsFrom": [
-            "last_institution_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_history_last_board_university_id_fk_board_universities_id_fk": {
-          "name": "academic_history_last_board_university_id_fk_board_universities_id_fk",
-          "tableFrom": "academic_history",
-          "tableTo": "board_universities",
-          "columnsFrom": [
-            "last_board_university_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_history_specialization_id_specializations_id_fk": {
-          "name": "academic_history_specialization_id_specializations_id_fk",
-          "tableFrom": "academic_history",
-          "tableTo": "specializations",
-          "columnsFrom": [
-            "specialization_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_history_last_result_id_fk_board_result_status_id_fk": {
-          "name": "academic_history_last_result_id_fk_board_result_status_id_fk",
-          "tableFrom": "academic_history",
-          "tableTo": "board_result_status",
-          "columnsFrom": [
-            "last_result_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.academic_identifiers": {
-      "name": "academic_identifiers",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "rfid": {
-          "name": "rfid",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "program_course_id_fk": {
-          "name": "program_course_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cu_form_number": {
-          "name": "cu_form_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "uid": {
-          "name": "uid",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "old_uid": {
-          "name": "old_uid",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "registration_number": {
-          "name": "registration_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "roll_number": {
-          "name": "roll_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "section_id_fk": {
-          "name": "section_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "class_roll_number": {
-          "name": "class_roll_number",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "apaar_id": {
-          "name": "apaar_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "abc_id": {
-          "name": "abc_id",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "apprid": {
-          "name": "apprid",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "check_repeat": {
-          "name": "check_repeat",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "academic_identifiers_student_id_fk_students_id_fk": {
-          "name": "academic_identifiers_student_id_fk_students_id_fk",
-          "tableFrom": "academic_identifiers",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_identifiers_program_course_id_fk_program_courses_id_fk": {
-          "name": "academic_identifiers_program_course_id_fk_program_courses_id_fk",
-          "tableFrom": "academic_identifiers",
-          "tableTo": "program_courses",
-          "columnsFrom": [
-            "program_course_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "academic_identifiers_section_id_fk_sections_id_fk": {
-          "name": "academic_identifiers_section_id_fk_sections_id_fk",
-          "tableFrom": "academic_identifiers",
+        "students_section_id_fk_sections_id_fk": {
+          "name": "students_section_id_fk_sections_id_fk",
+          "tableFrom": "students",
           "tableTo": "sections",
           "columnsFrom": [
             "section_id_fk"
@@ -8368,15 +8678,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "academic_identifiers_student_id_fk_unique": {
-          "name": "academic_identifiers_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8390,12 +8692,6 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
-        },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "place_of_stay": {
           "name": "place_of_stay",
@@ -8439,19 +8735,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "accommodation_student_id_fk_students_id_fk": {
-          "name": "accommodation_student_id_fk_students_id_fk",
-          "tableFrom": "accommodation",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "accommodation_address_id_fk_address_id_fk": {
           "name": "accommodation_address_id_fk_address_id_fk",
           "tableFrom": "accommodation",
@@ -8467,15 +8750,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "accommodation_student_id_fk_unique": {
-          "name": "accommodation_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8496,15 +8771,45 @@
           "primaryKey": false,
           "notNull": false
         },
+        "other_country": {
+          "name": "other_country",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "state_id_fk": {
           "name": "state_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
+        "other_state": {
+          "name": "other_state",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "city_id_fk": {
           "name": "city_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_city": {
+          "name": "other_city",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "district_id_fk": {
+          "name": "district_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_district": {
+          "name": "other_district",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -8524,6 +8829,30 @@
           "name": "locality_type",
           "type": "locality_type",
           "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "postoffice_id": {
+          "name": "postoffice_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_postoffice": {
+          "name": "other_postoffice",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "police_station_id": {
+          "name": "police_station_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_police_station": {
+          "name": "other_police_station",
+          "type": "varchar(2000)",
           "primaryKey": false,
           "notNull": false
         },
@@ -8588,6 +8917,19 @@
           "tableTo": "cities",
           "columnsFrom": [
             "city_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "address_district_id_fk_cities_id_fk": {
+          "name": "address_district_id_fk_cities_id_fk",
+          "tableFrom": "address",
+          "tableTo": "cities",
+          "columnsFrom": [
+            "district_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -8737,20 +9079,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "person_name": {
           "name": "person_name",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "relation_to_student": {
-          "name": "relation_to_student",
+        "having_relation_as": {
+          "name": "having_relation_as",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
@@ -8795,21 +9131,7 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "emergency_contacts_student_id_fk_students_id_fk": {
-          "name": "emergency_contacts_student_id_fk_students_id_fk",
-          "tableFrom": "emergency_contacts",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -8824,12 +9146,6 @@
           "name": "id",
           "type": "serial",
           "primaryKey": true,
-          "notNull": true
-        },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
           "notNull": true
         },
         "parent_type": {
@@ -8857,6 +9173,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "other_guardian_details_person_id_fk": {
+          "name": "other_guardian_details_person_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spouse_details_person_id_fk": {
+          "name": "spouse_details_person_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_occupation_id_fk": {
+          "name": "family_occupation_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "annual_income_id_fk": {
           "name": "annual_income_id_fk",
           "type": "integer",
@@ -8880,19 +9214,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "family_details_student_id_fk_students_id_fk": {
-          "name": "family_details_student_id_fk_students_id_fk",
-          "tableFrom": "family_details",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "family_details_father_details_person_id_fk_person_id_fk": {
           "name": "family_details_father_details_person_id_fk_person_id_fk",
           "tableFrom": "family_details",
@@ -8932,6 +9253,45 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
+        "family_details_other_guardian_details_person_id_fk_person_id_fk": {
+          "name": "family_details_other_guardian_details_person_id_fk_person_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "person",
+          "columnsFrom": [
+            "other_guardian_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_spouse_details_person_id_fk_person_id_fk": {
+          "name": "family_details_spouse_details_person_id_fk_person_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "person",
+          "columnsFrom": [
+            "spouse_details_person_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "family_details_family_occupation_id_fk_occupations_id_fk": {
+          "name": "family_details_family_occupation_id_fk_occupations_id_fk",
+          "tableFrom": "family_details",
+          "tableTo": "occupations",
+          "columnsFrom": [
+            "family_occupation_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
         "family_details_annual_income_id_fk_annual_incomes_id_fk": {
           "name": "family_details_annual_income_id_fk_annual_incomes_id_fk",
           "tableFrom": "family_details",
@@ -8947,15 +9307,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "family_details_student_id_fk_unique": {
-          "name": "family_details_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8970,15 +9322,40 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
+        "blood_group_id_fk": {
+          "name": "blood_group_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "blood_group_id_fk": {
-          "name": "blood_group_id_fk",
-          "type": "integer",
+        "identification_mark": {
+          "name": "identification_mark",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "height": {
+          "name": "height",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_spectacles": {
+          "name": "has_spectacles",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "spectacles_notes": {
+          "name": "spectacles_notes",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -8994,15 +9371,91 @@
           "primaryKey": false,
           "notNull": false
         },
-        "height": {
-          "name": "height",
-          "type": "numeric",
+        "illness": {
+          "name": "illness",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "width": {
-          "name": "width",
-          "type": "numeric",
+        "illness_notes": {
+          "name": "illness_notes",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allergy": {
+          "name": "allergy",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "allergy_notes": {
+          "name": "allergy_notes",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "surgery": {
+          "name": "surgery",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "surgery_notes": {
+          "name": "surgery_notes",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_infected_covid19": {
+          "name": "is_infected_covid19",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_vaccinated_covid19": {
+          "name": "is_vaccinated_covid19",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "vaccine_name": {
+          "name": "vaccine_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_vaccine_name": {
+          "name": "other_vaccine_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "donated_blood": {
+          "name": "donated_blood",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_donating_blood": {
+          "name": "is_donating_blood",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "other_health_conditions": {
+          "name": "other_health_conditions",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_health_conditions_notes": {
+          "name": "other_health_conditions_notes",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -9024,6 +9477,30 @@
           "primaryKey": false,
           "notNull": false
         },
+        "mediclaim_id_fk": {
+          "name": "mediclaim_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mediclaim_file": {
+          "name": "mediclaim_file",
+          "type": "varchar(900)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mediclaim_provider": {
+          "name": "mediclaim_provider",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mediclaim_provider_number": {
+          "name": "mediclaim_provider_number",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -9041,19 +9518,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "health_student_id_fk_students_id_fk": {
-          "name": "health_student_id_fk_students_id_fk",
-          "tableFrom": "health",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "health_blood_group_id_fk_blood_group_id_fk": {
           "name": "health_blood_group_id_fk_blood_group_id_fk",
           "tableFrom": "health",
@@ -9069,15 +9533,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "health_student_id_fk_unique": {
-          "name": "health_student_id_fk_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "student_id_fk"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -9091,6 +9547,13 @@
           "type": "serial",
           "primaryKey": true,
           "notNull": true
+        },
+        "person_title_type": {
+          "name": "person_title_type",
+          "type": "person_title_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
         },
         "name": {
           "name": "name",
@@ -9122,6 +9585,20 @@
           "primaryKey": false,
           "notNull": false
         },
+        "gender": {
+          "name": "gender",
+          "type": "gender_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marital_status": {
+          "name": "marital_status",
+          "type": "marital_status_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
         "qualification_id_fk": {
           "name": "qualification_id_fk",
           "type": "integer",
@@ -9137,12 +9614,6 @@
         "office_addres_id_fk": {
           "name": "office_addres_id_fk",
           "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "office_phone": {
-          "name": "office_phone",
-          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -9219,11 +9690,41 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
+        "first_name": {
+          "name": "first_name",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
+        },
+        "middle_name": {
+          "name": "middle_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "whatsapp_number": {
+          "name": "whatsapp_number",
+          "type": "varchar(15)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mobile_number": {
+          "name": "mobile_number",
+          "type": "varchar(15)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emergency_contact_number": {
+          "name": "emergency_contact_number",
+          "type": "varchar(15)",
+          "primaryKey": false,
+          "notNull": false
         },
         "nationality_id_fk": {
           "name": "nationality_id_fk",
@@ -9234,6 +9735,18 @@
         "other_nationality_id_fk": {
           "name": "other_nationality_id_fk",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "voter_id": {
+          "name": "voter_id",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "passport_number": {
+          "name": "passport_number",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -9267,6 +9780,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "place_of_birth": {
+          "name": "place_of_birth",
+          "type": "varchar(7000)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "gender": {
           "name": "gender",
           "type": "gender_type",
@@ -9274,15 +9793,17 @@
           "primaryKey": false,
           "notNull": false
         },
-        "email": {
-          "name": "email",
-          "type": "varchar(255)",
+        "is_gujarati": {
+          "name": "is_gujarati",
+          "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": false
         },
-        "alternative_email": {
-          "name": "alternative_email",
-          "type": "varchar(255)",
+        "marital_status": {
+          "name": "marital_status",
+          "type": "marital_status_type",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -9328,19 +9849,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "personal_details_student_id_fk_students_id_fk": {
-          "name": "personal_details_student_id_fk_students_id_fk",
-          "tableFrom": "personal_details",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "personal_details_nationality_id_fk_nationality_id_fk": {
           "name": "personal_details_nationality_id_fk_nationality_id_fk",
           "tableFrom": "personal_details",
@@ -9462,12 +9970,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "student_id_fk": {
-          "name": "student_id_fk",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "transport_id_fk": {
           "name": "transport_id_fk",
           "type": "integer",
@@ -9515,19 +10017,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "transport_details_student_id_fk_students_id_fk": {
-          "name": "transport_details_student_id_fk_students_id_fk",
-          "tableFrom": "transport_details",
-          "tableTo": "students",
-          "columnsFrom": [
-            "student_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "transport_details_transport_id_fk_transport_id_fk": {
           "name": "transport_details_transport_id_fk_transport_id_fk",
           "tableFrom": "transport_details",
@@ -9580,7 +10069,11 @@
         "WAITING_FOR_DOCUMENTS",
         "DOCUMENTS_VERIFIED",
         "DOCUMENTS_PENDING",
-        "DOCUMENTS_REJECTED"
+        "DOCUMENTS_REJECTED",
+        "MERIT_LISTED",
+        "WAITING_FOR_ADMISSION",
+        "ADMITTED",
+        "SUBJECT_PAPER_SELECTION"
       ]
     },
     "public.admission_steps": {
@@ -9594,7 +10087,9 @@
         "DOCUMENTS",
         "PAYMENT",
         "REVIEW",
-        "SUBMITTED"
+        "SUBMITTED",
+        "MINOR_PAPER_SELECTION",
+        "SEMESTER_WISE_SUBJECT_SELECTION"
       ]
     },
     "public.attachment_type": {
@@ -9603,6 +10098,17 @@
       "values": [
         "FILE",
         "LINK"
+      ]
+    },
+    "public.bank_account_type": {
+      "name": "bank_account_type",
+      "schema": "public",
+      "values": [
+        "SAVINGS",
+        "CURRENT",
+        "FIXED_DEPOSIT",
+        "RECURRING_DEPOSIT",
+        "OTHER"
       ]
     },
     "public.board_result_status_type": {
@@ -9684,6 +10190,17 @@
       "values": [
         "RURAL",
         "URBAN"
+      ]
+    },
+    "public.marital_status_type": {
+      "name": "marital_status_type",
+      "schema": "public",
+      "values": [
+        "SINGLE",
+        "MARRIED",
+        "WIDOWED",
+        "DIVORCED",
+        "SEPARATED"
       ]
     },
     "public.marksheet_source": {

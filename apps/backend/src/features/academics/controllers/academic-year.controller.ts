@@ -11,7 +11,7 @@ import {
     setCurrentAcademicYear,
     findAcademicYearByYearRange
 } from "../services/academic-year.service.js";
-import { AcademicYear } from "../models/academic-year.model.js";
+import { AcademicYear } from "@repo/db/schemas/models/academics";
 
 // Create new academic year
 export const createAcademicYearHandler = async (req: Request, res: Response, next: NextFunction) => {

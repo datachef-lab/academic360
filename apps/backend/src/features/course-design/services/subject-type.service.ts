@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { SubjectType, subjectTypeModel } from "../models/subject-type.model.js";
+import { SubjectType, subjectTypeModel } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq } from "drizzle-orm";
-import { paperModel } from "../models/paper.model.js";
+import { paperModel } from "@repo/db/schemas/models/course-design";
 import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 import XLSX from "xlsx";

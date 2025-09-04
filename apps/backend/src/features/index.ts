@@ -1,7 +1,7 @@
 import {  batchRouter, documentRouter, marksheetRouter } from "./academics/routes/index.js";
 import authRouter from "@/features/auth/routes/auth.route.js";
 import { bloodGroupRouter, boardUniversityRouter, categoryRouter, cityRouter, countryRouter, degreeRouter, institutionRouter, languageMediumRouter, nationalityRouter, occupationRouter, pickupPointRouter, qualificationRouter, religionRouter, stateRouter, transportRouter } from "./resources/routes/index.js";
-import { academicHistoryRouter, academicIdentifierRouter,reportRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter,specializationRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
+import {   reportRouter, accommodationRouter, addressRouter, admissionRouter, emergencyContactRouter,specializationRouter, healthRouter, familyRouter, personalDetailsRouter, personRouter, studentRouter, transportDetailsRouter, userRouter } from "./user/routes/index.js";
 import feesComponentRouter from "./fees/routes/feesComponent.route.js";
 import addonRouter from "./fees/routes/addon.route.js";
 import feesHeadRouter from "./fees/routes/fees-head.route.js";
@@ -35,8 +35,7 @@ export {
     religionRouter,
     stateRouter,
     transportRouter,
-    academicHistoryRouter,
-    academicIdentifierRouter,
+
     accommodationRouter,
     addressRouter,
     admissionRouter,

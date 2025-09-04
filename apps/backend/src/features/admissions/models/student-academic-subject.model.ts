@@ -1,7 +1,7 @@
 import { integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { admissionAcademicInfoModel } from "./admission-academic-info.model.js";
-import { academicSubjectModel } from "./academic-subject.model.js";
-import { subjectResultStatusType } from "@/features/user/models/helper.js";
+import { admissionAcademicInfoModel } from "@repo/db/schemas/models/admissions";
+import { boardSubjectModel } from "@repo/db/schemas/models/admissions";
+import { subjectResultStatusType } from "@repo/db/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -11,7 +11,7 @@ export const studentAcademicSubjects = pgTable("student_academic_subjects", {
         .references(() => admissionAcademicInfoModel.id)
         .notNull(),
     academicSubjectId: integer("academic_subject_id_fk")
-        .references(() => academicSubjectModel.id)
+        .references(() => boardSubjectModel.id)
         .notNull(),
     fullMarks: numeric("full_marks", { precision: 10, scale: 2 }).notNull(),
     totalMarks: numeric("total_marks", { precision: 10, scale: 2 }).notNull(),

@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { marksheetPaperMappingModel } from "../models/marksheet-paper-mapping.model.js";
-import { marksheetModel } from "../models/marksheet.model.js";
-import { batchStudentPaperModel } from "@/features/course-design/models/batch-student-paper.model.js";
+import { marksheetPaperMappingModel } from  "@repo/db/schemas/models/academics";
+import { marksheetModel } from "@repo/db/schemas/models/academics";
+import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
 import { eq, and, desc, count } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 

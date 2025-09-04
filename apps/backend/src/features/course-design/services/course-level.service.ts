@@ -6,12 +6,12 @@ import { db } from "@/db/index.js";
 
 
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourses } from "../models/program-course.model.js";
+import { programCourseModel } from "@repo/db/schemas";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";
 import XLSX from "xlsx";
 import fs from "fs";
-import { courseLevelModel, CourseLevel } from "@repo/db/schemas/models/course-design";
+import { courseLevelModel, CourseLevel } from "@repo/db/schemas";
 
 // Types
 // export type CourseLevelData = z.infer<typeof insertCourseLevelSchema>;
@@ -215,9 +215,9 @@ export const deleteCourseLevelSafe = async (id: string) => {
     if (!found) return null;
 
     const [{ programCourseCount }] = await db
-        .select({ programCourseCount: countDistinct(programCourses.id) })
-        .from(programCourses)
-        .where(eq(programCourses.courseLevelId, +id));
+        .select({ programCourseCount: countDistinct(programCourseModel.id) })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.courseLevelId, +id));
 
     if (programCourseCount > 0) {
         return {

@@ -1,4 +1,4 @@
-import { Family } from "@/features/user/models/family.model.js";
+import { Family } from "@repo/db/schemas/models/user";
 import { PersonType } from "./person.js";
 import { AnnualIncome } from "@/features/resources/models/annualIncome.model.js";
 

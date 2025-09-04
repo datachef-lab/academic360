@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
-import { PaperComponent, paperComponentModel } from "../models/paper-component.model.js";
+import { PaperComponent, paperComponentModel } from "@repo/db/schemas/models/course-design";
 import { and, countDistinct, eq } from "drizzle-orm";
 import { PaperComponentDto } from "@/types/course-design/index.type";
 import { findExamComponentById } from "./exam-component.service.js";
-import { marksheetPaperComponentMappingModel } from "@/features/academics/models/marksheet-paper-component-mapping.model.js";
+import { marksheetPaperComponentMappingModel } from "@repo/db/schemas/models/academics";
 
 // Create a new paper component
 export const createPaperComponent = async (paperComponentData: PaperComponentDto) => {
@@ -17,7 +17,7 @@ export const createPaperComponent = async (paperComponentData: PaperComponentDto
             )
         );
     if (!existingPaperComponent) {
-        const [newPaperComponent] = await db.insert(paperComponentModel).values({ ...props, examComponentId: examComponent?.id! }).returning();
+        const [newPaperComponent] = await db.insert(paperComponentModel).values({ ...props, examComponentId: examComponent?.id!, paperId: paperComponentData.paperId! }).returning();
         existingPaperComponent = newPaperComponent;
     }
     return existingPaperComponent;

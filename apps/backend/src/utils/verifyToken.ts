@@ -1,4 +1,4 @@
-import { userTypeEnum } from "@/features/user/models/helper.js";
+import { userTypeEnum } from "@repo/db/schemas/enums";
 import "dotenv/config";
 
 import jwt from "jsonwebtoken";

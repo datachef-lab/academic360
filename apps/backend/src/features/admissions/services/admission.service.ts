@@ -10,24 +10,24 @@ import {
     AdmissionCourse,
     admissionCourseModel,
 } from "../models/admission-course.model.js";
-import { courseModel } from "@/features/course-design/models/course.model.js";
-// import { boardUniversityModel } from "../models/board-university.model.js";
+import { courseModel } from "@repo/db/schemas/models/course-design";
+// import { boardModel } from "../models/board-university.model.js";
 import { admissionAcademicInfoModel } from "../models/admission-academic-info.model.js";
 import { admissionCourseApplication } from "../models/admission-course-application.model.js";
 import { count, desc, eq, and, sql, ilike, or, SQL } from "drizzle-orm";
-import {
-    createAdmissionCourse,
-    findAdmissionCoursesByAdmissionId,
-    updateAdmissionCourse,
-} from "./admission-course.service.js";
+// import {
+//     createAdmissionCourse,
+//     findAdmissionCoursesByAdmissionId,
+//     updateAdmissionCourse,
+// } from "@repo/db/schemas/models/admissions";
 import { AdmissionDto } from "@/types/admissions/index.js";
-import { categoryModel } from "@/features/resources/models/category.model.js";
+import { categoryModel } from "@repo/db/schemas/models/resources";
 // import { admissionAdditionalInfoModel } from "../models/admission-additional-info.model.js";
-import { admissionAdditionalInfoModel } from "@/features/admissions/models/admisison-additional-info.model.js";
-import { annualIncomeModel } from "@/features/resources/models/annualIncome.model.js";
-import { boardUniversityModel } from "@/features/resources/models/boardUniversity.model.js";
-import { religionModel } from "@/features/resources/models/religion.model.js";
-import { academicYearModel } from "@/features/academics/models/academic-year.model.js";
+import { admissionAdditionalInfoModel } from "@repo/db/schemas/models/admissions";
+import { annualIncomeModel } from "@repo/db/schemas/models/resources";
+import { boardModel } from "@repo/db/schemas/models/resources";
+import { religionModel } from "@repo/db/schemas/models/resources";
+import { academicYearModel } from "@repo/db/schemas/models/academics";
 import { findAcademicYearById } from "@/features/academics/services/academic-year.service.js";
 
 // CREATE
@@ -50,7 +50,7 @@ export async function createAdmission(
 
     for (const crs of courses) {
         crs.admissionId = newAdmission.id;
-        await createAdmissionCourse(crs);
+        // await createAdmissionCourse(crs);
     }
 
     return await modelToDto(newAdmission);
@@ -151,7 +151,7 @@ export async function updateAdmission(
 
     for (const crs of admission.courses) {
         if (crs.id) {
-            await updateAdmissionCourse(crs);
+            // await updateAdmissionCourse(crs);
         } else {
             // Try to find the admission_course record by admissionId and courseId
             const existing = await db
@@ -165,11 +165,11 @@ export async function updateAdmission(
                 );
             if (existing && existing.length > 0) {
                 // Update the found record
-                await updateAdmissionCourse({ ...crs, id: existing[0].id });
+                // await updateAdmissionCourse({ ...crs, id: existing[0].id });
             } else {
                 // Create new mapping
                 crs.admissionId = id;
-                await createAdmissionCourse(crs);
+                // await createAdmissionCourse(crs);
             }
         }
     }
@@ -197,14 +197,14 @@ export async function deleteAdmission(id: number) {
 
 // DTO conversion
 async function modelToDto(adm: Admission): Promise<AdmissionDto> {
-    const courses = await findAdmissionCoursesByAdmissionId(adm.id!);
+    // const courses = await findAdmissionCoursesByAdmissionId(adm.id!);
     const academicYear = await findAcademicYearById(adm.academicYearId);
     return {
         ...adm,
         academicYear: academicYear!,
         createdAt: adm.createdAt ?? undefined,
         updatedAt: adm.updatedAt ?? undefined,
-        courses,
+        courses: [],
     };
 }
 
@@ -264,10 +264,6 @@ export async function getApplicationFormsByAdmissionYear(
                 "name",
             ),
             category: categoryModel.name,
-            religion:
-                sql<string>`COALESCE((SELECT ${religionModel.name} FROM ${admissionGeneralInfoModel} LEFT JOIN ${religionModel} ON ${admissionGeneralInfoModel.religionId} = ${religionModel.id} WHERE ${admissionGeneralInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1), (SELECT ${religionModel.name} FROM ${admissionAdditionalInfoModel} LEFT JOIN ${religionModel} ON ${admissionAdditionalInfoModel.religionId} = ${religionModel.id} WHERE ${admissionAdditionalInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1))`.as(
-                    "religion",
-                ),
             annualIncome: annualIncomeModel.range,
             gender: admissionGeneralInfoModel.gender,
             isGujarati: admissionGeneralInfoModel.isGujarati,
@@ -276,7 +272,7 @@ export async function getApplicationFormsByAdmissionYear(
                     "course",
                 ),
             boardUniversity:
-                sql<string>`(SELECT ${boardUniversityModel.name} FROM ${admissionAcademicInfoModel} LEFT JOIN ${boardUniversityModel} ON ${admissionAcademicInfoModel.boardUniversityId} = ${boardUniversityModel.id} WHERE ${admissionAcademicInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1)`.as(
+                sql<string>`(SELECT ${boardModel.name} FROM ${admissionAcademicInfoModel} LEFT JOIN ${boardModel} ON ${admissionAcademicInfoModel.boardUniversityId} = ${boardModel.id} WHERE ${admissionAcademicInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1)`.as(
                     "boardUniversity",
                 ),
         })
@@ -341,7 +337,7 @@ export async function getApplicationFormsByAdmissionYear(
     }
     if (filters.boardUniversity) {
         conditions.push(
-            sql`LOWER((SELECT ${boardUniversityModel.name} FROM ${admissionAcademicInfoModel} LEFT JOIN ${boardUniversityModel} ON ${admissionAcademicInfoModel.boardUniversityId} = ${boardUniversityModel.id} WHERE ${admissionAcademicInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1)) = LOWER(${filters.boardUniversity})`,
+            sql`LOWER((SELECT ${boardModel.name} FROM ${admissionAcademicInfoModel} LEFT JOIN ${boardModel} ON ${admissionAcademicInfoModel.boardUniversityId} = ${boardModel.id} WHERE ${admissionAcademicInfoModel.applicationFormId} = ${applicationFormModel.id} LIMIT 1)) = LOWER(${filters.boardUniversity})`,
         );
     }
 

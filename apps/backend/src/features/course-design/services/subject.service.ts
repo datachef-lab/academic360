@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { Subject, subjectModel } from "../models/subject.model.js";
+import { Subject, subjectModel } from "@repo/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike } from "drizzle-orm";
-import { paperModel } from "../models/paper.model.js";
+import { paperModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 

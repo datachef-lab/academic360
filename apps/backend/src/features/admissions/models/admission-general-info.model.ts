@@ -1,8 +1,8 @@
-import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
-import { categoryModel } from "@/features/resources/models/category.model.js";
-import { nationalityModel } from "@/features/resources/models/nationality.model.js";
-import { religionModel } from "@/features/resources/models/religion.model.js";
-import { degreeLevelTypeEnum, genderTypeEnum } from "@/features/user/models/helper.js";
+import { applicationFormModel } from "@repo/db/schemas/models/admissions";
+import { categoryModel } from "@repo/db/schemas/models/resources";
+import { nationalityModel } from "@repo/db/schemas/models/resources";
+import { religionModel } from "@repo/db/schemas/models/resources";
+import { degreeLevelTypeEnum, genderTypeEnum } from "@repo/db/schemas/enums";
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

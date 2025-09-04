@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { Specialization, specializationModel } from "@/features/course-design/models/specialization.model.js";
+import { Specialization, specializationModel } from "@repo/db/schemas/models/course-design";
 import { eq } from "drizzle-orm";
 
 export async function addSpecialization(specialization: Specialization): Promise<Specialization | null> {

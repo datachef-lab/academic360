@@ -1,5 +1,5 @@
-import academicHistoryRouter from '@/features/user/routes/academicHistory.route.js';
-import academicIdentifierRouter from '@/features/user/routes/academicIdentifier.route.js';
+// import academicHistoryRouter from   '@/features/user/routes/academicHistory.route.js';
+// import academicIdentifierRouter from '@/features/user/routes/academicIdentifier.route.js';
 import accommodationRouter from '@/features/user/routes/accomodation.route.js';
 import addressRouter from '@/features/user/routes/address.route.js';
 import admissionRouter from '@/features/admissions/routes/admission.route.js';
@@ -15,8 +15,7 @@ import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/course-design/routes/specialization.routes.js";
 
 export {
-    academicHistoryRouter,
-    academicIdentifierRouter,
+
     accommodationRouter,
     addressRouter,
     admissionRouter,

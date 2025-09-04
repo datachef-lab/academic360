@@ -1,13 +1,13 @@
 
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
-import { userModel } from "../models/user.model.js";
+import { userModel } from "@repo/db/schemas/models/user";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
 import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
-import { userTypeEnum } from "../models/helper.js";
+import { userTypeEnum } from "@repo/db/schemas/enums";
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -105,7 +105,7 @@ export const toggleDisableUser = async (req: Request, res: Response, next: NextF
                     200,
                     "SUCCESS",
                     user,
-                    `User ${user.disabled ? "disabled" : "enabled"} successfully!`
+                    `User ${!user.isActive ? "disabled" : "enabled"} successfully!`
                 )
             );
         } else {

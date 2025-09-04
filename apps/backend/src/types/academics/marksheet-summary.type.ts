@@ -1,4 +1,4 @@
-import { Class } from "@/features/academics/models/class.model.js";
+import { Class } from "@repo/db/schemas/models/academics";
 
 export interface MarksheetSummary {
   id: number;

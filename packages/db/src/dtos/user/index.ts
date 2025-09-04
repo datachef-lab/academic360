@@ -1,7 +1,7 @@
-import { AcademicHistory, AcademicIdentifier, Specialization, UserT, Shift, Section, BoardResultStatus, Accommodation, Person, Qualification, Occupation, Family, AnnualIncome, Health, PersonalDetails, Nationality, Religion, Category, LanguageMedium, Disability, TransportDetails, Transport, PickupPoint, AddressT, CountryT } from "../../schemas";
+import {  Specialization, UserT, Shift, Section, BoardResultStatus, Accommodation, Person, Qualification, Occupation, Family, AnnualIncome, Health, PersonalDetails, Nationality, Religion, Category, LanguageMedium, Disability, TransportDetails, Transport, PickupPoint, AddressT, CountryT } from "../../schemas";
 import { BloodGroupDto, BoardUniversityDto, InstitutionDto } from "../resources";
 import { AdmissionCourseDetailsDto } from "../admissions";
-import { AcademicHistoryT, AcademicIdentifierT, AccommodationT, AnnualIncomeT, BoardResultStatusT, CategoryT, City, CityT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, QualificationT, ReligionT, SectionT, ShiftT, SpecializationT, State, StateT, TransportT } from "../../schemas/models";
+import {  AccommodationT, AnnualIncomeT, BoardResultStatusT, CategoryT, City, CityT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, QualificationT, ReligionT, SectionT, ShiftT, SpecializationT, State, StateT, TransportT } from "../../schemas/models";
 import { createStudentSchema, DisabilityCodeT, TransportDetailsT, userModel, } from "../../schemas/models/user";
 import { StudentT } from "../../schemas/models/user/student.model";
 
@@ -14,11 +14,11 @@ export interface UserDto extends UserT {
 export interface StudentDto extends Omit<StudentT, "specializationId"> {
     name: string;
     specialization?: SpecializationT | null;
-    academicIdentifier?: AcademicIdentifierDto | null;
+    
     personalDetails?: PersonalDetailsDto | null;
     admissionCourseDetails?: AdmissionCourseDetailsDto | null;
     familyDetails: FamilyDetailDto | null;
-    lastAcademicInfo: AcademicHistoryDto | null;
+
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId"> {
@@ -27,18 +27,8 @@ export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "ci
     city?: CityT | null;
 }
 
-export interface AcademicHistoryDto extends Omit<AcademicHistoryT, "lastInstitutionId" | "lastBoardUniversityId" | "lastResultId" | "specializationId"> {
-    lastInstitution?: InstitutionDto | null;
-    lastBoardUniversity?: BoardUniversityDto | null;
-    lastResult?: BoardResultStatusT | null;
-    specialization?: SpecializationT | null;
-}
 
-export interface AcademicIdentifierDto extends Omit<AcademicIdentifierT, "streamId" | "shiftId" | "sectionId"> {
-    // stream?: StreamType | null;  
-    shift: ShiftT | null;
-    section: SectionT | null;
-}
+
 
 export interface AccommodationDto extends Omit<AccommodationT, "addressId"> {
     address?: AddressDto | null;
@@ -93,5 +83,5 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
 
 export interface ProfileInfo {
     familyDetails: FamilyDetailDto | null;
-    lastAcademicInfo: AcademicHistory | null;
+
 }

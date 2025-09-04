@@ -1,4 +1,4 @@
-import { BloodGroupT, BoardUniversityT, CityT, DegreeT, InstitutionT, StateT } from "@/schemas";
+import { BloodGroupT, BoardT, CityT, DegreeT, InstitutionT, StateT } from "@/schemas";
 import { AddressDto } from "../user";
 
 
@@ -6,7 +6,7 @@ export interface BloodGroupDto extends BloodGroupT {
     percentageUsers?: number | null;
 }
 
-export interface BoardUniversityDto extends Omit<BoardUniversityT, "degreeId" | "addressId"> {
+export interface BoardUniversityDto extends Omit<BoardT, "degreeId" | "addressId"> {
     degree?: DegreeT | null;
     address?: AddressDto | null;
 }

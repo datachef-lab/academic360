@@ -1,10 +1,10 @@
 // import { Batch, Class, Section, Session, Shift } from "@/db/schema";
-import { Batch } from "@/features/academics/models/batch.model";
+import { Batch } from "@repo/db/schemas/models/academics";
 // import { CourseDto, SubjectMetadataDto } from "../academics";
-import { Class } from "@/features/academics/models/class.model";
-import { Section } from "@/features/academics/models/section.model";
-import { Shift } from "@/features/academics/models/shift.model";
-import { Session } from "@/features/academics/models/session.model";
+import { Class } from "@repo/db/schemas/models/academics";
+import { Section } from "@repo/db/schemas/models/academics";
+import { Shift } from "@repo/db/schemas/models/academics";
+import { Session } from "@repo/db/schemas/models/academics";
 import { CourseDto } from "@/types/course-design/index.type";
 
 export interface BatchDto extends Omit<Batch, "academicYearId" | "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"> {

@@ -1,5 +1,5 @@
 import { HealthType } from "@/types/user/health.js";
-import { Health, healthModel, createHealthSchema } from "../models/health.model.js";
+import { Health, healthModel, createHealthSchema } from "@repo/db/schemas/models/user";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import { findBloodGroupById } from "@/features/resources/services/bloodGroup.service.js";
@@ -142,7 +142,7 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
             })
             .from(healthModel)
             .leftJoin(bloodGroupModel, eq(healthModel.bloodGroupId, bloodGroupModel.id))
-            .where(eq(healthModel.studentId, studentId));
+
         if (!result || result.length === 0) {
             return null;
         }
@@ -179,11 +179,11 @@ export async function findHealthByStudentId(studentId: number): Promise<HealthTy
 
 export async function updateHealth(id: number, health: HealthType): Promise<HealthType | null> {
     try {
-        const { bloodGroup, studentId, ...props } = health;
+        const { bloodGroup,  ...props } = health;
         // Validate input (excluding nested objects)
-        validateHealthInput({ ...props, studentId });
+        // validateHealthInput({ ...props, studentId });
         // Ensure we have proper Date objects
-        const sanitizedProps = ensureDateObjects({ ...props, studentId });
+        const sanitizedProps = ensureDateObjects({ ...props,  });
         sanitizedProps.updatedAt = new Date();
         // Update the health record
         const [updatedHealth] = await db.update(healthModel).set({
@@ -221,15 +221,12 @@ export async function removeHealth(id: number): Promise<boolean | null> {
 
 export async function removeHealthByStudentId(studentId: number): Promise<boolean | null> {
     try {
-        const [foundHealth] = await db.select().from(healthModel).where(eq(healthModel.studentId, studentId));
-        if (!foundHealth) {
-            return null;
-        }
-        const [deletedHealth] = await db.delete(healthModel).where(eq(healthModel.studentId, studentId)).returning();
-        if (!deletedHealth) {
-            return false;
-        }
-        return true;
+       
+        // const [deletedHealth] = await db.delete(healthModel).where(eq(healthModel.studentId, studentId)).returning();
+        // if (!deletedHealth) {
+        //     return false;
+        // }
+        return false;
     } catch (error) {
         console.error("Error in removeHealthByStudentId service:", error);
         return false;

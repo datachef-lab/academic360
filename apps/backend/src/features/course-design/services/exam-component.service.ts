@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { ExamComponent, examComponentModel } from "../models/exam-component.model.js";
+import { ExamComponent, examComponentModel } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq } from "drizzle-orm";
-import { paperComponentModel } from "../models/paper-component.model.js";
+import { paperComponentModel } from "@repo/db/schemas/models/course-design";
 import { ExamComponentSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 

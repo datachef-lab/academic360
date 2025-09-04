@@ -1,6 +1,7 @@
-CREATE TYPE "public"."admission_form_status" AS ENUM('DRAFT', 'PAYMENT_DUE', 'PAYMENT_SUCCESS', 'PAYMENT_FAILED', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CANCELLED', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_PAYMENT', 'WAITING_FOR_DOCUMENTS', 'DOCUMENTS_VERIFIED', 'DOCUMENTS_PENDING', 'DOCUMENTS_REJECTED');--> statement-breakpoint
-CREATE TYPE "public"."admission_steps" AS ENUM('GENERAL_INFORMATION', 'ACADEMIC_INFORMATION', 'COURSE_APPLICATION', 'ADDITIONAL_INFORMATION', 'DOCUMENTS', 'PAYMENT', 'REVIEW', 'SUBMITTED');--> statement-breakpoint
+CREATE TYPE "public"."admission_form_status" AS ENUM('DRAFT', 'PAYMENT_DUE', 'PAYMENT_SUCCESS', 'PAYMENT_FAILED', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CANCELLED', 'WAITING_FOR_APPROVAL', 'WAITING_FOR_PAYMENT', 'WAITING_FOR_DOCUMENTS', 'DOCUMENTS_VERIFIED', 'DOCUMENTS_PENDING', 'DOCUMENTS_REJECTED', 'MERIT_LISTED', 'WAITING_FOR_ADMISSION', 'ADMITTED', 'SUBJECT_PAPER_SELECTION');--> statement-breakpoint
+CREATE TYPE "public"."admission_steps" AS ENUM('GENERAL_INFORMATION', 'ACADEMIC_INFORMATION', 'COURSE_APPLICATION', 'ADDITIONAL_INFORMATION', 'DOCUMENTS', 'PAYMENT', 'REVIEW', 'SUBMITTED', 'MINOR_PAPER_SELECTION', 'SEMESTER_WISE_SUBJECT_SELECTION');--> statement-breakpoint
 CREATE TYPE "public"."attachment_type" AS ENUM('FILE', 'LINK');--> statement-breakpoint
+CREATE TYPE "public"."bank_account_type" AS ENUM('SAVINGS', 'CURRENT', 'FIXED_DEPOSIT', 'RECURRING_DEPOSIT', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."board_result_status_type" AS ENUM('PASS', 'FAIL IN THEORY', 'FAIL IN PRACTICAL', 'FAIL');--> statement-breakpoint
 CREATE TYPE "public"."board_result_type" AS ENUM('FAIL', 'PASS');--> statement-breakpoint
 CREATE TYPE "public"."class_type" AS ENUM('YEAR', 'SEMESTER');--> statement-breakpoint
@@ -10,6 +11,7 @@ CREATE TYPE "public"."disability_type" AS ENUM('VISUAL', 'HEARING_IMPAIRMENT', '
 CREATE TYPE "public"."framework_type" AS ENUM('CCF', 'CBCS');--> statement-breakpoint
 CREATE TYPE "public"."gender_type" AS ENUM('MALE', 'FEMALE', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."locality_type" AS ENUM('RURAL', 'URBAN');--> statement-breakpoint
+CREATE TYPE "public"."marital_status_type" AS ENUM('SINGLE', 'MARRIED', 'WIDOWED', 'DIVORCED', 'SEPARATED');--> statement-breakpoint
 CREATE TYPE "public"."marksheet_source" AS ENUM('FILE_UPLOAD', 'ADDED');--> statement-breakpoint
 CREATE TYPE "public"."notice_status" AS ENUM('ACTIVE', 'EXPIRED', 'SCHEDULED');--> statement-breakpoint
 CREATE TYPE "public"."notice_variant" AS ENUM('EXAM', 'ALERT', 'FEE', 'EVENT');--> statement-breakpoint
@@ -33,6 +35,7 @@ CREATE TYPE "public"."user_type" AS ENUM('ADMIN', 'STUDENT', 'FACULTY', 'STAFF',
 CREATE TYPE "public"."transport_type" AS ENUM('BUS', 'TRAIN', 'METRO', 'AUTO', 'TAXI', 'CYCLE', 'WALKING', 'OTHER');--> statement-breakpoint
 CREATE TABLE "academic_years" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_academic_year_id" integer,
 	"year" varchar(255) NOT NULL,
 	"is_current_year" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -163,6 +166,7 @@ CREATE TABLE "sections" (
 --> statement-breakpoint
 CREATE TABLE "sessions" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_session_id" integer,
 	"academic_id_fk" integer,
 	"name" varchar(255) NOT NULL,
 	"from" date NOT NULL,
@@ -185,158 +189,16 @@ CREATE TABLE "shifts" (
 	CONSTRAINT "shifts_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
-CREATE TABLE "academic_subjects" (
+CREATE TABLE "board_subjects" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"board_university_id_fk" integer NOT NULL,
-	"name" varchar(500) NOT NULL,
-	"passing_marks" integer,
+	"legacy_board_subject_mapping_sub_id" integer,
+	"board_id_fk" integer NOT NULL,
+	"subject_id_fk" integer NOT NULL,
+	"full_marks_theory" double precision,
+	"passing_marks_theory" double precision,
+	"full_marks_practical" double precision,
+	"passing_marks_practical" double precision,
 	"disabled" boolean DEFAULT false,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "admission_additional_info" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"application_form_id_fk" integer NOT NULL,
-	"alternate_mobile_number" varchar(255),
-	"blood_group_id_fk" integer NOT NULL,
-	"religion_id_fk" integer NOT NULL,
-	"category_id_fk" integer NOT NULL,
-	"is_physically_challenged" boolean DEFAULT false,
-	"disability_type" "disability_type",
-	"is_single_parent" boolean DEFAULT false,
-	"father_title" "person_title_type",
-	"father_name" varchar(255),
-	"mother_title" "person_title_type",
-	"mother_name" varchar(255),
-	"is_either_parent_staff" boolean DEFAULT false,
-	"name_of_staff_parent" varchar(255),
-	"department_of_staff_parent_fk" integer,
-	"has_smartphone" boolean DEFAULT false,
-	"has_laptop_or_desktop" boolean DEFAULT false,
-	"has_internet_access" boolean DEFAULT false,
-	"annual_income_id_fk" integer NOT NULL,
-	"apply_under_ncc_category" boolean DEFAULT false,
-	"apply_under_sports_category" boolean DEFAULT false,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "admission_course_applications" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"application_form_id_fk" integer NOT NULL,
-	"admission_course_id_fk" integer NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "admission_courses" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"admission_id_fk" integer NOT NULL,
-	"course_id_fk" integer NOT NULL,
-	"amount" integer DEFAULT 750 NOT NULL,
-	"disabled" boolean DEFAULT false,
-	"is_closed" boolean DEFAULT false,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	"remarks" text
-);
---> statement-breakpoint
-CREATE TABLE "admission_general_info" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"application_form_id_fk" integer NOT NULL,
-	"first_name" varchar(255) NOT NULL,
-	"middle_name" varchar(255),
-	"last_name" varchar(255),
-	"date_of_birth" date NOT NULL,
-	"nationality_id_fk" integer,
-	"other_nationality" varchar(255),
-	"is_gujarati" boolean DEFAULT false,
-	"category_id_fk" integer,
-	"religion_id_fk" integer,
-	"gender" "gender_type" DEFAULT 'MALE',
-	"degree_level" "degree_level_type" DEFAULT 'UNDER_GRADUATE' NOT NULL,
-	"password" varchar(255) NOT NULL,
-	"whatsapp_number" varchar(15),
-	"mobile_number" varchar(15) NOT NULL,
-	"email" varchar(255) NOT NULL,
-	"residence_of_kolkata" boolean NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "admissions" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"academic_year_id_fk" integer NOT NULL,
-	"admission_code" varchar(255),
-	"is_closed" boolean DEFAULT false NOT NULL,
-	"start_date" date,
-	"last_date" date,
-	"archived" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	"remarks" text
-);
---> statement-breakpoint
-CREATE TABLE "application_forms" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"admission_id_fk" integer NOT NULL,
-	"application_number" varchar(255),
-	"form_status" "admission_form_status" NOT NULL,
-	"admission_step" "admission_steps" NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now(),
-	"remarks" text
-);
---> statement-breakpoint
-CREATE TABLE "sports_categories" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"name" varchar(255) NOT NULL,
-	"disabled" boolean DEFAULT false,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "sports_info" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"additional_info_id_fk" integer NOT NULL,
-	"sports_category_id_fk" integer NOT NULL,
-	"level" "sports_level" NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "student_academic_subjects" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"admission_academic_info_id_fk" integer NOT NULL,
-	"academic_subject_id_fk" integer NOT NULL,
-	"full_marks" numeric(10, 2) NOT NULL,
-	"total_marks" numeric(10, 2) NOT NULL,
-	"result_status" "board_result_status_type" NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
-CREATE TABLE "admission_academic_info" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"application_form_id_fk" integer NOT NULL,
-	"board_university_id_fk" integer NOT NULL,
-	"board_result_status" "board_result_status_type" NOT NULL,
-	"roll_number" varchar(255),
-	"school_number" varchar(255),
-	"center_number" varchar(255),
-	"admit_card_id" varchar(255),
-	"institute_id_fk" integer,
-	"other_institute" varchar(500),
-	"language_medium_id_fk" integer NOT NULL,
-	"year_of_passing" integer NOT NULL,
-	"stream_type" "stream_type" NOT NULL,
-	"is_registered_for_ug_in_cu" boolean DEFAULT false,
-	"cu_registration_number" varchar(255),
-	"previously_registered_course_id_fk" integer,
-	"other_previously_registered_course" varchar(500),
-	"previous_college_id_fk" integer,
-	"other_college" varchar(500),
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -344,14 +206,16 @@ CREATE TABLE "admission_academic_info" (
 CREATE TABLE "admission_course_details" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"legacy_course_details_id" integer,
-	"student_id_fk" integer NOT NULL,
+	"is_transferred" boolean DEFAULT false NOT NULL,
+	"application_form_id_fk" integer NOT NULL,
+	"admission_program_course_id_fk" integer NOT NULL,
 	"stream_id_fk" integer NOT NULL,
-	"program_course_id_fk" integer NOT NULL,
 	"class_id_fk" integer NOT NULL,
 	"shift_id_fk" integer NOT NULL,
 	"eligibility_criteria_id_fk" integer,
 	"student_category_id_fk" integer NOT NULL,
-	"roll_number" varchar(50) NOT NULL,
+	"rfid_number" varchar(50),
+	"class_roll_number" varchar(50) NOT NULL,
 	"app_number" varchar(50) NOT NULL,
 	"challan_number" varchar(50) NOT NULL,
 	"amount" integer DEFAULT 0 NOT NULL,
@@ -363,13 +227,13 @@ CREATE TABLE "admission_course_details" (
 	"sms_sent_at" timestamp,
 	"is_verified" boolean DEFAULT false NOT NULL,
 	"verified_at" timestamp,
-	"verified_by" integer,
+	"verified_by_user_id_fk" integer,
 	"verified_on" timestamp,
+	"is_freeship_applied" boolean DEFAULT false NOT NULL,
 	"freeship_date" timestamp,
-	"freeship_approved_by" integer,
+	"freeship_approved_by_user_id_fk" integer,
 	"freeship_approved_on" timestamp,
 	"freeship_perc" integer NOT NULL,
-	"is_freeship_applied" boolean DEFAULT false NOT NULL,
 	"freeship_perc_applied" integer DEFAULT 0 NOT NULL,
 	"is_freeship_approved" boolean DEFAULT false NOT NULL,
 	"freeship_amount_id" integer,
@@ -387,11 +251,9 @@ CREATE TABLE "admission_course_details" (
 	"fees_paid_reconciled" boolean DEFAULT false NOT NULL,
 	"online_ref_number" varchar(200),
 	"payment_message" varchar(1000),
-	"chk_anti_rag_student" boolean DEFAULT false NOT NULL,
-	"chk_anti_rag_parent" boolean DEFAULT false NOT NULL,
 	"last_date_document_pending" timestamp,
 	"adm_frm_dwnld" varchar(5),
-	"adm_frm_dwnl_id_entry_date" varchar(5),
+	"adm_frm_dwnl_id_entry_date" timestamp,
 	"fees_payment_bank_id" integer,
 	"fees_draft_number" varchar(50),
 	"fees_draft_date" timestamp,
@@ -400,16 +262,15 @@ CREATE TABLE "admission_course_details" (
 	"is_blocked" boolean DEFAULT false NOT NULL,
 	"block_remarks" varchar(1000),
 	"shift_change_remarks" varchar(1000),
-	"is_transferred" boolean DEFAULT false NOT NULL,
 	"specialization_id_fk" integer,
 	"is_ed_cut_off_failed" boolean DEFAULT false NOT NULL,
 	"is_merit_listed" boolean DEFAULT false NOT NULL,
 	"best_of_four" double precision,
 	"total_score" double precision,
-	"merit_list_id" integer,
+	"merit_list_id_fk" integer,
 	"merit_listed_on" timestamp,
 	"merit_list_count" integer,
-	"merit_list_by" integer,
+	"merit_list_by_user_id_fk" integer,
 	"is_admit_card_selected" boolean DEFAULT false NOT NULL,
 	"admit_card_selected_on" timestamp,
 	"admission_test_sms_sent_on" timestamp,
@@ -438,8 +299,19 @@ CREATE TABLE "admission_course_details" (
 	"cancel_source_id" integer,
 	"cancel_remarks" varchar(1000),
 	"cancel_date" timestamp,
-	"cancel_user_id" integer,
+	"cancel_by_user_id_fk" integer,
 	"cancel_entry_date" timestamp,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "student_category" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_student_category_id" integer NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"document_required" boolean DEFAULT false NOT NULL,
+	"course_id_fk" integer NOT NULL,
+	"class_id_fk" integer NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -454,9 +326,171 @@ CREATE TABLE "adm_subject_paper_selections" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
+CREATE TABLE "admission_additional_info" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"application_form_id_fk" integer NOT NULL,
+	"alternate_mobile_number" varchar(255),
+	"is_physically_challenged" boolean DEFAULT false,
+	"disability_type" "disability_type",
+	"is_single_parent" boolean DEFAULT false,
+	"family_details_id_fk" integer,
+	"is_either_parent_staff" boolean DEFAULT false,
+	"name_of_staff_parent" varchar(255),
+	"department_of_staff_parent_fk" integer,
+	"has_family_ex_student" boolean DEFAULT false,
+	"family_ex_student_relation" varchar(255),
+	"family_ex_student_name" varchar(255),
+	"family_ex_student_program_course_id_fk" integer,
+	"family_ex_student_year_of_passing" integer,
+	"has_smartphone" boolean DEFAULT false,
+	"has_laptop_or_desktop" boolean DEFAULT false,
+	"has_internet_access" boolean DEFAULT false,
+	"annual_income_id_fk" integer NOT NULL,
+	"apply_under_ncc_category" boolean DEFAULT false,
+	"apply_under_sports_category" boolean DEFAULT false,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "admission_academic_info" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_academic_info_id" integer,
+	"application_form_id_fk" integer NOT NULL,
+	"board_id_fk" integer NOT NULL,
+	"other_board" varchar(755),
+	"board_result_status" "board_result_status_type" NOT NULL,
+	"percentage_of_marks" double precision,
+	"division" varchar(255),
+	"rank" integer,
+	"total_points" double precision,
+	"aggregate" double precision,
+	"subject_studied" varchar(255),
+	"last_school_id_fk" integer,
+	"last_school_name" varchar(755),
+	"last_school_address_id_fk" integer,
+	"index_number_1" varchar(255),
+	"index_number_2" varchar(255),
+	"registration_number" varchar(255),
+	"roll_number" varchar(255),
+	"school_number" varchar(255),
+	"center_number" varchar(255),
+	"admit_card_id" varchar(255),
+	"language_medium_id_fk" integer,
+	"year_of_passing" integer NOT NULL,
+	"studied_up_to_class" integer,
+	"specialization_id" integer,
+	"best_of_four" double precision,
+	"total_score" double precision,
+	"old_best_of_four" double precision,
+	"old_total_score" double precision,
+	"is_registered_for_ug_in_cu" boolean DEFAULT false,
+	"cu_registration_number" varchar(255),
+	"previously_registered_program_course_id_fk" integer,
+	"other_previously_registered_program_course" varchar(500),
+	"previous_institute_id_fk" integer,
+	"other_previous_institute" varchar(500),
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "admission_program_courses" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"admission_id_fk" integer NOT NULL,
+	"program_course_id_fk" integer NOT NULL,
+	"amount" integer DEFAULT 750 NOT NULL,
+	"shift_id_fk" integer,
+	"class_id_fk" integer,
+	"disabled" boolean DEFAULT false,
+	"is_closed" boolean DEFAULT false,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now(),
+	"remarks" text
+);
+--> statement-breakpoint
+CREATE TABLE "admission_general_info" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_personal_details_id" integer,
+	"application_form_id_fk" integer NOT NULL,
+	"email" varchar(255) NOT NULL,
+	"password" varchar(255) NOT NULL,
+	"eligibility_criteria_id_fk" integer,
+	"student_category_id_fk" integer,
+	"personal_details_id_fk" integer,
+	"is_minority" boolean DEFAULT false,
+	"dtls" varchar(255),
+	"gujarati_class" integer,
+	"club_a_id" integer,
+	"club_b_id" integer,
+	"tshirt_size" varchar(255),
+	"spqta_approved_by_user_id_fk" integer,
+	"spqta_approved_date" date,
+	"separated" boolean DEFAULT false,
+	"chk_flats" varchar(255),
+	"back_door_flag" integer,
+	"health_id_fk" integer,
+	"accommodation_id_fk" integer,
+	"emergency_contact_id_fk" integer,
+	"residence_of_kolkata" boolean NOT NULL,
+	"bank_branch_id_fk" integer,
+	"transport_details_id_fk" integer,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "admissions" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"session_id_fk" integer NOT NULL,
+	"status" "admission_form_status" NOT NULL,
+	"admission_code" varchar(255),
+	"is_closed" boolean DEFAULT false NOT NULL,
+	"start_date" date,
+	"last_date" date,
+	"archived" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now(),
+	"remarks" text
+);
+--> statement-breakpoint
+CREATE TABLE "application_forms" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"admission_id_fk" integer NOT NULL,
+	"level" "degree_level_type" DEFAULT 'UNDER_GRADUATE' NOT NULL,
+	"application_number" varchar(255) NOT NULL,
+	"changed_application_number" varchar(255),
+	"form_status" "admission_form_status" NOT NULL,
+	"admission_step" "admission_steps" NOT NULL,
+	"adm_approved_by_user_id_fk" integer,
+	"adm_approved_date" timestamp,
+	"verify_type" varchar(100),
+	"verify_remarks" varchar(1000),
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now(),
+	"remarks" text
+);
+--> statement-breakpoint
+CREATE TABLE "cancel_sources" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_cancel_source_id" integer NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
 CREATE TABLE "eligibility_criteria" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"legacy_eligibility_criteria_id" integer NOT NULL,
+	"course_id_fk" integer NOT NULL,
+	"class_id_fk" integer NOT NULL,
+	"category_id_fk" integer NOT NULL,
+	"description" varchar(1000),
+	"general_instruction" varchar(1000),
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "grade" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_grade_id" integer NOT NULL,
 	"course_id_fk" integer NOT NULL,
 	"class_id_fk" integer NOT NULL,
 	"category_id_fk" integer NOT NULL,
@@ -476,14 +510,6 @@ CREATE TABLE "merit_lists" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "cancel_sources" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"legacy_cancel_source_id" integer NOT NULL,
-	"name" varchar(255) NOT NULL,
-	"created_at" timestamp DEFAULT now(),
-	"updated_at" timestamp DEFAULT now()
-);
---> statement-breakpoint
 CREATE TABLE "paper_selections" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"student_id_fk" integer NOT NULL,
@@ -493,13 +519,33 @@ CREATE TABLE "paper_selections" (
 	"updated_at" timestamp DEFAULT now()
 );
 --> statement-breakpoint
-CREATE TABLE "student_category" (
+CREATE TABLE "sports_categories" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"legacy_student_category_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"document_required" boolean DEFAULT false NOT NULL,
-	"course_id_fk" integer NOT NULL,
-	"class_id_fk" integer NOT NULL,
+	"disabled" boolean DEFAULT false,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "sports_info" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"additional_info_id_fk" integer NOT NULL,
+	"sports_category_id_fk" integer NOT NULL,
+	"level" "sports_level" NOT NULL,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "student_academic_subjects" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_subject_details_id" integer,
+	"admission_academic_info_id_fk" integer NOT NULL,
+	"board_subject_id_fk" integer NOT NULL,
+	"theory_marks" double precision DEFAULT 0,
+	"practical_marks" double precision DEFAULT 0,
+	"total_marks" double precision DEFAULT 0,
+	"grade_id_fk" integer,
+	"result_status" "board_result_status_type" NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -558,6 +604,17 @@ CREATE TABLE "batch_student_papers" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "course_headers" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_course_header_id" integer,
+	"name" varchar(500) NOT NULL,
+	"sequence" integer,
+	"disabled" boolean DEFAULT false,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "course_headers_sequence_unique" UNIQUE("sequence")
+);
+--> statement-breakpoint
 CREATE TABLE "course_levels" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
@@ -583,7 +640,7 @@ CREATE TABLE "course_types" (
 CREATE TABLE "courses" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"legacy_course_id" integer,
-	"degree_id_fk" integer,
+	"course_header_id_fk" integer,
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
@@ -911,9 +968,9 @@ CREATE TABLE "board_result_status" (
 	CONSTRAINT "board_result_status_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
-CREATE TABLE "board_universities" (
+CREATE TABLE "boards" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"legacy_board_university_id" integer,
+	"legacy_board_id" integer,
 	"name" varchar(700) NOT NULL,
 	"degree_id" integer,
 	"passing_marks" integer,
@@ -923,8 +980,8 @@ CREATE TABLE "board_universities" (
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "board_universities_name_unique" UNIQUE("name"),
-	CONSTRAINT "board_universities_sequence_unique" UNIQUE("sequence")
+	CONSTRAINT "boards_name_unique" UNIQUE("name"),
+	CONSTRAINT "boards_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
 CREATE TABLE "categories" (
@@ -944,17 +1001,14 @@ CREATE TABLE "categories" (
 --> statement-breakpoint
 CREATE TABLE "cities" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"legacy_city_id" integer,
-	"state_id" integer NOT NULL,
+	"legacy_district_id" integer,
+	"city_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"document_required" boolean DEFAULT false NOT NULL,
-	"code" varchar(10) NOT NULL,
 	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "cities_name_unique" UNIQUE("name"),
-	CONSTRAINT "cities_code_unique" UNIQUE("code"),
 	CONSTRAINT "cities_sequence_unique" UNIQUE("sequence")
 );
 --> statement-breakpoint
@@ -974,7 +1028,6 @@ CREATE TABLE "degree" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"legacy_degree_id" integer,
 	"name" varchar(255) NOT NULL,
-	"level" "degree_level_type",
 	"sequence" integer,
 	"disabled" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -1098,8 +1151,8 @@ CREATE TABLE "users" (
 	"phone" varchar(255),
 	"whatsapp_number" varchar(255),
 	"image" varchar(255),
-	"type" "user_type" DEFAULT 'STUDENT',
-	"disabled" boolean DEFAULT false,
+	"type" "user_type" NOT NULL,
+	"is_active" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
@@ -1110,9 +1163,20 @@ CREATE TABLE "students" (
 	"legacy_student_id" integer,
 	"user_id_fk" integer NOT NULL,
 	"application_id_fk" integer,
+	"program_course_id_fk" integer NOT NULL,
+	"specialization_id_fk" integer,
+	"rfid" varchar(255),
+	"cu_form_number" varchar(255),
+	"registration_number" varchar(255),
+	"roll_number" varchar(255),
+	"section_id_fk" integer,
+	"class_roll_number" varchar(255),
+	"apaar_id" varchar(255),
+	"abc_id" varchar(255),
+	"apprid" varchar(255),
+	"check_repeat" boolean,
 	"community" "community_type",
 	"handicapped" boolean DEFAULT false,
-	"specialization_id_fk" integer,
 	"last_passed_year" integer,
 	"notes" text,
 	"active" boolean,
@@ -1124,61 +1188,33 @@ CREATE TABLE "students" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "academic_history" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer NOT NULL,
-	"last_institution_id_fk" integer,
-	"last_board_university_id_fk" integer,
-	"studied_up_to_class" integer,
-	"passed_year" integer,
-	"specialization_id" integer,
-	"last_result_id_fk" integer,
-	"remarks" varchar(255),
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "academic_identifiers" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer NOT NULL,
-	"rfid" varchar(255),
-	"program_course_id_fk" integer,
-	"cu_form_number" varchar(255),
-	"uid" varchar(255),
-	"old_uid" varchar(255),
-	"registration_number" varchar(255),
-	"roll_number" varchar(255),
-	"section_id_fk" integer,
-	"class_roll_number" varchar(255),
-	"apaar_id" varchar(255),
-	"abc_id" varchar(255),
-	"apprid" varchar(255),
-	"check_repeat" boolean,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "academic_identifiers_student_id_fk_unique" UNIQUE("student_id_fk")
-);
---> statement-breakpoint
 CREATE TABLE "accommodation" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer,
 	"place_of_stay" "place_of_stay_type",
 	"address_id_fk" integer,
 	"start_date" date,
 	"end_date" date,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "accommodation_student_id_fk_unique" UNIQUE("student_id_fk")
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "address" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"country_id_fk" integer,
+	"other_country" varchar(255),
 	"state_id_fk" integer,
+	"other_state" varchar(255),
 	"city_id_fk" integer,
+	"other_city" varchar(255),
+	"district_id_fk" integer,
+	"other_district" varchar(255),
 	"address_line" varchar(1000),
 	"landmark" varchar(255),
 	"locality_type" "locality_type",
+	"postoffice_id" integer,
+	"other_postoffice" varchar(2000),
+	"police_station_id" integer,
+	"other_police_station" varchar(2000),
 	"phone" varchar(255),
 	"pincode" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -1208,9 +1244,8 @@ CREATE TABLE "disability_codes" (
 --> statement-breakpoint
 CREATE TABLE "emergency_contacts" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer,
 	"person_name" varchar(255),
-	"relation_to_student" varchar(255),
+	"having_relation_as" varchar(255),
 	"email" varchar(255),
 	"phone" varchar(255),
 	"office_phone" varchar(255),
@@ -1221,61 +1256,91 @@ CREATE TABLE "emergency_contacts" (
 --> statement-breakpoint
 CREATE TABLE "family_details" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer NOT NULL,
 	"parent_type" "parent_type",
 	"father_details_person_id_fk" integer,
 	"mother_details_person_id_fk" integer,
 	"guardian_details_person_id_fk" integer,
+	"other_guardian_details_person_id_fk" integer,
+	"spouse_details_person_id_fk" integer,
+	"family_occupation_id_fk" integer,
 	"annual_income_id_fk" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "family_details_student_id_fk_unique" UNIQUE("student_id_fk")
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "health" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer,
 	"blood_group_id_fk" integer,
+	"identification_mark" varchar(255),
+	"height" varchar(255),
+	"weight" varchar(255),
+	"has_spectacles" boolean DEFAULT false,
+	"spectacles_notes" varchar(255),
 	"eye_power_left" numeric,
 	"eye_power_right" numeric,
-	"height" numeric,
-	"width" numeric,
+	"illness" varchar(255),
+	"illness_notes" varchar(255),
+	"allergy" varchar(255),
+	"allergy_notes" varchar(255),
+	"surgery" varchar(255),
+	"surgery_notes" varchar(255),
+	"is_infected_covid19" boolean DEFAULT false,
+	"is_vaccinated_covid19" boolean DEFAULT false,
+	"vaccine_name" varchar(255),
+	"other_vaccine_name" varchar(255),
+	"donated_blood" boolean DEFAULT false,
+	"is_donating_blood" boolean DEFAULT false,
+	"other_health_conditions" varchar(255),
+	"other_health_conditions_notes" varchar(255),
 	"past_medical_history" text,
 	"past_surgical_history" text,
 	"drug_allergy" text,
+	"mediclaim_id_fk" integer,
+	"mediclaim_file" varchar(900),
+	"mediclaim_provider" varchar(255),
+	"mediclaim_provider_number" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "health_student_id_fk_unique" UNIQUE("student_id_fk")
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "person" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"person_title_type" "person_title_type",
 	"name" varchar(255),
 	"email" varchar(255),
 	"phone" varchar(255),
 	"aadhaar_card_number" varchar(255),
 	"image" varchar(255),
+	"gender" "gender_type",
+	"marital_status" "marital_status_type",
 	"qualification_id_fk" integer,
 	"occupation_id_fk" integer,
 	"office_addres_id_fk" integer,
-	"office_phone" varchar(255),
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "personal_details" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer NOT NULL,
+	"first_name" varchar(255) NOT NULL,
+	"middle_name" varchar(255),
+	"last_name" varchar(255),
+	"whatsapp_number" varchar(15),
+	"mobile_number" varchar(15) NOT NULL,
+	"emergency_contact_number" varchar(15),
 	"nationality_id_fk" integer,
 	"other_nationality_id_fk" integer,
+	"voter_id" varchar(255),
+	"passport_number" varchar(255),
 	"aadhaar_card_number" varchar(16),
 	"religion_id_fk" integer,
 	"category_id_fk" integer,
 	"mother_tongue_language_medium_id_fk" integer,
 	"date_of_birth" date,
+	"place_of_birth" varchar(7000),
 	"gender" "gender_type",
-	"email" varchar(255),
-	"alternative_email" varchar(255),
+	"is_gujarati" boolean DEFAULT false,
+	"marital_status" "marital_status_type",
 	"mailing_address_id_fk" integer,
 	"residential_address_id_fk" integer,
 	"disability" "disability_type",
@@ -1286,7 +1351,6 @@ CREATE TABLE "personal_details" (
 --> statement-breakpoint
 CREATE TABLE "transport_details" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"student_id_fk" integer,
 	"transport_id_fk" integer,
 	"pickup_point_id_fk" integer,
 	"seat_number" varchar(255),
@@ -1315,59 +1379,76 @@ ALTER TABLE "marksheets" ADD CONSTRAINT "marksheets_updated_by_user_id_users_id_
 ALTER TABLE "notice_attachments" ADD CONSTRAINT "notice_attachments_notice_id_fk_notices_id_fk" FOREIGN KEY ("notice_id_fk") REFERENCES "public"."notices"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notices" ADD CONSTRAINT "notices_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_academic_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_subjects" ADD CONSTRAINT "academic_subjects_board_university_id_fk_board_universities_id_fk" FOREIGN KEY ("board_university_id_fk") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_blood_group_id_fk_blood_group_id_fk" FOREIGN KEY ("blood_group_id_fk") REFERENCES "public"."blood_group"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_religion_id_fk_religion_id_fk" FOREIGN KEY ("religion_id_fk") REFERENCES "public"."religion"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_category_id_fk_categories_id_fk" FOREIGN KEY ("category_id_fk") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_department_of_staff_parent_fk_departments_id_fk" FOREIGN KEY ("department_of_staff_parent_fk") REFERENCES "public"."departments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk" FOREIGN KEY ("annual_income_id_fk") REFERENCES "public"."annual_incomes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_course_applications" ADD CONSTRAINT "admission_course_applications_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_course_applications" ADD CONSTRAINT "admission_course_applications_admission_course_id_fk_admission_courses_id_fk" FOREIGN KEY ("admission_course_id_fk") REFERENCES "public"."admission_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_courses" ADD CONSTRAINT "admission_courses_admission_id_fk_admissions_id_fk" FOREIGN KEY ("admission_id_fk") REFERENCES "public"."admissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_courses" ADD CONSTRAINT "admission_courses_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_nationality_id_fk_nationality_id_fk" FOREIGN KEY ("nationality_id_fk") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_category_id_fk_categories_id_fk" FOREIGN KEY ("category_id_fk") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_religion_id_fk_religion_id_fk" FOREIGN KEY ("religion_id_fk") REFERENCES "public"."religion"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admissions" ADD CONSTRAINT "admissions_academic_year_id_fk_academic_years_id_fk" FOREIGN KEY ("academic_year_id_fk") REFERENCES "public"."academic_years"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_admission_id_fk_admissions_id_fk" FOREIGN KEY ("admission_id_fk") REFERENCES "public"."admissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sports_info" ADD CONSTRAINT "sports_info_additional_info_id_fk_admission_additional_info_id_fk" FOREIGN KEY ("additional_info_id_fk") REFERENCES "public"."admission_additional_info"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "sports_info" ADD CONSTRAINT "sports_info_sports_category_id_fk_sports_categories_id_fk" FOREIGN KEY ("sports_category_id_fk") REFERENCES "public"."sports_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "student_academic_subjects" ADD CONSTRAINT "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk" FOREIGN KEY ("admission_academic_info_id_fk") REFERENCES "public"."admission_academic_info"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "student_academic_subjects" ADD CONSTRAINT "student_academic_subjects_academic_subject_id_fk_academic_subjects_id_fk" FOREIGN KEY ("academic_subject_id_fk") REFERENCES "public"."academic_subjects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_board_university_id_fk_board_universities_id_fk" FOREIGN KEY ("board_university_id_fk") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_institute_id_fk_institutions_id_fk" FOREIGN KEY ("institute_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_language_medium_id_fk_language_medium_id_fk" FOREIGN KEY ("language_medium_id_fk") REFERENCES "public"."language_medium"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_previously_registered_course_id_fk_courses_id_fk" FOREIGN KEY ("previously_registered_course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_previous_college_id_fk_institutions_id_fk" FOREIGN KEY ("previous_college_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "board_subjects" ADD CONSTRAINT "board_subjects_board_id_fk_boards_id_fk" FOREIGN KEY ("board_id_fk") REFERENCES "public"."boards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "board_subjects" ADD CONSTRAINT "board_subjects_subject_id_fk_subjects_id_fk" FOREIGN KEY ("subject_id_fk") REFERENCES "public"."subjects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_admission_program_course_id_fk_admission_program_courses_id_fk" FOREIGN KEY ("admission_program_course_id_fk") REFERENCES "public"."admission_program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_stream_id_fk_streams_id_fk" FOREIGN KEY ("stream_id_fk") REFERENCES "public"."streams"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_shift_id_fk_shifts_id_fk" FOREIGN KEY ("shift_id_fk") REFERENCES "public"."shifts"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_eligibility_criteria_id_fk_eligibility_criteria_id_fk" FOREIGN KEY ("eligibility_criteria_id_fk") REFERENCES "public"."eligibility_criteria"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_student_category_id_fk_student_category_id_fk" FOREIGN KEY ("student_category_id_fk") REFERENCES "public"."student_category"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_verified_by_user_id_fk_users_id_fk" FOREIGN KEY ("verified_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_freeship_approved_by_user_id_fk_users_id_fk" FOREIGN KEY ("freeship_approved_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_fees_payment_bank_branch_id_fk_bank_branches_id_fk" FOREIGN KEY ("fees_payment_bank_branch_id_fk") REFERENCES "public"."bank_branches"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_fees_payment_bank_id_banks_id_fk" FOREIGN KEY ("fees_payment_bank_id") REFERENCES "public"."banks"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_specialization_id_fk_specializations_id_fk" FOREIGN KEY ("specialization_id_fk") REFERENCES "public"."specializations"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_merit_list_id_merit_lists_id_fk" FOREIGN KEY ("merit_list_id") REFERENCES "public"."merit_lists"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_merit_list_id_fk_merit_lists_id_fk" FOREIGN KEY ("merit_list_id_fk") REFERENCES "public"."merit_lists"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_merit_list_by_user_id_fk_users_id_fk" FOREIGN KEY ("merit_list_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_cancel_source_id_cancel_sources_id_fk" FOREIGN KEY ("cancel_source_id") REFERENCES "public"."cancel_sources"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "admission_course_details" ADD CONSTRAINT "admission_course_details_cancel_by_user_id_fk_users_id_fk" FOREIGN KEY ("cancel_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_category" ADD CONSTRAINT "student_category_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "student_category" ADD CONSTRAINT "student_category_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "adm_subject_paper_selections" ADD CONSTRAINT "adm_subject_paper_selections_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "adm_subject_paper_selections" ADD CONSTRAINT "adm_subject_paper_selections_admission_course_details_id_fk_admission_course_details_id_fk" FOREIGN KEY ("admission_course_details_id_fk") REFERENCES "public"."admission_course_details"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "adm_subject_paper_selections" ADD CONSTRAINT "adm_subject_paper_selections_paper_id_fk_papers_id_fk" FOREIGN KEY ("paper_id_fk") REFERENCES "public"."papers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_family_details_id_fk_family_details_id_fk" FOREIGN KEY ("family_details_id_fk") REFERENCES "public"."family_details"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_department_of_staff_parent_fk_departments_id_fk" FOREIGN KEY ("department_of_staff_parent_fk") REFERENCES "public"."departments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_family_ex_student_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("family_ex_student_program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_additional_info" ADD CONSTRAINT "admission_additional_info_annual_income_id_fk_annual_incomes_id_fk" FOREIGN KEY ("annual_income_id_fk") REFERENCES "public"."annual_incomes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_board_id_fk_boards_id_fk" FOREIGN KEY ("board_id_fk") REFERENCES "public"."boards"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_last_school_id_fk_institutions_id_fk" FOREIGN KEY ("last_school_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_last_school_address_id_fk_address_id_fk" FOREIGN KEY ("last_school_address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_language_medium_id_fk_language_medium_id_fk" FOREIGN KEY ("language_medium_id_fk") REFERENCES "public"."language_medium"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_specialization_id_specializations_id_fk" FOREIGN KEY ("specialization_id") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_previously_registered_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("previously_registered_program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_academic_info" ADD CONSTRAINT "admission_academic_info_previous_institute_id_fk_institutions_id_fk" FOREIGN KEY ("previous_institute_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_program_courses" ADD CONSTRAINT "admission_program_courses_admission_id_fk_admissions_id_fk" FOREIGN KEY ("admission_id_fk") REFERENCES "public"."admissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_program_courses" ADD CONSTRAINT "admission_program_courses_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_program_courses" ADD CONSTRAINT "admission_program_courses_shift_id_fk_shifts_id_fk" FOREIGN KEY ("shift_id_fk") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_program_courses" ADD CONSTRAINT "admission_program_courses_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_eligibility_criteria_id_fk_eligibility_criteria_id_fk" FOREIGN KEY ("eligibility_criteria_id_fk") REFERENCES "public"."eligibility_criteria"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_student_category_id_fk_student_category_id_fk" FOREIGN KEY ("student_category_id_fk") REFERENCES "public"."student_category"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_personal_details_id_fk_personal_details_id_fk" FOREIGN KEY ("personal_details_id_fk") REFERENCES "public"."personal_details"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_spqta_approved_by_user_id_fk_users_id_fk" FOREIGN KEY ("spqta_approved_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_health_id_fk_health_id_fk" FOREIGN KEY ("health_id_fk") REFERENCES "public"."health"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_accommodation_id_fk_accommodation_id_fk" FOREIGN KEY ("accommodation_id_fk") REFERENCES "public"."accommodation"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_emergency_contact_id_fk_emergency_contacts_id_fk" FOREIGN KEY ("emergency_contact_id_fk") REFERENCES "public"."emergency_contacts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_bank_branch_id_fk_bank_branches_id_fk" FOREIGN KEY ("bank_branch_id_fk") REFERENCES "public"."bank_branches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_transport_details_id_fk_transport_details_id_fk" FOREIGN KEY ("transport_details_id_fk") REFERENCES "public"."transport_details"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "admissions" ADD CONSTRAINT "admissions_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_admission_id_fk_admissions_id_fk" FOREIGN KEY ("admission_id_fk") REFERENCES "public"."admissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_adm_approved_by_user_id_fk_users_id_fk" FOREIGN KEY ("adm_approved_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "eligibility_criteria" ADD CONSTRAINT "eligibility_criteria_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "eligibility_criteria" ADD CONSTRAINT "eligibility_criteria_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "eligibility_criteria" ADD CONSTRAINT "eligibility_criteria_category_id_fk_categories_id_fk" FOREIGN KEY ("category_id_fk") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "grade" ADD CONSTRAINT "grade_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "grade" ADD CONSTRAINT "grade_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "grade" ADD CONSTRAINT "grade_category_id_fk_categories_id_fk" FOREIGN KEY ("category_id_fk") REFERENCES "public"."categories"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "paper_selections" ADD CONSTRAINT "paper_selections_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "paper_selections" ADD CONSTRAINT "paper_selections_admission_course_details_id_fk_admission_course_details_id_fk" FOREIGN KEY ("admission_course_details_id_fk") REFERENCES "public"."admission_course_details"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "paper_selections" ADD CONSTRAINT "paper_selections_paper_id_fk_papers_id_fk" FOREIGN KEY ("paper_id_fk") REFERENCES "public"."papers"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "student_category" ADD CONSTRAINT "student_category_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "student_category" ADD CONSTRAINT "student_category_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
+ALTER TABLE "sports_info" ADD CONSTRAINT "sports_info_additional_info_id_fk_admission_additional_info_id_fk" FOREIGN KEY ("additional_info_id_fk") REFERENCES "public"."admission_additional_info"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "sports_info" ADD CONSTRAINT "sports_info_sports_category_id_fk_sports_categories_id_fk" FOREIGN KEY ("sports_category_id_fk") REFERENCES "public"."sports_categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_academic_subjects" ADD CONSTRAINT "student_academic_subjects_admission_academic_info_id_fk_admission_academic_info_id_fk" FOREIGN KEY ("admission_academic_info_id_fk") REFERENCES "public"."admission_academic_info"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_academic_subjects" ADD CONSTRAINT "student_academic_subjects_board_subject_id_fk_board_subjects_id_fk" FOREIGN KEY ("board_subject_id_fk") REFERENCES "public"."board_subjects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "student_academic_subjects" ADD CONSTRAINT "student_academic_subjects_grade_id_fk_grade_id_fk" FOREIGN KEY ("grade_id_fk") REFERENCES "public"."grade"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batch_student_papers" ADD CONSTRAINT "batch_student_papers_batch_student_mapping_id_fk_batch_student_mappings_id_fk" FOREIGN KEY ("batch_student_mapping_id_fk") REFERENCES "public"."batch_student_mappings"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batch_student_papers" ADD CONSTRAINT "batch_student_papers_paper_id_fk_papers_id_fk" FOREIGN KEY ("paper_id_fk") REFERENCES "public"."papers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "courses" ADD CONSTRAINT "courses_degree_id_fk_degree_id_fk" FOREIGN KEY ("degree_id_fk") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "courses" ADD CONSTRAINT "courses_course_header_id_fk_course_headers_id_fk" FOREIGN KEY ("course_header_id_fk") REFERENCES "public"."course_headers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "paper_components" ADD CONSTRAINT "paper_components_paper_id_fk_papers_id_fk" FOREIGN KEY ("paper_id_fk") REFERENCES "public"."papers"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "paper_components" ADD CONSTRAINT "paper_components_exam_component_id_fk_exam_components_id_fk" FOREIGN KEY ("exam_component_id_fk") REFERENCES "public"."exam_components"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "papers" ADD CONSTRAINT "papers_subject_id_fk_subjects_id_fk" FOREIGN KEY ("subject_id_fk") REFERENCES "public"."subjects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -1401,40 +1482,33 @@ ALTER TABLE "student_fees_mappings" ADD CONSTRAINT "student_fees_mappings_fees_s
 ALTER TABLE "student_fees_mappings" ADD CONSTRAINT "student_fees_mappings_instalment_id_fk_instalments_id_fk" FOREIGN KEY ("instalment_id_fk") REFERENCES "public"."instalments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "payments" ADD CONSTRAINT "payments_application_form_id_fk_application_forms_id_fk" FOREIGN KEY ("application_form_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "bank_branches" ADD CONSTRAINT "bank_branches_bank_id_fk_banks_id_fk" FOREIGN KEY ("bank_id_fk") REFERENCES "public"."banks"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
-ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "board_universities" ADD CONSTRAINT "board_universities_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "boards" ADD CONSTRAINT "boards_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "boards" ADD CONSTRAINT "boards_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "cities" ADD CONSTRAINT "cities_city_id_cities_id_fk" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "institutions" ADD CONSTRAINT "institutions_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "institutions" ADD CONSTRAINT "institutions_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "states" ADD CONSTRAINT "states_country_id_countries_id_fk" FOREIGN KEY ("country_id") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_application_id_fk_application_forms_id_fk" FOREIGN KEY ("application_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "students" ADD CONSTRAINT "students_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_specialization_id_fk_specializations_id_fk" FOREIGN KEY ("specialization_id_fk") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_institution_id_fk_institutions_id_fk" FOREIGN KEY ("last_institution_id_fk") REFERENCES "public"."institutions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_board_university_id_fk_board_universities_id_fk" FOREIGN KEY ("last_board_university_id_fk") REFERENCES "public"."board_universities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_specialization_id_specializations_id_fk" FOREIGN KEY ("specialization_id") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_history" ADD CONSTRAINT "academic_history_last_result_id_fk_board_result_status_id_fk" FOREIGN KEY ("last_result_id_fk") REFERENCES "public"."board_result_status"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "academic_identifiers" ADD CONSTRAINT "academic_identifiers_section_id_fk_sections_id_fk" FOREIGN KEY ("section_id_fk") REFERENCES "public"."sections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "accommodation" ADD CONSTRAINT "accommodation_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "students" ADD CONSTRAINT "students_section_id_fk_sections_id_fk" FOREIGN KEY ("section_id_fk") REFERENCES "public"."sections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "accommodation" ADD CONSTRAINT "accommodation_address_id_fk_address_id_fk" FOREIGN KEY ("address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "address" ADD CONSTRAINT "address_country_id_fk_countries_id_fk" FOREIGN KEY ("country_id_fk") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "address" ADD CONSTRAINT "address_state_id_fk_states_id_fk" FOREIGN KEY ("state_id_fk") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "address" ADD CONSTRAINT "address_city_id_fk_cities_id_fk" FOREIGN KEY ("city_id_fk") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "emergency_contacts" ADD CONSTRAINT "emergency_contacts_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "family_details" ADD CONSTRAINT "family_details_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "address" ADD CONSTRAINT "address_district_id_fk_cities_id_fk" FOREIGN KEY ("district_id_fk") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_details" ADD CONSTRAINT "family_details_father_details_person_id_fk_person_id_fk" FOREIGN KEY ("father_details_person_id_fk") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_details" ADD CONSTRAINT "family_details_mother_details_person_id_fk_person_id_fk" FOREIGN KEY ("mother_details_person_id_fk") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_details" ADD CONSTRAINT "family_details_guardian_details_person_id_fk_person_id_fk" FOREIGN KEY ("guardian_details_person_id_fk") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "family_details" ADD CONSTRAINT "family_details_other_guardian_details_person_id_fk_person_id_fk" FOREIGN KEY ("other_guardian_details_person_id_fk") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "family_details" ADD CONSTRAINT "family_details_spouse_details_person_id_fk_person_id_fk" FOREIGN KEY ("spouse_details_person_id_fk") REFERENCES "public"."person"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "family_details" ADD CONSTRAINT "family_details_family_occupation_id_fk_occupations_id_fk" FOREIGN KEY ("family_occupation_id_fk") REFERENCES "public"."occupations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "family_details" ADD CONSTRAINT "family_details_annual_income_id_fk_annual_incomes_id_fk" FOREIGN KEY ("annual_income_id_fk") REFERENCES "public"."annual_incomes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "health" ADD CONSTRAINT "health_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "health" ADD CONSTRAINT "health_blood_group_id_fk_blood_group_id_fk" FOREIGN KEY ("blood_group_id_fk") REFERENCES "public"."blood_group"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person" ADD CONSTRAINT "person_qualification_id_fk_qualifications_id_fk" FOREIGN KEY ("qualification_id_fk") REFERENCES "public"."qualifications"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person" ADD CONSTRAINT "person_occupation_id_fk_occupations_id_fk" FOREIGN KEY ("occupation_id_fk") REFERENCES "public"."occupations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person" ADD CONSTRAINT "person_office_addres_id_fk_address_id_fk" FOREIGN KEY ("office_addres_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_nationality_id_fk_nationality_id_fk" FOREIGN KEY ("nationality_id_fk") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_other_nationality_id_fk_nationality_id_fk" FOREIGN KEY ("other_nationality_id_fk") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_religion_id_fk_religion_id_fk" FOREIGN KEY ("religion_id_fk") REFERENCES "public"."religion"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -1443,6 +1517,5 @@ ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_mother_tongue_la
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_mailing_address_id_fk_address_id_fk" FOREIGN KEY ("mailing_address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_residential_address_id_fk_address_id_fk" FOREIGN KEY ("residential_address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_disablity_code_id_fk_disability_codes_id_fk" FOREIGN KEY ("disablity_code_id_fk") REFERENCES "public"."disability_codes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_transport_id_fk_transport_id_fk" FOREIGN KEY ("transport_id_fk") REFERENCES "public"."transport"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transport_details" ADD CONSTRAINT "transport_details_pickup_point_id_fk_pickup_point_id_fk" FOREIGN KEY ("pickup_point_id_fk") REFERENCES "public"."pickup_point"("id") ON DELETE no action ON UPDATE no action;

@@ -4,7 +4,6 @@ export * from "./adm-student-category.model";
 export * from "./adm-subject-paper-selection";
 export * from "./admisison-additional-info.model";
 export * from "./admission-academic-info.model";
-export * from "./admission-course-application.model";
 export * from "./admission-course.model";
 export * from "./admission-general-info.model";
 export * from "./admission.model";

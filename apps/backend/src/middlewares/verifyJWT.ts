@@ -3,7 +3,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { NextFunction, Request, Response } from "express";
 import { verifyToken } from "@/utils/verifyToken.js";
 import { db } from "@/db/index.js";
-import { userModel } from "@/features/user/models/user.model.js";
+import { userModel } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
 
@@ -20,7 +20,7 @@ export const verifyJWT = async (req: Request, res: Response, next: NextFunction)
 
         const [foundUser] = await db.select().from(userModel).where(eq(userModel.id, decoded.id));
 
-        if (!foundUser || foundUser.disabled) {
+        if (!foundUser || foundUser.isActive) {
             throw new ApiError(401, "Unauthorized");
         }
 

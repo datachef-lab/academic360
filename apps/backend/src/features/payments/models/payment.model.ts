@@ -1,5 +1,5 @@
-import { applicationFormModel } from "@/features/admissions/models/application-form.model.js";
-import { paymentMode, paymentStatus } from "@/features/user/models/helper.js";
+import { applicationFormModel } from "@repo/db/schemas/models/admissions";
+import { paymentMode, paymentStatus } from "@repo/db/schemas/enums";
 import { integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

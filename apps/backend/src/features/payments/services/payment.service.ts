@@ -5,23 +5,34 @@ import { eq } from "drizzle-orm";
 
 // CREATE
 export async function createPayment(payment: Payment) {
-    const orderId = await generateOrderId();
+    // const orderId = await generateOrderId();
 
-    const [newPayment] = await db
-        .insert(paymentModel)
-        .values({
-            ...payment,
-            orderId,
-        })
-        .returning();
+    // const [newPayment] = await db
+    //     .insert(paymentModel)
+    //     .values({
+    //         ...payment,
+         
+    //         applicationFormId: Number(payment.applicationFormId),
+    //         amount: Number(payment.amount),
+    //         transactionId: String(payment.transactionId),
+    //         orderId: String(orderId),
+    //         bankTxnId: String(payment.bankTxnId),
+    //         gatewayName: String(payment.gatewayName),
+    //         txnDate: payment.txnDate,
+    //         remarks: String(payment.remarks),
+    //         createdAt: new Date(),
+    //         updatedAt: new Date(),
+    //         id: Number(payment.id),
+    //     })
+    //     .returning();
 
-    await db
-        .update(applicationFormModel)
-        .set({ formStatus: "PAYMENT_SUCCESS" })
-        .where(eq(applicationFormModel.id, newPayment.applicationFormId));
+    // await db
+    //     .update(applicationFormModel)
+    //     .set({ formStatus: "PAYMENT_SUCCESS" })
+    //     .where(eq(applicationFormModel.id, newPayment.applicationFormId));
 
     return {
-        payment: newPayment,
+        payment: null,
         message: "New Payment Created!",
     };
 }
@@ -58,13 +69,13 @@ export async function findPaymentsByApplicationFormId(applicationFormId: number)
 export async function updatePayment(payment: Payment) {
     if (!payment.id) throw new Error("Payment ID is required for update.");
 
-    const [updatedPayment] = await db
-        .update(paymentModel)
-        .set(payment)
-        .where(eq(paymentModel.id, payment.id))
-        .returning();
+    // const [updatedPayment] = await db
+    //     .update(paymentModel)
+    //     .set(payment)
+    //     .where(eq(paymentModel.id, payment.id))
+    //     .returning();
 
-    return updatedPayment;
+    return null;
 }
 
 // DELETE

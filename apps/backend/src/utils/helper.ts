@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import { AnyColumn, count, desc, eq, SQLWrapper, SQL } from "drizzle-orm";
 import { PgTable } from "drizzle-orm/pg-core";
 import { PaginatedResponse } from "./PaginatedResponse.js";
-import { Marksheet } from "@/features/academics/models/marksheet.model.js";
+// import { Marksheet } from "@/features/academics/models/marksheet.model.js";
 // import { findMarksheetsByStudentId } from "@/features/academics/services/marksheet.service.js";
 // import { Stream } from "@/features/academics/models/stream.model.js";
 // import { MarksheetType } from "@/types/academics/marksheet.type.js";

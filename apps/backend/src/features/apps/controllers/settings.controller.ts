@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { findAll, findById, findByIdOrName, getSettingFileService, save } from "../service/settings.service.js";
-import { settingsVariantEnum } from "@/features/user/models/helper.js";
+import { settingsVariantEnum } from "@repo/db/schemas/enums";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/index.js";
-import { Settings } from "../models/settings.model.js";
+import { Settings } from "@repo/db/schemas/models/app";
 import path from "path";
 import fs from "fs";
 

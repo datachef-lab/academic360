@@ -38,9 +38,9 @@
 // import { academicIdentifierModel } from "@/features/user/models/academicIdentifier.model.js";
 // import { findUserById } from "@/features/user/services/user.service.js";
 
-import { db, mysqlConnection } from "@/db/index";
-import { Course, courseModel } from "@/features/course-design/models/course.model";
-import { OldCourse } from "@/types/old-data/old-course";
+// import { db, mysqlConnection } from "@/db/index";
+// import { Course, courseModel } from "@/features/course-design/models/course.model";
+// import { OldCourse } from "@/types/old-data/old-course";
 
 // const BATCH_SIZE = 500;
 

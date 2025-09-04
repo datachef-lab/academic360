@@ -3,7 +3,7 @@ import type { StringValue } from "ms";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { NextFunction, Request, Response } from "express";
-import { userModel, User } from "@/features/user/models/user.model.js";
+import { userModel, User } from "@repo/db/schemas/models/user";
 import { handleError } from "@/utils/handleError.js";
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
@@ -11,7 +11,7 @@ import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { generateToken } from "@/utils/generateToken.js";
 import { addUser, findUserByEmail, userResponseFormat } from "@/features/user/services/user.service.js";
-import { userTypeEnum } from "@/features/user/models/helper.js";
+import { userTypeEnum } from "@repo/db/schemas/enums";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const givenUser = req.body as User;
@@ -48,7 +48,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         }
 
         console.log("Checking if user is disabled?");
-        if (foundUser.disabled) {
+        if (foundUser.isActive) {
             res.status(403).json(new ApiError(403, "Your account is disabled. Please contact support."));
             return;
         }

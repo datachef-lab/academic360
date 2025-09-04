@@ -1,4 +1,4 @@
-import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/features/user/models/helper";
+import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@repo/db/schemas/enums";
 
 export type StudentFeesMapping = {
     id: number;

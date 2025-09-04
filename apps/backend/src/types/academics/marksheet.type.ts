@@ -1,11 +1,11 @@
-import { Marksheet } from "@/features/academics/models/marksheet.model.js";
-import { AcademicIdentifierType } from "../user/academic-identifier.js";
-import { Class } from "@/features/academics/models/class.model.js";
+import { Marksheet } from "@repo/db/schemas/models/academics";
+
+import { Class } from "@repo/db/schemas/models/academics";
 import { BatchDto } from "./batch.type.js";
-import { MarksheetPaperMapping } from "@/features/academics/models/marksheet-paper-mapping.model.js";
-import { MarksheetPaperComponentMapping } from "@/features/academics/models/marksheet-paper-component-mapping.model.js";
+import { MarksheetPaperMapping } from "@repo/db/schemas/models/academics";
+import { MarksheetPaperComponentMapping } from "@repo/db/schemas/models/academics";
 import { PaperComponentDto } from "../course-design/index.type.js";
-import { Paper } from "@/features/course-design/models/paper.model.js";
+import { Paper } from "@repo/db/schemas/models/course-design";
 
 export interface MarksheetPaperComponentMappingDto extends Omit<MarksheetPaperComponentMapping, "paperComponentId"> {
     paperComponent: PaperComponentDto;
@@ -21,6 +21,6 @@ export interface MarksheetDto extends Omit<Marksheet, "batchStudentMappingId" | 
     name: string;
     class: Class;
     batch: BatchDto;
-    academicIdentifier: AcademicIdentifierType;
+    // academicIdentifier: AcademicIdentifierType;
     papers: MarksheetPaperDto[];
 }

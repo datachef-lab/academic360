@@ -1,12 +1,12 @@
 import { db } from "@/db/index.js";
-import { addressModel } from "../models/address.model.js";
+import { addressModel } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
-import { Person, personModel, createPersonSchema } from "../models/person.model.js";
-import { familyModel } from "../models/family.model.js";
+import { Person, personModel, createPersonSchema } from "@repo/db/schemas/models/user";
+import { familyModel } from "@repo/db/schemas/models/user";
 import { addAddress, addressResponseFormat, findAddressById, saveAddress } from "./address.service.js";
 import { findOccupationById } from "@/features/resources/services/occupation.service.js";
 import { findQualificationById } from "@/features/resources/services/qualification.service.js";
-import { z } from "zod";
+import { z } from "zod";    
 
 // Validate input using Zod schema
 function validatePersonInput(data: Omit<Person, 'id'>) {

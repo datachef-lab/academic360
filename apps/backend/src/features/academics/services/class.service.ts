@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
-import { classModel } from "../models/class.model.js";
+import { classModel } from "@repo/db/schemas/models/academics";
 import { and, eq } from "drizzle-orm";
 // import { classTypeEnum } from "@/features/user/models/helper";
 
-import type { Class } from "../models/class.model.js";
+import type { Class } from "@repo/db/schemas/models/academics";
 
 const defaultClasses: Class[] = [
     { name: "SEMESTER I", type: "SEMESTER" },

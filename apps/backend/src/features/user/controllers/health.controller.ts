@@ -8,7 +8,7 @@ import {
   removeHealthByStudentId,
   getAllHealths
 } from "../services/health.service.js";
-import { createHealthSchema } from "../models/health.model.js";
+import { createHealthSchema } from "@repo/db/schemas/models/user";
 import { HealthType } from "@/types/user/health.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
@@ -23,15 +23,15 @@ export const createHealth = async (req: Request, res: Response, next: NextFuncti
     }
     const healthData: HealthType = req.body;
     // Check if health record already exists for this student
-    if (healthData.studentId) {
-      const existingHealth = await findHealthByStudentId(healthData.studentId);
-      if (existingHealth) {
-        // If exists, update it instead of creating new
-        const updatedHealth = await updateHealth(existingHealth.id!, { ...healthData, id: existingHealth.id! });
-        res.status(200).json({ success: true, message: "Health record updated successfully", payload: updatedHealth });
-        return;
-      }
-    }
+    // if (healthData.studentId) {
+    //   const existingHealth = await findHealthByStudentId(healthData.studentId);
+    //   if (existingHealth) {
+    //     // If exists, update it instead of creating new
+    //     const updatedHealth = await updateHealth(existingHealth.id!, { ...healthData, id: existingHealth.id! });
+    //     res.status(200).json({ success: true, message: "Health record updated successfully", payload: updatedHealth });
+    //     return;
+    //   }
+    // }
     // Continue with normal create if no existing record
     const createdHealth = await addHealth(healthData);
     if (createdHealth) {

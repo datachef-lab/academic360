@@ -1,6 +1,6 @@
 import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
-import { courseModel } from "@/features/course-design/models/course.model.js";
+import { courseModel } from "@repo/db/schemas/models/course-design";
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 

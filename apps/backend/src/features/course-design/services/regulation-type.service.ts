@@ -1,13 +1,13 @@
 import { db } from "@/db/index.js";
-import { regulationTypeModel, RegulationType } from "@/features/course-design/models/regulation-type.model.js";
+import { regulationTypeModel, RegulationType } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourses } from "../models/program-course.model.js";
-import { paperModel } from "../models/paper.model.js";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { paperModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 
 const defaultRegulationType: RegulationType[] = [
-    {
+    {           
         name: "CBCS",
         shortName: "CBCS",
         disabled: false,
@@ -71,9 +71,9 @@ export async function deleteRegulationTypeSafe(id: number) {
         .from(paperModel)
         .where(eq(paperModel.regulationTypeId, id));
     const [{ programCourseCount }] = await db
-        .select({ programCourseCount: countDistinct(programCourses.id) })
-        .from(programCourses)
-        .where(eq(programCourses.regulationTypeId, id));
+        .select({ programCourseCount: countDistinct(programCourseModel.id) })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.regulationTypeId, id));
 
     if (paperCount > 0 || programCourseCount > 0) {
         return {

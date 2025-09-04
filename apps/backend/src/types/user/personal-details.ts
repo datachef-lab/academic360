@@ -1,10 +1,10 @@
-import { PersonalDetails } from "@/features/user/models/personalDetails.model.js";
+import { PersonalDetails } from "@repo/db/schemas/models/user";
 import { AddressType } from "./address.js";
-import { Nationality } from "@/features/resources/models/nationality.model.js";
-import { Religion } from "@/features/resources/models/religion.model.js";
-import { Category } from "@/features/resources/models/category.model.js";
-import { LanguageMedium } from "@/features/resources/models/languageMedium.model.js";
-import { Disability } from "@/features/user/models/disabilityCode.model.js";
+import { Nationality } from "@repo/db/schemas/models/resources";
+import { Religion } from "@repo/db/schemas/models/resources";
+import { Category } from "@repo/db/schemas/models/resources";
+import { LanguageMedium } from "@repo/db/schemas/models/resources";
+import { Disability } from "@repo/db/schemas/models/user";
 
 
 export interface PersonalDetailsType extends Omit<PersonalDetails, "nationalityId" | "otherNationalityId" | "religionId" | "categoryId" | "motherTongueId" | "mailingAddressId" | "residentialAddressId" | "disabilityCodeId"> {

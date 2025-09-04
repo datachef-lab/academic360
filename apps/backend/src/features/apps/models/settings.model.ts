@@ -1,4 +1,4 @@
-import { settingsTypeInputEnum, settingsVariantEnum } from "@/features/user/models/helper.js";
+import { settingsTypeInputEnum, settingsVariantEnum } from "@repo/db/schemas/enums";
 import { pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";

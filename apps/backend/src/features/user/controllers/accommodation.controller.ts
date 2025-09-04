@@ -1,7 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createAccommodationSchema, updateAccommodationSchema } from "@/features/user/models/accommodation.model.js";
+import { createAccommodationSchema, updateAccommodationSchema } from "@repo/db/schemas/models/user";
 import { addAccommodation, findAccommotionById, findAccommotionByStudentId, updateAccommodation as updateAccommodationService, removeAccommodation, removeAccommodationByStudentId, getAllAccommodations } from "@/features/user/services/accommodation.service.js";
 import { AccommodationType } from "@/types/user/accommodation.js";
 

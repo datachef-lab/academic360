@@ -1,10 +1,11 @@
 import { db } from "@/db/index.js";
-import { batchStudentMappingModel } from "../models/batch-student-mapping.model.js";
-import { batchModel } from "../models/batch.model.js";
-import { studentModel } from "@/features/user/models/student.model.js";
-import { userModel } from "@/features/user/models/user.model.js";
+import { PaginatedResponse } from "@/utils/PaginatedResponse";
+import { batchStudentMappingModel } from "@repo/db/schemas/models/academics";
+import { batchModel } from "@repo/db/schemas/models/academics";
+import { studentModel } from "@repo/db/schemas/models/user";
+import { userModel } from "@repo/db/schemas/models/user";
 import { eq, and, desc, asc, count, sql } from "drizzle-orm";
-import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
+
 
 export interface BatchStudentMappingFilters {
   page?: number;

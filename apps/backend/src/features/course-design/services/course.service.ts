@@ -1,102 +1,105 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import { CourseDto } from "@/types/course-design/index.type.js";
-import { Course, courseModel, createCourseModel } from "../../course-design/models/course.model.js";
+import { Course, courseModel, createCourseModel } from "@repo/db/schemas";
 import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 // import { StreamType } from "@/types/academics/stream.js";
 // import { findStreamById } from "./stream.service.js";
 // import { streamModel } from "../models/stream.model.js";
 import { OldCourse } from "@/types/old-data/old-course.js";
 // import { processCourse } from "./batch.service.js";
-import { studentModel } from "@/features/user/models/student.model.js";
+// import { studentModel } from "@/features/user/models/student.model.js";
 
 import { OldStudent } from "@/types/old-student.js";
-import { Degree } from "@/features/resources/models/degree.model.js";
-import { findDegreeById } from "@/features/resources/services/degree.service.js";
 import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
 import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
 import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
 import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
-import { programCourses } from "@/features/course-design/models/program-course.model.js";
-import { batchModel } from "@/features/academics/models/batch.model.js";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
+import { batchModel } from "@repo/db/schemas/models/academics";
 import XLSX from "xlsx";
 import fs from "fs";
-import { academicIdentifierModel } from "@repo/db/schemas/index.js";
+import { studentModel } from "@repo/db/schemas/index.js";
 
 export interface BulkUploadResult {
-  success: Course[];
-  errors: Array<{ row: number; data: unknown[]; error: string }>;
-  summary: {
-    total: number;
-    successful: number;
-    failed: number;
-  };
+    success: Course[];
+    errors: Array<{ row: number; data: unknown[]; error: string }>;
+    summary: {
+        total: number;
+        successful: number;
+        failed: number;
+    };
 }
 
 export const bulkUploadCourses = async (
-  filePath: string,
-  io?: any,
-  uploadSessionId?: string
+    filePath: string,
+    io?: any,
+    uploadSessionId?: string
 ): Promise<BulkUploadResult> => {
-  const result: BulkUploadResult = { 
-    success: [], 
-    errors: [], 
-    summary: { total: 0, successful: 0, failed: 0 } 
-  };
-  try {
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    const result: BulkUploadResult = {
+        success: [],
+        errors: [],
+        summary: { total: 0, successful: 0, failed: 0 }
+    };
+    try {
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-    result.summary.total = data.length - 1;
+        result.summary.total = data.length - 1;
 
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i] as any[];
-      const rowNumber = i + 1;
-      try {
-        const courseData = {
-          name: row[0]?.toString()?.trim(),
-          code: row[1]?.toString()?.trim(),
-          shortName: row[2]?.toString()?.trim() || null,
-          sequence: row[3] ? parseInt(row[3].toString()) : null,
-          degreeId: row[4] ? parseInt(row[4].toString()) : null,
-          disabled: row[5]?.toString()?.toLowerCase() === 'inactive' || row[5]?.toString()?.toLowerCase() === 'false',
-        };
-        if (!courseData.name) {
-          result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
-          result.summary.failed++;
-          continue;
+        for (let i = 1; i < data.length; i++) {
+            const row = data[i] as any[];
+            const rowNumber = i + 1;
+            try {
+                const courseData = {
+                    name: row[0]?.toString()?.trim(),
+                    // code column not present in courseModel; ignore
+                    shortName: row[2]?.toString()?.trim() || null,
+                    sequence: row[3] ? parseInt(row[3].toString()) : null,
+                    // degreeId not present in courseModel; ignore
+                    disabled: row[5]?.toString()?.toLowerCase() === 'inactive' || row[5]?.toString()?.toLowerCase() === 'false',
+                } as const;
+                if (!courseData.name) {
+                    result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
+                    result.summary.failed++;
+                    continue;
+                }
+                // Insert the course
+                const [newCourse] = await db.insert(courseModel).values({
+                    name: courseData.name!,
+                    shortName: courseData.shortName ?? undefined,
+                    sequence: courseData.sequence ?? undefined,
+                    disabled: courseData.disabled,
+                }).returning();
+                result.success.push(newCourse);
+                result.summary.successful++;
+            } catch (error: unknown) {
+                console.error(`Error processing row ${rowNumber}:`, error);
+                result.errors.push({ row: rowNumber, data: row, error: error instanceof Error ? error.message : "Unknown error" });
+                result.summary.failed++;
+            }
+            if (io && uploadSessionId) {
+                io.to(uploadSessionId).emit("bulk-upload-progress", {
+                    processed: i,
+                    total: data.length - 1,
+                    percent: Math.round((i / (data.length - 1)) * 100)
+                });
+            }
         }
-        // Insert the course
-        const [newCourse] = await db.insert(courseModel).values(courseData).returning();
-        result.success.push(newCourse);
-        result.summary.successful++;
-      } catch (error: unknown) {
-        console.error(`Error processing row ${rowNumber}:`, error);
-        result.errors.push({ row: rowNumber, data: row, error: error instanceof Error ? error.message : "Unknown error" });
-        result.summary.failed++;
-      }
-      if (io && uploadSessionId) {
-        io.to(uploadSessionId).emit("bulk-upload-progress", {
-          processed: i,
-          total: data.length - 1,
-          percent: Math.round((i / (data.length - 1)) * 100)
-        });
-      }
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (io && uploadSessionId) {
+            if (result.errors.length > 0) {
+                io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
+            } else {
+                io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
+            }
+        }
+        return result;
+    } catch (error: unknown) {
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        throw new Error(`Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    if (io && uploadSessionId) {
-      if (result.errors.length > 0) {
-        io.to(uploadSessionId).emit("bulk-upload-failed", { errorCount: result.errors.length });
-      } else {
-        io.to(uploadSessionId).emit("bulk-upload-done", { successCount: result.success.length });
-      }
-    }
-    return result;
-  } catch (error: unknown) {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    throw new Error(`Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
 };
 
 export async function findAllCourses(): Promise<CourseDto[]> {
@@ -123,21 +126,22 @@ export async function findCourseById(id: number): Promise<CourseDto | null> {
 }
 
 export async function createCourse(course: CourseDto): Promise<CourseDto | null> {
-    const { degree, id, createdAt, updatedAt, ...props } = course;
+    const { id, createdAt, updatedAt, degree, ...props } = course;
     console.log("in create course in service, course:", course);
     const courseData: Course = {
-        ...props,
-        degreeId: degree?.id,
-    }
+        name: course.name!,
+        shortName: course.shortName!,
+        sequence: props.sequence ?? null,
+        disabled: props.disabled ?? false,
+        legacyCourseId: props.legacyCourseId ?? null,
+        courseHeaderId: props.courseHeaderId ?? undefined,
+    };
 
     const [existingCourse] = await db
         .select()
         .from(courseModel)
         .where(
-            and(
-                ilike(courseModel.name, courseData.name.trim()),
-                eq(courseModel.degreeId, courseData.degreeId!),
-            )
+            ilike(courseModel.name, courseData.name.trim())
         );
 
     if (existingCourse) return null;
@@ -157,11 +161,18 @@ export async function createCourse(course: CourseDto): Promise<CourseDto | null>
 }
 
 export async function updateCourse(id: number, course: CourseDto): Promise<CourseDto | null> {
-    const { degree, id: idObj, createdAt, updatedAt, ...props } = course;
+    const { id: idObj, createdAt, updatedAt, degree, ...props } = course;
     console.log("in update course in service, course:", course, "id:", id);
     const [updatedCourse] = await db
         .update(courseModel)
-        .set({ ...props, degreeId: course.degree?.id, ...props })
+        .set({
+            name: props.name!,
+            shortName: props.shortName ?? undefined,
+            sequence: props.sequence ?? undefined,
+            disabled: props.disabled ?? undefined,
+            legacyCourseId: props.legacyCourseId ?? undefined,
+            courseHeaderId: props.courseHeaderId ?? undefined,
+        })
         .where(eq(courseModel.id, id))
         .returning();
 
@@ -203,7 +214,7 @@ export async function deleteCourseSafe(id: number) {
             .leftJoin(admissionCourseModel, eq(admissionCourseModel.id, admissionCourseApplication.admissionCourseId))
             .where(eq(admissionCourseModel.courseId, id)),
         db.select({ admCourseCount: countDistinct(admissionCourseModel.id) }).from(admissionCourseModel).where(eq(admissionCourseModel.courseId, id)),
-        db.select({ programCourseCount: countDistinct(programCourses.id) }).from(programCourses).where(eq(programCourses.courseId, id)),
+        db.select({ programCourseCount: countDistinct(programCourseModel.id) }).from(programCourseModel).where(eq(programCourseModel.courseId, id)),
         db.select({ feesStructureCount: countDistinct(feesStructureModel.id) }).from(feesStructureModel).where(eq(feesStructureModel.courseId, id)),
 
     ]);
@@ -274,17 +285,10 @@ export async function courseFormatResponse(course: Course | null): Promise<Cours
         return null;
     }
 
-    const { degreeId, ...props } = course;
-
-    let degree: Degree | null = null;
-    if (degreeId) {
-        degree = await findDegreeById(degreeId);
-    }
-
     return {
-        ...props,
-        degree,
-    }
+        ...course,
+        degree: undefined,
+    } as unknown as CourseDto;
 }
 
 function or(...conditions: unknown[]) {
@@ -309,11 +313,11 @@ export async function mapStudentCourses() {
             const paginatedResult = await db
                 .select({
                     id: studentModel.id,
-                    uid: academicIdentifierModel.uid,
-                    academicIdentifierId: academicIdentifierModel.id
+                    // uid: academicIdentifierModel.uid,
+                    // academicIdentifierId: academicIdentifierModel.id
                 })
                 .from(studentModel)
-                .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
+                // .leftJoin(academicIdentifierModel, eq(academicIdentifierModel.studentId, studentModel.id))
                 .limit(BATCH_SIZE)
                 .offset(offset);
 
@@ -323,14 +327,13 @@ export async function mapStudentCourses() {
                     SELECT *
                     FROM studentpersonaldetails
                     WHERE
-                        codeNumber IN (${paginatedResult.map(std => std.uid!.trim())})
+                        codeNumber IN ('')
                         AND ;
                 `) as [OldStudent[], any];
 
             for (let i = 0; i < paginatedResult.length; i++) {
                 const oldStudent = oldStudents.find(
-                    (std) => std.codeNumber.trim().toLowerCase() == paginatedResult[i].uid!.trim().toLowerCase()
-                );
+                    (std) => std.codeNumber.trim().toLowerCase() == '');
 
                 if (!oldStudent) {
                     console.log("Old Student not found therefore continue")

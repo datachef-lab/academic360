@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import * as sessionService from "../services/session.service.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
-import { Session } from "../models/session.model.js";
+import { Session } from "@repo/db/schemas/models/academics";
 
 export const createSessionHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {

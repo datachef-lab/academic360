@@ -1,11 +1,11 @@
-import { Student } from "@/features/user/models/student.model.js";
+import { Student } from "@repo/db/schemas/models/user";
 import { PersonalDetailsType } from "./personal-details.js";
-import { AcademicIdentifierType } from "./academic-identifier.js";
-import { Specialization } from "@/features/course-design/models/specialization.model.js";
+
+import { Specialization } from "@repo/db/schemas/models/course-design";
 
 export interface StudentType extends Omit<Student, "specializationId"> {
     name: string;
     specialization?: Specialization | null;
-    academicIdentifier?: AcademicIdentifierType | null;
+    // academicIdentifier?: AcademicIdentifierType | null;
     personalDetails?: PersonalDetailsType | null;
 }

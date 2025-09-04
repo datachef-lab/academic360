@@ -7,7 +7,7 @@ import {
   updateDisabilityCode,
   deleteDisabilityCode,
 } from "../services/disabilityCode.service";
-import { createDisabilityCodeSchema } from "../models/disabilityCode.model";
+import { createDisabilityCodeSchema } from "@repo/db/schemas/models/user";
 
 // Schema to validate and convert route `id` param to number
 const idParamSchema = z.object({

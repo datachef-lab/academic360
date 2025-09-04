@@ -1,7 +1,7 @@
 import { socketService } from "../services/socketService.js";
 import { Request } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { User } from "@/features/user/models/user.model.js";
+import { User } from "@repo/db/schemas/models/user";
 
 // Send notification for file uploads
 export const sendFileUploadNotification = (

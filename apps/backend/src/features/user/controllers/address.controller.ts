@@ -1,9 +1,9 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import { createAddressSchema, updateAddressSchema } from "@/features/user/models/address.model.js";
+import { createAddressSchema, updateAddressSchema } from "@repo/db/schemas/models/user";
 import { addAddress, findAddressById, saveAddress, removeAddress, getAllAddresses } from "@/features/user/services/address.service.js";
-import { Address } from "@/features/user/models/address.model.js";
+import { Address } from "@repo/db/schemas/models/user";
 
 export const createAddress = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {

@@ -1,59 +1,59 @@
 import { db } from "@/db/index.js";
-import { programCourses, ProgramCourse, NewProgramCourse } from "@/features/course-design/models/program-course.model.js";
+import { programCourseModel, ProgramCourse, NewProgramCourse } from "@repo/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
-import { streamModel } from "@/features/course-design/models/stream.model.js";
-import { courseModel } from "@/features/course-design/models/course.model.js";
-import { courseTypeModel } from "@/features/course-design/models/course-type.model.js";
-import { courseLevelModel } from "@/features/course-design/models/course-level.model.js";
-import { affiliationModel } from "@/features/course-design/models/affiliation.model.js";
-import { regulationTypeModel } from "@/features/course-design/models/regulation-type.model.js";
-import { paperModel } from "../models/paper.model.js";
+    import { streamModel } from "@repo/db/schemas/models/course-design";
+import { courseModel } from "@repo/db/schemas/models/course-design";
+import { courseTypeModel } from "@repo/db/schemas/models/course-design";
+import { courseLevelModel } from "@repo/db/schemas/models/course-design";
+import { affiliationModel } from "@repo/db/schemas/models/course-design";
+import { regulationTypeModel } from "@repo/db/schemas/models/course-design";
+import { paperModel } from "@repo/db/schemas/models/course-design";
 
 export async function createProgramCourse(data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) {
     const [existingProgramCourse] = await db
         .select()
-        .from(programCourses)
+        .from(programCourseModel)
         .where(
             and(
-                eq(programCourses.streamId, data.streamId!),
-                eq(programCourses.courseId, data.courseId!),
-                eq(programCourses.courseTypeId, data.courseTypeId!),
-                eq(programCourses.courseLevelId, data.courseLevelId!),
-                eq(programCourses.affiliationId, data.affiliationId!),
-                eq(programCourses.regulationTypeId, data.regulationTypeId!),
+                eq(programCourseModel.streamId, data.streamId!),
+                eq(programCourseModel.courseId, data.courseId!),
+                eq(programCourseModel.courseTypeId, data.courseTypeId!),
+                eq(programCourseModel.courseLevelId, data.courseLevelId!),
+                eq(programCourseModel.affiliationId, data.affiliationId!),
+                eq(programCourseModel.regulationTypeId, data.regulationTypeId!),
             )
         );
 
     if (existingProgramCourse) return null;
     
-    const [created] = await db.insert(programCourses).values(data).returning();
+    const [created] = await db.insert(programCourseModel).values(data).returning();
     return created;
 }
 
 export async function getProgramCourseById(id: number) {
-    const [programCourse] = await db.select().from(programCourses).where(eq(programCourses.id, id));
+    const [programCourse] = await db.select().from(programCourseModel).where(eq(programCourseModel.id, id));
     return programCourse;
 }
 
 export async function getAllProgramCourses() {
-    return db.select().from(programCourses);
+    return db.select().from(programCourseModel);
 }
 
 export async function updateProgramCourse(id: number, data: Partial<ProgramCourse>) {
     const { id: idObj, createdAt, updatedAt, ...props } = data;
-    const [updated] = await db.update(programCourses).set(props).where(eq(programCourses.id, id)).returning();
+    const [updated] = await db.update(programCourseModel).set(props).where(eq(programCourseModel.id, id)).returning();
     return updated;
 }
 
 export async function deleteProgramCourse(id: number) {
-    const [deleted] = await db.delete(programCourses).where(eq(programCourses.id, id)).returning();
+    const [deleted] = await db.delete(programCourseModel).where(eq(programCourseModel.id, id)).returning();
     return deleted;
 }
 
 export async function deleteProgramCourseSafe(id: number) {
-    const [found] = await db.select().from(programCourses).where(eq(programCourses.id, id));
+        const [found] = await db.select().from(programCourseModel).where(eq(programCourseModel.id, id));
     if (!found) return null;
 
     // Check dependent papers
@@ -70,7 +70,7 @@ export async function deleteProgramCourseSafe(id: number) {
         };
     }
 
-    const [deleted] = await db.delete(programCourses).where(eq(programCourses.id, id)).returning();
+    const [deleted] = await db.delete(programCourseModel).where(eq(programCourseModel.id, id)).returning();
     if (deleted) return { success: true, message: "Program course deleted successfully.", records: [] };
     return { success: false, message: "Failed to delete program course.", records: [] };
 }
@@ -196,7 +196,7 @@ export const bulkUploadProgramCourses = async (
         continue;
       }
 
-      const created = await db.insert(programCourses).values({
+      const created = await db.insert(programCourseModel).values({
         streamId,
         courseId,
         courseTypeId,

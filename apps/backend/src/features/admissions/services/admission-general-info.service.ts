@@ -9,27 +9,41 @@ import { sendZeptoMail } from "@/notifications/zepto-mailer.js";
 
 // CREATE
 export async function createGeneralInfo(generalInfo: Omit<AdmissionGeneralInfo, "id" | "createdAt" | "updatedAt">) {
-    const applicationForm = await findApplicationFormById(generalInfo.applicationFormId);
+    const applicationForm = await findApplicationFormById(Number(generalInfo.applicationFormId));
     if (!applicationForm) {
         return { generalInfo: null, message: "Invalid application id" }
     }
-    const admission = await findAdmissionById(applicationForm?.admissionId!);
+    const admission = await findAdmissionById(Number(applicationForm?.admissionId!));
     if (!admission) {
         return { generalInfo: null, message: "Invalid admision id" }
     }
-    const existingEntry = await checkExistingEntry(admission.id!, generalInfo);
+    const existingEntry = await checkExistingEntry(Number(admission.id!), generalInfo);
     if (existingEntry) {
         return { generalInfo: existingEntry, message: "General info already exists for this student." };
     }
-    
+
     // Encrypt the password
     const hashedPassword = await bcrypt.hash(generalInfo.password, 10);
 
     const [newGeneralInfo] = await db
         .insert(admissionGeneralInfoModel)
         .values({
-            ...generalInfo,
+            applicationFormId: Number(generalInfo.applicationFormId),
+            firstName: generalInfo.firstName,
+            middleName: generalInfo.middleName ?? undefined,
+            lastName: generalInfo.lastName ?? undefined,
+            dateOfBirth: generalInfo.dateOfBirth,
+            nationalityId: generalInfo.nationalityId ?? undefined,
+            otherNationality: generalInfo.otherNationality ?? undefined,
+            isGujarati: !!generalInfo.isGujarati,
+            categoryId: generalInfo.categoryId ?? undefined,
+            religionId: generalInfo.religionId ?? undefined,
+            gender: generalInfo.gender,
+            degreeLevel: generalInfo.degreeLevel,
             password: hashedPassword,
+            whatsappNumber: generalInfo.whatsappNumber ?? undefined,
+            mobileNumber: generalInfo.mobileNumber,
+            email: generalInfo.email,
             residenceOfKolkata: !!generalInfo.residenceOfKolkata
         })
         .returning();
@@ -58,7 +72,7 @@ export async function findByLoginIdAndPassword(mobileNumber: string, password: s
     const users = await db
         .select()
         .from(admissionGeneralInfoModel)
-        .where(ilike(admissionGeneralInfoModel.mobileNumber, mobileNumber.trim()));
+        .where(ilike(admissionGeneralInfoModel.mobileNumber, mobileNumber.trim()))
 
     if (users.length === 0) {
         return null;
@@ -96,7 +110,7 @@ export async function findGeneralInfoByApplicationFormId(applicationFormId: numb
     const [generalInfo] = await db
         .select()
         .from(admissionGeneralInfoModel)
-        .where(eq(admissionGeneralInfoModel.applicationFormId, applicationFormId));
+        .where(eq(admissionGeneralInfoModel.applicationFormId, Number(applicationFormId)));
 
     if (!generalInfo) {
         return null;
@@ -129,8 +143,8 @@ export async function checkExistingEntry(admissionId: number, generalInfo: Parti
         .innerJoin(applicationFormModel, eq(admissionGeneralInfoModel.applicationFormId, applicationFormModel.id))
         .where(
             and(
-                eq(admissionGeneralInfoModel.mobileNumber, generalInfo.mobileNumber!),
-                eq(applicationFormModel.admissionId, admissionId)
+                ilike(admissionGeneralInfoModel.mobileNumber, String(generalInfo.mobileNumber || '').trim()),
+                eq(applicationFormModel.admissionId, Number(admissionId))
             )
         );
 

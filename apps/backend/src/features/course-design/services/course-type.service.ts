@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { CourseType, courseTypeModel } from "../models/course-type.model.js";
+import { CourseType, courseTypeModel } from "@repo/db/schemas";
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourses } from "../models/program-course.model.js";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -189,9 +189,9 @@ export async function deleteCourseTypeSafe(id: number) {
     if (!found) return null;
 
     const [{ programCourseCount }] = await db
-        .select({ programCourseCount: countDistinct(programCourses.id) })
-        .from(programCourses)
-        .where(eq(programCourses.courseTypeId, id));
+        .select({ programCourseCount: countDistinct(programCourseModel.id) })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.courseTypeId, id));
 
     if (programCourseCount > 0) {
         return {

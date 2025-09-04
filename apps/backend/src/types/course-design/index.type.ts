@@ -1,15 +1,15 @@
-import { Course } from "@/features/course-design/models/course.model.js";
-import { Paper } from "@/features/course-design/models/paper.model";
-import { Subject } from "@/features/course-design/models/subject.model";
-import { SubjectType } from "@/features/course-design/models/subject-type.model";
+import { Course } from "@repo/db/schemas/models/course-design";
+import { Paper } from "@repo/db/schemas/models/course-design";
+import { Subject } from "@repo/db/schemas/models/course-design";
+import { SubjectType } from "@repo/db/schemas/models/course-design";
 import { Degree } from "@/features/resources/models/degree.model";
-import { Specialization } from "@/features/course-design/models/specialization.model";
-import { PaperComponent } from "@/features/course-design/models/paper-component.model";
-import { ExamComponent } from "@/features/course-design/models/exam-component.model";
-import { Topic } from "@/features/course-design/models/topic.model";
-import { Affiliation } from "@/features/course-design/models/affiliation.model";
-import { RegulationType } from "@/features/course-design/models/regulation-type.model";
-import { AcademicYear } from "@/features/academics/models/academic-year.model";
+import { Specialization } from "@repo/db/schemas/models/course-design";
+import { PaperComponent } from "@repo/db/schemas/models/course-design";
+import { ExamComponent } from "@repo/db/schemas/models/course-design";
+import { Topic } from "@repo/db/schemas/models/course-design";
+import { Affiliation } from "@repo/db/schemas/models/course-design";
+import { RegulationType } from "@repo/db/schemas/models/course-design";
+import { AcademicYear } from "@repo/db/schemas/models/academics";
 
 export interface CourseDto extends Omit<Course, "degreeId"> {
     degree: Degree | null;

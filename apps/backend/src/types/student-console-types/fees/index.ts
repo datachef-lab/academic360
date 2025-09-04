@@ -1,13 +1,13 @@
 // import { AcademicYear, Class, FeesComponent, FeesSlabMapping, FeesStructure, Instalment, Shift, StudentFeesMapping } from "@/db/schema";
-import { FeesStructure } from "@/features/fees/models/fees-structure.model";
+import { FeesStructure } from "@repo/db/schemas/models/fees";
 // import { CourseDto } from "../academics";
-import { Shift } from "@/features/academics/models/shift.model";
-import { AcademicYear } from "@/features/academics/models/academic-year.model";
-import { Class } from "@/features/academics/models/class.model";
-import { FeesComponent } from "@/features/fees/models/fees-component.model";
-import { FeesSlabMapping } from "@/features/fees/models/fees-slab-mapping.model";
-import { Instalment } from "@/features/fees/models/instalment.model";
-import { StudentFeesMapping } from "@/features/fees/models/student-fees-mapping.model";
+import { Shift } from "@repo/db/schemas/models/academics";
+import { AcademicYear } from "@repo/db/schemas/models/academics";
+import { Class } from "@repo/db/schemas/models/academics";
+import { FeesComponent } from "@repo/db/schemas/models/fees";
+import { FeesSlabMapping } from "@repo/db/schemas/models/fees";
+import { Instalment } from "@repo/db/schemas/models/fees";
+import { StudentFeesMapping } from "@repo/db/schemas/models/fees";
 import { CourseDto } from "@/types/course-design/index.type";
 
 export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {

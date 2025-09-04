@@ -2,14 +2,15 @@ import { db } from "@/db/index.js";
 import {
     academicYearModel,
     AcademicYear,
-} from "../models/academic-year.model.js";
+} from "@repo/db/schemas/models/academics";
 import { eq, and, desc, or, count, countDistinct } from "drizzle-orm";
-import { Session, sessionModel } from "../models/session.model.js";
-import { marksheetPaperMappingModel } from "../models/marksheet-paper-mapping.model.js";
-import { noticeModel } from "../models/notice.model.js";
-import { admissionModel } from "@/features/admissions/models/admission.model.js";
-import { paperModel } from "@/features/course-design/models/paper.model.js";
-import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
+import { Session, sessionModel } from "@repo/db/schemas/models/academics";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
+import { noticeModel } from "@repo/db/schemas/models/academics";
+
+import { paperModel } from "@repo/db/schemas/models/course-design";
+import { feesStructureModel } from "@repo/db/schemas/models/fees";
+import { admissionModel } from "@repo/db/schemas";
 
 export async function createAcademicYear(
     academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
@@ -102,7 +103,7 @@ export async function deleteAcademicYear(
             admissionCount: countDistinct(admissionModel.id),
         })
         .from(admissionModel)
-        .where(eq(admissionModel.academicYearId, id));
+        .where(eq(admissionModel.sessionId, 0));
 
     const [{ paperCount }] = await db
         .select({

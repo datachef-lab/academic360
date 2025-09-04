@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
 import { eq, and, ilike, countDistinct } from "drizzle-orm";
-import { Paper, paperModel } from "../models/paper.model.js";
-import { PaperDto } from "@/types/course-design/index.type.js";
+import { Paper, paperModel } from "@repo/db/schemas/models/course-design";
+import { PaperDto } from "@repo/db/dtos/course-design";
 import {
     createPaperComponent,
     // updatePaperComponent,
@@ -11,12 +11,12 @@ import {
 import XLSX from "xlsx";
 import fs from "fs";
 import { createTopic, getTopicsByPaperId, updateTopic } from "./topic.service.js";
-import { paperComponentModel } from "../models/paper-component.model.js";
-import { examComponentModel } from "../models/exam-component.model.js";
-import { classModel } from "@/features/academics/models/class.model.js";
-import { topicModel } from "../models/topic.model.js";
-import { marksheetPaperMappingModel } from "@/features/academics/models/marksheet-paper-mapping.model.js";
-import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
+import { paperComponentModel } from "@repo/db/schemas/models/course-design";
+import { examComponentModel } from "@repo/db/schemas/models/course-design";
+import { classModel } from "@repo/db/schemas/models/academics";
+import { topicModel } from "@repo/db/schemas/models/course-design";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
+import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
 // import { findCourseById } from "./course.service";
 // import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
 // import { findClassById } from "@/features/academics/services/class.service";
@@ -27,20 +27,17 @@ import { batchStudentPaperModel } from "../models/batch-student-paper.model.js";
 // import { getPaperComponentById } from "../controllers/paper-component.controller";
 
 export interface BulkUploadResult {
-  success: Paper[];
-  errors: Array<{ row: number; data: unknown[]; error: string }>;
-  summary: {
-    total: number;
-    successful: number;
-    failed: number;
-  };
+    success: Paper[];
+    errors: Array<{ row: number; data: unknown[]; error: string }>;
+    summary: {
+        total: number;
+        successful: number;
+        failed: number;
+    };
 }
 
 export async function createPaper(data: PaperDto) {
     const {
-        id,
-        createdAt,
-        updatedAt,
         components,
         topics,
         ...props
@@ -65,8 +62,13 @@ export async function createPaper(data: PaperDto) {
         const [created] = await db
             .insert(paperModel)
             .values({
-                ...props,
-                subjectId: data?.subjectId!,
+                name: data.name,
+                code: data.code,
+                isOptional: props.isOptional ?? false,
+                sequence: props.sequence ?? undefined,
+                disabled: props.disabled ?? false,
+                subjectId: data.subjectId!,
+                subjectTypeId: data.subjectTypeId!,
                 affiliationId: data.affiliationId,
                 regulationTypeId: data.regulationTypeId,
                 academicYearId: data.academicYearId!,
@@ -139,7 +141,7 @@ export async function getPaperById(id: number) {
     }
 
     // Return the complete paper object with components
-    return await modelToDto(paper);
+    return await modelToDto(paper as Paper);
 }
 
 export async function getAllPapers() {
@@ -147,7 +149,7 @@ export async function getAllPapers() {
 
     return (
         await Promise.all(
-            papers.map(async (paper) => await modelToDto(paper)),
+            papers.map(async (paper) => await modelToDto(paper as Paper)),
         )
     ).filter((paper) => paper !== null) as PaperDto[]; // Ensure we return only valid PaperDto objects
 }
@@ -156,7 +158,18 @@ export async function updatePaper(id: number, data: PaperDto) {
     const [updatedPaper] = await db
         .update(paperModel)
         .set({
-            ...data,
+            name: data.name,
+            code: data.code,
+            isOptional: data.isOptional,
+            subjectId: data.subjectId,
+            subjectTypeId: data.subjectTypeId,
+            affiliationId: data.affiliationId,
+            regulationTypeId: data.regulationTypeId,
+            academicYearId: data.academicYearId,
+            programCourseId: data.programCourseId,
+            classId: data.classId,
+            disabled: data.disabled,
+            sequence: data.sequence,
             updatedAt: new Date(),
         })
         .where(eq(paperModel.id, id))

@@ -10,7 +10,7 @@ import {
   removeFamilysByStudentId,
   getAllFamilies
 } from "../services/family.service.js";
-import { createFamilySchema } from "../models/family.model.js";
+import { createFamilySchema } from "@repo/db/schemas/models/user";
 import { FamilyType } from "@/types/user/family.js";
 
 // Create a new family record

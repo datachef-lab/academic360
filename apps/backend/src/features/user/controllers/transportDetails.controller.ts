@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createTransportDetailsSchema } from "../models/transportDetails.model.js";
+import { createTransportDetailsSchema } from "@repo/db/schemas/models/user";
 import {
   addTransportDetails,
   findTransportDetailsById,
@@ -9,7 +9,7 @@ import {
   removeTransportDetailsByStudentId,
   getAllTransportDetails
 } from "../services/transportDetail.service.js";
-import { TransportDetails } from "../models/transportDetails.model.js";
+import { TransportDetails } from "@repo/db/schemas/models/user";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 

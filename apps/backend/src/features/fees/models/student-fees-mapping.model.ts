@@ -1,10 +1,10 @@
-import { studentModel } from "@/features/user/models/student.model.js";
+import { studentModel } from "@repo/db/schemas/models/user";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { feesStructureModel } from "./fees-structure.model.js";
-import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@/features/user/models/helper.js";
-import { instalmentModel } from "./instalment.model.js";
+import { feesStructureModel } from "@repo/db/schemas/models/fees";
+import { paymentModeEnum, paymentStatusEnum, studentFeesMappingEnum } from "@repo/db/schemas/enums";
+import { instalmentModel } from "@repo/db/schemas/models/fees";
 
 export const studentFeesMappingModel = pgTable("student_fees_mappings", {
     id: serial().primaryKey(),

@@ -1,13 +1,15 @@
 import bcrypt from "bcryptjs";
 import { eq, count, desc, or, ilike, and } from "drizzle-orm";
 import { db } from "@/db/index.js";
-import { User, userModel } from "../models/user.model.js";
-import { PayloadType, UserType } from "@/types/user/user.js";
+
+import { User, userModel } from "@repo/db/schemas/models/user";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { findStudentById, findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
-import { userTypeEnum } from "../models/helper.js";
+import { userTypeEnum } from "@repo/db/schemas/enums";
 import { number } from "zod";
+import { UserType } from "@/types/user/user.js";
+import { PayloadType } from "@repo/db/dtos/user";
 
 export async function addUser(user: User) {
     // Hash the password before storing it in the database
@@ -107,7 +109,7 @@ export async function toggleUser(id: number) {
     }
 
     const [updatedUser] = await db.update(userModel).set({
-        disabled: !foundUser.disabled
+        isActive: !foundUser.isActive
     })
         .where(eq(userModel.id, foundUser.id))
         .returning();

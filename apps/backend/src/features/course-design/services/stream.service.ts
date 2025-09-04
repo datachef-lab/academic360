@@ -1,7 +1,7 @@
 import { db } from "@/db/index.js";
-import { Stream, streamModel } from "../models/stream.model.js";
+import { Stream, streamModel } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq, ilike } from "drizzle-orm";
-import { programCourses } from "../models/program-course.model.js";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -135,9 +135,9 @@ export async function deleteStreamSafe(id: number) {
     if (!found) return null;
 
     const [{ programCourseCount }] = await db
-        .select({ programCourseCount: countDistinct(programCourses.id) })
-        .from(programCourses)
-        .where(eq(programCourses.streamId, id));
+        .select({ programCourseCount: countDistinct(programCourseModel.id) })
+        .from(programCourseModel)
+        .where(eq(programCourseModel.streamId, id));
 
     if (programCourseCount > 0) {
         return {

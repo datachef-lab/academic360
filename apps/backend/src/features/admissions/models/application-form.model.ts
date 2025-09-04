@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { admissionModel } from "./admission.model.js";
-import { admissionFormStatus, admissionSteps } from "@/features/user/models/helper.js";
+import { admissionFormStatus, admissionSteps } from "@repo/db/schemas/enums";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
