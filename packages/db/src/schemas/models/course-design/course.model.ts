@@ -8,8 +8,7 @@ export const courseModel = pgTable('courses', {
     id: serial().primaryKey(),
     legacyCourseId: integer("legacy_course_id"),
     courseHeaderId: integer("course_header_id_fk")
-        .references(() => courseHeaderModel.id)
-        .notNull(),
+        .references(() => courseHeaderModel.id),
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
     sequence: integer().unique(),

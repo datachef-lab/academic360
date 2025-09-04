@@ -13,7 +13,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { programCourseModel, specializationModel, streamModel } from "@/schemas/models/course-design";
 import { boardResultStatusType } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
-import { boardUniversityModel, institutionModel, languageMediumModel } from "@/schemas/models/resources";
+import { boardModel, institutionModel, languageMediumModel } from "@/schemas/models/resources";
 import { addressModel } from "../user";
 
 export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
@@ -22,11 +22,10 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     applicationFormId: integer("application_form_id_fk")
         .references(() => applicationFormModel.id)
         .notNull(),
-    boardUniversityId: integer("board_university_id_fk")
-        .references(() => boardUniversityModel.id)
+    boardId: integer("board_id_fk")
+        .references(() => boardModel.id)
         .notNull(),
-    otherBoardUniversityName: varchar("other_board_university_name", { length: 755 }),
-    
+    otherBoard: varchar("other_board", { length: 755 }),
     boardResultStatus: boardResultStatusType("board_result_status").notNull(),
     percentageOfMarks: doublePrecision(),
     division: varchar("division", { length: 255 }),
@@ -47,17 +46,16 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     schoolNumber: varchar("school_number", { length: 255 }),
     centerNumber: varchar("center_number", { length: 255 }),
     admitCardId: varchar("admit_card_id", { length: 255 }),
-    instituteId: integer("institute_id_fk").references(() => institutionModel.id),
-    otherInstitute: varchar("other_institute", { length: 500 }),
+    // instituteId: integer("institute_id_fk").references(() => institutionModel.id),
+    // otherInstitute: varchar("other_institute", { length: 500 }),
     languageMediumId: integer("language_medium_id_fk")
-        .references(() => languageMediumModel.id)
-        .notNull(),
+        .references(() => languageMediumModel.id),
     yearOfPassing: integer("year_of_passing").notNull(),
     studiedUpToClass: integer(),
 
     specializationId: integer().references(() => specializationModel.id),
     
-    streamId: integer("stream_id_fk").references(() => streamModel.id).notNull(),
+    // streamId: integer("stream_id_fk").references(() => streamModel.id).notNull(),
     bestOfFour: doublePrecision(),
     totalScore: doublePrecision(),
 

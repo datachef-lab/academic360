@@ -3,8 +3,9 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { applicationFormModel, eligibilityCriteriaModel, studentCategoryModel } from "@/schemas/models/admissions";
-import { accommodationModel, emergencyContactModel, healthModel, personalDetailsModel, transportDetailsModel } from "../user";
+import { accommodationModel, emergencyContactModel, healthModel, personalDetailsModel, transportDetailsModel, userModel } from "../user";
 import { bankBranchModel } from "../payments";
+// import { staffModel } from "../user/staff.model";
 
 export const admissionGeneralInfoModel = pgTable("admission_general_info", {
     id: serial("id").primaryKey(),
@@ -35,7 +36,8 @@ export const admissionGeneralInfoModel = pgTable("admission_general_info", {
 
     tshirtSize: varchar("tshirt_size", { length: 255 }),
 
-    spqtaApprovedBy: integer("spqta_approved_by"), // TODO: Add user model
+    spqtaApprovedBy: integer("spqta_approved_by_user_id_fk")
+        .references(() => userModel.id),
 
     spqtaApprovedDate: date("spqta_approved_date"),
 

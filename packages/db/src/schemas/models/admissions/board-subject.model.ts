@@ -6,7 +6,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { subjectModel } from "../course-design";
 import { boardModel } from "../resources";
 
-export const academicSubjectModel = pgTable("academic_subjects", {
+export const boardSubjectModel = pgTable("board_subjects", {
     id: serial("id").primaryKey(),
     legacyBoardSubjectMappingSubId: integer("legacy_board_subject_mapping_sub_id"),
     boardId: integer("board_id_fk").references(() => boardModel.id).notNull(),
@@ -20,8 +20,8 @@ export const academicSubjectModel = pgTable("academic_subjects", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAcademicSubjects = createInsertSchema(academicSubjectModel);
+export const createBoardSubjects = createInsertSchema(boardSubjectModel);
 
-export type AcademicSubject = z.infer<typeof createAcademicSubjects>;
+export type BoardSubject = z.infer<typeof createBoardSubjects>;
 
-export type AcademicSubjectT = typeof createAcademicSubjects._type;
+export type BoardSubjectT = typeof createBoardSubjects._type;

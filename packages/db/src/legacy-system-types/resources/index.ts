@@ -1,10 +1,10 @@
-export interface Country {
+export interface OldCountry {
     readonly id: number;
     countryName: string;
     pos: number;
 }
 
-export interface CountrySubTab {
+export interface OldCountrySubTab {
     readonly id: number;
     parent_id: number; // References: countrymaintab
     index_col: number;
@@ -12,13 +12,13 @@ export interface CountrySubTab {
     pos: number;
 }
 
-export interface CityMaintab {
+export interface OldCityMaintab {
     readonly id: number;
     countryId: number; // References: countrymaintab
     stateId: string; // References: countrysubtab
 }
 
-export interface CitySubtab {
+export interface OldCitySubtab {
     readonly id: number;
     index_col: number;
     parent_id: number; // References: citymaintab
@@ -27,9 +27,21 @@ export interface CitySubtab {
     pos: number;
 }
 
-export interface DistrictMaintab {
+export interface OldDistrict {
     readonly id: number;
     stateId: string; // References: countrysubtab
     cityId: string; // References: citysubtab
     name: string;
+}
+
+export interface OldDegree {
+    readonly id?: number;
+    degreeName: string;
+}
+
+export interface OldInstitution {
+    readonly id: number;
+    name: string;
+    pos: number;
+    degreeid: number;
 }

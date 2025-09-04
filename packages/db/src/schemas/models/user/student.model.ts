@@ -7,6 +7,7 @@ import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { sectionModel } from "../academics";
+import z from "zod";
 
 export const studentModel = pgTable("students", {
     id: serial().primaryKey(),
@@ -53,6 +54,7 @@ export const studentRelations = relations(studentModel, ({ one }) => ({
 }))
 
 export const createStudentSchema = createInsertSchema(studentModel);
+export type Student = z.infer<typeof createStudentSchema>;
 
 export type StudentT = typeof createStudentSchema._type;
 

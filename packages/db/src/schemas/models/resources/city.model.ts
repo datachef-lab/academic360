@@ -11,7 +11,7 @@ export const cityModel = pgTable("cities", {
     stateId: integer().notNull().references(() => stateModel.id),
     name: varchar({ length: 255 }).notNull().unique(),
     documentRequired: boolean().notNull().default(false),
-    code: varchar({ length: 10 }).notNull().unique(),
+    code: varchar({ length: 10 }),
     sequence: integer().unique(),
     disabled: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),

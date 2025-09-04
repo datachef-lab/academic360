@@ -1,4 +1,4 @@
-export interface Course {
+export interface OldCourse {
     readonly id: number | null;
     courseName: string;
     courseSName: string | null;
@@ -13,7 +13,7 @@ export interface Course {
     modifydt: Date | null | string;
 }
 
-export interface Class {
+export interface OldClass {
     readonly id: number;
     classname: string | null;
     position: number | null;
@@ -30,12 +30,41 @@ export interface OldEligibilityCriteria {
     generalInstruction: string;
 }
 
-export interface StudentCategory {
-    readonly id: number;
-    studentCName: string;
-    document: boolean | 1 | 0;
-    courseId: number;
-    classId: number;
-    flgyes: boolean | 1 | 0;
+export interface OldPaperList {
+    readonly id?: number;
+    index_col: number | null;
+    parent_id: number;
+    paperName: string;
+    paperShortName: string;
+    isPractical: boolean;
+    paperCreditPoint: number | null;
+    paperType: string | null;
+    displayName: string | null;
 }
 
+export interface OldPaperSubject {
+    readonly ID?: number;
+    subjectTypeId: number;
+    subjectId: number;
+}
+
+export interface OldStudentPaper {
+    readonly ID: number;
+    index_col: number;
+    parent_id: number
+    studentId: number
+}
+
+export interface OldSubjectType {
+    readonly id?: number;
+    subjectTypeName: string;
+    rptpos: number | null;
+    shortname: string | null;
+}
+
+export interface OldSubject {
+    readonly id: number;
+    subjectName: string;
+    subjectTypeId: number;
+    univcode: string | null;
+}

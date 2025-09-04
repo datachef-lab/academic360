@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const academicYearModel = pgTable("academic_years", {
     id: serial().primaryKey(),
+    legacyAcademicYearId: integer(),
     year: varchar({ length: 255 }).notNull(),
     isCurrentYear: boolean("is_current_year").notNull().default(false),
     createdAt: timestamp().notNull().defaultNow(),

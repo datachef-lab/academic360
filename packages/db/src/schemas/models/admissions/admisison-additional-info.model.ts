@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { departmentModel, familyModel } from "@/schemas/models/user";
-import { disabilityTypeEnum, personTitleType } from "@/schemas/enums";
+import { disabilityTypeEnum } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { annualIncomeModel, bloodGroupModel, categoryModel, religionModel } from "@/schemas/models/resources";
 import { bankBranchModel } from "../payments";

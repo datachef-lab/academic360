@@ -6,7 +6,7 @@ import { admissionModel } from "@/schemas/models/admissions";
 import { programCourseModel } from "@/schemas/models/course-design";
 import { classModel, shiftModel } from "../academics";
 
-export const admissionCourseModel = pgTable("admission_courses", {
+export const admissionProgramCourseModel = pgTable("admission_program_courses", {
     id: serial().primaryKey().notNull(),
     admissionId: integer("admission_id_fk")
         .references(() => admissionModel.id)
@@ -24,8 +24,8 @@ export const admissionCourseModel = pgTable("admission_courses", {
     remarks: text("remarks"),
 });
 
-export const createAdmissionCourseSchema = createInsertSchema(admissionCourseModel);
+export const createAdmissionProgramCourseSchema = createInsertSchema(admissionProgramCourseModel);
 
-export type AdmissionCourse = z.infer<typeof createAdmissionCourseSchema>;
+export type AdmissionProgramCourse = z.infer<typeof createAdmissionProgramCourseSchema>;
 
-export type AdmissionCourseT = typeof createAdmissionCourseSchema._type;
+export type AdmissionProgramCourseT = typeof createAdmissionProgramCourseSchema._type;

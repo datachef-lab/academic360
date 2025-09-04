@@ -144,6 +144,8 @@ export const admissionSteps = pgEnum("admission_steps", [
     "PAYMENT",
     "REVIEW",
     "SUBMITTED",
+    "MINOR_PAPER_SELECTION",
+    "SEMESTER_WISE_SUBJECT_SELECTION",
 ]);
 
 export const paymentStatus = pgEnum("payment_status", [

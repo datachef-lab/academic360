@@ -326,23 +326,6 @@ export async function addAccommodation(oldStudent: OldStudent ) {
     return newAccommodation;
 }
 
-// export async function addAdmission(oldStudent: OldStudent, student: Student) {
-// const [existingAdmission] = await db.select().from(admissionModel).where(eq(admissionModel.studentId, student.id as number));
-// if (existingAdmission) {
-//     return existingAdmission;
-// }
-
-// const [newAdmission] = await db.insert(admissionModel).values({
-//     studentId: student.id as number,
-//     admissionCode: oldStudent.admissioncodeno?.trim()?.toUpperCase(),
-//     applicantSignature: oldStudent.applicantSignature?.trim()?.toUpperCase(),
-//     yearOfAdmission: oldStudent.admissionYear,
-//     admissionDate: oldStudent.admissiondate?.toISOString()
-// }).returning();
-
-// return newAdmission;
-// }
-
 async function categorizeIncome(income: string | null | undefined) {
     if (!income || income.trim() === "" || income === "0") {
         return undefined;
@@ -468,7 +451,7 @@ export async function addFamily(oldStudent: OldStudent, student: Student) {
     return newFamily;
 }
 
-export async function addHealth(oldStudent: OldStudent, student: Student) {
+export async function addHealth(oldStudent: OldStudent, student) {
     const [existingHealth] = await db.select().from(healthModel).where(eq(healthModel.studentId, student.id as number));
     if (existingHealth) {
         return existingHealth;
@@ -492,14 +475,14 @@ export async function addHealth(oldStudent: OldStudent, student: Student) {
     return newHealth;
 }
 
-export async function addEmergencyContact(oldStudent: OldStudent, student: Student) {
+export async function addEmergencyContact(oldStudent: OldStudent) {
     const [existingEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.studentId, student.id as number));
     if (existingEmergencyContact) {
         return existingEmergencyContact;
     }
 
     const [newEmergencyContact] = await db.insert(emergencyContactModel).values({
-        studentId: student.id as number,
+
         personName: oldStudent.emercontactpersonnm?.trim()?.toUpperCase(),
         phone: oldStudent.emercontactpersonmob?.trim(),
         residentialPhone: oldStudent.emrgnResidentPhNo?.trim(),
@@ -668,133 +651,7 @@ export async function addBoardResultStatus(oldStudent: OldStudent, db: DbType): 
     return newBoardResultStatus;
 }
 
-export async function addAcademicHistory(oldStudent: OldStudent, student: Student) {
-    const [existingAcademicHistory] = await db.select().from(academicHistoryModel).where(eq(academicHistoryModel.studentId, student.id as number));
-    if (existingAcademicHistory) {
-        return existingAcademicHistory;
-    }
 
-    let lastBoardUniversity: BoardUniversity | undefined;
-    if (oldStudent.lastBoardUniversity) {
-        lastBoardUniversity = await addBoardUnversity(oldStudent, db);
-    }
-
-    let boardResultStatus: BoardResultStatus | null | undefined;
-    if (oldStudent.boardresultid) {
-        boardResultStatus = await addBoardResultStatus(oldStudent, db);
-    }
-
-    const [newAcdemicHistory] = await db.insert(academicHistoryModel).values({
-        studentId: student.id as number,
-        lastBoardUniversityId: lastBoardUniversity ? lastBoardUniversity.id : undefined,
-        // lastInstitutionId: // TODO
-        lastResultId: boardResultStatus ? boardResultStatus.id : undefined,
-        // specialization: // TODO
-        // remarks: 
-        // studiedUpToClass
-    }).returning();
-
-    return newAcdemicHistory;
-}
-
-export async function addAcademicIdentifier(oldStudent: OldStudent, student: Student) {
-    const cleanString = (value: unknown): string | undefined => {
-        if (typeof value === "string") {
-            return value.replace(/[\s\-\/]/g, "").trim()?.toUpperCase();
-        }
-        return undefined; // Return undefined for non-string values
-    };
-
-    const addHyphen = (value: unknown, type: "reg_no" | "roll_no"): string | undefined => {
-        const cleanedValue = cleanString(value);
-        if (!cleanedValue || isNaN(Number(cleanedValue))) return undefined; // Ensure it's numeric
-
-        if (type === "reg_no" && cleanedValue.length === 13) {
-            return cleanedValue.replace(/^(\d{3})(\d{4})(\d{4})(\d{2})$/, "$1-$2-$3-$4");
-        }
-
-        if (type === "roll_no") {
-            if (cleanedValue.length === 10) {
-                return cleanedValue.replace(/^(\d{4})(\d{2})(\d{4})$/, "$1-$2-$3");
-            }
-            if (cleanedValue.length === 12) {
-                return cleanedValue.replace(/^(\d{6})(\d{2})(\d{4})$/, "$1-$2-$3");
-            }
-            if (cleanedValue.length === 13 && cleanedValue.includes("BBA")) {
-                return cleanedValue.replace(/^(\d{3})(\d{6})(\d{4})$/, "$1-$2-$3");
-            }
-            if (cleanedValue.startsWith("B") || cleanedValue.startsWith("N")) {
-                return cleanedValue;
-            }
-        }
-
-        return undefined; // Return undefined if length is incorrect
-    };
-
-    const [existingAcademicIdentifier] = await db.select().from(academicIdentifierModel).where(eq(academicIdentifierModel.studentId, student.id as number));
-
-    let framework: "CCF" | "CBCS" | undefined;
-    if (oldStudent.coursetype && oldStudent.coursetype?.toUpperCase().trim() === "CBCS" || oldStudent.coursetype?.toUpperCase().trim() === "CCF") {
-        framework = oldStudent.coursetype?.toUpperCase().trim() === "CBCS" ? "CBCS" : "CCF";
-    }
-
-    if (existingAcademicIdentifier) {
-        const updatedValues: Record<string, any> = {};
-
-        const registrationNumber = oldStudent.univregno
-            ? addHyphen(oldStudent.univregno, "reg_no")
-            : oldStudent.universityRegNo
-                ? addHyphen(oldStudent.universityRegNo, "reg_no")
-                : null;
-
-        const rollNumber = oldStudent.univlstexmrollno ? addHyphen(oldStudent.univlstexmrollno, "roll_no") : undefined;
-
-        if (registrationNumber !== null) updatedValues.registrationNumber = registrationNumber;
-        if (rollNumber !== undefined) updatedValues.rollNumber = rollNumber;
-
-        // Ensure there is at least one field to update
-        if (Object.keys(updatedValues).length === 0) {
-            console.warn("No values to update for academicIdentifierModel");
-            return existingAcademicIdentifier;
-        }
-
-        console.log(updatedValues);
-
-        const [updatedAcademicIdentifier] = await db
-            .update(academicIdentifierModel)
-            .set({
-                registrationNumber: updatedValues?.registrationNumber ? updatedValues?.registrationNumber : null,
-                rollNumber: updatedValues?.rollNumber ? updatedValues?.rollNumber : null,
-            })
-            .where(eq(academicIdentifierModel.id, existingAcademicIdentifier.id))
-            .returning();
-
-        return updatedAcademicIdentifier;
-    }
-
-    const [newAcademicIdentifier] = await db.insert(academicIdentifierModel).values({
-        studentId: student.id as number,
-        // streamId
-        // course
-        programCourseId: null,
-        abcId: cleanString(oldStudent.abcid)?.toUpperCase(),
-        apprid: cleanString(oldStudent.apprid)?.toUpperCase(),
-        checkRepeat: typeof oldStudent.chkrepeat === 'undefined' ? undefined : oldStudent.chkrepeat,
-        // apaarId
-        classRollNumber: oldStudent.rollNumber ? oldStudent.rollNumber?.toString()?.trim()?.toUpperCase() : null,
-        cuFormNumber: cleanString(oldStudent.cuformno)?.toUpperCase(),
-        // frameworkType
-
-        // framework,
-        oldUid: cleanString(oldStudent.oldcodeNumber)?.toUpperCase(),
-        uid: cleanString(oldStudent.codeNumber)?.toUpperCase(),
-        registrationNumber: oldStudent.univregno ? addHyphen(oldStudent.univregno, "reg_no") : (oldStudent.universityRegNo ? addHyphen(oldStudent.universityRegNo, "reg_no") : null),
-        rollNumber: addHyphen(oldStudent.univlstexmrollno, "roll_no"),
-        rfid: cleanString(oldStudent.rfidno)?.toUpperCase(),
-    }).returning();
-
-    return newAcademicIdentifier;
-}
 
 export async function addTransportDetails(oldStudent: OldStudent, student: Student) {
     const [existingTransportDetails] = await db.select().from(transportDetailsModel).where(eq(transportDetailsModel.studentId, student.id as number));
