@@ -1,6 +1,6 @@
 {
-  "id": "8865171a-2b05-4ba8-8faf-4046c9faee4b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "7d758ffc-a908-4d92-a975-e3ded789c909",
+  "prevId": "3dafdf1e-9413-440d-b645-1f20d597e0f3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3485,14 +3485,14 @@
           "type": "admission_form_status",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "admission_step": {
           "name": "admission_step",
           "type": "admission_steps",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "adm_approved_by_user_id_fk": {
           "name": "adm_approved_by_user_id_fk",
@@ -4171,7 +4171,7 @@
           "type": "board_result_status_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -7760,14 +7760,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "degree_id": {
-          "name": "degree_id",
+        "degree_id_fk": {
+          "name": "degree_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "address_id": {
-          "name": "address_id",
+        "address_id_fk": {
+          "name": "address_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -7802,12 +7802,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "institutions_degree_id_degree_id_fk": {
-          "name": "institutions_degree_id_degree_id_fk",
+        "institutions_degree_id_fk_degree_id_fk": {
+          "name": "institutions_degree_id_fk_degree_id_fk",
           "tableFrom": "institutions",
           "tableTo": "degree",
           "columnsFrom": [
-            "degree_id"
+            "degree_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -7815,12 +7815,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "institutions_address_id_address_id_fk": {
-          "name": "institutions_address_id_address_id_fk",
+        "institutions_address_id_fk_address_id_fk": {
+          "name": "institutions_address_id_fk_address_id_fk",
           "tableFrom": "institutions",
           "tableTo": "address",
           "columnsFrom": [
-            "address_id"
+            "address_id_fk"
           ],
           "columnsTo": [
             "id"

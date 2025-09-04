@@ -1,0 +1,1 @@
+ALTER TABLE "institutions" ALTER COLUMN "degree_id_fk" DROP NOT NULL;

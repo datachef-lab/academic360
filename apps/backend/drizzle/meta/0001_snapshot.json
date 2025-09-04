@@ -1,6 +1,6 @@
 {
-  "id": "8865171a-2b05-4ba8-8faf-4046c9faee4b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "f9c4486d-a3b6-4262-be57-18ab24f1d916",
+  "prevId": "8865171a-2b05-4ba8-8faf-4046c9faee4b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3485,14 +3485,14 @@
           "type": "admission_form_status",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "admission_step": {
           "name": "admission_step",
           "type": "admission_steps",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "adm_approved_by_user_id_fk": {
           "name": "adm_approved_by_user_id_fk",

@@ -14,7 +14,7 @@ export const userModel = pgTable('users', {
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
     type: userTypeEnum().notNull(),
-    isActive: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

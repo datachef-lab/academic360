@@ -11,4 +11,4 @@ export * from "./person.model";
 export * from "./personalDetails.model";
 export * from "./student.model";
 export * from "./transportDetails.model";
-export * from "./user.model";
+export * from "./staff.model";

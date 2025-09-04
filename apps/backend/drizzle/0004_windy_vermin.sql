@@ -1,0 +1,1 @@
+ALTER TABLE "student_academic_subjects" ALTER COLUMN "result_status" DROP NOT NULL;

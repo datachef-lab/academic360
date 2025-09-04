@@ -5,7 +5,7 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 
 import { cityModel } from "@/schemas/models/resources";
 
-export const districtModel = pgTable("cities", {
+export const districtModel = pgTable("districts", {
     id: serial().primaryKey(),
     legacyDistrictId: integer(),
     cityId: integer().notNull().references(() => cityModel.id),

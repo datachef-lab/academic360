@@ -75,8 +75,8 @@ export const staffModel = pgTable('staffs', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createUserSchema = createInsertSchema(userModel);
+export const createStaffSchema = createInsertSchema(staffModel);
 
-export type User = z.infer<typeof createUserSchema>;
+export type Staff = z.infer<typeof createStaffSchema>;
 
-export type UserT = typeof createUserSchema._type;
+export type StaffT = typeof createStaffSchema._type;

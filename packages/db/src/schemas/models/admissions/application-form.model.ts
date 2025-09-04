@@ -16,8 +16,8 @@ export const applicationFormModel = pgTable("application_forms", {
     level: degreeLevelTypeEnum().default("UNDER_GRADUATE").notNull(),
     applicationNumber: varchar({ length: 255 }).notNull(),
     changedApplicationNumber: varchar({ length: 255 }),
-    formStatus: admissionFormStatus("form_status").notNull(),
-    admissionStep: admissionSteps("admission_step").notNull(),
+    formStatus: admissionFormStatus("form_status"),
+    admissionStep: admissionSteps("admission_step"),
     admApprovedBy: integer("adm_approved_by_user_id_fk")
         .references(() => userModel.id),
     admApprovedDate: timestamp("adm_approved_date"),

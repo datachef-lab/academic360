@@ -12,7 +12,7 @@ interface OldLanguageMedium {
     name: string;
 }
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
-import { addressModel, annualIncomeModel, bloodGroupModel, categoryModel, cityModel, countryModel, districtModel, languageMediumModel, nationalityModel, occupationModel, religionModel, specializationModel, stateModel, accommodationModel, Address, BloodGroup, healthModel, Health, emergencyContactModel, EmergencyContact, personalDetailsModel, admissionCourseDetailsModel, Student, Stream, CourseType, courseTypeModel, AdmissionCourseDetails, affiliationModel, classModel, regulationTypeModel, academicYearModel, subjectModel, subjectTypeModel, paperModel, courseLevelModel, programCourseModel, studentCategoryModel, streamModel, courseModel, eligibilityCriteriaModel, shiftModel, meritListModel, bankModel, bankBranchModel, admSubjectPaperSelectionModel, ProgramCourse, Course, personModel, familyModel, Occupation, userTypeEnum, userModel, User, studentModel, applicationFormModel, admissionModel, sessionModel, Session, ApplicationForm, admissionGeneralInfoModel, EligibilityCriteria, StudentCategory, PersonalDetails, Accommodation, BankBranch, admissionAcademicInfoModel, AdmissionAcademicInfo, Board, boardModel, Degree, degreeModel, LanguageMedium, LanguageMediumT, Institution, institutionModel, Specialization, studentAcademicSubjectModel, Subject, BoardSubject, boardSubjectModel, admissionProgramCourseModel, AcademicYear, CancelSource, cancelSourceModel } from "@repo/db/schemas";
+import { addressModel, annualIncomeModel, bloodGroupModel, categoryModel, cityModel, countryModel, districtModel, languageMediumModel, nationalityModel, occupationModel, religionModel, specializationModel, stateModel, accommodationModel, Address, BloodGroup, healthModel, Health, emergencyContactModel, EmergencyContact, personalDetailsModel, admissionCourseDetailsModel, Student, Stream, CourseType, courseTypeModel, AdmissionCourseDetails, affiliationModel, classModel, regulationTypeModel, academicYearModel, subjectModel, subjectTypeModel, paperModel, courseLevelModel, programCourseModel, studentCategoryModel, streamModel, courseModel, eligibilityCriteriaModel, shiftModel, meritListModel, bankModel, bankBranchModel, admSubjectPaperSelectionModel, ProgramCourse, Course, personModel, familyModel, Occupation, userTypeEnum, userModel, User, studentModel, applicationFormModel, admissionModel, sessionModel, Session, ApplicationForm, admissionGeneralInfoModel, EligibilityCriteria, StudentCategory, PersonalDetails, Accommodation, BankBranch, admissionAcademicInfoModel, AdmissionAcademicInfo, Board, boardModel, Degree, degreeModel, LanguageMedium, LanguageMediumT, Institution, institutionModel, Specialization, studentAcademicSubjectModel, Subject, BoardSubject, boardSubjectModel, admissionProgramCourseModel, AcademicYear, CancelSource, cancelSourceModel, sectionModel } from "@repo/db/schemas";
 import { AdmissionCourseDetailsT } from "@repo/db/schemas/models/admissions/adm-course-details.model";
 // import { processStudent } from "../controllers/oldStudent.controller"; // Removed to avoid conflict
 import { OldClass, OldCourse, OldEligibilityCriteria, OldSubject, OldSubjectType } from "@repo/db/legacy-system-types/course-design";
@@ -21,6 +21,7 @@ import { OldBank, OldBankBranch } from "@repo/db/legacy-system-types/payment";
 import { formatAadhaarCardNumber } from "@/utils";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model";
 import { OldAcademicDetails, OldAcademicYear, OldBoard, OldSession } from "@repo/db/legacy-system-types/academics";
+import { addDegree } from "@/features/resources/services/degree.service";
 
 const BATCH_SIZE = 500;
 
@@ -29,7 +30,7 @@ type DbType = NodePgDatabase<Record<string, never>> & {
 }
 
 export async function loadData() {
-    await loadAllStaffs();
+
 
     // STEP 1: Count the total numbers of students
     console.log('\n\nCounting rows from table \`personaldetails\`...');
@@ -49,7 +50,6 @@ export async function loadData() {
         const [rows] = await mysqlConnection.query(`
             SELECT * 
             FROM personaldetails
-            WHERE uid IS NOT NULL AND shiftid = 2
             LIMIT ${BATCH_SIZE}
             OFFSET ${offset};
         `) as [OldAdmStudentPersonalDetail[], any];
@@ -58,24 +58,23 @@ export async function loadData() {
 
         for (let i = 0; i < oldDataArr.length; i++) {
             // Fetch the related studentpersonalDetail
-            const [admStudentPersonalDetailRows] = await mysqlConnection.query(`
-                SELECT * 
-                FROM personaldetails
-                WHERE transferred = ${oldDataArr[i].id};
-            `) as [OldAdmStudentPersonalDetail[], any];
             try {
-                if (admStudentPersonalDetailRows.length === 0) {
-                    console.log(`No studentpersonaldetails found for transferred: ${oldDataArr[i].id}`);
-                    continue; // Skip to the next iteration if no related record is found
-                }
-                await processStudent(admStudentPersonalDetailRows[0]);
+
+                const student = await processStudent(oldDataArr[i]);
+                const name = [oldDataArr[i]?.firstName, oldDataArr[i]?.middleName, oldDataArr[i]?.lastName].filter(Boolean).join(' ');
+                console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`);
             } catch (error) {
                 console.log(error)
             }
-            console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${[admStudentPersonalDetailRows[0]?.firstName, admStudentPersonalDetailRows[0]?.middleName, admStudentPersonalDetailRows[0]?.lastName].filter(Boolean).join(' ')}`);
+
+
+
 
         }
     }
+
+
+    await loadAllStaffs();
 }
 
 async function loadAllStaffs() {
@@ -122,13 +121,14 @@ async function loadAllStaffs() {
 async function addAdmissionApplicationForm(oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail) {
     const [[oldSession]] = await mysqlConnection.query(`
         SELECT *
-        FROM currentsessionmaster;
+        FROM currentsessionmaster
+        WHERE id = ${oldAdmStudentPersonalDetails.sessionId};
     `) as [OldSession[], any];
 
     if (!oldSession) {
         throw new Error("No session info found");
     }
-
+    console.log("oldSession", oldSession);
     const [[oldAcademicYear]] = await mysqlConnection.query(`
         SELECT *
         FROM accademicyear
@@ -203,7 +203,7 @@ async function addAdmissionApplicationForm(oldAdmStudentPersonalDetails: OldAdmS
 
     let admApprovedBy: User | null = null;
     if (oldAdmStudentPersonalDetails.admapprovedby) {
-        admApprovedBy = await addUser(oldAdmStudentPersonalDetails, "STAFF");
+        admApprovedBy = (await addUser(oldAdmStudentPersonalDetails, "STAFF")) ?? null;
         const [[oldStaff]] = await mysqlConnection.query(`
         SELECT *
         FROM staffpersonaldetails
@@ -215,9 +215,7 @@ async function addAdmissionApplicationForm(oldAdmStudentPersonalDetails: OldAdmS
     const [applicationForm] = await db.insert(applicationFormModel).values({
         admissionId: foundAdmission.id!,
         level: oldAdmStudentPersonalDetails.applevel?.trim().toUpperCase() === "UG" ? "UNDER_GRADUATE" : "POST_GRADUATE",
-        admissionStep: "SEMESTER_WISE_SUBJECT_SELECTION",
         applicationNumber: '',
-        formStatus: "ADMITTED",
         admApprovedBy: admApprovedBy?.id,
         admApprovedDate: oldAdmStudentPersonalDetails.admapprovedt ? new Date(oldAdmStudentPersonalDetails.admapprovedt) : null,
         verifyType: oldAdmStudentPersonalDetails.verifytype || undefined,
@@ -228,9 +226,7 @@ async function addAdmissionApplicationForm(oldAdmStudentPersonalDetails: OldAdmS
 }
 
 async function addAdmGeneralInformation(oldStudent: OldStudent, oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, applicationForm: ApplicationForm) {
-    if (!oldAdmStudentPersonalDetails.contactNo) {
-        throw new Error("Contact no is required in addAdmGeneralInformation()");
-    }
+
 
     let eligibilityCriteria: EligibilityCriteria | null = null;
     if (oldAdmStudentPersonalDetails.eligibilityCriteriaId) {
@@ -256,14 +252,14 @@ async function addAdmGeneralInformation(oldStudent: OldStudent, oldAdmStudentPer
 
     let spqtaApprovedBy: User | null = null;
     if (oldAdmStudentPersonalDetails.spqtaapprovedby) {
-        spqtaApprovedBy = await addUser(oldAdmStudentPersonalDetails, "STAFF");
+        spqtaApprovedBy = (await addUser(oldAdmStudentPersonalDetails, "STAFF")) ?? null;
     }
 
 
 
     // let transportDetails = await addTransportDetails(oldStudent, personalDetails);
 
-    const hashedPassword = await bcrypt.hash(oldAdmStudentPersonalDetails.contactNo!.trim()?.toUpperCase(), 10);
+    const hashedPassword = await bcrypt.hash(oldAdmStudentPersonalDetails.contactNo?.trim() || 'default', 10);
     const values = {
         email: oldAdmStudentPersonalDetails.email || '',
         password: hashedPassword,
@@ -304,9 +300,11 @@ async function addAdmAcademicInfo(oldAdmStudentPersonalDetails: OldAdmStudentPer
         WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
     `) as [OldAcademicDetails[], any];
 
-    if (!oldAcademicDetails) {
-        throw new Error(`No academic details found for personal-details ID: ${oldAdmStudentPersonalDetails.id}`);
-    }
+    // if (!oldAcademicDetails) {
+    //     // throw new Error(`No academic details found for personal-details ID: ${oldAdmStudentPersonalDetails.id}`);
+    //     console.log("no academic details found for personal-details ID: ", oldAdmStudentPersonalDetails.id);
+    //     return undefined;
+    // }
 
     let board: Board | undefined;
     if (oldAcademicDetails.boardId) {
@@ -395,6 +393,10 @@ async function processAdmissionApplicationForm(oldStudent: OldStudent, oldAdmStu
     const admGeneralInformation = await addAdmGeneralInformation(oldStudent, oldAdmStudentPersonalDetails, applicationForm);
 
     const admAcademicInfo = await addAdmAcademicInfo(oldAdmStudentPersonalDetails, applicationForm);
+    if (!admAcademicInfo) {
+        console.log("no academic info found for personal-details ID: ", oldAdmStudentPersonalDetails.id);
+        return undefined;
+    }
 
     const admAcademSubjects = await addAdmAcademSubjects(oldAdmStudentPersonalDetails, applicationForm, admAcademicInfo);
 
@@ -420,9 +422,7 @@ async function addAdmAcademSubjects(oldAdmStudentPersonalDetails: OldAdmStudentP
         WHERE parent_id = ${oldAcademicDetails.id};
     `) as [OldAdmSubjectDetails[], any];
 
-    if (!admAcademicSubjects) {
-        throw new Error(`No academic subjects found for academic details ID: ${oldAcademicDetails.id}`);
-    }
+
 
     for (let i = 0; i < admAcademicSubjects.length; i++) {
         const oldAdmAcademicSubject = admAcademicSubjects[i];
@@ -431,7 +431,11 @@ async function addAdmAcademSubjects(oldAdmStudentPersonalDetails: OldAdmStudentP
         const boardSubject = await addBoardSubject(oldAdmAcademicSubject.subjectId!);
 
         if (!boardSubject) {
-            throw new Error(`No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`);
+            // throw new Error(`No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`);
+
+            console.log(`No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`);
+            continue;
+
         }
 
         const [existingSubject] = await db
@@ -454,7 +458,7 @@ async function addAdmAcademSubjects(oldAdmStudentPersonalDetails: OldAdmStudentP
                 practicalMarks: oldAdmAcademicSubject.practicalMarksobtained || 0,
                 totalMarks: oldAdmAcademicSubject.totalMarks || 0,
                 gradeId: oldAdmAcademicSubject.gradeid || undefined,
-                resultStatus: oldAdmAcademicSubject.status?.toUpperCase() as "PASS" | "FAIL" | "FAIL IN THEORY" | "FAIL IN PRACTICAL",
+                resultStatus: oldAdmAcademicSubject.status?.toUpperCase() as "PASS" | "FAIL" | "FAIL IN THEORY" | "FAIL IN PRACTICAL" ?? undefined,
             });
         }
     }
@@ -470,7 +474,9 @@ async function addBoardSubject(oldSubjectId: number): Promise<BoardSubject | und
     `) as [OldSubject[], any];
 
     if (!oldSubject) {
-        throw new Error(`No academic | subject found for academic subject ID: ${oldSubjectId}`);
+        // throw new Error(`No academic | subject found for academic subject ID: ${oldSubjectId}`);
+        console.log(`No academic | subject found for academic subject ID: ${oldSubjectId}`);
+        return undefined;
     }
 
     const [[boardSubjectSubMapping]] = await mysqlConnection.query(`
@@ -558,6 +564,10 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
     // Do the admission application form
     const applicationForm = await processAdmissionApplicationForm(oldStudent, oldAdmStudentPersonalDetails);
 
+    if (!applicationForm) {
+        return;
+    }
+
     const [existingAdmCourseDetails] = await db
         .select()
         .from(admissionCourseDetailsModel)
@@ -569,8 +579,13 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
         )
 
     if (!existingAdmCourseDetails) {
-        return;
+        console.log("no adm course details found for application form ID: ", applicationForm.id);
+        return undefined;
     }
+
+    console.log("in processStudent(), existingAdmCourseDetails", existingAdmCourseDetails);
+
+
 
     const [admission] = await db
         .select()
@@ -600,18 +615,50 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
     //     WHERE admissionId = ${oldOldCourseDetails.id};
     // `) as [OldStudent[], any];
 
+
+
     const user = await addUser(oldAdmStudentPersonalDetails, "STUDENT");
+
+    if (!user) {
+        return undefined;
+    }
+
+    const [foundAdmissionProgramCourse] = await db
+        .select()
+        .from(admissionProgramCourseModel)
+        .where(eq(admissionProgramCourseModel.id, existingAdmCourseDetails.admissionProgramCourseId as number));
+
+    const [foundProgramCourse] = await db
+        .select()
+        .from(programCourseModel)
+        .where(eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId as number));
 
 
     // Step 2: Check for the student
-    const student = await addStudent(oldStudent, oldAdmStudentPersonalDetails, oldCourseDetails, user);
+    const student = await addStudent(oldStudent, oldAdmStudentPersonalDetails, oldCourseDetails, user, foundProgramCourse, applicationForm);
 
     // Step 3: Check for the accomodation
     await addAccommodation(oldStudent.placeofstay || "", oldStudent.placeofstayaddr || "", "", oldStudent.placeofstaycontactno || "");
 
+    console.log("updating application form to SUBJECT_PAPER_SELECTION");
+    await db
+        .update(applicationFormModel)
+        .set({
+            formStatus: "SUBJECT_PAPER_SELECTION"
+        })
+        .where(
+            eq(applicationFormModel.id, applicationForm.id as number)
+        );
 
+    const [[oldCourseDetailsTransferred]] = await mysqlConnection.query(`
+            SELECT * 
+            FROM coursedetails
+            WHERE transferred = true and id = ${existingAdmCourseDetails.legacyCourseDetailsId};
+        `) as [OldCourseDetails[], any];
 
-    await getSubjectRelatedFields(oldCourseDetails, existingAdmCourseDetails, academicYear, student.id!);
+    console.log("in processStudent(), oldCourseDetailsTransferred", oldCourseDetailsTransferred);
+
+    await getSubjectRelatedFields(oldCourseDetailsTransferred, existingAdmCourseDetails, academicYear, student.id!);
 
 
     return student;
@@ -626,6 +673,21 @@ async function addInstitution(oldInstitutionId: number): Promise<Institution | u
         return undefined;
     }
 
+    const [[oldDegree]] = await mysqlConnection.query(`SELECT * FROM degree WHERE id = ${oldInstitution.degreeid}`) as [OldDegree[], any];
+
+    let degree: Degree | undefined;
+    if (oldDegree) {
+        const [existingDegree] = await db.select().from(degreeModel).where(ilike(degreeModel.name, oldDegree.degreeName.trim()));
+        if (existingDegree) {
+            degree = existingDegree;
+        }
+        else {
+            const [newDegree] = await db.insert(degreeModel).values({ name: oldDegree.degreeName.trim() }).returning();
+            degree = newDegree;
+        }
+    }
+
+
     const [existingInstitution] = await db
         .select()
         .from(institutionModel)
@@ -634,9 +696,28 @@ async function addInstitution(oldInstitutionId: number): Promise<Institution | u
         return existingInstitution;
     }
 
+    // Ensure a non-null degreeId (fallback to an 'UNKNOWN' degree if not resolvable)
+    let degreeIdToUse = degree?.id as number | undefined;
+    if (!degreeIdToUse) {
+        const [existingUnknown] = await db
+            .select()
+            .from(degreeModel)
+            .where(eq(degreeModel.name, ""));
+        if (existingUnknown) {
+            degreeIdToUse = existingUnknown.id as number;
+        } else {
+            const [createdUnknown] = await db
+                .insert(degreeModel)
+                .values({ name: "" })
+                .returning();
+            degreeIdToUse = createdUnknown.id as number;
+        }
+    }
+
     const [newInstitution] = await db.insert(institutionModel).values({
         name: oldInstitution.name.trim(),
-        degreeId: oldInstitution.degreeid,
+        legacyInstitutionId: oldInstitution.id,
+        degreeId: degreeIdToUse,
     }).returning();
 
     return newInstitution;
@@ -651,13 +732,13 @@ async function addLanguageMediumById(oldLanguageMediumId: number): Promise<Langu
         return null;
     }
 
-    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, oldLanguageMedium.name.trim().toUpperCase()));
+    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, oldLanguageMedium.name.trim()));
     if (existingLanguage) {
         return existingLanguage;
     }
 
     const [newLanguage] = await db.insert(languageMediumModel).values({
-        name: oldLanguageMedium.name.trim().toUpperCase(),
+        name: oldLanguageMedium.name.trim(),
         legacyLanguageMediumId: oldLanguageMediumId,
     }).returning();
 
@@ -673,7 +754,7 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
         return undefined;
     }
 
-    const [existingBoard] = await db.select().from(boardModel).where(eq(boardModel.name, oldBoard.boardName.trim().toUpperCase()));
+    const [existingBoard] = await db.select().from(boardModel).where(eq(boardModel.name, oldBoard.boardName.trim()));
 
     if (existingBoard) {
         return existingBoard;
@@ -683,18 +764,18 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     const [degreeRows] = await mysqlConnection.query(`SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`) as [OldDegree[], any];
     const [oldDegree] = degreeRows;
     if (oldDegree) {
-        const [existingDegree] = await db.select().from(degreeModel).where(eq(degreeModel.name, oldDegree.degreeName.trim().toUpperCase()));
+        const [existingDegree] = await db.select().from(degreeModel).where(eq(degreeModel.name, oldDegree.degreeName.trim()));
         if (existingDegree) {
             degree = existingDegree;
         }
         else {
-            const [newDegree] = await db.insert(degreeModel).values({ name: oldDegree.degreeName.trim().toUpperCase() }).returning();
+            const [newDegree] = await db.insert(degreeModel).values({ name: oldDegree.degreeName.trim() }).returning();
             degree = newDegree;
         }
     }
 
     const [newBoard] = await db.insert(boardModel).values({
-        name: oldBoard.boardName.trim().toUpperCase(),
+        name: oldBoard.boardName.trim(),
         degreeId: degree ? degree.id : undefined,
         passingMarks: oldBoard.passmrks,
         code: oldBoard.code,
@@ -704,21 +785,25 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
 }
 
 export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, type: typeof userTypeEnum.enumValues[number]) {
-    const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff => "isTeacher" in d;
-    const isAdmStudent = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldAdmStudentPersonalDetail => "transferred" in d;
+    if (!oldData) {
+        return undefined;
+    }
+    const isStaff = (type: typeof userTypeEnum.enumValues[number]): type is "STAFF" => type === "STAFF";
+    const isAdmStudent = (type: typeof userTypeEnum.enumValues[number]): type is "STUDENT" => type === "STUDENT";
 
-    if (!isStaff(oldData) && !isAdmStudent(oldData)) {
+    // console.log("oldData in addUser() ----->", oldData);
+    if (!isStaff(type) && !isAdmStudent(type)) {
         throw new Error("Invalid old details type");
     }
 
     // Fetch personal details based on type
     let personalDetails: any = null;
     let codeNumber: string = "";
-    let name: string = "UNKNOWN";
+    let name: string = "";
     let phone: string | undefined = undefined;
     let whatsappNumber: string | undefined = undefined;
 
-    if (isStaff(oldData)) {
+    if (isStaff(type)) {
         // Fetch staff personal details
         const [staffPersonalDetailRows] = await mysqlConnection.query(`
             SELECT * 
@@ -732,20 +817,21 @@ export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, t
             name = [personalDetails.firstname, personalDetails.middlename, personalDetails.lastname]
                 .filter(Boolean)
                 .join(' ')
-                .trim() || "UNKNOWN";
+                .trim() || "";
             phone = personalDetails.phoneMobileNo?.trim();
             whatsappNumber = personalDetails.phoneMobileNo?.trim(); // Assuming same as phone for staff
         }
-    } else if (isAdmStudent(oldData)) {
-        // For OldAdmStudentPersonalDetail, the data is already the personal details
-        personalDetails = oldData;
-        codeNumber = oldData.codenumber || (oldData.id ? oldData.id.toString() : "");
-        name = [oldData.firstName, oldData.middleName, oldData.lastName]
-            .filter(Boolean)
+    } else if (isAdmStudent(type)) {
+        // For OldAdmStudentPersonalDetail, read fields safely
+        const s = oldData as OldAdmStudentPersonalDetail;
+        personalDetails = s;
+        codeNumber = (s as any).codenumber || (s.id ? String(s.id) : "");
+        name = [s.firstName, s.middleName, s.lastName]
+            .filter(Boolean as any)
             .join(' ')
-            .trim() || "UNKNOWN";
-        phone = oldData.studentcontactNo?.trim();
-        whatsappNumber = oldData.whatsappno?.trim();
+            .trim() || "";
+        phone = (s as any).studentPersonalContactNo?.trim() || s.studentcontactNo?.trim() || s.contactNo?.trim();
+        whatsappNumber = (s as any).whatsappno?.trim();
     }
 
     const cleanString = (value: unknown): string | undefined => {
@@ -755,8 +841,8 @@ export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, t
         return undefined;
     };
 
-    const email = `${cleanString(codeNumber)?.toUpperCase()}@thebges.edu.in`;
-    const hashedPassword = await bcrypt.hash(codeNumber.trim()?.toUpperCase(), 10);
+    const email = `${cleanString(codeNumber)}@thebges.edu.in`;
+    const hashedPassword = await bcrypt.hash(codeNumber.trim(), 10);
 
     // Check if user already exists
     const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
@@ -775,9 +861,12 @@ export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, t
         whatsappNumber: whatsappNumber,
     }).returning();
 
-    if (type === "ADMIN" || type === "STAFF" || type === "FACULTY") {
+    if (type === "STAFF") {
         if (oldData.id) {
             await addStaff(oldData.id, newUser);
+            await db.update(userModel).set({
+                isActive: !!((oldData as OldStaff).active),
+            }).where(eq(userModel.id, newUser.id as number));
         }
     }
 
@@ -792,7 +881,7 @@ export async function addStaff(oldStaffId: number, user: User) {
 
     const [[oldStaff]] = await mysqlConnection.query(`
         SELECT *
-        FROM staffpesonaldetails
+        FROM staffpersonaldetails
         WHERE id = ${oldStaffId}
         `) as [OldStaff[], any];
 
@@ -802,21 +891,110 @@ export async function addStaff(oldStaffId: number, user: User) {
 
     const shift = await addShift(oldStaff.empShiftId);
 
-    if (!shift) {
-        console.log(`Shift not found for old staff ${oldStaffId}`);
-        throw Error(`Shift not found for old staff ${oldStaffId}, i n addStaff()`);
+    const personalDetails = await addPersonalDetails(oldStaff);
+
+    const familyDetails = await addFamily(oldStaff);
+
+    const studentCategory = await addStudentCategory(oldStaff.studentCategoryId);
+
+    const health = await addHealth(oldStaff);
+
+    const emergencyContact = await addEmergencyContact({
+        personName: oldStaff.emergencyname ?? undefined,
+        havingRelationAs: oldStaff.emergencyrelationship ?? undefined,
+        email: undefined,
+        phone: oldStaff.emergencytelmobile ?? undefined,
+        officePhone: oldStaff.emergencytellandno ?? undefined,
+        residentialPhone: undefined,
+    } as any);
+
+    // Previous employer address if present
+    let previousEmployeeAddressId: number | undefined = undefined;
+    if (oldStaff.privempaddrs) {
+        const [addr] = await db.insert(addressModel).values({
+            addressLine: oldStaff.privempaddrs.trim(),
+            localityType: null,
+        } as any).returning();
+        previousEmployeeAddressId = addr.id as number;
     }
 
-    const personalDetails = await addPersonalDetails(oldStaff);
+    const bank = await addBank(oldStaff.bankid)
+    let board: Board | undefined = undefined;
+    if (oldStaff.board) {
+        const [existingBoard] = await db
+            .select()
+            .from(boardModel)
+            .where(eq(boardModel.name, oldStaff.board.trim()));
+        if (!existingBoard) {
+            const [newBoard] = await db.insert(boardModel).values({
+                name: oldStaff.board.trim(),
+            }).returning();
+            board = newBoard;
+        }
+        else {
+            board = existingBoard;
+        }
+    }
 
     const [newStaff] = await db.insert(staffModel).values({
         userId: user.id as number,
+        boardId: board?.id ?? undefined,
+        attendanceCode: oldStaff.staffAttendanceCode ?? undefined,
+        uid: oldStaff.uid ? String(oldStaff.uid) : undefined,
+        codeNumber: oldStaff.codeNumber ?? undefined,
+        shiftId: shift?.id ?? undefined,
+        gratuityNumber: oldStaff.gratuityno ?? undefined,
+        personalDetailsId: personalDetails?.id ?? undefined,
+        familyDetailsId: familyDetails?.id ?? undefined,
+        studentCategoryId: studentCategory?.id ?? undefined,
+        healthId: health?.id ?? undefined,
+        emergencyContactId: emergencyContact?.id ?? undefined,
+        computerOperationKnown: !!oldStaff.computeroperationknown,
+        bankBranchId: undefined,
+        // Optional academic links not resolvable from legacy staff payload
+        bankAccountNumber: oldStaff.bankAccNo ?? undefined,
+        banlIfscCode: oldStaff.bankifsccode ?? undefined,
+        bankAccountType: oldStaff.bankacctype
+            ? ((t => (
+                t === "SAVINGS" || t === "CURRENT" || t === "FIXED_DEPOSIT" || t === "RECURRING_DEPOSIT" || t === "OTHER"
+            ) ? t : "OTHER")(String(oldStaff.bankacctype).trim()) as any)
+            : undefined,
+        providentFundAccountNumber: oldStaff.providentFundAccNo ?? undefined,
+        panNumber: oldStaff.panNo ?? undefined,
+        esiNumber: oldStaff.esiNo ?? undefined,
+        impNumber: oldStaff.impNo ?? undefined,
+        clinicAddress: oldStaff.clinicAddress ?? undefined,
+        hasPfNomination: !!oldStaff.pfnomination,
+        childrens: oldStaff.childrens ?? undefined,
+        majorChildName: oldStaff.majorChildName ?? undefined,
+        majorChildPhone: oldStaff.majorChildContactNo ?? undefined,
+        previousEmployeeName: oldStaff.privempnm ?? undefined,
+        previousEmployeePhone: undefined,
+        previousEmployeeAddressId: previousEmployeeAddressId,
+        gratuityNominationDate: oldStaff.gratuitynominationdt ? new Date(oldStaff.gratuitynominationdt as any) : undefined,
+        univAccountNumber: oldStaff.univAccNo ?? undefined,
+        dateOfConfirmation: oldStaff.dateofconfirmation ? new Date(oldStaff.dateofconfirmation) : undefined,
+        dateOfProbation: oldStaff.dateofprobation ? new Date(oldStaff.dateofprobation) : undefined,
 
     }).returning();
 
+    let name = oldStaff.name ?? "";
+    if (personalDetails?.middleName) {
+        name += `${personalDetails?.middleName}`;
+    }
+    if (personalDetails?.lastName) {
+        name += ` ${personalDetails?.lastName}`;
+    }
+
+    await db.update(userModel).set({
+        name,
+    }).where(eq(userModel.id, user.id as number));
+
     return newStaff;
 }
-export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, oldOldCourseDetails: OldCourseDetails, user: User) {
+
+
+export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, oldOldCourseDetails: OldCourseDetails, user: User, programCourse: ProgramCourse, applicationForm: ApplicationForm) {
     const [existingStudent] = await db
         .select()
         .from(studentModel)
@@ -853,17 +1031,36 @@ export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDe
 
 
 
-
-
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
-        programCourseId: 0, // TODO: Replace with actual program course id
-        legacyStudentId: oldStudent.id,
-
-        applicationId: null,
+        programCourseId: programCourse.id as number,
+        legacyStudentId: oldStudent.id as number,
+        rfid: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
+        registrationNumber: oldStudent.univregno ? String(oldStudent.univregno) : undefined,
+        rollNumber: oldStudent.univlstexmrollno ? String(oldStudent.univlstexmrollno) : undefined,
+        cuFormNumber: oldStudent.cuformno ? String(oldStudent.cuformno) : undefined,
+        classRollNumber: oldStudent.rollNumber ? String(oldStudent.rollNumber) : undefined,
+        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
+        apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        checkRepeat: !!oldStudent.chkrepeat,
+        applicationId: applicationForm.id as number,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         handicapped: !!oldStudent.handicapped,
+        lastPassedYear: oldStudent.lspassedyr ?? undefined,
+        notes: oldStudent.notes ?? undefined,
+        active: !!oldStudent.active,
+        alumni: !!oldStudent.alumni,
+
+        leavingDate: oldStudent.leavingdate ? new Date(oldStudent.leavingdate) : undefined,
+        leavingReason: oldStudent.leavingreason ?? undefined,
+
     }).returning();
+
+    await db.update(userModel).set({
+        name: `${oldStudent.name}`,
+    }).where(eq(userModel.id, user.id as number));
+
 
     return newStudent;
 }
@@ -889,7 +1086,7 @@ export async function addAccommodation(placeOfStay: string, placeOfStayAddr: str
             placeOfStay = '';
     }
 
-    // const address = await addAddress({ cityId: city.id, districtId: district.id, stateId: stateId, countryId: countryId, otherCity: otherCity, otherDistrict: otherDistrict, otherState: otherState, otherCountry: otherCountry, pincode: pincode, landmark: landmark, postofficeId: postofficeId, addressLine: placeOfStayAddr?.toUpperCase()?.trim(), localityType: localityType?.toUpperCase() === "URBAN" ? "URBAN" : (localityType?.toUpperCase() === "RURAL" ? "RURAL" : null), phone: placeOfStayContactNo?.trim()?.toUpperCase(), otherPostoffice: otherPostoffice, otherPoliceStation: otherPoliceStation, policeStationId: policeStationId });
+    // const address = await addAddress({ cityId: city.id, districtId: district.id, stateId: stateId, countryId: countryId, otherCity: otherCity, otherDistrict: otherDistrict, otherState: otherState, otherCountry: otherCountry, pincode: pincode, landmark: landmark, postofficeId: postofficeId, addressLine: placeOfStayAddr?.trim(), localityType: localityType === "URBAN" ? "URBAN" : (localityType === "RURAL" ? "RURAL" : null), phone: placeOfStayContactNo?.trim(), otherPostoffice: otherPostoffice, otherPoliceStation: otherPoliceStation, policeStationId: policeStationId });
 
     const [newAccommodation] = await db.insert(accommodationModel).values({
         placeOfStay: placeOfStay as "OWN" | "HOSTEL" | "FAMILY_FRIENDS" | "PAYING_GUEST" | "RELATIVES",
@@ -915,9 +1112,9 @@ async function addAddress({ cityId, districtId, stateId, countryId, otherCity, o
         policeStationId: policeStationId,
         landmark: landmark,
         postofficeId: postofficeId,
-        addressLine: addressLine?.toUpperCase()?.trim(),
-        localityType: localityType?.toUpperCase() === "URBAN" ? "URBAN" : (localityType?.toUpperCase() === "RURAL" ? "RURAL" : null),
-        phone: phone?.trim()?.toUpperCase()
+        addressLine: addressLine?.trim(),
+        localityType: localityType === "URBAN" ? "URBAN" : (localityType === "RURAL" ? "RURAL" : null),
+        phone: phone?.trim()
     }).returning();
 
     return address;
@@ -925,12 +1122,12 @@ async function addAddress({ cityId, districtId, stateId, countryId, otherCity, o
 
 
 export async function addOccupation(name: string, legacyOccupationId: number) {
-    const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim().toUpperCase()));
+    const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim()));
     if (existingOccupation) {
         return existingOccupation;
     }
     const [newOccupation] = await db.insert(occupationModel).values({
-        name: name.trim().toUpperCase(),
+        name: name.trim(),
         legacyOccupationId: legacyOccupationId,
 
     }).returning();
@@ -939,21 +1136,21 @@ export async function addOccupation(name: string, legacyOccupationId: number) {
 }
 
 export async function addBloodGroup(type: string, legacyBloodGroupId?: number) {
-    const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim().toUpperCase()));
+    const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim()));
     if (existingBloodGroup) {
         return existingBloodGroup;
     }
-    const [newBloodGroup] = await db.insert(bloodGroupModel).values({ legacyBloodGroupId: legacyBloodGroupId, type: type.trim().toUpperCase() }).returning();
+    const [newBloodGroup] = await db.insert(bloodGroupModel).values({ legacyBloodGroupId: legacyBloodGroupId, type: type.trim() }).returning();
 
     return newBloodGroup;
 }
 
 export async function addNationality(name: string, code: number | undefined | null, legacyNationalityId?: number) {
-    const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim().toUpperCase()));
+    const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim()));
     if (existingNationality) {
         return existingNationality;
     }
-    const [newNationality] = await db.insert(nationalityModel).values({ legacyNationalityId: legacyNationalityId, name: name.trim().toUpperCase(), code }).returning();
+    const [newNationality] = await db.insert(nationalityModel).values({ legacyNationalityId: legacyNationalityId, name: name.trim(), code }).returning();
 
     return newNationality;
 }
@@ -962,44 +1159,44 @@ export async function addCategory(name: string, code: string, documentRequired: 
     // Check if category exists by name OR code
     const [existingCategory] = await db.select().from(categoryModel).where(
         or(
-            eq(categoryModel.name, name.trim().toUpperCase()),
+            eq(categoryModel.name, name.trim()),
             eq(categoryModel.code, code)
         )
     );
     if (existingCategory) {
         return existingCategory;
     }
-    const [newCategory] = await db.insert(categoryModel).values({ legacyCategoryId: legacyCategoryId, name: name.trim().toUpperCase(), code, documentRequired }).returning();
+    const [newCategory] = await db.insert(categoryModel).values({ legacyCategoryId: legacyCategoryId, name: name.trim(), code, documentRequired }).returning();
 
     return newCategory;
 }
 
 export async function addReligion(name: string, legacyReligionId: number) {
-    const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim().toUpperCase()));
+    const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim()));
     if (existingReligion) {
         return existingReligion;
     }
-    const [newReligion] = await db.insert(religionModel).values({ legacyReligionId: legacyReligionId, name: name.trim().toUpperCase() }).returning();
+    const [newReligion] = await db.insert(religionModel).values({ legacyReligionId: legacyReligionId, name: name.trim() }).returning();
 
     return newReligion;
 }
 
 export async function addLanguageMedium(name: string, legacyLanguageMediumId: number) {
-    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim().toUpperCase()));
+    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim()));
     if (existingLanguage) {
         return existingLanguage;
     }
-    const [newLanguage] = await db.insert(languageMediumModel).values({ legacyLanguageMediumId: legacyLanguageMediumId, name: name.trim().toUpperCase() }).returning();
+    const [newLanguage] = await db.insert(languageMediumModel).values({ legacyLanguageMediumId: legacyLanguageMediumId, name: name.trim() }).returning();
 
     return newLanguage;
 }
 
 export async function addSpecialization(name: string, db: DbType, legacySpecializationId?: number) {
-    const [existingSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.name, name.trim().toUpperCase()));
+    const [existingSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.name, name.trim()));
     if (existingSpecialization) {
         return existingSpecialization;
     }
-    const [newSpecialization] = await db.insert(specializationModel).values({ legacySpecializationId: legacySpecializationId, name: name.trim().toUpperCase() }).returning();
+    const [newSpecialization] = await db.insert(specializationModel).values({ legacySpecializationId: legacySpecializationId, name: name.trim() }).returning();
 
     return newSpecialization;
 }
@@ -1009,7 +1206,7 @@ async function addCountry(oldCountry: OldCountry) {
         .select()
         .from(countryModel)
         .where(
-            ilike(countryModel.name, oldCountry.countryName.trim().toUpperCase())
+            ilike(countryModel.name, oldCountry.countryName.trim())
         );
     if (existingCountry) {
         return existingCountry;
@@ -1018,7 +1215,7 @@ async function addCountry(oldCountry: OldCountry) {
         .insert(countryModel)
         .values({
             legacyCountryId: oldCountry.id,
-            name: oldCountry.countryName.trim().toUpperCase(),
+            name: oldCountry.countryName.trim(),
         }).returning();
 
     return newCountry;
@@ -1083,9 +1280,13 @@ async function addState(legacyStateId: number) {
 }
 
 async function addCity(oldCityId: number) {
+    console.log("oldCityId in addCity() ----->", oldCityId);
+    if (isNaN(oldCityId)) {
+        return null;
+    }
     const [[oldCitySubtab]] = await mysqlConnection.query(`
         SELECT * 
-        FROM citysubtab
+        FROM citysub
         WHERE id = ${oldCityId};
     `) as [OldCitySubtab[], any];
 
@@ -1099,13 +1300,14 @@ async function addCity(oldCityId: number) {
         return null;
     }
 
+    const normalizedCityName = oldCitySubtab.cityname.trim();
     const [existingCity] = await db
-        .select()
+        .select({ id: cityModel.id })
         .from(cityModel)
         .where(
             and(
                 eq(cityModel.stateId, state.id),
-                ilike(cityModel.name, oldCitySubtab.cityname.trim())
+                ilike(cityModel.name, normalizedCityName)
             )
         );
     if (existingCity) {
@@ -1117,7 +1319,7 @@ async function addCity(oldCityId: number) {
         .values({
             stateId: state.id,
             legacyCityId: oldCityId,
-            name: oldCitySubtab.cityname.trim()
+            name: normalizedCityName
         }).returning();
     return newCity;
 }
@@ -1125,7 +1327,7 @@ async function addCity(oldCityId: number) {
 async function addDistrict(oldDistrictId: number) {
     const [[oldDistrict]] = await mysqlConnection.query(`
         SELECT * 
-        FROM districtsubtab
+        FROM district
         WHERE id = ${oldDistrictId};
     `) as [OldDistrict[], any];
 
@@ -1246,8 +1448,8 @@ async function addHealth(details: OldStudent | OldStaff) {
 
 async function addEmergencyContact(emergencyContact: EmergencyContact) {
     const [newEmergencyContact] = await db.insert(emergencyContactModel).values({
-        personName: emergencyContact.personName?.trim()?.toUpperCase(),
-        havingRelationAs: emergencyContact.havingRelationAs?.trim()?.toUpperCase(),
+        personName: emergencyContact.personName?.trim(),
+        havingRelationAs: emergencyContact.havingRelationAs?.trim(),
         email: emergencyContact.email?.trim()?.toLowerCase(),
         phone: emergencyContact.phone?.trim(),
         officePhone: emergencyContact.officePhone?.trim(),
@@ -1311,8 +1513,8 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
             otherPostoffice: mailingOtherPostOffice || undefined,
             policeStationId: mailingPoliceStationId || undefined,
             otherPoliceStation: mailingOtherPoliceStation || undefined,
-            addressLine: mailingAddressLine?.trim()?.toUpperCase(),
-            pincode: mailingPin?.trim()?.toUpperCase(),
+            addressLine: mailingAddressLine?.trim(),
+            pincode: mailingPin?.trim(),
             localityType: null,
         }).returning();
         mailingAddress = address;
@@ -1335,9 +1537,9 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
             otherPostoffice: resiOtherPostOffice || undefined,
             policeStationId: resiPoliceStationId || undefined,
             otherPoliceStation: resiOtherPoliceStation || undefined,
-            addressLine: residentialAddressLine?.trim()?.toUpperCase(),
-            phone: resiPhone?.trim()?.toUpperCase() || undefined,
-            pincode: resiPin?.trim()?.toUpperCase(),
+            addressLine: residentialAddressLine?.trim(),
+            phone: resiPhone?.trim() || undefined,
+            pincode: resiPin?.trim(),
             localityType: null,
         }).returning();
         residentialAddress = address;
@@ -1347,7 +1549,7 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
     const fullName = isStaff(oldDetails)
         ? (oldDetails.name || "")
         : ((oldDetails.firstName || "") + " " + (oldDetails.middleName || "") + " " + (oldDetails.lastName || "")).trim();
-    const firstName = (fullName.split(" ")[0] || "UNKNOWN").toUpperCase();
+    const firstName = (fullName.split(" ")[0] || "");
 
     const mobileNumber = isStaff(oldDetails)
         ? (oldDetails.phoneMobileNo || oldDetails.contactNo || "")
@@ -1361,7 +1563,7 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
     const placeOfBirth = isStaff(oldDetails) ? undefined : (oldDetails.placeofBirth || undefined);
     const whatsappNumber = isStaff(oldDetails) ? undefined : (oldDetails.whatsappno || undefined);
     const emergencyContactNumber = isStaff(oldDetails) ? undefined : (oldDetails.emergencycontactno || undefined);
-    const isGujarati = isStaff(oldDetails) ? false : ((oldDetails.community || "").toUpperCase() === "GUJARATI");
+    const isGujarati = isStaff(oldDetails) ? false : ((oldDetails.community || "") === "GUJARATI");
 
     // Additional personal details fields
     const voterId = isStaff(oldDetails) ? oldDetails.voterIdNo : undefined;
@@ -1637,6 +1839,12 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
         verifiedBy = await addUser(oldStaff, "STAFF");
     }
 
+    let meritListBy: User | undefined;
+    if (courseDetails.meritlistby) {
+        const [[oldStaff]] = await mysqlConnection.query(`SELECT * FROM staffpersonaldetails WHERE id = ${courseDetails.meritlistby}`) as [OldStaff[], any];
+        meritListBy = await addUser(oldStaff, "STAFF");
+    }
+
 
 
     // Ensure required foreign keys are present
@@ -1707,7 +1915,7 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
         meritListId: meritList?.id,
         meritListedOn: courseDetails.meritlistdt ? new Date(courseDetails.meritlistdt) : undefined,
         meritListCount: courseDetails.meritlistcount || undefined,
-        meritListBy: courseDetails.meritlistby || undefined,
+        meritListBy: meritListBy ? meritListBy?.id : undefined,
         isAdmitCardSelected: !!courseDetails.admitcardselected,
         admitCardSelectedOn: courseDetails.admitcardselectedon ? new Date(courseDetails.admitcardselectedon) : undefined,
         admissionTestSmsSentOn: courseDetails.admtestsmssenton ? new Date(courseDetails.admtestsmssenton) : undefined,
@@ -1779,13 +1987,15 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
 }
 
 async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmissionCourseDetails: AdmissionCourseDetails, academicYear: AcademicYear, studentId: number) {
+
     const [admissionProgramCourse] = await db
         .select()
         .from(admissionProgramCourseModel)
         .where(
-            eq(programCourseModel.id, newAdmissionCourseDetails.admissionProgramCourseId as number)
+            eq(admissionProgramCourseModel.id, newAdmissionCourseDetails.admissionProgramCourseId as number)
         );
 
+    console.log("in getSubjectRelatedFields(), admissionProgramCourse", admissionProgramCourse);
     if (!admissionProgramCourse) {
         throw new Error("Admission Program Course not found...!");
     }
@@ -1818,7 +2028,7 @@ async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmis
         .select()
         .from(classModel)
         .where(
-            ilike(classModel.name, oldClass.classname!.trim().toUpperCase()),
+            ilike(classModel.name, oldClass.classname!.trim()),
         );
 
     if (!foundClass) {
@@ -1853,8 +2063,11 @@ async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmis
     const [oldCvSubjectSelections] = await mysqlConnection.query(`
         SELECT * FROM cvsubjectselection WHERE parent_id = ${courseDetails.id}
     `) as [OldCvSubjectSelection[], any];
+    console.log(`
+        SELECT * FROM cvsubjectselection WHERE parent_id = ${courseDetails.id}
+    `)
 
-
+    console.log("in getSubjectRelatedFields(), oldCvSubjectSelections", oldCvSubjectSelections);
 
     for (let i = 0; i < oldCvSubjectSelections.length; i++) {
         const oldCvSubjectSelection = oldCvSubjectSelections[i];
@@ -1864,14 +2077,14 @@ async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmis
             .select()
             .from(subjectModel)
             .where(
-                ilike(subjectModel.name, oldSubject.subjectName.trim().toUpperCase()),
+                ilike(subjectModel.name, oldSubject.subjectName.trim()),
             )
         if (!foundSubject) {
             const newSubject = await db
                 .insert(subjectModel)
                 .values({
-                    name: oldSubject.subjectName.trim().toUpperCase(),
-                    code: oldSubject.univcode?.trim().toUpperCase(),
+                    name: oldSubject.subjectName.trim(),
+                    code: oldSubject.univcode?.trim(),
                 })
                 .returning();
             foundSubject = newSubject[0];
@@ -1881,13 +2094,13 @@ async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmis
             .select()
             .from(subjectTypeModel)
             .where(
-                ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName.trim().toUpperCase()),
+                ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName.trim()),
             )
         if (!foundSubjectType) {
             const newSubjectType = await db
                 .insert(subjectTypeModel)
                 .values({
-                    name: oldSubjectType.subjectTypeName.trim().toUpperCase(),
+                    name: oldSubjectType.subjectTypeName.trim(),
                 })
                 .returning();
             foundSubjectType = newSubjectType[0];
@@ -1926,6 +2139,7 @@ async function getSubjectRelatedFields(courseDetails: OldCourseDetails, newAdmis
             foundPaper = newPaper[0];
         }
 
+        console.log("oldCvSubjectSelection", oldCvSubjectSelection.id);
         await addAdmSubjectPaperSelection(oldCvSubjectSelection, studentId, newAdmissionCourseDetails.id!, foundPaper.id);
 
     }
@@ -2015,7 +2229,7 @@ async function addStudentCategory(oldStudentCategoryId: number | null) {
         .select()
         .from(studentCategoryModel)
         .where(
-            eq(studentCategoryModel.name, studentCategoryRow.studentCName.trim().toUpperCase()),
+            eq(studentCategoryModel.name, studentCategoryRow.studentCName.trim()),
         )
 
     if (foundStudentCategory) return foundStudentCategory;
@@ -2027,7 +2241,7 @@ async function addStudentCategory(oldStudentCategoryId: number | null) {
         .insert(studentCategoryModel)
         .values({
             legacyStudentCategoryId: oldStudentCategoryId,
-            name: studentCategoryRow.studentCName.trim().toUpperCase(),
+            name: studentCategoryRow.studentCName.trim(),
             courseId: course?.id || 0,
             classId: classSem?.id || 0,
             documentRequired: !!studentCategoryRow.document,
@@ -2047,7 +2261,7 @@ async function addClass(oldClassId: number | null) {
         .select()
         .from(classModel)
         .where(
-            ilike(classModel.name, classRow.classname!.trim().toUpperCase()),
+            ilike(classModel.name, classRow.classname!.trim()),
         )
 
 
@@ -2056,7 +2270,7 @@ async function addClass(oldClassId: number | null) {
     return (await db
         .insert(classModel)
         .values({
-            name: classRow.classname!.trim().toUpperCase(),
+            name: classRow.classname!.trim(),
             type: classRow.type === "year" ? "YEAR" : "SEMESTER",
         })
         .returning()
@@ -2069,7 +2283,7 @@ async function addStream(stream: Stream) {
         .select()
         .from(streamModel)
         .where(
-            ilike(streamModel.name, stream.name.trim().toUpperCase()),
+            ilike(streamModel.name, stream.name.trim()),
         )
 
     if (foundStream) return foundStream;
@@ -2091,7 +2305,7 @@ async function addCourse(oldCourseId: number | null) {
         .select()
         .from(courseModel)
         .where(
-            ilike(courseModel.name, courseRow.courseName.trim().toUpperCase()),
+            ilike(courseModel.name, courseRow.courseName.trim()),
         )
 
     if (foundCourse) return foundCourse;
@@ -2111,8 +2325,8 @@ async function addCourse(oldCourseId: number | null) {
     return (await db
         .insert(courseModel)
         .values({
-            name: courseRow.courseName.trim().toUpperCase(),
-            shortName: courseRow.courseSName?.trim().toUpperCase(),
+            name: courseRow.courseName.trim(),
+            shortName: courseRow.courseSName?.trim(),
             legacyCourseId: oldCourseId,
             sequence: nextSequence,
 
@@ -2147,8 +2361,8 @@ async function addEligibilityCriteria(oldEligibilityId: number | null) {
             courseId: eligibilityRow.courseId,
             classId: eligibilityRow.classId,
             categoryId: eligibilityRow.categoryId,
-            description: eligibilityRow.description?.trim().toUpperCase(),
-            generalInstruction: eligibilityRow.generalInstruction?.trim().toUpperCase(),
+            description: eligibilityRow.description?.trim(),
+            generalInstruction: eligibilityRow.generalInstruction?.trim(),
 
         })
         .returning()
@@ -2166,7 +2380,7 @@ async function addShift(oldShiftId: number | null) {
         .select()
         .from(shiftModel)
         .where(
-            eq(shiftModel.name, shiftRow.shiftName.trim().toUpperCase()),
+            eq(shiftModel.name, shiftRow.shiftName.trim()),
         )
 
     if (foundShift) return foundShift;
@@ -2175,8 +2389,8 @@ async function addShift(oldShiftId: number | null) {
         .insert(shiftModel)
         .values({
             legacyShiftId: oldShiftId,
-            name: shiftRow.shiftName.trim().toUpperCase(),
-            codePrefix: shiftRow.codeprefix?.trim().toUpperCase(),
+            name: shiftRow.shiftName.trim(),
+            codePrefix: shiftRow.codeprefix?.trim(),
         })
         .returning()
     )[0];
@@ -2193,7 +2407,7 @@ async function addMeritList(oldMeritListId: number | null) {
         .select()
         .from(meritListModel)
         .where(
-            eq(meritListModel.name, meritListRow.name.trim().toUpperCase()),
+            eq(meritListModel.name, meritListRow.name.trim()),
         )
 
     if (foundMeritList) return foundMeritList;
@@ -2202,7 +2416,7 @@ async function addMeritList(oldMeritListId: number | null) {
         .insert(meritListModel)
         .values({
             legacyMeritListId: oldMeritListId,
-            name: meritListRow.name.trim().toUpperCase(),
+            name: meritListRow.name.trim(),
             description: meritListRow.description.trim(),
             checkAuto: meritListRow.checkauto === 1, // Convert 0 or 1 to boolean
         })
@@ -2223,16 +2437,17 @@ async function addBank(oldBankId: number | null) {
         .select()
         .from(bankModel)
         .where(
-            eq(bankModel.name, bankRow.bankName.trim().toUpperCase()),
+            eq(bankModel.name, bankRow.bankName.trim()),
         )
 
     if (foundBank) return foundBank;
 
     return (await db
-        .insert(foundBank)
+        .insert(bankModel)
         .values({
             legacyBankId: oldBankId,
-            name: bankRow.bankName.trim().toUpperCase(),
+
+            name: bankRow.bankName.trim(),
         })
         .returning()
     )[0];
@@ -2254,7 +2469,7 @@ async function addBankBranch(oldBankBranchId: number | null) {
         .where(
             and(
                 eq(bankBranchModel.bankId, bank.id!),
-                eq(bankBranchModel.name, bankBranchRow.name.trim().toUpperCase()),
+                eq(bankBranchModel.name, bankBranchRow.name.trim()),
             )
         )
 
@@ -2264,7 +2479,7 @@ async function addBankBranch(oldBankBranchId: number | null) {
         .insert(bankBranchModel)
         .values({
             legacyBankBranchId: oldBankBranchId,
-            name: bankBranchRow.name.trim().toUpperCase(),
+            name: bankBranchRow.name.trim(),
             bankId: bank.id!,
         })
         .returning()
@@ -2274,7 +2489,7 @@ async function addBankBranch(oldBankBranchId: number | null) {
 // This function is storing the minor subjects selected during admission-application form phas after merit list is generated.
 async function addAdmSubjectPaperSelection(cvSubjectSelectionRow: OldCvSubjectSelection, studentId: number, admissionCourseDetailsId: number, paperId: number) {
 
-
+    console.log("cvSubjectSelectionRow", cvSubjectSelectionRow);
     if (!cvSubjectSelectionRow) return null;
 
     const [foundAdmSbjPprSelection] = await db
@@ -2318,7 +2533,7 @@ async function addSubjectType(oldSubjectTypeId: number | null) {
         .select()
         .from(subjectTypeModel)
         .where(
-            eq(subjectTypeModel.name, subjectTypeRow.subjectTypeName.trim().toUpperCase()),
+            ilike(subjectTypeModel.name, subjectTypeRow.subjectTypeName.trim()),
         );
 
     if (foundSubjectType) return foundSubjectType;
@@ -2327,8 +2542,8 @@ async function addSubjectType(oldSubjectTypeId: number | null) {
         .insert(subjectTypeModel)
         .values({
             legacySubjectTypeId: oldSubjectTypeId,
-            name: subjectTypeRow.subjectTypeName.trim().toUpperCase(),
-            code: subjectTypeRow.shortname?.trim().toUpperCase(),
+            name: subjectTypeRow.subjectTypeName.trim(),
+            code: subjectTypeRow.shortname?.trim(),
         })
         .returning()
     )[0];
@@ -2347,7 +2562,7 @@ async function addSubject(oldSubjectId: number | null) {
         .select()
         .from(subjectModel)
         .where(
-            eq(subjectModel.name, subjectRow.subjectName.trim().toUpperCase()),
+            eq(subjectModel.name, subjectRow.subjectName.trim()),
         );
 
     if (foundSubject) return foundSubject;
@@ -2356,14 +2571,14 @@ async function addSubject(oldSubjectId: number | null) {
         .insert(subjectModel)
         .values({
             legacySubjectId: oldSubjectId,
-            name: subjectRow.subjectName.trim().toUpperCase(),
-            code: subjectRow.univcode?.trim().toUpperCase(),
+            name: subjectRow.subjectName.trim(),
+            code: subjectRow.univcode?.trim(),
         })
         .returning()
     )[0];
 }
 
-async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, student: Student) {
+async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff) {
     const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff => "isTeacher" in d;
     const isAdmStudent = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldAdmStudentPersonalDetail => "transferred" in d;
 
@@ -2409,7 +2624,7 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, stu
 
     const [father] = await db.insert(personModel).values({
         title: undefined, // No title data in legacy
-        name: (isStaff(oldDetails) ? null : oldDetails.fatherName)?.toUpperCase()?.trim() || "UNKNOWN",
+        name: (isStaff(oldDetails) ? null : oldDetails.fatherName)?.trim(),
         email: (isStaff(oldDetails) ? null : oldDetails.fatherEmail)?.trim().toLowerCase(),
         phone: (isStaff(oldDetails) ? null : oldDetails.fmobno)?.trim(),
         aadhaarCardNumber: formatAadhaarCardNumber(isStaff(oldDetails) ? undefined : oldDetails.fadhaarcardno || undefined),
@@ -2439,7 +2654,7 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, stu
 
     const [mother] = await db.insert(personModel).values({
         title: undefined, // No title data in legacy
-        name: (isStaff(oldDetails) ? null : oldDetails.motherName)?.toUpperCase()?.trim() || "UNKNOWN",
+        name: (isStaff(oldDetails) ? null : oldDetails.motherName)?.trim(),
         email: (isStaff(oldDetails) ? null : oldDetails.motherEmail)?.trim().toLowerCase(),
         phone: (isStaff(oldDetails) ? null : oldDetails.mmobno)?.trim(),
         aadhaarCardNumber: formatAadhaarCardNumber(isStaff(oldDetails) ? undefined : oldDetails.madhaarcardno || undefined),
@@ -2469,7 +2684,7 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, stu
     const guardianOffAddress = isStaff(oldDetails) ? null : oldDetails.localguardianAddress;
     if (guardianOffAddress) {
         const [address] = await db.insert(addressModel).values({
-            addressLine: guardianOffAddress?.trim()?.toUpperCase(),
+            addressLine: guardianOffAddress?.trim(),
             localityType: null,
         }).returning();
         guardianOfficeAddress = address;
@@ -2477,7 +2692,7 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, stu
 
     const [guardian] = await db.insert(personModel).values({
         title: undefined, // No title data in legacy
-        name: (isStaff(oldDetails) ? null : oldDetails.otherGuardianName)?.toUpperCase()?.trim() || "UNKNOWN",
+        name: (isStaff(oldDetails) ? null : oldDetails.otherGuardianName)?.trim() || "",
         email: undefined, // No guardian email in legacy data
         phone: (isStaff(oldDetails) ? null : oldDetails.gmobno)?.trim(),
         aadhaarCardNumber: formatAadhaarCardNumber(isStaff(oldDetails) ? undefined : oldDetails.gadhaarcardno || undefined),

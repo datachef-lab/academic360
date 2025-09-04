@@ -21,7 +21,7 @@ export const studentAcademicSubjectModel = pgTable("student_academic_subjects", 
     practicalMarks: doublePrecision("practical_marks").default(0),
     totalMarks: doublePrecision("total_marks").default(0),
     gradeId: integer("grade_id_fk").references(() => gradeModel.id),
-    resultStatus: subjectResultStatusType("result_status").notNull(),
+    resultStatus: subjectResultStatusType("result_status"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

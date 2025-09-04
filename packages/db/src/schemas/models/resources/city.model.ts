@@ -9,7 +9,7 @@ export const cityModel = pgTable("cities", {
     id: serial().primaryKey(),
     legacyCityId: integer(),
     stateId: integer().notNull().references(() => stateModel.id),
-    name: varchar({ length: 255 }).notNull().unique(),
+    name: varchar({ length: 255 }),
     documentRequired: boolean().notNull().default(false),
     code: varchar({ length: 10 }),
     sequence: integer().unique(),
