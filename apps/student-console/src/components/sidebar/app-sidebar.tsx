@@ -85,8 +85,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ].filter((ele) => !!ele);
 
   return (
-    <Sidebar variant="floating" collapsible="icon" {...props}>
-      <SidebarHeader>
+    <Sidebar variant="floating" collapsible="icon" {...props} className="rounded-md">
+      <SidebarHeader className="!bg-purple-600">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent">
@@ -94,22 +94,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Image
                   width={32}
                   height={32}
-                  src={"/logo.jpeg"}
+                  src={`${process.env.NEXT_PUBLIC_URL!}/logo.jpeg`}
                   alt={"BESC Logo"}
                   className="w-8 h-8 rounded-lg object-cover"
                 />
               </div>
               <div className="grid flex-1 text-left text-sm">
-                <span className="truncate font-semibold text-wrap">BESC | Student Console</span>
+                <span className="truncate font-semibold text-wrap text-white">BESC | Student Console</span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="!bg-purple-600">
         <NavMain items={navMainItems} className="p-0" />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="!bg-purple-600 p-2">
         <NavUser />
       </SidebarFooter>
     </Sidebar>

@@ -32,7 +32,6 @@ export function NavMain({
   }[];
   className?: string;
 }) {
-  
   // No state needed for hover, just use empty functions
   const handleMouseEnter = () => {};
   const handleMouseLeave = () => {};
@@ -41,26 +40,15 @@ export function NavMain({
 
   // Initialize expanded items based on active state
   useEffect(() => {
-    setExpandedItems(
-      items.filter((item) => item.isActive).map((item) => item.title)
-    );
+    setExpandedItems(items.filter((item) => item.isActive).map((item) => item.title));
   }, [items]);
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) =>
-      prev.includes(title)
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
-    );
+    setExpandedItems((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]));
   };
 
   return (
-    <SidebarGroup
-      className={cn(
-        "transition-all duration-300 border-transparent",
-        className
-      )}
-    >
+    <SidebarGroup className={cn("transition-all duration-300 border-transparent", className)}>
       <SidebarMenu className="space-y-1.5 border-transparent">
         {items.map((item) => {
           const isExpanded = expandedItems.includes(item.title);
@@ -75,7 +63,7 @@ export function NavMain({
                 }}
                 className={cn(
                   "overflow-hidden transition-all duration-200",
-                  item.isActive && "bg-[#eff1f7] rounded-l-lg"
+                  item.isActive && "bg-[#eff1f7] rounded-l-lg",
                 )}
                 style={{
                   borderTopRightRadius: 0,
@@ -86,10 +74,7 @@ export function NavMain({
                 }}
               >
                 <SidebarMenuItem
-                  className={cn(
-                    "transition-all duration-200",
-                    item.isActive && "bg-[#eff1f7]"
-                  )}
+                  className={cn("transition-all duration-200", item.isActive && "bg-[#eff1f7]")}
                   style={{
                     borderTopRightRadius: 0,
                     borderBottomRightRadius: 0,
@@ -106,12 +91,10 @@ export function NavMain({
                         "relative group border-transparent flex items-center px-3 py-2.5 rounded-md transition-all duration-200",
                         item.isActive
                           ? "bg-[#eff1f7] text-purple-800 font-bold"
-                          : "hover:text-white"
+                          : "text-white hover:text-white hover:bg-purple-700",
                       )}
                       style={{
-                        backgroundColor: item.isActive
-                          ? "#eff1f7"
-                          : "transparent",
+                        backgroundColor: item.isActive ? "#eff1f7" : "transparent",
                       }}
                     >
                       {item.icon && (
@@ -120,7 +103,7 @@ export function NavMain({
                             "mr-3 transition-colors group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:z-20",
                             item.isActive
                               ? "text-purple-800 dark:text-purple-800"
-                              : "text-white/80 group-data-[collapsible=icon]:text-white"
+                              : "text-white group-data-[collapsible=icon]:text-white",
                           )}
                           whileHover={{
                             rotate: 5,
@@ -144,7 +127,7 @@ export function NavMain({
                       <span
                         className={cn(
                           "flex-1 truncate font-medium group-data-[collapsible=icon]:hidden",
-                          item.isActive && "text-purple-800 font-bold"
+                          item.isActive ? "text-purple-800 font-bold" : "text-white",
                         )}
                       >
                         {item.title}
@@ -156,7 +139,7 @@ export function NavMain({
                           transition={{ duration: 0.2 }}
                           className={cn(
                             "ml-auto group-data-[collapsible=icon]:hidden",
-                            item.isActive ? "text-purple-800" : "opacity-60"
+                            item.isActive ? "text-purple-800" : "text-white opacity-80",
                           )}
                         >
                           <ChevronRight className="h-4 w-4" />
@@ -190,14 +173,11 @@ export function NavMain({
                                   className="relative px-3 py-1.5 text-sm rounded-md transition-all duration-200 hover:text-white group"
                                 >
                                   <Link href={subItem.url}>
-                                    <span className="relative z-10">
-                                      {subItem.title}
-                                    </span>
+                                    <span className="relative z-10">{subItem.title}</span>
                                     <motion.span
                                       className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                                       style={{
-                                        backgroundColor:
-                                          "rgba(255, 255, 255, 0.2)",
+                                        backgroundColor: "rgba(255, 255, 255, 0.2)",
                                       }}
                                       initial={false}
                                       whileHover={{

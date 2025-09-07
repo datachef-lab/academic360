@@ -236,7 +236,11 @@ export default function SignInPage() {
         {/* Right section */}
         <div className="hidden w-1/2 bg-indigo-600 md:block">
           <div className="relative h-full w-full">
-            <img src="/hero-image.jpeg" alt="Descriptive alt text" className="object-cover w-full h-full" />
+            <img
+              src={`${process.env.NEXT_PUBLIC_URL!}/hero-image.jpeg`}
+              alt="Descriptive alt text"
+              className="object-cover w-full h-full"
+            />
           </div>
         </div>
       </motion.div>

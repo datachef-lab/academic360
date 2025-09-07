@@ -12,38 +12,38 @@ const features = [
   {
     title: "Study Materials",
     description: "Access and download study materials and resources anytime.",
-    illustration: "/illustrations/notifications/class.svg",
+    illustration: `${process.env.NEXT_PUBLIC_URL!}/illustrations/notifications/class.svg`,
   },
   {
     title: "Exam Notifications",
     description: "Get real-time updates on upcoming exams and results.",
-    illustration: "/illustrations/notifications/assignment.svg",
+    illustration: `${process.env.NEXT_PUBLIC_URL!}/illustrations/notifications/assignment.svg`,
   },
   {
     title: "Library Management",
     description: "Search, borrow, and track library books easily.",
-    illustration: "/illustrations/profile/academic.svg",
+    illustration: `${process.env.NEXT_PUBLIC_URL!}/illustrations/profile/academic.svg`,
   },
   {
     title: "Attendance Tracking",
     description: "Track your attendance and mark presence digitally.",
-    illustration: "/illustrations/profile/address.svg",
+    illustration: `${process.env.NEXT_PUBLIC_URL!}/illustrations/profile/address.svg`,
   },
 ];
 
 const steps = [
   {
-    icon: "/illustrations/notifications/class.svg",
+    icon: `${process.env.NEXT_PUBLIC_URL!}/illustrations/notifications/class.svg`,
     title: "Register",
     desc: "Create your student account in a few easy steps.",
   },
   {
-    icon: "/illustrations/profile/background.svg",
+    icon: `${process.env.NEXT_PUBLIC_URL!}/illustrations/profile/background.svg`,
     title: "Apply",
     desc: "Fill out your admission form and upload documents.",
   },
   {
-    icon: "/illustrations/notifications/assignment.svg",
+    icon: `${process.env.NEXT_PUBLIC_URL!}/illustrations/notifications/assignment.svg`,
     title: "Track",
     desc: "Get updates on your application and student journey.",
   },
@@ -58,7 +58,7 @@ export default function Page() {
         <nav className="max-w-6xl mx-auto flex items-center justify-between py-3 px-6">
           <div className="flex items-center gap-3">
             <img
-              src="/besc-logo.jpeg"
+              src={`${process.env.NEXT_PUBLIC_URL!}/besc-logo.jpeg`}
               alt={COLLEGE_NAME}
               className="w-9 h-9 rounded-full border-2 border-purple-400 bg-white shadow"
             />
@@ -66,9 +66,15 @@ export default function Page() {
           </div>
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            <Link href="#features" className="text-gray-700 font-medium hover:text-purple-700 transition">Features</Link>
-            <Link href="#how" className="text-gray-700 font-medium hover:text-purple-700 transition">How it works</Link>
-            <Link href="/admissions" className="text-gray-700 font-medium hover:text-purple-700 transition">Admissions</Link>
+            <Link href="#features" className="text-gray-700 font-medium hover:text-purple-700 transition">
+              Features
+            </Link>
+            <Link href="#how" className="text-gray-700 font-medium hover:text-purple-700 transition">
+              How it works
+            </Link>
+            <Link href="/admissions" className="text-gray-700 font-medium hover:text-purple-700 transition">
+              Admissions
+            </Link>
             <Link
               href="/login"
               className="ml-2 px-5 py-1.5 rounded-full border-2 border-purple-500 text-purple-700 font-semibold bg-white shadow hover:bg-purple-50 hover:text-purple-900 transition"
@@ -82,7 +88,13 @@ export default function Page() {
             onClick={() => setMobileMenuOpen((v) => !v)}
             aria-label="Open menu"
           >
-            <svg className="w-7 h-7 text-purple-700" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg
+              className="w-7 h-7 text-purple-700"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
@@ -90,9 +102,27 @@ export default function Page() {
         {/* Mobile Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white/95 backdrop-blur border-b border-purple-100 shadow-lg px-6 py-4 flex flex-col gap-4 animate-fade-in z-40">
-            <Link href="#features" className="text-gray-700 font-medium hover:text-purple-700 transition" onClick={() => setMobileMenuOpen(false)}>Features</Link>
-            <Link href="#how" className="text-gray-700 font-medium hover:text-purple-700 transition" onClick={() => setMobileMenuOpen(false)}>How it works</Link>
-            <Link href="/admissions" className="text-gray-700 font-medium hover:text-purple-700 transition" onClick={() => setMobileMenuOpen(false)}>Admissions</Link>
+            <Link
+              href="#features"
+              className="text-gray-700 font-medium hover:text-purple-700 transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Features
+            </Link>
+            <Link
+              href="#how"
+              className="text-gray-700 font-medium hover:text-purple-700 transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              How it works
+            </Link>
+            <Link
+              href="/admissions"
+              className="text-gray-700 font-medium hover:text-purple-700 transition"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Admissions
+            </Link>
             <Link
               href="/login"
               className="px-5 py-2 rounded-full border-2 border-purple-500 text-purple-700 font-semibold bg-white shadow hover:bg-purple-50 hover:text-purple-900 transition"
@@ -114,10 +144,16 @@ export default function Page() {
           <div className="flex-1 flex flex-col items-center md:items-start justify-center text-center md:text-left gap-3 w-full break-words">
             <h1 className="w-full text-2xl xs:text-3xl sm:text-4xl md:text-5xl font-extrabold mb-1 text-gray-900 leading-tight break-words">
               <span>BESC </span>
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-purple-700">College</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-purple-700">
+                College
+              </span>
             </h1>
-            <h2 className="w-full text-base xs:text-lg sm:text-xl md:text-2xl font-semibold text-purple-600 mb-1 break-words">{COLLEGE_TAGLINE}</h2>
-            <p className="w-full text-sm xs:text-base sm:text-lg text-gray-700 mb-3 max-w-xl break-words">{COLLEGE_MISSION}</p>
+            <h2 className="w-full text-base xs:text-lg sm:text-xl md:text-2xl font-semibold text-purple-600 mb-1 break-words">
+              {COLLEGE_TAGLINE}
+            </h2>
+            <p className="w-full text-sm xs:text-base sm:text-lg text-gray-700 mb-3 max-w-xl break-words">
+              {COLLEGE_MISSION}
+            </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto justify-center md:justify-start">
               <Link
                 href="/admissions"
@@ -135,10 +171,10 @@ export default function Page() {
           </div>
           <div className="flex-1 flex items-center justify-center w-full md:w-auto mt-4 md:mt-0">
             <img
-              src="/illustrations/landing-page-illustration.png"
+              src={`${process.env.NEXT_PUBLIC_URL!}/illustrations/landing-page-illustration.png`}
               alt="Students Illustration"
               className="max-w-full h-auto w-40 xs:w-48 sm:w-64 md:w-full max-w-[220px] sm:max-w-xs md:max-w-md drop-shadow-2xl animate-float rounded-md mx-auto"
-              style={{ minHeight: 120, maxHeight: 220, objectFit: 'contain' }}
+              style={{ minHeight: 120, maxHeight: 220, objectFit: "contain" }}
             />
           </div>
         </div>
@@ -152,7 +188,10 @@ export default function Page() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 w-full flex flex-col items-center bg-gradient-to-b from-white via-purple-50 to-purple-100">
+      <section
+        id="features"
+        className="py-24 px-4 w-full flex flex-col items-center bg-gradient-to-b from-white via-purple-50 to-purple-100"
+      >
         <div className="max-w-6xl w-full mx-auto">
           <h2 className="text-3xl font-bold text-center mb-14 text-gray-900">Features</h2>
           <div className="grid md:grid-cols-4 gap-8 w-full">
@@ -176,12 +215,18 @@ export default function Page() {
       </section>
 
       {/* How it works Section */}
-      <section id="how" className="py-20 px-4 w-full flex flex-col items-center bg-gradient-to-b from-purple-100 via-white to-purple-50">
+      <section
+        id="how"
+        className="py-20 px-4 w-full flex flex-col items-center bg-gradient-to-b from-purple-100 via-white to-purple-50"
+      >
         <div className="max-w-5xl w-full mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12 text-purple-700">How it works</h2>
           <div className="flex flex-col md:flex-row items-center justify-between gap-8 w-full relative">
             {/* Timeline line */}
-            <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-purple-200 z-0" style={{ transform: 'translateY(-50%)' }} />
+            <div
+              className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-purple-200 z-0"
+              style={{ transform: "translateY(-50%)" }}
+            />
             {steps.map((step, idx) => (
               <motion.div
                 key={step.title}
@@ -206,27 +251,37 @@ export default function Page() {
       <footer className="w-full bg-gradient-to-r from-purple-800 to-purple-900 border-t border-purple-900 py-4">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-center gap-2 px-6">
           <div className="flex items-center gap-3">
-            <img src="/besc-logo.jpeg" alt={COLLEGE_NAME} className="w-7 h-7 rounded-full border border-purple-300 bg-white shadow" />
+            <img
+              src={`${process.env.NEXT_PUBLIC_URL!}/besc-logo.jpeg`}
+              alt={COLLEGE_NAME}
+              className="w-7 h-7 rounded-full border border-purple-300 bg-white shadow"
+            />
             <span className="text-base font-semibold text-white">{COLLEGE_NAME}</span>
             <div className="flex gap-2 ml-2">
               {/* Facebook SVG */}
               <a href="#" className="text-purple-300 hover:text-white" aria-label="Facebook">
-                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4"><path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0"/></svg>
+                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+                  <path d="M22.675 0h-21.35C.595 0 0 .592 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.797.143v3.24l-1.918.001c-1.504 0-1.797.715-1.797 1.763v2.313h3.587l-.467 3.622h-3.12V24h6.116C23.406 24 24 23.406 24 22.674V1.326C24 .592 23.406 0 22.675 0" />
+                </svg>
               </a>
               {/* Twitter SVG */}
               <a href="#" className="text-purple-300 hover:text-white" aria-label="Twitter">
-                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4"><path d="M24 4.557a9.83 9.83 0 0 1-2.828.775 4.932 4.932 0 0 0 2.165-2.724c-.951.564-2.005.974-3.127 1.195a4.916 4.916 0 0 0-8.38 4.482C7.691 8.095 4.066 6.13 1.64 3.161c-.542.938-.856 2.021-.857 3.17 0 2.188 1.115 4.116 2.823 5.247a4.904 4.904 0 0 1-2.229-.616c-.054 2.281 1.581 4.415 3.949 4.89a4.936 4.936 0 0 1-2.224.084c.627 1.956 2.444 3.377 4.6 3.417A9.867 9.867 0 0 1 0 21.543a13.94 13.94 0 0 0 7.548 2.209c9.142 0 14.307-7.721 13.995-14.646A9.936 9.936 0 0 0 24 4.557z"/></svg>
+                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+                  <path d="M24 4.557a9.83 9.83 0 0 1-2.828.775 4.932 4.932 0 0 0 2.165-2.724c-.951.564-2.005.974-3.127 1.195a4.916 4.916 0 0 0-8.38 4.482C7.691 8.095 4.066 6.13 1.64 3.161c-.542.938-.856 2.021-.857 3.17 0 2.188 1.115 4.116 2.823 5.247a4.904 4.904 0 0 1-2.229-.616c-.054 2.281 1.581 4.415 3.949 4.89a4.936 4.936 0 0 1-2.224.084c.627 1.956 2.444 3.377 4.6 3.417A9.867 9.867 0 0 1 0 21.543a13.94 13.94 0 0 0 7.548 2.209c9.142 0 14.307-7.721 13.995-14.646A9.936 9.936 0 0 0 24 4.557z" />
+                </svg>
               </a>
               {/* LinkedIn SVG */}
               <a href="#" className="text-purple-300 hover:text-white" aria-label="LinkedIn">
-                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11.75 20h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.784-1.75-1.75s.784-1.75 1.75-1.75 1.75.784 1.75 1.75-.784 1.75-1.75 1.75zm15.25 11.268h-3v-5.604c0-1.337-.025-3.063-1.868-3.063-1.868 0-2.154 1.459-2.154 2.967v5.7h-3v-10h2.881v1.367h.041c.401-.761 1.381-1.563 2.841-1.563 3.039 0 3.6 2.001 3.6 4.599v5.597z"/></svg>
+                <svg fill="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11.75 20h-3v-10h3v10zm-1.5-11.268c-.966 0-1.75-.784-1.75-1.75s.784-1.75 1.75-1.75 1.75.784 1.75 1.75-.784 1.75-1.75 1.75zm15.25 11.268h-3v-5.604c0-1.337-.025-3.063-1.868-3.063-1.868 0-2.154 1.459-2.154 2.967v5.7h-3v-10h2.881v1.367h.041c.401-.761 1.381-1.563 2.841-1.563 3.039 0 3.6 2.001 3.6 4.599v5.597z" />
+                </svg>
               </a>
             </div>
           </div>
           {/* <div className="flex flex-col md:items-end items-center gap-1">
             <div className="flex items-center gap-1 text-purple-200 text-sm">
               <span>Powered by</span>
-              <img src="/datachef-logo.svg" alt="DataChef" className="w-6 h-6 rounded-full bg-white border border-purple-300" />
+            <img src={`${process.env.NEXT_PUBLIC_URL!}/datachef-logo.svg`} alt="DataChef" className="w-6 h-6 rounded-full bg-white border border-purple-300" />
               <span className="font-bold text-white">DataChef</span>
             </div>
           </div> */}

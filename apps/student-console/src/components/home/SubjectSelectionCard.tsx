@@ -21,7 +21,7 @@ export default function SubjectSelectionCard() {
         <div
           className="w-1/2 bg-gradient-to-br flex items-center justify-center relative"
           style={{
-            backgroundImage: "url(/illustrations/subject-selection-illustration.png)",
+            backgroundImage: `url(${process.env.NEXT_PUBLIC_URL!}/illustrations/subject-selection-illustration.png)`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",

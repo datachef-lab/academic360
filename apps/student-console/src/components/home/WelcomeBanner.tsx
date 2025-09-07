@@ -30,7 +30,7 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
 
       <div className="absolute right-0 bottom-0 top-0 -mr-10 md:mr-0 z-0 hidden sm:flex items-center justify-center">
         <Image
-          src="/illustrations/welcome-illustration-male.png"
+          src={`${process.env.NEXT_PUBLIC_URL!}/illustrations/welcome-illustration-male.png`}
           alt="Welcome Illustration"
           width={320}
           height={220}
