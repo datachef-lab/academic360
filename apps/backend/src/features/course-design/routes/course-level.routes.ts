@@ -14,7 +14,11 @@ const router = Router();
 
 // CourseLevel routes
 router.post("/", createCourseLevel as RequestHandler);
-router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadCourseLevels as RequestHandler);
+router.post(
+  "/bulk-upload",
+  uploadExcelMiddleware,
+  bulkUploadCourseLevels as RequestHandler,
+);
 router.get("/", getAllCourseLevels as RequestHandler);
 router.get("/:id", getCourseLevelById as RequestHandler);
 router.put("/:id", updateCourseLevel as RequestHandler);

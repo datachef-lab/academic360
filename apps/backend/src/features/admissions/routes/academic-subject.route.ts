@@ -5,7 +5,7 @@ import {
   getAcademicSubjectByIdHandler,
   getAllAcademicSubjectsHandler,
   updateAcademicSubjectHandler,
-  deleteAcademicSubjectHandler
+  deleteAcademicSubjectHandler,
 } from "../controllers/academic-subject.controller.js";
 
 const router = express.Router();
@@ -18,4 +18,4 @@ router.get("/", getAllAcademicSubjectsHandler);
 router.put("/:id", updateAcademicSubjectHandler);
 router.delete("/:id", deleteAcademicSubjectHandler);
 
-export default router; 
+export default router;

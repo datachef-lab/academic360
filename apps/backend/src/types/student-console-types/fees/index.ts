@@ -10,17 +10,22 @@ import { Instalment } from "@repo/db/schemas/models/fees";
 import { StudentFeesMapping } from "@repo/db/schemas/models/fees";
 import { CourseDto } from "@/types/course-design/index.type";
 
-export interface FeesStructureDto extends Omit<FeesStructure, "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"> {
-    shift?: Shift;
-    academicYear: AcademicYear;
-    course: CourseDto;
-    class: Class
-    advanceForCourse: CourseDto | null;
-    components: FeesComponent[];
-    feesSlabMappings: FeesSlabMapping[];
-    instalments: Instalment[];
+export interface FeesStructureDto
+  extends Omit<
+    FeesStructure,
+    "academicYearId" | "classId" | "courseId" | "shiftId" | "advanceForCourseId"
+  > {
+  shift?: Shift;
+  academicYear: AcademicYear;
+  course: CourseDto;
+  class: Class;
+  advanceForCourse: CourseDto | null;
+  components: FeesComponent[];
+  feesSlabMappings: FeesSlabMapping[];
+  instalments: Instalment[];
 }
 
-export interface StudentMappingDto extends Omit<StudentFeesMapping, "feesStructureId"> {
-    feesStructure: FeesStructureDto;
+export interface StudentMappingDto
+  extends Omit<StudentFeesMapping, "feesStructureId"> {
+  feesStructure: FeesStructureDto;
 }

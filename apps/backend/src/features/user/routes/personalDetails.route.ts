@@ -1,4 +1,9 @@
-import express, { Request, Response, NextFunction, RequestHandler } from "express";
+import express, {
+  Request,
+  Response,
+  NextFunction,
+  RequestHandler,
+} from "express";
 import {
   createPersonalDetails,
   getPersonalDetailsById,
@@ -7,9 +12,9 @@ import {
   updatePersonalDetailsByStudentId,
   deletePersonalDetailsById,
   deletePersonalDetailsByStudentId,
-  getAllPersonalDetailsController
+  getAllPersonalDetailsController,
 } from "../controllers/personalDetails.controller.js";
-import { verifyJWT } from "@/middlewares/verifyJWT.js"; 
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 
@@ -17,10 +22,8 @@ const router = express.Router();
 function asyncHandler<
   Req extends Request = Request,
   Res extends Response = Response,
-  Next extends NextFunction = NextFunction
->(
-  fn: (req: Req, res: Res, next: Next) => Promise<void>
-): RequestHandler {
+  Next extends NextFunction = NextFunction,
+>(fn: (req: Req, res: Res, next: Next) => Promise<void>): RequestHandler {
   return (req, res, next) => {
     fn(req as Req, res as Res, next as Next).catch(next);
   };
@@ -34,9 +37,15 @@ router.post("/", asyncHandler(createPersonalDetails));
 
 router.get("/student/:studentId", asyncHandler(getPersonalDetailsByStudentId));
 
-router.put("/student/:studentId", asyncHandler(updatePersonalDetailsByStudentId));
+router.put(
+  "/student/:studentId",
+  asyncHandler(updatePersonalDetailsByStudentId),
+);
 
-router.delete("/student/:studentId", asyncHandler(deletePersonalDetailsByStudentId));
+router.delete(
+  "/student/:studentId",
+  asyncHandler(deletePersonalDetailsByStudentId),
+);
 
 router.get("/:id", asyncHandler(getPersonalDetailsById));
 

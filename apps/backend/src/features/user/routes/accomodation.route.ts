@@ -7,7 +7,7 @@ import {
   updateAccommodation,
   deleteAccommodation,
   deleteAccommodationByStudentId,
-  getAllAccommodationsController
+  getAllAccommodationsController,
 } from "../controllers/accommodation.controller.js";
 
 const router = express.Router();

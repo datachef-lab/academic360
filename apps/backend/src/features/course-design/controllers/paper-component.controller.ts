@@ -15,7 +15,8 @@ export const createPaperComponent = async (req: Request, res: Response) => {
     });
     res.status(201).json(newPaperComponent);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(400).json({ error: errorMessage });
   }
 };
@@ -25,7 +26,8 @@ export const getAllPaperComponents = async (_req: Request, res: Response) => {
     const allPaperComponents = await getAllPaperComponentsService();
     res.json(allPaperComponents);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });
   }
 };
@@ -38,24 +40,29 @@ export const getPaperComponentById = async (req: Request, res: Response) => {
     }
     res.json(paperComponent);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });
   }
 };
 
 export const updatePaperComponent = async (req: Request, res: Response) => {
   try {
-    const updatedPaperComponent = await updatePaperComponentService(req.params.id, {
-      ...req.body,
-      paperId: req.body.paperId,
-    });
+    const updatedPaperComponent = await updatePaperComponentService(
+      req.params.id,
+      {
+        ...req.body,
+        paperId: req.body.paperId,
+      },
+    );
     if (!updatedPaperComponent) {
       res.status(404).json({ error: "Paper Component not found" });
       return;
     }
     res.json(updatedPaperComponent);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(400).json({ error: errorMessage });
   }
 };
@@ -69,7 +76,8 @@ export const deletePaperComponent = async (req: Request, res: Response) => {
     }
     res.json(result);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ error: errorMessage });
   }
 };

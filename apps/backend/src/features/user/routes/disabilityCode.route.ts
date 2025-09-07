@@ -11,13 +11,12 @@ const router = Router();
 
 // Utility to wrap async route handlers
 function asyncHandler(
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<any>,
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
     fn(req, res, next).catch(next);
   };
 }
-
 
 router.post("/", asyncHandler(createDisabilityCodeHandler));
 

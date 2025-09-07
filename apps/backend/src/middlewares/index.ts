@@ -4,10 +4,4 @@ import { loginLimiter } from "./loginLimiter.middleware.js";
 import { validateData } from "./validation.middleware.js";
 import { verifyJWT } from "./verifyJWT.js";
 
-export {
-    errorHandler,
-    logger,
-    loginLimiter,
-    validateData,
-    verifyJWT,
-}
+export { errorHandler, logger, loginLimiter, validateData, verifyJWT };

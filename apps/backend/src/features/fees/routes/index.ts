@@ -13,4 +13,4 @@ router.use("/components", feesComponentRouter);
 router.use("/slabs", feesSlabRouter);
 router.use("/instalments", instalmentRouter);
 
-export default router; 
+export default router;

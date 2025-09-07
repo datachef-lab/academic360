@@ -1,10 +1,10 @@
 import express from "express";
 import {
-    createBoardUniversity,
-    getAllBoardUniversity,
-    getBoardUniversityById,
-    deleteBoardUniversity,
-    updateBoardUniversity,
+  createBoardUniversity,
+  getAllBoardUniversity,
+  getBoardUniversityById,
+  deleteBoardUniversity,
+  updateBoardUniversity,
 } from "@/features/resources/controllers/boardUniversity.controller.js";
 
 const router = express.Router();

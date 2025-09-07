@@ -6,10 +6,10 @@ import { handleError } from "./handleError.js";
 import { verifyToken } from "./verifyToken.js";
 
 export {
-    ApiResponse,
-    ApiError,
-    formatAadhaarCardNumber,
-    generateToken,
-    handleError,
-    verifyToken
-}
+  ApiResponse,
+  ApiError,
+  formatAadhaarCardNumber,
+  generateToken,
+  handleError,
+  verifyToken,
+};

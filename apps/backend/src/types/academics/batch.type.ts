@@ -15,7 +15,6 @@ import { Section } from "@repo/db/schemas/models/academics";
 import { Shift } from "@repo/db/schemas/models/academics";
 import { Session } from "@repo/db/schemas/models/academics";
 
-
 // export interface BatchType extends Omit<Batch, "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"> {
 //     course: CourseType | null;
 //     academicClass: Class | null;
@@ -65,10 +64,14 @@ import { Session } from "@repo/db/schemas/models/academics";
 //     programmeType: typeof programmeTypeEnum.enumValues[number];
 // }
 
-export interface BatchDto extends Omit<Batch, "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"> {
-    course: CourseDto;
-    class: Class;
-    section: Section;
-    shift: Shift;
-    session: Session;
+export interface BatchDto
+  extends Omit<
+    Batch,
+    "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"
+  > {
+  course: CourseDto;
+  class: Class;
+  section: Section;
+  shift: Shift;
+  session: Session;
 }

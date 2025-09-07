@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { 
-    getFeesStructuresHandler, 
-    getFeesStructureByIdHandler, 
-    createFeesStructureHandler, 
-    updateFeesStructureHandler, 
-    deleteFeesStructureHandler,
-    getAcademicYearsFromFeesStructuresHandler,
-    getCoursesFromFeesStructuresHandler,
-    getFeesStructuresByAcademicYearIdAndCourseIdHandler,
-    checkFeesStructureExistsHandler
+import {
+  getFeesStructuresHandler,
+  getFeesStructureByIdHandler,
+  createFeesStructureHandler,
+  updateFeesStructureHandler,
+  deleteFeesStructureHandler,
+  getAcademicYearsFromFeesStructuresHandler,
+  getCoursesFromFeesStructuresHandler,
+  getFeesStructuresByAcademicYearIdAndCourseIdHandler,
+  checkFeesStructureExistsHandler,
 } from "../controllers/fees-structure.controller.js";
 
 const feesStructureRouter = Router();
@@ -21,9 +21,18 @@ feesStructureRouter.put("/:id", updateFeesStructureHandler);
 feesStructureRouter.delete("/:id", deleteFeesStructureHandler);
 
 // Additional routes
-feesStructureRouter.get("/academic-years/all", getAcademicYearsFromFeesStructuresHandler);
-feesStructureRouter.get("/courses/:academicYearId", getCoursesFromFeesStructuresHandler);
-feesStructureRouter.get("/by-academic-year-and-course/:academicYearId/:courseId", getFeesStructuresByAcademicYearIdAndCourseIdHandler);
+feesStructureRouter.get(
+  "/academic-years/all",
+  getAcademicYearsFromFeesStructuresHandler,
+);
+feesStructureRouter.get(
+  "/courses/:academicYearId",
+  getCoursesFromFeesStructuresHandler,
+);
+feesStructureRouter.get(
+  "/by-academic-year-and-course/:academicYearId/:courseId",
+  getFeesStructuresByAcademicYearIdAndCourseIdHandler,
+);
 // feesStructureRouter.get("/design-abstract-level", getFeesDesignAbstractLevelHandler);
 feesStructureRouter.post("/exists", checkFeesStructureExistsHandler);
 

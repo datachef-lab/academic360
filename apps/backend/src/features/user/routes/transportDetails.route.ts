@@ -7,7 +7,7 @@ import {
   updateTransportDetailsController,
   deleteTransportDetails,
   deleteTransportDetailsByStudentId,
-  getAllTransportDetailsController
+  getAllTransportDetailsController,
 } from "../controllers/transportDetails.controller.js";
 
 const router = express.Router();

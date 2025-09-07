@@ -9,4 +9,4 @@ export { default as admissionCourseApplicationRouter } from "./routes/admission-
 export { default as sportsCategoryRouter } from "./routes/sports-category.route.js";
 export { default as sportsInfoRouter } from "./routes/sports-info.route.js";
 export { default as studentAcademicSubjectRouter } from "./routes/student-academic-subject.route.js";
-export { default as academicSubjectRouter } from "./routes/academic-subject.route.js"; 
+export { default as academicSubjectRouter } from "./routes/academic-subject.route.js";

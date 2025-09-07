@@ -1,11 +1,11 @@
 import express from "express";
-import { 
-    getAllAnnualIncomes, 
-    getAnnualIncomeById,
-    createAnnualIncomeController, 
-    updateAnnualIncomeController, 
-    deleteAnnualIncomeController,
-    UpdateAnnualIncome // Legacy function for backward compatibility
+import {
+  getAllAnnualIncomes,
+  getAnnualIncomeById,
+  createAnnualIncomeController,
+  updateAnnualIncomeController,
+  deleteAnnualIncomeController,
+  UpdateAnnualIncome, // Legacy function for backward compatibility
 } from "@/features/resources/controllers/annualIncome.controller.js";
 
 const router = express.Router();

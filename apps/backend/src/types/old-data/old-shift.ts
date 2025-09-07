@@ -1,5 +1,5 @@
 export interface OldShift {
-    readonly id?: number;
-    shiftName: string;
-    codeprefix: string;
+  readonly id?: number;
+  shiftName: string;
+  codeprefix: string;
 }

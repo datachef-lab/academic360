@@ -1,11 +1,11 @@
 import express from "express";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
-import { 
-    createDegree, 
-    deleteDegree, 
-    getAllDegree, 
-    getDegreeById,
-    updateDegree 
+import {
+  createDegree,
+  deleteDegree,
+  getAllDegree,
+  getDegreeById,
+  updateDegree,
 } from "@/features/resources/controllers/degree.controller.js";
 
 const router = express.Router();
@@ -29,4 +29,3 @@ router.put("/:id", updateDegree);
 router.delete("/:id", deleteDegree);
 
 export default router;
-    

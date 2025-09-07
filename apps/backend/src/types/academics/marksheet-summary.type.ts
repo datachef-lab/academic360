@@ -14,5 +14,4 @@ export interface MarksheetSummary {
   percentage: number;
   classification: string | null;
   remarks: string | null;
-
 }

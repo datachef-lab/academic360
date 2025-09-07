@@ -31,7 +31,6 @@
 
 //         res.status(200).json(new ApiResponse(200, "SUCCESS", foundAdmission, "Fetched Admission successfully!"));
 
-
 //     } catch (error) {
 //         handleError(error, res, next);
 //     }
@@ -55,7 +54,7 @@
 //         const { id } = req.query;
 
 //         const updatedAdmission = await saveAdmission(Number(id), req.body as Admission);
-        
+
 //         if (!updatedAdmission) {
 //             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Admission not found"));
 //         }

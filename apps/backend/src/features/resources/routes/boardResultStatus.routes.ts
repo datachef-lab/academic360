@@ -1,10 +1,10 @@
 import express from "express";
-import { 
-    createBoardResultStatus, 
-    getAllBoardResultStatuses,
-    getBoardResultStatusById, 
-    updateBoardResultStatus,
-    deleteBoardResultStatus
+import {
+  createBoardResultStatus,
+  getAllBoardResultStatuses,
+  getBoardResultStatusById,
+  updateBoardResultStatus,
+  deleteBoardResultStatus,
 } from "../controllers/boardResultStatus.controller.js";
 
 const router = express.Router();

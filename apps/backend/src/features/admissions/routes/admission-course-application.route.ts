@@ -5,7 +5,7 @@ import {
   getAdmissionCourseApplicationByIdHandler,
   getAdmissionCourseApplicationsByApplicationFormIdHandler,
   updateAdmissionCourseApplicationHandler,
-  deleteAdmissionCourseApplicationHandler
+  deleteAdmissionCourseApplicationHandler,
 } from "../controllers/admission-course-application.controller.js";
 
 const router = express.Router();
@@ -14,8 +14,11 @@ router.use(verifyJWT);
 
 router.post("/", createAdmissionCourseApplicationHandler);
 router.get("/:id", getAdmissionCourseApplicationByIdHandler);
-router.get("/application-form/:applicationFormId", getAdmissionCourseApplicationsByApplicationFormIdHandler);
+router.get(
+  "/application-form/:applicationFormId",
+  getAdmissionCourseApplicationsByApplicationFormIdHandler,
+);
 router.put("/:id", updateAdmissionCourseApplicationHandler);
 router.delete("/:id", deleteAdmissionCourseApplicationHandler);
 
-export default router; 
+export default router;

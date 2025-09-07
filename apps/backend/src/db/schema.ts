@@ -6,12 +6,12 @@ import { fileURLToPath } from "url";
 export * from "@repo/db/schemas/index";
 
 export default defineConfig({
-    out: "./drizzle",
-    schema: "./src/db/schema.ts",
-    dialect: "postgresql",
-    dbCredentials: {
-        url: process.env.DATABASE_URL!,
-    },
+  out: "./drizzle",
+  schema: "./src/db/schema.ts",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: process.env.DATABASE_URL!,
+  },
 });
 
 // const directoryName = path.dirname(fileURLToPath(import.meta.url));

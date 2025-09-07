@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { getFeesHeadsHandler, getFeesHeadByIdHandler, createFeesHeadHandler, updateFeesHeadHandler, deleteFeesHeadHandler } from "../controllers/fees-head.controller.js";
+import {
+  getFeesHeadsHandler,
+  getFeesHeadByIdHandler,
+  createFeesHeadHandler,
+  updateFeesHeadHandler,
+  deleteFeesHeadHandler,
+} from "../controllers/fees-head.controller.js";
 
 const feesHeadRouter = Router();
 

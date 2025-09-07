@@ -5,7 +5,6 @@
 // import { Degree } from "@/features/resources/models/degree.model";
 // import { Specialization } from "@/features/course-design/models/specialization.model";
 
-
 // export interface CourseDto extends Omit<Course, "degreeId"> {
 //     degree: Degree;
 // }

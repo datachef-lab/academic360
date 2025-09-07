@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { getFeesReceiptTypesHandler, getFeesReceiptTypeByIdHandler, createFeesReceiptTypeHandler, updateFeesReceiptTypeHandler, deleteFeesReceiptTypeHandler } from "../controllers/fees-receipt-type.controller.js";
+import {
+  getFeesReceiptTypesHandler,
+  getFeesReceiptTypeByIdHandler,
+  createFeesReceiptTypeHandler,
+  updateFeesReceiptTypeHandler,
+  deleteFeesReceiptTypeHandler,
+} from "../controllers/fees-receipt-type.controller.js";
 
 const feesReceiptTypeRouter = Router();
 

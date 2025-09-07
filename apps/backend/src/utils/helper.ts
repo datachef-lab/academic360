@@ -11,87 +11,87 @@ import { PaginatedResponse } from "./PaginatedResponse.js";
 // import { findSubjectMetdataById } from "@/features/academics/services/subjectMetadata.service.js";
 import { Degree } from "@/features/resources/models/degree.model.js";
 import {
-    findSemesterNumberbyClassId,
-    processClassBySemesterNumber,
+  findSemesterNumberbyClassId,
+  processClassBySemesterNumber,
 } from "@/features/academics/services/class.service.js";
 // import { StreamType } from "@/types/academics/stream.js";
 
 export async function findAll<T>(
-    model: PgTable,
-    page: number = 1,
-    pageSize: number = 10000,
-    orderByColumn: string = "id",
-    whereCondition?: SQL,
+  model: PgTable,
+  page: number = 1,
+  pageSize: number = 10000,
+  orderByColumn: string = "id",
+  whereCondition?: SQL,
 ): Promise<PaginatedResponse<T>> {
-    const offset = (page - 1) * pageSize;
+  const offset = (page - 1) * pageSize;
 
-    let query = db.select().from(model);
+  let query = db.select().from(model);
 
-    if (whereCondition) {
-        query = (query as any).where(whereCondition);
-    }
+  if (whereCondition) {
+    query = (query as any).where(whereCondition);
+  }
 
-    const dataArr = await query
-        .limit(pageSize)
-        .offset(offset)
-        .orderBy(desc(model[orderByColumn as keyof typeof model] as AnyColumn));
+  const dataArr = await query
+    .limit(pageSize)
+    .offset(offset)
+    .orderBy(desc(model[orderByColumn as keyof typeof model] as AnyColumn));
 
-    const countQuery = db.select({ count: count() }).from(model);
+  const countQuery = db.select({ count: count() }).from(model);
 
-    if (dataArr.length === 0) {
-        return {
-            content: [],
-            page: page,
-            pageSize,
-            totalElements: 0,
-            totalPages: 0,
-        };
-    }
-
-    const [{ count: countRows }] = whereCondition
-        ? await countQuery.where(whereCondition)
-        : await countQuery;
-
+  if (dataArr.length === 0) {
     return {
-        content: dataArr as T[],
-        page: page,
-        pageSize,
-        totalElements: Number(countRows),
-        totalPages: Math.ceil(Number(countRows) / pageSize),
+      content: [],
+      page: page,
+      pageSize,
+      totalElements: 0,
+      totalPages: 0,
     };
+  }
+
+  const [{ count: countRows }] = whereCondition
+    ? await countQuery.where(whereCondition)
+    : await countQuery;
+
+  return {
+    content: dataArr as T[],
+    page: page,
+    pageSize,
+    totalElements: Number(countRows),
+    totalPages: Math.ceil(Number(countRows) / pageSize),
+  };
 }
 
 interface FindAllByFormattedProps<T, K> {
-    model: PgTable;
-    fn: (ele: T) => Promise<K | null>;
-    page?: number;
-    pageSize?: number;
-    orderByColumn?: string;
+  model: PgTable;
+  fn: (ele: T) => Promise<K | null>;
+  page?: number;
+  pageSize?: number;
+  orderByColumn?: string;
 }
 
 export async function findAllByFormatted<T, K>({
-    model,
-    fn,
-    page = 1,
-    pageSize = 10,
-    orderByColumn = "id",
+  model,
+  fn,
+  page = 1,
+  pageSize = 10,
+  orderByColumn = "id",
 }: FindAllByFormattedProps<T, K>): Promise<PaginatedResponse<K>> {
-    const arrResponse = await findAll<T>(model, page, pageSize, orderByColumn);
+  const arrResponse = await findAll<T>(model, page, pageSize, orderByColumn);
 
-    // Await Promise.all to resolve async operations
-    const content = (await Promise.all(
-        arrResponse.content.map(async (ele) => {
-            return await fn(ele);
-        }),
-    )) as K[];
+  // Await Promise.all to resolve async operations
+  const content = (await Promise.all(
+    arrResponse.content.map(async (ele) => {
+      return await fn(ele);
+    }),
+  )) as K[];
 
-    return {
-        content,
-        page: arrResponse.page,
-        pageSize: arrResponse.pageSize,
-        totalElements: arrResponse.totalElements,
-        totalPages: arrResponse.totalPages,
-    };
+  return {
+    content,
+    page: arrResponse.page,
+    pageSize: arrResponse.pageSize,
+    totalElements: arrResponse.totalElements,
+    totalPages: arrResponse.totalPages,
+  };
 }
 
 // export async function getLetterGrade(subject: Subject) {

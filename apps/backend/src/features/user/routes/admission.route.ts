@@ -5,5 +5,4 @@
 
 // router.use(verifyJWT);
 
-
 // export default router;

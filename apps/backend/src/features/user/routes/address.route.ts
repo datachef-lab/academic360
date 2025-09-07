@@ -1,11 +1,11 @@
 import express from "express";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
-    createAddress,
-    getAddressById,
-    getAllAddress,
-    updateAddress,
-    deleteAddress
+  createAddress,
+  getAddressById,
+  getAllAddress,
+  updateAddress,
+  deleteAddress,
 } from "../controllers/address.controller.js";
 
 const router = express.Router();

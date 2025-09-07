@@ -1,5 +1,5 @@
-import { Request, Response } from 'express';
-import * as shiftService from '../services/shift.service.js';
+import { Request, Response } from "express";
+import * as shiftService from "../services/shift.service.js";
 
 export const getAllShifts = async (req: Request, res: Response) => {
   const shifts = await shiftService.getAllShifts();
@@ -8,7 +8,10 @@ export const getAllShifts = async (req: Request, res: Response) => {
 
 export const getShiftById = async (req: Request, res: Response) => {
   const shift = await shiftService.findById(Number(req.params.id));
-  if (!shift) {res.status(404).json({ message: 'Shift not found' }); return };
+  if (!shift) {
+    res.status(404).json({ message: "Shift not found" });
+    return;
+  }
   res.json(shift);
 };
 
@@ -18,17 +21,22 @@ export const createShift = async (req: Request, res: Response) => {
 };
 
 export const updateShift = async (req: Request, res: Response) => {
-  const updated = await shiftService.updateShift(Number(req.params.id), req.body);
-  if (!updated) {res.status(404).json({ message: 'Shift not found' });
-  return 
-}
+  const updated = await shiftService.updateShift(
+    Number(req.params.id),
+    req.body,
+  );
+  if (!updated) {
+    res.status(404).json({ message: "Shift not found" });
+    return;
+  }
   res.json(updated);
 };
 
 export const deleteShift = async (req: Request, res: Response) => {
   const deleted = await shiftService.deleteShift(Number(req.params.id));
-  if (!deleted) {res.status(404).json({ message: 'Shift not found' });
-  return ;
-}
+  if (!deleted) {
+    res.status(404).json({ message: "Shift not found" });
+    return;
+  }
   res.status(204).send();
 };

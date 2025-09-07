@@ -5,7 +5,7 @@ import {
   getSportsCategoryByIdHandler,
   getAllSportsCategoriesHandler,
   updateSportsCategoryHandler,
-  deleteSportsCategoryHandler
+  deleteSportsCategoryHandler,
 } from "../controllers/sports-category.controller.js";
 
 const router = express.Router();
@@ -18,4 +18,4 @@ router.get("/", getAllSportsCategoriesHandler);
 router.put("/:id", updateSportsCategoryHandler);
 router.delete("/:id", deleteSportsCategoryHandler);
 
-export default router; 
+export default router;

@@ -18,12 +18,15 @@ export async function getAcademicYearsByAffiliation(affiliationId: number) {
         isActive: academicYearModel.isCurrentYear,
       })
       .from(academicYearModel)
-      .innerJoin(paperModel, eq(paperModel.academicYearId, academicYearModel.id))
+      .innerJoin(
+        paperModel,
+        eq(paperModel.academicYearId, academicYearModel.id),
+      )
       .where(eq(paperModel.affiliationId, affiliationId));
 
     return academicYears;
   } catch (error) {
-    console.error('Error getting academic years by affiliation:', error);
+    console.error("Error getting academic years by affiliation:", error);
     throw error;
   }
 }
@@ -31,7 +34,7 @@ export async function getAcademicYearsByAffiliation(affiliationId: number) {
 // Get regulation types based on affiliation and academic year
 export async function getRegulationTypesByAffiliationAndAcademicYear(
   affiliationId: number,
-  academicYearId: number
+  academicYearId: number,
 ) {
   try {
     // Get unique regulation types that have papers for this affiliation and academic year
@@ -42,17 +45,23 @@ export async function getRegulationTypesByAffiliationAndAcademicYear(
         code: regulationTypeModel.shortName,
       })
       .from(regulationTypeModel)
-      .innerJoin(paperModel, eq(paperModel.regulationTypeId, regulationTypeModel.id))
+      .innerJoin(
+        paperModel,
+        eq(paperModel.regulationTypeId, regulationTypeModel.id),
+      )
       .where(
         and(
           eq(paperModel.affiliationId, affiliationId),
-          eq(paperModel.academicYearId, academicYearId)
-        )
+          eq(paperModel.academicYearId, academicYearId),
+        ),
       );
 
     return regulationTypes;
   } catch (error) {
-    console.error('Error getting regulation types by affiliation and academic year:', error);
+    console.error(
+      "Error getting regulation types by affiliation and academic year:",
+      error,
+    );
     throw error;
   }
 }
@@ -61,7 +70,7 @@ export async function getRegulationTypesByAffiliationAndAcademicYear(
 export async function getSubjectsByAffiliationAcademicYearAndRegulation(
   affiliationId: number,
   academicYearId: number,
-  regulationTypeId: number
+  regulationTypeId: number,
 ) {
   try {
     // Get unique subjects that have papers for this combination
@@ -78,13 +87,16 @@ export async function getSubjectsByAffiliationAcademicYearAndRegulation(
         and(
           eq(paperModel.affiliationId, affiliationId),
           eq(paperModel.academicYearId, academicYearId),
-          eq(paperModel.regulationTypeId, regulationTypeId)
-        )
+          eq(paperModel.regulationTypeId, regulationTypeId),
+        ),
       );
 
     return subjects;
   } catch (error) {
-    console.error('Error getting subjects by affiliation, academic year, and regulation:', error);
+    console.error(
+      "Error getting subjects by affiliation, academic year, and regulation:",
+      error,
+    );
     throw error;
   }
 }
@@ -104,7 +116,7 @@ export async function getAvailableAffiliations() {
 
     return affiliations;
   } catch (error) {
-    console.error('Error getting available affiliations:', error);
+    console.error("Error getting available affiliations:", error);
     throw error;
   }
-} 
+}

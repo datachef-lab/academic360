@@ -33,7 +33,10 @@ export async function createDisabilityCodeHandler(req: Request, res: Response) {
 /**
  * Handler to get all disability codes.
  */
-export async function getAllDisabilityCodesHandler(req: Request, res: Response) {
+export async function getAllDisabilityCodesHandler(
+  req: Request,
+  res: Response,
+) {
   try {
     const codes = await getAllDisabilityCodes();
     return res.status(200).json({ success: true, payload: codes });
@@ -49,7 +52,10 @@ export async function getAllDisabilityCodesHandler(req: Request, res: Response) 
 /**
  * Handler to get a disability code by ID.
  */
-export async function getDisabilityCodeByIdHandler(req: Request, res: Response) {
+export async function getDisabilityCodeByIdHandler(
+  req: Request,
+  res: Response,
+) {
   try {
     const { id } = idParamSchema.parse(req.params);
     const code = await getDisabilityCodeById(id);

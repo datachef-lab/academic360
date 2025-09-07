@@ -1,18 +1,18 @@
 import express from "express";
 
 import {
-    createReligion,
-    deleteReligionRecord,
-    getAllReligion,
-    getReligionById,
-    updateReligionRecord,
+  createReligion,
+  deleteReligionRecord,
+  getAllReligion,
+  getReligionById,
+  updateReligionRecord,
 } from "@/features/resources/controllers/religion.controller.js";
 
 const router = express.Router();
 
 /**
  * Religion Routes
- * 
+ *
  * POST   /                    - Create a new religion
  * GET    /                    - Get all religions
  * GET    /:id                 - Get religion by ID

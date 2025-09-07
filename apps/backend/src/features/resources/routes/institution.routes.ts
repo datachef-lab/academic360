@@ -1,10 +1,10 @@
 import express from "express";
-import { 
-    createNewInstitution, 
-    deleteInstitutions, 
-    getAllInstitution, 
-    getInstitutionById, 
-    updateInstitution 
+import {
+  createNewInstitution,
+  deleteInstitutions,
+  getAllInstitution,
+  getInstitutionById,
+  updateInstitution,
 } from "@/features/resources/controllers/institution.controller.js";
 
 const router = express.Router();

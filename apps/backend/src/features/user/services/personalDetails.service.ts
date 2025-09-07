@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { db } from "@/db/index.js";
-import { PersonalDetails, personalDetailsModel, createPersonalDetailsSchema } from "@repo/db/schemas/models/user";
+import {
+  PersonalDetails,
+  personalDetailsModel,
+  createPersonalDetailsSchema,
+} from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { PersonalDetailsType } from "@/types/user/personal-details.js";
 import { addAddress, findAddressById, saveAddress } from "./address.service.js";
@@ -12,245 +16,297 @@ import { findCategoryById } from "@/features/resources/services/category.service
 
 // Validate input using Zod schema
 function validatePersonalDetailsInput(data: any) {
-    const parseResult = createPersonalDetailsSchema.safeParse(data);
-    if (!parseResult.success) {
-        const error = new Error("Validation failed: " + JSON.stringify(parseResult.error.issues));
-        // @ts-ignore
-        error.status = 400;
-        throw error;
+  const parseResult = createPersonalDetailsSchema.safeParse(data);
+  if (!parseResult.success) {
+    const error = new Error(
+      "Validation failed: " + JSON.stringify(parseResult.error.issues),
+    );
+    // @ts-ignore
+    error.status = 400;
+    throw error;
+  }
+  return parseResult.data;
+}
+
+export async function addPersonalDetails(
+  personalDetails: PersonalDetailsType,
+): Promise<PersonalDetailsType | null> {
+  // let {
+  //     category,
+  //     disabilityCode,
+  //     mailingAddress,
+  //     residentialAddress,
+  //     motherTongue,
+  //     nationality,
+  //     otherNationality,
+  //     religion,
+  //     ...props
+  // } = personalDetails;
+
+  // // Validate input (excluding nested objects)
+  // validatePersonalDetailsInput(props);
+
+  // if (mailingAddress) {
+  //     mailingAddress = await addAddress(mailingAddress);
+  // }
+
+  // if (residentialAddress) {
+  //     residentialAddress = await addAddress(residentialAddress);
+  // }
+
+  // const [newPersonalDetails] = await db.insert(personalDetailsModel).values({
+  //     ...props,
+  //     categoryId: category?.id,
+  //     disabilityCodeId: disabilityCode?.id,
+  //     mailingAddressId: mailingAddress?.id,
+  //     residentialAddressId: residentialAddress?.id,
+  //     motherTongueId: motherTongue?.id,
+  //     nationalityId: nationality?.id,
+  //     otherNationalityId: otherNationality?.id,
+  //     religionId: religion?.id,
+  // }).returning();
+
+  // const formattedPersonalDetails = await personalDetailsResponseFormat(newPersonalDetails);
+  return null;
+}
+
+export async function findPersonalDetailsById(
+  id: number,
+): Promise<PersonalDetailsType | null> {
+  const [foundPersonalDetail] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, id));
+  if (!foundPersonalDetail) return null;
+  const formattedPersonalDetails =
+    await personalDetailsResponseFormat(foundPersonalDetail);
+  return formattedPersonalDetails;
+}
+
+export async function findPersonalDetailsByStudentId(
+  stdentId: number,
+): Promise<PersonalDetailsType | null> {
+  // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, stdentId));
+  return null;
+  // const formattedPersonalDetails = await personalDetailsResponseFormat(foundPersonalDetail);
+  // return formattedPersonalDetails;
+}
+
+export async function savePersonalDetails(
+  id: number,
+  personalDetails: PersonalDetailsType,
+): Promise<PersonalDetailsType | null> {
+  let {
+    category,
+    disabilityCode,
+    mailingAddress,
+    residentialAddress,
+    motherTongue,
+    nationality,
+    religion,
+
+    createdAt,
+    updatedAt,
+    id: personalDetailsId,
+    ...props
+  } = personalDetails;
+
+  // Validate input (excluding nested objects)
+  validatePersonalDetailsInput({ ...props });
+
+  const [updatedPersonalDetails] = await db
+    .update(personalDetailsModel)
+    .set({
+      ...props,
+      // studentId, // Ensure studentId is included in the update
+      categoryId: category?.id,
+      disabilityCodeId: disabilityCode?.id,
+      mailingAddressId: mailingAddress?.id,
+      residentialAddressId: residentialAddress?.id,
+      motherTongueId: motherTongue?.id,
+      nationalityId: nationality?.id,
+      religionId: religion?.id,
+    })
+    .where(eq(personalDetailsModel.id, id))
+    .returning();
+
+  if (!updatedPersonalDetails) return null;
+
+  // if (mailingAddress) {
+  //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
+  // }
+
+  // if (residentialAddress) {
+  //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
+  // }
+
+  const formattedPersonalDetails = await personalDetailsResponseFormat(
+    updatedPersonalDetails,
+  );
+  return formattedPersonalDetails;
+}
+
+export async function savePersonalDetailsByStudentId(
+  studentId: number,
+  personalDetails: PersonalDetailsType,
+): Promise<PersonalDetailsType | null> {
+  // let {
+  //     category,
+  //     disabilityCode,
+  //     mailingAddress,
+  //     residentialAddress,
+  //     motherTongue,
+  //     nationality,
+  //     otherNationality,
+  //     religion,
+  //     id: personalDetailsId,
+  //     ...props
+  // } = personalDetails;
+
+  // // Validate input (excluding nested objects)
+  // validatePersonalDetailsInput({ ...props, studentId });
+
+  // const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
+  //     ...props,
+  //     categoryId: category?.id,
+  //     disabilityCodeId: disabilityCode?.id,
+  //     mailingAddressId: mailingAddress?.id,
+  //     residentialAddressId: residentialAddress?.id,
+  //     motherTongueId: motherTongue?.id,
+  //     nationalityId: nationality?.id,
+  //     otherNationalityId: otherNationality?.id,
+  //     religionId: religion?.id,
+  // }).where(eq(personalDetailsModel.studentId, studentId)).returning();
+
+  // if (!updatedPersonalDetails) return null;
+
+  // if (mailingAddress) {
+  //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
+  // }
+
+  // if (residentialAddress) {
+  //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
+  // }
+
+  // const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
+  return null;
+}
+
+export async function removePersonalDetails(
+  id: number,
+): Promise<boolean | null> {
+  // Return if the personal-detail doesn't exist
+  const [foundPersonalDetail] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, id));
+  if (!foundPersonalDetail) {
+    return null; // No Content
+  }
+  // Delete the personal-detail
+  const [deletedPersonalDetail] = await db
+    .delete(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, id))
+    .returning();
+  if (!deletedPersonalDetail) {
+    return false; // Failure!
+  }
+  return true; // Success!
+}
+
+export async function removePersonalDetailsByStudentId(
+  studentId: number,
+): Promise<boolean | null> {
+  // Return if the personal-detail doesn't exist
+  // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, studentId));
+  // if (!foundPersonalDetail) {
+  //     return null; // No Content
+  // }
+  // // Delete the personal-detail
+  // const [deletedPersonalDetail] = await db.delete(personalDetailsModel).where(eq(personalDetailsModel.studentId, studentId)).returning();
+  // if (!deletedPersonalDetail) {
+  //     return false; // Failure!
+  // }
+  return false; // Success!
+}
+
+export async function removePersonalDetailsByAddressId(
+  addresId: number,
+): Promise<boolean | null> {
+  // Return if the personal-detail doesn't exist
+  let [foundPersonalDetail] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.mailingAddressId, addresId));
+  if (!foundPersonalDetail) {
+    const tmpPersonalDetails = await db
+      .select()
+      .from(personalDetailsModel)
+      .where(eq(personalDetailsModel.residentialAddressId, addresId));
+    if (tmpPersonalDetails.length == 0) {
+      return null; // No Content
     }
-    return parseResult.data;
-}
-
-export async function addPersonalDetails(personalDetails: PersonalDetailsType): Promise<PersonalDetailsType | null> {
-    // let {
-    //     category,
-    //     disabilityCode,
-    //     mailingAddress,
-    //     residentialAddress,
-    //     motherTongue,
-    //     nationality,
-    //     otherNationality,
-    //     religion,
-    //     ...props
-    // } = personalDetails;
-
-    // // Validate input (excluding nested objects)
-    // validatePersonalDetailsInput(props);
-
-    // if (mailingAddress) {
-    //     mailingAddress = await addAddress(mailingAddress);
-    // }
-
-    // if (residentialAddress) {
-    //     residentialAddress = await addAddress(residentialAddress);
-    // }
-
-    // const [newPersonalDetails] = await db.insert(personalDetailsModel).values({
-    //     ...props,
-    //     categoryId: category?.id,
-    //     disabilityCodeId: disabilityCode?.id,
-    //     mailingAddressId: mailingAddress?.id,
-    //     residentialAddressId: residentialAddress?.id,
-    //     motherTongueId: motherTongue?.id,
-    //     nationalityId: nationality?.id,
-    //     otherNationalityId: otherNationality?.id,
-    //     religionId: religion?.id,
-    // }).returning();
-
-    // const formattedPersonalDetails = await personalDetailsResponseFormat(newPersonalDetails);
-    return null;
-}
-
-export async function findPersonalDetailsById(id: number): Promise<PersonalDetailsType | null> {
-    const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.id, id));
-    if (!foundPersonalDetail) return null;
-    const formattedPersonalDetails = await personalDetailsResponseFormat(foundPersonalDetail);
-    return formattedPersonalDetails;
-}
-
-export async function findPersonalDetailsByStudentId(stdentId: number): Promise<PersonalDetailsType | null> {
-    // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, stdentId));
-    return null;
-    // const formattedPersonalDetails = await personalDetailsResponseFormat(foundPersonalDetail);
-    // return formattedPersonalDetails;
-}
-
-export async function savePersonalDetails(id: number, personalDetails: PersonalDetailsType): Promise<PersonalDetailsType | null> {
-    let {
-        category,
-        disabilityCode,
-        mailingAddress,
-        residentialAddress,
-        motherTongue,
-        nationality,
-        religion,
-
-        createdAt,
-        updatedAt,
-        id: personalDetailsId,
-        ...props
-    } = personalDetails;
-
-    // Validate input (excluding nested objects)
-    validatePersonalDetailsInput({ ...props });
-
-    const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
-        ...props,
-        // studentId, // Ensure studentId is included in the update
-        categoryId: category?.id,
-        disabilityCodeId: disabilityCode?.id,
-        mailingAddressId: mailingAddress?.id,
-        residentialAddressId: residentialAddress?.id,
-        motherTongueId: motherTongue?.id,
-        nationalityId: nationality?.id,
-        religionId: religion?.id,
-    }).where(eq(personalDetailsModel.id, id)).returning();
-
-    if (!updatedPersonalDetails) return null;
-
-    // if (mailingAddress) {
-    //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
-    // }
-
-    // if (residentialAddress) {
-    //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
-    // }
-
-    const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
-    return formattedPersonalDetails;
-}
-
-export async function savePersonalDetailsByStudentId(studentId: number, personalDetails: PersonalDetailsType): Promise<PersonalDetailsType | null> {
-    // let {
-    //     category,
-    //     disabilityCode,
-    //     mailingAddress,
-    //     residentialAddress,
-    //     motherTongue,
-    //     nationality,
-    //     otherNationality,
-    //     religion,
-    //     id: personalDetailsId,
-    //     ...props
-    // } = personalDetails;
-
-    // // Validate input (excluding nested objects)
-    // validatePersonalDetailsInput({ ...props, studentId });
-
-    // const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
-    //     ...props,
-    //     categoryId: category?.id,
-    //     disabilityCodeId: disabilityCode?.id,
-    //     mailingAddressId: mailingAddress?.id,
-    //     residentialAddressId: residentialAddress?.id,
-    //     motherTongueId: motherTongue?.id,
-    //     nationalityId: nationality?.id,
-    //     otherNationalityId: otherNationality?.id,
-    //     religionId: religion?.id,
-    // }).where(eq(personalDetailsModel.studentId, studentId)).returning();
-
-    // if (!updatedPersonalDetails) return null;
-
-    // if (mailingAddress) {
-    //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
-    // }
-
-    // if (residentialAddress) {
-    //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
-    // }
-
-    // const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
-    return null;
-}
-
-export async function removePersonalDetails(id: number): Promise<boolean | null> {
-    // Return if the personal-detail doesn't exist
-    const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.id, id));
-    if (!foundPersonalDetail) {
-        return null; // No Content
-    }
-    // Delete the personal-detail
-    const [deletedPersonalDetail] = await db.delete(personalDetailsModel).where(eq(personalDetailsModel.id, id)).returning();
-    if (!deletedPersonalDetail) {
-        return false; // Failure!
-    }
-    return true; // Success!
-}
-
-export async function removePersonalDetailsByStudentId(studentId: number): Promise<boolean | null> {
-    // Return if the personal-detail doesn't exist
-    // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, studentId));
-    // if (!foundPersonalDetail) {
-    //     return null; // No Content
-    // }
-    // // Delete the personal-detail
-    // const [deletedPersonalDetail] = await db.delete(personalDetailsModel).where(eq(personalDetailsModel.studentId, studentId)).returning();
-    // if (!deletedPersonalDetail) {
-    //     return false; // Failure!
-    // }
-    return false; // Success!
-}
-
-export async function removePersonalDetailsByAddressId(addresId: number): Promise<boolean | null> {
-    // Return if the personal-detail doesn't exist
-    let [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.mailingAddressId, addresId));
-    if (!foundPersonalDetail) {
-        const tmpPersonalDetails = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.residentialAddressId, addresId));
-        if (tmpPersonalDetails.length == 0) {
-            return null; // No Content
-        }
-        foundPersonalDetail = tmpPersonalDetails[0];
-    }
-    // Delete the personal-detail
-    const [deletedPersonalDetail] = await db.delete(personalDetailsModel).where(eq(personalDetailsModel.id, foundPersonalDetail.id)).returning();
-    if (!deletedPersonalDetail) {
-        return false; // Failure!
-    }
-    return true; // Success!
+    foundPersonalDetail = tmpPersonalDetails[0];
+  }
+  // Delete the personal-detail
+  const [deletedPersonalDetail] = await db
+    .delete(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, foundPersonalDetail.id))
+    .returning();
+  if (!deletedPersonalDetail) {
+    return false; // Failure!
+  }
+  return true; // Success!
 }
 
 export async function getAllPersonalDetails(): Promise<PersonalDetails[]> {
-    const details = await db.select().from(personalDetailsModel);
-    return details;
+  const details = await db.select().from(personalDetailsModel);
+  return details;
 }
 
-export async function personalDetailsResponseFormat(personalDetails: PersonalDetails): Promise<PersonalDetailsType | null> {
-    if (!personalDetails) {
-        return null;
-    }
-    const {
-        categoryId,
-        disabilityCodeId,
-        mailingAddressId,
-        residentialAddressId,
-        motherTongueId,
-        nationalityId,
-        religionId,
-        ...props
-    } = personalDetails;
-    const formattedPersonalDetails: PersonalDetailsType = { ...props };
-    if (categoryId) {
-        formattedPersonalDetails.category = await findCategoryById(categoryId);
-    }
-    if (disabilityCodeId) {
-        formattedPersonalDetails.disabilityCode = await findDisabilityCodeById(disabilityCodeId);
-    }
-    if (mailingAddressId) {
-        formattedPersonalDetails.mailingAddress = await findAddressById(mailingAddressId);
-    }
-    if (residentialAddressId) {
-        formattedPersonalDetails.residentialAddress = await findAddressById(residentialAddressId);
-    }
-    if (motherTongueId) {
-        formattedPersonalDetails.motherTongue = await findLanguageMediumById(motherTongueId);
-    }
-    if (nationalityId) {
-        formattedPersonalDetails.nationality = await findNationalityById(nationalityId);
-    }
+export async function personalDetailsResponseFormat(
+  personalDetails: PersonalDetails,
+): Promise<PersonalDetailsType | null> {
+  if (!personalDetails) {
+    return null;
+  }
+  const {
+    categoryId,
+    disabilityCodeId,
+    mailingAddressId,
+    residentialAddressId,
+    motherTongueId,
+    nationalityId,
+    religionId,
+    ...props
+  } = personalDetails;
+  const formattedPersonalDetails: PersonalDetailsType = { ...props };
+  if (categoryId) {
+    formattedPersonalDetails.category = await findCategoryById(categoryId);
+  }
+  if (disabilityCodeId) {
+    formattedPersonalDetails.disabilityCode =
+      await findDisabilityCodeById(disabilityCodeId);
+  }
+  if (mailingAddressId) {
+    formattedPersonalDetails.mailingAddress =
+      await findAddressById(mailingAddressId);
+  }
+  if (residentialAddressId) {
+    formattedPersonalDetails.residentialAddress =
+      await findAddressById(residentialAddressId);
+  }
+  if (motherTongueId) {
+    formattedPersonalDetails.motherTongue =
+      await findLanguageMediumById(motherTongueId);
+  }
+  if (nationalityId) {
+    formattedPersonalDetails.nationality =
+      await findNationalityById(nationalityId);
+  }
 
-    if (religionId) {
-        formattedPersonalDetails.religion = await findReligionById(religionId);
-    }
-    return formattedPersonalDetails;
+  if (religionId) {
+    formattedPersonalDetails.religion = await findReligionById(religionId);
+  }
+  return formattedPersonalDetails;
 }

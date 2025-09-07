@@ -1,11 +1,11 @@
 import { UserType } from "@/features/user/models/user.model.js";
 
-export { };
+export {};
 
 declare global {
-    namespace Express {
-        export interface Request {
-            user: UserType;
-        }
+  namespace Express {
+    export interface Request {
+      user: UserType;
     }
+  }
 }

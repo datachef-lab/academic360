@@ -14,12 +14,31 @@ export const createCourseLevel = async (req: Request, res: Response) => {
   try {
     const newCourseLevel = await createCourseLevelService(req.body);
     if (!newCourseLevel) {
-      res.status(400).json(new ApiResponse(400, "BAD_REQUEST", null, "Course level already exists"));
-      return 
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Course level already exists",
+          ),
+        );
+      return;
     }
-    res.status(201).json(new ApiResponse(201, "SUCCESS", newCourseLevel, "Course level created successfully!"));
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          newCourseLevel,
+          "Course level created successfully!",
+        ),
+      );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(400).json(new ApiResponse(400, "ERROR", null, errorMessage));
   }
 };
@@ -27,33 +46,61 @@ export const createCourseLevel = async (req: Request, res: Response) => {
 export const bulkUploadCourseLevels = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
     }
     console.log("Uploaded file path:", req.file.path);
-    const uploadSessionId = req.body.uploadSessionId || req.query.uploadSessionId;
+    const uploadSessionId =
+      req.body.uploadSessionId || req.query.uploadSessionId;
     const io = socketService.getIO();
-    const result = await bulkUploadCourseLevelsService(req.file.path, io, uploadSessionId);
+    const result = await bulkUploadCourseLevelsService(
+      req.file.path,
+      io,
+      uploadSessionId,
+    );
     const response = {
       success: result.success,
       errors: result.errors,
       summary: {
         total: result.success.length + result.errors.length,
         successful: result.success.length,
-        failed: result.errors.length
-      }
+        failed: result.errors.length,
+      },
     };
-    res.status(200).json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
+    res
+      .status(200)
+      .json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
   } catch (error: unknown) {
-    res.status(500).json(new ApiResponse(500, "ERROR", null, error instanceof Error ? error.message : "Unknown error"));
+    res
+      .status(500)
+      .json(
+        new ApiResponse(
+          500,
+          "ERROR",
+          null,
+          error instanceof Error ? error.message : "Unknown error",
+        ),
+      );
   }
 };
 
 export const getAllCourseLevels = async (_req: Request, res: Response) => {
   try {
     const allCourseLevels = await getAllCourseLevelsService();
-    res.status(200).json(new ApiResponse(200, "SUCCESS", allCourseLevels, "All course levels fetched"));
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          allCourseLevels,
+          "All course levels fetched",
+        ),
+      );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json(new ApiResponse(500, "ERROR", null, errorMessage));
   }
 };
@@ -62,24 +109,55 @@ export const getCourseLevelById = async (req: Request, res: Response) => {
   try {
     const courseLevel = await findById(+req.params.id);
     if (!courseLevel) {
-      return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course level not found"));
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, "NOT_FOUND", null, "Course level not found"),
+        );
     }
-    res.status(200).json(new ApiResponse(200, "SUCCESS", courseLevel, "Course level fetched successfully"));
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          courseLevel,
+          "Course level fetched successfully",
+        ),
+      );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json(new ApiResponse(500, "ERROR", null, errorMessage));
   }
 };
 
 export const updateCourseLevel = async (req: Request, res: Response) => {
   try {
-    const updatedCourseLevel = await updateCourseLevelService(req.params.id, req.body);
+    const updatedCourseLevel = await updateCourseLevelService(
+      req.params.id,
+      req.body,
+    );
     if (!updatedCourseLevel) {
-      return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course level not found"));
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, "NOT_FOUND", null, "Course level not found"),
+        );
     }
-    res.status(200).json(new ApiResponse(200, "UPDATED", updatedCourseLevel, "Course level updated successfully"));
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "UPDATED",
+          updatedCourseLevel,
+          "Course level updated successfully",
+        ),
+      );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(400).json(new ApiResponse(400, "ERROR", null, errorMessage));
   }
 };
@@ -88,11 +166,25 @@ export const deleteCourseLevel = async (req: Request, res: Response) => {
   try {
     const deletedCourseLevel = await deleteCourseLevelService(req.params.id);
     if (!deletedCourseLevel) {
-      return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course level not found"));
+      return res
+        .status(404)
+        .json(
+          new ApiResponse(404, "NOT_FOUND", null, "Course level not found"),
+        );
     }
-    res.status(200).json(new ApiResponse(200, "DELETED", deletedCourseLevel, "Course level deleted successfully"));
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "DELETED",
+          deletedCourseLevel,
+          "Course level deleted successfully",
+        ),
+      );
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     res.status(500).json(new ApiResponse(500, "ERROR", null, errorMessage));
   }
 };

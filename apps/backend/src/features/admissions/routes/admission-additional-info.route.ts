@@ -5,7 +5,7 @@ import {
   getAdmissionAdditionalInfoByIdHandler,
   getAdmissionAdditionalInfoByApplicationFormIdHandler,
   updateAdmissionAdditionalInfoHandler,
-  deleteAdmissionAdditionalInfoHandler
+  deleteAdmissionAdditionalInfoHandler,
 } from "../controllers/admission-additional-info.controller.js";
 
 const router = express.Router();
@@ -14,8 +14,11 @@ router.use(verifyJWT);
 
 router.post("/", createAdmissionAdditionalInfoHandler);
 router.get("/:id", getAdmissionAdditionalInfoByIdHandler);
-router.get("/application-form/:applicationFormId", getAdmissionAdditionalInfoByApplicationFormIdHandler);
+router.get(
+  "/application-form/:applicationFormId",
+  getAdmissionAdditionalInfoByApplicationFormIdHandler,
+);
 router.put("/:id", updateAdmissionAdditionalInfoHandler);
 router.delete("/:id", deleteAdmissionAdditionalInfoHandler);
 
-export default router; 
+export default router;

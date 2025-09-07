@@ -1,17 +1,17 @@
 import express from "express";
 import {
-    createNewQualification,
-    deleteQualifications,
-    getAllQualification,
-    getQualificationById,
-    updateQualification,
+  createNewQualification,
+  deleteQualifications,
+  getAllQualification,
+  getQualificationById,
+  updateQualification,
 } from "@/features/resources/controllers/qualification.controller.js";
 
 const router = express.Router();
 
 /**
  * Qualification Routes
- * 
+ *
  * POST   /                    - Create a new qualification
  * GET    /                    - Get all qualifications
  * GET    /:id                 - Get qualification by ID

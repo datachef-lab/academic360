@@ -5,7 +5,7 @@ import {
   getAdmissionAcademicInfoByIdHandler,
   getAdmissionAcademicInfoByApplicationFormIdHandler,
   updateAdmissionAcademicInfoHandler,
-  deleteAdmissionAcademicInfoHandler
+  deleteAdmissionAcademicInfoHandler,
 } from "../controllers/admission-academic-info.controller.js";
 
 const router = express.Router();
@@ -14,8 +14,11 @@ router.use(verifyJWT);
 
 router.post("/", createAdmissionAcademicInfoHandler);
 router.get("/:id", getAdmissionAcademicInfoByIdHandler);
-router.get("/application-form/:applicationFormId", getAdmissionAcademicInfoByApplicationFormIdHandler);
+router.get(
+  "/application-form/:applicationFormId",
+  getAdmissionAcademicInfoByApplicationFormIdHandler,
+);
 router.put("/:id", updateAdmissionAcademicInfoHandler);
 router.delete("/:id", deleteAdmissionAcademicInfoHandler);
 
-export default router; 
+export default router;

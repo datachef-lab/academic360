@@ -1,18 +1,18 @@
 import express from "express";
 import {
-    createNewTransport,
-    deleteTransport,
-    getAllTransport,
-    getTransportById,
-    getTransportsByMode,
-    updateTransport,
+  createNewTransport,
+  deleteTransport,
+  getAllTransport,
+  getTransportById,
+  getTransportsByMode,
+  updateTransport,
 } from "@/features/resources/controllers/transport.controller.js";
 
 const router = express.Router();
 
 /**
  * Transport Routes
- * 
+ *
  * POST   /                    - Create a new transport
  * GET    /                    - Get all transports
  * GET    /:id                 - Get transport by ID

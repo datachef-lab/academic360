@@ -5,7 +5,7 @@ import {
   getAdmissionCourseByIdHandler,
   getAdmissionCoursesByAdmissionIdHandler,
   updateAdmissionCourseHandler,
-  deleteAdmissionCourseHandler
+  deleteAdmissionCourseHandler,
 } from "../controllers/admission-course.controller.js";
 
 const router = express.Router();
@@ -18,4 +18,4 @@ router.get("/admission/:admissionId", getAdmissionCoursesByAdmissionIdHandler);
 router.put("/:id", updateAdmissionCourseHandler);
 router.delete("/:id", deleteAdmissionCourseHandler);
 
-export default router; 
+export default router;

@@ -57,8 +57,8 @@
 
 // export async function processCourse(courseId: number): Promise<Course> {
 //     const [courseResult] = (await mysqlConnection.query(`
-//                 SELECT * 
-//                 FROM ${oldCourseTable} 
+//                 SELECT *
+//                 FROM ${oldCourseTable}
 //                 WHERE id = ${courseId}`)) as [OldCourse[], any];
 
 //     const oldCourse = courseResult[0];
@@ -89,7 +89,7 @@
 
 // export async function processSession(oldSessionId: number) {
 //     const [result] = (await mysqlConnection.query(`
-//             SELECT * 
+//             SELECT *
 //             FROM currentsessionmaster
 //             WHERE id = ${oldSessionId}
 //         `)) as [OldSession[], any];
@@ -120,8 +120,8 @@
 
 // export async function processClass(classId: number): Promise<Class> {
 //     const [classResult] = (await mysqlConnection.query(`
-//                 SELECT * 
-//                 FROM ${oldClassTable} 
+//                 SELECT *
+//                 FROM ${oldClassTable}
 //                 WHERE id = ${classId}`)) as [OldClass[], any];
 
 //     const oldClass = classResult[0];
@@ -148,14 +148,14 @@
 
 // export async function processSection(sectionId: number) {
 //     const [sectionResult] = (await mysqlConnection.query(`
-//                 SELECT * 
-//                 FROM ${oldSectionTable} 
+//                 SELECT *
+//                 FROM ${oldSectionTable}
 //                 WHERE id = ${sectionId}`)) as [OldSection[], any];
 
 //     const oldSection = sectionResult[0];
 //     console.log(`
-//                 SELECT * 
-//                 FROM ${oldSectionTable} 
+//                 SELECT *
+//                 FROM ${oldSectionTable}
 //                 WHERE id = ${sectionId}`);
 //     console.log("oldSection:", oldSection);
 
@@ -184,8 +184,8 @@
 //     }
 
 //     const [shiftResult] = (await mysqlConnection.query(`
-//                 SELECT * 
-//                 FROM ${oldShiftTable} 
+//                 SELECT *
+//                 FROM ${oldShiftTable}
 //                 WHERE id = ${shiftId}`)) as [OldShift[], any];
 
 //     const oldShift = shiftResult[0];
@@ -215,7 +215,7 @@
 //     sessionId: number,
 // ) {
 //     const [OldAcademicYears] = (await mysqlConnection.query(`
-//             SELECT * 
+//             SELECT *
 //             FROM accademicyear
 //             WHERE id = ${oldSessionId}
 //         `)) as [OldAcademicYear[], any];
@@ -352,8 +352,8 @@
 
 //         // Fetch the student's associated with this subject
 //         const [rows] = await mysqlConnection.query(`
-//             SELECT COUNT(*) AS totalRows 
-//             FROM ${oldStudentPaperTable} 
+//             SELECT COUNT(*) AS totalRows
+//             FROM ${oldStudentPaperTable}
 //             WHERE parent_id = ${oldBatchPaper.parent_id}
 //         `);
 //         const { totalRows } = (rows as { totalRows: number }[])[0];
@@ -371,10 +371,10 @@
 //                 `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
 //             );
 //             const [rows] = (await mysqlConnection.query(`
-//                 SELECT * 
+//                 SELECT *
 //                 FROM ${oldStudentPaperTable}
 //                 WHERE parent_id = ${oldBatchPaper.ID}
-//                 LIMIT ${BATCH_SIZE} 
+//                 LIMIT ${BATCH_SIZE}
 //                 OFFSET ${offset}
 //             `)) as [OldStudentPaper[], any];
 //             const oldDataArr = rows as OldStudentPaper[];
@@ -384,7 +384,7 @@
 
 //                 // Fetch the student based on old Id
 //                 const [[oldStudent]] = (await mysqlConnection.query(`
-//                     SELECT * 
+//                     SELECT *
 //                     FROM ${oldStudentTable}
 //                     WHERE id = ${oldStudentPaper.studentId}
 //                 `)) as [OldStudent[], any];
@@ -436,8 +436,8 @@
 // }) {
 //     const [oldSubjectType] = (
 //         (await mysqlConnection.query(`
-//                     SELECT * 
-//                     FROM ${oldSubjectTypeTable} 
+//                     SELECT *
+//                     FROM ${oldSubjectTypeTable}
 //                     WHERE id = ${subjectTypeId}`)) as [OldSubjectType[], any]
 //     )[0];
 //     // console.log("in getMappedSubjectMetadata(), oldSubjectType:", oldSubjectType.subjectTypeName.trim().toUpperCase())
@@ -461,8 +461,8 @@
 //     // console.log("foundSubjectType:", foundSubjectType.irpName, foundSubjectType.marksheetName);
 //     const [oldSubject] = (
 //         (await mysqlConnection.query(`
-//                     SELECT * 
-//                     FROM ${oldSubjectTable} 
+//                     SELECT *
+//                     FROM ${oldSubjectTable}
 //                     WHERE id = ${subjectId} AND subjectTypeId = ${subjectTypeId}`)) as [
 //             OldSubject[],
 //             any,
@@ -580,7 +580,7 @@
 
 //             // Fetch the student's papers association
 //             const [studentPapers] = (await mysqlConnection.query(`
-//                 SELECT * 
+//                 SELECT *
 //                 FROM ${oldStudentPaperTable}
 //                 WHERE studentId = ${oldStudent.id}
 //             `)) as [OldStudentPaper[], any];
@@ -706,9 +706,9 @@
 //     console.log(`\n\nCounting rows from table ${oldBatchTable}...`);
 
 //     const [rows] = await mysqlConnection.query(`
-//         SELECT COUNT(*) AS totalRows 
-//         FROM ${oldBatchTable} 
-//         WHERE sessionId > 15; 
+//         SELECT COUNT(*) AS totalRows
+//         FROM ${oldBatchTable}
+//         WHERE sessionId > 15;
 //     `);
 //     const { totalRows } = (rows as { totalRows: number }[])[0];
 
@@ -723,10 +723,10 @@
 //             `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
 //         );
 //         const [rows] = (await mysqlConnection.query(`
-//             SELECT * 
+//             SELECT *
 //             FROM ${oldBatchTable}
 //             WHERE sessionId > 15
-//             LIMIT ${BATCH_SIZE} 
+//             LIMIT ${BATCH_SIZE}
 //             OFFSET ${offset}
 //         `)) as [OldBatch[], any];
 //         const oldDataArr = rows as OldBatch[];
@@ -957,7 +957,6 @@
 //             status
 //         });
 //     }
-
 
 //     // Paginate (for now, return all in one page)
 //     const paginatedStudentEntry = {

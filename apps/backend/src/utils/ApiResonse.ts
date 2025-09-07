@@ -13,7 +13,6 @@ export class ApiResponse extends Response {
     this.httpStatusCode = httpStatusCode;
     this.payload = payload;
     this.httpStatus = httpStatus;
-    this.message=message;
+    this.message = message;
   }
 }
-

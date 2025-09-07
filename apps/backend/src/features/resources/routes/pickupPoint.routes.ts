@@ -1,17 +1,17 @@
 import express from "express";
-import { 
-    createPickupPoint, 
-    deletePickupPoint, 
-    getAllPickupPoint, 
-    getPickupPointById,
-    updatePickupPoint 
+import {
+  createPickupPoint,
+  deletePickupPoint,
+  getAllPickupPoint,
+  getPickupPointById,
+  updatePickupPoint,
 } from "@/features/resources/controllers/pickupPoint.controller.js";
 
 const router = express.Router();
 
 /**
  * Pickup Point Routes
- * 
+ *
  * POST   /                    - Create a new pickup point
  * GET    /                    - Get all pickup points
  * GET    /:id                 - Get pickup point by ID

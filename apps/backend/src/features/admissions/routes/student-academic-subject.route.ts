@@ -5,7 +5,7 @@ import {
   getStudentAcademicSubjectByIdHandler,
   getStudentAcademicSubjectsByAcademicInfoIdHandler,
   updateStudentAcademicSubjectHandler,
-  deleteStudentAcademicSubjectHandler
+  deleteStudentAcademicSubjectHandler,
 } from "../controllers/student-academic-subject.controller.js";
 
 const router = express.Router();
@@ -14,8 +14,11 @@ router.use(verifyJWT);
 
 router.post("/", createStudentAcademicSubjectHandler);
 router.get("/:id", getStudentAcademicSubjectByIdHandler);
-router.get("/academic-info/:academicInfoId", getStudentAcademicSubjectsByAcademicInfoIdHandler);
+router.get(
+  "/academic-info/:academicInfoId",
+  getStudentAcademicSubjectsByAcademicInfoIdHandler,
+);
 router.put("/:id", updateStudentAcademicSubjectHandler);
 router.delete("/:id", deleteStudentAcademicSubjectHandler);
 
-export default router; 
+export default router;

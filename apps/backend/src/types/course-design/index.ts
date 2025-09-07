@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // SubjectType Schema
 export const SubjectTypeSchema = z.object({

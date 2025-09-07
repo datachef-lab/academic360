@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { createAddonHandler, deleteAddonHandler, getAddonByIdHandler, getAddonsHandler, updateAddonHandler } from "../controllers/addon.controller.js";
+import {
+  createAddonHandler,
+  deleteAddonHandler,
+  getAddonByIdHandler,
+  getAddonsHandler,
+  updateAddonHandler,
+} from "../controllers/addon.controller.js";
 // import { getAddonsHandler, getAddonByIdHandler, createAddonHandler, updateAddonHandler, deleteAddonHandler } from "../controllers/addon.controller.js";
 
 const addonRouter = Router();

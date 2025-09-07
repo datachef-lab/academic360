@@ -14,7 +14,11 @@ const router = Router();
 
 // Course routes
 router.post("/", createCourseHandler as RequestHandler);
-router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadCoursesHandler as RequestHandler);
+router.post(
+  "/bulk-upload",
+  uploadExcelMiddleware,
+  bulkUploadCoursesHandler as RequestHandler,
+);
 router.get("/", getAllCoursesHandler as RequestHandler);
 router.get("/:id", getCourseByIdHandler as RequestHandler);
 router.put("/:id", updateCourseHandler as RequestHandler);

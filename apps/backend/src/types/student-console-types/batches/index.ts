@@ -7,11 +7,20 @@ import { Shift } from "@repo/db/schemas/models/academics";
 import { Session } from "@repo/db/schemas/models/academics";
 import { CourseDto } from "@/types/course-design/index.type";
 
-export interface BatchDto extends Omit<Batch, "academicYearId" | "courseId" | "classId" | "sectionId" | "shiftId" | "sessionId"> {
-    course: CourseDto;
-    class: Class;
-    section: Section;
-    shift: Shift;
-    session: Session;
-    // subjects: SubjectMetadataDto[];
+export interface BatchDto
+  extends Omit<
+    Batch,
+    | "academicYearId"
+    | "courseId"
+    | "classId"
+    | "sectionId"
+    | "shiftId"
+    | "sessionId"
+  > {
+  course: CourseDto;
+  class: Class;
+  section: Section;
+  shift: Shift;
+  session: Session;
+  // subjects: SubjectMetadataDto[];
 }

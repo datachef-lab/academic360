@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { marksheetPaperMappingModel } from  "@repo/db/schemas/models/academics";
+import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
 import { marksheetModel } from "@repo/db/schemas/models/academics";
 import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
 import { eq, and, desc, count } from "drizzle-orm";

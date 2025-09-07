@@ -11,7 +11,7 @@ const router = express.Router();
 
 /**
  * Nationality Routes
- * 
+ *
  * POST   /                    - Create a new nationality
  * GET    /                    - Get all nationalities
  * GET    /:id                 - Get nationality by ID

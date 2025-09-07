@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { getFeesComponentsHandler, getFeesComponentByIdHandler, createFeesComponentHandler, updateFeesComponentHandler, deleteFeesComponentHandler } from "../controllers/feesComponent.controller.js";
+import {
+  getFeesComponentsHandler,
+  getFeesComponentByIdHandler,
+  createFeesComponentHandler,
+  updateFeesComponentHandler,
+  deleteFeesComponentHandler,
+} from "../controllers/feesComponent.controller.js";
 
 const feesComponentRouter = Router();
 

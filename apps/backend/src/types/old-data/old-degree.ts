@@ -1,4 +1,4 @@
 export interface OldDegree {
-    readonly id?: number;
-    degreeName: string;
+  readonly id?: number;
+  degreeName: string;
 }

@@ -168,7 +168,7 @@
 
 //   if (!student) {
 //     const [rows] = (await mysqlConnection.query(`
-//                 SELECT * 
+//                 SELECT *
 //                 FROM studentpersonaldetails
 //                 WHERE univregno = ${marksheet.academicIdentifier.registrationNumber};
 //         `)) as [OldStudent[], any];
@@ -1009,7 +1009,7 @@
 //   if (!foundAcademicIdentifier) {
 //     // Create new student
 //     const [rows] = (await mysqlConnection.query(`
-//                 SELECT * 
+//                 SELECT *
 //                 FROM studentpersonaldetails
 //                 WHERE univregno = ${arr[0].registration_no};
 //         `)) as [OldStudent[], any];

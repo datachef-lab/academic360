@@ -21,7 +21,6 @@ export {
   streamRouter,
   subjectTypeRouter,
   affiliationRouter,
-
   regulationTypeRouter,
   programCourseRouter,
   courseTypeRouter,
@@ -29,4 +28,4 @@ export {
   specializationRouter,
   examComponentRouter,
   cascadingDropdownsRouter,
-}; 
+};

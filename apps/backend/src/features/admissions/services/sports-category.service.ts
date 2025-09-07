@@ -1,9 +1,14 @@
 import { db } from "@/db/index.js";
-import { sportsCategoryModel, SportsCategory } from "../models/sports-category.model.js";
+import {
+  sportsCategoryModel,
+  SportsCategory,
+} from "../models/sports-category.model.js";
 import { eq } from "drizzle-orm";
 
 // CREATE
-export async function createSportCategory(givenSportCategory: Omit<SportsCategory, 'id'>) {
+export async function createSportCategory(
+  givenSportCategory: Omit<SportsCategory, "id">,
+) {
   const [newCategory] = await db
     .insert(sportsCategoryModel)
     .values(givenSportCategory)
@@ -26,7 +31,10 @@ export async function getSportCategoryById(id: number) {
 }
 
 // UPDATE
-export async function updateSportCategory(id: number, update: Partial<Omit<SportsCategory, 'id'>>) {
+export async function updateSportCategory(
+  id: number,
+  update: Partial<Omit<SportsCategory, "id">>,
+) {
   const [updated] = await db
     .update(sportsCategoryModel)
     .set(update)

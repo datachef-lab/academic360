@@ -7,7 +7,7 @@ import {
   updateEmergencyContact,
   deleteEmergencyContact,
   deleteEmergencyContactByStudentId,
-  getAllEmergencyContactsController
+  getAllEmergencyContactsController,
 } from "../controllers/emergencyContact.controller.js";
 
 const router = express.Router();

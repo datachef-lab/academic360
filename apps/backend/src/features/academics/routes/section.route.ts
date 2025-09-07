@@ -3,4 +3,4 @@ import { getAllSectionsController } from "../controllers/section.controller.js";
 
 const router = express.Router();
 router.get("/", getAllSectionsController);
-export default router; 
+export default router;

@@ -12,14 +12,15 @@ import { RegulationType } from "@repo/db/schemas/models/course-design";
 import { AcademicYear } from "@repo/db/schemas/models/academics";
 
 export interface CourseDto extends Omit<Course, "degreeId"> {
-    degree: Degree | null;
+  degree: Degree | null;
 }
 
-export interface PaperComponentDto extends Omit<PaperComponent, "examComponentId"> {
-    examComponent: ExamComponent;
+export interface PaperComponentDto
+  extends Omit<PaperComponent, "examComponentId"> {
+  examComponent: ExamComponent;
 }
 
 export interface PaperDto extends Paper {
-    components: PaperComponentDto[];
-    topics: Topic[];
+  components: PaperComponentDto[];
+  topics: Topic[];
 }

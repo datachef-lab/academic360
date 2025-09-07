@@ -5,7 +5,7 @@ import {
   getSportsInfoByIdHandler,
   getSportsInfoByAdditionalInfoIdHandler,
   updateSportsInfoHandler,
-  deleteSportsInfoHandler
+  deleteSportsInfoHandler,
 } from "../controllers/sports-info.controller.js";
 
 const router = express.Router();
@@ -14,8 +14,11 @@ router.use(verifyJWT);
 
 router.post("/", createSportsInfoHandler);
 router.get("/:id", getSportsInfoByIdHandler);
-router.get("/additional-info/:additionalInfoId", getSportsInfoByAdditionalInfoIdHandler);
+router.get(
+  "/additional-info/:additionalInfoId",
+  getSportsInfoByAdditionalInfoIdHandler,
+);
 router.put("/:id", updateSportsInfoHandler);
 router.delete("/:id", deleteSportsInfoHandler);
 
-export default router; 
+export default router;

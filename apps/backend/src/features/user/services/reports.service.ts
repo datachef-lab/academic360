@@ -31,132 +31,132 @@ export const getReports = async ({
   semester,
   year,
   showFailedOnly,
-  export: isExport
+  export: isExport,
 }: ReportQueryParams) => {
-//   const filters = [
-//     year !== undefined ? eq(marksheetModel.year, year) : undefined,
-//     // framework
-//     //   ? eq(streamModel.framework, framework as "CCF" | "CBCS")
-//     //   : undefined,
-//     stream ? eq(degreeModel.name, stream) : undefined,
-//   ];
+  //   const filters = [
+  //     year !== undefined ? eq(marksheetModel.year, year) : undefined,
+  //     // framework
+  //     //   ? eq(streamModel.framework, framework as "CCF" | "CBCS")
+  //     //   : undefined,
+  //     stream ? eq(degreeModel.name, stream) : undefined,
+  //   ];
 
-//   if (semester) {
-//     const foundClass = await processClassBySemesterNumber(semester);
-//     filters.push(eq(marksheetModel.classId, foundClass.id));
-//   }
+  //   if (semester) {
+  //     const foundClass = await processClassBySemesterNumber(semester);
+  //     filters.push(eq(marksheetModel.classId, foundClass.id));
+  //   }
 
-//   const query = db
-//     .select({
-//       id: marksheetModel.studentId,
-//       rollNumber: academicIdentifierModel.rollNumber,
-//       registrationNumber: academicIdentifierModel.registrationNumber,
-//       uid: academicIdentifierModel.uid,
-//       name: userModel.name,
-//       stream: degreeModel.name,
-//       framework: academicIdentifierModel.framework,
-//       semester: classModel.name,
-//       year: marksheetModel.year,
-//       subjectName: subjectMetadataModel.name,
-//       fullMarks: subjectMetadataModel.fullMarks,
-//       obtainedMarks: subjectModel.totalMarks,
-//       credit: subjectMetadataModel.credit,
-//       sgpa: marksheetModel.sgpa,
-//       cgpa: marksheetModel.cgpa,
-//       letterGrade: subjectModel.letterGrade,
-//       remarks: marksheetModel.remarks,
-//     })
-//     .from(marksheetModel)
-//     .leftJoin(
-//       academicIdentifierModel,
-//       eq(marksheetModel.studentId, academicIdentifierModel.studentId),
-//     )
-//     .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
-//     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-//     // .leftJoin(streamModel, eq(academicIdentifierModel.framework, framework))
-//     .leftJoin(classModel, eq(marksheetModel.classId, classModel.id))
-//     .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
-//     .leftJoin(
-//       subjectMetadataModel,
-//       eq(subjectModel.subjectMetadataId, subjectMetadataModel.id),
-//     )
-//     .where(and(...filters.filter(Boolean)));
+  //   const query = db
+  //     .select({
+  //       id: marksheetModel.studentId,
+  //       rollNumber: academicIdentifierModel.rollNumber,
+  //       registrationNumber: academicIdentifierModel.registrationNumber,
+  //       uid: academicIdentifierModel.uid,
+  //       name: userModel.name,
+  //       stream: degreeModel.name,
+  //       framework: academicIdentifierModel.framework,
+  //       semester: classModel.name,
+  //       year: marksheetModel.year,
+  //       subjectName: subjectMetadataModel.name,
+  //       fullMarks: subjectMetadataModel.fullMarks,
+  //       obtainedMarks: subjectModel.totalMarks,
+  //       credit: subjectMetadataModel.credit,
+  //       sgpa: marksheetModel.sgpa,
+  //       cgpa: marksheetModel.cgpa,
+  //       letterGrade: subjectModel.letterGrade,
+  //       remarks: marksheetModel.remarks,
+  //     })
+  //     .from(marksheetModel)
+  //     .leftJoin(
+  //       academicIdentifierModel,
+  //       eq(marksheetModel.studentId, academicIdentifierModel.studentId),
+  //     )
+  //     .leftJoin(studentModel, eq(marksheetModel.studentId, studentModel.id))
+  //     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+  //     // .leftJoin(streamModel, eq(academicIdentifierModel.framework, framework))
+  //     .leftJoin(classModel, eq(marksheetModel.classId, classModel.id))
+  //     .leftJoin(subjectModel, eq(marksheetModel.id, subjectModel.marksheetId))
+  //     .leftJoin(
+  //       subjectMetadataModel,
+  //       eq(subjectModel.subjectMetadataId, subjectMetadataModel.id),
+  //     )
+  //     .where(and(...filters.filter(Boolean)));
 
-//   const allReportResult = await query;
-//   console.log("Query returned", allReportResult.length, "records");
-return {
+  //   const allReportResult = await query;
+  //   console.log("Query returned", allReportResult.length, "records");
+  return {
     content: [],
     page,
     pageSize,
     totalRecords: 0,
     totalPages: 0,
   };
-//   if (!allReportResult || allReportResult.length === 0) {
-//     return {
-//       content: [],
-//       page,
-//       pageSize,
-//       totalRecords: 0,
-//       totalPages: 0,
-//     };
-//   }
+  //   if (!allReportResult || allReportResult.length === 0) {
+  //     return {
+  //       content: [],
+  //       page,
+  //       pageSize,
+  //       totalRecords: 0,
+  //       totalPages: 0,
+  //     };
+  //   }
 
   const studentData: Record<number, any> = {};
 
-//   allReportResult.forEach((record) => {
-//     if (record.id !== null && !studentData[record.id]) {
-//       studentData[record.id] = {
-//         id: record.id,
-//         rollNumber: record.rollNumber,
-//         registrationNumber: record.registrationNumber,
-//         uid: record.uid,
-//         name: record.name,
-//         semester: record.semester,
-//         stream: record.stream,
-//         framework: record.framework,
-//         year: record.year,
-//         sgpa: record.sgpa ? Number(record.sgpa) : 0,
-//         cgpa: record.cgpa ? Number(record.cgpa) : 0,
-//         letterGrade: record.letterGrade,
-//         remarks: record.remarks,
-//         percentage: "0.00%",
-//         subjects: [],
-//       };
-//     }
-//   });
+  //   allReportResult.forEach((record) => {
+  //     if (record.id !== null && !studentData[record.id]) {
+  //       studentData[record.id] = {
+  //         id: record.id,
+  //         rollNumber: record.rollNumber,
+  //         registrationNumber: record.registrationNumber,
+  //         uid: record.uid,
+  //         name: record.name,
+  //         semester: record.semester,
+  //         stream: record.stream,
+  //         framework: record.framework,
+  //         year: record.year,
+  //         sgpa: record.sgpa ? Number(record.sgpa) : 0,
+  //         cgpa: record.cgpa ? Number(record.cgpa) : 0,
+  //         letterGrade: record.letterGrade,
+  //         remarks: record.remarks,
+  //         percentage: "0.00%",
+  //         subjects: [],
+  //       };
+  //     }
+  //   });
 
-//   allReportResult.forEach((record) => {
-//     if (!studentData[record.id].subjects) {
-//       studentData[record.id].subjects = [];
-//     }
+  //   allReportResult.forEach((record) => {
+  //     if (!studentData[record.id].subjects) {
+  //       studentData[record.id].subjects = [];
+  //     }
 
-//     const existingSubjectIndex = studentData[record.id].subjects.findIndex(
-//       (s: any) => s.name === record.subjectName,
-//     );
+  //     const existingSubjectIndex = studentData[record.id].subjects.findIndex(
+  //       (s: any) => s.name === record.subjectName,
+  //     );
 
-//     if (existingSubjectIndex === -1) {
-//       studentData[record.id].subjects.push({
-//         name: record.subjectName,
-//         obtainedMarks: record.obtainedMarks,
-//         fullMarks: record.fullMarks,
-//         credit: record.credit,
-//         status: record.remarks,
-//         letterGrade: record.letterGrade,
-//         examYear: record.year,
-//       });
-//     } else {
-//       const existing = studentData[record.id].subjects[existingSubjectIndex];
-//       if (
-//         (record.obtainedMarks ?? 0) > (existing.obtainedMarks ?? 0) ||
-//         record.year > existing.examYear
-//       ) {
-//         studentData[record.id].subjects[existingSubjectIndex] = {
-//           ...record,
-//           examYear: record.year,
-//         };
-//       }
-//     }
-//   });
+  //     if (existingSubjectIndex === -1) {
+  //       studentData[record.id].subjects.push({
+  //         name: record.subjectName,
+  //         obtainedMarks: record.obtainedMarks,
+  //         fullMarks: record.fullMarks,
+  //         credit: record.credit,
+  //         status: record.remarks,
+  //         letterGrade: record.letterGrade,
+  //         examYear: record.year,
+  //       });
+  //     } else {
+  //       const existing = studentData[record.id].subjects[existingSubjectIndex];
+  //       if (
+  //         (record.obtainedMarks ?? 0) > (existing.obtainedMarks ?? 0) ||
+  //         record.year > existing.examYear
+  //       ) {
+  //         studentData[record.id].subjects[existingSubjectIndex] = {
+  //           ...record,
+  //           examYear: record.year,
+  //         };
+  //       }
+  //     }
+  //   });
 
   const allFormattedData = Object.values(studentData).map((student) => {
     student.totalFullMarks = student.subjects.reduce(
@@ -230,20 +230,22 @@ return {
     };
   });
 
-  let filteredData 
-  if(showFailedOnly == "FAIL"){
-    filteredData=allFormattedData.filter((student) => student.status.include("FAIL"));
-      }
-  else if(showFailedOnly == "PASS"){
-    filteredData= allFormattedData.filter((student) => student.status.include("PASS"));
-  }
-  else {
-    filteredData=allFormattedData;
+  let filteredData;
+  if (showFailedOnly == "FAIL") {
+    filteredData = allFormattedData.filter((student) =>
+      student.status.include("FAIL"),
+    );
+  } else if (showFailedOnly == "PASS") {
+    filteredData = allFormattedData.filter((student) =>
+      student.status.include("PASS"),
+    );
+  } else {
+    filteredData = allFormattedData;
   }
 
   console.log("Export flag:", isExport);
-  
-  if(isExport){
+
+  if (isExport) {
     return {
       content: filteredData,
       page: 1,
@@ -252,7 +254,7 @@ return {
       totalPages: 1,
     };
   }
- 
+
   const paginatedData = filteredData.slice(
     (page - 1) * pageSize,
     page * pageSize,

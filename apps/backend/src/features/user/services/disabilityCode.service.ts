@@ -9,7 +9,11 @@ import { eq } from "drizzle-orm";
  * @throws Error if the code is invalid or already exists.
  */
 export async function createDisabilityCode(data: { code: string }) {
-  if (!data.code || typeof data.code !== "string" || data.code.trim().length < 2) {
+  if (
+    !data.code ||
+    typeof data.code !== "string" ||
+    data.code.trim().length < 2
+  ) {
     throw new Error("Invalid code");
   }
 
@@ -65,7 +69,11 @@ export async function getDisabilityCodeById(id: number) {
  * @throws Error if the code is invalid or not found.
  */
 export async function updateDisabilityCode(id: number, data: { code: string }) {
-  if (!data.code || typeof data.code !== "string" || data.code.trim().length < 2) {
+  if (
+    !data.code ||
+    typeof data.code !== "string" ||
+    data.code.trim().length < 2
+  ) {
     throw new Error("Invalid code");
   }
 

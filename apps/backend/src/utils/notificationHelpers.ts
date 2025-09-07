@@ -7,7 +7,7 @@ import { User } from "@repo/db/schemas/models/user";
 export const sendFileUploadNotification = (
   req: Request,
   filename: string,
-  userId?: string
+  userId?: string,
 ) => {
   const user = req.user as User;
   const notification = {
@@ -18,11 +18,11 @@ export const sendFileUploadNotification = (
     message: `uploaded a new file "${filename}"`,
     createdAt: new Date(),
     read: false,
-    meta: { 
+    meta: {
       filename,
       uploadedBy: user?.id || "unknown",
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   };
 
   // Broadcast to all or send to specific user
@@ -40,7 +40,7 @@ export const sendEditNotification = (
   req: Request,
   itemName: string,
   itemType: string,
-  userId?: string
+  userId?: string,
 ) => {
   const user = req.user as User;
   const notification = {
@@ -51,12 +51,12 @@ export const sendEditNotification = (
     message: `edited ${itemType.toLowerCase()} "${itemName}"`,
     createdAt: new Date(),
     read: false,
-    meta: { 
+    meta: {
       itemName,
       itemType,
       editedBy: user?.id || "unknown",
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   };
 
   // Broadcast to all or send to specific user
@@ -74,7 +74,7 @@ export const sendUpdateNotification = (
   req: Request,
   itemName: string,
   itemType: string,
-  userId?: string
+  userId?: string,
 ) => {
   const user = req.user as User;
   const notification = {
@@ -85,12 +85,12 @@ export const sendUpdateNotification = (
     message: `updated ${itemType.toLowerCase()} "${itemName}"`,
     createdAt: new Date(),
     read: false,
-    meta: { 
+    meta: {
       itemName,
       itemType,
       updatedBy: user?.id || "unknown",
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   };
 
   // Broadcast to all or send to specific user
@@ -107,7 +107,7 @@ export const sendUpdateNotification = (
 export const sendInfoNotification = (
   message: string,
   userId?: string,
-  userName?: string
+  userName?: string,
 ) => {
   const notification = {
     id: uuidv4(),
@@ -118,8 +118,8 @@ export const sendInfoNotification = (
     createdAt: new Date(),
     read: false,
     meta: {
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    },
   };
 
   // Broadcast to all or send to specific user
@@ -130,4 +130,4 @@ export const sendInfoNotification = (
   }
 
   return notification;
-}; 
+};

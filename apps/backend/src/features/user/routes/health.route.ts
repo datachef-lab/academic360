@@ -7,7 +7,7 @@ import {
   updateHealth,
   deleteHealth,
   deleteHealthByStudentId,
-  getAllHealthsController
+  getAllHealthsController,
 } from "../controllers/health.controller.js";
 
 const router = express.Router();

@@ -7,7 +7,7 @@ import {
   updateFamily,
   deleteFamilyById,
   deleteFamilyByStudentId,
-  getAllFamiliesController
+  getAllFamiliesController,
 } from "../controllers/family.controller.js";
 
 const router = express.Router();

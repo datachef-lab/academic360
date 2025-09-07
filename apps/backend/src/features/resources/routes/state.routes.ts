@@ -1,12 +1,12 @@
 import express from "express";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
-import { 
-    createState, 
-    deleteStateRecord, 
-    getAllState, 
-    getStateById,
-    getStatesByCountryId,
-    updateStateRecord 
+import {
+  createState,
+  deleteStateRecord,
+  getAllState,
+  getStateById,
+  getStatesByCountryId,
+  updateStateRecord,
 } from "@/features/resources/controllers/state.controller.js";
 
 const router = express.Router();
@@ -16,7 +16,7 @@ router.use(verifyJWT);
 
 /**
  * State Routes
- * 
+ *
  * POST   /                    - Create a new state
  * GET    /                    - Get all states
  * GET    /:id                 - Get state by ID

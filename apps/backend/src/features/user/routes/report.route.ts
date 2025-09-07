@@ -3,6 +3,6 @@ import { getAllReports } from "../controllers/report.controller.js";
 
 const router = express.Router();
 
-router.get("/query", getAllReports );
+router.get("/query", getAllReports);
 
 export default router;

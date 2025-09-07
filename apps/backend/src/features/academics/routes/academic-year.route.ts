@@ -1,14 +1,14 @@
 import express from "express";
 import { verifyJWT } from "@/middlewares/index.js";
 import {
-    createAcademicYearHandler,
-    getAllAcademicYearsHandler,
-    getAcademicYearByIdHandler,
-    getCurrentAcademicYearHandler,
-    updateAcademicYearHandler,
-    deleteAcademicYearHandler,
-    setCurrentAcademicYearHandler,
-    findAcademicYearByYearRangeHandler
+  createAcademicYearHandler,
+  getAllAcademicYearsHandler,
+  getAcademicYearByIdHandler,
+  getCurrentAcademicYearHandler,
+  updateAcademicYearHandler,
+  deleteAcademicYearHandler,
+  setCurrentAcademicYearHandler,
+  findAcademicYearByYearRangeHandler,
 } from "../controllers/academic-year.controller.js";
 
 const router = express.Router();
@@ -18,11 +18,11 @@ router.use(verifyJWT);
 
 // Test endpoint to check authentication
 router.get("/test-auth", (req, res) => {
-    res.json({
-        message: "Auth test",
-        user: req.user,
-        headers: req.headers.authorization
-    });
+  res.json({
+    message: "Auth test",
+    user: req.user,
+    headers: req.headers.authorization,
+  });
 });
 
 // More specific routes first

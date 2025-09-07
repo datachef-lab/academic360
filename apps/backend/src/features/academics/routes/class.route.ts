@@ -5,7 +5,7 @@ import {
   getAllClassesController,
   getClassByIdController,
   updateClassController,
-  deleteClassController
+  deleteClassController,
 } from "../controllers/class.controller.js";
 
 const router = express.Router();
@@ -18,4 +18,4 @@ router.get("/:id", getClassByIdController);
 router.put("/:id", updateClassController);
 router.delete("/:id", deleteClassController);
 
-export default router; 
+export default router;

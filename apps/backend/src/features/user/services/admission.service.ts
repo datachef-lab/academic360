@@ -46,9 +46,9 @@
 //     if (!foundAdmission) {
 //         return null; // No content
 //     }
-    
+
 //     const [deletedAdmission] = await db.delete(admissionModel).where(eq(admissionModel.id, id)).returning();
-    
+
 //     if (!deletedAdmission) {
 //         return false; // Failure!
 //     }
@@ -61,9 +61,9 @@
 //     if (!foundAdmission) {
 //         return null; // No content
 //     }
-    
+
 //     const [deletedAdmission] = await db.delete(admissionModel).where(eq(admissionModel.studentId, studentId)).returning();
-    
+
 //     if (!deletedAdmission) {
 //         return false; // Failure!
 //     }

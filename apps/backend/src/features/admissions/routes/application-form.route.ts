@@ -5,7 +5,7 @@ import {
   getApplicationFormByIdHandler,
   getApplicationFormsByAdmissionIdHandler,
   updateApplicationFormHandler,
-  deleteApplicationFormHandler
+  deleteApplicationFormHandler,
 } from "../controllers/application-form.controller.js";
 
 const router = express.Router();
@@ -18,4 +18,4 @@ router.get("/admission/:admissionId", getApplicationFormsByAdmissionIdHandler);
 router.put("/:id", updateApplicationFormHandler);
 router.delete("/:id", deleteApplicationFormHandler);
 
-export default router; 
+export default router;

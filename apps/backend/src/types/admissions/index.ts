@@ -14,48 +14,44 @@ import { AcademicYear } from "@repo/db/schemas/models/academics";
 // import { Admission } from "@/features/user/models/admission.model.js";
 
 export interface AdmissionAcademicInfoDto extends AdmissionAcademicInfo {
-    subjects: StudentAcademicSubjects[];
+  subjects: StudentAcademicSubjects[];
 }
 
-
 export interface AdmissionAdditionalInfoDto extends AdmissionAdditionalInfo {
-    sportsInfo: SportsInfo[];
+  sportsInfo: SportsInfo[];
 }
 
 export interface ApplicationFormDto extends ApplicationForm {
-    generalInfo: AdmissionGeneralInfo | null;
-    academicInfo: AdmissionAcademicInfoDto | null;
-    courseApplication: AdmissionCourseApplication[] | null;
-    additionalInfo: AdmissionAdditionalInfoDto | null;
-    paymentInfo: Payment | null;
-    currentStep: number;
+  generalInfo: AdmissionGeneralInfo | null;
+  academicInfo: AdmissionAcademicInfoDto | null;
+  courseApplication: AdmissionCourseApplication[] | null;
+  additionalInfo: AdmissionAdditionalInfoDto | null;
+  paymentInfo: Payment | null;
+  currentStep: number;
 }
 
 export interface BoardUniversityDto extends BoardUniversity {
-    subjects: AcademicSubject[];
-    degreeName?: string;
+  subjects: AcademicSubject[];
+  degreeName?: string;
 }
 
 export interface AdmissionDto extends Admission {
-    courses: AdmissionCourse[];
-    academicYear: AcademicYear;
+  courses: AdmissionCourse[];
+  academicYear: AcademicYear;
 }
 
-
 export interface Stats {
-    admissionYearCount: number;
-    totalApplications: number;
-    totalPayments: number;
-    totalDrafts: number;
+  admissionYearCount: number;
+  totalApplications: number;
+  totalPayments: number;
+  totalDrafts: number;
 }
 
 export interface AdmissionSummary {
-    id: number;
-    admissionYear: number;
-    isClosed: boolean;
-    totalApplications: number;
-    totalPayments: number;
-    totalDrafts: number;
+  id: number;
+  admissionYear: number;
+  isClosed: boolean;
+  totalApplications: number;
+  totalPayments: number;
+  totalDrafts: number;
 }
-
-

@@ -11,7 +11,7 @@ const router = express.Router();
 
 /**
  * Language Medium Routes
- * 
+ *
  * POST   /                    - Create a new language medium
  * GET    /                    - Get all language mediums
  * GET    /:id                 - Get language medium by ID

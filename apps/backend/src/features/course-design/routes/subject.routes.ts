@@ -14,7 +14,11 @@ const router = Router();
 
 // Subject routes
 router.post("/", createSubjectHandler as RequestHandler);
-router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadSubjectsHandler as RequestHandler);
+router.post(
+  "/bulk-upload",
+  uploadExcelMiddleware,
+  bulkUploadSubjectsHandler as RequestHandler,
+);
 router.get("/", getAllSubjectsHandler as RequestHandler);
 router.get("/:id", getSubjectByIdHandler as RequestHandler);
 router.put("/:id", updateSubjectHandler as RequestHandler);

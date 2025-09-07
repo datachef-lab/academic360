@@ -4,13 +4,15 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const otpModel = pgTable("otps", {
-    id: serial("id").primaryKey(),
-    otp: varchar("otp", { length: 6 }).notNull(),
-    recipient: varchar("recipient", { length: 255 }).notNull(),
-    type: otpType("type").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
+  id: serial("id").primaryKey(),
+  otp: varchar("otp", { length: 6 }).notNull(),
+  recipient: varchar("recipient", { length: 255 }).notNull(),
+  type: otpType("type").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 export const createOtpSchema = createInsertSchema(otpModel);

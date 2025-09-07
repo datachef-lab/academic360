@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { getStudentFeesMappingsHandler, getStudentFeesMappingByIdHandler, createStudentFeesMappingHandler, updateStudentFeesMappingHandler, deleteStudentFeesMappingHandler } from "../controllers/student-fees-mapping.controller.js";
+import {
+  getStudentFeesMappingsHandler,
+  getStudentFeesMappingByIdHandler,
+  createStudentFeesMappingHandler,
+  updateStudentFeesMappingHandler,
+  deleteStudentFeesMappingHandler,
+} from "../controllers/student-fees-mapping.controller.js";
 
 const studentFeesMappingRouter = Router();
 

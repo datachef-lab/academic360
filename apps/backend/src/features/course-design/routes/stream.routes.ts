@@ -14,7 +14,11 @@ const router = Router();
 
 // Stream routes
 router.post("/", createStreamHandler as RequestHandler);
-router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadStreamsHandler as RequestHandler);
+router.post(
+  "/bulk-upload",
+  uploadExcelMiddleware,
+  bulkUploadStreamsHandler as RequestHandler,
+);
 router.get("/", getAllStreamsHandler as RequestHandler);
 router.get("/:id", getStreamByIdHandler as RequestHandler);
 router.put("/:id", updateStreamHandler as RequestHandler);
