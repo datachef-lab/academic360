@@ -8,15 +8,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prepare": "husky"
   },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,scss,md}": [
-      "prettier --write",
-      "eslint --fix"
+      "prettier --write"
     ]
   },
   "pnpm": {
@@ -32,6 +26,7 @@
     "add": "^2.0.6",
     "autoprefixer": "^10.4.20",
     "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
     "postcss": "^8.4.49",
     "prettier": "^3.2.5",
     "rollup": "^4.34.4",
