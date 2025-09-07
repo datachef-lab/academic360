@@ -1,11 +1,30 @@
 import { ApplicationForm, paymentMode } from "@/db/schema";
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+
+// Work around strict shadcn typings with proper type extensions
+const LabelFixed = Label as React.ComponentType<
+  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+>;
+const SelectTriggerFixed = SelectTrigger as React.ComponentType<
+  React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
+>;
+const SelectContentFixed = SelectContent as React.ComponentType<
+  React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
+>;
+const SelectItemFixed = SelectItem as React.ComponentType<
+  React.ComponentProps<typeof SelectItem> & {
+    children?: React.ReactNode;
+    value?: string;
+    key?: string | number;
+    className?: string;
+  }
+>;
 
 interface PaymentStepProps {
   stepNotes: React.ReactNode;
@@ -16,7 +35,7 @@ interface PaymentStepProps {
   currentStep: number;
 }
 
-let paymentMethods = paymentMode.enumValues
+let paymentMethods = paymentMode.enumValues;
 
 export default function PaymentStep({
   applicationForm,
@@ -24,13 +43,13 @@ export default function PaymentStep({
   onPaymentInfoChange,
   onNext,
   onPrev,
-  currentStep
+  currentStep,
 }: PaymentStepProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentInfo, setPaymentInfo] = useState({
-    paymentMode: "ONLINE" as typeof paymentMode.enumValues[number],
+    paymentMode: "ONLINE" as (typeof paymentMode.enumValues)[number],
     transactionId: "",
     transactionDate: new Date().toISOString().split("T")[0],
     amount: 500,
@@ -58,7 +77,7 @@ export default function PaymentStep({
     try {
       // Save payment info
       onPaymentInfoChange(paymentInfo);
-      
+
       // Show success message
       toast({
         title: "Success",
@@ -99,24 +118,30 @@ export default function PaymentStep({
       {/* Payment Form */}
       <div className="space-y-4">
         <div>
-          <Label className="flex items-center mb-1">Payment Method <span className="text-red-600">*</span></Label>
+          <LabelFixed className="flex items-center mb-1">
+            Payment Method <span className="text-red-600">*</span>
+          </LabelFixed>
           <Select
             value={paymentInfo.paymentMode}
-            onValueChange={(value) => setPaymentInfo({ ...paymentInfo, paymentMode: value as typeof paymentMode.enumValues[number] })}
+            onValueChange={(value) =>
+              setPaymentInfo({ ...paymentInfo, paymentMode: value as (typeof paymentMode.enumValues)[number] })
+            }
           >
-            <SelectTrigger>
+            <SelectTriggerFixed>
               <SelectValue placeholder="Select payment method" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ONLINE">Online Payment</SelectItem>
-              <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-              <SelectItem value="CHEQUE">Cheque</SelectItem>
-            </SelectContent>
+            </SelectTriggerFixed>
+            <SelectContentFixed>
+              <SelectItemFixed value="ONLINE">Online Payment</SelectItemFixed>
+              <SelectItemFixed value="BANK_TRANSFER">Bank Transfer</SelectItemFixed>
+              <SelectItemFixed value="CHEQUE">Cheque</SelectItemFixed>
+            </SelectContentFixed>
           </Select>
         </div>
 
         <div>
-          <Label className="flex items-center mb-1">Transaction ID <span className="text-red-600">*</span></Label>
+          <LabelFixed className="flex items-center mb-1">
+            Transaction ID <span className="text-red-600">*</span>
+          </LabelFixed>
           <Input
             value={paymentInfo.transactionId}
             onChange={(e) => setPaymentInfo({ ...paymentInfo, transactionId: e.target.value })}
@@ -125,7 +150,7 @@ export default function PaymentStep({
         </div>
 
         <div>
-          <Label className="flex items-center mb-1">Amount</Label>
+          <LabelFixed className="flex items-center mb-1">Amount</LabelFixed>
           <Input
             type="number"
             value={paymentInfo.amount}
@@ -139,18 +164,11 @@ export default function PaymentStep({
       {/* Navigation Buttons */}
       <div className="flex justify-end gap-4 mt-6">
         {currentStep > 1 && (
-          <Button
-            variant="outline"
-            onClick={handlePrevious}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={handlePrevious} disabled={isLoading}>
             Previous
           </Button>
         )}
-        <Button
-          onClick={handleSubmit}
-          disabled={isLoading}
-        >
+        <Button onClick={handleSubmit} disabled={isLoading}>
           {isLoading ? "Submitting..." : "Submit Application"}
         </Button>
       </div>

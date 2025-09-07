@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findAll } from "@/lib/services/access-control.service";
+// import { findAll } from "@/lib/services/access-control.service";
 import { verifyAccessToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Get students from database (no search text for list)
-        const result = await findAll(page, size, "");
+        // const result = await findAll(page, size, "");
+        const result: unknown[] = [];
         console.log("/api/student/list result:", result);
         return NextResponse.json(result);
     } catch (error) {

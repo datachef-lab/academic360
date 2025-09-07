@@ -12,7 +12,7 @@ import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 // import { staffModel } from "../user/staff.model";
 import { applicationFormModel } from "./application-form.model";
-import { admissionProgramCourseModel } from "./admission-course.model";
+import { admissionProgramCourseModel } from "./admission-program-course.model";
 
 
 export const admissionCourseDetailsModel = pgTable("admission_course_details", {
@@ -43,9 +43,9 @@ export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     classRollNumber: varchar({ length: 50 }).notNull(),
     appNumber: varchar({ length: 50 }).notNull(),
     challanNumber: varchar({ length: 50 }).notNull(),
-    
+
     amount: integer("amount").notNull().default(0),
-    
+
     paymentTimestamp: timestamp("payment_timestamp"),
     receivedPayment: boolean().notNull().default(false),
     paymentType: varchar({ length: 500 }),
@@ -75,8 +75,8 @@ export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     feesPaidAt: timestamp("fees_paid_at"),
     feesPaymentBankBranchId: integer("fees_payment_bank_branch_id_fk")
         .references(() => bankBranchModel.id, { onDelete: "cascade", onUpdate: "cascade" }),
-    
-        isInstallmentApplied: boolean().notNull().default(false),
+
+    isInstallmentApplied: boolean().notNull().default(false),
     installmentAppliedOn: timestamp("installment_applied_on"),
     feesChallanInstallmentAmount: integer("fees_challan_installment_amount"),
     feesPaymentEntryDate: timestamp("fees_payment_entry_date"),
@@ -99,7 +99,7 @@ export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     blockRemarks: varchar({ length: 1000 }),
     shiftChangeRemarks: varchar({ length: 1000 }),
 
-    
+
     specializationId: integer("specialization_id_fk")
         .references(() => specializationModel.id, { onDelete: "cascade", onUpdate: "cascade" }),
 

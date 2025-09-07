@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, boolean, timestamp, integer, text } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
 import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),
+    legacyId: integer(),
     name: varchar({ length: 255 }).notNull(),
     email: varchar({ length: 500 }).unique().notNull(),
     password: varchar({ length: 255 }).notNull(),
@@ -14,6 +15,9 @@ export const userModel = pgTable('users', {
     whatsappNumber: varchar({ length: 255 }),
     image: varchar({ length: 255 }),
     type: userTypeEnum().notNull(),
+    isSuspended: boolean().default(false),
+    suspendedReason: text(),
+    suspendedTillDate: timestamp(),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

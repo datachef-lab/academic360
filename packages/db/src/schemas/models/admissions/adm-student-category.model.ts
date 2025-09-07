@@ -15,6 +15,7 @@ export const studentCategoryModel = pgTable("student_category", {
     classId: integer("class_id_fk")
         .references(() => classModel.id, { onDelete: "cascade", onUpdate: "cascade" })
         .notNull(),
+    isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

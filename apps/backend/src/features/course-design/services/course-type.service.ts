@@ -19,12 +19,10 @@ const defaultCourseType: CourseType[] = [
     {
         name: "Honours",
         shortName: "H",
-        disabled: false,
     },
     {
         name: "General",
         shortName: "G",
-        disabled: false,
     }
 ]
 
@@ -164,7 +162,7 @@ export const bulkUploadCourseTypes = async (
     }
 };
 
-export async function getCourseTypeById(id: number) {
+export async function findById(id: number) {
     const [courseType] = await db.select().from(courseTypeModel).where(eq(courseTypeModel.id, id));
     return courseType;
 }

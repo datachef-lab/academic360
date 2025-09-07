@@ -45,8 +45,7 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
     hasInternetAccess: boolean("has_internet_access").default(false),
 
     annualIncomeId: integer("annual_income_id_fk")
-        .references(() => annualIncomeModel.id)
-        .notNull(),
+        .references(() => annualIncomeModel.id),
 
    
 

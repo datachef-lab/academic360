@@ -3,7 +3,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
   createCourseLevel as createCourseLevelService,
   getAllCourseLevels as getAllCourseLevelsService,
-  getCourseLevelById as getCourseLevelByIdService,
+  findById,
   updateCourseLevel as updateCourseLevelService,
   deleteCourseLevel as deleteCourseLevelService,
   bulkUploadCourseLevels as bulkUploadCourseLevelsService,
@@ -60,7 +60,7 @@ export const getAllCourseLevels = async (_req: Request, res: Response) => {
 
 export const getCourseLevelById = async (req: Request, res: Response) => {
   try {
-    const courseLevel = await getCourseLevelByIdService(req.params.id);
+    const courseLevel = await findById(+req.params.id);
     if (!courseLevel) {
       return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course level not found"));
     }

@@ -1,5 +1,5 @@
 {
-  "id": "8865171a-2b05-4ba8-8faf-4046c9faee4b",
+  "id": "d441d33a-2e75-4c09-a57d-f49b460a3148",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -138,8 +138,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "course_id_fk": {
-          "name": "course_id_fk",
+        "program_course_id_fk": {
+          "name": "program_course_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -185,12 +185,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "batches_course_id_fk_courses_id_fk": {
-          "name": "batches_course_id_fk_courses_id_fk",
+        "batches_program_course_id_fk_program_courses_id_fk": {
+          "name": "batches_program_course_id_fk_program_courses_id_fk",
           "tableFrom": "batches",
-          "tableTo": "courses",
+          "tableTo": "program_courses",
           "columnsFrom": [
-            "course_id_fk"
+            "program_course_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -292,12 +292,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -358,12 +358,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -979,12 +979,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -1238,12 +1238,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -2173,6 +2173,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2444,7 +2451,7 @@
           "name": "annual_income_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "apply_under_ncc_category": {
           "name": "apply_under_ncc_category",
@@ -2940,12 +2947,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "is_closed": {
           "name": "is_closed",
@@ -3485,14 +3492,39 @@
           "type": "admission_form_status",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "admission_step": {
           "name": "admission_step",
           "type": "admission_steps",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "is_blocked": {
+          "name": "is_blocked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "block_remarks": {
+          "name": "block_remarks",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocked_by_user_id_fk": {
+          "name": "blocked_by_user_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blocked_date": {
+          "name": "blocked_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
         },
         "adm_approved_by_user_id_fk": {
           "name": "adm_approved_by_user_id_fk",
@@ -3547,6 +3579,19 @@
           "tableTo": "admissions",
           "columnsFrom": [
             "admission_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "application_forms_blocked_by_user_id_fk_users_id_fk": {
+          "name": "application_forms_blocked_by_user_id_fk_users_id_fk",
+          "tableFrom": "application_forms",
+          "tableTo": "users",
+          "columnsFrom": [
+            "blocked_by_user_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -4002,12 +4047,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -4171,7 +4216,7 @@
           "type": "board_result_status_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -4467,12 +4512,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "remarks": {
           "name": "remarks",
@@ -4611,12 +4656,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -4677,12 +4722,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -4743,12 +4788,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -4821,12 +4866,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -4907,12 +4952,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5108,12 +5153,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5288,8 +5333,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
@@ -5425,12 +5470,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5491,12 +5536,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5563,12 +5608,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5635,12 +5680,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5707,12 +5752,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -5767,12 +5812,12 @@
           "primaryKey": false,
           "notNull": true
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "sequence": {
           "name": "sequence",
@@ -6877,12 +6922,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -6994,12 +7039,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7060,12 +7105,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7146,12 +7191,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7236,12 +7281,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7348,12 +7393,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7447,12 +7492,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7527,12 +7572,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7600,12 +7645,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7679,12 +7724,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7760,14 +7805,14 @@
           "primaryKey": false,
           "notNull": true
         },
-        "degree_id": {
-          "name": "degree_id",
+        "degree_id_fk": {
+          "name": "degree_id_fk",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "address_id": {
-          "name": "address_id",
+        "address_id_fk": {
+          "name": "address_id_fk",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
@@ -7778,12 +7823,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7802,12 +7847,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "institutions_degree_id_degree_id_fk": {
-          "name": "institutions_degree_id_degree_id_fk",
+        "institutions_degree_id_fk_degree_id_fk": {
+          "name": "institutions_degree_id_fk_degree_id_fk",
           "tableFrom": "institutions",
           "tableTo": "degree",
           "columnsFrom": [
-            "degree_id"
+            "degree_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -7815,12 +7860,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "institutions_address_id_address_id_fk": {
-          "name": "institutions_address_id_address_id_fk",
+        "institutions_address_id_fk_address_id_fk": {
+          "name": "institutions_address_id_fk_address_id_fk",
           "tableFrom": "institutions",
           "tableTo": "address",
           "columnsFrom": [
-            "address_id"
+            "address_id_fk"
           ],
           "columnsTo": [
             "id"
@@ -7878,12 +7923,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -7957,12 +8002,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8023,12 +8068,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8141,12 +8186,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8214,12 +8259,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8293,12 +8338,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "disabled": {
-          "name": "disabled",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8433,6 +8478,12 @@
           "primaryKey": true,
           "notNull": true
         },
+        "legacy_id": {
+          "name": "legacy_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "varchar(255)",
@@ -8476,12 +8527,31 @@
           "primaryKey": false,
           "notNull": true
         },
+        "is_suspended": {
+          "name": "is_suspended",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "suspended_reason": {
+          "name": "suspended_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "suspended_till_date": {
+          "name": "suspended_till_date",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -8554,8 +8624,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rfid": {
-          "name": "rfid",
+        "uid": {
+          "name": "uid",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rfid_number": {
+          "name": "rfid_number",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
@@ -8583,6 +8659,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": false
+        },
+        "shift_id_fk": {
+          "name": "shift_id_fk",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         },
         "class_roll_number": {
           "name": "class_roll_number",
@@ -8651,13 +8733,6 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false
-        },
-        "is_suspended": {
-          "name": "is_suspended",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
         },
         "leaving_date": {
           "name": "leaving_date",
@@ -8752,6 +8827,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "students_shift_id_fk_shifts_id_fk": {
+          "name": "students_shift_id_fk_shifts_id_fk",
+          "tableFrom": "students",
+          "tableTo": "shifts",
+          "columnsFrom": [
+            "shift_id_fk"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -9054,6 +9142,13 @@
           "type": "varchar(2000)",
           "primaryKey": false,
           "notNull": true
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -10161,8 +10256,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "rfid": {
-          "name": "rfid",
+        "rfid_number": {
+          "name": "rfid_number",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false

@@ -8,7 +8,7 @@ export async function addSpecialization(specialization: Specialization): Promise
     return newSpecialization;
 }
 
-export async function findSpecializationById(id: number): Promise<Specialization | null> {
+export async function findById(id: number): Promise<Specialization | null> {
     const [foundSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.id, id));
 
     return foundSpecialization;

@@ -29,8 +29,20 @@ import {
   Megaphone,
   UserCog,
   Settings,
+  Search,
+  BookOpen,
 } from "lucide-react";
 import { NavUser } from "../../../components/globals/NavUser";
+import { Button } from "@/components/ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { useState, useEffect } from "react";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -50,9 +62,83 @@ const pathIconMap: Record<string, React.ElementType> = {
   settings: Settings,
 };
 
+// Search data
+const searchData = [
+  {
+    title: "Dashboard",
+    description: "Main dashboard overview",
+    href: "/dashboard",
+    icon: Home,
+    category: "Navigation",
+  },
+  {
+    title: "Academic Setup",
+    description: "Configure academic year settings",
+    href: "/dashboard/academic-year-setup",
+    icon: LayoutList,
+    category: "Academic",
+  },
+  {
+    title: "Students",
+    description: "Manage student records",
+    href: "/dashboard/students",
+    icon: Users,
+    category: "Management",
+  },
+  {
+    title: "Courses & Subjects",
+    description: "Manage courses and subjects",
+    href: "/dashboard/courses-subjects",
+    icon: BookOpen,
+    category: "Academic",
+  },
+  {
+    title: "Exam Management",
+    description: "Handle exam schedules and results",
+    href: "/dashboard/exam-management",
+    icon: ClipboardList,
+    category: "Academic",
+  },
+  {
+    title: "Settings",
+    description: "Application settings",
+    href: "/dashboard/settings",
+    icon: Settings,
+    category: "System",
+  },
+  {
+    title: "Notice Management",
+    description: "Manage notices and announcements",
+    href: "/dashboard/notices",
+    icon: Megaphone,
+    category: "Communication",
+  },
+  {
+    title: "Faculty & Staff",
+    description: "Manage faculty and staff records",
+    href: "/dashboard/faculty-staff",
+    icon: UserCog,
+    category: "Management",
+  },
+];
+
 export default function HomeLayout() {
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
+  const [open, setOpen] = useState(false);
+
+  // Keyboard shortcut handler
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   return (
     <ThemeProvider defaultTheme="light">
@@ -106,7 +192,19 @@ export default function HomeLayout() {
               </Breadcrumb>
             </div>
             <div className="flex items-center mr-2 gap-2">
-              {/* <GlobalSearch /> */}
+              {/* Search Button */}
+              <Button
+                variant="outline"
+                className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+                onClick={() => setOpen(true)}
+              >
+                <Search className="mr-2 h-4 w-4" />
+                <span className="hidden lg:inline-flex">Search...</span>
+                <span className="inline-flex lg:hidden">Search</span>
+                <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </Button>
               <NavUser />
               {/* <NotifcationPanel /> */}
               {/* <ModeToggle /> */}
@@ -117,6 +215,47 @@ export default function HomeLayout() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+
+      {/* Command Dialog for Spotlight Search */}
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          {Object.entries(
+            searchData.reduce(
+              (acc, item) => {
+                const category = item.category;
+                if (!acc[category]) {
+                  acc[category] = [];
+                }
+                acc[category].push(item);
+                return acc;
+              },
+              {} as Record<string, typeof searchData>,
+            ),
+          ).map(([category, items]) => (
+            <CommandGroup key={category} heading={category}>
+              {items.map((item) => (
+                <CommandItem
+                  key={item.href}
+                  value={item.title}
+                  onSelect={() => {
+                    setOpen(false);
+                    window.location.href = item.href;
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{item.title}</span>
+                    <span className="text-xs text-muted-foreground">{item.description}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          ))}
+        </CommandList>
+      </CommandDialog>
     </ThemeProvider>
   );
 }

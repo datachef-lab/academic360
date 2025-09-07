@@ -10,33 +10,39 @@ import { cn } from "@/lib/utils";
 //   DropdownMenuTrigger,
 // } from "@/components/ui/dropdown-menu";
 import {
-  //   User,
   Settings,
-  //   ChevronDown,
   Home,
-  //   LogOut,
-  Boxes,
   LayoutList,
-  BadgeIndianRupee,
-  //   ClipboardList,
-  //   Layers3,
-  Users,
-  Library,
-  PartyPopper,
   LayoutDashboard,
   Megaphone,
   UserCog,
+  Plus,
+  ChevronDown,
+  Calendar,
 } from "lucide-react";
 // import { toast } from "sonner";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
 // import { UserAvatar } from "@/hooks/UserAvatar";
 import { SearchStudentModal } from "./SearchStudentModal";
-import DottedSeparator from "../ui/dotted-separator";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { useSettings } from "@/features/settings/hooks/use-settings";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 // import { useSettings } from "@/features/settings/providers/settings-provider";
+
+// Academic year data
+const academicYears = [
+  { value: "2024-25", label: "2024-25" },
+  { value: "2023-24", label: "2023-24" },
+  { value: "2022-23", label: "2022-23" },
+  { value: "2021-22", label: "2021-22" },
+];
 
 // Navigation data
 const data = {
@@ -70,16 +76,16 @@ const data = {
     },
   ],
   navMain: [
-    { title: "Resources", url: "/dashboard/resources", icon: Boxes },
-    { title: "Courses & Subject Design", url: "/dashboard/courses-subjects-design", icon: LayoutList },
-    { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
+    // { title: "Resources", url: "/dashboard/resources", icon: Boxes },
+    { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
+    // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },
     // { title: "Exam Management", url: "/dashboard/exam-management", icon: ClipboardList },
-    { title: "Students", url: "/dashboard/students", icon: Users },
-    { title: "Marksheets", url: "/dashboard/marksheets", icon: Users },
-    { title: "Library", url: "/dashboard/library", icon: Library },
-    { title: "Events", url: "/dashboard/events", icon: PartyPopper },
+    // { title: "Students", url: "/dashboard/students", icon: Users },
+    // { title: "Marksheets", url: "/dashboard/marksheets", icon: Users },
+    // { title: "Library", url: "/dashboard/library", icon: Library },
+    // { title: "Events", url: "/dashboard/events", icon: PartyPopper },
   ],
 
   navAdministration: [
@@ -114,6 +120,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //   const setIsLoggingOut = React.useState(false)[1];
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
+  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState("2024-25");
 
   React.useEffect(() => {}, [settings]);
 
@@ -142,68 +149,114 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <div className="relative">
       <Sidebar collapsible="icon" {...props} className="bg-white overflow-hidden border-none">
-        <SidebarHeader className="p-2 py-[11px] border-none hover:bg-purple-900 border-purple-500 bg-purple-900/95">
-          <Link to="/dashboard" className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center drop-shadow-lg rounded-lg">
-                <Avatar>
-                  <AvatarImage
-                    src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
-                    alt="college-logo"
-                    width={24}
-                    height={24}
-                  />
-                  <AvatarFallback>
-                    <GalleryVerticalEnd className="h-6 w-6 text-white" />
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-              <h1 className="text-lg font-semibold text-white">
-                {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console
-              </h1>
-            </div>
-          </Link>
+        <SidebarHeader className="h-16 border-b border-purple-50/30 bg-gradient-to-r from-purple-900 to-purple-800 shadow-lg p-0">
+          <div className=" h-full flex items-center w-full">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-purple-700/50 transition-colors">
+                  <div className="flex items-center justify-center p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
+                    <Avatar className="h-7 w-7 ring-2 ring-white/20">
+                      <AvatarImage
+                        src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
+                        alt="college-logo"
+                      />
+                      <AvatarFallback className="bg-white text-purple-600 font-bold">
+                        <GalleryVerticalEnd className="h-3 w-3" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-base font-bold text-white leading-tight truncate">
+                      {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console Panel
+                    </h1>
+                    <p className="text-xs text-purple-200 truncate">
+                      {academicYears.find((year) => year.value === selectedAcademicYear)?.label || "Select Year"}
+                    </p>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <div className="p-2">
+                  <div className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-gray-900">
+                    <Calendar className="h-4 w-4" />
+                    Select Academic Year
+                  </div>
+                  <div className="border-t border-gray-100 mt-2 pt-2">
+                    {academicYears.map((year) => (
+                      <DropdownMenuItem
+                        key={year.value}
+                        onClick={() => setSelectedAcademicYear(year.value)}
+                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5"
+                      >
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">{year.label}</span>
+                        {selectedAcademicYear === year.value && (
+                          <div className="ml-auto h-2 w-2 bg-purple-600 rounded-full" />
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </SidebarHeader>
 
-        <DottedSeparator color="bg-purple-800/95" />
         <SidebarContent className="p-0 border-none bg-purple-800/95">
-          <div className="mb-4 flex flex-col justify-between ">
-            <div>
-              {/* Dashboard Link */}
-              <div className="mb-4">
-                {data.navDash.map((item) => (
+          <div className="h-full flex flex-col justify-between ">
+            <div className="">
+              <div className="flex flex-col h-full justify-between">
+                {/* Academic Year Setup */}
+                <div className="my-4 mb-6 border mx-2 rounded-l-md">
                   <NavItem
-                    key={item.title}
-                    icon={item.icon && <item.icon className="h-5 w-5" />}
-                    href={item.url}
-                    isActive={
-                      !isSearchActive &&
-                      (item.url === "/dashboard"
-                        ? currentPath === "/dashboard"
-                        : isSidebarActive(currentPath, item.url))
-                    }
+                    key={"Academic Year Setup"}
+                    icon={<Plus className="h-5 w-5" />}
+                    href={"/dashboard/academic-year-setup"}
                   >
-                    <span className="text-lg">{item.title}</span>
+                    <span className="text">New Academic Setup</span>
                   </NavItem>
-                ))}
-              </div>
-              {/* Masters Section */}
-              <div className="mb-4">
-                <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">Masters</h3>
-                <div>
-                  {data.navMain.map((item) => (
+                </div>
+
+                {/* Dashboard Link */}
+                <div className="mb-4">
+                  {data.navDash.map((item) => (
                     <NavItem
                       key={item.title}
                       icon={item.icon && <item.icon className="h-5 w-5" />}
                       href={item.url}
-                      isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                      isActive={
+                        !isSearchActive &&
+                        (item.url === "/dashboard"
+                          ? currentPath === "/dashboard"
+                          : isSidebarActive(currentPath, item.url))
+                      }
                     >
-                      <span className="text-base">{item.title}</span>
+                      <span className="text-lg">{item.title}</span>
                     </NavItem>
                   ))}
                 </div>
+                {/* Masters Section */}
+                <div className="mb-4 ">
+                  <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                    Masters
+                  </h3>
+                  <div>
+                    {data.navMain.map((item) => (
+                      <NavItem
+                        key={item.title}
+                        icon={item.icon && <item.icon className="h-5 w-5" />}
+                        href={item.url}
+                        isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                      >
+                        <span className="text-[14px]">{item.title}</span>
+                      </NavItem>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
+
             {/* Administration */}
             <div className="my-14">
               <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">

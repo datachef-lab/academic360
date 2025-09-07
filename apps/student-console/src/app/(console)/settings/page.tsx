@@ -1,14 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +12,7 @@ import { Settings } from "lucide-react";
 export default function SettingsPage() {
   const { user } = useAuth();
   const [siteName, setSiteName] = useState("BESC Student Console");
-  const [siteDescription, setSiteDescription] = useState(
-    "Student Portal for BESC"
-  );
+  const [siteDescription, setSiteDescription] = useState("Student Portal for BESC");
   const [enableMaterialsUpload, setEnableMaterialsUpload] = useState(true);
   const [enableNotifications, setEnableNotifications] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -34,7 +25,7 @@ export default function SettingsPage() {
     }, 1000);
   };
 
-  if (!user?.isAdmin) {
+  if (user?.type !== "ADMIN") {
     return null;
   }
 
@@ -44,9 +35,7 @@ export default function SettingsPage() {
         <Settings size={24} className="text-primary" />
         <h1 className="text-2xl font-semibold">General Settings</h1>
       </div>
-      <p className="text-muted-foreground">
-        Basic configuration for your portal
-      </p>
+      <p className="text-muted-foreground">Basic configuration for your portal</p>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -91,23 +80,17 @@ export default function SettingsPage() {
               <Checkbox
                 id="enableMaterialsUpload"
                 checked={enableMaterialsUpload}
-                onCheckedChange={(checked) =>
-                  setEnableMaterialsUpload(!!checked)
-                }
+                onCheckedChange={(checked: boolean) => setEnableMaterialsUpload(!!checked)}
               />
-              <Label htmlFor="enableMaterialsUpload">
-                Enable Materials Upload
-              </Label>
+              <Label htmlFor="enableMaterialsUpload">Enable Materials Upload</Label>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="enableNotifications"
                 checked={enableNotifications}
-                onCheckedChange={(checked) => setEnableNotifications(!!checked)}
+                onCheckedChange={(checked: boolean) => setEnableNotifications(!!checked)}
               />
-              <Label htmlFor="enableNotifications">
-                Enable Email Notifications
-              </Label>
+              <Label htmlFor="enableNotifications">Enable Email Notifications</Label>
             </div>
           </CardContent>
           <CardFooter>

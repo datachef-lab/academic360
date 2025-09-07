@@ -7,7 +7,7 @@ export const degreeModel = pgTable("degree", {
     legacyDegreeId: integer(),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

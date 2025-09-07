@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createApplicationForm, deleteApplicationForm, findApplicationFormById, findApplicationFormsByAdmissionId, updateApplicationForm } from "@/lib/services/application-form.service";
 import { ApplicationForm, AdmissionGeneralInfo } from "@/db/schema";
 import { ApplicationFormDto } from "@/types/admissions";
-import { generateApplicationFormToken, setApplicationFormCookies } from "@/lib/services/auth.service";
+// import { generateApplicationFormToken, setApplicationFormCookies } from "@/lib/services/auth.service";
 
 async function tmp(applicationForm: ApplicationFormDto) {
     try {
 
         let response: NextResponse<unknown> | undefined;
-        const token = generateApplicationFormToken(applicationForm!);
-        response = setApplicationFormCookies(token);
+        // const token = generateApplicationFormToken(applicationForm!);
+        // response = setApplicationFormCookies(token);
         return NextResponse.json({ applicationForm }, response);
 
 
@@ -40,8 +40,8 @@ export async function POST(req: NextRequest) {
         }
 
         let response: NextResponse<unknown> | undefined;
-        const token = generateApplicationFormToken(result.applicationForm as ApplicationFormDto);
-        response = setApplicationFormCookies(token);
+        // const token = generateApplicationFormToken(result.applicationForm as ApplicationFormDto);
+        // response = setApplicationFormCookies(token);
 
         return NextResponse.json(result, { status: 201 });
     } catch (error) {

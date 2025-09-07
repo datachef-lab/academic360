@@ -15,7 +15,7 @@ export const boardModel = pgTable("boards", {
     code: varchar({ length: 255 }),
     addressId: integer().references(() => addressModel.id),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

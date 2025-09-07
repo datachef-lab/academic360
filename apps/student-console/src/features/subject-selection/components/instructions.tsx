@@ -1,9 +1,9 @@
 import React from "react";
 import { BookOpen, Layers, FileText, GraduationCap, Lightbulb, Info, AlertTriangle } from "lucide-react";
 
-export default function Instructions() {
+export default function Instructions({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="h-full flex flex-col">
+    <div className={`h-full flex flex-col ${compact ? "" : ""}`}>
       {/* Fixed Header - Even Smaller Height */}
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 mb-3 flex-shrink-0">
         <div className="p-2 border-b border-gray-100">

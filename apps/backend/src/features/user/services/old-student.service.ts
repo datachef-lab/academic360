@@ -6,13 +6,14 @@ import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, mysqlConnection } from "@/db";
 import { OldCourseDetails, OldAdmStudentPersonalDetail, OldAdmSubjectDetails, OldCvSubjectSelection, OldMeritList, OldStudentCategory, OldBoardSubjectMappingSub } from "@repo/db/legacy-system-types/admissions";
 import { OldCityMaintab, OldCitySubtab, OldCountry, OldCountrySubTab, OldDegree, OldDistrict, OldInstitution } from "@repo/db/legacy-system-types/resources";
+import * as oldStudentController from "../controllers/oldStudent.controller";
 
 interface OldLanguageMedium {
     readonly id: number;
     name: string;
 }
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
-import { addressModel, annualIncomeModel, bloodGroupModel, categoryModel, cityModel, countryModel, districtModel, languageMediumModel, nationalityModel, occupationModel, religionModel, specializationModel, stateModel, accommodationModel, Address, BloodGroup, healthModel, Health, emergencyContactModel, EmergencyContact, personalDetailsModel, admissionCourseDetailsModel, Student, Stream, CourseType, courseTypeModel, AdmissionCourseDetails, affiliationModel, classModel, regulationTypeModel, academicYearModel, subjectModel, subjectTypeModel, paperModel, courseLevelModel, programCourseModel, studentCategoryModel, streamModel, courseModel, eligibilityCriteriaModel, shiftModel, meritListModel, bankModel, bankBranchModel, admSubjectPaperSelectionModel, ProgramCourse, Course, personModel, familyModel, Occupation, userTypeEnum, userModel, User, studentModel, applicationFormModel, admissionModel, sessionModel, Session, ApplicationForm, admissionGeneralInfoModel, EligibilityCriteria, StudentCategory, PersonalDetails, Accommodation, BankBranch, admissionAcademicInfoModel, AdmissionAcademicInfo, Board, boardModel, Degree, degreeModel, LanguageMedium, LanguageMediumT, Institution, institutionModel, Specialization, studentAcademicSubjectModel, Subject, BoardSubject, boardSubjectModel, admissionProgramCourseModel, AcademicYear, CancelSource, cancelSourceModel, sectionModel } from "@repo/db/schemas";
+import { addressModel, annualIncomeModel, bloodGroupModel, categoryModel, cityModel, countryModel, districtModel, languageMediumModel, nationalityModel, occupationModel, religionModel, specializationModel, stateModel, accommodationModel, Address, BloodGroup, healthModel, Health, emergencyContactModel, EmergencyContact, personalDetailsModel, admissionCourseDetailsModel, Student, Stream, CourseType, courseTypeModel, AdmissionCourseDetails, affiliationModel, classModel, regulationTypeModel, academicYearModel, subjectModel, subjectTypeModel, paperModel, courseLevelModel, programCourseModel, studentCategoryModel, streamModel, courseModel, eligibilityCriteriaModel, shiftModel, meritListModel, bankModel, bankBranchModel, admSubjectPaperSelectionModel, ProgramCourse, Course, personModel, familyModel, Occupation, userTypeEnum, userModel, User, studentModel, applicationFormModel, admissionModel, sessionModel, Session, ApplicationForm, admissionGeneralInfoModel, EligibilityCriteria, StudentCategory, PersonalDetails, Accommodation, BankBranch, admissionAcademicInfoModel, AdmissionAcademicInfo, Board, boardModel, Degree, degreeModel, LanguageMedium, LanguageMediumT, Institution, institutionModel, Specialization, studentAcademicSubjectModel, Subject, BoardSubject, boardSubjectModel, admissionProgramCourseModel, AcademicYear, CancelSource, cancelSourceModel, sectionModel, admissionAdditionalInfoModel, transportDetailsModel } from "@repo/db/schemas";
 import { AdmissionCourseDetailsT } from "@repo/db/schemas/models/admissions/adm-course-details.model";
 // import { processStudent } from "../controllers/oldStudent.controller"; // Removed to avoid conflict
 import { OldClass, OldCourse, OldEligibilityCriteria, OldSubject, OldSubjectType } from "@repo/db/legacy-system-types/course-design";
@@ -29,16 +30,66 @@ type DbType = NodePgDatabase<Record<string, never>> & {
     $client: Pool;
 }
 
-export async function loadData() {
+async function fetchData(isTransferred: boolean, offset: number, limit: number = BATCH_SIZE) {
+    if (isTransferred) {
+        const [personalDetailsResult] = await mysqlConnection.query(`
+            SELECT COUNT(pd.id) AS totalRows
+            FROM
+                personaldetails pd,
+                studentpersonaldetails s,
+                coursedetails cd
+            WHERE 
+                cd.id = s.admissionid
+                AND pd.id = cd.parent_id;
+        `);
+        const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
+        const [rows] = await mysqlConnection.query(`
+            SELECT pd.* 
+            FROM 
+                personaldetails pd,
+                studentpersonaldetails s,
+                coursedetails cd
+            WHERE 
+                cd.id = s.admissionid
+                AND pd.id = cd.parent_id
+            LIMIT ${limit}
+            OFFSET ${offset};
+        `) as [OldAdmStudentPersonalDetail[], any];
 
+        return { totalRows, oldDataArr: rows as OldAdmStudentPersonalDetail[] };
+    }
+    else {
+        const [personalDetailsResult] = await mysqlConnection.query(`
+            SELECT COUNT(pd.id) AS totalRows 
+            FROM 
+                personaldetails pd,
+                coursedetails cd
+            WHERE
+                (cd.transferred = false OR cd.transferred IS NULL)
+                AND cd.parent_id = pd.id;
+        `);
+        const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
+        const [rows] = await mysqlConnection.query(`
+            SELECT pd.* 
+            FROM 
+                personaldetails pd,
+                coursedetails cd
+            WHERE
+                (cd.transferred = false OR cd.transferred IS NULL)
+                AND cd.parent_id = pd.id
+            LIMIT ${limit}
+            OFFSET ${offset};
+        `) as [OldAdmStudentPersonalDetail[], any];
+        return { totalRows, oldDataArr: rows as OldAdmStudentPersonalDetail[] };
+    }
+}
+
+export async function loadData(byIsTransferred: boolean) {
+    // Do fetch the data from the old database which are transferred first
+    const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
 
     // STEP 1: Count the total numbers of students
-    console.log('\n\nCounting rows from table \`personaldetails\`...');
-    const [personalDetailsResult] = await mysqlConnection.query(`
-        SELECT COUNT(*) AS totalRows
-        FROM personaldetails;
-    `);
-    const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
+    console.log(`\n\nCounting rows from table \`personaldetails\`... for ${byIsTransferred ? "transferred" : "not transferred"}`);
     // STEP 2: Calculate the number of batches
     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
     console.log(`\nTotal rows to migrate for personaldetails: ${totalRows}`);
@@ -46,35 +97,49 @@ export async function loadData() {
     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-        console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
-        const [rows] = await mysqlConnection.query(`
-            SELECT * 
-            FROM personaldetails
-            LIMIT ${BATCH_SIZE}
-            OFFSET ${offset};
-        `) as [OldAdmStudentPersonalDetail[], any];
+        const { oldDataArr } = await fetchData(byIsTransferred, offset, BATCH_SIZE);
 
-        const oldDataArr = rows as OldAdmStudentPersonalDetail[];
+        console.log(`\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`);
 
         for (let i = 0; i < oldDataArr.length; i++) {
             // Fetch the related studentpersonalDetail
             try {
-
-                const student = await processStudent(oldDataArr[i]);
+                await processApplicationForm(oldDataArr[i]);
                 const name = [oldDataArr[i]?.firstName, oldDataArr[i]?.middleName, oldDataArr[i]?.lastName].filter(Boolean).join(' ');
                 console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`);
             } catch (error) {
                 console.log(error)
             }
 
-
-
-
         }
     }
 
+    console.log("Application forms migrated successfully");
 
-    await loadAllStaffs();
+    // if (byIsTransferred) {
+    //     const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
+    //     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+    //     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+    //         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+
+    //         const { oldDataArr } = await fetchData(byIsTransferred, offset, BATCH_SIZE);
+
+
+    //         for (let i = 0; i < oldDataArr.length; i++) {
+    //             // Fetch the related studentpersonalDetail
+    //             try {
+    //                 await processApplicationForm(oldDataArr[i]);
+    //                 const name = [oldDataArr[i]?.firstName, oldDataArr[i]?.middleName, oldDataArr[i]?.lastName].filter(Boolean).join(' ');
+    //                 console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`);
+    //             } catch (error) {
+    //                 console.log(error)
+    //             }
+
+    //         }
+    //     }
+    // }
+
+    // await loadAllStaffs();
 }
 
 async function loadAllStaffs() {
@@ -300,15 +365,35 @@ async function addAdmAcademicInfo(oldAdmStudentPersonalDetails: OldAdmStudentPer
         WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
     `) as [OldAcademicDetails[], any];
 
-    // if (!oldAcademicDetails) {
-    //     // throw new Error(`No academic details found for personal-details ID: ${oldAdmStudentPersonalDetails.id}`);
-    //     console.log("no academic details found for personal-details ID: ", oldAdmStudentPersonalDetails.id);
-    //     return undefined;
-    // }
+    if (!oldAcademicDetails) {
+        console.log("no academic details found for personal-details ID: ", oldAdmStudentPersonalDetails.id);
+        return undefined;
+    }
 
     let board: Board | undefined;
-    if (oldAcademicDetails.boardId) {
+    if (oldAcademicDetails?.boardId) {
         board = await addBoard(oldAcademicDetails.boardId);
+    }
+
+    // Ensure we have a board - create fallback if needed
+    if (!board) {
+        const [existingBoard] = await db
+            .select()
+            .from(boardModel)
+            .where(eq(boardModel.name, "UNKNOWN"));
+        if (existingBoard) {
+            board = existingBoard;
+        } else {
+            board = (await db.insert(boardModel).values({ name: "UNKNOWN" }).returning())[0];
+        }
+    }
+
+    // At this point, board is guaranteed to be defined
+    const finalBoard = board!;
+
+    // Ensure we have a valid board ID
+    if (!finalBoard.id) {
+        throw new Error("Board ID is missing after creation/selection");
     }
 
     let lastSchool: Institution | undefined;
@@ -325,9 +410,9 @@ async function addAdmAcademicInfo(oldAdmStudentPersonalDetails: OldAdmStudentPer
         .insert(admissionAcademicInfoModel)
         .values({
             applicationFormId: applicationForm.id!,
-            boardId: board?.id || 0, // Required field - using 0 as fallback
+            boardId: finalBoard.id as number,
+
             boardResultStatus: oldAcademicDetails.boardResultStatus === "PASS" ? "PASS" : "FAIL", // Required field
-            // languageMediumId: languageMedium?.id || 0, // Required field - using 0 as fallback
             yearOfPassing: oldAcademicDetails.yearofPassing || 0, // Required field
 
 
@@ -402,6 +487,8 @@ async function processAdmissionApplicationForm(oldStudent: OldStudent, oldAdmStu
 
     await addAdmCourseApps(oldAdmStudentPersonalDetails, applicationForm);
 
+    const admAdditionalInfo = await addAdmAdditionalInfo(oldAdmStudentPersonalDetails, applicationForm);
+
     return applicationForm;
 }
 
@@ -464,6 +551,28 @@ async function addAdmAcademSubjects(oldAdmStudentPersonalDetails: OldAdmStudentP
     }
 
 
+}
+
+async function addAdmAdditionalInfo(oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, applicationForm: ApplicationForm) {
+    const familyDetails = await addFamily(oldAdmStudentPersonalDetails);
+
+    const annualIncome = await categorizeIncome(oldAdmStudentPersonalDetails.familyIncome);
+    const [newAdmAdditionalInfo] = await db.insert(admissionAdditionalInfoModel).values({
+        applicationFormId: applicationForm.id!,
+        familyDetailsId: familyDetails?.id as number,
+
+        applyUnderNCCCategory: !!oldAdmStudentPersonalDetails.nccQuota,
+        applyUnderSportsCategory: !!oldAdmStudentPersonalDetails.sportsquota,
+        familyExStudentName: oldAdmStudentPersonalDetails.famexstdname,
+        familyExStudentRelation: oldAdmStudentPersonalDetails.famexstdrelation,
+
+        hasSmartphone: !!oldAdmStudentPersonalDetails.resismartphone,
+        hasLaptopOrDesktop: !!oldAdmStudentPersonalDetails.resilaptop,
+        hasInternetAccess: !!oldAdmStudentPersonalDetails.resiinternet,
+        annualIncomeId: annualIncome?.id || undefined,
+
+    }).returning();
+    return newAdmAdditionalInfo;
 }
 
 async function addBoardSubject(oldSubjectId: number): Promise<BoardSubject | undefined> {
@@ -541,11 +650,25 @@ async function addBoardSubject(oldSubjectId: number): Promise<BoardSubject | und
 
 
 
-export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail) {
+export async function processApplicationForm(oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail) {
+    // Check if student already exists to prevent duplicate processing
+    if (oldAdmStudentPersonalDetails.id) {
+        const [existingStudent] = await db
+            .select()
+            .from(studentModel)
+            .where(eq(studentModel.legacyStudentId, oldAdmStudentPersonalDetails.id));
+
+        if (existingStudent) {
+            console.log(`Student with legacy ID ${oldAdmStudentPersonalDetails.id} already exists, skipping processing`);
+            return existingStudent;
+        }
+    }
+
     // Step 1: Fetch student personaldetails from old personaldetails table and create user
     const [[oldCourseDetails]] = await mysqlConnection.query(`
         SELECT * 
-        FROM coursedetails;
+        FROM coursedetails
+        WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
     `) as [OldCourseDetails[], any];
 
     if (!oldCourseDetails) {
@@ -565,7 +688,7 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
     const applicationForm = await processAdmissionApplicationForm(oldStudent, oldAdmStudentPersonalDetails);
 
     if (!applicationForm) {
-        return;
+        return undefined;
     }
 
     const [existingAdmCourseDetails] = await db
@@ -579,7 +702,7 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
         )
 
     if (!existingAdmCourseDetails) {
-        console.log("no adm course details found for application form ID: ", applicationForm.id);
+        console.log("Is not transferred for application form ID: ", applicationForm.id);
         return undefined;
     }
 
@@ -607,17 +730,7 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
             eq(academicYearModel.id, session?.academicYearId as number)
         );
 
-    // TODO: The below steps wull be conditional
-
-    // const [[oldStudent]] = await mysqlConnection.query(`
-    //     SELECT *
-    //     FROM studentpersonaldetails
-    //     WHERE admissionId = ${oldOldCourseDetails.id};
-    // `) as [OldStudent[], any];
-
-
-
-    const user = await addUser(oldAdmStudentPersonalDetails, "STUDENT");
+    const user = await addUser(oldAdmStudentPersonalDetails, "STUDENT", oldStudent.codeNumber);
 
     if (!user) {
         return undefined;
@@ -635,10 +748,65 @@ export async function processStudent(oldAdmStudentPersonalDetails: OldAdmStudent
 
 
     // Step 2: Check for the student
-    const student = await addStudent(oldStudent, oldAdmStudentPersonalDetails, oldCourseDetails, user, foundProgramCourse, applicationForm);
+    const student = await addStudent(oldStudent, oldAdmStudentPersonalDetails, oldCourseDetails, user, foundProgramCourse, applicationForm, existingAdmCourseDetails);
 
     // Step 3: Check for the accomodation
-    await addAccommodation(oldStudent.placeofstay || "", oldStudent.placeofstayaddr || "", "", oldStudent.placeofstaycontactno || "");
+    const accommodation = await addAccommodation(oldStudent.placeofstay || "", oldStudent.placeofstayaddr || "", "", oldStudent.placeofstaycontactno || "");
+
+    // Step 4: Check for the accomodation
+    await oldStudentController.addAccommodation(oldStudent, student, accommodation.id!);
+
+    // Step 5: Check for the admission
+    // await addAdmission(oldStudent, student);
+
+    // Step 6: Check for the Familys
+    const [existingAdditionalInfo] = await db.select()
+        .from(admissionAdditionalInfoModel)
+        .where(eq(admissionAdditionalInfoModel.applicationFormId, applicationForm.id as number));
+    if (existingAdditionalInfo) {
+        const [existingFamily] = await db.select()
+            .from(familyModel)
+            .where(eq(familyModel.id, existingAdditionalInfo.familyDetailsId as number));
+        if (existingFamily) {
+            await oldStudentController.addFamily(oldStudent, student, existingFamily.id!);
+        }
+    }
+
+
+    // Step 7: Check for the health
+    const [foundAdmGeneralInfo] = await db.select()
+        .from(admissionGeneralInfoModel)
+        .where(eq(admissionGeneralInfoModel.applicationFormId, applicationForm.id as number));
+    if (foundAdmGeneralInfo) {
+        const [existingHealth] = await db.select()
+            .from(healthModel)
+            .where(eq(healthModel.id, foundAdmGeneralInfo.healthId as number));
+        if (existingHealth) {
+            await oldStudentController.addHealth(oldStudent, student, existingHealth.id!);
+        }
+
+        const [foundEmergencyContact] = await db.select()
+            .from(emergencyContactModel)
+            .where(eq(emergencyContactModel.id, foundAdmGeneralInfo.emergencyContactId as number));
+        if (foundEmergencyContact) {
+            await oldStudentController.addEmergencyContact(oldStudent, student, foundEmergencyContact.id!);
+        }
+
+        const [foundPersonalDetails] = await db.select()
+            .from(personalDetailsModel)
+            .where(eq(personalDetailsModel.id, foundAdmGeneralInfo.personalDetailsId as number));
+        if (foundPersonalDetails) {
+            await oldStudentController.addPersonalDetails(oldStudent, user, foundPersonalDetails.id!);
+        }
+
+        const [foundTransportDetails] = await db.select()
+            .from(transportDetailsModel)
+            .where(eq(transportDetailsModel.id, foundAdmGeneralInfo.transportDetailsId as number));
+        if (foundTransportDetails) {
+            await oldStudentController.addTransportDetails(oldStudent, student, foundTransportDetails.id!);
+        }
+    }
+
 
     console.log("updating application form to SUBJECT_PAPER_SELECTION");
     await db
@@ -754,7 +922,7 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
         return undefined;
     }
 
-    const [existingBoard] = await db.select().from(boardModel).where(eq(boardModel.name, oldBoard.boardName.trim()));
+    const [existingBoard] = await db.select().from(boardModel).where(ilike(boardModel.name, oldBoard.boardName.trim()));
 
     if (existingBoard) {
         return existingBoard;
@@ -784,10 +952,15 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     return newBoard;
 }
 
-export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, type: typeof userTypeEnum.enumValues[number]) {
+export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, type: typeof userTypeEnum.enumValues[number], uid?: string) {
     if (!oldData) {
         return undefined;
     }
+
+    if (type === "STUDENT" && (!uid || uid.trim() === "")) {
+        throw new Error("UID is required for student");
+    }
+
     const isStaff = (type: typeof userTypeEnum.enumValues[number]): type is "STAFF" => type === "STAFF";
     const isAdmStudent = (type: typeof userTypeEnum.enumValues[number]): type is "STUDENT" => type === "STUDENT";
 
@@ -797,42 +970,10 @@ export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, t
     }
 
     // Fetch personal details based on type
-    let personalDetails: any = null;
-    let codeNumber: string = "";
-    let name: string = "";
-    let phone: string | undefined = undefined;
-    let whatsappNumber: string | undefined = undefined;
+    // let personalDetails = await addPersonalDetails(oldData);
+    let phone: string | undefined = oldData.contactNo?.trim();
+    let whatsappNumber: string | undefined = oldData.contactNo?.trim();
 
-    if (isStaff(type)) {
-        // Fetch staff personal details
-        const [staffPersonalDetailRows] = await mysqlConnection.query(`
-            SELECT * 
-            FROM staffpersonaldetails
-            WHERE id = ${oldData.id};
-        `) as [OldStaff[], any];
-
-        if (staffPersonalDetailRows.length > 0) {
-            personalDetails = staffPersonalDetailRows[0];
-            codeNumber = personalDetails.empcode || personalDetails.id.toString();
-            name = [personalDetails.firstname, personalDetails.middlename, personalDetails.lastname]
-                .filter(Boolean)
-                .join(' ')
-                .trim() || "";
-            phone = personalDetails.phoneMobileNo?.trim();
-            whatsappNumber = personalDetails.phoneMobileNo?.trim(); // Assuming same as phone for staff
-        }
-    } else if (isAdmStudent(type)) {
-        // For OldAdmStudentPersonalDetail, read fields safely
-        const s = oldData as OldAdmStudentPersonalDetail;
-        personalDetails = s;
-        codeNumber = (s as any).codenumber || (s.id ? String(s.id) : "");
-        name = [s.firstName, s.middleName, s.lastName]
-            .filter(Boolean as any)
-            .join(' ')
-            .trim() || "";
-        phone = (s as any).studentPersonalContactNo?.trim() || s.studentcontactNo?.trim() || s.contactNo?.trim();
-        whatsappNumber = (s as any).whatsappno?.trim();
-    }
 
     const cleanString = (value: unknown): string | undefined => {
         if (typeof value === 'string') {
@@ -841,25 +982,63 @@ export async function addUser(oldData: OldAdmStudentPersonalDetail | OldStaff, t
         return undefined;
     };
 
-    const email = `${cleanString(codeNumber)}@thebges.edu.in`;
-    const hashedPassword = await bcrypt.hash(codeNumber.trim(), 10);
 
-    // Check if user already exists
-    const [existingUser] = await db.select().from(userModel).where(eq(userModel.email, email.trim().toLowerCase()));
+    // const email = `${cleanString(codeNumber)}@thebges.edu.in`;
+    const hashedPassword = await bcrypt.hash("default", 10);
+
+    // Check if user already exists by legacyId OR email
+    let existingUser;
+    if (oldData?.email?.trim()) {
+        // Check by both legacyId and email
+        [existingUser] = await db
+            .select()
+            .from(userModel)
+            .where(
+                or(
+                    eq(userModel.legacyId, oldData.id!),
+                    eq(userModel.email, oldData.email.trim())
+                )
+            );
+    } else {
+        // Check only by legacyId
+        [existingUser] = await db
+            .select()
+            .from(userModel)
+            .where(eq(userModel.legacyId, oldData.id!));
+    }
+
     if (existingUser) {
-        const [updatedUser] = await db.update(userModel).set({ password: hashedPassword }).where(eq(userModel.id, existingUser.id)).returning();
-        return updatedUser;
+        console.log(`User with legacy ID ${oldData.id} or email ${oldData?.email} already exists, skipping creation`);
+        return existingUser;
     }
 
     // Create the new user
-    const [newUser] = await db.insert(userModel).values({
-        name: name,
-        email: email.trim().toLowerCase(),
-        password: hashedPassword,
-        phone: phone,
-        type,
-        whatsappNumber: whatsappNumber,
-    }).returning();
+    let newUser: User | undefined;
+    let nameToUse = '';
+    if (type === "STUDENT") {
+        nameToUse = [(oldData as OldAdmStudentPersonalDetail).firstName, (oldData as OldAdmStudentPersonalDetail).middleName, (oldData as OldAdmStudentPersonalDetail).lastName].filter(Boolean).join(' ').trim();
+    }
+    else if (type === "STAFF") {
+        nameToUse = [(oldData as OldStaff).name].filter(Boolean).join(' ').trim();
+    }
+    try {
+        [newUser] = await db.insert(userModel).values({
+            name: nameToUse,
+            legacyId: oldData.id!,
+            email: type === "STUDENT" ? `${cleanString(uid)}@thebges.edu.in` : (oldData).email?.trim() ?? "",
+            password: hashedPassword,
+            phone: phone,
+            type,
+            whatsappNumber: whatsappNumber,
+        }).returning();
+    } catch (error: any) {
+        // If there's a duplicate key error, try to find the existing user
+        throw error;
+    }
+
+    if (!newUser) {
+        throw new Error("Failed to create or find user");
+    }
 
     if (type === "STAFF") {
         if (oldData.id) {
@@ -906,7 +1085,7 @@ export async function addStaff(oldStaffId: number, user: User) {
         phone: oldStaff.emergencytelmobile ?? undefined,
         officePhone: oldStaff.emergencytellandno ?? undefined,
         residentialPhone: undefined,
-    } as any);
+    } as EmergencyContact);
 
     // Previous employer address if present
     let previousEmployeeAddressId: number | undefined = undefined;
@@ -994,12 +1173,19 @@ export async function addStaff(oldStaffId: number, user: User) {
 }
 
 
-export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, oldOldCourseDetails: OldCourseDetails, user: User, programCourse: ProgramCourse, applicationForm: ApplicationForm) {
+export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail, oldOldCourseDetails: OldCourseDetails, user: User, programCourse: ProgramCourse, applicationForm: ApplicationForm, admCourseDetails: AdmissionCourseDetails) {
+    // Check for existing student by userId OR legacyStudentId to prevent duplicates
     const [existingStudent] = await db
         .select()
         .from(studentModel)
-        .where(eq(studentModel.userId, user.id as number));
+        .where(
+            or(
+                eq(studentModel.userId, user.id as number),
+                eq(studentModel.legacyStudentId, oldStudent.id as number)
+            )
+        );
     if (existingStudent) {
+        console.log(`Student already exists with legacy ID: ${oldStudent.id}, skipping creation`);
         return existingStudent;
     }
 
@@ -1033,9 +1219,10 @@ export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDe
 
     const [newStudent] = await db.insert(studentModel).values({
         userId: user.id as number,
+        uid: oldStudent.codeNumber ? String(oldStudent.codeNumber) : oldStudent.oldcodeNumber ? String(oldStudent.oldcodeNumber) : '',
         programCourseId: programCourse.id as number,
         legacyStudentId: oldStudent.id as number,
-        rfid: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
+        rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno ? String(oldStudent.univregno) : undefined,
         rollNumber: oldStudent.univlstexmrollno ? String(oldStudent.univlstexmrollno) : undefined,
         cuFormNumber: oldStudent.cuformno ? String(oldStudent.cuformno) : undefined,
@@ -1044,6 +1231,7 @@ export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDe
         abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
         apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
         checkRepeat: !!oldStudent.chkrepeat,
+        shiftId: admCourseDetails.shiftId,
         applicationId: applicationForm.id as number,
         community: (oldStudent.communityid === 0 || oldStudent.communityid === null) ? null : (oldStudent.communityid === 1 ? "GUJARATI" : "NON-GUJARATI"),
         handicapped: !!oldStudent.handicapped,
@@ -1059,6 +1247,7 @@ export async function addStudent(oldStudent: OldStudent, oldAdmStudentPersonalDe
 
     await db.update(userModel).set({
         name: `${oldStudent.name}`,
+
     }).where(eq(userModel.id, user.id as number));
 
 
@@ -1122,7 +1311,7 @@ async function addAddress({ cityId, districtId, stateId, countryId, otherCity, o
 
 
 export async function addOccupation(name: string, legacyOccupationId: number) {
-    const [existingOccupation] = await db.select().from(occupationModel).where(eq(occupationModel.name, name.trim()));
+    const [existingOccupation] = await db.select().from(occupationModel).where(ilike(occupationModel.name, name.trim()));
     if (existingOccupation) {
         return existingOccupation;
     }
@@ -1136,7 +1325,7 @@ export async function addOccupation(name: string, legacyOccupationId: number) {
 }
 
 export async function addBloodGroup(type: string, legacyBloodGroupId?: number) {
-    const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(eq(bloodGroupModel.type, type.trim()));
+    const [existingBloodGroup] = await db.select().from(bloodGroupModel).where(ilike(bloodGroupModel.type, type.trim()));
     if (existingBloodGroup) {
         return existingBloodGroup;
     }
@@ -1146,7 +1335,10 @@ export async function addBloodGroup(type: string, legacyBloodGroupId?: number) {
 }
 
 export async function addNationality(name: string, code: number | undefined | null, legacyNationalityId?: number) {
-    const [existingNationality] = await db.select().from(nationalityModel).where(eq(nationalityModel.name, name.trim()));
+    const [existingNationality] = await db
+        .select()
+        .from(nationalityModel)
+        .where(ilike(nationalityModel.name, name.trim()));
     if (existingNationality) {
         return existingNationality;
     }
@@ -1159,8 +1351,8 @@ export async function addCategory(name: string, code: string, documentRequired: 
     // Check if category exists by name OR code
     const [existingCategory] = await db.select().from(categoryModel).where(
         or(
-            eq(categoryModel.name, name.trim()),
-            eq(categoryModel.code, code)
+            ilike(categoryModel.name, name.trim()),
+            ilike(categoryModel.code, code)
         )
     );
     if (existingCategory) {
@@ -1172,7 +1364,7 @@ export async function addCategory(name: string, code: string, documentRequired: 
 }
 
 export async function addReligion(name: string, legacyReligionId: number) {
-    const [existingReligion] = await db.select().from(religionModel).where(eq(religionModel.name, name.trim()));
+    const [existingReligion] = await db.select().from(religionModel).where(ilike(religionModel.name, name.trim()));
     if (existingReligion) {
         return existingReligion;
     }
@@ -1182,7 +1374,7 @@ export async function addReligion(name: string, legacyReligionId: number) {
 }
 
 export async function addLanguageMedium(name: string, legacyLanguageMediumId: number) {
-    const [existingLanguage] = await db.select().from(languageMediumModel).where(eq(languageMediumModel.name, name.trim()));
+    const [existingLanguage] = await db.select().from(languageMediumModel).where(ilike(languageMediumModel.name, name.trim()));
     if (existingLanguage) {
         return existingLanguage;
     }
@@ -1192,7 +1384,7 @@ export async function addLanguageMedium(name: string, legacyLanguageMediumId: nu
 }
 
 export async function addSpecialization(name: string, db: DbType, legacySpecializationId?: number) {
-    const [existingSpecialization] = await db.select().from(specializationModel).where(eq(specializationModel.name, name.trim()));
+    const [existingSpecialization] = await db.select().from(specializationModel).where(ilike(specializationModel.name, name.trim()));
     if (existingSpecialization) {
         return existingSpecialization;
     }
@@ -1201,7 +1393,7 @@ export async function addSpecialization(name: string, db: DbType, legacySpeciali
     return newSpecialization;
 }
 
-async function addCountry(oldCountry: OldCountry) {
+export async function addCountry(oldCountry: OldCountry) {
     const [existingCountry] = await db
         .select()
         .from(countryModel)
@@ -1221,7 +1413,7 @@ async function addCountry(oldCountry: OldCountry) {
     return newCountry;
 }
 
-async function addState(legacyStateId: number) {
+export async function addState(legacyStateId: number) {
     const [[oldCityMaintab]] = await mysqlConnection.query(`
         SELECT * 
         FROM citymaintab
@@ -1279,7 +1471,7 @@ async function addState(legacyStateId: number) {
     return newState;
 }
 
-async function addCity(oldCityId: number) {
+export async function addCity(oldCityId: number) {
     console.log("oldCityId in addCity() ----->", oldCityId);
     if (isNaN(oldCityId)) {
         return null;
@@ -1324,7 +1516,7 @@ async function addCity(oldCityId: number) {
     return newCity;
 }
 
-async function addDistrict(oldDistrictId: number) {
+export async function addDistrict(oldDistrictId: number) {
     const [[oldDistrict]] = await mysqlConnection.query(`
         SELECT * 
         FROM district
@@ -1409,7 +1601,7 @@ async function addHealth(details: OldStudent | OldStaff) {
     let bloodGroup: BloodGroup | undefined;
 
     // Resolve blood group if legacy id present
-    const legacyBgId = details.bloodGroup;
+    const legacyBgId = details?.bloodGroup;
     if (legacyBgId) {
         const [bloodGroupResult] = await mysqlConnection.query(`SELECT * FROM bloodgroup WHERE id = ${legacyBgId}`) as [{ id: number, name: string }[], any];
         if (bloodGroupResult.length > 0) {
@@ -1582,14 +1774,14 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
             nationalityId = nat.id;
         }
     }
-    let otherNationalityId: number | undefined;
-    if (!isStaff(oldDetails) && oldDetails.othernationality) {
-        const [rows] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldDetails.othernationality}`) as [{ id: number, nationalityName: string, code: number }[], any];
-        if (rows.length > 0) {
-            const nat = await addNationality(rows[0].nationalityName, rows[0].code);
-            otherNationalityId = nat.id;
-        }
-    }
+    // let otherNationalityId: number | undefined;
+    // if (!isStaff(oldDetails) && oldDetails.othernationality) {
+    //     const [rows] = await mysqlConnection.query(`SELECT * FROM nationality WHERE id = ${oldDetails.othernationality}`) as [{ id: number, nationalityName: string, code: number }[], any];
+    //     if (rows.length > 0) {
+    //         const nat = await addNationality(rows[0].nationalityName, rows[0].code);
+    //         otherNationalityId = nat.id;
+    //     }
+    // }
     let religionId: number | undefined;
     if ((isStaff(oldDetails) ? oldDetails.religionId : oldDetails.religionId)) {
         const relId = isStaff(oldDetails) ? oldDetails.religionId : oldDetails.religionId;
@@ -1632,7 +1824,7 @@ async function addPersonalDetails(oldDetails: OldAdmStudentPersonalDetail | OldS
         passportNumber: passportNumber as string | undefined,
         aadhaarCardNumber: aadhaar || undefined,
         nationalityId,
-        otherNationalityId,
+        otherNationality: 'othernationality' in oldDetails && oldDetails.othernationality ? oldDetails.othernationality : undefined,
         religionId,
         categoryId,
         motherTongueId,
@@ -1694,7 +1886,7 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
             name: "Science & Technology",
             code: "Sci.",
             shortName: "Sci.",
-            disabled: false,
+            isActive: true,
         });
     }
     else if (normalizedCourseName?.includes("ba")) {
@@ -1702,7 +1894,7 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
             name: "Arts & Humanities",
             code: "Arts",
             shortName: "Arts",
-            disabled: false,
+            isActive: true,
         });
     }
     else if (
@@ -1794,6 +1986,7 @@ async function processOldCourseDetails(courseDetails: OldCourseDetails, applicat
             .values({
                 admissionId: admission?.id as number,
                 programCourseId: programCourse.id as number,
+                classId: classData?.id as number,
             })
             .returning())[0];
     }
@@ -2229,7 +2422,7 @@ async function addStudentCategory(oldStudentCategoryId: number | null) {
         .select()
         .from(studentCategoryModel)
         .where(
-            eq(studentCategoryModel.name, studentCategoryRow.studentCName.trim()),
+            ilike(studentCategoryModel.name, studentCategoryRow.studentCName.trim()),
         )
 
     if (foundStudentCategory) return foundStudentCategory;
@@ -2380,7 +2573,7 @@ async function addShift(oldShiftId: number | null) {
         .select()
         .from(shiftModel)
         .where(
-            eq(shiftModel.name, shiftRow.shiftName.trim()),
+            ilike(shiftModel.name, shiftRow.shiftName.trim()),
         )
 
     if (foundShift) return foundShift;
@@ -2407,7 +2600,7 @@ async function addMeritList(oldMeritListId: number | null) {
         .select()
         .from(meritListModel)
         .where(
-            eq(meritListModel.name, meritListRow.name.trim()),
+            ilike(meritListModel.name, meritListRow.name.trim()),
         )
 
     if (foundMeritList) return foundMeritList;
@@ -2437,7 +2630,7 @@ async function addBank(oldBankId: number | null) {
         .select()
         .from(bankModel)
         .where(
-            eq(bankModel.name, bankRow.bankName.trim()),
+            ilike(bankModel.name, bankRow.bankName.trim()),
         )
 
     if (foundBank) return foundBank;
@@ -2469,7 +2662,7 @@ async function addBankBranch(oldBankBranchId: number | null) {
         .where(
             and(
                 eq(bankBranchModel.bankId, bank.id!),
-                eq(bankBranchModel.name, bankBranchRow.name.trim()),
+                ilike(bankBranchModel.name, bankBranchRow.name.trim()),
             )
         )
 
@@ -2562,7 +2755,7 @@ async function addSubject(oldSubjectId: number | null) {
         .select()
         .from(subjectModel)
         .where(
-            eq(subjectModel.name, subjectRow.subjectName.trim()),
+            ilike(subjectModel.name, subjectRow.subjectName.trim()),
         );
 
     if (foundSubject) return foundSubject;
@@ -2580,7 +2773,11 @@ async function addSubject(oldSubjectId: number | null) {
 
 async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff) {
     const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff => "isTeacher" in d;
-    const isAdmStudent = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldAdmStudentPersonalDetail => "transferred" in d;
+    const isAdmStudent = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldAdmStudentPersonalDetail => "applevel" in d;
+
+    if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
+        throw new Error("Invalid old details type");
+    }
 
     if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
         throw new Error("Invalid old details type");

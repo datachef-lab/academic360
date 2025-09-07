@@ -31,34 +31,34 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
       return;
     }
 
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ uid, password }),
-      });
+    // try {
+    //   const response = await fetch("/api/auth/login", {
+    //     method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify({ uid, password }),
+    //   });
 
-      if (!response.ok) {
-        setError("Failed to sign in");
-        return;
-      }
+    //   if (!response.ok) {
+    //     setError("Failed to sign in");
+    //     return;
+    //   }
 
-      const data: { user: Student; accessToken: string } =
-        await response.json();
-      console.log("in login, data:", data);
+    //   const data: { user: Student; accessToken: string } =
+    //     await response.json();
+    //   console.log("in login, data:", data);
 
-      login(data.accessToken, data.user);
+    //   login(data.accessToken, data.user as UserDto);
 
-      // Redirect to callback URL on successful login
-      router.push(callbackUrl);
-    } catch (error) {
-      setError("Invalid email or password!");
-      console.log(error);
-    } finally {
-      setIsLoading(false);
-    }
+    //   // Redirect to callback URL on successful login
+    //   router.push(callbackUrl);
+    // } catch (error) {
+    //   setError("Invalid email or password!");
+    //   console.log(error);
+    // } finally {
+    //   setIsLoading(false);
+    // }
   };
 
   return (
@@ -74,11 +74,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
           className="w-full bg-white hover:bg-gray-50 mb-4"
           onClick={() => (window.location.href = "/api/auth/google")}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2"
-            viewBox="0 0 24 24"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24">
             <path
               fill="#4285F4"
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -101,32 +97,21 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
         </Button>
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
-            <Separator className="w-full" />
+            <Separator />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-slate-500">
-              Or continue with
-            </span>
+            <span className="bg-white px-2 text-slate-500">Or continue with</span>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">UID</Label>
-            <Input
-              id="uid"
-              type="text"
-              value={uid}
-              onChange={(e) => setUID(e.target.value)}
-              required
-            />
+            <Input id="uid" type="text" value={uid} onChange={(e) => setUID(e.target.value)} required />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">OTP</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-indigo-600 hover:text-indigo-800"
-              >
+              <Link href="/forgot-password" className="text-sm text-indigo-600 hover:text-indigo-800">
                 Forgot password?
               </Link>
             </div>

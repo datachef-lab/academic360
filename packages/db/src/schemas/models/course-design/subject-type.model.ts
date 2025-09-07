@@ -8,7 +8,7 @@ export const subjectTypeModel = pgTable("subject_types", {
     name: varchar({ length: 255 }),
     code: varchar({ length: 255 }),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

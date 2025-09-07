@@ -809,7 +809,7 @@ setTotalCount(result.length); // Assuming the API returns total count in a 'tota
                             <TableCell className="flex items-center justify-center"> {/* Removed padding, added flex to center content */}
                                 <Checkbox
                                   checked={!subject.disabled}
-                                  onCheckedChange={(checked) => {
+                                  onCheckedChange={(checked: boolean) => {
                                     const newSubjects = [...editedSubjects];
                                     const originalIndex = editedSubjects.indexOf(subject);
                                     if (originalIndex > -1) newSubjects[originalIndex].disabled = !checked; 

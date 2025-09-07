@@ -1,0 +1,4 @@
+07-09-2025	21:52:23	6202d259-e147-4bcf-b3ae-9f1c879697a8	GET	/api/users/5/profile	http://localhost:3000
+07-09-2025	21:52:23	08793d82-deb8-4891-b181-5b4ca6fe3309	GET	/api/users/5/profile	http://localhost:3000
+07-09-2025	21:52:23	cd3c1b28-88eb-4d61-b2ad-78746ed900a8	OPTIONS	/api/users/5/profile	http://localhost:3000
+07-09-2025	21:52:18	f299d817-9a58-42e8-8f69-2095f2b92e75	POST	/auth/login	http://localhost:3000

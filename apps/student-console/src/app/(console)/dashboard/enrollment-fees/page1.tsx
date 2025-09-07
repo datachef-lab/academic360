@@ -432,7 +432,7 @@ export default function FeesPage() {
                                         ? (summary.paid / summary.total) * 100
                                         : 0
                                     }
-                                    className="h-3 bg-purple-100"
+                                    // className="h-3 bg-purple-100"
                                   />
                                   <p className="text-lg font-bold text-purple-800 mt-1">
                                     {summary.total > 0

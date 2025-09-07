@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/table-core";
 import { Degree } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
@@ -43,7 +43,7 @@ export const columns = ({ onEdit }: { onEdit: (degree: Degree) => void }): Colum
         const date = new Date(row.original.createdAt);
         return date.toLocaleDateString();
       } else {
-        return 'N/A';
+        return "N/A";
       }
     },
   },
@@ -53,8 +53,10 @@ export const columns = ({ onEdit }: { onEdit: (degree: Degree) => void }): Colum
     cell: ({ row }) => {
       const isActive = !row.original.disabled;
       return (
-        <span className={`px-2 py-1 rounded text-xs font-semibold ${isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-          {isActive ? 'Active' : 'Inactive'}
+        <span
+          className={`px-2 py-1 rounded text-xs font-semibold ${isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+        >
+          {isActive ? "Active" : "Inactive"}
         </span>
       );
     },
@@ -103,4 +105,4 @@ export const columns = ({ onEdit }: { onEdit: (degree: Degree) => void }): Colum
       );
     },
   },
-]; 
+];

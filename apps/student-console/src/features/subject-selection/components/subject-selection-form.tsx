@@ -1,21 +1,18 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { AlertCircle, Info } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function SubjectSelectionForm() {
   const { user } = useAuth();
   const { student } = useStudent();
-  const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
   const [errors, setErrors] = useState<string[]>([]);
+  const [agree1, setAgree1] = useState(false);
+  const [agree2, setAgree2] = useState(false);
+  const [agree3, setAgree3] = useState(false);
 
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
@@ -45,6 +42,11 @@ export default function SubjectSelectionForm() {
     "Environmental Science",
     "Computer Science",
   ]);
+
+  // Fix for shadcn Select type issues in some contexts
+  const SelectTriggerFixed = SelectTrigger as React.ComponentType<any>;
+  const SelectContentFixed = SelectContent as React.ComponentType<any>;
+  const SelectItemFixed = SelectItem as React.ComponentType<any>;
 
   // Auto-assign Minor II when Minor I is selected
   useEffect(() => {
@@ -120,11 +122,12 @@ export default function SubjectSelectionForm() {
     return newErrors.length === 0;
   };
 
-  const handlePreview = () => {
+  const handleNext = () => {
     if (validateForm()) {
-      setOpen(true);
+      setStep(2);
     }
   };
+  const handleBack = () => setStep(1);
 
   // Filter out Minor subjects from IDC options
   const getFilteredIdcOptions = (currentIdcValue: string) => {
@@ -136,8 +139,11 @@ export default function SubjectSelectionForm() {
     );
   };
 
+  const [showTips, setShowTips] = useState(true);
+  const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
+
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Student Information Section - Fixed */}
       {/* <div className="bg-blue-800 shadow-2xl rounded-2xl border-0 p-8 mb-6 flex-shrink-0">
         <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-4">
@@ -230,7 +236,23 @@ export default function SubjectSelectionForm() {
         </div>
       </div> */}
 
-      <div className="bg-blue-600 mt-2 mb-4 text-white font-bold p-2 rounded-lg">
+      {/* Mobile toggle */}
+      <div className="lg:hidden mt-2 mb-2">
+        <button
+          type="button"
+          onClick={() => setShowStudentInfoMobile((v) => !v)}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 bg-white"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+            <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+          </svg>
+          {showStudentInfoMobile ? "Hide" : "Show"} Student Info
+        </button>
+      </div>
+
+      <div
+        className={`bg-blue-600 mt-2 mb-4 text-white font-bold p-2 rounded-lg ${showStudentInfoMobile ? "block" : "hidden"} lg:block`}
+      >
         <div className="flex items-center gap-2 justify-between py-2 mb-3 text-xl border-b">
           <div className="text-white">Student Information</div>
           <div className="text-blue-100 text-sm font-normal">Academic Year 2024-25</div>
@@ -242,293 +264,326 @@ export default function SubjectSelectionForm() {
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">{student?.academicIdentifier?.uid}</p>
+            <p className="text-base font-bold text-white">{student?.id}</p>
           </div>
+          {/* Roll number may be unavailable on StudentDto */}
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">{student?.academicIdentifier?.rollNumber}</p>
+            <p className="text-base font-bold text-white">N/A</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
             <p className="text-base font-bold text-white">
-              {student?.admissionCourseDetails?.programCourse?.course?.name} ({student?.admissionCourseDetails?.programCourse?.courseType?.shortName})
+              {student?.programCourse?.course?.name} ({student?.programCourse?.courseType?.shortName})
             </p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
-            <p className="text-base font-bold text-white">{student?.admissionCourseDetails?.shift?.name}</p>
+            <p className="text-base font-bold text-white">{student?.shift?.name}</p>
           </div>
         </div>
       </div>
 
       {/* Form Section - No Scrolling */}
-      <div className="flex-1">
-        <div className="shadow-lg rounded-xl bg-white p-6 border border-gray-100">
+      <div className="flex-1 overflow-hidden">
+        <div className="shadow-lg rounded-xl bg-white p-6 border border-gray-100 h-full overflow-y-auto">
+          {/* Mobile notes banner */}
+          <div className="lg:hidden">
+            {showTips && (
+              <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
+                <AlertCircle className="w-4 h-4 mt-0.5" />
+                <div className="text-sm">
+                  Before selecting subjects, please review the guidelines. Tap the info button to view notes.
+                </div>
+                <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
+                  Dismiss
+                </button>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => alert("Open notes: scroll to Important Notes & Guide section for detailed rules.")}
+              className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Info className="w-4 h-4" /> View Notes
+            </button>
+          </div>
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-2">
-              Semester-wise Subject Selection for Calcutta University Registration
+              {step === 1
+                ? "Semester-wise Subject Selection for Calcutta University Registration"
+                : "Preview Your Selections"}
             </h2>
-            <p className="text-gray-600 text-sm">Please select your subjects according to the guidelines</p>
+            <p className="text-gray-600 text-sm">
+              {step === 1
+                ? "Please select your subjects according to the guidelines"
+                : "Review and confirm declarations before saving"}
+            </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-6">
-            {/* Minor Subjects */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
-              <select
-                value={minor1}
-                onChange={(e) => setMinor1(e.target.value)}
-                onFocus={() => handleFieldFocus("minor")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select Minor I</option>
-                {admissionMinorSubjects.map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {step === 1 && (
+            <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
+              {/* Minor Subjects */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
+                <Select value={minor1} onValueChange={setMinor1} onOpenChange={(o) => o && handleFieldFocus("minor")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select Minor I" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {admissionMinorSubjects.map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
-              <select
-                value={minor2}
-                disabled
-                className="w-full p-2.5 border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
-              >
-                <option value="">{minor2 || "Auto-assigned"}</option>
-              </select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
+                <select
+                  value={minor2}
+                  disabled
+                  className="w-full p-2.5 border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
+                >
+                  <option value="">{minor2 || "Auto-assigned"}</option>
+                </select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
-              <select
-                value={aec3}
-                onChange={(e) => setAec3(e.target.value)}
-                onFocus={() => handleFieldFocus("aec")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select AEC 3</option>
-                {availableAecSubjects.map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
+                <Select value={aec3} onValueChange={setAec3} onOpenChange={(o) => o && handleFieldFocus("aec")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select AEC 3" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {availableAecSubjects.map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            {/* IDC Subjects */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
-              <select
-                value={idc1}
-                onChange={(e) => setIdc1(e.target.value)}
-                onFocus={() => handleFieldFocus("idc")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select IDC 1</option>
-                {getFilteredIdcOptions(idc1).map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+              {/* IDC Subjects */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
+                <Select value={idc1} onValueChange={setIdc1} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select IDC 1" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {getFilteredIdcOptions(idc1).map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
-              <select
-                value={idc2}
-                onChange={(e) => setIdc2(e.target.value)}
-                onFocus={() => handleFieldFocus("idc")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select IDC 2</option>
-                {getFilteredIdcOptions(idc2).map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
+                <Select value={idc2} onValueChange={setIdc2} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select IDC 2" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {getFilteredIdcOptions(idc2).map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
-              <select
-                value={idc3}
-                onChange={(e) => setIdc3(e.target.value)}
-                onFocus={() => handleFieldFocus("idc")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select IDC 3</option>
-                {getFilteredIdcOptions(idc3).map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
+                <Select value={idc3} onValueChange={setIdc3} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select IDC 3" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {getFilteredIdcOptions(idc3).map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            {/* CVAC Subjects */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">CVAC 2 (Semester I)</label>
-              <select
-                value={cvac2}
-                onChange={(e) => setCvac2(e.target.value)}
-                onFocus={() => handleFieldFocus("cvac")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select CVAC 2</option>
-                <option value="constitutional-values">Constitutional Values</option>
-              </select>
-            </div>
+              {/* CVAC Subjects */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">CVAC 2 (Semester I)</label>
+                <Select value={cvac2} onValueChange={setCvac2} onOpenChange={(o) => o && handleFieldFocus("cvac")}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select CVAC 2" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    <SelectItemFixed value="constitutional-values">Constitutional Values</SelectItemFixed>
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
-              <select
-                value={cvac4}
-                onChange={(e) => setCvac4(e.target.value)}
-                onFocus={() => handleFieldFocus("cvac")}
-                className="w-full p-2.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm hover:border-gray-400 transition-colors"
-              >
-                <option value="">Select CVAC 4</option>
-                {availableCvac4Options.map((subject) => (
-                  <option key={subject} value={subject}>
-                    {subject}
-                  </option>
-                ))}
-              </select>
-            </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
+                <Select value={cvac4} onValueChange={setCvac4}>
+                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                    <SelectValue placeholder="Select CVAC 4" />
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    {availableCvac4Options.map((subject) => (
+                      <SelectItemFixed key={subject} value={subject}>
+                        {subject}
+                      </SelectItemFixed>
+                    ))}
+                  </SelectContentFixed>
+                </Select>
+              </div>
 
-            <div className="space-y-2">{/* Empty space for grid alignment */}</div>
-          </div>
+              <div className="space-y-2">{/* Empty space for grid alignment */}</div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <>
+              {/* Errors (should be none here, but guard just in case) */}
+              {errors.length > 0 && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+                  <p className="font-medium mb-2">Please fix the following errors:</p>
+                  <ul className="list-disc list-inside space-y-1">
+                    {errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Preview */}
+              {errors.length === 0 && (
+                <div className="overflow-x-auto my-4">
+                  <table className="w-full border border-gray-200 text-sm rounded-lg overflow-hidden">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="border p-2 text-left font-semibold text-gray-700">Subject Category</th>
+                        <th className="border p-2 text-left font-semibold text-gray-700">Selection</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">Minor I (Semester I & II)</td>
+                        <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">Minor II (Semester III & IV)</td>
+                        <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
+                        <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
+                        <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
+                        <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">AEC 3 (Semester III)</td>
+                        <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">CVAC 2 (Semester I)</td>
+                        <td className="border p-2 text-gray-800">{cvac2 || "-"}</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50">
+                        <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
+                        <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Declarations */}
+              {errors.length === 0 && (
+                <div className="space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree1}
+                      onChange={(e) => setAgree1(e.target.checked)}
+                    />
+                    <span>I confirm that I have read the semester-wise subject selection guidelines given above.</span>
+                  </label>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree2}
+                      onChange={(e) => setAgree2(e.target.checked)}
+                    />
+                    <span>
+                      I understand that once submitted, I will not be allowed to change the selected subjects in the
+                      future.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree3}
+                      onChange={(e) => setAgree3(e.target.checked)}
+                    />
+                    <span>
+                      In the event of violation of subject selection rules, I will abide by the final decision taken by
+                      the Vice-Principal/Course Coordinator/Calcutta University.
+                    </span>
+                  </label>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-100">
-            <button
-              onClick={handlePreview}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
-            >
-              Preview & Save
-            </button>
+            {step === 1 && (
+              <button
+                onClick={handleNext}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
+              >
+                Next
+              </button>
+            )}
+            {step === 2 && (
+              <>
+                <button
+                  onClick={handleBack}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium text-gray-700 text-sm"
+                >
+                  Back
+                </button>
+                <button
+                  disabled={!agree1 || !agree2 || !agree3}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm text-sm"
+                >
+                  Save
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Popup Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <h2 className="text-xl font-bold text-gray-800">
-              {errors.length > 0 ? "Validation Errors" : "Preview Your Selections"}
-            </h2>
-            <p className="text-gray-600 text-sm">
-              {errors.length > 0
-                ? "Please fix the following errors before proceeding"
-                : "Please review your subject selections before proceeding"}
-            </p>
-          </DialogHeader>
-
-          {/* Error Display */}
-          {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
-              <p className="font-medium mb-2">Please fix the following errors:</p>
-              <ul className="list-disc list-inside space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Preview Table - Only show if no errors */}
-          {errors.length === 0 && (
-            <div className="overflow-x-auto my-4">
-              <table className="w-full border border-gray-200 text-sm rounded-lg overflow-hidden">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="border p-2 text-left font-semibold text-gray-700">Subject Category</th>
-                    <th className="border p-2 text-left font-semibold text-gray-700">Selection</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">Minor I (Semester I & II)</td>
-                    <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">Minor II (Semester III & IV)</td>
-                    <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
-                    <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
-                    <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
-                    <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">AEC 3 (Semester III)</td>
-                    <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">CVAC 2 (Semester I)</td>
-                    <td className="border p-2 text-gray-800">{cvac2 || "-"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
-                    <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Declarations - Only show if no errors */}
-          {errors.length === 0 && (
-            <div className="space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
-              <label className="flex items-start gap-2">
-                <input type="checkbox" className="mt-1 rounded" required />
-                <span>I confirm that I have read the semester-wise subject selection guidelines given above.</span>
-              </label>
-              <label className="flex items-start gap-2">
-                <input type="checkbox" className="mt-1 rounded" required />
-                <span>
-                  I understand that once submitted, I will not be allowed to change the selected subjects in the future.
-                </span>
-              </label>
-              <label className="flex items-start gap-2">
-                <input type="checkbox" className="mt-1 rounded" required />
-                <span>
-                  In the event of violation of subject selection rules, I will abide by the final decision taken by the
-                  Vice-Principal/Course Coordinator/Calcutta University.
-                </span>
-              </label>
-            </div>
-          )}
-
-          <DialogFooter>
-            <button
-              onClick={() => setOpen(false)}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium text-gray-700 text-sm"
-            >
-              {errors.length > 0 ? "Close" : "Go Back to Edit"}
-            </button>
-            {errors.length === 0 && (
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm">
-                Continue to Save
-              </button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Removed modal preview - now handled inline in Step 2 */}
     </div>
   );
 }

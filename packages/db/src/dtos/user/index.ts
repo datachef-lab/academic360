@@ -1,24 +1,27 @@
-import {  Specialization, UserT, Shift, Section, BoardResultStatus, Accommodation, Person, Qualification, Occupation, Family, AnnualIncome, Health, PersonalDetails, Nationality, Religion, Category, LanguageMedium, Disability, TransportDetails, Transport, PickupPoint, AddressT, CountryT } from "../../schemas";
-import { BloodGroupDto, BoardUniversityDto, InstitutionDto } from "../resources";
-import { AdmissionCourseDetailsDto } from "../admissions";
-import {  AccommodationT, AnnualIncomeT, BoardResultStatusT, CategoryT, City, CityT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, QualificationT, ReligionT, SectionT, ShiftT, SpecializationT, State, StateT, TransportT } from "../../schemas/models";
-import { createStudentSchema, DisabilityCodeT, TransportDetailsT, userModel, } from "../../schemas/models/user";
+import { UserT, Family, AddressT, CountryT } from "../../schemas";
+import { BloodGroupDto } from "../resources";
+import { AccommodationT, AnnualIncomeT, ApplicationFormT, CategoryT, CityT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, QualificationT, ReligionT, SectionT, ShiftT, SpecializationT, StateT, TransportT } from "../../schemas/models";
+import { DisabilityCodeT, EmergencyContactT, StaffT, TransportDetailsT, } from "../../schemas/models/user";
 import { StudentT } from "../../schemas/models/user/student.model";
+import { ProgramCourseDto } from "../course-design";
+import { BatchDto } from "../batches";
+import { ApplicationFormDto } from "../admissions";
 
-export type PayloadType = StudentDto | null;
-
-export interface UserDto extends UserT {
-    payload: PayloadType,
+export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId" | "sectionId" | "shiftId"> {
+    applicationFormAbstract: ApplicationFormT | null;
+    programCourse: ProgramCourseDto;
+    specialization: SpecializationT | null;
+    section: SectionT | null;
+    shift: ShiftT | null;
+    currentBatch: BatchDto | null;
 }
 
-export interface StudentDto extends Omit<StudentT, "specializationId"> {
-    name: string;
-    specialization?: SpecializationT | null;
-    
-    personalDetails?: PersonalDetailsDto | null;
-    admissionCourseDetails?: AdmissionCourseDetailsDto | null;
-    familyDetails: FamilyDetailDto | null;
+export interface StaffDto extends Omit<StaffT, "shiftId"> {
+    shift: ShiftT | null;
+}
 
+export interface UserDto extends UserT {
+    payload: StudentDto | StaffDto,
 }
 
 export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId"> {
@@ -26,9 +29,6 @@ export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "ci
     state?: StateT | null;
     city?: CityT | null;
 }
-
-
-
 
 export interface AccommodationDto extends Omit<AccommodationT, "addressId"> {
     address?: AddressDto | null;
@@ -51,9 +51,8 @@ export interface HealthDto extends Omit<HealthT, "bloodGroupId"> {
     bloodGroup?: BloodGroupDto | null;
 }
 
-export interface PersonalDetailsDto extends Omit<PersonalDetailsT, "nationalityId" | "otherNationalityId" | "religionId" | "categoryId" | "motherTongueId" | "mailingAddressId" | "residentialAddressId" | "disabilityCodeId"> {
+export interface PersonalDetailsDto extends Omit<PersonalDetailsT, "nationalityId" | "religionId" | "categoryId" | "motherTongueId" | "mailingAddressId" | "residentialAddressId" | "disabilityCodeId"> {
     nationality?: NationalityT | null;
-    otherNationality?: NationalityT | null;
     religion?: ReligionT | null;
     category?: CategoryT | null;
     motherTongue?: LanguageMediumT | null;
@@ -67,9 +66,6 @@ export interface TransportDetailsDto extends Omit<TransportDetailsT, "transportI
     pickupPoint: PickupPointT | null;
 }
 
-
-
-
 export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | "motherDetailsPersonId" | "guardianDetailsPersonId" | "annualIncomeId"> {
     father?: PersonDto;
     mother?: PersonDto;
@@ -77,11 +73,14 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
     annualIncome?: AnnualIncomeT | null;
 }
 
-// export interface BasicInfo {
-//     recentBatch: BatchDto | null 
-// }
+
 
 export interface ProfileInfo {
+    applicationFormDto?: ApplicationFormDto | null; // Only for student
     familyDetails: FamilyDetailDto | null;
-
+    personalDetails: PersonalDetailsDto | null;
+    healthDetails: HealthDto | null;
+    emergencyContactDetails: EmergencyContactT | null;
+    transportDetails: TransportDetailsDto | null;
+    accommodationDetails: AccommodationDto | null;
 }

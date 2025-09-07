@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { admissionModel } from "@/schemas/models/admissions";
 import { admissionFormStatus, admissionSteps } from "@/schemas/enums";
@@ -18,6 +18,13 @@ export const applicationFormModel = pgTable("application_forms", {
     changedApplicationNumber: varchar({ length: 255 }),
     formStatus: admissionFormStatus("form_status"),
     admissionStep: admissionSteps("admission_step"),
+
+    isBlocked: boolean().default(false),
+    blockRemarks: varchar({ length: 1000 }),
+    blockedBy: integer("blocked_by_user_id_fk")
+        .references(() => userModel.id),
+    blockedDate: timestamp("blocked_date"),
+    
     admApprovedBy: integer("adm_approved_by_user_id_fk")
         .references(() => userModel.id),
     admApprovedDate: timestamp("adm_approved_date"),

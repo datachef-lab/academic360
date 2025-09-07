@@ -110,7 +110,7 @@ export const bulkUploadStreams = async (
   }
 };
 
-export async function getStreamById(id: number) {
+export async function findById(id: number) {
     const [stream] = await db.select().from(streamModel).where(eq(streamModel.id, id));
     return stream;
 }

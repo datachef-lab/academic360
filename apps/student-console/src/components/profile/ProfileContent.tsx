@@ -3,27 +3,86 @@
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mail, Phone, User, Users, BookText, Award, Clock, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import {
+  Mail,
+  Phone,
+  User,
+  Users,
+  BookText,
+  Award,
+  Clock,
+  GraduationCap,
+  Heart,
+  AlertTriangle,
+  Car,
+  Home,
+  FileText,
+  MapPin,
+  Calendar,
+  CreditCard,
+  Shield,
+  Globe,
+  Briefcase,
+  School,
+  Edit,
+  Save,
+  X,
+} from "lucide-react";
 import Image from "next/image";
-import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
-import { AcademicIdentifierDto, StudentDto } from "@/dtos/user";
+import { useProfile } from "@/hooks/use-profile";
+import { UserDto, ProfileInfo, FamilyDto } from "@repo/db/dtos/user";
+import { useStudent } from "@/providers/student-provider";
 
 export default function ProfileContent() {
   const { user } = useAuth();
-  const { student, batches } = useStudent();
-  const [activeTab, setActiveTab] = useState("basic");
+  const { profileInfo, loading, error } = useProfile();
+  const [activeTab, setActiveTab] = useState("personal");
+  const [isEditing, setIsEditing] = useState(false);
+  const { student } = useStudent();
 
-  if (!student) return <div className="p-6">Student data not found</div>;
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
 
-  // Extract nested objects with proper type checking for better IntelliSense
-  const personalDetails = student.personalDetails;
-  const academicIdentifier = student.academicIdentifier;
-  const admissionCourseDetails = student.admissionCourseDetails;
+  if (error)
+    return (
+      <div className="p-6 text-center">
+        <div className="text-red-600 text-lg font-medium">Error loading profile</div>
+        <div className="text-gray-500 text-sm mt-2">{error}</div>
+      </div>
+    );
+
+  if (!profileInfo)
+    return (
+      <div className="p-6 text-center">
+        <div className="text-gray-600 text-lg font-medium">Profile data not found</div>
+      </div>
+    );
+
+  // Extract nested objects with proper type checking
+  const personalDetails = profileInfo.personalDetails;
+  const applicationForm = profileInfo.applicationFormDto;
+  const familyDetails = profileInfo.familyDetails;
+  const healthDetails = profileInfo.healthDetails;
+  const emergencyContactDetails = profileInfo.emergencyContactDetails;
+  const transportDetails = profileInfo.transportDetails;
+  const accommodationDetails = profileInfo.accommodationDetails;
+
+  // Prefer values from student provider where requested
+  const uidFromStudent = student?.id ? String(student.id) : "Not Available";
+  const courseNameFromStudent = student?.programCourse?.course?.name || "";
+  const courseTypeFromStudent = student?.programCourse?.courseType?.shortName || "";
 
   // Helper function to format date
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return "N/A";
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return "Not Available";
     return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -37,358 +96,902 @@ export default function ProfileContent() {
     return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${uid}.jpg`;
   };
 
-  // Helper function to get student image with fallback
-  const getStudentImage = (uid?: string) => {
-    const imageUrl = getStudentImageUrl(uid);
-
-    if (!imageUrl) {
-      return (
-        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full flex items-center justify-center">
-          <User className="h-14 w-14 text-white" strokeWidth={1.5} />
-        </div>
-      );
-    }
-
-    return (
-      <Image
-        src={imageUrl}
-        alt={`${student.name || "Student"} profile image`}
-        className="h-full w-full object-cover"
-        width={128}
-        height={128}
-        onError={(e) => {
-          // Fallback to default avatar if image fails to load
-          const target = e.target as HTMLImageElement;
-          target.style.display = "none";
-          const fallback = target.nextElementSibling as HTMLElement;
-          if (fallback) fallback.classList.remove("hidden");
-        }}
-      />
-    );
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "basic":
-        return (
-          <Card className="shadow-md rounded-xl border-none overflow-hidden">
-            <CardHeader className="bg-blue-600 py-4">
-              <CardTitle className="text-xl text-white flex items-center">
-                <div className="mr-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
-              <div className="space-y-1.5 bg-blue-50 p-4 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all">
-                <p className="text-sm font-medium text-blue-600">Full Name</p>
-                <p className="font-medium text-lg">{student.name}</p>
-              </div>
-              <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">Date of Birth</p>
-                <p className="font-medium text-lg">
-                  {formatDate(
-                    student.personalDetails?.dateOfBirth ? new Date(student.personalDetails.dateOfBirth) : undefined,
-                  )}
-                </p>
-              </div>
-              <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
-                <p className="text-sm font-medium text-indigo-600">Gender</p>
-                <p className="font-medium text-lg">{student.personalDetails?.gender || "Not Specified"}</p>
-              </div>
-              <div className="space-y-1.5 bg-emerald-50 p-4 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-all">
-                <p className="text-sm font-medium text-emerald-600">Nationality</p>
-                <p className="font-medium text-lg">{student.personalDetails?.nationality?.name || "Not Specified"}</p>
-              </div>
-              <div className="space-y-1.5 bg-rose-50 p-4 rounded-lg border border-rose-100 hover:bg-rose-100 transition-all md:col-span-2">
-                <p className="text-sm font-medium text-rose-600">Aadhar Card Number</p>
-                <p className="font-medium text-lg">{student.personalDetails?.aadhaarCardNumber || "Not Provided"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case "family":
-        return (
-          <Card className="shadow-md rounded-xl border-none overflow-hidden">
-            <CardHeader className="bg-purple-600 py-4">
-              <CardTitle className="text-xl text-white flex items-center">
-                <div className="mr-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Users className="h-5 w-5 text-white" />
-                </div>
-                Family Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
-              <div className="space-y-1.5 bg-purple-50 p-4 rounded-lg border border-purple-100 hover:bg-purple-100 transition-all">
-                <p className="text-sm font-medium text-purple-600">Father&apos;s Name</p>
-                <p className="font-medium text-lg">{student.familyDetails?.father?.name || "Not Provided"}</p>
-              </div>
-              <div className="space-y-1.5 bg-blue-50 p-4 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all">
-                <p className="text-sm font-medium text-blue-600">Father&apos;s Contact</p>
-                <p className="font-medium text-lg">{student.familyDetails?.father?.phone || "Not Provided"}</p>
-              </div>
-              <div className="space-y-1.5 bg-pink-50 p-4 rounded-lg border border-pink-100 hover:bg-pink-100 transition-all">
-                <p className="text-sm font-medium text-pink-600">Mother&apos;s Name</p>
-                <p className="font-medium text-lg">{student.familyDetails?.mother?.name || "Not Provided"}</p>
-              </div>
-              <div className="space-y-1.5 bg-rose-50 p-4 rounded-lg border border-rose-100 hover:bg-rose-100 transition-all">
-                <p className="text-sm font-medium text-rose-600">Mother&apos;s Contact</p>
-                <p className="font-medium text-lg">{student.familyDetails?.mother?.phone || "Not Provided"}</p>
-              </div>
-              <div className="space-y-1.5 bg-violet-50 p-4 rounded-lg border border-violet-100 hover:bg-violet-100 transition-all">
-                <p className="text-sm font-medium text-violet-600">Guardian&apos;s Name</p>
-                <p className="font-medium text-lg">{student.familyDetails?.guardian?.name || "Not Provided"}</p>
-              </div>
-              <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
-                <p className="text-sm font-medium text-indigo-600">Guardian&apos;s Contact</p>
-                <p className="font-medium text-lg">{student.familyDetails?.guardian?.phone || "Not Provided"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case "academic":
-        return (
-          <Card className="shadow-md rounded-xl border-none overflow-hidden">
-            <CardHeader className="bg-emerald-600 py-4">
-              <CardTitle className="text-xl text-white flex items-center">
-                <div className="mr-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <BookText className="h-5 w-5 text-white" />
-                </div>
-                Academic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
-              <div className="space-y-1.5 bg-emerald-50 p-4 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-all">
-                <p className="text-sm font-medium text-emerald-600">Programme Course</p>
-                <p className="font-medium text-lg">
-                  {admissionCourseDetails?.programCourse?.course?.name +
-                    " (" +
-                    admissionCourseDetails?.programCourse?.courseType?.shortName +
-                    ")" || "Not Available"}
-                </p>
-              </div>
-              <div className="space-y-1.5 bg-teal-50 p-4 rounded-lg border border-teal-100 hover:bg-teal-100 transition-all">
-                <p className="text-sm font-medium text-teal-600">Section</p>
-                <p className="font-medium text-lg">{academicIdentifier?.section?.name || "Not Available"}</p>
-              </div>
-              <div className="space-y-1.5 bg-blue-50 p-4 rounded-lg border border-blue-100 hover:bg-blue-100 transition-all">
-                <p className="text-sm font-medium text-blue-600">Class Roll Number</p>
-                <p className="font-medium text-lg">{academicIdentifier?.rollNumber || "Not Assigned"}</p>
-              </div>
-              <div className="space-y-1.5 bg-indigo-50 p-4 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-all">
-                <p className="text-sm font-medium text-indigo-600">UID</p>
-                <p className="font-medium text-lg">{student.academicIdentifier?.uid || "Not Assigned"}</p>
-              </div>
-              <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">Admission Year</p>
-                <p className="font-medium text-lg">
-                  {admissionCourseDetails?.applicationTimestamp
-                    ? new Date(admissionCourseDetails.applicationTimestamp).getFullYear()
-                    : "Not Available"}
-                </p>
-              </div>
-              <div className="space-y-1.5 bg-orange-50 p-4 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all">
-                <p className="text-sm font-medium text-orange-600">Admission Date</p>
-                <p className="font-medium text-lg">
-                  {formatDate(
-                    admissionCourseDetails?.applicationTimestamp
-                      ? new Date(admissionCourseDetails.applicationTimestamp)
-                      : undefined,
-                  )}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      case "previous":
-        return (
-          <Card className="shadow-md rounded-xl border-none overflow-hidden">
-            <CardHeader className="bg-amber-600 py-4">
-              <CardTitle className="text-xl text-white flex items-center">
-                <div className="mr-3 w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                  <Award className="h-5 w-5 text-white" />
-                </div>
-                Previous Education
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-white">
-              <div className="space-y-1.5 bg-amber-50 p-4 rounded-lg border border-amber-100 hover:bg-amber-100 transition-all">
-                <p className="text-sm font-medium text-amber-600">Last Institution Name</p>
-                <p className="font-medium text-lg">
-                  {student.lastAcademicInfo?.lastInstitution?.name || "Not Provided"}
-                </p>
-              </div>
-              <div className="space-y-1.5 bg-orange-50 p-4 rounded-lg border border-orange-100 hover:bg-orange-100 transition-all">
-                <p className="text-sm font-medium text-orange-600">Last Board/University</p>
-                <p className="font-medium text-lg">
-                  {student.lastAcademicInfo?.lastBoardUniversity?.name
-                    ? `ID: ${student.lastAcademicInfo?.lastInstitution?.name}`
-                    : "Not Provided"}
-                </p>
-              </div>
-              <div className="space-y-1.5 bg-yellow-50 p-4 rounded-lg border border-yellow-100 hover:bg-yellow-100 transition-all md:col-span-2">
-                <p className="text-sm font-medium text-yellow-600">Passed Year</p>
-                <p className="font-medium text-lg">{student.lastPassedYear || "Not Provided"}</p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      default:
-        return null;
-    }
+  // Helper function to format address
+  const formatAddress = (address: any) => {
+    if (!address) return "Not Available";
+    const parts = [
+      address.addressLine,
+      address.city?.name,
+      address.state?.name,
+      address.country?.name,
+      address.pincode,
+    ].filter(Boolean);
+    return parts.join(", ") || "Not Available";
   };
 
   return (
-    <div className="p-6 bg-white">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-blue-700">Student Profile</h1>
-        {student.leavingDate && academicIdentifier?.uid && (
-          <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 py-1.5 px-3 text-white">
-            <Image
-              src={getStudentImageUrl(academicIdentifier.uid) || ""}
-              alt="Graduate Badge"
-              width={16}
-              height={16}
-              className="mr-2 filter invert"
-              onError={(e) => {
-                // Hide image if it fails to load
-                (e.target as HTMLImageElement).style.display = "none";
-              }}
-            />
-            Graduated
-          </Badge>
-        )}
-      </div>
-
-      <div className="grid grid-cols-12 gap-6">
-        {/* Left Column - Profile Card and Quick Info */}
-        <div className="col-span-12 md:col-span-5 lg:col-span-4 space-y-6">
-          {/* Profile Card */}
-          <Card className="overflow-hidden border-none shadow-lg rounded-xl">
-            <div className="bg-gradient-to-r from-indigo-600 to-blue-600 h-40 relative">
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute -right-10 -top-10 w-40 h-40 rounded-full bg-blue-400 mix-blend-overlay"></div>
-                <div className="absolute right-20 top-10 w-20 h-20 rounded-full bg-purple-400 mix-blend-overlay"></div>
-                <div className="absolute left-10 bottom-5 w-28 h-28 rounded-full bg-indigo-300 mix-blend-overlay"></div>
-              </div>
-              <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16">
-                <div className="w-32 h-32 rounded-full border-4 border-white bg-white shadow-xl flex items-center justify-center overflow-hidden">
-                  {getStudentImage(academicIdentifier?.uid || "")}
-                  {/* Fallback avatar (hidden by default, shown on image error) */}
-                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full items-center justify-center hidden">
-                    <User className="h-14 w-14 text-white" strokeWidth={1.5} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="pt-20 pb-6 px-6 text-center">
-              <h2 className="text-2xl font-bold text-gray-800">{student.name}</h2>
-              <p className="text-indigo-600 font-medium">UID: {academicIdentifier?.uid || "Not Available"}</p>
-            </div>
-          </Card>
-
-          {/* Quick Info Cards */}
-          <div className="grid grid-cols-1 gap-4">
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-                <Mail className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xs text-blue-600 font-medium">Email</span>
-                <p className="text-gray-800 font-medium truncate">{user?.email || "N/A"}</p>
-              </div>
-            </div>
-            <div className="bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
-                <Phone className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xs text-green-600 font-medium">Phone</span>
-                <p className="text-gray-800 font-medium">{user?.phone || "N/A"}</p>
-              </div>
-            </div>
-            <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xs text-purple-600 font-medium">Regulation Type</span>
-                <p className="text-gray-800 font-medium">
-                  {admissionCourseDetails?.programCourse?.regulationType?.name || "N/A"}
-                </p>
-              </div>
-            </div>
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-amber-600 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <span className="text-xs text-amber-600 font-medium">Date of Birth</span>
-                <p className="text-gray-800 font-medium">
-                  {formatDate(
-                    student.personalDetails?.dateOfBirth ? new Date(student.personalDetails.dateOfBirth) : undefined,
-                  )}
-                </p>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+              <p className="text-gray-600 mt-1">Manage your personal information and academic details</p>
             </div>
           </div>
         </div>
 
-        {/* Right Column - Tab Navigation and Content */}
-        <div className="col-span-12 md:col-span-7 lg:col-span-8 space-y-6">
-          {/* Tab Navigation */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
-            <div className="grid grid-cols-4 divide-x divide-gray-100">
-              <button
-                onClick={() => setActiveTab("basic")}
-                className={`py-4 px-2 flex flex-col items-center transition-colors ${
-                  activeTab === "basic"
-                    ? "bg-blue-50 text-blue-700 border-t-2 border-blue-600"
-                    : "hover:bg-gray-50 text-gray-700"
-                }`}
-              >
-                <User className="h-5 w-5 mb-1" />
-                <span className="text-sm font-medium">Personal</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("family")}
-                className={`py-4 px-2 flex flex-col items-center transition-colors ${
-                  activeTab === "family"
-                    ? "bg-purple-50 text-purple-700 border-t-2 border-purple-600"
-                    : "hover:bg-gray-50 text-gray-700"
-                }`}
-              >
-                <Users className="h-5 w-5 mb-1" />
-                <span className="text-sm font-medium">Family</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("academic")}
-                className={`py-4 px-2 flex flex-col items-center transition-colors ${
-                  activeTab === "academic"
-                    ? "bg-emerald-50 text-emerald-700 border-t-2 border-emerald-600"
-                    : "hover:bg-gray-50 text-gray-700"
-                }`}
-              >
-                <BookText className="h-5 w-5 mb-1" />
-                <span className="text-sm font-medium">Academic</span>
-              </button>
-              <button
-                onClick={() => setActiveTab("previous")}
-                className={`py-4 px-2 flex flex-col items-center transition-colors ${
-                  activeTab === "previous"
-                    ? "bg-amber-50 text-amber-700 border-t-2 border-amber-600"
-                    : "hover:bg-gray-50 text-gray-700"
-                }`}
-              >
-                <Award className="h-5 w-5 mb-1" />
-                <span className="text-sm font-medium">Education</span>
-              </button>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Sidebar - Profile Summary */}
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <div className="relative inline-block mb-4">
+                    <div className="h-24 w-24 border-4 border-white shadow-lg rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {getStudentImageUrl(applicationForm?.courseApplication?.[0]?.rfidNumber || "") ? (
+                        <img
+                          src={getStudentImageUrl(applicationForm?.courseApplication?.[0]?.rfidNumber || "") || ""}
+                          alt={user?.name || "Student"}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-gray-600 text-2xl font-bold">{user?.name?.charAt(0) || "S"}</span>
+                      )}
+                    </div>
+                    <Badge className="absolute -top-1 -right-1 bg-green-500 text-white text-xs px-2 py-1">
+                      Student
+                    </Badge>
+                  </div>
+                  <h2 className="text-xl font-bold text-gray-900 mb-1">{user?.name || "Not Available"}</h2>
+                  <p className="text-sm text-gray-600 mb-4">UID: {uidFromStudent}</p>
+
+                  <Separator />
+
+                  {/* Quick Stats */}
+                  <div className="space-y-3 mt-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Roll Number</span>
+                      <span className="font-semibold">
+                        {applicationForm?.courseApplication?.[0]?.classRollNumber || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Admission Year</span>
+                      <span className="font-semibold">
+                        {applicationForm?.courseApplication?.[0]?.applicationTimestamp
+                          ? new Date(applicationForm.courseApplication[0].applicationTimestamp).getFullYear()
+                          : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Program Course</span>
+                      <span className="font-semibold text-right text-xs">
+                        {courseNameFromStudent}
+                        {courseTypeFromStudent ? ` (${courseTypeFromStudent})` : ""}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Content Panel */}
-          {renderContent()}
+          {/* Right Content Area */}
+          <div className="lg:col-span-2">
+            {/* Navigation Tabs */}
+            <Card className="mb-6">
+              <CardContent className="p-0 overflow-x-auto">
+                <div className="flex border-b whitespace-nowrap">
+                  {[
+                    { id: "personal", label: "Personal", icon: User },
+                    { id: "family", label: "Family", icon: Users },
+                    { id: "application", label: "Application", icon: FileText },
+                    { id: "health", label: "Health", icon: Heart },
+                    { id: "emergency", label: "Emergency", icon: AlertTriangle },
+                    { id: "transport", label: "Transport", icon: Car },
+                    { id: "accommodation", label: "Accommodation", icon: Home },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${
+                        activeTab === tab.id
+                          ? "border-b-2 border-blue-500 text-blue-600 bg-blue-50"
+                          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                      }`}
+                    >
+                      <tab.icon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tab Content */}
+            <Card>
+              <CardContent className="p-6">
+                {activeTab === "personal" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        Personal Information
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
+                            Full Name
+                          </label>
+                          <Input
+                            id="fullName"
+                            value={user?.name || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-700">
+                            Date of Birth
+                          </label>
+                          <Input
+                            id="dateOfBirth"
+                            value={formatDate(personalDetails?.dateOfBirth || undefined)}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="gender" className="text-sm font-medium text-gray-700">
+                            Gender
+                          </label>
+                          <Input
+                            id="gender"
+                            value={personalDetails?.gender || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="nationality" className="text-sm font-medium text-gray-700">
+                            Nationality
+                          </label>
+                          <Input
+                            id="nationality"
+                            value={personalDetails?.nationality?.name || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="religion" className="text-sm font-medium text-gray-700">
+                            Religion
+                          </label>
+                          <Input
+                            id="religion"
+                            value={personalDetails?.religion?.name || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="category" className="text-sm font-medium text-gray-700">
+                            Category
+                          </label>
+                          <Input
+                            id="category"
+                            value={personalDetails?.category?.name || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="aadhaar" className="text-sm font-medium text-gray-700">
+                            Aadhaar Card Number
+                          </label>
+                          <Input
+                            id="aadhaar"
+                            value={personalDetails?.aadhaarCardNumber || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherTongue" className="text-sm font-medium text-gray-700">
+                            Mother Tongue
+                          </label>
+                          <Input
+                            id="motherTongue"
+                            value={personalDetails?.motherTongue?.name || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <MapPin className="h-5 w-5" />
+                        Address Information
+                      </h3>
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700">Residential Address</h4>
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <label htmlFor="resAddress" className="text-sm font-medium text-gray-700">
+                                Address Line
+                              </label>
+                              <Input
+                                id="resAddress"
+                                value={personalDetails?.residentialAddress?.addressLine || ""}
+                                disabled={!isEditing}
+                                className={!isEditing ? "bg-gray-50" : ""}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="resCity" className="text-sm font-medium text-gray-700">
+                                  City
+                                </label>
+                                <Input
+                                  id="resCity"
+                                  value={personalDetails?.residentialAddress?.city?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="resState" className="text-sm font-medium text-gray-700">
+                                  State
+                                </label>
+                                <Input
+                                  id="resState"
+                                  value={personalDetails?.residentialAddress?.state?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="resCountry" className="text-sm font-medium text-gray-700">
+                                  Country
+                                </label>
+                                <Input
+                                  id="resCountry"
+                                  value={personalDetails?.residentialAddress?.country?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="resPincode" className="text-sm font-medium text-gray-700">
+                                  Pincode
+                                </label>
+                                <Input
+                                  id="resPincode"
+                                  value={personalDetails?.residentialAddress?.pincode || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-4">
+                          <h4 className="text-sm font-semibold text-gray-700">Mailing Address</h4>
+                          <div className="space-y-3">
+                            <div className="space-y-2">
+                              <label htmlFor="mailAddress" className="text-sm font-medium text-gray-700">
+                                Address Line
+                              </label>
+                              <Input
+                                id="mailAddress"
+                                value={personalDetails?.mailingAddress?.addressLine || ""}
+                                disabled={!isEditing}
+                                className={!isEditing ? "bg-gray-50" : ""}
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="mailCity" className="text-sm font-medium text-gray-700">
+                                  City
+                                </label>
+                                <Input
+                                  id="mailCity"
+                                  value={personalDetails?.mailingAddress?.city?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="mailState" className="text-sm font-medium text-gray-700">
+                                  State
+                                </label>
+                                <Input
+                                  id="mailState"
+                                  value={personalDetails?.mailingAddress?.state?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="mailCountry" className="text-sm font-medium text-gray-700">
+                                  Country
+                                </label>
+                                <Input
+                                  id="mailCountry"
+                                  value={personalDetails?.mailingAddress?.country?.name || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="mailPincode" className="text-sm font-medium text-gray-700">
+                                  Pincode
+                                </label>
+                                <Input
+                                  id="mailPincode"
+                                  value={personalDetails?.mailingAddress?.pincode || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "family" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Family Information
+                    </h3>
+
+                    {/* Father's Information */}
+                    <div className="space-y-4">
+                      <h4 className="text-md font-semibold text-gray-800">Father's Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label htmlFor="fatherName" className="text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <Input
+                            id="fatherName"
+                            value={familyDetails?.father?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherTitle" className="text-sm font-medium text-gray-700">
+                            Title
+                          </label>
+                          <Input
+                            id="fatherTitle"
+                            value={familyDetails?.father?.title || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherPhone" className="text-sm font-medium text-gray-700">
+                            Phone Number
+                          </label>
+                          <Input
+                            id="fatherPhone"
+                            value={familyDetails?.father?.phone || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherEmail" className="text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <Input
+                            id="fatherEmail"
+                            value={familyDetails?.father?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherOccupation" className="text-sm font-medium text-gray-700">
+                            Occupation
+                          </label>
+                          <Input
+                            id="fatherOccupation"
+                            value={familyDetails?.father?.occupation?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherAadhaar" className="text-sm font-medium text-gray-700">
+                            Aadhaar Card
+                          </label>
+                          <Input
+                            id="fatherAadhaar"
+                            value={familyDetails?.father?.aadhaarCardNumber || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Mother's Information */}
+                    <div className="space-y-4">
+                      <Separator />
+                      <h4 className="text-md font-semibold text-gray-800">Mother's Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label htmlFor="motherName" className="text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <Input
+                            id="motherName"
+                            value={familyDetails?.mother?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherTitle" className="text-sm font-medium text-gray-700">
+                            Title
+                          </label>
+                          <Input
+                            id="motherTitle"
+                            value={familyDetails?.mother?.title || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherPhone" className="text-sm font-medium text-gray-700">
+                            Phone Number
+                          </label>
+                          <Input
+                            id="motherPhone"
+                            value={familyDetails?.mother?.phone || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherEmail" className="text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <Input
+                            id="motherEmail"
+                            value={familyDetails?.mother?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherOccupation" className="text-sm font-medium text-gray-700">
+                            Occupation
+                          </label>
+                          <Input
+                            id="motherOccupation"
+                            value={familyDetails?.mother?.occupation?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherAadhaar" className="text-sm font-medium text-gray-700">
+                            Aadhaar Card
+                          </label>
+                          <Input
+                            id="motherAadhaar"
+                            value={familyDetails?.mother?.aadhaarCardNumber || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "application" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <GraduationCap className="h-5 w-5" />
+                      Application Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="course" className="text-sm font-medium text-gray-700">
+                          Program Course
+                        </label>
+                        <Input
+                          id="course"
+                          value={`${student?.programCourse?.course?.name || ""}${student?.programCourse?.courseType?.shortName ? ` (${student.programCourse.courseType.shortName})` : ""}`}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="section" className="text-sm font-medium text-gray-700">
+                          Section
+                        </label>
+                        <Input
+                          id="section"
+                          value={student?.section?.name || applicationForm?.courseApplication?.[0]?.class?.name || ""}
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="rollNumber" className="text-sm font-medium text-gray-700">
+                          Class Roll Number
+                        </label>
+                        <Input
+                          id="rollNumber"
+                          value={applicationForm?.courseApplication?.[0]?.classRollNumber || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="uid" className="text-sm font-medium text-gray-700">
+                          UID
+                        </label>
+                        <Input
+                          id="uid"
+                          value={
+                            (student?.id ? String(student.id) : "") ||
+                            applicationForm?.courseApplication?.[0]?.rfidNumber ||
+                            ""
+                          }
+                          disabled
+                          className="bg-gray-50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Academic Details */}
+                    <Separator />
+                    <div className="space-y-4">
+                      <h4 className="text-md font-semibold text-gray-900">Academic Details</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label htmlFor="lastInstitution" className="text-sm font-medium text-gray-700">
+                            Last Institution
+                          </label>
+                          <Input
+                            id="lastInstitution"
+                            value={applicationForm?.academicInfo?.lastSchoolName || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="board" className="text-sm font-medium text-gray-700">
+                            Board / University
+                          </label>
+                          <Input
+                            id="board"
+                            value={applicationForm?.academicInfo?.board?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="yop" className="text-sm font-medium text-gray-700">
+                            Year of Passing
+                          </label>
+                          <Input
+                            id="yop"
+                            value={applicationForm?.academicInfo?.yearOfPassing || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="percentage" className="text-sm font-medium text-gray-700">
+                            Percentage / CGPA
+                          </label>
+                          <Input
+                            id="percentage"
+                            value={applicationForm?.academicInfo?.percentageOfMarks || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Board Subjects Table */}
+                    <div className="space-y-3">
+                      <h4 className="text-md font-semibold text-gray-900">12th Board Subjects & Marks</h4>
+                      <div className="overflow-x-auto border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 text-gray-700">
+                            <tr>
+                              <th className="px-4 py-3 text-left font-semibold">Sr No</th>
+                              <th className="px-4 py-3 text-left font-semibold">Subject</th>
+                              <th className="px-4 py-3 text-center font-semibold">Full Marks</th>
+                              <th className="px-4 py-3 text-center font-semibold">Total Marks</th>
+                              <th className="px-4 py-3 text-center font-semibold">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {(applicationForm?.academicInfo?.subjects ?? []).length === 0 ? (
+                              <tr>
+                                <td className="px-4 py-6 text-center text-gray-500" colSpan={5}>
+                                  No subjects available
+                                </td>
+                              </tr>
+                            ) : (
+                              applicationForm!.academicInfo!.subjects!.map((subject: any, index: number) => {
+                                const subjectName = subject?.name || `Subject ${index + 1}`;
+                                const fullMarks = subject?.fullMarks ?? subject?.maximumMarks ?? "N/A";
+                                const computedMarks = (subject?.theoryMarks || 0) + (subject?.practicalMarks || 0);
+                                const totalMarks = subject?.totalMarks ?? (computedMarks || "N/A");
+                                return (
+                                  <tr key={index} className="hover:bg-gray-50">
+                                    <td className="px-4 py-3">{index + 1}</td>
+                                    <td className="px-4 py-3">{subjectName}</td>
+                                    <td className="px-4 py-3 text-center">{fullMarks}</td>
+                                    <td className="px-4 py-3 text-center font-medium">{totalMarks}</td>
+                                    <td className="px-4 py-3 text-center">
+                                      <span
+                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${subject?.resultStatus === "PASS" ? "bg-green-100 text-green-700" : subject?.resultStatus === "FAIL" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}`}
+                                      >
+                                        {subject?.resultStatus || "N/A"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "health" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Heart className="h-5 w-5" />
+                      Health Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="bloodGroup" className="text-sm font-medium text-gray-700">
+                          Blood Group
+                        </label>
+                        <Input
+                          id="bloodGroup"
+                          value={healthDetails?.bloodGroup?.type || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="height" className="text-sm font-medium text-gray-700">
+                          Height
+                        </label>
+                        <Input
+                          id="height"
+                          value={healthDetails?.height ? `${healthDetails.height} cm` : ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="weight" className="text-sm font-medium text-gray-700">
+                          Weight
+                        </label>
+                        <Input
+                          id="weight"
+                          value={healthDetails?.weight ? `${healthDetails.weight} kg` : ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="allergies" className="text-sm font-medium text-gray-700">
+                          Allergies
+                        </label>
+                        <Input
+                          id="allergies"
+                          value={healthDetails?.allergy || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "emergency" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Emergency Contact Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="emergencyContact" className="text-sm font-medium text-gray-700">
+                          Contact Person
+                        </label>
+                        <Input
+                          id="emergencyContact"
+                          value={emergencyContactDetails?.personName || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="relationship" className="text-sm font-medium text-gray-700">
+                          Relationship
+                        </label>
+                        <Input
+                          id="relationship"
+                          value={emergencyContactDetails?.havingRelationAs || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="emergencyPhone" className="text-sm font-medium text-gray-700">
+                          Phone Number
+                        </label>
+                        <Input
+                          id="emergencyPhone"
+                          value={emergencyContactDetails?.phone || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="emergencyEmail" className="text-sm font-medium text-gray-700">
+                          Email
+                        </label>
+                        <Input
+                          id="emergencyEmail"
+                          value={emergencyContactDetails?.email || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "transport" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Car className="h-5 w-5" />
+                      Transport Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="transportMode" className="text-sm font-medium text-gray-700">
+                          Transport Mode
+                        </label>
+                        <Input
+                          id="transportMode"
+                          value={transportDetails?.transportInfo?.mode || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="pickupPoint" className="text-sm font-medium text-gray-700">
+                          Pickup Point
+                        </label>
+                        <Input
+                          id="pickupPoint"
+                          value={transportDetails?.pickupPoint?.name || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="routeName" className="text-sm font-medium text-gray-700">
+                          Route Name
+                        </label>
+                        <Input
+                          id="routeName"
+                          value={transportDetails?.transportInfo?.routeName || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="driverName" className="text-sm font-medium text-gray-700">
+                          Driver Name
+                        </label>
+                        <Input
+                          id="driverName"
+                          value={transportDetails?.transportInfo?.driverName || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "accommodation" && (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Home className="h-5 w-5" />
+                      Accommodation Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label htmlFor="placeOfStay" className="text-sm font-medium text-gray-700">
+                          Place of Stay
+                        </label>
+                        <Input
+                          id="placeOfStay"
+                          value={accommodationDetails?.placeOfStay || ""}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="startDate" className="text-sm font-medium text-gray-700">
+                          Start Date
+                        </label>
+                        <Input
+                          id="startDate"
+                          value={formatDate(accommodationDetails?.startDate || undefined)}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="endDate" className="text-sm font-medium text-gray-700">
+                          End Date
+                        </label>
+                        <Input
+                          id="endDate"
+                          value={formatDate(accommodationDetails?.endDate || undefined)}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label htmlFor="accommodationAddress" className="text-sm font-medium text-gray-700">
+                          Address
+                        </label>
+                        <Input
+                          id="accommodationAddress"
+                          value={formatAddress(accommodationDetails?.address)}
+                          disabled={!isEditing}
+                          className={!isEditing ? "bg-gray-50" : ""}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

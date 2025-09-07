@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { drizzle } from 'drizzle-orm/mysql2';
+import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
 import { createPool, type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
 import { drizzle as drizzlePostgres, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from "./schema"; // Import your schema
@@ -26,7 +26,7 @@ const dbConfig = {
 
 // Create a global pool that can be reused for MySQL
 let pool: Pool;
-let db: ReturnType<typeof drizzle>;
+let db: MySql2Database<Record<string, never>>;
 
 // Initialize MySQL pool right away
 try {

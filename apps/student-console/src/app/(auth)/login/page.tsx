@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { axiosInstance } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+
 import { doLogin } from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
@@ -19,6 +20,8 @@ export default function SignInPage() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [invalidOpen, setInvalidOpen] = useState(false);
+  const [invalidMessage, setInvalidMessage] = useState("");
   const router = useRouter();
   const { login } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -38,17 +41,27 @@ export default function SignInPage() {
       if (response.httpStatusCode === 200) {
         const payload = response.payload as { accessToken: string; user: UserDto; redirectTo?: string };
         console.log("Login payload:", payload);
-        login(payload.accessToken, payload.user);
-
-        // Add a small delay to ensure auth state is updated before redirect
-        setTimeout(() => {
-          router.push(payload.redirectTo || "/dashboard");
-        }, 100);
+        const type = (payload.user as any)?.userType || (payload.user as any)?.type || (payload.user as any)?.role;
+        const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
+        if (!isStudent) {
+          // Do NOT proceed to dashboard; show invalid dialog
+          setInvalidMessage("This account does not have access to the Student Console.");
+          setInvalidOpen(true);
+        } else {
+          login(payload.accessToken, payload.user);
+          // Add a small delay to ensure auth state is updated before redirect
+          setTimeout(() => {
+            router.push(payload.redirectTo || "/dashboard");
+          }, 100);
+        }
       } else {
         throw new Error(response.message || "Login failed");
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Login failed");
+      const msg = error instanceof Error ? error.message : "Invalid credentials";
+      setError(msg);
+      setInvalidMessage("Invalid credentials. Please check your UID and password.");
+      setInvalidOpen(true);
     } finally {
       setIsLoading(false);
     }
@@ -60,6 +73,15 @@ export default function SignInPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900">
+      {/* Invalid user / credentials dialog */}
+      <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <h3 className="text-lg font-semibold">Unable to sign in</h3>
+            <p className="text-sm text-gray-600">{invalidMessage || "Something went wrong while signing in."}</p>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
       {/* Background pattern */}
       <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwNDAiIGZpbGwtb3BhY2l0eT0iMC4zIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
 
@@ -111,9 +133,9 @@ export default function SignInPage() {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="uid" className="block text-sm font-medium text-gray-700">
+                <label htmlFor="uid" className="block text-sm font-medium text-gray-700">
                   UID
-                </Label>
+                </label>
                 <div className="relative mt-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -137,9 +159,9 @@ export default function SignInPage() {
 
               <div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                     Password
-                  </Label>
+                  </label>
                   <Link
                     href="/forgot-password"
                     className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors"

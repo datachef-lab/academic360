@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { BatchCustom } from "@/types/academics/batch";
 import { StudentAccessControl } from "@/types/academics/access-control";
-import { StudentDto } from "@repo/db/dtos/user";
+import { UserDto, StudentDto } from "@repo/db/dtos/user";
 
 interface StudentContextType {
   student: StudentDto | null;
@@ -54,7 +54,7 @@ export const StudentProvider = ({ children }: { children: React.ReactNode }) => 
     }
 
     console.log("✅ Setting student data from user payload");
-    setStudent(user.payload);
+    setStudent(user.payload as StudentDto);
     setError(null);
   };
 

@@ -3,7 +3,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { 
   createRegulationType, 
-  getRegulationTypeById, 
+  findById, 
   getAllRegulationTypes, 
   updateRegulationType, 
   deleteRegulationTypeSafe, 
@@ -27,7 +27,7 @@ export const createRegulationTypeHandler = async (req: Request, res: Response, n
 export const getRegulationTypeByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const regulationType = await getRegulationTypeById(id);
+        const regulationType = await findById(id);
         if (!regulationType) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Regulation type with ID ${id} not found`));
         res.status(200).json(new ApiResponse(200, "SUCCESS", regulationType, "Regulation type fetched successfully"));
     } catch (error) {

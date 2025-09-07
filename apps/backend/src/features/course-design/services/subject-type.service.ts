@@ -125,7 +125,7 @@ export const bulkUploadSubjectTypes = async (
 
     for (let i = 0; i < rowsArray.length; i++) {
         const row = rowsArray[i];
-        const [name, code, sequence, disabled] = row;
+        const [name, code, sequence, isActive] = row;
         // Validation: name required
         if (!name || typeof name !== "string" || name.trim().length < 2) {
             errors.push({ row: i + 2, data: row, error: "Name is required and must be at least 2 characters." });
@@ -136,7 +136,7 @@ export const bulkUploadSubjectTypes = async (
                 name: name.trim(),
                 code: code ? String(code).trim() : null,
                 sequence: sequence !== undefined && sequence !== null && sequence !== '' ? Number(sequence) : null,
-                disabled: disabled === true || disabled === "true" || disabled === 1 || disabled === "1"
+                isActive: isActive === true || isActive === "true" || isActive === 1 || isActive === "1"
             }).returning();
             success.push(created[0]);
         } catch (err: unknown) {

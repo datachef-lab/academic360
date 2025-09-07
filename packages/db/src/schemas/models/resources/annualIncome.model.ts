@@ -6,7 +6,7 @@ export const annualIncomeModel = pgTable("annual_incomes", {
     id: serial().primaryKey(),
     range: varchar({ length: 255 }).notNull(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -9,7 +9,6 @@ const defaultAffiliation: Affiliation[] = [
     {
         name: "Calcutta University",
         shortName: "CU",
-        disabled: false,
     }
 ]
 export async function loadAffiliation() {
@@ -39,7 +38,7 @@ export async function createAffiliation(data: Affiliation) {
     return created;
 }
 
-export async function getAffiliationById(id: number) {
+export async function findById(id: number) {
     const [affiliation] = await db.select().from(affiliationModel).where(eq(affiliationModel.id, id));
     return affiliation;
 }
@@ -139,7 +138,6 @@ export const bulkUploadAffiliations = async (
                 name: name.trim(),
                 shortName: shortName ? String(shortName).trim() : null,
                 sequence: sequence !== undefined && sequence !== null && sequence !== '' ? Number(sequence) : null,
-                disabled: disabled === true || disabled === "true" || disabled === 1 || disabled === "1",
                 remarks: remarks ? String(remarks).trim() : null
             }).returning();
             success.push(created[0]);

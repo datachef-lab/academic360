@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateAccessControl } from "@/lib/services/access-control.service";
+// import { updateAccessControl } from "@/lib/services/access-control.service";
 
 // PUT endpoint to update student access permissions
 export async function PUT(
@@ -12,11 +12,11 @@ export async function PUT(
 
         const { status, access_course, access_library, access_exams } = await request.json();
 
-        const updatedStudent = await updateAccessControl({
-            id: parseInt(id), status, access_course, access_library, access_exams,
-        });
+        // const updatedStudent = await updateAccessControl({
+        //     id: parseInt(id), status, access_course, access_library, access_exams,
+        // });
 
-        return NextResponse.json(updatedStudent, { status: 200 });
+        return NextResponse.json({}, { status: 200 });
 
     } catch (error) {
         console.error("Error updating student access:", error);

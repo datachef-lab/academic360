@@ -2,11 +2,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, User, ChevronDown } from "lucide-react";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,9 +14,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
+import { useStudent } from "@/providers/student-provider";
 
 export function NavUser() {
   const { user, logout } = useAuth();
+  const { student } = useStudent();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -29,7 +27,7 @@ export function NavUser() {
   };
 
   const initials = user?.name
-    ? user.name
+    ? (user.name as string)
         .split(" ")
         .map((n) => n[0])
         .join("")
@@ -42,22 +40,13 @@ export function NavUser() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="flex items-center gap-2 p-2"
-            >
+            <SidebarMenuButton size="lg" className="flex items-center gap-2 p-2">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-primary text-primary-foreground">
-                  {initials}
-                </AvatarFallback>
+                <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col text-left">
-                <span className="text-sm font-semibold">
-                  {user?.name || "Student"}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {user?.codeNumber || ""}
-                </span>
+                <span className="text-sm font-semibold">{user?.name || "Student"}</span>
+                <span className="text-xs text-gray-500">{user?.payload.uid || ""}</span>
               </div>
               <ChevronDown className="ml-auto h-4 w-4" />
             </SidebarMenuButton>

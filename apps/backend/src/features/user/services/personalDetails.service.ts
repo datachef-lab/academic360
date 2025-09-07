@@ -84,7 +84,6 @@ export async function savePersonalDetails(id: number, personalDetails: PersonalD
         residentialAddress,
         motherTongue,
         nationality,
-        otherNationality,
         religion,
 
         createdAt,
@@ -105,7 +104,6 @@ export async function savePersonalDetails(id: number, personalDetails: PersonalD
         residentialAddressId: residentialAddress?.id,
         motherTongueId: motherTongue?.id,
         nationalityId: nationality?.id,
-        otherNationalityId: otherNationality?.id,
         religionId: religion?.id,
     }).where(eq(personalDetailsModel.id, id)).returning();
 
@@ -125,45 +123,45 @@ export async function savePersonalDetails(id: number, personalDetails: PersonalD
 
 export async function savePersonalDetailsByStudentId(studentId: number, personalDetails: PersonalDetailsType): Promise<PersonalDetailsType | null> {
     // let {
-        //     category,
-        //     disabilityCode,
-        //     mailingAddress,
-        //     residentialAddress,
-        //     motherTongue,
-        //     nationality,
-        //     otherNationality,
-        //     religion,
-        //     id: personalDetailsId,
-        //     ...props
-        // } = personalDetails;
+    //     category,
+    //     disabilityCode,
+    //     mailingAddress,
+    //     residentialAddress,
+    //     motherTongue,
+    //     nationality,
+    //     otherNationality,
+    //     religion,
+    //     id: personalDetailsId,
+    //     ...props
+    // } = personalDetails;
 
-        // // Validate input (excluding nested objects)
-        // validatePersonalDetailsInput({ ...props, studentId });
+    // // Validate input (excluding nested objects)
+    // validatePersonalDetailsInput({ ...props, studentId });
 
-        // const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
-        //     ...props,
-        //     categoryId: category?.id,
-        //     disabilityCodeId: disabilityCode?.id,
-        //     mailingAddressId: mailingAddress?.id,
-        //     residentialAddressId: residentialAddress?.id,
-        //     motherTongueId: motherTongue?.id,
-        //     nationalityId: nationality?.id,
-        //     otherNationalityId: otherNationality?.id,
-        //     religionId: religion?.id,
-        // }).where(eq(personalDetailsModel.studentId, studentId)).returning();
+    // const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
+    //     ...props,
+    //     categoryId: category?.id,
+    //     disabilityCodeId: disabilityCode?.id,
+    //     mailingAddressId: mailingAddress?.id,
+    //     residentialAddressId: residentialAddress?.id,
+    //     motherTongueId: motherTongue?.id,
+    //     nationalityId: nationality?.id,
+    //     otherNationalityId: otherNationality?.id,
+    //     religionId: religion?.id,
+    // }).where(eq(personalDetailsModel.studentId, studentId)).returning();
 
-        // if (!updatedPersonalDetails) return null;
+    // if (!updatedPersonalDetails) return null;
 
-        // if (mailingAddress) {
-        //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
-        // }
+    // if (mailingAddress) {
+    //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
+    // }
 
-        // if (residentialAddress) {
-        //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
-        // }
+    // if (residentialAddress) {
+    //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
+    // }
 
-        // const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
-        return null;
+    // const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
+    return null;
 }
 
 export async function removePersonalDetails(id: number): Promise<boolean | null> {
@@ -228,7 +226,6 @@ export async function personalDetailsResponseFormat(personalDetails: PersonalDet
         residentialAddressId,
         motherTongueId,
         nationalityId,
-        otherNationalityId,
         religionId,
         ...props
     } = personalDetails;
@@ -251,9 +248,7 @@ export async function personalDetailsResponseFormat(personalDetails: PersonalDet
     if (nationalityId) {
         formattedPersonalDetails.nationality = await findNationalityById(nationalityId);
     }
-    if (otherNationalityId) {
-        formattedPersonalDetails.otherNationality = await findNationalityById(otherNationalityId);
-    }
+
     if (religionId) {
         formattedPersonalDetails.religion = await findReligionById(religionId);
     }

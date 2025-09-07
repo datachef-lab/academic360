@@ -8,7 +8,7 @@ export const nationalityModel = pgTable("nationality", {
     name: varchar({ length: 255 }).notNull(),
     code: integer(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

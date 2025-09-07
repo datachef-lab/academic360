@@ -34,48 +34,48 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: House,
       isActive: pathname === "/dashboard",
     },
-    {
-      title: "Attendance",
-      url: "/dashboard/attendance",
-      icon: ListChecks,
-      isActive: pathname === "/dashboard/attendance",
-    },
+    // {
+    //   title: "Attendance",
+    //   url: "/dashboard/attendance",
+    //   icon: ListChecks,
+    //   isActive: pathname === "/dashboard/attendance",
+    // },
     {
       title: "Subject Selection",
       url: "/dashboard/subject-selection",
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
     },
-    accessControl?.access_exams && {
-      title: "Exams",
-      url: "/dashboard/exams",
-      icon: NotebookPen,
-      isActive: pathname === "/dashboard/exams",
-    },
-    accessControl?.access_course && {
-      title: "Course Catalogue",
-      url: "/dashboard/course-catalogue",
-      icon: BookOpen,
-      isActive: pathname === "/dashboard/course-catalogue",
-    },
-    accessControl?.access_documents && {
-      title: "Documents",
-      url: "/dashboard/documents",
-      icon: ScrollText,
-      isActive: pathname === "/dashboard/documents",
-    },
-    {
-      title: "Enrollment & Fees",
-      url: "/dashboard/enrollment-fees",
-      icon: IndianRupee,
-      isActive: pathname === "/dashboard/enrollment-fees",
-    },
-    accessControl?.access_library && {
-      title: "Library",
-      url: "/dashboard/library",
-      icon: Library,
-      isActive: pathname === "/dashboard/library",
-    },
+    // accessControl?.access_exams && {
+    //   title: "Exams",
+    //   url: "/dashboard/exams",
+    //   icon: NotebookPen,
+    //   isActive: pathname === "/dashboard/exams",
+    // },
+    // accessControl?.access_course && {
+    //   title: "Course Catalogue",
+    //   url: "/dashboard/course-catalogue",
+    //   icon: BookOpen,
+    //   isActive: pathname === "/dashboard/course-catalogue",
+    // },
+    // accessControl?.access_documents && {
+    //   title: "Documents",
+    //   url: "/dashboard/documents",
+    //   icon: ScrollText,
+    //   isActive: pathname === "/dashboard/documents",
+    // },
+    // {
+    //   title: "Enrollment & Fees",
+    //   url: "/dashboard/enrollment-fees",
+    //   icon: IndianRupee,
+    //   isActive: pathname === "/dashboard/enrollment-fees",
+    // },
+    // accessControl?.access_library && {
+    //   title: "Library",
+    //   url: "/dashboard/library",
+    //   icon: Library,
+    //   isActive: pathname === "/dashboard/library",
+    // },
     {
       title: "Profile",
       url: "/dashboard/profile",
@@ -89,7 +89,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="xl" className="cursor-default hover:bg-transparent">
+            <SidebarMenuButton size="lg" className="cursor-default hover:bg-transparent">
               <div className="flex aspect-square w-8 h-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 <Image
                   width={32}

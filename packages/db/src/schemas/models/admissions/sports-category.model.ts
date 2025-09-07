@@ -5,7 +5,7 @@ import { boolean, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-cor
 export const sportsCategoryModel = pgTable("sports_categories", {
     id: serial().primaryKey(),
     name: varchar({length: 255}).notNull(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

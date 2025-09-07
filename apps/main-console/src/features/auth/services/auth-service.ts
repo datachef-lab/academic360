@@ -1,7 +1,9 @@
+import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
+import { UserDto } from "@repo/db/dtos/user";
 
 export async function login(credential: { email: string, password: string }) {
-    const response = await axiosInstance.post("/auth/login", credential, { withCredentials: true });
+    const response = await axiosInstance.post<ApiResonse<{ accessToken: string; user: UserDto }>>("/auth/login", credential, { withCredentials: true });
     console.log(response.data);
     return response.data;
 }

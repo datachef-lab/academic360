@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect, ReactNode, createContext, useContext } from "react";
 import axiosInstance from "@/utils/api";
 import { useNavigate } from "react-router-dom";
-import { User } from "@/types/user/user";
-import { ApiResonse } from "@/types/api-response";
 
+import { ApiResonse } from "@/types/api-response";
+import { UserDto } from "@repo/db/dtos/user";
 export interface AuthContextType {
-  user: User | null;
-  login: (accessToken: string, userData: User) => void;
+  user: UserDto | null;
+  login: (accessToken: string, userData: UserDto) => void;
   logout: () => void;
   accessToken: string | null;
   displayFlag: boolean;
@@ -30,10 +30,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [displayFlag, setDisplayFlag] = useState(false);
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserDto | null>(null);
   const navigate = useNavigate();
 
-  const login = (accessToken: string, userData: User) => {
+  const login = (accessToken: string, userData: UserDto) => {
     setAccessToken(accessToken);
     setUser(userData);
   };
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const generateNewToken = useCallback(async (): Promise<string | null> => {
     try {
-      const response = await axiosInstance.get<ApiResonse<{ accessToken: string; user: User }>>(
+      const response = await axiosInstance.get<ApiResonse<{ accessToken: string; user: UserDto }>>(
         "/auth/refresh",
         { withCredentials: true }, // Include cookies in the request
       );

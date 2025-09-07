@@ -16,14 +16,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -38,13 +31,33 @@ import {
   DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Work around strict shadcn typings with proper type extensions
+const DialogTriggerFixed = DialogTrigger as React.ComponentType<
+  React.ComponentProps<typeof DialogTrigger> & { children?: React.ReactNode; asChild?: boolean }
+>;
+const DialogCloseFixed = DialogClose as React.ComponentType<
+  React.ComponentProps<typeof DialogClose> & { children?: React.ReactNode; asChild?: boolean }
+>;
+const DialogTitleFixed = DialogTitle as React.ComponentType<
+  React.ComponentProps<typeof DialogTitle> & { children?: React.ReactNode }
+>;
+const DialogDescriptionFixed = DialogDescription as React.ComponentType<
+  React.ComponentProps<typeof DialogDescription> & { children?: React.ReactNode }
+>;
+const SelectTriggerFixed = SelectTrigger as React.ComponentType<
+  React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
+>;
+const SelectContentFixed = SelectContent as React.ComponentType<
+  React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
+>;
+const SelectItemFixed = SelectItem as React.ComponentType<
+  React.ComponentProps<typeof SelectItem> & { children?: React.ReactNode; value?: string; key?: string }
+>;
+const LabelFixed = Label as React.ComponentType<
+  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string }
+>;
 import AdmissionForm from "@/components/admissions/AdmissionForm";
 import { ApplicationFormProvider } from "@/providers/adm-application-form-provider";
 import { AdmissionDto } from "@/types/admissions";
@@ -101,18 +114,25 @@ export default function AdmissionDetailsPage() {
       });
 
       if (searchTerm) queryParams.append("search", searchTerm);
-      if (filters.category && filters.category !== "all" && filters.category !== "All") queryParams.append("category", filters.category);
-      if (filters.religion && filters.religion !== "all" && filters.religion !== "All") queryParams.append("religion", filters.religion);
-      if (filters.annualIncome && filters.annualIncome !== "all" && filters.annualIncome !== "All") queryParams.append("annualIncome", filters.annualIncome);
-      if (filters.gender && filters.gender !== "all" && filters.gender !== "All") queryParams.append("gender", filters.gender);
+      if (filters.category && filters.category !== "all" && filters.category !== "All")
+        queryParams.append("category", filters.category);
+      if (filters.religion && filters.religion !== "all" && filters.religion !== "All")
+        queryParams.append("religion", filters.religion);
+      if (filters.annualIncome && filters.annualIncome !== "all" && filters.annualIncome !== "All")
+        queryParams.append("annualIncome", filters.annualIncome);
+      if (filters.gender && filters.gender !== "all" && filters.gender !== "All")
+        queryParams.append("gender", filters.gender);
       if (filters.isGujarati === "true" || filters.isGujarati === "false") {
         queryParams.append("isGujarati", filters.isGujarati);
       }
-      if (filters.formStatus && filters.formStatus !== "all" && filters.formStatus !== "All") queryParams.append("formStatus", filters.formStatus);
-      if (filters.course && filters.course !== "all" && filters.course !== "All") queryParams.append("course", filters.course);
-      if (filters.boardUniversity && filters.boardUniversity !== "all" && filters.boardUniversity !== "All") queryParams.append("boardUniversity", filters.boardUniversity);
-console.log('Frontend filters:', filters, tempFilters);
-console.log(`/api/admissions/${year}?${queryParams.toString()}`);
+      if (filters.formStatus && filters.formStatus !== "all" && filters.formStatus !== "All")
+        queryParams.append("formStatus", filters.formStatus);
+      if (filters.course && filters.course !== "all" && filters.course !== "All")
+        queryParams.append("course", filters.course);
+      if (filters.boardUniversity && filters.boardUniversity !== "all" && filters.boardUniversity !== "All")
+        queryParams.append("boardUniversity", filters.boardUniversity);
+      console.log("Frontend filters:", filters, tempFilters);
+      console.log(`/api/admissions/${year}?${queryParams.toString()}`);
       const response = await fetch(`/api/admissions/${year}?${queryParams.toString()}`);
 
       const result = await response.json();
@@ -122,7 +142,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
       }
       setAdmission(result.admission);
       setStats(result.stats);
-      console.log(result)
+      console.log(result);
       setApplications(result.applications);
       setTotalItems(result.totalItems);
     } catch (error: any) {
@@ -207,9 +227,9 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
   };
 
   const handleRowSelect = (id: number) => {
-    setSelectedRows(prev => {
+    setSelectedRows((prev) => {
       if (prev.includes(id)) {
-        return prev.filter(rowId => rowId !== id);
+        return prev.filter((rowId) => rowId !== id);
       }
       return [...prev, id];
     });
@@ -219,7 +239,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
     if (selectAll) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(applications.map(app => app.id));
+      setSelectedRows(applications.map((app) => app.id));
     }
     setSelectAll(!selectAll);
   };
@@ -232,9 +252,9 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
 
     try {
       const response = await fetch(`/api/admissions/${year}/bulk-action`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           action,
@@ -243,7 +263,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
       });
 
       if (!response.ok) {
-        throw new Error('Failed to perform bulk action');
+        throw new Error("Failed to perform bulk action");
       }
 
       toast.success(`Successfully ${action.toLowerCase()}ed selected applications`);
@@ -251,12 +271,12 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
       setSelectAll(false);
       fetchData(); // Refresh the data
     } catch (error: any) {
-      toast.error(error.message || 'Failed to perform bulk action');
+      toast.error(error.message || "Failed to perform bulk action");
     }
   };
 
   const getActiveFilterCount = () => {
-    return Object.values(filters).filter(value => value !== "" && value !== "all").length;
+    return Object.values(filters).filter((value) => value !== "" && value !== "all").length;
   };
 
   if (isLoading) {
@@ -280,7 +300,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
   const isGujaratiOptions = [
     { label: "All", value: "all" },
     { label: "Yes", value: "true" },
-    { label: "No", value: "false" }
+    { label: "No", value: "false" },
   ];
   const categoryOptions = ["General", "OBC", "SC", "ST"];
   const religionOptions = ["Hinduism", "Muslim", "Christian", "Sikh"];
@@ -294,16 +314,14 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission.academicYear.year}</h1>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-report`, '_blank')}>
+            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-report`, "_blank")}>
               <FileText className="w-4 h-4 mr-2" />
               Download Report
             </Button>
             <Dialog open={isAddApplicationOpen} onOpenChange={setIsAddApplicationOpen}>
-              <DialogTrigger asChild>
-                <Button disabled={new Date().getFullYear() != Number(year)}>
-                  Add Application
-                </Button>
-              </DialogTrigger>
+              <DialogTriggerFixed asChild>
+                <Button disabled={new Date().getFullYear() != Number(year)}>Add Application</Button>
+              </DialogTriggerFixed>
               <DialogContent className="w-screen h-screen max-w-none p-0">
                 <div className="flex flex-col h-full">
                   <div className="flex-1 overflow-auto">
@@ -335,13 +353,13 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
         {selectedRows.length > 0 && (
           <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
             <div className="text-sm text-blue-700">
-              {selectedRows.length} application{selectedRows.length !== 1 ? 's' : ''} selected
+              {selectedRows.length} application{selectedRows.length !== 1 ? "s" : ""} selected
             </div>
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleBulkAction('APPROVE')}
+                onClick={() => handleBulkAction("APPROVE")}
                 className="bg-green-50 text-green-700 hover:bg-green-100 border-green-200"
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -350,7 +368,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleBulkAction('REJECT')}
+                onClick={() => handleBulkAction("REJECT")}
                 className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
               >
                 <XCircle className="w-4 h-4 mr-2" />
@@ -359,7 +377,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleBulkAction('DELETE')}
+                onClick={() => handleBulkAction("DELETE")}
                 className="bg-red-50 text-red-700 hover:bg-red-100 border-red-200"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -438,7 +456,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
             />
             <div className="flex items-center gap-2">
               <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-                <DialogTrigger asChild>
+                <DialogTriggerFixed asChild>
                   <Button variant="outline" className="relative">
                     <SlidersHorizontal className="w-4 h-4 mr-2" />
                     Filters
@@ -448,13 +466,11 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                       </span>
                     )}
                   </Button>
-                </DialogTrigger>
+                </DialogTriggerFixed>
                 <DialogContent className="sm:max-w-2xl p-6">
                   <DialogHeader>
-                    <DialogTitle>Filter Applications</DialogTitle>
-                    <DialogDescription>
-                      Apply filters to narrow down the application forms.
-                    </DialogDescription>
+                    <DialogTitleFixed>Filter Applications</DialogTitleFixed>
+                    <DialogDescriptionFixed>Apply filters to narrow down the application forms.</DialogDescriptionFixed>
                   </DialogHeader>
                   {/* {console.log('Dialog tempFilters:', tempFilters)} */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 py-4">
@@ -508,19 +524,23 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                     />
                   </div>
                   <DialogFooter>
-                    <Button type="submit" onClick={applyFilters}>Apply Filters</Button>
+                    <Button type="submit" onClick={applyFilters}>
+                      Apply Filters
+                    </Button>
                     {getActiveFilterCount() > 0 && (
-                      <Button variant="outline" onClick={clearFilters}>Clear Filters</Button>
+                      <Button variant="outline" onClick={clearFilters}>
+                        Clear Filters
+                      </Button>
                     )}
-                    <DialogClose asChild>
+                    <DialogCloseFixed asChild>
                       <Button variant="secondary">Close</Button>
-                    </DialogClose>
+                    </DialogCloseFixed>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
               {getActiveFilterCount() > 0 && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={clearFilters}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                 >
@@ -532,10 +552,10 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
           </div>
 
           <div className="flex gap-2 ml-auto">
-            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-forms`, '_blank')}>
+            <Button variant="outline" onClick={() => window.open(`/api/admissions/${year}/download-forms`, "_blank")}>
               <FileText className="w-4 h-4 mr-2" />
               Download
-            </Button>  
+            </Button>
           </div>
         </div>
 
@@ -552,17 +572,39 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                       className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Submitted?</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Religion</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Income</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Gender</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Gujarati?</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Course</TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Board/University</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    ID
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Name
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Status
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Submitted?
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Category
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Religion
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Income
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Gender
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Gujarati?
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Course
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Board/University
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-white divide-y divide-gray-200">
@@ -571,7 +613,7 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                     <TableRow
                       key={app.id}
                       className={`hover:bg-gray-50 transition-colors duration-150 ${
-                        selectedRows.includes(app.id) ? 'bg-blue-50' : ''
+                        selectedRows.includes(app.id) ? "bg-blue-50" : ""
                       }`}
                     >
                       <TableCell className="w-12 px-6 py-4">
@@ -582,20 +624,18 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                           className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                         />
                       </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.id}
-                      </TableCell>
-                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                        {app.name}
-                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.id}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{app.name}</TableCell>
                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            app.formStatus === "SUBMITTED" || app.formStatus === "APPROVED" || app.formStatus === "PAYMENT_SUCCESS"
+                            app.formStatus === "SUBMITTED" ||
+                            app.formStatus === "APPROVED" ||
+                            app.formStatus === "PAYMENT_SUCCESS"
                               ? "bg-green-100 text-green-800"
                               : app.formStatus === "REJECTED" || app.formStatus === "PAYMENT_FAILED"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-yellow-100 text-yellow-800"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
                           {app.formStatus}
@@ -661,20 +701,9 @@ console.log(`/api/admissions/${year}?${queryParams.toString()}`);
                 <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm text-gray-700">
-                      Showing{" "}
-                      <span className="font-medium">
-                        {(currentPage - 1) * itemsPerPage + 1}
-                      </span>{" "}
-                      to{" "}
-                      <span className="font-medium">
-                        {Math.min(
-                          currentPage * itemsPerPage,
-                          totalItems
-                        )}
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-medium">{totalItems}</span>{" "}
-                      results
+                      Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
+                      <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{" "}
+                      <span className="font-medium">{totalItems}</span> results
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -788,27 +817,19 @@ const FilterSelect = ({
   const displayValue = value || "all";
   return (
     <div className="w-full">
-      <Label className="block text-sm font-medium text-gray-700 mb-2">
-        {label}
-      </Label>
+      <LabelFixed className="block text-sm font-medium text-gray-700 mb-2">{label}</LabelFixed>
       <Select value={displayValue} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTriggerFixed className="w-full">
           <SelectValue placeholder="All" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All</SelectItem>
+        </SelectTriggerFixed>
+        <SelectContentFixed>
+          <SelectItemFixed value="all">All</SelectItemFixed>
           {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {label === "Is Gujarati"
-                ? option === "true"
-                  ? "Yes"
-                  : option === "false"
-                  ? "No"
-                  : "All"
-                : option}
-            </SelectItem>
+            <SelectItemFixed key={option} value={option}>
+              {label === "Is Gujarati" ? (option === "true" ? "Yes" : option === "false" ? "No" : "All") : option}
+            </SelectItemFixed>
           ))}
-        </SelectContent>
+        </SelectContentFixed>
       </Select>
     </div>
   );

@@ -19,7 +19,7 @@ export const personalDetailsModel = pgTable("personal_details", {
     
     
     nationalityId: integer("nationality_id_fk").references(() => nationalityModel.id),
-    otherNationalityId: integer("other_nationality_id_fk").references(() => nationalityModel.id),
+    otherNationality: varchar("other_nationality", { length: 255 }),
     
     voterId: varchar({ length: 255 }),
     passportNumber: varchar({ length: 255 }),

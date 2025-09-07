@@ -7,7 +7,7 @@ export const courseTypeModel = pgTable('course_types', {
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

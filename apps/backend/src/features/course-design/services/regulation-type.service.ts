@@ -10,12 +10,12 @@ const defaultRegulationType: RegulationType[] = [
     {           
         name: "CBCS",
         shortName: "CBCS",
-        disabled: false,
+        isActive: true,
     },
     {
         name: "CCF",
         shortName: "CCF",
-        disabled: false,
+        isActive: true,
     },
 ]
 
@@ -42,7 +42,7 @@ export async function createRegulationType(data: Omit<RegulationType, 'id' | 'cr
     return created;
 }
 
-export async function getRegulationTypeById(id: number) {
+export async function findById(id: number) {
     const [regulationType] = await db.select().from(regulationTypeModel).where(eq(regulationTypeModel.id, id));
     return regulationType;
 }
@@ -130,7 +130,7 @@ export const bulkUploadRegulationTypes = async (
 
     for (let i = 0; i < rowsArray.length; i++) {
         const row = rowsArray[i];
-        const [name, shortName, sequence, disabled] = row;
+        const [name, shortName, sequence, isActive] = row;
         if (!name || typeof name !== "string" || name.trim().length < 2) {
             errors.push({ row: i + 2, data: row, error: "Name is required and must be at least 2 characters." });
             continue;
@@ -140,7 +140,7 @@ export const bulkUploadRegulationTypes = async (
                 name: name.trim(),
                 shortName: shortName ? String(shortName).trim() : null,
                 sequence: sequence !== undefined && sequence !== null && sequence !== '' ? Number(sequence) : 0,
-                disabled: disabled === true || disabled === "true" || disabled === 1 || disabled === "1"
+                isActive: isActive === true || isActive === "true" || isActive === 1 || isActive === "1"
             }).returning();
             success.push(created[0]);
         } catch (err: unknown) {

@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { findAllCourse } from "@/lib/services/course.service";
+import { findAllCourse, findAllDbCourses } from "@/lib/services/course.service";
 import { verifyAccessToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
     try {
+        // Get query parameters
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '10', 10);
+
         // Verify access token
         // const authHeader = request.headers.get("authorization");
         // console.log("Authorization header:", authHeader ? "Present" : "Missing");
@@ -30,11 +35,25 @@ export async function GET(request: NextRequest) {
         //     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
         // }
 
-        // Fetch all courses
-        const courses = await findAllCourse();
-        console.log(`Returning ${courses?.length || 0} courses`);
+        // Check if pagination is requested
+        if (page && limit) {
+            // Fetch paginated courses
+            const { courses, totalCount } = await findAllDbCourses(page, limit);
+            console.log(`Returning ${courses?.length || 0} courses (page ${page}, total: ${totalCount})`);
 
-        return NextResponse.json(courses || []);
+            return NextResponse.json({
+                courses: courses || [],
+                totalCount: totalCount || 0,
+                page,
+                limit
+            });
+        } else {
+            // Fetch all courses (legacy behavior)
+            const courses = await findAllCourse();
+            console.log(`Returning ${courses?.length || 0} courses`);
+
+            return NextResponse.json(courses || []);
+        }
     } catch (error) {
         console.error("Error fetching courses:", error);
         return NextResponse.json(

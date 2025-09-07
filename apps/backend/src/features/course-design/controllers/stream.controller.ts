@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createStream, getStreamById, getAllStreams, updateStream, deleteStreamSafe, bulkUploadStreams } from "@/features/course-design/services/stream.service.js";
+import { createStream, findById, getAllStreams, updateStream, deleteStreamSafe, bulkUploadStreams } from "@/features/course-design/services/stream.service.js";
 
 export const createStreamHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -44,7 +44,7 @@ export const bulkUploadStreamsHandler = async (req: Request, res: Response, next
 export const getStreamByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const stream = await getStreamById(id);
+        const stream = await findById(id);
         if (!stream) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Stream with ID ${id} not found`));
             return;

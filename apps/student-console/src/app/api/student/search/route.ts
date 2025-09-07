@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 // import { findStudentsBySearch } from "@/lib/services/student-service";
 import { verifyAccessToken } from "@/lib/auth";
-import { findAll } from "@/lib/services/access-control.service";
+// import { findAll } from "@/lib/services/access-control.service";
 
 export async function GET(request: NextRequest) {
     try {
@@ -28,9 +28,10 @@ export async function GET(request: NextRequest) {
         console.log(`Searching students with query: '${query}', page: ${page}, size: ${size}`);
 
         // Search students with the query
-        const result = await findAll(page, size, query);
+        // const result = await findAll(page, size, query);
+        const result: unknown[] = [];
 
-        console.log(`Found ${result.data.length || 0} students matching query`);
+        console.log(`Found ${result.length || 0} students matching query`);
         console.log("result:", result)
         return NextResponse.json(result);
     } catch (error) {

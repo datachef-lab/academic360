@@ -1,24 +1,34 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Calendar,
-  Clock,
-  FileText,
-  BarChart,
-  GraduationCap,
-  History,
-} from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Calendar, Clock, FileText, BarChart, GraduationCap, History } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+
+// Work around strict shadcn typings with proper type extensions
+const TabsFixed = Tabs as React.ComponentType<
+  React.ComponentProps<typeof Tabs> & { children?: React.ReactNode; className?: string; defaultValue?: string }
+>;
+const TabsListFixed = TabsList as React.ComponentType<
+  React.ComponentProps<typeof TabsList> & { children?: React.ReactNode; className?: string }
+>;
+const TabsTriggerFixed = TabsTrigger as React.ComponentType<
+  React.ComponentProps<typeof TabsTrigger> & { children?: React.ReactNode; value?: string; className?: string }
+>;
+const TabsContentFixed = TabsContent as React.ComponentType<
+  React.ComponentProps<typeof TabsContent> & { children?: React.ReactNode; value?: string; className?: string }
+>;
+const SelectTriggerFixed = SelectTrigger as React.ComponentType<
+  React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
+>;
+const SelectContentFixed = SelectContent as React.ComponentType<
+  React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
+>;
+const SelectItemFixed = SelectItem as React.ComponentType<
+  React.ComponentProps<typeof SelectItem> & { children?: React.ReactNode; value?: string; key?: string }
+>;
 import { useAuth } from "@/hooks/use-auth";
 import { useStudent } from "@/providers/student-provider";
 import { format, parseISO } from "date-fns";
@@ -73,9 +83,7 @@ export default function ExamsContent() {
       examDate.setHours(0, 0, 0, 0);
       return examDate > today;
     })
-    .sort(
-      (a, b) => parseISO(a.examdate).getTime() - parseISO(b.examdate).getTime()
-    );
+    .sort((a, b) => parseISO(a.examdate).getTime() - parseISO(b.examdate).getTime());
 
   // Today's exams: exams happening today
   const recentExams = allExams
@@ -109,9 +117,7 @@ export default function ExamsContent() {
 
       return false;
     })
-    .sort(
-      (a, b) => parseISO(b.examdate).getTime() - parseISO(a.examdate).getTime()
-    );
+    .sort((a, b) => parseISO(b.examdate).getTime() - parseISO(a.examdate).getTime());
 
   useEffect(() => {
     // If we don't have a student ID yet, do nothing
@@ -202,12 +208,7 @@ export default function ExamsContent() {
   };
 
   // Format duration from start and end times with a max limit to prevent unreasonable durations
-  const formatDuration = (
-    startHr: number,
-    startMin: number,
-    endHr: number | Date,
-    endMin: number | Date
-  ) => {
+  const formatDuration = (startHr: number, startMin: number, endHr: number | Date, endMin: number | Date) => {
     const startMinutes = startHr * 60 + startMin;
 
     // Handle the case where endHr/endMin might be Date objects or numbers
@@ -234,11 +235,7 @@ export default function ExamsContent() {
     const durationMinutes = endMinutes - startMinutes;
 
     // If duration is negative or unreasonably large (>8 hours), show a reasonable default
-    if (
-      durationMinutes <= 0 ||
-      durationMinutes > 480 ||
-      isNaN(durationMinutes)
-    ) {
+    if (durationMinutes <= 0 || durationMinutes > 480 || isNaN(durationMinutes)) {
       // Try to provide a sensible default based on the exam type (2 hours for most exams)
       return "2 hours";
     }
@@ -339,12 +336,7 @@ export default function ExamsContent() {
     const styles = variantStyles[variant];
 
     // Icon based on variant
-    const Icon =
-      variant === "completed"
-        ? FileText
-        : variant === "today"
-        ? GraduationCap
-        : Calendar;
+    const Icon = variant === "completed" ? FileText : variant === "today" ? GraduationCap : Calendar;
 
     return (
       <motion.div
@@ -353,24 +345,16 @@ export default function ExamsContent() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: index * 0.1 }}
       >
-        <Card
-          className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}
-        >
+        <Card className={`shadow-md hover:shadow-lg transition-all overflow-hidden group ${styles.border}`}>
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-start gap-4 w-full md:w-auto">
-                <div
-                  className={`${styles.iconBg} p-3 rounded-lg flex-shrink-0`}
-                >
+                <div className={`${styles.iconBg} p-3 rounded-lg flex-shrink-0`}>
                   <Icon className={`w-6 h-6 ${styles.iconColor}`} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {exam.testName}
-                  </h3>
-                  <p className={`${styles.titleColor} font-medium mb-2`}>
-                    {exam.paperName}
-                  </p>
+                  <h3 className="text-lg font-semibold text-gray-800">{exam.testName}</h3>
+                  <p className={`${styles.titleColor} font-medium mb-2`}>{exam.paperName}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -382,12 +366,7 @@ export default function ExamsContent() {
                     </div>
                     <div className="flex items-center">
                       <FileText className="w-4 h-4 mr-1.5 text-gray-400" />
-                      {formatDuration(
-                        exam.frmhr,
-                        exam.frmmnt,
-                        exam.tohr,
-                        exam.tomnt
-                      )}
+                      {formatDuration(exam.frmhr, exam.frmmnt, exam.tohr, exam.tomnt)}
                     </div>
                     <div className="flex items-center">
                       <BarChart className="w-4 h-4 mr-1.5 text-gray-400" />
@@ -397,11 +376,7 @@ export default function ExamsContent() {
                 </div>
               </div>
               <div className="mt-3 md:mt-0">
-                <span
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}
-                >
-                  {exam.className}
-                </span>
+                <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${styles.badge}`}>{exam.className}</span>
               </div>
             </div>
           </CardContent>
@@ -424,15 +399,10 @@ export default function ExamsContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="mr-5 bg-white/10 backdrop-blur-sm p-4 rounded-xl shadow-xl border border-white/10">
-                <GraduationCap
-                  size={36}
-                  className="text-white drop-shadow-md"
-                />
+                <GraduationCap size={36} className="text-white drop-shadow-md" />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
-                  Exams Dashboard
-                </h1>
+                <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">Exams Dashboard</h1>
                 <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
                   Track your examinations and academic performance
                 </p>
@@ -440,21 +410,18 @@ export default function ExamsContent() {
             </div>
             {semesters.length > 0 && (
               <div className="hidden md:block">
-                <Select
-                  value={selectedSemester}
-                  onValueChange={setSelectedSemester}
-                >
-                  <SelectTrigger className="w-[180px] border-white/20 bg-white/10 text-white backdrop-blur-sm">
+                <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+                  <SelectTriggerFixed className="w-[180px] border-white/20 bg-white/10 text-white backdrop-blur-sm">
                     <SelectValue placeholder="Select semester" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Semesters</SelectItem>
+                  </SelectTriggerFixed>
+                  <SelectContentFixed>
+                    <SelectItemFixed value="all">All Semesters</SelectItemFixed>
                     {semesters.map((sem) => (
-                      <SelectItem key={sem} value={sem}>
+                      <SelectItemFixed key={sem} value={sem}>
                         {sem}
-                      </SelectItem>
+                      </SelectItemFixed>
                     ))}
-                  </SelectContent>
+                  </SelectContentFixed>
                 </Select>
               </div>
             )}
@@ -465,21 +432,18 @@ export default function ExamsContent() {
       <div className="max-w-7xl mx-auto px-6 pb-12">
         {semesters.length > 0 && (
           <div className="block md:hidden mb-6">
-            <Select
-              value={selectedSemester}
-              onValueChange={setSelectedSemester}
-            >
-              <SelectTrigger className="w-full border-indigo-100">
+            <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+              <SelectTriggerFixed className="w-full border-indigo-100">
                 <SelectValue placeholder="Select semester" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Semesters</SelectItem>
+              </SelectTriggerFixed>
+              <SelectContentFixed>
+                <SelectItemFixed value="all">All Semesters</SelectItemFixed>
                 {semesters.map((sem) => (
-                  <SelectItem key={sem} value={sem}>
+                  <SelectItemFixed key={sem} value={sem}>
                     {sem}
-                  </SelectItem>
+                  </SelectItemFixed>
                 ))}
-              </SelectContent>
+              </SelectContentFixed>
             </Select>
           </div>
         )}
@@ -495,12 +459,8 @@ export default function ExamsContent() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-blue-600 font-medium">
-                      Upcoming Exams
-                    </p>
-                    <p className="text-3xl font-bold text-blue-700">
-                      {upcomingExams.length}
-                    </p>
+                    <p className="text-sm text-blue-600 font-medium">Upcoming Exams</p>
+                    <p className="text-3xl font-bold text-blue-700">{upcomingExams.length}</p>
                   </div>
                   <div className="bg-blue-50 p-3 rounded-xl border border-blue-200">
                     <Calendar size={24} className="text-blue-600" />
@@ -519,12 +479,8 @@ export default function ExamsContent() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-amber-600 font-medium">
-                      Next Exam
-                    </p>
-                    <p className="text-3xl font-bold text-amber-700">
-                      {getNextExamDaysAway()}
-                    </p>
+                    <p className="text-sm text-amber-600 font-medium">Next Exam</p>
+                    <p className="text-3xl font-bold text-amber-700">{getNextExamDaysAway()}</p>
                   </div>
                   <div className="bg-amber-50 p-3 rounded-xl border border-amber-200">
                     <Clock size={24} className="text-amber-600" />
@@ -543,14 +499,9 @@ export default function ExamsContent() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-purple-600 font-medium">
-                      Total Subjects
-                    </p>
+                    <p className="text-sm text-purple-600 font-medium">Total Subjects</p>
                     <p className="text-3xl font-bold text-purple-700">
-                      {
-                        [...new Set(allExams.map((exam) => exam.paperName))]
-                          .length
-                      }
+                      {[...new Set(allExams.map((exam) => exam.paperName))].length}
                     </p>
                   </div>
                   <div className="bg-purple-50 p-3 rounded-xl border border-purple-200">
@@ -570,12 +521,8 @@ export default function ExamsContent() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-emerald-600 font-medium">
-                      Today&apos;s Exams
-                    </p>
-                    <p className="text-3xl font-bold text-emerald-700">
-                      {recentExams.length}
-                    </p>
+                    <p className="text-sm text-emerald-600 font-medium">Today&apos;s Exams</p>
+                    <p className="text-3xl font-bold text-emerald-700">{recentExams.length}</p>
                   </div>
                   <div className="bg-emerald-50 p-3 rounded-xl border border-emerald-200">
                     <BarChart size={24} className="text-emerald-600" />
@@ -604,58 +551,51 @@ export default function ExamsContent() {
           ) : error ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-red-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-700 mb-2">
-                Error Loading Exams
-              </h3>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">Error Loading Exams</h3>
               <p className="text-gray-500 max-w-md mx-auto">{error}</p>
             </div>
           ) : allExams.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-700 mb-2">
-                No Exams Found
-              </h3>
+              <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Found</h3>
               <p className="text-gray-500 max-w-md mx-auto">
-                We couldn&apos;t find any exams for your account. If you believe
-                this is an error, please contact the administrative staff.
+                We couldn&apos;t find any exams for your account. If you believe this is an error, please contact the
+                administrative staff.
               </p>
             </div>
           ) : (
-            <Tabs defaultValue="recent" className="w-full">
-              <TabsList className="inline-flex h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-8">
-                <TabsTrigger
+            <TabsFixed defaultValue="recent" className="w-full">
+              <TabsListFixed className="inline-flex h-12 items-center justify-center rounded-lg bg-indigo-50/60 p-1 mb-8">
+                <TabsTriggerFixed
                   value="upcoming"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
                   <Calendar className="w-4 h-4 mr-2" />
                   Upcoming ({upcomingExams.length})
-                </TabsTrigger>
-                <TabsTrigger
+                </TabsTriggerFixed>
+                <TabsTriggerFixed
                   value="recent"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
                   <Clock className="w-4 h-4 mr-2" />
                   Today ({recentExams.length})
-                </TabsTrigger>
-                <TabsTrigger
+                </TabsTriggerFixed>
+                <TabsTriggerFixed
                   value="previous"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-6 py-2.5 text-sm font-medium ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm"
                 >
                   <History className="w-4 h-4 mr-2" />
                   Completed ({previousExams.length})
-                </TabsTrigger>
-              </TabsList>
+                </TabsTriggerFixed>
+              </TabsListFixed>
 
-              <TabsContent value="upcoming" className="space-y-4">
+              <TabsContentFixed value="upcoming" className="space-y-4">
                 {upcomingExams.length === 0 ? (
                   <div className="text-center py-8 bg-blue-50/50 rounded-lg">
                     <Calendar className="h-12 w-12 mx-auto text-blue-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">
-                      No Upcoming Exams
-                    </h3>
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Upcoming Exams</h3>
                     <p className="text-gray-500 max-w-md mx-auto">
-                      You don&apos;t have any upcoming exams scheduled at the
-                      moment.
+                      You don&apos;t have any upcoming exams scheduled at the moment.
                     </p>
                   </div>
                 ) : (
@@ -666,43 +606,25 @@ export default function ExamsContent() {
                         <Clock className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-blue-800">
-                          Important Notice
-                        </h3>
-                        <p className="text-blue-700">
-                          Please arrive 15 minutes prior to the start time of
-                          all exams.
-                        </p>
+                        <h3 className="text-sm font-medium text-blue-800">Important Notice</h3>
+                        <p className="text-blue-700">Please arrive 15 minutes prior to the start time of all exams.</p>
                       </div>
                     </div>
                     {upcomingExams
-                      .filter(
-                        (exam) =>
-                          selectedSemester === "all" ||
-                          exam.sessionName === selectedSemester
-                      )
+                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard
-                          key={exam.id}
-                          exam={exam}
-                          index={index}
-                          variant="default"
-                        />
+                        <ExamCard key={exam.id} exam={exam} index={index} variant="default" />
                       ))}
                   </>
                 )}
-              </TabsContent>
+              </TabsContentFixed>
 
-              <TabsContent value="recent" className="space-y-4">
+              <TabsContentFixed value="recent" className="space-y-4">
                 {recentExams.length === 0 ? (
                   <div className="text-center py-8 bg-emerald-50/50 rounded-lg">
                     <Clock className="h-12 w-12 mx-auto text-emerald-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">
-                      No Exams Today
-                    </h3>
-                    <p className="text-gray-500 max-w-md mx-auto">
-                      You don&apos;t have any exams scheduled for today.
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Exams Today</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">You don&apos;t have any exams scheduled for today.</p>
                   </div>
                 ) : (
                   <>
@@ -712,13 +634,8 @@ export default function ExamsContent() {
                         <Clock className="w-5 h-5 text-amber-600" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-amber-800">
-                          Today&apos;s Reminder
-                        </h3>
-                        <p className="text-amber-700">
-                          Please arrive 15 minutes prior to the start time of
-                          all exams.
-                        </p>
+                        <h3 className="text-sm font-medium text-amber-800">Today&apos;s Reminder</h3>
+                        <p className="text-amber-700">Please arrive 15 minutes prior to the start time of all exams.</p>
                       </div>
                     </div>
 
@@ -730,13 +647,9 @@ export default function ExamsContent() {
                             <Clock className="w-5 h-5 text-emerald-600" />
                           </div>
                           <div>
-                            <h3 className="text-sm font-medium text-emerald-800">
-                              Total Exam Time Today
-                            </h3>
+                            <h3 className="text-sm font-medium text-emerald-800">Total Exam Time Today</h3>
                             <p className="text-lg font-bold text-emerald-600">
-                              {formatMinutesToHoursMinutes(
-                                getTotalTodayExamDuration()
-                              )}
+                              {formatMinutesToHoursMinutes(getTotalTodayExamDuration())}
                             </p>
                           </div>
                         </div>
@@ -749,52 +662,28 @@ export default function ExamsContent() {
                       </div>
                     </div>
                     {recentExams
-                      .filter(
-                        (exam) =>
-                          selectedSemester === "all" ||
-                          exam.sessionName === selectedSemester
-                      )
+                      .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
                       .map((exam, index) => (
-                        <ExamCard
-                          key={exam.id}
-                          exam={exam}
-                          index={index}
-                          variant="today"
-                        />
+                        <ExamCard key={exam.id} exam={exam} index={index} variant="today" />
                       ))}
                   </>
                 )}
-              </TabsContent>
+              </TabsContentFixed>
 
-              <TabsContent value="previous" className="space-y-4">
+              <TabsContentFixed value="previous" className="space-y-4">
                 {previousExams.length === 0 ? (
                   <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <History className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <h3 className="text-lg font-medium text-gray-700 mb-2">
-                      No Completed Exams
-                    </h3>
-                    <p className="text-gray-500 max-w-md mx-auto">
-                      You don&apos;t have any completed exam records.
-                    </p>
+                    <h3 className="text-lg font-medium text-gray-700 mb-2">No Completed Exams</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">You don&apos;t have any completed exam records.</p>
                   </div>
                 ) : (
                   previousExams
-                    .filter(
-                      (exam) =>
-                        selectedSemester === "all" ||
-                        exam.sessionName === selectedSemester
-                    )
-                    .map((exam, index) => (
-                      <ExamCard
-                        key={exam.id}
-                        exam={exam}
-                        index={index}
-                        variant="completed"
-                      />
-                    ))
+                    .filter((exam) => selectedSemester === "all" || exam.sessionName === selectedSemester)
+                    .map((exam, index) => <ExamCard key={exam.id} exam={exam} index={index} variant="completed" />)
                 )}
-              </TabsContent>
-            </Tabs>
+              </TabsContentFixed>
+            </TabsFixed>
           )}
         </motion.div>
       </div>

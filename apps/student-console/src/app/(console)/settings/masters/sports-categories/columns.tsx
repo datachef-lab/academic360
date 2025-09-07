@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/table-core";
 import { Button } from "@/components/ui/button";
 import { Pencil, CheckCircle, Ban } from "lucide-react";
 import { SportsCategoryDialog } from "./sports-category-dialog";
@@ -27,13 +27,12 @@ export const columns: ColumnDef<SportsCategory>[] = [
   {
     accessorKey: "disabled",
     header: "Status",
-    cell: ({ row }) => (
+    cell: ({ row }) =>
       row.original.disabled ? (
         <span className="text-red-600 font-semibold">Disabled</span>
       ) : (
         <span className="text-green-600 font-semibold">Active</span>
-      )
-    ),
+      ),
   },
   {
     accessorKey: "createdAt",
@@ -43,7 +42,7 @@ export const columns: ColumnDef<SportsCategory>[] = [
         const date = new Date(row.original.createdAt);
         return date.toLocaleDateString();
       } else {
-        return 'N/A';
+        return "N/A";
       }
     },
   },
@@ -59,28 +58,28 @@ export const columns: ColumnDef<SportsCategory>[] = [
         setLoading(true);
         try {
           const response = await fetch(`/api/sports-categories?id=${sportsCategory.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ disabled: !sportsCategory.disabled }),
           });
           if (response.ok) {
             toast({
-              title: 'Status Updated',
-              description: `Category is now ${!sportsCategory.disabled ? 'disabled' : 'active'}.`,
+              title: "Status Updated",
+              description: `Category is now ${!sportsCategory.disabled ? "disabled" : "active"}.`,
             });
             window.location.reload();
           } else {
             toast({
-              title: 'Error',
-              description: 'Failed to update status.',
-              variant: 'destructive',
+              title: "Error",
+              description: "Failed to update status.",
+              variant: "destructive",
             });
           }
         } catch (error) {
           toast({
-            title: 'Error',
-            description: 'An unexpected error occurred.',
-            variant: 'destructive',
+            title: "Error",
+            description: "An unexpected error occurred.",
+            variant: "destructive",
           });
         } finally {
           setLoading(false);
@@ -95,10 +94,14 @@ export const columns: ColumnDef<SportsCategory>[] = [
             </Button>
           </SportsCategoryDialog>
           <Button variant="ghost" size="icon" onClick={handleToggle} disabled={loading}>
-            {sportsCategory.disabled ? <CheckCircle className="h-4 w-4 text-green-600" /> : <Ban className="h-4 w-4 text-red-600" />}
+            {sportsCategory.disabled ? (
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            ) : (
+              <Ban className="h-4 w-4 text-red-600" />
+            )}
           </Button>
         </div>
       );
     },
   },
-]; 
+];

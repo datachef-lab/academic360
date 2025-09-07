@@ -3,7 +3,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import { 
   createProgramCourse, 
-  getProgramCourseById, 
+  findById, 
   getAllProgramCourses, 
   updateProgramCourse, 
   deleteProgramCourseSafe, 
@@ -27,7 +27,7 @@ export const createProgramCourseHandler = async (req: Request, res: Response, ne
 export const getProgramCourseByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const programCourse = await getProgramCourseById(id);
+        const programCourse = await findById(id);
         if (!programCourse) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Program course with ID ${id} not found`));
         res.status(200).json(new ApiResponse(200, "SUCCESS", programCourse, "Program course fetched successfully"));
     } catch (error) {

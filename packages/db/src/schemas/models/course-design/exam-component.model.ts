@@ -8,7 +8,7 @@ export const examComponentModel = pgTable("exam_components", {
     shortName: varchar({ length: 500 }),
     code: varchar({ length: 500 }),
     sequence: serial().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

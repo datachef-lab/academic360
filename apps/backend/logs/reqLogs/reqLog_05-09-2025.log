@@ -1,8 +1,15 @@
-05-09-2025	01:00:32	67f1bfe4-9b67-474a-8e0d-e6e9852d8614	GET	/api/students/old-data	undefined
-05-09-2025	00:53:37	b1cf7ce4-e443-45b4-b358-0b4ad5dc9169	GET	/api/students/old-data	undefined
-05-09-2025	00:34:56	7477a95b-8cc8-4152-8629-b5cd4cfd6842	GET	/api/students/old-data	undefined
-05-09-2025	00:26:33	e27f654f-9547-406c-9942-e7bdf60fe4f0	GET	/api/students/old-data	undefined
-05-09-2025	00:24:32	9bffac4f-d7d2-4619-bf09-1ed863ad4426	GET	/api/students/old-data	undefined
-05-09-2025	00:16:51	d1312424-b2bf-4b5d-93ca-7a90a4ce13a8	GET	/api/students/old-data	undefined
-05-09-2025	00:13:23	80ace743-5e21-4196-bd65-22a4a3792adb	GET	/api/students/old-data	undefined
-05-09-2025	00:11:23	9cf71687-e276-497d-8801-f37fc6db9ad4	GET	/api/students/old-data	undefined
+05-09-2025	23:58:32	14285899-e92e-41bb-8cc2-6f5977de9f1d	GET	/api/v1/academics/test-auth	undefined
+05-09-2025	23:57:42	15a2fe84-1f82-458a-9a8f-89f3ff8f66ac	GET	/api/v1/academics/all	undefined
+05-09-2025	23:56:31	0f92e76d-ab0a-4484-82fc-ebe1784393be	GET	/auth/refresh	undefined
+05-09-2025	23:56:00	2c1d061e-a85e-460b-82c7-0f4de23de4dd	GET	/api/v1/academics/all	undefined
+05-09-2025	23:55:31	e0bf32bd-0b49-42d0-aaac-a7c1f2f1e304	GET	/api/v1/academics/all	undefined
+05-09-2025	23:50:24	e6b34ad0-7a81-468a-8fc3-2b9355052950	GET	/api/course-design/papers	http://localhost:5173
+05-09-2025	23:50:24	ef6f41cf-8a30-4a03-b301-6f28d3734dbb	GET	/auth/refresh	http://localhost:5173
+05-09-2025	23:50:24	8f024dba-6953-445b-af08-e8fb45133476	GET	/api/course-design/papers	http://localhost:5173
+05-09-2025	23:50:24	08cf2684-29ad-4c6c-bf63-057dc22b5735	GET	/api/course-design/papers	http://localhost:5173
+05-09-2025	23:50:24	3977eb92-1f85-43a0-9dec-ff166faacb28	GET	/api/v1/academics/all	http://localhost:5173
+05-09-2025	23:50:24	330dace3-1e68-408a-af27-dae002d0ba0b	GET	/api/v1/academics/all	http://localhost:5173
+05-09-2025	23:50:24	c5f1670f-f97b-493c-be2f-4ae51ddcc810	GET	/api/v1/academics/all	http://localhost:5173
+05-09-2025	23:50:24	0fca8591-defe-4d9a-acc3-18cca749537d	GET	/auth/refresh	http://localhost:5173
+05-09-2025	23:50:24	4d14e152-25bd-470f-a0b2-fdd12871d651	GET	/auth/refresh	http://localhost:5173
+173

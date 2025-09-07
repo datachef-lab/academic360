@@ -21,7 +21,7 @@ export const programCourseModel = pgTable("program_courses", {
     totalSemesters: integer("total_semesters").notNull(),
     affiliationId: integer("affiliation_id_fk").references(() => affiliationModel.id),
     regulationTypeId: integer("regulation_type_id_fk").references(() => regulationTypeModel.id),
-    disabled: boolean("disabled").default(true),
+    isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

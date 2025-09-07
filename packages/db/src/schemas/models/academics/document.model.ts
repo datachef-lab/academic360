@@ -7,7 +7,7 @@ export const documentModel = pgTable("documents", {
     name: varchar({ length: 255 }).notNull().unique(),
     description: varchar({ length: 255 }),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

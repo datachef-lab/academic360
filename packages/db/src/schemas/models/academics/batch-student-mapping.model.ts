@@ -2,8 +2,8 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
-import { studentModel } from "@/schemas/models/user";
-import { batchModel } from "@/schemas/models/academics";
+import { studentModel } from "../user";
+import { batchModel } from "./index";
 
 export const batchStudentMappingModel = pgTable("batch_student_mappings", {
     id: serial().primaryKey(),

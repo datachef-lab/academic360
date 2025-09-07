@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createCourseType, getCourseTypeById, getAllCourseTypes, updateCourseType, deleteCourseTypeSafe, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
+import { createCourseType, findById, getAllCourseTypes, updateCourseType, deleteCourseTypeSafe, bulkUploadCourseTypes } from "@/features/course-design/services/course-type.service.js";
 import { socketService } from "@/services/socketService.js";
 
 export const createCourseTypeHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -44,7 +44,7 @@ export const bulkUploadCourseTypesHandler = async (req: Request, res: Response, 
 export const getCourseTypeByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.query.id || req.params.id);
-        const courseType = await getCourseTypeById(id);
+        const courseType = await findById(id);
         if (!courseType) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Course type with ID ${id} not found`));
             return;

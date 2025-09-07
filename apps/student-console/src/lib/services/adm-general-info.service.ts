@@ -1,7 +1,7 @@
 import {dbPostgres} from "@/db";
 import { admissionGeneralInfo, AdmissionGeneralInfo, applicationForms } from "@/db/schema";
 import { and, eq, ilike } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from 'bcryptjs';
 import { findAdmissionById } from "./admission.service";
 import { findApplicationFormById } from "./application-form.service";
 import { sendZeptoMail } from "@/lib/notifications/zepto-mailer";

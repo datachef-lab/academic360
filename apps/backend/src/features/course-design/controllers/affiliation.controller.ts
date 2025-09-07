@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
-import { createAffiliation, getAffiliationById, getAllAffiliations, updateAffiliation, deleteAffiliationSafe, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
+import { createAffiliation, findById, getAllAffiliations, updateAffiliation, deleteAffiliationSafe, bulkUploadAffiliations } from "@/features/course-design/services/affiliation.service.js";
 import { socketService } from "@/services/socketService.js";
 
 export const createAffiliationHandler = async (req: Request, res: Response, next: NextFunction) => {
@@ -20,7 +20,7 @@ export const createAffiliationHandler = async (req: Request, res: Response, next
 export const getAffiliationByIdHandler = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const id = Number(req.params.id);
-        const affiliation = await getAffiliationById(id);
+        const affiliation = await findById(id);
         if (!affiliation) return res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, `Affiliation with ID ${id} not found`));
         res.status(200).json(new ApiResponse(200, "SUCCESS", affiliation, "Affiliation fetched successfully"));
     } catch (error) {

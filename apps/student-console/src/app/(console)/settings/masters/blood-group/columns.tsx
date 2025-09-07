@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/table-core";
 import { BloodGroup } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Loader2 } from "lucide-react";
@@ -15,7 +15,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteBloodGroup } from './actions';
+import * as React from "react";
+import { deleteBloodGroup } from "./actions";
 
 export const columns: ColumnDef<BloodGroup>[] = [
   {
@@ -73,4 +74,4 @@ export const columns: ColumnDef<BloodGroup>[] = [
       );
     },
   },
-]; 
+];

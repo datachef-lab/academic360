@@ -1,5 +1,5 @@
 "use client";
-import styles from "@/app/(besc)/settings/settings.module.css"
+import styles from "./settings.module.css"
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -56,7 +56,7 @@ export default function SettingsLayout({
     if (!isLoading && user === null) {
       setIsRedirecting(true);
       router.push("/");
-    } else if (!isLoading && user !== null && !user.isAdmin) {
+    } else if (!isLoading && user !== null && user.type !== "ADMIN") {
       setIsRedirecting(true);
       router.push("/dashboard");
     }
@@ -82,7 +82,7 @@ export default function SettingsLayout({
   }
 
   // If user is not admin, dont render children until redirect happens
-  if (!user?.isAdmin) {
+  if (user?.type !== "ADMIN") {
     return null;
   }
 

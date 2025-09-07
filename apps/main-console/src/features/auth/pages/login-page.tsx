@@ -246,9 +246,11 @@ import { Badge } from "@/components/ui/badge";
 import DottedSeparator from "@/components/ui/dotted-separator";
 import { FcGoogle } from "react-icons/fc";
 import { useSettings } from "@/features/settings/hooks/use-settings";
+import { useAuth } from "../hooks/use-auth";
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { login: loginProvider } = useAuth();
   const { settings } = useSettings();
   const [showPassword, setShowPassword] = useState(false);
   const [credential, setCredential] = useState({ email: "", password: "" });
@@ -259,7 +261,7 @@ const LoginPage = () => {
     mutationFn: login,
     onSuccess: (data) => {
       console.log("Login successful:", data.payload);
-      localStorage.setItem("token", data.payload.accessToken);
+      loginProvider(data.payload.accessToken, data.payload.user);
       navigate("/dashboard", { replace: true });
     },
   });

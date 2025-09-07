@@ -20,8 +20,18 @@ export const verifyJWT = async (req: Request, res: Response, next: NextFunction)
 
         const [foundUser] = await db.select().from(userModel).where(eq(userModel.id, decoded.id));
 
-        if (!foundUser || foundUser.isActive) {
-            throw new ApiError(401, "Unauthorized");
+        console.log("JWT Verification - User ID:", decoded.id);
+        console.log("JWT Verification - Found User:", foundUser);
+        console.log("JWT Verification - User Active:", foundUser?.isActive);
+
+        if (!foundUser) {
+            console.log("JWT Verification - User not found in database");
+            throw new ApiError(401, "User not found");
+        }
+
+        if (!foundUser.isActive) {
+            console.log("JWT Verification - User is inactive");
+            throw new ApiError(401, "User account is inactive");
         }
 
         req.user = foundUser;

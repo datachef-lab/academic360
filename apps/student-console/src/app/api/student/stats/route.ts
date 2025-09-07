@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { findStats } from "@/lib/services/access-control.service";
+// import { findStats } from "@/lib/services/access-control.service";
 
 export async function GET() {
     try {
         // Use the server action instead of direct database call
-        const stats = await findStats();
+        // const stats = await findStats();
+        const stats: unknown = {};
 
         if (!stats) {
             return NextResponse.json({ error: "stats not found" }, { status: 404 });

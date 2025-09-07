@@ -1,6 +1,6 @@
 "use client";
 
-import { ColumnDef } from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/table-core";
 import { BoardUniversity } from "@/db/schema"; // Make sure this import is correct based on your schema
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, Loader2 } from "lucide-react";
@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { deleteBoardUniversity } from './actions';
+import { deleteBoardUniversity } from "./actions";
 
 export const columns: ColumnDef<BoardUniversity>[] = [
   {
@@ -39,7 +39,7 @@ export const columns: ColumnDef<BoardUniversity>[] = [
         const date = new Date(row.original.createdAt);
         return date.toLocaleDateString(); // Or format as needed
       } else {
-        return 'N/A'; // Or any other placeholder for missing date
+        return "N/A"; // Or any other placeholder for missing date
       }
     },
   },

@@ -10,7 +10,7 @@ export const bankModel = pgTable("banks", {
     address: varchar("address", { length: 500 }),
     ifscCode: varchar("ifsc_code", { length: 20 }),
     swiftCode: varchar("swift_code", { length: 20 }),
-    disabled: boolean().default(false).notNull(),
+    isActive: boolean().default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

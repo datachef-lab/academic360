@@ -52,7 +52,7 @@ CREATE TABLE "batch_student_mappings" (
 --> statement-breakpoint
 CREATE TABLE "batches" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"course_id_fk" integer NOT NULL,
+	"program_course_id_fk" integer NOT NULL,
 	"class_id_fk" integer NOT NULL,
 	"section_id_fk" integer,
 	"shift_id_fk" integer,
@@ -67,7 +67,7 @@ CREATE TABLE "classes" (
 	"short_name" varchar(255),
 	"type" "class_type" NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "classes_sequence_unique" UNIQUE("sequence")
@@ -78,7 +78,7 @@ CREATE TABLE "documents" (
 	"name" varchar(255) NOT NULL,
 	"description" varchar(255),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "documents_name_unique" UNIQUE("name"),
@@ -157,7 +157,7 @@ CREATE TABLE "sections" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(500) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "sections_name_unique" UNIQUE("name"),
@@ -198,7 +198,7 @@ CREATE TABLE "board_subjects" (
 	"passing_marks_theory" double precision,
 	"full_marks_practical" double precision,
 	"passing_marks_practical" double precision,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -312,6 +312,7 @@ CREATE TABLE "student_category" (
 	"document_required" boolean DEFAULT false NOT NULL,
 	"course_id_fk" integer NOT NULL,
 	"class_id_fk" integer NOT NULL,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -345,7 +346,7 @@ CREATE TABLE "admission_additional_info" (
 	"has_smartphone" boolean DEFAULT false,
 	"has_laptop_or_desktop" boolean DEFAULT false,
 	"has_internet_access" boolean DEFAULT false,
-	"annual_income_id_fk" integer NOT NULL,
+	"annual_income_id_fk" integer,
 	"apply_under_ncc_category" boolean DEFAULT false,
 	"apply_under_sports_category" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
@@ -400,7 +401,7 @@ CREATE TABLE "admission_program_courses" (
 	"amount" integer DEFAULT 750 NOT NULL,
 	"shift_id_fk" integer,
 	"class_id_fk" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"is_closed" boolean DEFAULT false,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now(),
@@ -457,8 +458,12 @@ CREATE TABLE "application_forms" (
 	"level" "degree_level_type" DEFAULT 'UNDER_GRADUATE' NOT NULL,
 	"application_number" varchar(255) NOT NULL,
 	"changed_application_number" varchar(255),
-	"form_status" "admission_form_status" NOT NULL,
-	"admission_step" "admission_steps" NOT NULL,
+	"form_status" "admission_form_status",
+	"admission_step" "admission_steps",
+	"is_blocked" boolean DEFAULT false,
+	"block_remarks" varchar(1000),
+	"blocked_by_user_id_fk" integer,
+	"blocked_date" timestamp,
 	"adm_approved_by_user_id_fk" integer,
 	"adm_approved_date" timestamp,
 	"verify_type" varchar(100),
@@ -522,7 +527,7 @@ CREATE TABLE "paper_selections" (
 CREATE TABLE "sports_categories" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -545,7 +550,7 @@ CREATE TABLE "student_academic_subjects" (
 	"practical_marks" double precision DEFAULT 0,
 	"total_marks" double precision DEFAULT 0,
 	"grade_id_fk" integer,
-	"result_status" "board_result_status_type" NOT NULL,
+	"result_status" "board_result_status_type",
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -589,7 +594,7 @@ CREATE TABLE "affiliations" (
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"remarks" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -609,7 +614,7 @@ CREATE TABLE "course_headers" (
 	"legacy_course_header_id" integer,
 	"name" varchar(500) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "course_headers_sequence_unique" UNIQUE("sequence")
@@ -620,7 +625,7 @@ CREATE TABLE "course_levels" (
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "course_levels_sequence_unique" UNIQUE("sequence")
@@ -631,7 +636,7 @@ CREATE TABLE "course_types" (
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "course_types_sequence_unique" UNIQUE("sequence")
@@ -644,7 +649,7 @@ CREATE TABLE "courses" (
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "courses_sequence_unique" UNIQUE("sequence")
@@ -656,7 +661,7 @@ CREATE TABLE "exam_components" (
 	"short_name" varchar(500),
 	"code" varchar(500),
 	"sequence" serial NOT NULL,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "exam_components_sequence_unique" UNIQUE("sequence")
@@ -685,7 +690,7 @@ CREATE TABLE "papers" (
 	"code" varchar(255) NOT NULL,
 	"is_optional" boolean DEFAULT false,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -700,7 +705,7 @@ CREATE TABLE "program_courses" (
 	"total_semesters" integer NOT NULL,
 	"affiliation_id_fk" integer,
 	"regulation_type_id_fk" integer,
-	"disabled" boolean DEFAULT true,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -710,7 +715,7 @@ CREATE TABLE "regulation_types" (
 	"name" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "regulation_types_sequence_unique" UNIQUE("sequence")
@@ -721,7 +726,7 @@ CREATE TABLE "specializations" (
 	"legacy_specialization_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "specializations_name_unique" UNIQUE("name")
@@ -733,7 +738,7 @@ CREATE TABLE "streams" (
 	"code" varchar(500) NOT NULL,
 	"short_name" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "streams_sequence_unique" UNIQUE("sequence")
@@ -745,7 +750,7 @@ CREATE TABLE "subject_types" (
 	"name" varchar(255),
 	"code" varchar(255),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "subject_types_sequence_unique" UNIQUE("sequence")
@@ -757,7 +762,7 @@ CREATE TABLE "subjects" (
 	"name" varchar(500) NOT NULL,
 	"code" varchar(500),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "subjects_sequence_unique" UNIQUE("sequence")
@@ -767,7 +772,7 @@ CREATE TABLE "topics" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"paper_id_fk" integer NOT NULL,
 	"name" varchar(500) NOT NULL,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"sequence" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -916,7 +921,7 @@ CREATE TABLE "banks" (
 	"address" varchar(500),
 	"ifsc_code" varchar(20),
 	"swift_code" varchar(20),
-	"disabled" boolean DEFAULT false NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -934,7 +939,7 @@ CREATE TABLE "annual_incomes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"range" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "annual_incomes_sequence_unique" UNIQUE("sequence")
@@ -945,7 +950,7 @@ CREATE TABLE "blood_group" (
 	"legacy_blood_group_id" integer,
 	"type" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "blood_group_type_unique" UNIQUE("type"),
@@ -959,7 +964,7 @@ CREATE TABLE "board_result_status" (
 	"spcl_type" varchar(255) NOT NULL,
 	"result" "board_result_type",
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "board_result_status_sequence_unique" UNIQUE("sequence")
@@ -974,7 +979,7 @@ CREATE TABLE "boards" (
 	"code" varchar(255),
 	"address_id" integer,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "boards_name_unique" UNIQUE("name"),
@@ -988,7 +993,7 @@ CREATE TABLE "categories" (
 	"document_required" boolean,
 	"code" varchar(10) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "categories_name_unique" UNIQUE("name"),
@@ -1004,7 +1009,7 @@ CREATE TABLE "cities" (
 	"document_required" boolean DEFAULT false NOT NULL,
 	"code" varchar(10),
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "cities_sequence_unique" UNIQUE("sequence")
@@ -1015,7 +1020,7 @@ CREATE TABLE "countries" (
 	"legacy_country_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "countries_name_unique" UNIQUE("name"),
@@ -1027,7 +1032,7 @@ CREATE TABLE "degree" (
 	"legacy_degree_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "degree_name_unique" UNIQUE("name"),
@@ -1040,7 +1045,7 @@ CREATE TABLE "districts" (
 	"city_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "districts_name_unique" UNIQUE("name"),
@@ -1051,10 +1056,10 @@ CREATE TABLE "institutions" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"legacy_institution_id" integer,
 	"name" varchar(700) NOT NULL,
-	"degree_id" integer NOT NULL,
-	"address_id" integer,
+	"degree_id_fk" integer,
+	"address_id_fk" integer,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "institutions_name_unique" UNIQUE("name"),
@@ -1066,7 +1071,7 @@ CREATE TABLE "language_medium" (
 	"legacy_language_medium_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "language_medium_name_unique" UNIQUE("name"),
@@ -1079,7 +1084,7 @@ CREATE TABLE "nationality" (
 	"name" varchar(255) NOT NULL,
 	"code" integer,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "nationality_sequence_unique" UNIQUE("sequence")
@@ -1090,7 +1095,7 @@ CREATE TABLE "occupations" (
 	"legacy_occupation_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "occupations_name_unique" UNIQUE("name"),
@@ -1110,7 +1115,7 @@ CREATE TABLE "qualifications" (
 	"legacy_qualification_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "qualifications_name_unique" UNIQUE("name"),
@@ -1122,7 +1127,7 @@ CREATE TABLE "religion" (
 	"legacy_religion_id" integer,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "religion_name_unique" UNIQUE("name"),
@@ -1135,7 +1140,7 @@ CREATE TABLE "states" (
 	"country_id" integer NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"sequence" integer,
-	"disabled" boolean DEFAULT false,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "states_name_unique" UNIQUE("name"),
@@ -1156,6 +1161,7 @@ CREATE TABLE "transport" (
 --> statement-breakpoint
 CREATE TABLE "users" (
 	"id" serial PRIMARY KEY NOT NULL,
+	"legacy_id" integer,
 	"name" varchar(255) NOT NULL,
 	"email" varchar(500) NOT NULL,
 	"password" varchar(255) NOT NULL,
@@ -1163,7 +1169,10 @@ CREATE TABLE "users" (
 	"whatsapp_number" varchar(255),
 	"image" varchar(255),
 	"type" "user_type" NOT NULL,
-	"is_active" boolean DEFAULT false,
+	"is_suspended" boolean DEFAULT false,
+	"suspended_reason" text,
+	"suspended_till_date" timestamp,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "users_email_unique" UNIQUE("email")
@@ -1176,11 +1185,13 @@ CREATE TABLE "students" (
 	"application_id_fk" integer,
 	"program_course_id_fk" integer NOT NULL,
 	"specialization_id_fk" integer,
-	"rfid" varchar(255),
+	"uid" varchar(255),
+	"rfid_number" varchar(255),
 	"cu_form_number" varchar(255),
 	"registration_number" varchar(255),
 	"roll_number" varchar(255),
 	"section_id_fk" integer,
+	"shift_id_fk" integer NOT NULL,
 	"class_roll_number" varchar(255),
 	"apaar_id" varchar(255),
 	"abc_id" varchar(255),
@@ -1192,7 +1203,6 @@ CREATE TABLE "students" (
 	"notes" text,
 	"active" boolean,
 	"alumni" boolean,
-	"is_suspended" boolean DEFAULT false,
 	"leaving_date" timestamp,
 	"leaving_reason" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -1238,6 +1248,7 @@ CREATE TABLE "departments" (
 	"name" varchar(900) NOT NULL,
 	"code" varchar(100) NOT NULL,
 	"description" varchar(2000) NOT NULL,
+	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now(),
 	CONSTRAINT "departments_name_unique" UNIQUE("name"),
@@ -1377,7 +1388,7 @@ CREATE TABLE "staffs" (
 	"attendance_code" varchar(255),
 	"uid" varchar(255),
 	"code_number" varchar(255),
-	"rfid" varchar(255),
+	"rfid_number" varchar(255),
 	"shift_id_fk" integer,
 	"gratuity_number" varchar(255),
 	"personal_details_id_fk" integer,
@@ -1418,7 +1429,7 @@ CREATE TABLE "staffs" (
 --> statement-breakpoint
 ALTER TABLE "batch_student_mappings" ADD CONSTRAINT "batch_student_mappings_batch_id_fk_batches_id_fk" FOREIGN KEY ("batch_id_fk") REFERENCES "public"."batches"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batch_student_mappings" ADD CONSTRAINT "batch_student_mappings_student_id_fk_students_id_fk" FOREIGN KEY ("student_id_fk") REFERENCES "public"."students"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "batches" ADD CONSTRAINT "batches_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "batches" ADD CONSTRAINT "batches_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batches" ADD CONSTRAINT "batches_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batches" ADD CONSTRAINT "batches_section_id_fk_sections_id_fk" FOREIGN KEY ("section_id_fk") REFERENCES "public"."sections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batches" ADD CONSTRAINT "batches_shift_id_fk_shifts_id_fk" FOREIGN KEY ("shift_id_fk") REFERENCES "public"."shifts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -1487,6 +1498,7 @@ ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_bank
 ALTER TABLE "admission_general_info" ADD CONSTRAINT "admission_general_info_transport_details_id_fk_transport_details_id_fk" FOREIGN KEY ("transport_details_id_fk") REFERENCES "public"."transport_details"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "admissions" ADD CONSTRAINT "admissions_session_id_fk_sessions_id_fk" FOREIGN KEY ("session_id_fk") REFERENCES "public"."sessions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_admission_id_fk_admissions_id_fk" FOREIGN KEY ("admission_id_fk") REFERENCES "public"."admissions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_blocked_by_user_id_fk_users_id_fk" FOREIGN KEY ("blocked_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "application_forms" ADD CONSTRAINT "application_forms_adm_approved_by_user_id_fk_users_id_fk" FOREIGN KEY ("adm_approved_by_user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "eligibility_criteria" ADD CONSTRAINT "eligibility_criteria_course_id_fk_courses_id_fk" FOREIGN KEY ("course_id_fk") REFERENCES "public"."courses"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "eligibility_criteria" ADD CONSTRAINT "eligibility_criteria_class_id_fk_classes_id_fk" FOREIGN KEY ("class_id_fk") REFERENCES "public"."classes"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
@@ -1542,14 +1554,15 @@ ALTER TABLE "boards" ADD CONSTRAINT "boards_degree_id_degree_id_fk" FOREIGN KEY 
 ALTER TABLE "boards" ADD CONSTRAINT "boards_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cities" ADD CONSTRAINT "cities_state_id_states_id_fk" FOREIGN KEY ("state_id") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "districts" ADD CONSTRAINT "districts_city_id_cities_id_fk" FOREIGN KEY ("city_id") REFERENCES "public"."cities"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "institutions" ADD CONSTRAINT "institutions_degree_id_degree_id_fk" FOREIGN KEY ("degree_id") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "institutions" ADD CONSTRAINT "institutions_address_id_address_id_fk" FOREIGN KEY ("address_id") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "institutions" ADD CONSTRAINT "institutions_degree_id_fk_degree_id_fk" FOREIGN KEY ("degree_id_fk") REFERENCES "public"."degree"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "institutions" ADD CONSTRAINT "institutions_address_id_fk_address_id_fk" FOREIGN KEY ("address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "states" ADD CONSTRAINT "states_country_id_countries_id_fk" FOREIGN KEY ("country_id") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_user_id_fk_users_id_fk" FOREIGN KEY ("user_id_fk") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_application_id_fk_application_forms_id_fk" FOREIGN KEY ("application_id_fk") REFERENCES "public"."application_forms"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_program_course_id_fk_program_courses_id_fk" FOREIGN KEY ("program_course_id_fk") REFERENCES "public"."program_courses"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_specialization_id_fk_specializations_id_fk" FOREIGN KEY ("specialization_id_fk") REFERENCES "public"."specializations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "students" ADD CONSTRAINT "students_section_id_fk_sections_id_fk" FOREIGN KEY ("section_id_fk") REFERENCES "public"."sections"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "students" ADD CONSTRAINT "students_shift_id_fk_shifts_id_fk" FOREIGN KEY ("shift_id_fk") REFERENCES "public"."shifts"("id") ON DELETE cascade ON UPDATE cascade;--> statement-breakpoint
 ALTER TABLE "accommodation" ADD CONSTRAINT "accommodation_address_id_fk_address_id_fk" FOREIGN KEY ("address_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "address" ADD CONSTRAINT "address_country_id_fk_countries_id_fk" FOREIGN KEY ("country_id_fk") REFERENCES "public"."countries"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "address" ADD CONSTRAINT "address_state_id_fk_states_id_fk" FOREIGN KEY ("state_id_fk") REFERENCES "public"."states"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

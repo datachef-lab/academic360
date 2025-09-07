@@ -15,10 +15,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { StudentProvider, useStudent } from "@/providers/student-provider";
 
 import { House, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function DashboardLayout({
   children,
@@ -26,18 +27,29 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const [invalidUserOpen, setInvalidUserOpen] = useState(false);
   const { student } = useStudent();
 
   useEffect(() => {
     if (user) {
-      console.log("User loaded in layout:", user);
+      // If the authenticated user's type is not STUDENT, show dialog then logout
+      const type = (user as any)?.userType || (user as any)?.type || (user as any)?.role;
+      const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
+      if (!isStudent) {
+        setInvalidUserOpen(true);
+        // Auto logout shortly after showing the dialog
+        const t = setTimeout(() => {
+          logout();
+        }, 1500);
+        return () => clearTimeout(t);
+      }
     }
-  }, [user]);
+  }, [user, logout]);
 
   const getStudentImageUrl = (uid?: string) => {
-    if (!user?.payload?.academicIdentifier?.uid) return null;
-    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${user?.payload?.academicIdentifier?.uid}.jpg`;
+    // if (!user?.payload?.academicIdentifier?.uid) return null;
+    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${"student"}.jpg`;
   };
 
   const getStudentImage = (uid?: string) => {
@@ -55,7 +67,7 @@ export default function DashboardLayout({
       <>
         <Image
           src={imageUrl}
-          alt={`${student?.name || "Student"} profile image`}
+          alt={`${user?.name || "Student"} profile image`}
           className="h-full w-full object-cover"
           width={40}
           height={40}
@@ -99,6 +111,17 @@ export default function DashboardLayout({
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="h-screen py-2 pr-2 ">
+          {/* Invalid user dialog */}
+          <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <h3 className="text-lg font-semibold">Invalid User</h3>
+                <p className="text-sm text-gray-600">
+                  Your account does not have access to the Student Console. You will be signed out.
+                </p>
+              </DialogHeader>
+            </DialogContent>
+          </Dialog>
           <header className="flex h-14 shrink-0 mb-3 items-center justify-between transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 rounded-lg border border-border bg-card shadow-sm px-4">
             <div className="flex items-center gap-3 ">
               <SidebarTrigger className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" />
@@ -130,14 +153,23 @@ export default function DashboardLayout({
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full overflow-hidden">
-                {(() => {
-                  const uid = student?.academicIdentifier?.uid || undefined;
-                  console.log("Current student UID:", uid);
-                  console.log("Student data:", student);
-                  return getStudentImage(uid);
-                })()}
-              </div>
+              {(() => {
+                const initials = (user?.name || "U")
+                  .toString()
+                  .split(" ")
+                  .filter(Boolean)
+                  .map((p) => p[0]!.toUpperCase())
+                  .slice(0, 2)
+                  .join("");
+                return (
+                  <div
+                    className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
+                    title={user?.name?.toString() || "User"}
+                  >
+                    {initials}
+                  </div>
+                );
+              })()}
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 overflow-y-scroll">

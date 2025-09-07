@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { createCourse, deleteCourseSafe, findAllCourses, findCourseById, searchCourses, updateCourse, bulkUploadCourses } from "@/features/course-design/services/course.service.js";
+import { createCourse, deleteCourseSafe, findAllCourses, findById, searchCourses, updateCourse, bulkUploadCourses } from "@/features/course-design/services/course.service.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { socketService } from "@/services/socketService.js";
 
@@ -49,7 +49,7 @@ export async function getCourseByIdHandler(req: Request, res: Response): Promise
             return;
         }
 
-        const course = await findCourseById(id);
+        const course = await findById(id);
         if (!course) {
             res.status(404).json(new ApiResponse(404, "NOT_FOUND", null, "Course not found"));
             return;

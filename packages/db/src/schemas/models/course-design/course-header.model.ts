@@ -7,7 +7,7 @@ export const courseHeaderModel = pgTable('course_headers', {
     legacyCourseHeaderId: integer("legacy_course_header_id"),
     name: varchar({ length: 500 }).notNull(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

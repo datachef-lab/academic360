@@ -30,12 +30,10 @@ const defaultCourseLevel: CourseLevel[] = [
     {
         name: "Undergraduate",
         shortName: "UG",
-        disabled: false,
     },
     {
         name: "Postgraduate",
         shortName: "PG",
-        disabled: false,
     }
 ]
 
@@ -184,8 +182,8 @@ export const getAllCourseLevels = async () => {
 };
 
 // Get courseLevel by ID
-export const getCourseLevelById = async (id: string) => {
-    const courseLevel = await db.select().from(courseLevelModel).where(eq(courseLevelModel.id, +id));
+export const findById = async (id: number) => {
+    const courseLevel = await db.select().from(courseLevelModel).where(eq(courseLevelModel.id, id));
     return courseLevel.length > 0 ? courseLevel[0] : null;
 };
 

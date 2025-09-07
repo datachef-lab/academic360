@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Type assertion to fix TypeScript issues with Select components
+const SelectTriggerFixed = SelectTrigger as React.ComponentType<any>;
+const SelectContentFixed = SelectContent as React.ComponentType<any>;
+const SelectItemFixed = SelectItem as React.ComponentType<any>;
 import HeaderBanner from "@/components/attendance/header-banner";
 import AttendanceTabs from "@/components/attendance/attendance-tabs";
 import { mockData } from "@/components/attendance/data";
@@ -18,26 +17,22 @@ export default function AttendancePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
       {/* Header Banner */}
-      <HeaderBanner
-        mockData={mockData}
-        selectedSemester={selectedSemester}
-        setSelectedSemester={setSelectedSemester}
-      />
+      <HeaderBanner mockData={mockData} selectedSemester={selectedSemester} setSelectedSemester={setSelectedSemester} />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 pb-12">
         <div className="block md:hidden mb-6">
           <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-            <SelectTrigger className="w-full border-indigo-100">
+            <SelectTriggerFixed className="w-full border-indigo-100">
               <SelectValue placeholder="Select semester" />
-            </SelectTrigger>
-            <SelectContent>
+            </SelectTriggerFixed>
+            <SelectContentFixed>
               {mockData.semesters.map((sem) => (
-                <SelectItem key={sem} value={sem.toString()}>
+                <SelectItemFixed key={sem} value={sem.toString()}>
                   Semester {sem}
-                </SelectItem>
+                </SelectItemFixed>
               ))}
-            </SelectContent>
+            </SelectContentFixed>
           </Select>
         </div>
 
@@ -46,11 +41,6 @@ export default function AttendancePage() {
     </div>
   );
 }
-
-
-
-
-
 
 // Dynamically add some dummy upcoming and ongoing classes for the current day
 // const today = new Date().toLocaleDateString("en-US", {

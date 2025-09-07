@@ -7,7 +7,7 @@ export const affiliationModel = pgTable('affiliations', {
     name: varchar({ length: 500 }).notNull(),
     shortName: varchar({ length: 500 }),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     remarks: text("remarks"),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

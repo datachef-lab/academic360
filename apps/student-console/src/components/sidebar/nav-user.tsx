@@ -2,12 +2,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { LogOut, ChevronDown, Settings } from "lucide-react";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,8 +47,8 @@ export function NavUser() {
             >
               <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:mx-auto">
                 <AvatarImage
-                  src={`https://74.207.233.48:8443/hrclIRP/studentimages/${student?.imgFile}`}
-                  alt={student?.name || "student-profile-image"}
+                  src={`https://74.207.233.48:8443/hrclIRP/studentimages/${(student as any)?.imgFile}`}
+                  alt={user?.name || "student-profile-image"}
                 />
 
                 <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-sm group-data-[collapsible=icon]:text-base">
@@ -61,12 +56,8 @@ export function NavUser() {
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-semibold">
-                  {user?.name || "Student"}
-                </span>
-                <span className="truncate text-xs">
-                  {user?.codeNumber || ""}
-                </span>
+                <span className="truncate font-semibold">{user?.name || "Student"}</span>
+                <span className="truncate text-xs">{user?.payload.uid || ""}</span>
               </div>
               <ChevronDown className="ml-auto h-4 w-4 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
@@ -80,21 +71,15 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">
-                    {initials}
-                  </AvatarFallback>
+                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">
-                    {user?.name || "Student"}
-                  </span>
-                  <span className="truncate text-xs">
-                    {user?.codeNumber || ""}
-                  </span>
+                  <span className="truncate font-semibold">{user?.name || "Student"}</span>
+                  <span className="truncate text-xs">{user?.payload.uid || ""}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
-            {user?.isAdmin && (
+            {user?.type === "ADMIN" && (
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>

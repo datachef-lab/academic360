@@ -28,7 +28,7 @@ export async function getAllShifts(): Promise<Shift[]> {
     return db.select().from(shiftModel);
 }
 
-export async function getShiftById(id: number): Promise<Shift | null> {
+export async function findById(id: number): Promise<Shift | null> {
     const [foundShift] = await db.select().from(shiftModel).where(eq(shiftModel.id, id));
     return foundShift || null;
 }

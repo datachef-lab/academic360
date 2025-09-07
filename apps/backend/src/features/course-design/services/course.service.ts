@@ -58,7 +58,7 @@ export const bulkUploadCourses = async (
                     shortName: row[2]?.toString()?.trim() || null,
                     sequence: row[3] ? parseInt(row[3].toString()) : null,
                     // degreeId not present in courseModel; ignore
-                    disabled: row[5]?.toString()?.toLowerCase() === 'inactive' || row[5]?.toString()?.toLowerCase() === 'false',
+                    isActive: row[5]?.toString()?.toLowerCase() === 'inactive' || row[5]?.toString()?.toLowerCase() === 'false',
                 } as const;
                 if (!courseData.name) {
                     result.errors.push({ row: rowNumber, data: row, error: "Name is required" });
@@ -70,7 +70,7 @@ export const bulkUploadCourses = async (
                     name: courseData.name!,
                     shortName: courseData.shortName ?? undefined,
                     sequence: courseData.sequence ?? undefined,
-                    disabled: courseData.disabled,
+                    isActive: courseData.isActive,
                 }).returning();
                 result.success.push(newCourse);
                 result.summary.successful++;
@@ -114,7 +114,7 @@ export async function findAllCourses(): Promise<CourseDto[]> {
     return formattedCourses.filter((course): course is CourseDto => course !== null);
 }
 
-export async function findCourseById(id: number): Promise<CourseDto | null> {
+export async function findById(id: number): Promise<CourseDto | null> {
     const [foundCourse] = await db
         .select()
         .from(courseModel)
@@ -132,7 +132,7 @@ export async function createCourse(course: CourseDto): Promise<CourseDto | null>
         name: course.name!,
         shortName: course.shortName!,
         sequence: props.sequence ?? null,
-        disabled: props.disabled ?? false,
+        isActive: props.isActive ?? true,
         legacyCourseId: props.legacyCourseId ?? null,
         courseHeaderId: props.courseHeaderId ?? undefined,
     };
@@ -169,7 +169,7 @@ export async function updateCourse(id: number, course: CourseDto): Promise<Cours
             name: props.name!,
             shortName: props.shortName ?? undefined,
             sequence: props.sequence ?? undefined,
-            disabled: props.disabled ?? undefined,
+            isActive: props.isActive ?? undefined,
             legacyCourseId: props.legacyCourseId ?? undefined,
             courseHeaderId: props.courseHeaderId ?? undefined,
         })
@@ -206,7 +206,7 @@ export async function deleteCourseSafe(id: number) {
         [{ feesStructureCount }],
 
     ] = await Promise.all([
-        db.select({ batchCount: countDistinct(batchModel.id) }).from(batchModel).where(eq(batchModel.courseId, id)),
+        db.select({ batchCount: countDistinct(batchModel.id) }).from(batchModel).where(eq(batchModel.classId, id)),
         db.select({ studyMaterialCount: sql<number>`0` }).from(courseModel).where(eq(courseModel.id, id)),
         db.select({ admAcademicInfoCount: countDistinct(admissionAcademicInfoModel.id) }).from(admissionAcademicInfoModel).where(eq(admissionAcademicInfoModel.previouslyRegisteredCourseId, id)),
         db.select({ admCourseAppCount: countDistinct(admissionCourseApplication.id) })

@@ -13,7 +13,7 @@ export const cityModel = pgTable("cities", {
     documentRequired: boolean().notNull().default(false),
     code: varchar({ length: 10 }),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

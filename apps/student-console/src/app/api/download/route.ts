@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
         const filename = path.basename(absolutePath);
 
         // Return file as a stream
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(fileBuffer as BodyInit, {
             headers: {
                 'Content-Type': contentType,
                 'Content-Disposition': `attachment; filename="${filename}"`,

@@ -9,7 +9,7 @@ export const categoryModel = pgTable("categories", {
     documentRequired: boolean(),
     code: varchar({ length: 10 }).notNull().unique(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

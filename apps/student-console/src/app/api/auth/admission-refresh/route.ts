@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { generateTokens, verifyApplicationForm, setAuthCookies, setApplicationFormCookies, generateApplicationFormToken } from '@/lib/services/auth.service';
+// import { generateTokens, verifyApplicationForm, setAuthCookies, setApplicationFormCookies, generateApplicationFormToken } from '@/lib/services/auth.service';
 import { Student } from '@/types/academics/student';
-import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
+// import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
 import { ApplicationForm } from '@/db/schema';
 import { findApplicationFormById } from '@/lib/services/application-form.service';
 import { findStudentByApplicationId } from '@/lib/services/student.service';
@@ -23,61 +23,61 @@ export async function GET() {
         }
 
         // Verify refresh token
-        let applicationForm = verifyApplicationForm(applicationFormToken);
-        console.log("in applicationForm,", applicationForm);
+        // let applicationForm = verifyApplicationForm(applicationFormToken);
+        // console.log("in applicationForm,", applicationForm);
 
-        if (!applicationForm) {
-            return NextResponse.json(
-                { error: 'Invalid application-form-token' },
-                { status: 401 }
-            );
-        }
+        // if (!applicationForm) {
+        //     return NextResponse.json(
+        //         { error: 'Invalid application-form-token' },
+        //         { status: 401 }
+        //     );
+        // }
 
-        applicationForm = await findApplicationFormById(applicationForm.id!);
+        // applicationForm = await findApplicationFormById(applicationForm.id!);
 
-        if (!applicationForm) {
-            return NextResponse.json(
-                { error: 'application-form not found' },
-                { status: 404 }
-            );
-        }
+        // if (!applicationForm) {
+        //     return NextResponse.json(
+        //         { error: 'application-form not found' },
+        //         { status: 404 }
+        //     );
+        // }
 
-        const admision = await findAdmissionById(applicationForm.admissionId!);
-        if (!admision || admision.isClosed == true) {
-            return NextResponse.json(
-                { error: 'application-form not found' },
-                { status: 404 }
-            );
-        }
+        // const admision = await findAdmissionById(applicationForm.admissionId!);
+        // if (!admision || admision.isClosed == true) {
+        //     return NextResponse.json(
+        //         { error: 'application-form not found' },
+        //         { status: 404 }
+        //     );
+        // }
 
-        let response: NextResponse<unknown> | undefined;
+        // let response: NextResponse<unknown> | undefined;
 
-        if (applicationForm?.formStatus === "APPROVED") {
-            const user = await findStudentByApplicationId(applicationForm.id!);
-            if (user) {
-                const tokens = generateTokens(user);
+        // if (applicationForm?.formStatus === "APPROVED") {
+        //     const user = await findStudentByApplicationId(applicationForm.id!);
+        //     if (user) {
+        //         const tokens = generateTokens(user);
 
-                const response = setAuthCookies(tokens);
-                const accessControl = await findAccessControlByStudentId(user.id as number);
-                return NextResponse.json({
-                    user: {
-                        id: user.id,
-                        name: user.name,
-                        uid: user.codeNumber,
-                        email: user.institutionalemail,
-                        isAdmin: user.isAdmin,
-                    },
-                    accessControl,
-                    accessToken: tokens.accessToken,
-                    redirectTo: '/dashboard'
-                }, response);
-            }
-        }
-        else {
-            const token = generateApplicationFormToken(applicationForm!);
-            response = setApplicationFormCookies(token);
-            return NextResponse.json({ applicationForm }, response);
-        }
+        //         const response = setAuthCookies(tokens);
+        //         const accessControl = await findAccessControlByStudentId(user.id as number);
+        //         return NextResponse.json({
+        //             user: {
+        //                 id: user.id,
+        //                 name: user.name,
+        //                 uid: user.codeNumber,
+        //                 email: user.institutionalemail,
+        //                 isAdmin: user.isAdmin,
+        //             },
+        //             accessControl,
+        //             accessToken: tokens.accessToken,
+        //             redirectTo: '/dashboard'
+        //         }, response);
+        //     }
+        // }
+        // else {
+        //     const token = generateApplicationFormToken(applicationForm!);
+        //     response = setApplicationFormCookies(token);
+        //     return NextResponse.json({ applicationForm }, response);
+        // }
     } catch (error) {
         console.error('Token refresh error:', error);
         return NextResponse.json(

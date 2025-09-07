@@ -66,7 +66,7 @@ export async function createPaper(data: PaperDto) {
                 code: data.code,
                 isOptional: props.isOptional ?? false,
                 sequence: props.sequence ?? undefined,
-                disabled: props.disabled ?? false,
+                isActive: props.isActive ?? true,
                 subjectId: data.subjectId!,
                 subjectTypeId: data.subjectTypeId!,
                 affiliationId: data.affiliationId,
@@ -168,7 +168,7 @@ export async function updatePaper(id: number, data: PaperDto) {
             academicYearId: data.academicYearId,
             programCourseId: data.programCourseId,
             classId: data.classId,
-            disabled: data.disabled,
+            isActive: data.isActive,
             sequence: data.sequence,
             updatedAt: new Date(),
         })
@@ -210,7 +210,7 @@ export async function updatePaperWithComponents(id: number, data: Omit<PaperDto,
             subjectTypeId: data.subjectTypeId,
             programCourseId: data.programCourseId,
             classId: classRecord.id,
-            disabled: data.disabled,
+            isActive: data.isActive,
         })
         .where(eq(paperModel.id, id))
         .returning();

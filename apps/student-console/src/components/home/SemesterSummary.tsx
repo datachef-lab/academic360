@@ -1,27 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { GraduationCap } from "lucide-react";
-import {
-  MarksheetSummary,
-  SubjectMetadataType,
-} from "@/types/academics/marksheet-summary";
+import { MarksheetSummary, SubjectMetadataType } from "@/types/academics/marksheet-summary";
 import { SemesterSummaryTable } from "./SemesterSummaryTable";
 import { getSemesterSummary } from "@/lib/services/semester-summary.service";
-import { Student } from "@/types/academics/student";
+import { StudentDto } from "@repo/db/dtos/user";
 import BacklogDialog from "./BacklogDialog";
 
-export default function SemesterSummary({ student }: { student: Student }) {
-  const [semesterSummary, setSemesterSummary] = useState<
-    MarksheetSummary[] | null
-  >(null);
-  const [selectedBacklogs, setSelectedBacklogs] = useState<
-    SubjectMetadataType[] | null
-  >(null);
+export default function SemesterSummary({ student }: { student: StudentDto }) {
+  const [semesterSummary, setSemesterSummary] = useState<MarksheetSummary[] | null>(null);
+  const [selectedBacklogs, setSelectedBacklogs] = useState<SubjectMetadataType[] | null>(null);
   const [backlogsDialogOpen, setBacklogsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!semesterSummary) {
-      getSemesterSummary(student!.codeNumber).then((summary) => {
+      getSemesterSummary(student?.id?.toString() || "").then((summary) => {
         if (summary) {
           console.log("summary:", summary);
           setSemesterSummary(summary);
@@ -51,24 +44,15 @@ export default function SemesterSummary({ student }: { student: Student }) {
         </CardHeader>
         <CardContent className="px-5 pb-3 pt-0">
           {semesterSummary && semesterSummary.length > 0 ? (
-            <SemesterSummaryTable
-              data={semesterSummary}
-              onBacklogsClick={handleBacklogsClick}
-            />
+            <SemesterSummaryTable data={semesterSummary} onBacklogsClick={handleBacklogsClick} />
           ) : (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              No semester data available
-            </div>
+            <div className="text-center py-4 text-gray-500 text-sm">No semester data available</div>
           )}
         </CardContent>
       </Card>
 
       {/* Backlogs Dialog */}
-      <BacklogDialog
-        open={backlogsDialogOpen}
-        setOpen={setBacklogsDialogOpen}
-        backlogs={selectedBacklogs}
-      />
+      <BacklogDialog open={backlogsDialogOpen} setOpen={setBacklogsDialogOpen} backlogs={selectedBacklogs} />
     </>
   );
 }

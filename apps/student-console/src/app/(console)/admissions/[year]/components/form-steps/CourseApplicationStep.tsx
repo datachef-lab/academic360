@@ -199,7 +199,7 @@ export default function CourseApplicationStep({
                       <Checkbox
                         id={`course-${course.id}`}
                         checked={!!selected}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={(checked: boolean) => {
                           if (!admissionCourse) return;
                           if (checked) {
                             setSelectedCourses([
@@ -210,7 +210,7 @@ export default function CourseApplicationStep({
                             setSelectedCourses(selectedCourses.filter(sc => sc.admissionCourseId !== admissionCourse.id));
                           }
                         }}
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
                         className="mx-auto"
                       />
                     </td>

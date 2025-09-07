@@ -11,7 +11,7 @@ export const stateModel = pgTable("states", {
     countryId: integer().notNull().references(() => countryModel.id),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

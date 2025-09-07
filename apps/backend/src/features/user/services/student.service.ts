@@ -1,33 +1,21 @@
-import { count, eq, ilike, or, sql, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import { Student, studentModel } from "@repo/db/schemas/models/user";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
-import { findAll } from "@/utils/helper.js";
-
-import { removeAccommodationByStudentId } from "./accommodation.service.js";
-// import { removeAdmissionByStudentId } from "./admission.service.js";
-import { findFamilyByStudentId, removeFamilysByStudentId } from "./family.service.js";
-import { removeHealthByStudentId } from "./health.service.js";
-import { removeEmergencyContactByStudentId } from "./emergencyContact.service.js";
-import { removeTransportDetailsByStudentId } from "./transportDetail.service.js";
-import {
-    addPersonalDetails,
-    findPersonalDetailsByStudentId,
-    removePersonalDetailsByStudentId,
-    savePersonalDetails,
-} from "./personalDetails.service.js";
-// import { removeMarksheetByStudentId } from "@/features/academics/services/marksheet.service.js";
-import { findSpecializationById } from "@/features/resources/services/specialization.service.js";
-import { findUserById } from "./user.service.js";
-// import { academicIdentifierModel }   from "../models/academicIdentifier.model.js";
-// import { streamModel } from "@/features/academics/models/stream.model.js";
 import { degreeModel } from "@repo/db/schemas/models/resources";
 import { marksheetModel } from "@repo/db/schemas/models/academics";
-import { userModel } from "@repo/db/schemas/models/user";
+
 import { processClassBySemesterNumber } from "@/features/academics/services/class.service.js";
 import { StudentDto } from "@repo/db/dtos/user/index.js";
-import { findAdmCourseDetailsByStudentId } from "@/features/admissions/services/adm-course-details.service.js";
+import { applicationFormModel } from "@repo/db/schemas";
+
+
+import * as programCourseService from "@/features/course-design/services/program-course.service";
+import * as specializationService from "@/features/resources/services/specialization.service";
+import * as sectionService from "@/features/academics/services/section.service";
+import * as shiftService from "@/features/academics/services/shift.service";
+
 
 export async function addStudent(
     student: StudentType,
@@ -35,7 +23,7 @@ export async function addStudent(
     // let { name, academicIdentifier, specialization, personalDetails, ...props } =
     //     student;
 
-    
+
 
     // if (personalDetails) {
     //     personalDetails = await addPersonalDetails(personalDetails);
@@ -83,15 +71,13 @@ export async function findAllStudent(
     };
 }
 
-export async function findStudentById(id: number): Promise<StudentType | null> {
-    // const [foundStudent] = await db
-    //     .select()
-    //     .from(studentModel)
-    //     .where(eq(studentModel.id, id));
+export async function findById(id: number): Promise<StudentDto | null> {
+    const [foundStudent] = await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.id, id));
 
-    // const formatedStudent = await studentResponseFormat(foundStudent);
-
-    return null;
+    return await modelToDto(foundStudent);
 }
 
 export async function findStudentByUserId(
@@ -103,7 +89,7 @@ export async function findStudentByUserId(
         .where(eq(studentModel.userId, userId));
 
     console.log("Found student:", foundStudent);
-    return await studentResponseFormat(foundStudent);
+    return await modelToDto(foundStudent);
 }
 
 export async function saveStudent(
@@ -153,7 +139,7 @@ export async function saveStudent(
 
 export async function removeStudent(id: number): Promise<boolean | null> {
     // Return if the student not exist.
-    const foundStudent = await findStudentById(id);
+    const foundStudent = await findById(id);
     if (!foundStudent) {
         return null;
     }
@@ -491,40 +477,60 @@ export async function findFilteredStudents({
     };
 }
 
-async function studentResponseFormat(
+async function modelToDto(
     student: Student,
 ): Promise<StudentDto | null> {
     if (!student) {
         return null;
     }
 
-    const { specializationId, ...props } = student;
+    const {
+        applicationId,
+        programCourseId,
+        specializationId,
+        sectionId,
+        shiftId,
+        ...props
+    } = student;
 
-    // Get raw user data to avoid infinite loop with userResponseFormat
-    const [user] = await db.select().from(userModel).where(eq(userModel.id, student.userId));
+    // Fetch related data in parallel
+    const [
+        applicationForm,
+        programCourse,
+        specialization,
+        section,
+        shift,
+        currentBatch
+    ] = await Promise.all([
+        (async () => {
+            if (!applicationId) return null;
+            try {
+                const rows = await db
+                    .select()
+                    .from(applicationFormModel)
+                    .where(eq(applicationFormModel.id, applicationId));
+                return rows[0] ?? null;
+            } catch (e) {
+                console.error("Failed to fetch application form for id:", applicationId, e);
+                return null;
+            }
+        })(),
+        programCourseService.findById(programCourseId),
+        specializationId ? specializationService.findById(specializationId) : null,
+        sectionId ? sectionService.findById(sectionId) : null,
+        shiftId ? shiftService.findById(shiftId) : null,
+        // TODO: Implement findCurrentBatchByStudentId or similar
+        null
+    ]);
 
-    // const formatedStudent: StudentDto = { ...props, name: user?.name as string, familyDetails: null, lastAcademicInfo: null };
-
-    // const familyDetails = await findFamilyByStudentId(student?.id as number);
-
-    // formatedStudent.familyDetails = familyDetails;
-
-    // formatedStudent.lastAcademicInfo = await findAcademicHistoryByStudentId(student?.id as number);
-
-    // formatedStudent.admissionCourseDetails = await findAdmCourseDetailsByStudentId(student?.id as number);
-
-    // if (specializationId) {
-    //     formatedStudent.specialization =
-    //         await findSpecializationById(specializationId);
-    // }
-
-    // formatedStudent.academicIdentifier = await findAcademicIdentifierByStudentId(
-    //     student?.id as number,
-    // );
-
-    // formatedStudent.personalDetails = await findPersonalDetailsByStudentId(
-    //     student?.id as number,
-    // );
-
-    return null;
+    return {
+        ...props,
+        applicationFormAbstract: applicationForm,
+        programCourse: programCourse!,
+        specialization,
+        section,
+        shift,
+        currentBatch
+    };
 }
+

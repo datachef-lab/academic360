@@ -1,0 +1,2 @@
+06-09-2025	00:03:40	ac90c66d-60bf-4453-9018-fa585ab6260a	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
+params: 	GET	/api/board-universities?page=1&pageSize=10	http://localhost:5173

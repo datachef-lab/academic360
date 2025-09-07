@@ -62,11 +62,29 @@ import Dashboard from "./features/dashboard/pages/dashboard";
 import LoginPage from "./features/auth/pages/login-page";
 import { NotFoundPage, SettingsPage, UserProfilePage } from "./pages";
 
+// import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
+import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
+import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
+import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
+
+import WhitelistedCategoriesPage from "./features/academic-year-setup/pages/whitelisted-categories-page";
+import AlternativeSubjectsPage from "./features/academic-year-setup/pages/alternative-subjects-page";
+import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
+import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
+import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
+
 // import * as resourceModule from "@/pages/resources";
 
 const router = createBrowserRouter(
   [
-    { path: "/", element: <LoginPage /> },
+    {
+      path: "/",
+      element: (
+        <AuthProvider>
+          <LoginPage />
+        </AuthProvider>
+      ),
+    },
     {
       path: "/dashboard",
       element: (
@@ -78,6 +96,80 @@ const router = createBrowserRouter(
       ),
       children: [
         { path: "", element: <Dashboard /> },
+        {
+          path: "academic-year-setup",
+          element: <Outlet />,
+          children: [
+            { path: "", element: <AcademicYearSetupPage /> },
+            {
+              path: "course-design",
+              element: <courseSubjectModule.CoursesSubjectsMaster />,
+              children: [
+                { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+                { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
+                { path: "streams", element: <courseSubjectModule.StreamsPage /> },
+                { path: "courses", element: <courseSubjectModule.CoursesPage /> },
+                { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
+                { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
+                { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
+                { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
+                { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
+                { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
+                { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+                { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+                { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
+                { path: "academic-years", element: <AcademicYearPage /> },
+              ],
+            },
+            {
+              path: "subject-configurations",
+              element: <SubjectConfigurationMaster />,
+              children: [
+                { path: "", element: <MandatorySubjectsPage /> },
+                // { path: "program-course-relations", element: <RestrictedGroupingPage /> },
+                { path: "alternative-subjects", element: <AlternativeSubjectsPage /> },
+                { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
+                { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
+                { path: "semester-availability", element: <SemesterAvailabilityPage /> },
+
+              ],
+            },
+          ],
+        },
+        // {
+        //   path: "academic-year-setup/:year",
+        //   element: <Outlet />,
+        //   children: [
+        //     { path: "", element: <SelectedAcademicYearPage /> },
+        //     {
+        //       path: "course-design",
+        //       element: <courseSubjectModule.CoursesSubjectsMaster />,
+        //       children: [
+        //         { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+        //         { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
+        //         { path: "streams", element: <courseSubjectModule.StreamsPage /> },
+        //         { path: "courses", element: <courseSubjectModule.CoursesPage /> },
+        //         { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
+        //         { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
+        //         { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
+        //         { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
+        //         { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
+        //         { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
+        //         { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+        //         { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+        //         { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
+        //         { path: "academic-years", element: <AcademicYearPage /> },
+        //       ],
+        //     },
+        //     {
+        //         path: "subject-configurations",
+        //         element: <Outlet />,
+        //         children: [
+        //           { path: "", element: <SubjectConfigurationsPage /> },
+        //         ],
+        //       },
+        //   ],
+        // },
         { path: "resources", element: <SettingsPage /> },
         // {
         //   path: "resources",
@@ -98,26 +190,26 @@ const router = createBrowserRouter(
         //   ],
         // },
 
-        {
-          path: "courses-subjects-design",
-          element: <courseSubjectModule.CoursesSubjectsMaster />,
-          children: [
-            { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
-            { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
-            { path: "streams", element: <courseSubjectModule.StreamsPage /> },
-            { path: "courses", element: <courseSubjectModule.CoursesPage /> },
-            { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
-            { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
-            { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
-            { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
-            { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
-            { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
-            { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
-            { path: "classes", element: <courseSubjectModule.ClassesPage /> },
-            { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
-            { path: "academic-years", element: <AcademicYearPage /> },
-          ],
-        },
+        // {
+        //   path: "courses-subjects-design",
+        //   element: <courseSubjectModule.CoursesSubjectsMaster />,
+        //   children: [
+        //     { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+        //     { path: "", element: <courseSubjectModule.ProgramCoursesPage /> },
+        //     { path: "streams", element: <courseSubjectModule.StreamsPage /> },
+        //     { path: "courses", element: <courseSubjectModule.CoursesPage /> },
+        //     { path: "course-types", element: <courseSubjectModule.CourseTypesPage /> },
+        //     { path: "course-levels", element: <courseSubjectModule.CourseLevelsPage /> },
+        //     { path: "affiliations", element: <courseSubjectModule.AffiliationsPage /> },
+        //     { path: "regulation-types", element: <courseSubjectModule.RegulationTypesPage /> },
+        //     { path: "subjects", element: <courseSubjectModule.SubjectsPage /> },
+        //     { path: "subject-categories", element: <courseSubjectModule.SubjectCategoriesPage /> },
+        //     { path: "subject-paper-mapping", element: <courseSubjectModule.SubjectPaperMappingPage /> },
+        //     { path: "classes", element: <courseSubjectModule.ClassesPage /> },
+        //     { path: "paper-components", element: <courseSubjectModule.ExamComponentesPage /> },
+        //     { path: "academic-years", element: <AcademicYearPage /> },
+        //   ],
+        // },
         {
           path: "admissions-fees/admissions/:year",
           element: <Outlet />,

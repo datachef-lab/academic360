@@ -1,18 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { AdmissionAcademicInfo, BoardUniversity, Course, LanguageMedium, streamType, Institution } from "@/db/schema"; // Import necessary types
 import { Combobox } from "@/components/ui/combobox";
 // import { Combobox } from "@/components/ui/combobox";
+
+// Work around strict shadcn typings with proper type extensions
+const LabelFixed = Label as React.ComponentType<
+  React.ComponentProps<typeof Label> & { children?: React.ReactNode; className?: string; htmlFor?: string }
+>;
+const SelectTriggerFixed = SelectTrigger as React.ComponentType<
+  React.ComponentProps<typeof SelectTrigger> & { children?: React.ReactNode; className?: string }
+>;
+const SelectContentFixed = SelectContent as React.ComponentType<
+  React.ComponentProps<typeof SelectContent> & { children?: React.ReactNode }
+>;
+const SelectItemFixed = SelectItem as React.ComponentType<
+  React.ComponentProps<typeof SelectItem> & {
+    children?: React.ReactNode;
+    value?: string;
+    key?: string | number;
+    className?: string;
+  }
+>;
 
 interface InstituteDetailsModalProps {
   onChange: (field: keyof AdmissionAcademicInfo, value: any) => void;
@@ -35,7 +48,7 @@ export default function InstituteDetailsModal({
   colleges,
   institutions = [],
 }: InstituteDetailsModalProps) {
-  console.log('Colleges in InstituteDetailsModal:', colleges);
+  console.log("Colleges in InstituteDetailsModal:", colleges);
   const params = useParams();
   const admissionYear = parseInt(params.year as string);
 
@@ -49,11 +62,11 @@ export default function InstituteDetailsModal({
   };
 
   // Find the 'Other Institute' ID from the colleges list (formerly institutions)
-  const otherInstitute = (colleges || []).find(inst => inst.name === 'Other Institute');
+  const otherInstitute = (colleges || []).find((inst) => inst.name === "Other Institute");
   const otherInstituteId = otherInstitute?.id;
 
   // Find the 'Other college' ID from the colleges list
-  const otherCollege = (colleges || []).find(coll => coll.name === 'Other college');
+  const otherCollege = (colleges || []).find((coll) => coll.name === "Other college");
   const otherCollegeId = otherCollege?.id;
 
   // Note: Assuming 'Other Course' handling will be similar if courses are made dynamic
@@ -66,8 +79,14 @@ export default function InstituteDetailsModal({
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-900 rounded-lg shadow p-3 sm:p-4 text-left text-xs sm:text-sm mb-4">
           <p className="font-semibold mb-2">Please Note:</p>
           <ol className="list-decimal list-inside space-y-1">
-            <li>Please select your Class 12 school name under the "Select Institute" option in serial no. b(i). In case your school's name is not enlisted in the dropdown list, select "Other Institute" from the list and enter the name of your school in serial no. b(ii).</li>
-            <li>Sr. No f(i) is applicable for students who have cleared Class XII board exam in or before year 2024.</li>
+            <li>
+              Please select your Class 12 school name under the "Select Institute" option in serial no. b(i). In case
+              your school's name is not enlisted in the dropdown list, select "Other Institute" from the list and enter
+              the name of your school in serial no. b(ii).
+            </li>
+            <li>
+              Sr. No f(i) is applicable for students who have cleared Class XII board exam in or before year 2024.
+            </li>
             <li>Red dot indicates mandatory field.</li>
           </ol>
         </div>
@@ -76,47 +95,75 @@ export default function InstituteDetailsModal({
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">a(i) Roll No <span className="text-red-600">*</span></Label>
-              <Input value={academicInfo.rollNumber || ''} onChange={(e) => onChange('rollNumber', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                a(i) Roll No <span className="text-red-600">*</span>
+              </LabelFixed>
+              <Input
+                value={academicInfo.rollNumber || ""}
+                onChange={(e) => onChange("rollNumber", e.target.value)}
+                className="w-full h-8 text-xs sm:text-sm"
+              />
             </div>
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">a(ii) School No <span className="text-red-600">*</span></Label>
-              <Input value={academicInfo.schoolNumber || ''} onChange={(e) => onChange('schoolNumber', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                a(ii) School No <span className="text-red-600">*</span>
+              </LabelFixed>
+              <Input
+                value={academicInfo.schoolNumber || ""}
+                onChange={(e) => onChange("schoolNumber", e.target.value)}
+                className="w-full h-8 text-xs sm:text-sm"
+              />
             </div>
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">a(iii) Center No <span className="text-red-600">*</span></Label>
-              <Input value={academicInfo.centerNumber || ''} onChange={(e) => onChange('centerNumber', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                a(iii) Center No <span className="text-red-600">*</span>
+              </LabelFixed>
+              <Input
+                value={academicInfo.centerNumber || ""}
+                onChange={(e) => onChange("centerNumber", e.target.value)}
+                className="w-full h-8 text-xs sm:text-sm"
+              />
             </div>
           </div>
           <div>
-            <Label className="flex items-center mb-1 text-xs sm:text-sm">a(iv) Admit Card ID. <span className="text-red-600">*</span></Label>
-            <Input value={academicInfo.admitCardId || ''} onChange={(e) => onChange('admitCardId', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+            <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+              a(iv) Admit Card ID. <span className="text-red-600">*</span>
+            </LabelFixed>
+            <Input
+              value={academicInfo.admitCardId || ""}
+              onChange={(e) => onChange("admitCardId", e.target.value)}
+              className="w-full h-8 text-xs sm:text-sm"
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">b(i). Select Institute <span className="text-red-600">*</span></Label>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                b(i). Select Institute <span className="text-red-600">*</span>
+              </LabelFixed>
               <Combobox
                 dataArr={[
-                  ...institutions.filter(ele => ele.id !== undefined).map(ele => ({ value: ele.id!.toString(), label: ele.name })),
-                  { value: "OTHER", label: "Other Institute" }
+                  ...institutions
+                    .filter((ele) => ele.id !== undefined)
+                    .map((ele) => ({ value: ele.id!.toString(), label: ele.name })),
+                  { value: "OTHER", label: "Other Institute" },
                 ]}
                 value={
                   academicInfo.instituteId === null
                     ? "OTHER"
-                    : typeof academicInfo.instituteId === 'number'
-                    ? String(academicInfo.instituteId)
-                    : ""
+                    : typeof academicInfo.instituteId === "number"
+                      ? String(academicInfo.instituteId)
+                      : ""
                 }
-                onChange={val => {
+                onChange={(val) => {
                   if (val === "OTHER") {
-                    onChange('instituteId', null);
-                    onChange('otherInstitute', '');
+                    onChange("instituteId", null);
+                    onChange("otherInstitute", "");
                   } else if (!val || val === "0") {
-                    onChange('instituteId', null);
-                    onChange('otherInstitute', null);
+                    onChange("instituteId", null);
+                    onChange("otherInstitute", null);
                   } else if (!isNaN(Number(val))) {
-                    onChange('instituteId', Number(val));
-                    onChange('otherInstitute', null);
+                    onChange("instituteId", Number(val));
+                    onChange("otherInstitute", null);
                   }
                 }}
                 placeholder="Select Institute"
@@ -125,110 +172,158 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.instituteId === null && (
               <div>
-                <Label className="flex items-center mb-1 text-xs sm:text-sm">b(ii). Other Institute</Label>
-                <Input value={academicInfo.otherInstitute || ''} onChange={(e) => onChange('otherInstitute', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">b(ii). Other Institute</LabelFixed>
+                <Input
+                  value={academicInfo.otherInstitute || ""}
+                  onChange={(e) => onChange("otherInstitute", e.target.value)}
+                  className="w-full h-8 text-xs sm:text-sm"
+                />
               </div>
             )}
           </div>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">Select Medium <span className="text-red-600">*</span></Label>
-              <Select value={academicInfo.languageMediumId === 0 ? "0" : academicInfo.languageMediumId?.toString() || ''} onValueChange={(val) => onChange('languageMediumId', parseInt(val))}>
-                <SelectTrigger className="w-full h-8 text-xs sm:text-sm"><SelectValue placeholder="Select Medium" /></SelectTrigger>
-                <SelectContent>
-                   <SelectItem value="0">Select Medium</SelectItem>
-                   {languageMediums.map((medium) => (
-                    medium.id && (
-                     <SelectItem key={medium.id} value={medium.id.toString()} className="text-xs sm:text-sm">
-                       {medium.name}
-                     </SelectItem>
-                    )
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">Select Year Of Passing <span className="text-red-600">*</span></Label>
-              <Select 
-                value={academicInfo.yearOfPassing ? academicInfo.yearOfPassing.toString() : ''}
-                onValueChange={(val) => onChange('yearOfPassing', val === '0' ? null : parseInt(val))}
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                Select Medium <span className="text-red-600">*</span>
+              </LabelFixed>
+              <Select
+                value={academicInfo.languageMediumId === 0 ? "0" : academicInfo.languageMediumId?.toString() || ""}
+                onValueChange={(val) => onChange("languageMediumId", parseInt(val))}
               >
-                <SelectTrigger className="w-full h-8 text-xs sm:text-sm"><SelectValue placeholder="Select Year Of Passing" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Select Year Of Passing</SelectItem>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year.toString()} className="text-xs sm:text-sm">
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select Medium" />
+                </SelectTriggerFixed>
+                <SelectContentFixed>
+                  <SelectItemFixed value="0">Select Medium</SelectItemFixed>
+                  {languageMediums.map(
+                    (medium) =>
+                      medium.id && (
+                        <SelectItemFixed key={medium.id} value={medium.id.toString()} className="text-xs sm:text-sm">
+                          {medium.name}
+                        </SelectItemFixed>
+                      ),
+                  )}
+                </SelectContentFixed>
               </Select>
             </div>
-           </div>
+            <div>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                Select Year Of Passing <span className="text-red-600">*</span>
+              </LabelFixed>
+              <Select
+                value={academicInfo.yearOfPassing ? academicInfo.yearOfPassing.toString() : ""}
+                onValueChange={(val) => onChange("yearOfPassing", val === "0" ? null : parseInt(val))}
+              >
+                <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select Year Of Passing" />
+                </SelectTriggerFixed>
+                <SelectContentFixed>
+                  <SelectItemFixed value="0">Select Year Of Passing</SelectItemFixed>
+                  {yearOptions.map((year) => (
+                    <SelectItemFixed key={year} value={year.toString()} className="text-xs sm:text-sm">
+                      {year}
+                    </SelectItemFixed>
+                  ))}
+                </SelectContentFixed>
+              </Select>
+            </div>
+          </div>
           <div>
-            <Label className="flex items-center mb-1 text-xs sm:text-sm">e. Coming from which Stream <span className="text-red-600">*</span></Label>
-            <Select value={academicInfo.streamType || 'null'} onValueChange={(val) => onChange('streamType', val as "COMMERCE" | "SCIENCE" | "HUMANITIES")}>
-              <SelectTrigger className="w-full h-8 text-xs sm:text-sm"><SelectValue placeholder="Select Stream" /></SelectTrigger>
-              <SelectContent>
-                {streamType.enumValues.map(value => (
-                  <SelectItem key={value} value={value}>{value}</SelectItem>
+            <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+              e. Coming from which Stream <span className="text-red-600">*</span>
+            </LabelFixed>
+            <Select
+              value={academicInfo.streamType || "null"}
+              onValueChange={(val) => onChange("streamType", val as "COMMERCE" | "SCIENCE" | "HUMANITIES")}
+            >
+              <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTriggerFixed>
+              <SelectContentFixed>
+                {streamType.enumValues.map((value) => (
+                  <SelectItemFixed key={value} value={value}>
+                    {value}
+                  </SelectItemFixed>
                 ))}
-              </SelectContent>
+              </SelectContentFixed>
             </Select>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">f. Have you ever been registered for any undergraduate courses under Calcutta University? <span className="text-red-600">*</span></Label>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                f. Have you ever been registered for any undergraduate courses under Calcutta University?{" "}
+                <span className="text-red-600">*</span>
+              </LabelFixed>
               <Select
-                value={academicInfo.isRegisteredForUgInCu === true ? 'Yes' : academicInfo.isRegisteredForUgInCu === false ? 'No' : 'null'}
-                onValueChange={(val) => onChange('isRegisteredForUgInCu', val === 'Yes' ? true : val === 'No' ? false : null)}
+                value={
+                  academicInfo.isRegisteredForUgInCu === true
+                    ? "Yes"
+                    : academicInfo.isRegisteredForUgInCu === false
+                      ? "No"
+                      : "null"
+                }
+                onValueChange={(val) =>
+                  onChange("isRegisteredForUgInCu", val === "Yes" ? true : val === "No" ? false : null)
+                }
                 disabled={academicInfo.yearOfPassing === admissionYear}
               >
-                <SelectTrigger className="w-full h-8 text-xs sm:text-sm"><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="null">Select</SelectItem>
-                  <SelectItem value="Yes" className="text-xs sm:text-sm">Yes</SelectItem>
-                  <SelectItem value="No" className="text-xs sm:text-sm">No</SelectItem>
-                </SelectContent>
+                <SelectTriggerFixed className="w-full h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select" />
+                </SelectTriggerFixed>
+                <SelectContentFixed>
+                  <SelectItemFixed value="null">Select</SelectItemFixed>
+                  <SelectItemFixed value="Yes" className="text-xs sm:text-sm">
+                    Yes
+                  </SelectItemFixed>
+                  <SelectItemFixed value="No" className="text-xs sm:text-sm">
+                    No
+                  </SelectItemFixed>
+                </SelectContentFixed>
               </Select>
             </div>
             {academicInfo.isRegisteredForUgInCu === true && (
               <div>
-                <Label className="flex items-center mb-1 text-xs sm:text-sm">g. Calcutta University Registration No</Label>
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                  g. Calcutta University Registration No
+                </LabelFixed>
                 <Input
-                  value={academicInfo.cuRegistrationNumber || ''}
-                  onChange={(e) => onChange('cuRegistrationNumber', e.target.value)}
+                  value={academicInfo.cuRegistrationNumber || ""}
+                  onChange={(e) => onChange("cuRegistrationNumber", e.target.value)}
                   className="w-full h-8 text-xs sm:text-sm"
                   disabled={academicInfo.yearOfPassing === admissionYear}
                 />
               </div>
             )}
           </div>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">h(i). Previously Registered Course</Label>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">
+                h(i). Previously Registered Course
+              </LabelFixed>
               <Combobox
                 dataArr={[
-                  ...registeredCourses.filter(course => course.id !== undefined).map((course) => ({ value: course.id!.toString(), label: course.name })),
-                  { value: "OTHER", label: "Other Course" }
+                  ...registeredCourses
+                    .filter((course) => course.id !== undefined)
+                    .map((course) => ({ value: course.id!.toString(), label: course.name })),
+                  { value: "OTHER", label: "Other Course" },
                 ]}
                 value={
                   academicInfo.previouslyRegisteredCourseId === null
                     ? "OTHER"
-                    : typeof academicInfo.previouslyRegisteredCourseId === 'number'
-                    ? String(academicInfo.previouslyRegisteredCourseId)
-                    : ""
+                    : typeof academicInfo.previouslyRegisteredCourseId === "number"
+                      ? String(academicInfo.previouslyRegisteredCourseId)
+                      : ""
                 }
-                onChange={val => {
+                onChange={(val) => {
                   if (val === "OTHER") {
-                    onChange('previouslyRegisteredCourseId', null);
-                    onChange('otherPreviouslyRegisteredCourse', '');
+                    onChange("previouslyRegisteredCourseId", null);
+                    onChange("otherPreviouslyRegisteredCourse", "");
                   } else if (!val || val === "0") {
-                    onChange('previouslyRegisteredCourseId', null);
-                    onChange('otherPreviouslyRegisteredCourse', null);
+                    onChange("previouslyRegisteredCourseId", null);
+                    onChange("otherPreviouslyRegisteredCourse", null);
                   } else if (!isNaN(Number(val))) {
-                    onChange('previouslyRegisteredCourseId', Number(val));
-                    onChange('otherPreviouslyRegisteredCourse', null);
+                    onChange("previouslyRegisteredCourseId", Number(val));
+                    onChange("otherPreviouslyRegisteredCourse", null);
                   }
                 }}
                 placeholder="Select Previous Registered Course"
@@ -238,10 +333,10 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.previouslyRegisteredCourseId === null && (
               <div>
-                <Label className="flex items-center mb-1 text-xs sm:text-sm">h(ii). Other Course</Label>
-                <Input 
-                  value={academicInfo.otherPreviouslyRegisteredCourse || ''} 
-                  onChange={(e) => onChange('otherPreviouslyRegisteredCourse', e.target.value)} 
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">h(ii). Other Course</LabelFixed>
+                <Input
+                  value={academicInfo.otherPreviouslyRegisteredCourse || ""}
+                  onChange={(e) => onChange("otherPreviouslyRegisteredCourse", e.target.value)}
                   className="w-full h-8 text-xs sm:text-sm"
                   disabled={academicInfo.yearOfPassing === admissionYear}
                 />
@@ -250,29 +345,31 @@ export default function InstituteDetailsModal({
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <Label className="flex items-center mb-1 text-xs sm:text-sm">i. Previous College</Label>
+              <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">i. Previous College</LabelFixed>
               <Combobox
                 dataArr={[
-                  ...colleges.filter(coll => coll.id !== undefined).map((coll) => ({ value: coll.id!.toString(), label: coll.name })),
-                  { value: "OTHER", label: "Other College" }
+                  ...colleges
+                    .filter((coll) => coll.id !== undefined)
+                    .map((coll) => ({ value: coll.id!.toString(), label: coll.name })),
+                  { value: "OTHER", label: "Other College" },
                 ]}
                 value={
                   academicInfo.previousCollegeId === null
                     ? "OTHER"
-                    : typeof academicInfo.previousCollegeId === 'number'
-                    ? String(academicInfo.previousCollegeId)
-                    : ""
+                    : typeof academicInfo.previousCollegeId === "number"
+                      ? String(academicInfo.previousCollegeId)
+                      : ""
                 }
-                onChange={val => {
+                onChange={(val) => {
                   if (val === "OTHER") {
-                    onChange('previousCollegeId', null);
-                    onChange('otherCollege', '');
+                    onChange("previousCollegeId", null);
+                    onChange("otherCollege", "");
                   } else if (!val || val === "0") {
-                    onChange('previousCollegeId', null);
-                    onChange('otherCollege', null);
+                    onChange("previousCollegeId", null);
+                    onChange("otherCollege", null);
                   } else if (!isNaN(Number(val))) {
-                    onChange('previousCollegeId', Number(val));
-                    onChange('otherCollege', null);
+                    onChange("previousCollegeId", Number(val));
+                    onChange("otherCollege", null);
                   }
                 }}
                 placeholder="Select Previous College"
@@ -281,17 +378,25 @@ export default function InstituteDetailsModal({
             </div>
             {academicInfo.previousCollegeId === null && (
               <div>
-                <Label className="flex items-center mb-1 text-xs sm:text-sm">j. Other college</Label>
-                <Input value={academicInfo.otherCollege || ''} onChange={(e) => onChange('otherCollege', e.target.value)} className="w-full h-8 text-xs sm:text-sm" />
+                <LabelFixed className="flex items-center mb-1 text-xs sm:text-sm">j. Other college</LabelFixed>
+                <Input
+                  value={academicInfo.otherCollege || ""}
+                  onChange={(e) => onChange("otherCollege", e.target.value)}
+                  className="w-full h-8 text-xs sm:text-sm"
+                />
               </div>
             )}
           </div>
         </div>
       </div>
       <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-auto p-2 sm:p-4 border-t">
-        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Close</Button>
-        <Button onClick={handleSave} className="w-full sm:w-auto">Done</Button>
+        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+          Close
+        </Button>
+        <Button onClick={handleSave} className="w-full sm:w-auto">
+          Done
+        </Button>
       </div>
     </div>
   );
-} 
+}

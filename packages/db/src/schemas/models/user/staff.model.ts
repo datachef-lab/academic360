@@ -23,7 +23,7 @@ export const staffModel = pgTable('staffs', {
     attendanceCode: varchar("attendance_code", { length: 255 }),
     uid: varchar({ length: 255 }),
     codeNumber: varchar({ length: 255 }),
-    rfid: varchar({ length: 255 }),
+    rfidNumber: varchar({ length: 255 }),
     shiftId: integer("shift_id_fk").references(() => shiftModel.id),
     gratuityNumber: varchar({ length: 255 }),
 

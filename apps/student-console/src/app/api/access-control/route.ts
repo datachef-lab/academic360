@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { findAccessControlByStudentId } from "@/lib/services/access-control.service";
+// import { findAccessControlByStudentId } from "@/lib/services/access-control.service";
 
 export async function GET(request: Request) {
     try {
@@ -10,9 +10,9 @@ export async function GET(request: Request) {
             return NextResponse.json([]);
         }
 
-        const accessControl = await findAccessControlByStudentId(+studentIdParam);
+        // const accessControl = await findAccessControlByStudentId(+studentIdParam);
 
-        return NextResponse.json(accessControl);
+        return NextResponse.json({});
 
     } catch (error) {
         console.error("Error fetching courses:", error);

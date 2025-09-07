@@ -10,7 +10,7 @@ export const topicModel = pgTable("topics", {
         .references(() => paperModel.id)
         .notNull(),
     name: varchar({ length: 500 }).notNull(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     sequence: integer().unique(),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

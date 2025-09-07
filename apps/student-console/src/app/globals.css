@@ -5,60 +5,60 @@
 @layer base {
   :root {
     /* Main background - using a deeper blue for better contrast */
-    --background: 220 30% 95%;
-    --foreground: 224 80% 10%;
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
 
     /* Cards with crisp white background */
     --card: 0 0% 100%;
-    --card-foreground: 224 80% 10%;
+    --card-foreground: 240 10% 3.9%;
 
     /* Popover styling */
     --popover: 0 0% 100%;
-    --popover-foreground: 224 80% 10%;
+    --popover-foreground: 240 10% 3.9%;
 
     /* Primary: Deep Indigo - richer and more impactful */
-    --primary: 245 70% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
 
     /* Secondary: Vibrant Teal - stronger contrast with primary */
-    --secondary: 180 80% 35%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
 
     /* Muted elements with deeper blue */
-    --muted: 220 30% 90%;
-    --muted-foreground: 215 25% 30%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
 
     /* Accent: Vibrant Magenta - bold accent that stands out */
-    --accent: 330 85% 55%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
 
     /* Destructive: Deeper red for better visibility */
-    --destructive: 0 90% 50%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
     /* Borders and inputs - stronger for better definition */
-    --border: 220 30% 85%;
-    --input: 220 30% 85%;
-    --ring: 245 70% 50%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 10% 3.9%;
 
     /* Chart colors - more saturated and distinct */
-    --chart-1: 245 70% 50%;
-    --chart-2: 180 80% 35%;
-    --chart-3: 330 85% 55%;
-    --chart-4: 25 95% 50%;
-    --chart-5: 275 90% 50%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
     /* Sidebar styling - purple theme matching welcome header (#925FE2) */
-    --sidebar-background: 263 80% 60%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 263 80% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 263 80% 70%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 263 80% 50%;
-    --sidebar-ring: 263 80% 70%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Notification color filters for SVG icons */
     --blue-filter: invert(42%) sepia(93%) saturate(1352%) hue-rotate(199deg)
@@ -79,58 +79,58 @@
 
   .dark {
     /* Rich dark background - deeper for better contrast */
-    --background: 224 50% 8%;
-    --foreground: 210 40% 98%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
     /* Dark cards with better separation */
-    --card: 224 50% 12%;
-    --card-foreground: 210 40% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
 
     /* Popover styling */
-    --popover: 224 50% 12%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
 
     /* Primary: Vibrant Electric Blue */
-    --primary: 220 100% 60%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
 
     /* Secondary: Bright Teal */
-    --secondary: 175 90% 40%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
 
     /* Muted elements */
-    --muted: 223 47% 15%;
-    --muted-foreground: 215 20% 80%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
 
     /* Accent: Vivid Pink */
-    --accent: 330 95% 60%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
 
     /* Destructive: Bright Red */
-    --destructive: 0 95% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
     /* Borders and inputs - more visible in dark mode */
-    --border: 223 47% 20%;
-    --input: 223 47% 20%;
-    --ring: 220 100% 60%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
 
     /* Chart colors - brighter in dark mode */
-    --chart-1: 220 100% 60%;
-    --chart-2: 175 90% 40%;
-    --chart-3: 330 95% 60%;
-    --chart-4: 25 95% 60%;
-    --chart-5: 275 95% 60%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
 
     /* Sidebar styling - dark purple theme matching welcome header (#925FE2) */
-    --sidebar-background: 263 80% 60%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 263 80% 60%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 263 80% 70%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 263 80% 50%;
-    --sidebar-ring: 263 80% 70%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
   }
 }
 
@@ -322,4 +322,13 @@
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #bdbdbd transparent;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }

@@ -18,12 +18,12 @@ import { Outlet } from "react-router-dom";
 const nestedHomeLinks = [
   {
     title: "Program Courses",
-    url: "/dashboard/courses-subjects-design",
+    url: "/dashboard/academic-year-setup/course-design",
     icon: Library,
   },
   {
     title: "Subject Paper Mapping",
-    url: "/dashboard/courses-subjects-design/subject-paper-mapping",
+    url: "/dashboard/academic-year-setup/course-design/subject-paper-mapping",
     icon: FileText,
   },
 ];
@@ -31,57 +31,57 @@ const nestedHomeLinks = [
 const masterLinks = [
   {
     title: "Academic Years",
-    url: "/dashboard/courses-subjects-design/academic-years",
+    url: "/dashboard/academic-year-setup/course-design/academic-years",
     icon: UserCheck, // represents student admission
   },
   {
     title: "Classes",
-    url: "/dashboard/courses-subjects-design/classes",
+    url: "/dashboard/academic-year-setup/course-design/classes",
     icon: Library,
   },
   {
     title: "Paper/Exam Components",
-    url: "/dashboard/courses-subjects-design/paper-components",
+    url: "/dashboard/academic-year-setup/course-design/paper-components",
     icon: Library,
   },
   {
     title: "Courses",
-    url: "/dashboard/courses-subjects-design/courses",
+    url: "/dashboard/academic-year-setup/course-design/courses",
     icon: Library,
   },
   {
     title: "Course Types",
-    url: "/dashboard/courses-subjects-design/course-types",
+    url: "/dashboard/academic-year-setup/course-design/course-types",
     icon: Type,
   },
   {
     title: "Course Levels",
-    url: "/dashboard/courses-subjects-design/course-levels",
+    url: "/dashboard/academic-year-setup/course-design/course-levels",
     icon: Layers,
   },
   {
     title: "Streams",
-    url: "/dashboard/courses-subjects-design/streams",
+    url: "/dashboard/academic-year-setup/course-design/streams",
     icon: GitBranch,
   },
   {
     title: "Subjects",
-    url: "/dashboard/courses-subjects-design/subjects",
+    url: "/dashboard/academic-year-setup/course-design/subjects",
     icon: Book,
   },
   {
     title: "Subject Categories",
-    url: "/dashboard/courses-subjects-design/subject-categories",
+    url: "/dashboard/academic-year-setup/course-design/subject-categories",
     icon: Bookmark,
   },
   {
     title: "Affiliations",
-    url: "/dashboard/courses-subjects-design/affiliations",
+    url: "/dashboard/academic-year-setup/course-design/affiliations",
     icon: Shield,
   },
   {
     title: "Regulation Types",
-    url: "/dashboard/courses-subjects-design/regulation-types",
+    url: "/dashboard/academic-year-setup/course-design/regulation-types",
     icon: GraduationCap,
   },
 ];

@@ -10,8 +10,10 @@ import { eq } from "drizzle-orm";
 import { ApiError } from "@/utils/ApiError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { generateToken } from "@/utils/generateToken.js";
-import { addUser, findUserByEmail, userResponseFormat } from "@/features/user/services/user.service.js";
+import { addUser, } from "@/features/user/services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
+
+import * as userService from "@/features/user/services/user.service.js";
 
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
     const givenUser = req.body as User;
@@ -35,10 +37,12 @@ export const createUser = async (req: Request, res: Response, next: NextFunction
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { email, password } = req.body;
+        const { app } = req.headers;
+
         console.log("🔑 Login attempt for:", email);
 
         console.log("📋 Looking up user by email...");
-        const foundUser = await findUserByEmail(email);
+        const foundUser = await userService.findByEmail(email);
         console.log("📋 User lookup result:", foundUser ? "Found" : "Not found");
 
         if (!foundUser) {
@@ -48,7 +52,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         }
 
         console.log("Checking if user is disabled?");
-        if (foundUser.isActive) {
+        if (!foundUser.isActive || foundUser.isSuspended) {
             res.status(403).json(new ApiError(403, "Your account is disabled. Please contact support."));
             return;
         }
@@ -59,6 +63,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         if (!isPasswordMatch) {
             res.status(401).json(new ApiError(401, "Please provide the valid credentials."));
             return;
+        }
+
+        if (app === "student-console") {
+            const { payload, ...rest } = foundUser;
+            
         }
 
         const accessToken = generateToken({ id: foundUser.id as number, type: foundUser.type as User["type"] }, process.env.ACCESS_TOKEN_SECRET!, process.env.ACCESS_TOKEN_EXPIRY! as StringValue);
@@ -141,7 +150,7 @@ export const refresh = async (req: Request, res: Response, next: NextFunction) =
                 }
 
                 // Format user with payload (student data)
-                const foundUser = await userResponseFormat(rawUser);
+                const foundUser = await userService.modelToDto(rawUser);
                 if (!foundUser) {
                     res.status(401).json(new ApiError(404, "User formatting failed"));
                     return;

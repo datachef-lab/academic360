@@ -373,7 +373,7 @@ export default function MaterialsSettingsPage() {
     );
   }
 
-  if (!user?.isAdmin) {
+  if (user?.type !== "ADMIN") {
     return null;
   }
 

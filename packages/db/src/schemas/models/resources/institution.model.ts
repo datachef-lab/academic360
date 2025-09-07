@@ -13,7 +13,7 @@ export const institutionModel = pgTable("institutions", {
     degreeId: integer("degree_id_fk").references(() => degreeModel.id),
     addressId: integer("address_id_fk").references(() => addressModel.id),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

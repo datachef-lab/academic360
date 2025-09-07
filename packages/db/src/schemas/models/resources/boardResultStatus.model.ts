@@ -11,7 +11,7 @@ export const boardResultStatusModel = pgTable("board_result_status", {
     spclType: varchar({ length: 255 }).notNull(),
     result: boardResultTypeEnum(),
     sequence: integer().unique(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -15,7 +15,7 @@ export const boardSubjectModel = pgTable("board_subjects", {
     passingMarksTheory: doublePrecision("passing_marks_theory"),
     fullMarksPractical: doublePrecision("full_marks_practical"),
     passingMarksPractical: doublePrecision("passing_marks_practical"),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

@@ -7,7 +7,7 @@ export const getAllShifts = async (req: Request, res: Response) => {
 };
 
 export const getShiftById = async (req: Request, res: Response) => {
-  const shift = await shiftService.getShiftById(Number(req.params.id));
+  const shift = await shiftService.findById(Number(req.params.id));
   if (!shift) {res.status(404).json({ message: 'Shift not found' }); return };
   res.json(shift);
 };

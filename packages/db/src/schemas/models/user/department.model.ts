@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 export const departmentModel = pgTable("departments", {
     id: serial().primaryKey(),
@@ -8,6 +8,7 @@ export const departmentModel = pgTable("departments", {
     name: varchar({ length: 900 }).notNull().unique(),
     code: varchar({ length: 100 }).notNull().unique(),
     description: varchar({ length: 2000 }).notNull(),
+    isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

@@ -124,7 +124,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
       }
 
       // Use the user's rollNumber if available, or fall back to a default for testing
-      const rollNumber = student?.univlstexmrollno || "191017-11-0592";
+      const rollNumber = student?.rollNumber || "191017-11-0592";
 
       console.log("Fetching documents with:", {
         rollNumber,

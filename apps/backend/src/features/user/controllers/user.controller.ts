@@ -1,4 +1,3 @@
-
 import { db } from "@/db/index.js";
 import { NextFunction, Request, Response } from "express";
 import { userModel } from "@repo/db/schemas/models/user";
@@ -6,18 +5,46 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { ApiError } from "@/utils/ApiError.js";
 import { eq } from "drizzle-orm";
 import { handleError } from "@/utils/handleError.js";
-import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
+// import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
+import * as userService from "@/features/user/services/user.service.js";
+function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
+    return (req: Request, res: Response, next: NextFunction) => {
+        Promise.resolve(fn(req, res)).catch(next);
+    };
+}
+// import { asyncHandler } from "@/utils/helper.js";
+// import * as userService from "../services/user.service.js";
+
+export const getProfileInfo = asyncHandler(async (req: Request, res: Response) => {
+    const userId = Number(req.params.userId);
+    if (!userId || Number.isNaN(userId)) {
+        res.status(400).json({ message: "Invalid user id" });
+        return
+    }
+
+    const profile = await userService.findProfileInfo(userId);
+    if (!profile) {
+        res.status(404).json({ message: "Profile not found" });
+        return;
+    }
+
+    res.status(200).json(profile);
+
+});
+
+
+
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const { page,isAdmin, pageSize, type } = req.query;
-        const pageParsed = Math.max(Number(page)||1,1);
-        const pageSizeParsed =Math.max(Math.min(Number(pageSize)||10,100),1);
+        const { page, isAdmin, pageSize, type } = req.query;
+        const pageParsed = Math.max(Number(page) || 1, 1);
+        const pageSizeParsed = Math.max(Math.min(Number(pageSize) || 10, 100), 1);
         const isAdminCheck = String(isAdmin).toLowerCase() === "true";
 
 
-        const users = await findAllUsers(Number(pageParsed), Number(pageSizeParsed),isAdminCheck, type as typeof userTypeEnum.enumValues[number]);
+        const users = await userService.findAllUsers(Number(pageParsed), Number(pageSizeParsed), isAdminCheck, type as typeof userTypeEnum.enumValues[number]);
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {
@@ -29,7 +56,7 @@ export const getSearchedUsers = async (req: Request, res: Response, next: NextFu
     try {
         const { page, pageSize, searchText } = req.query;
 
-        const users = await searchUser(searchText as string, Number(page), Number(pageSize));
+        const users = await userService.searchUser(searchText as string, Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", users, "All users fetched successfully!"));
     } catch (error) {
@@ -44,7 +71,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
     }
 
     try {
-        const user = await findUserById(Number(id));
+        const user = await userService.findById(Number(id));
 
         if (user) {
             res.status(200).json(new ApiResponse(200, "SUCCESS", user, "User fetched successfully!"));
@@ -63,7 +90,7 @@ export const getUserByEmail = async (req: Request, res: Response, next: NextFunc
     }
 
     try {
-        const user = await findUserByEmail(email as string);
+        const user = await userService.findByEmail(email as string);
 
         if (user) {
             res.status(200).json(new ApiResponse(200, "SUCCESS", user, "User fetched successfully!"));
@@ -80,7 +107,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     const updatedData = req.body;
 
     try {
-        const updatedUser = await saveUser(+id, updatedData);
+        const updatedUser = await userService.saveUser(+id, updatedData);
 
         if (updatedUser) {
             res.status(200).json(new ApiResponse(200, "SUCCESS", updatedUser, "User updated successfully!"));
@@ -97,7 +124,7 @@ export const toggleDisableUser = async (req: Request, res: Response, next: NextF
 
     try {
         // Fetch the current user status
-        const user = await toggleUser(+id);
+        const user = await userService.toggleUser(+id);
 
         if (user) {
             res.status(200).json(

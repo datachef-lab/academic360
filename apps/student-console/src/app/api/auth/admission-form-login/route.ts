@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateApplicationFormToken, generateTokens, setApplicationFormCookies, setAuthCookies } from '@/lib/services/auth.service';
-import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
+// import { generateApplicationFormToken, generateTokens, setApplicationFormCookies, setAuthCookies } from '@/lib/services/auth.service';
+// import { findAccessControlByStudentId } from '@/lib/services/access-control.service';
 import { findStudentByApplicationId } from '@/lib/services/student.service';
 import { findByLoginIdAndPassword } from '@/lib/services/adm-general-info.service';
 
@@ -31,32 +31,32 @@ export async function POST(req: NextRequest) {
 
             let response: NextResponse<unknown> | undefined;
 
-            if (applicationForm?.formStatus === "APPROVED") {
-                const user = await findStudentByApplicationId(applicationForm.id!);
-                if (user) {
-                    const tokens = generateTokens(user);
+            // if (applicationForm?.formStatus === "APPROVED") {
+            //     const user = await findStudentByApplicationId(applicationForm.id!);
+            //     if (user) {
+            //         const tokens = generateTokens(user);
 
-                    const response = setAuthCookies(tokens);
-                    const accessControl = await findAccessControlByStudentId(user.id as number);
-                    return NextResponse.json({
-                        user: {
-                            id: user.id,
-                            name: user.name,
-                            uid: user.codeNumber,
-                            email: user.institutionalemail,
-                            isAdmin: user.isAdmin,
-                        },
-                        accessControl,
-                        accessToken: tokens.accessToken,
-                        redirectTo: '/dashboard'
-                    }, response);
-                }
-            }
-            else {
-                const token = generateApplicationFormToken(applicationForm!);
-                response = setApplicationFormCookies(token);
-                return NextResponse.json({ applicationForm }, response);
-            }
+            //         const response = setAuthCookies(tokens);
+            //         const accessControl = await findAccessControlByStudentId(user.id as number);
+            //         return NextResponse.json({
+            //             user: {
+            //                 id: user.id,
+            //                 name: user.name,
+            //                 uid: user.codeNumber,
+            //                 email: user.institutionalemail,
+            //                 isAdmin: user.isAdmin,
+            //             },
+            //             accessControl,
+            //             accessToken: tokens.accessToken,
+            //             redirectTo: '/dashboard'
+            //         }, response);
+            //     }
+            // }
+            // else {
+            //     const token = generateApplicationFormToken(applicationForm!);
+            //     response = setApplicationFormCookies(token);
+            //     return NextResponse.json({ applicationForm }, response);
+            // }
 
         } catch (error) {
             console.error("Error during adm-login:", error);

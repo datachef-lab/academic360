@@ -7,7 +7,7 @@ export const specializationModel = pgTable("specializations", {
     legacySpecializationId: integer("legacy_specialization_id"),
     name: varchar({ length: 255 }).notNull().unique(),
     sequence: integer(),
-    disabled: boolean().default(false),
+    isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

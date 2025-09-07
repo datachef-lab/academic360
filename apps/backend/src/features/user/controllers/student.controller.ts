@@ -1,12 +1,14 @@
 import { NextFunction, Request, Response } from "express";
-import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
+// import { addStudent, findAllStudent, findStudentById, removeStudent, saveStudent, searchStudent, searchStudentsByRollNumber, findFilteredStudents } from "@/features/user/services/student.service.js";
 import { StudentType } from "@/types/user/student.js";
 import { ApiError, ApiResponse, handleError } from "@/utils/index.js";
 import { boolean } from "drizzle-orm/mysql-core";
 
+import * as studentService from "@/features/user/services/student.service.js";
+
 export const createStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const newStudent = await addStudent(req.body as StudentType);
+        const newStudent = await studentService.addStudent(req.body as StudentType);
 
         res.status(201).json(new ApiResponse(201, "SUCCESS", newStudent, "Student Created!"));
     } catch (error) {
@@ -26,7 +28,7 @@ export const getAllStudents = async (req: Request, res: Response, next: NextFunc
             pageSize = "10";
         }
 
-        const students = await findAllStudent(Number(page), Number(pageSize));
+        const students = await studentService.findAllStudent(Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(201, "SUCCESS", students, "Students fetched!"));
     } catch (error) {
@@ -46,7 +48,7 @@ export const getSearchedStudents = async (req: Request, res: Response, next: Nex
             pageSize = "10";
         }
 
-        const students = await searchStudent(searchText as string, Number(page), Number(pageSize));
+        const students = await studentService.searchStudent(searchText as string, Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(201, "SUCCESS", students, "Students fetched!"));
     } catch (error) {
@@ -66,7 +68,7 @@ export const getSearchedStudentsByRollNumber = async (req: Request, res: Respons
             pageSize = "10";
         }
 
-        const students = await searchStudentsByRollNumber(searchText as string, Number(page), Number(pageSize));
+        const students = await studentService.searchStudentsByRollNumber(searchText as string, Number(page), Number(pageSize));
 
         res.status(200).json(new ApiResponse(200, "SUCCESS", students, "Students fetched!"));
     } catch (error) {
@@ -78,7 +80,7 @@ export const getStudentById = async (req: Request, res: Response, next: NextFunc
     try {
         const { id } = req.query;
 
-        const foundStudent = await findStudentById(Number(id));
+        const foundStudent = await studentService.findById(Number(id));
 
         if (!foundStudent) {
             res.status(404).json(new ApiError(404, `No student exist for id: ${id}`));
@@ -94,7 +96,7 @@ export const updateStudent = async (req: Request, res: Response, next: NextFunct
     try {
         const { id } = req.params;
 
-        const updatedStudent = await saveStudent(Number(id), req.body as StudentType);
+        const updatedStudent = await studentService.saveStudent(Number(id), req.body as StudentType);
 
         if (!updateStudent) {
             res.status(404).json(new ApiError(404, `No student exist for id: ${id}`));
@@ -110,7 +112,7 @@ export const deleteStudent = async (req: Request, res: Response, next: NextFunct
     try {
         const { id } = req.params;
 
-        const deletedStudent = await removeStudent(Number(id));
+        const deletedStudent = await studentService.removeStudent(Number(id));
 
         if (deletedStudent == null) {
             res.status(404).json(new ApiError(204, `No student exist for id: ${id}`));
@@ -132,7 +134,7 @@ export const getFilteredStudents = async (req: Request, res: Response,next:NextF
     try {
         const { page = 1, pageSize = 10, stream, year, semester, framework,export:isExport } = req.query;
         
-        const result = await findFilteredStudents({
+        const result = await studentService.findFilteredStudents({
             page: Number(page),
             pageSize: Number(pageSize),
             stream: stream as string,

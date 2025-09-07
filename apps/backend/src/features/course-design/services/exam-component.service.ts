@@ -11,28 +11,28 @@ const defaultExamComponents: ExamComponent[] = [
         shortName: "Theory",
         code: "TH",
         sequence: 1,
-        disabled: false,
+        isActive: true,
     },
     {
         name: "Practical",
         shortName: "Practical",
         code: "PR",
         sequence: 2,
-        disabled: false,
+        isActive: true,
     },
     {
         name: "Tutorial",
         shortName: "Tutorial",
         code: "TU",
         sequence: 5,
-        disabled: false,
+        isActive: true,
     },
     {
         name: "Viva",
         shortName: "Viva",
         code: "VIVA",
         sequence: 3,
-        disabled: false,
+        isActive: true,
     },
 
     {
@@ -40,7 +40,7 @@ const defaultExamComponents: ExamComponent[] = [
         shortName: "Project",
         code: "PROJ",
         sequence: 4,
-        disabled: false,
+        isActive: true,
     },
 ]
 

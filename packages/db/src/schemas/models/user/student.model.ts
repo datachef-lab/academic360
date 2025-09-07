@@ -6,7 +6,7 @@ import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
 import { applicationFormModel } from "@/schemas/models/admissions";
-import { sectionModel } from "../academics";
+import { sectionModel, shiftModel } from "../academics";
 import z from "zod";
 
 export const studentModel = pgTable("students", {
@@ -19,11 +19,15 @@ export const studentModel = pgTable("students", {
         .references(() => programCourseModel.id)
         .notNull(),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
-    rfid: varchar({ length: 255 }),
+    uid: varchar({ length: 255 }).notNull().unique(),
+    rfidNumber: varchar({ length: 255 }),
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
     rollNumber: varchar({ length: 255 }),
     sectionId: integer("section_id_fk").references(() => sectionModel.id),
+    shiftId: integer("shift_id_fk")
+        .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
+        .notNull(),
     classRollNumber: varchar({ length: 255 }),
     apaarId: varchar({ length: 255 }),
     abcId: varchar({ length: 255 }),
@@ -35,7 +39,6 @@ export const studentModel = pgTable("students", {
     notes: text(),
     active: boolean(),
     alumni: boolean(),
-    isSuspended: boolean().default(false),
     leavingDate: timestamp(),
     leavingReason: text(),
     createdAt: timestamp().notNull().defaultNow(),
