@@ -1,4 +1,4 @@
-import { AccommodationT, AddressT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetails, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardT, Class, ClassT, EligibilityCriteria, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, Shift, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategory, StudentCategoryT, TransportDetailsT, UserT } from "@/schemas";
+import { AccommodationT, AddressT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetails, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardT, Class, ClassT, EligibilityCriteria, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, Shift, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategory, StudentCategoryT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
 
@@ -23,11 +23,17 @@ export interface AdmissionGeneralInfoDto extends Omit<AdmissionGeneralInfoT, "el
     transportDetails: TransportDetailsT | null;
 }
 
+export interface BoardSubjectDto extends Omit<BoardSubjectT, "subjectId"> {
+    subject: SubjectT;
+}
+export interface StudentAcademicSubjectsDto extends Omit<StudentAcademicSubjectsT, "boardSubjectId"> {
+    boardSubject: BoardSubjectDto;
+}
 export interface AdmissionAcademicInfoDto extends Omit<AdmissionAcademicInfoT, "boardId" | "lastSchoolAddress"> {
     applicationForm: ApplicationFormDto | null;
     board: BoardT | null;
     lastSchoolAddress: AddressDto | null;
-    subjects: StudentAcademicSubjectsT[] | null;
+    subjects: StudentAcademicSubjectsDto[] | null;
 }
 
 export interface AdmissionCourseDetailsDto extends Omit<AdmissionCourseDetailsT, "streamId" | "programCourseId" | "classId" | "shiftId" | "eligibilityCriteriaId" | "studentCategoryId"> {

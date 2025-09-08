@@ -20,6 +20,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 
 export default function DashboardLayout({
   children,
@@ -32,27 +33,29 @@ export default function DashboardLayout({
   const { student } = useStudent();
 
   useEffect(() => {
-    if (user) {
-      // If the authenticated user's type is not STUDENT, show dialog then logout
-      const type = (user as any)?.userType || (user as any)?.type || (user as any)?.role;
-      const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
-      if (!isStudent) {
-        setInvalidUserOpen(true);
-        // Auto logout shortly after showing the dialog
-        const t = setTimeout(() => {
-          logout();
-        }, 1500);
-        return () => clearTimeout(t);
-      }
-    }
-  }, [user, logout]);
+    // Wait until auth state is resolved to avoid false negatives on refresh
+    if (isLoading) return;
+    if (!user) return;
 
-  const getStudentImageUrl = (uid?: string) => {
+    // If the authenticated user's type is not STUDENT, show dialog then logout
+    const userType = user.type;
+    const isStudent = userType === "STUDENT";
+    if (!isStudent) {
+      setInvalidUserOpen(true);
+      // Auto logout shortly after showing the dialog
+      const t = setTimeout(() => {
+        logout();
+      }, 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user, isLoading, logout]);
+
+  const getStudentImageUrl = (uid: string) => {
     // if (!user?.payload?.academicIdentifier?.uid) return null;
-    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${"student"}.jpg`;
+    return `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${uid}.jpg`;
   };
 
-  const getStudentImage = (uid?: string) => {
+  const getStudentImage = (uid: string) => {
     const imageUrl = getStudentImageUrl(uid);
 
     if (!imageUrl) {
@@ -153,7 +156,14 @@ export default function DashboardLayout({
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2">
-              {(() => {
+              <Avatar
+              // src={getStudentImage(user?.payload.uid!)}
+              // alt={user?.name || "User"}
+              // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
+              >
+                <AvatarImage src={getStudentImageUrl(user?.payload.uid!)} />
+              </Avatar>
+              {/* {(() => {
                 const initials = (user?.name || "U")
                   .toString()
                   .split(" ")
@@ -169,7 +179,7 @@ export default function DashboardLayout({
                     {initials}
                   </div>
                 );
-              })()}
+              })()} */}
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 overflow-y-scroll">

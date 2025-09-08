@@ -13,6 +13,14 @@ export async function findById(id: number) {
   return await modelToDto(foundStaff);
 }
 
+export async function findByUserId(userId: number) {
+  const [foundStaff] = await db
+    .select()
+    .from(staffModel)
+    .where(eq(staffModel.userId, userId));
+  return await modelToDto(foundStaff);
+}
+
 export async function modelToDto(
   staff: Staff | null,
 ): Promise<StaffDto | null> {

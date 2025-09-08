@@ -4,7 +4,7 @@ import { db } from "@/db/index.js";
 
 import { User, userModel } from "@repo/db/schemas/models/user";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
-import { findStudentByUserId } from "./student.service.js";
+// import { findStudentByUserId } from "./student.service.js";
 import { findAll } from "@/utils/helper.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
 import { number } from "zod";
@@ -19,10 +19,12 @@ import {
   HealthDto,
   AccommodationDto,
   AddressDto,
+  PersonDto,
 } from "@repo/db/index.js";
 import {
   AdmissionGeneralInfoDto,
   ApplicationFormDto,
+  StudentAcademicSubjectsDto,
 } from "@repo/db/dtos/admissions";
 import {
   admissionGeneralInfoModel,
@@ -53,7 +55,17 @@ import {
   AdmissionAcademicInfo,
   AdmissionAdditionalInfo,
   AdmissionCourseDetails,
+  studentAcademicSubjectModel,
+  StudentAcademicSubjects,
+  boardSubjectModel,
+  subjectModel,
 } from "@repo/db/schemas";
+import { personModel, familyModel } from "@repo/db/schemas/models/user";
+import {
+  qualificationModel,
+  occupationModel,
+} from "@repo/db/schemas/models/resources";
+import { annualIncomeModel } from "@repo/db/schemas/models/resources";
 import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
 import * as studentService from "./student.service.js";
 import * as staffService from "./staff.service.js";
@@ -245,9 +257,9 @@ export async function modelToDto(givenUser: User): Promise<UserDto | null> {
   let payload: StudentDto | StaffDto | null = null;
 
   if (givenUser.type == "STUDENT") {
-    payload = (await studentService.findById(givenUser.id as number))!;
+    payload = (await studentService.findByUserId(givenUser.id as number))!;
   } else {
-    payload = (await staffService.findById(givenUser.id as number))!;
+    payload = (await staffService.findByUserId(givenUser.id as number))!;
   }
 
   return { ...givenUser, payload };
@@ -266,9 +278,7 @@ export async function findProfileInfo(
   const isStudent = coreUser.type === "STUDENT";
 
   // Get student by userId to derive application form (only for student)
-  const student = isStudent
-    ? await studentService.findStudentByUserId(userId)
-    : null;
+  const student = isStudent ? await studentService.findByUserId(userId) : null;
 
   // Application form
   const applicationFormId = student?.applicationFormAbstract?.id ?? null;
@@ -362,6 +372,16 @@ export async function findProfileInfo(
       )[0] ?? null)
     : null;
 
+  // Family details (via Additional Info)
+  const family = additionalInfo?.familyDetailsId
+    ? ((
+        await db
+          .select()
+          .from(familyModel)
+          .where(eq(familyModel.id, additionalInfo.familyDetailsId))
+      )[0] ?? null)
+    : null;
+
   const courseApplications = applicationForm?.id
     ? await db
         .select()
@@ -400,7 +420,7 @@ export async function findProfileInfo(
 
   const result: ProfileInfo = {
     applicationFormDto,
-    familyDetails: null,
+    familyDetails: family ? await mapFamilyToDto(family) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
     emergencyContactDetails: emergencyContactDetails ?? null,
@@ -499,13 +519,47 @@ async function mapAcademicInfoToDto(
       : null,
     a.lastSchoolAddress ? fetchAddressDto(a.lastSchoolAddress) : null,
   ]);
+
+  const foundSubjects = await db
+    .select()
+    .from(studentAcademicSubjectModel)
+    .where(eq(studentAcademicSubjectModel.admissionAcademicInfoId, a.id!));
+
+  const subjects: StudentAcademicSubjectsDto[] = [];
+  for (const subject of foundSubjects) {
+    subjects.push(await mapStudentAcademicSubjectToDto(subject));
+  }
   return {
     ...a,
     applicationForm: null,
     board: board ?? undefined,
     lastSchoolAddress: lastSchoolAddress ?? undefined,
-    subjects: null,
+    subjects: subjects,
   } as any;
+}
+
+async function mapStudentAcademicSubjectToDto(
+  s: StudentAcademicSubjects,
+): Promise<StudentAcademicSubjectsDto> {
+  const { boardSubjectId, ...rest } = s;
+
+  const [boardSubject] = await db
+    .select()
+    .from(boardSubjectModel)
+    .where(eq(boardSubjectModel.id, boardSubjectId));
+
+  const [subject] = await db
+    .select()
+    .from(subjectModel)
+    .where(eq(subjectModel.id, boardSubject.subjectId));
+
+  return {
+    ...s,
+    boardSubject: {
+      ...boardSubject,
+      subject: subject!,
+    },
+  } as StudentAcademicSubjectsDto;
 }
 
 async function mapAdditionalInfoToDto(
@@ -609,6 +663,68 @@ async function mapAccommodationToDto(
     ...a,
     address,
   };
+}
+
+// Person and Family mappers
+async function mapPersonToDto(
+  personId: number | null | undefined,
+): Promise<PersonDto | null> {
+  if (!personId) return null;
+  const [p] = await db
+    .select()
+    .from(personModel)
+    .where(eq(personModel.id, personId));
+  if (!p) return null;
+
+  const [qualification, occupation, officeAddress] = await Promise.all([
+    p.qualificationId
+      ? db
+          .select()
+          .from(qualificationModel)
+          .where(eq(qualificationModel.id, p.qualificationId))
+          .then((r) => r[0] ?? null)
+      : null,
+    p.occupationId
+      ? db
+          .select()
+          .from(occupationModel)
+          .where(eq(occupationModel.id, p.occupationId))
+          .then((r) => r[0] ?? null)
+      : null,
+    p.officeAddressId ? fetchAddressDto(p.officeAddressId) : null,
+  ]);
+
+  return {
+    ...p,
+    qualification: qualification ?? undefined,
+    occupation: occupation ?? undefined,
+    officeAddress: officeAddress ?? undefined,
+  } as PersonDto;
+}
+
+async function mapFamilyToDto(
+  f: typeof familyModel.$inferSelect,
+): Promise<ProfileInfo["familyDetails"]> {
+  const [father, mother, guardian, annualIncome] = await Promise.all([
+    mapPersonToDto(f.fatherDetailsId ?? null),
+    mapPersonToDto(f.motherDetailsId ?? null),
+    mapPersonToDto(f.guardianDetailsId ?? null),
+    f.annualIncomeId
+      ? db
+          .select()
+          .from(annualIncomeModel)
+          .where(eq(annualIncomeModel.id, f.annualIncomeId))
+          .then((r) => r[0] ?? null)
+      : null,
+  ]);
+
+  return {
+    ...f,
+    father: father ?? undefined,
+    mother: mother ?? undefined,
+    guardian: guardian ?? undefined,
+    annualIncome: annualIncome ?? undefined,
+  } as any;
 }
 
 async function fetchAddressDto(

@@ -2,22 +2,23 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Calendar, Plus, Edit, Trash2, Download, ChevronsUpDown, Check } from "lucide-react";
+import { Pagination } from "@/components/ui/pagination";
+import { useTablePagination } from "@/hooks/useTablePagination";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Calendar, Plus, Edit, Trash2, Download } from "lucide-react";
-import { Pagination } from "@/components/ui/pagination";
-import { useTablePagination } from "@/hooks/useTablePagination";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 
 // Mock data - expanded for testing scroll behavior
 const semesterAvailability = [
@@ -231,11 +232,13 @@ const programCourses = [
 ];
 
 const semesters = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"];
+const subjectCategories = ["MAJOR", "MINOR", "AECC", "DSCC", "MDC", "IDC", "VAC", "CVAC"];
 
 export default function SemesterAvailabilityPage() {
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   // Use table pagination hook
   const tableData = useTablePagination({
@@ -261,6 +264,56 @@ export default function SemesterAvailabilityPage() {
   const endIndex = startIndex + tableData.itemsPerPage;
   const paginatedAvailability = filteredAvailability.slice(startIndex, endIndex);
 
+  // Compute a display subject category based on program course (for demo)
+  const getSubjectCategory = (programCourse: string) => {
+    if (programCourse.includes("Commerce")) return "MAJOR";
+    if (programCourse.includes("Business Administration")) return "AECC";
+    if (programCourse.includes("Computer Applications")) return "DSCC";
+    if (programCourse.includes("Information Technology")) return "VAC";
+    return "MAJOR";
+  };
+
+  // Helpers
+  const toRoman = (s: string) => {
+    const map: Record<string, string> = {
+      "1st": "I",
+      "2nd": "II",
+      "3rd": "III",
+      "4th": "IV",
+      "5th": "V",
+      "6th": "VI",
+      "7th": "VII",
+      "8th": "VIII",
+    };
+    return map[s] || s;
+  };
+
+  // Add dialog state (rows)
+  type AddRow = { subjectCategory: string; classes: string[] };
+  const [addRows, setAddRows] = useState<AddRow[]>([{ subjectCategory: "", classes: [] }]);
+  const addAddRow = () => setAddRows((p) => [...p, { subjectCategory: "", classes: [] }]);
+  const deleteAddRow = (idx: number) => setAddRows((p) => p.filter((_, i) => i !== idx));
+  const updateAddRow = (idx: number, patch: Partial<AddRow>) =>
+    setAddRows((p) => p.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  // Edit dialog state (single item)
+  const [editCategory, setEditCategory] = useState<string>("");
+  const [editClasses, setEditClasses] = useState<string[]>([]);
+  const openEdit = (index: number) => {
+    const item = filteredAvailability[index];
+    if (!item) return;
+    setEditCategory(getSubjectCategory(item.programCourse));
+    setEditClasses(item.availableSemesters);
+    setIsEditDialogOpen(true);
+  };
+
+  const saveAdd = () => {
+    setIsAddDialogOpen(false);
+  };
+  const saveEdit = () => {
+    setIsEditDialogOpen(false);
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Fixed Header */}
@@ -277,7 +330,7 @@ export default function SemesterAvailabilityPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={() => setIsAddDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -342,54 +395,55 @@ export default function SemesterAvailabilityPage() {
         </div>
       </div>
 
-      {/* Table with Fixed Header */}
+      {/* Table with Sticky Header */}
       <div className="flex-1 px-4 min-h-0">
         <Card className="h-full flex flex-col">
           <CardContent className="p-0 h-full flex flex-col">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-gray-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-100">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Subject</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Code</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Program-Course</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Available Semesters</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Credits</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Status</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Last Updated</TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-900">Actions</TableHead>
+            {/* Scrollable area with sticky header */}
+            <div className="flex-1 overflow-auto">
+              <Table className="table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-gray-100">
+                  <TableRow>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-16 border-r border-gray-300">
+                      Sr. No.
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-64 border-r border-gray-300">
+                      Subject Category
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300">
+                      Classes
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 w-32 border-r border-gray-300">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-center bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
-              </Table>
-            </div>
-
-            {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto">
-              <Table>
                 <TableBody>
-                  {paginatedAvailability.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.subject}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{item.subjectCode}</Badge>
+                  {paginatedAvailability.map((item, index) => (
+                    <TableRow key={item.id} className="border-b border-gray-200 hover:bg-gray-50">
+                      <TableCell className="w-16 border-r border-gray-300">{startIndex + index + 1}</TableCell>
+                      <TableCell className="w-64 border-r border-gray-300">
+                        <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50">
+                          {getSubjectCategory(item.programCourse)}
+                        </Badge>
                       </TableCell>
-                      <TableCell className="max-w-xs truncate">{item.programCourse}</TableCell>
-                      <TableCell>
+                      <TableCell className="border-r border-gray-300">
                         <div className="flex flex-wrap gap-1">
-                          {item.availableSemesters.map((semester, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {semester}
+                          {item.availableSemesters.map((semester, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                            >
+                              {toRoman(semester)}
                             </Badge>
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
-                          {item.credits}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="w-32 border-r border-gray-300">
                         <Badge
                           variant="outline"
                           className={
@@ -398,18 +452,15 @@ export default function SemesterAvailabilityPage() {
                               : "border-red-500 text-red-700 bg-red-50"
                           }
                         >
-                          {item.isActive ? "Active" : "Inactive"}
+                          {item.isActive ? "Available" : "Restricted"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
-                        {new Date(item.lastUpdated).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm">
+                      <TableCell className="w-24 border-r border-gray-300">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(index)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -438,58 +489,178 @@ export default function SemesterAvailabilityPage() {
         />
       </div>
 
+      {/* Add Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl h-[75vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Add Semester Availability</DialogTitle>
-            <DialogDescription>Configure semester availability for a subject.</DialogDescription>
+            <DialogDescription>Fill rows, then save.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div>
-              <Label htmlFor="subject">Subject</Label>
-              <Input id="subject" placeholder="e.g., Financial Accounting" />
+          <div className="border rounded-md flex-1 min-h-[18rem]">
+            <div className="h-[50vh] overflow-auto">
+              <Table className="table-fixed">
+                <TableHeader className="sticky top-0 z-10 bg-gray-100">
+                  <TableRow>
+                    <TableHead className="w-16 border-r border-gray-300">Sr. No.</TableHead>
+                    <TableHead className="w-64 border-r border-gray-300">Subject Category</TableHead>
+                    <TableHead className="w-[20rem] border-r border-gray-300">Classes</TableHead>
+                    <TableHead className="text-center w-24">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {addRows.map((row, idx) => (
+                    <TableRow key={idx} className="hover:bg-gray-50">
+                      <TableCell className="w-16 border-r border-gray-200">{idx + 1}</TableCell>
+                      <TableCell className="w-64 border-r border-gray-200">
+                        <Select
+                          value={row.subjectCategory}
+                          onValueChange={(v) => updateAddRow(idx, { subjectCategory: v })}
+                        >
+                          <SelectTrigger className="w-64">
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {subjectCategories.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {c}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="w-[20rem] border-r border-gray-200">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              className="w-full justify-between min-h-10 h-auto"
+                            >
+                              {row.classes.length === 0 ? (
+                                <span className="text-muted-foreground">Select semesters</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1 items-center justify-start h-auto">
+                                  {row.classes.map((s) => (
+                                    <Badge
+                                      key={s}
+                                      variant="outline"
+                                      className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                                    >
+                                      {toRoman(s)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 p-0 max-h-64 overflow-auto" align="start">
+                            <Command className="max-h-64 overflow-auto">
+                              <CommandInput placeholder="Search semesters..." className="text-gray-700" />
+                              <CommandEmpty>No semesters</CommandEmpty>
+                              <CommandGroup>
+                                {semesters.map((s) => (
+                                  <CommandItem
+                                    key={s}
+                                    onSelect={() => {
+                                      const exists = row.classes.includes(s);
+                                      const next = exists ? row.classes.filter((v) => v !== s) : [...row.classes, s];
+                                      updateAddRow(idx, { classes: next });
+                                    }}
+                                    className="text-gray-700"
+                                  >
+                                    <Check
+                                      className={`mr-2 h-4 w-4 ${row.classes.includes(s) ? "opacity-100" : "opacity-0"}`}
+                                    />
+                                    {toRoman(s)}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-600 hover:text-red-700"
+                          onClick={() => deleteAddRow(idx)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <Button onClick={addAddRow} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Plus className="h-4 w-4 mr-2" /> Add Row
+            </Button>
+            <DialogFooter className="m-0 p-0">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveAdd} className="bg-blue-600 hover:bg-blue-700 text-white">
+                Save
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Edit Semester Availability</DialogTitle>
+            <DialogDescription>Update subject category and available semesters.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
             <div>
-              <Label htmlFor="subjectCode">Subject Code</Label>
-              <Input id="subjectCode" placeholder="e.g., FA101" />
-            </div>
-            <div>
-              <Label htmlFor="programCourse">Program-Course</Label>
-              <Select>
+              <div className="text-sm font-medium mb-1">Subject Category</div>
+              <Select value={editCategory} onValueChange={setEditCategory}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Program-Course" />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {programCourses.map((programCourse) => (
-                    <SelectItem key={programCourse} value={programCourse}>
-                      {programCourse}
+                  {subjectCategories.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label htmlFor="credits">Credits</Label>
-              <Input id="credits" type="number" placeholder="4" />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="availableSemesters">Available Semesters</Label>
-              <Input id="availableSemesters" placeholder="e.g., 1st, 2nd, 3rd" />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="isActive">Active Status</Label>
-              <div className="flex items-center space-x-2 mt-2">
-                <Switch id="isActive" />
-                <Label htmlFor="isActive">Enable this availability</Label>
+              <div className="text-sm font-medium mb-2">Semesters</div>
+              <div className="grid grid-cols-4 gap-2">
+                {semesters.map((s) => (
+                  <label key={s} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={editClasses.includes(s)}
+                      onCheckedChange={(v) => {
+                        const checked = Boolean(v);
+                        setEditClasses((prev) =>
+                          checked ? Array.from(new Set([...prev, s])) : prev.filter((x) => x !== s),
+                        );
+                      }}
+                    />
+                    <span>{toRoman(s)}</span>
+                  </label>
+                ))}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => setIsAddDialogOpen(false)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              Add Availability
+            <Button onClick={saveEdit} className="bg-blue-600 hover:bg-blue-700 text-white">
+              Update
             </Button>
           </DialogFooter>
         </DialogContent>

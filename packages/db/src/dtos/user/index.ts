@@ -10,6 +10,7 @@ import { ApplicationFormDto } from "../admissions";
 export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId" | "sectionId" | "shiftId"> {
     applicationFormAbstract: ApplicationFormT | null;
     programCourse: ProgramCourseDto;
+    personalDetails: PersonalDetailsDto | null;
     specialization: SpecializationT | null;
     section: SectionT | null;
     shift: ShiftT | null;

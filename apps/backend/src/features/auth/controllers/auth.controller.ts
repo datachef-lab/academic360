@@ -110,8 +110,8 @@ export const login = async (
     // Create secure cookie with refresh token
     res.cookie("jwt", refreshToken, {
       httpOnly: true, // Accessible only by the web server
-      secure: false, // Only sent over HTTPS
-      // sameSite: "none", // Cross-site request forgery protection
+      secure: true, // Required when SameSite=None; ensures HTTPS
+      sameSite: "none", // Allow cross-site cookie for frontend on different origin
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
@@ -163,8 +163,8 @@ export const postGoogleLogin = async (
     // Create secure cookie with refresh token
     res.cookie("jwt", refreshToken, {
       httpOnly: true, // Accessible only by the web server
-      secure: false, // Only sent over HTTPS
-      // sameSite: "none", // Cross-site request forgery protection
+      secure: true, // Required when SameSite=None; ensures HTTPS
+      sameSite: "none", // Allow cross-site cookie for frontend on different origin
       maxAge: 1000 * 60 * 60 * 24, // 1 day
     });
 
@@ -256,7 +256,7 @@ export const logout = async (
     res.clearCookie("jwt", {
       httpOnly: true,
       secure: true,
-      // sameSite: "none",
+      sameSite: "none",
     });
 
     // Log out from Google (passport.js logout)

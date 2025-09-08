@@ -115,9 +115,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     displayFlag,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {user != null && accessToken != null && displayFlag && children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

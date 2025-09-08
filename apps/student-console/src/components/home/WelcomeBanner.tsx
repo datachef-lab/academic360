@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function WelcomeBanner({ student }: { student: StudentDto }) {
   const { user } = useAuth();
+
   const today = new Date();
   const dateString = today.toLocaleDateString("en-US", {
     day: "numeric",
@@ -30,7 +31,7 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
 
       <div className="absolute right-0 bottom-0 top-0 -mr-10 md:mr-0 z-0 hidden sm:flex items-center justify-center">
         <Image
-          src={`${process.env.NEXT_PUBLIC_URL!}/illustrations/welcome-illustration-male.png`}
+          src={`${process.env.NEXT_PUBLIC_URL!}/illustrations/${student?.personalDetails?.gender === "MALE" ? "welcome-illustration-male.png" : "welcome-illustration-female.png"}`}
           alt="Welcome Illustration"
           width={320}
           height={220}

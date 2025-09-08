@@ -1,2 +1,5 @@
-08-09-2025	02:44:17	a35b83f4-6088-4cd8-9ce7-a7e502e10104	GET	/api/users/5/profile	http://localhost:3000
-08-09-2025	02:44:15	822020e4-12cc-4bea-8002-dfffb387fc54	GET	/api/users/5/profile	http://localhost:3000
+08-09-2025	17:57:56	22e814a4-38d5-4f72-8dc0-c89dc613f8d1	GET	/api/users/3/profile	http://localhost:3000
+08-09-2025	17:57:55	377ed1ca-d025-486c-87fc-f495390dd3f1	GET	/api/users/3/profile	http://localhost:3000
+08-09-2025	17:57:54	718ba690-89eb-4fe8-b54f-f838008e43b7	GET	/auth/refresh	http://localhost:3000
+08-09-2025	17:57:53	19c03f4f-b335-47f4-bb8d-efa20031b8dc	OPTIONS	/api/users/3/profile	http://localhost:3000
+08-09-2025	17:57:53	77136c93-f323-43d3-aef5-a4db23e8593a	GET	/api/users/3/profile	http://localhost:3000

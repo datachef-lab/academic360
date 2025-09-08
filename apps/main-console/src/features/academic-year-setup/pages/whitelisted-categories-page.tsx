@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +15,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Shield, Plus, Edit, Trash2, Download } from "lucide-react";
+import { Shield, Plus, Edit, Trash2, Download, X } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { useTablePagination } from "@/hooks/useTablePagination";
 
@@ -24,46 +24,53 @@ import { useTablePagination } from "@/hooks/useTablePagination";
 const whitelistedCategories = [
   {
     id: 1,
-    categoryName: "Core Business",
-    description: "Essential business subjects",
-    subjects: ["Accounting", "Finance", "Marketing"],
-    programCourses: [
-      "B.COM (H) - Commerce & Management",
-      "BBA - Business Administration",
-      "BCA - Computer Applications",
-    ],
-    priority: "High",
+    subjectCategory: "MAJOR",
+    description: "Core major subjects for business programs",
+    programCourses: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
     isActive: true,
   },
   {
     id: 2,
-    categoryName: "Technical Skills",
-    description: "Programming and technical subjects",
-    subjects: ["Java", "Python", "Database Management"],
-    programCourses: ["BCA - Computer Applications", "B.Sc (IT) - Information Technology"],
-    priority: "High",
-    isActive: true,
-  },
-  {
-    id: 3,
-    categoryName: "General Education",
-    description: "General education subjects",
-    subjects: ["English Literature", "Environmental Studies", "Philosophy"],
+    subjectCategory: "MINOR",
+    description: "Minor subjects to complement major studies",
     programCourses: [
       "B.COM (H) - Commerce & Management",
       "BBA - Business Administration",
       "BCA - Computer Applications",
     ],
-    priority: "Low",
-    isActive: false,
+    isActive: true,
+  },
+  {
+    id: 3,
+    subjectCategory: "AECC",
+    description: "Ability Enhancement Compulsory Courses",
+    programCourses: [
+      "B.COM (H) - Commerce & Management",
+      "BBA - Business Administration",
+      "BCA - Computer Applications",
+      "B.Sc (IT) - Information Technology",
+    ],
+    isActive: true,
   },
   {
     id: 4,
-    categoryName: "Specialized Electives",
-    description: "Advanced specialized subjects",
-    subjects: ["International Business", "Digital Marketing", "AI & Machine Learning"],
+    subjectCategory: "DSCC",
+    description: "Discipline Specific Core Courses",
+    programCourses: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
+    isActive: true,
+  },
+  {
+    id: 5,
+    subjectCategory: "MDC",
+    description: "Multidisciplinary Courses",
+    programCourses: ["BCA - Computer Applications", "B.Sc (IT) - Information Technology"],
+    isActive: false,
+  },
+  {
+    id: 6,
+    subjectCategory: "IDC",
+    description: "Interdisciplinary Courses",
     programCourses: ["BBA - Business Administration", "B.Sc (IT) - Information Technology"],
-    priority: "Medium",
     isActive: true,
   },
 ];
@@ -75,17 +82,75 @@ const programCourses = [
   "B.Sc (IT) - Information Technology",
 ];
 
-const priorities = ["High", "Medium", "Low"];
-
 export default function WhitelistedCategoriesPage() {
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
-  const [selectedPriority, setSelectedPriority] = useState("");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
+
+  // Form state
+  const subjectCategoryOptions = useMemo(
+    () => Array.from(new Set(whitelistedCategories.map((c) => c.subjectCategory))),
+    [],
+  );
+  const [formSubjectCategory, setFormSubjectCategory] = useState<string>("");
+  const [formDescription, setFormDescription] = useState<string>("");
+  const [formSelectedCourses, setFormSelectedCourses] = useState<string[]>([]);
+  const [formIsActive, setFormIsActive] = useState<boolean>(true);
+  const [availableSearch, setAvailableSearch] = useState<string>("");
+
+  const availableCourses = useMemo(
+    () => programCourses.filter((c) => !formSelectedCourses.includes(c)),
+    [formSelectedCourses],
+  );
+
+  const filteredAvailableCourses = useMemo(
+    () => availableCourses.filter((c) => c.toLowerCase().includes(availableSearch.trim().toLowerCase())),
+    [availableCourses, availableSearch],
+  );
+
+  const openAddDialog = () => {
+    setDialogMode("add");
+    setFormSubjectCategory("");
+    setFormDescription("");
+    setFormSelectedCourses([]);
+    setFormIsActive(true);
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (item: (typeof whitelistedCategories)[number]) => {
+    setDialogMode("edit");
+    setFormSubjectCategory(item.subjectCategory);
+    setFormDescription(item.description);
+    setFormSelectedCourses(item.programCourses);
+    setFormIsActive(item.isActive);
+    setIsDialogOpen(true);
+  };
+
+  const handleAddCourse = (course: string) => {
+    setFormSelectedCourses((prev) => Array.from(new Set([...prev, course])));
+  };
+
+  const handleRemoveCourse = (course: string) => {
+    setFormSelectedCourses((prev) => prev.filter((c) => c !== course));
+  };
+
+  const handleSave = () => {
+    // For now, we only close the dialog. Integration with backend/state can be added later.
+    setIsDialogOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setFormSelectedCourses((prev) => Array.from(new Set([...prev, ...filteredAvailableCourses])));
+  };
+
+  const handleClearAll = () => {
+    setFormSelectedCourses([]);
+  };
 
   // Use table pagination hook
   const tableData = useTablePagination({
     data: whitelistedCategories,
-    searchFields: ["categoryName", "description"],
+    searchFields: ["subjectCategory", "description"],
     initialItemsPerPage: 10,
   });
 
@@ -95,8 +160,7 @@ export default function WhitelistedCategoriesPage() {
       !selectedProgramCourse ||
       selectedProgramCourse === "all" ||
       category.programCourses.includes(selectedProgramCourse);
-    const matchesPriority = !selectedPriority || selectedPriority === "all" || category.priority === selectedPriority;
-    return matchesProgramCourse && matchesPriority;
+    return matchesProgramCourse;
   });
 
   // Update pagination data with additional filters
@@ -122,7 +186,7 @@ export default function WhitelistedCategoriesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={openAddDialog}>
                 <Plus className="h-4 w-4 mr-2" />
                 Add
               </Button>
@@ -136,7 +200,7 @@ export default function WhitelistedCategoriesPage() {
         <div className="bg-background p-4 border border-gray-200 rounded-lg flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Search categories..."
+              placeholder="Search categories, programs..."
               className="w-64"
               value={tableData.searchTerm}
               onChange={(e) => tableData.setSearchTerm(e.target.value)}
@@ -160,25 +224,6 @@ export default function WhitelistedCategoriesPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={selectedPriority}
-              onValueChange={(value) => {
-                setSelectedPriority(value);
-                tableData.resetToFirstPage();
-              }}
-            >
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Filter by Priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Priorities</SelectItem>
-                {priorities.map((priority) => (
-                  <SelectItem key={priority} value={priority}>
-                    {priority}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
@@ -191,69 +236,54 @@ export default function WhitelistedCategoriesPage() {
       <div className="flex-1 px-4 min-h-0">
         <Card className="h-full flex flex-col">
           <CardContent className="p-0 h-full flex flex-col">
-            {/* Fixed Header */}
-            <div className="flex-shrink-0 border-b-2 border-gray-200">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-100">
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Category Name</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Description</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Subjects</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Programs</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Priority</TableHead>
-                    <TableHead className="bg-gray-100 font-semibold text-gray-900">Status</TableHead>
-                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-900">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-            </div>
-
-            {/* Scrollable Body */}
             <div className="flex-1 overflow-auto">
               <Table>
+                <TableHeader className="sticky top-0 z-10">
+                  <TableRow className="bg-gray-100">
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 w-16">
+                      Sr. No.
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 w-32">
+                      Subject Category
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 min-w-48">
+                      Description
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 min-w-64">
+                      Program-Courses
+                    </TableHead>
+                    <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300 w-24">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-right bg-gray-100 font-semibold text-gray-900 w-24">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
-                  {paginatedCategories.map((category) => (
-                    <TableRow key={category.id}>
-                      <TableCell className="font-medium">{category.categoryName}</TableCell>
-                      <TableCell className="max-w-xs truncate">{category.description}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {category.subjects.slice(0, 2).map((subject, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {subject}
-                            </Badge>
-                          ))}
-                          {category.subjects.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{category.subjects.length - 2} more
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
-                          {category.programCourses.map((programCourse, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
-                              {programCourse}
-                            </Badge>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            category.priority === "High"
-                              ? "border-red-500 text-red-700 bg-red-50"
-                              : category.priority === "Medium"
-                                ? "border-orange-500 text-orange-700 bg-orange-50"
-                                : "border-blue-500 text-blue-700 bg-blue-50"
-                          }
-                        >
-                          {category.priority}
+                  {paginatedCategories.map((category, index) => (
+                    <TableRow key={category.id} className="hover:bg-gray-50">
+                      <TableCell className="font-medium border-r border-gray-200">{startIndex + index + 1}</TableCell>
+                      <TableCell className="border-r border-gray-200">
+                        <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50">
+                          {category.subjectCategory}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="border-r border-gray-200 max-w-xs truncate">
+                        {category.description}
+                      </TableCell>
+                      <TableCell className="border-r border-gray-200">
+                        <div className="flex flex-wrap gap-1">
+                          {category.programCourses.map((programCourse, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                            >
+                              {programCourse.split(" - ")[0]}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="border-r border-gray-200">
                         <Badge
                           variant="outline"
                           className={
@@ -267,7 +297,7 @@ export default function WhitelistedCategoriesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(category)}>
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
@@ -299,55 +329,147 @@ export default function WhitelistedCategoriesPage() {
         />
       </div>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Whitelisted Category</DialogTitle>
-            <DialogDescription>Create a new whitelisted subject category.</DialogDescription>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-4xl h-[70vh] flex flex-col">
+          <DialogHeader className="border-b pb-3">
+            <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Whitelisted Category</DialogTitle>
+            <DialogDescription>
+              {dialogMode === "add" ? "Create a new" : "Update the"} whitelisted subject category.
+            </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div>
-              <Label htmlFor="categoryName">Category Name</Label>
-              <Input id="categoryName" placeholder="e.g., Core Business" />
+
+          <div className="flex-1 pr-1 overflow-hidden">
+            {/* Row 1: Subject Category + Description */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Subject Category</Label>
+                <Select value={formSubjectCategory} onValueChange={setFormSubjectCategory}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjectCategoryOptions.map((cat) => (
+                      <SelectItem key={cat} value={cat}>
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Description</Label>
+                <Textarea
+                  className="mt-1"
+                  placeholder="Describe the subject category..."
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="priority">Priority</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorities.map((priority) => (
-                    <SelectItem key={priority} value={priority}>
-                      {priority}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" placeholder="Describe the category..." />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="subjects">Subjects (comma-separated)</Label>
-              <Input id="subjects" placeholder="e.g., Accounting, Finance, Marketing" />
-            </div>
-            <div className="col-span-2">
-              <Label htmlFor="isActive">Active Status</Label>
-              <div className="flex items-center space-x-2 mt-2">
-                <Switch id="isActive" />
-                <Label htmlFor="isActive">Enable this category</Label>
+
+            {/* Row 2: Dual list for Program-Courses */}
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {/* Selected */}
+              <div className="border rounded-md p-3 border-green-200">
+                <div className="flex items-center justify-between mb-2 bg-green-50 border border-green-200 rounded-md px-2 py-1">
+                  <Label className="font-semibold text-green-700">Selected Program-Courses</Label>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="h-7 px-2" onClick={handleClearAll}>
+                      Clear All
+                    </Button>
+                    <span className="text-xs text-muted-foreground">{formSelectedCourses.length}</span>
+                  </div>
+                </div>
+                <div className="space-y-2 h-64 overflow-auto">
+                  {formSelectedCourses.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      No program-courses selected
+                    </div>
+                  ) : (
+                    formSelectedCourses.map((course) => (
+                      <div key={course} className="flex items-center justify-between gap-2 border rounded-md p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">{course.split(" - ")[0]}</span>
+                          {/* <span className="text-xs text-green-700">Selected</span> */}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleRemoveCourse(course)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Available */}
+              <div className="border rounded-md p-3 border-blue-200">
+                <div className="flex items-center justify-between mb-2 bg-blue-50 border border-blue-200 rounded-md px-2 py-1">
+                  <Label className="font-semibold text-blue-700">Available Program-Courses</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      className="h-7 px-2 bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={handleSelectAll}
+                    >
+                      Select All
+                    </Button>
+                    <span className="text-xs text-muted-foreground">{filteredAvailableCourses.length}</span>
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <Input
+                    placeholder="Search available courses..."
+                    value={availableSearch}
+                    onChange={(e) => setAvailableSearch(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2 h-64 overflow-auto">
+                  {filteredAvailableCourses.length === 0 ? (
+                    <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                      No available program-courses
+                    </div>
+                  ) : (
+                    filteredAvailableCourses.map((course) => (
+                      <div key={course} className="flex items-center justify-between gap-2 border rounded-md p-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">{course.split(" - ")[0]}</span>
+                          {/* <span className="text-xs text-gray-600">Available</span> */}
+                        </div>
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={() => handleAddCourse(course)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setIsAddDialogOpen(false)} className="bg-blue-600 hover:bg-blue-700 text-white">
-              Add Category
-            </Button>
+
+          <DialogFooter className="mt-4 border-t pt-3 z-10">
+            <div className="w-full flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Checkbox id="active" checked={formIsActive} onCheckedChange={(v) => setFormIsActive(Boolean(v))} />
+                <Label htmlFor="active">Active</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  {dialogMode === "add" ? "Save" : "Update"}
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -36,6 +36,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-profile";
 import { UserDto, ProfileInfo, FamilyDto } from "@repo/db/dtos/user";
 import { useStudent } from "@/providers/student-provider";
+import { StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 
 export default function ProfileContent() {
   const { user } = useAuth();
@@ -70,6 +71,7 @@ export default function ProfileContent() {
   const personalDetails = profileInfo.personalDetails;
   const applicationForm = profileInfo.applicationFormDto;
   const familyDetails = profileInfo.familyDetails;
+  console.log("familyDetails:", familyDetails);
   const healthDetails = profileInfo.healthDetails;
   const emergencyContactDetails = profileInfo.emergencyContactDetails;
   const transportDetails = profileInfo.transportDetails;
@@ -130,9 +132,9 @@ export default function ProfileContent() {
                 <div className="text-center">
                   <div className="relative inline-block mb-4">
                     <div className="h-24 w-24 border-4 border-white shadow-lg rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                      {getStudentImageUrl(applicationForm?.courseApplication?.[0]?.rfidNumber || "") ? (
+                      {getStudentImageUrl(student?.uid) ? (
                         <img
-                          src={getStudentImageUrl(applicationForm?.courseApplication?.[0]?.rfidNumber || "") || ""}
+                          src={getStudentImageUrl(student?.uid) || ""}
                           alt={user?.name || "Student"}
                           className="h-full w-full object-cover"
                         />
@@ -145,14 +147,14 @@ export default function ProfileContent() {
                     </Badge>
                   </div>
                   <h2 className="text-xl font-bold text-gray-900 mb-1">{user?.name || "Not Available"}</h2>
-                  <p className="text-sm text-gray-600 mb-4">UID: {uidFromStudent}</p>
+                  <p className="text-sm text-gray-600 mb-4">UID: {student?.uid}</p>
 
                   <Separator />
 
                   {/* Quick Stats */}
                   <div className="space-y-3 mt-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Roll Number</span>
+                      <span className="text-sm text-gray-600">College Roll Number</span>
                       <span className="font-semibold">
                         {applicationForm?.courseApplication?.[0]?.classRollNumber || "N/A"}
                       </span>
@@ -188,10 +190,10 @@ export default function ProfileContent() {
                     { id: "personal", label: "Personal", icon: User },
                     { id: "family", label: "Family", icon: Users },
                     { id: "application", label: "Application", icon: FileText },
-                    { id: "health", label: "Health", icon: Heart },
+                    // { id: "health", label: "Health", icon: Heart },
                     { id: "emergency", label: "Emergency", icon: AlertTriangle },
-                    { id: "transport", label: "Transport", icon: Car },
-                    { id: "accommodation", label: "Accommodation", icon: Home },
+                    // { id: "transport", label: "Transport", icon: Car },
+                    // { id: "accommodation", label: "Accommodation", icon: Home },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -288,6 +290,17 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
+                          <label htmlFor="bloodGroup" className="text-sm font-medium text-gray-700">
+                            Blood Group
+                          </label>
+                          <Input
+                            id="bloodGroup"
+                            value={healthDetails?.bloodGroup?.type || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
                           <label htmlFor="aadhaar" className="text-sm font-medium text-gray-700">
                             Aadhaar Card Number
                           </label>
@@ -299,6 +312,28 @@ export default function ProfileContent() {
                           />
                         </div>
                         <div className="space-y-2">
+                          <label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">
+                            Mobile Number
+                          </label>
+                          <Input
+                            id="mobileNumber"
+                            value={personalDetails?.mobileNumber || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="whatsappNumber" className="text-sm font-medium text-gray-700">
+                            WhatsApp Number
+                          </label>
+                          <Input
+                            id="whatsappNumber"
+                            value={personalDetails?.whatsappNumber || ""}
+                            disabled={!isEditing}
+                            className={!isEditing ? "bg-gray-50" : ""}
+                          />
+                        </div>
+                        {/* <div className="space-y-2">
                           <label htmlFor="motherTongue" className="text-sm font-medium text-gray-700">
                             Mother Tongue
                           </label>
@@ -308,7 +343,7 @@ export default function ProfileContent() {
                             disabled={!isEditing}
                             className={!isEditing ? "bg-gray-50" : ""}
                           />
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 
@@ -466,23 +501,23 @@ export default function ProfileContent() {
                       <h4 className="text-md font-semibold text-gray-800">Father's Information</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="fatherName" className="text-sm font-medium text-gray-700">
-                            Name
-                          </label>
-                          <Input
-                            id="fatherName"
-                            value={familyDetails?.father?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
-                        </div>
-                        <div className="space-y-2">
                           <label htmlFor="fatherTitle" className="text-sm font-medium text-gray-700">
                             Title
                           </label>
                           <Input
                             id="fatherTitle"
                             value={familyDetails?.father?.title || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="fatherName" className="text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <Input
+                            id="fatherName"
+                            value={familyDetails?.father?.name || ""}
                             disabled
                             className="bg-gray-50"
                           />
@@ -520,7 +555,7 @@ export default function ProfileContent() {
                             className="bg-gray-50"
                           />
                         </div>
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                           <label htmlFor="fatherAadhaar" className="text-sm font-medium text-gray-700">
                             Aadhaar Card
                           </label>
@@ -530,7 +565,7 @@ export default function ProfileContent() {
                             disabled
                             className="bg-gray-50"
                           />
-                        </div>
+                        </div> */}
                       </div>
                     </div>
 
@@ -540,23 +575,23 @@ export default function ProfileContent() {
                       <h4 className="text-md font-semibold text-gray-800">Mother's Information</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <label htmlFor="motherName" className="text-sm font-medium text-gray-700">
-                            Name
-                          </label>
-                          <Input
-                            id="motherName"
-                            value={familyDetails?.mother?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
-                        </div>
-                        <div className="space-y-2">
                           <label htmlFor="motherTitle" className="text-sm font-medium text-gray-700">
                             Title
                           </label>
                           <Input
                             id="motherTitle"
                             value={familyDetails?.mother?.title || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="motherName" className="text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <Input
+                            id="motherName"
+                            value={familyDetails?.mother?.name || ""}
                             disabled
                             className="bg-gray-50"
                           />
@@ -594,7 +629,7 @@ export default function ProfileContent() {
                             className="bg-gray-50"
                           />
                         </div>
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                           <label htmlFor="motherAadhaar" className="text-sm font-medium text-gray-700">
                             Aadhaar Card
                           </label>
@@ -604,7 +639,81 @@ export default function ProfileContent() {
                             disabled
                             className="bg-gray-50"
                           />
+                        </div> */}
+                      </div>
+                    </div>
+
+                    {/* Guardian's Information */}
+                    <div className="space-y-4">
+                      <Separator />
+                      <h4 className="text-md font-semibold text-gray-800">Guardian's Information</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label htmlFor="guardianTitle" className="text-sm font-medium text-gray-700">
+                            Title
+                          </label>
+                          <Input
+                            id="guardianTitle"
+                            value={familyDetails?.guardian?.title || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
                         </div>
+                        <div className="space-y-2">
+                          <label htmlFor="guardianName" className="text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <Input
+                            id="guardianName"
+                            value={familyDetails?.guardian?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="guardianPhone" className="text-sm font-medium text-gray-700">
+                            Phone Number
+                          </label>
+                          <Input
+                            id="guardianPhone"
+                            value={familyDetails?.guardian?.phone || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="guardianEmail" className="text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <Input
+                            id="guardianEmail"
+                            value={familyDetails?.guardian?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="guardianOccupation" className="text-sm font-medium text-gray-700">
+                            Occupation
+                          </label>
+                          <Input
+                            id="guardianOccupation"
+                            value={familyDetails?.guardian?.occupation?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        {/* <div className="space-y-2">
+                          <label htmlFor="guardianAadhaar" className="text-sm font-medium text-gray-700">
+                            Aadhaar Card
+                          </label>
+                          <Input
+                            id="guardianAadhaar"
+                            value={familyDetails?.guardian?.aadhaarCardNumber || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div> */}
                       </div>
                     </div>
                   </div>
@@ -641,7 +750,7 @@ export default function ProfileContent() {
                       </div>
                       <div className="space-y-2">
                         <label htmlFor="rollNumber" className="text-sm font-medium text-gray-700">
-                          Class Roll Number
+                          College Roll Number
                         </label>
                         <Input
                           id="rollNumber"
@@ -656,11 +765,7 @@ export default function ProfileContent() {
                         </label>
                         <Input
                           id="uid"
-                          value={
-                            (student?.id ? String(student.id) : "") ||
-                            applicationForm?.courseApplication?.[0]?.rfidNumber ||
-                            ""
-                          }
+                          value={user?.payload.uid || "" || applicationForm?.courseApplication?.[0]?.rfidNumber || ""}
                           disabled
                           className="bg-gray-50"
                         />
@@ -727,9 +832,13 @@ export default function ProfileContent() {
                           <thead className="bg-gray-50 text-gray-700">
                             <tr>
                               <th className="px-4 py-3 text-left font-semibold">Sr No</th>
-                              <th className="px-4 py-3 text-left font-semibold">Subject</th>
-                              <th className="px-4 py-3 text-center font-semibold">Full Marks</th>
-                              <th className="px-4 py-3 text-center font-semibold">Total Marks</th>
+                              {/* <th className="px-4 py-3 text-left font-semibold">Subject Code</th> */}
+                              <th className="px-4 py-3 text-left font-semibold">Subject Name</th>
+                              {/* <th className="px-4 py-3 text-center font-semibold">Passing (Theory)</th> */}
+                              {/* <th className="px-4 py-3 text-center font-semibold">Passing (Practical)</th> */}
+                              <th className="px-4 py-3 text-center font-semibold">Theory (Obtained/Full)</th>
+                              <th className="px-4 py-3 text-center font-semibold">Practical (Obtained/Full)</th>
+                              <th className="px-4 py-3 text-center font-semibold">Total (Obtained/Full)</th>
                               <th className="px-4 py-3 text-center font-semibold">Status</th>
                             </tr>
                           </thead>
@@ -741,27 +850,40 @@ export default function ProfileContent() {
                                 </td>
                               </tr>
                             ) : (
-                              applicationForm!.academicInfo!.subjects!.map((subject: any, index: number) => {
-                                const subjectName = subject?.name || `Subject ${index + 1}`;
-                                const fullMarks = subject?.fullMarks ?? subject?.maximumMarks ?? "N/A";
-                                const computedMarks = (subject?.theoryMarks || 0) + (subject?.practicalMarks || 0);
-                                const totalMarks = subject?.totalMarks ?? (computedMarks || "N/A");
-                                return (
-                                  <tr key={index} className="hover:bg-gray-50">
-                                    <td className="px-4 py-3">{index + 1}</td>
-                                    <td className="px-4 py-3">{subjectName}</td>
-                                    <td className="px-4 py-3 text-center">{fullMarks}</td>
-                                    <td className="px-4 py-3 text-center font-medium">{totalMarks}</td>
-                                    <td className="px-4 py-3 text-center">
-                                      <span
-                                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${subject?.resultStatus === "PASS" ? "bg-green-100 text-green-700" : subject?.resultStatus === "FAIL" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}`}
-                                      >
-                                        {subject?.resultStatus || "N/A"}
-                                      </span>
-                                    </td>
-                                  </tr>
-                                );
-                              })
+                              applicationForm!.academicInfo!.subjects!.map(
+                                (item: StudentAcademicSubjectsDto, index: number) => {
+                                  const subjectCode = item?.boardSubject?.subject?.code || "";
+                                  const subjectName = item?.boardSubject?.subject?.name || `Subject ${index + 1}`;
+                                  const fullMarksTheory = Number(item?.boardSubject?.fullMarksTheory || 0);
+                                  const passingMarksTheory = Number(item?.boardSubject?.passingMarksTheory || 0);
+                                  const fullMarksPractical = Number(item?.boardSubject?.fullMarksPractical || 0);
+                                  const passingMarksPractical = Number(item?.boardSubject?.passingMarksPractical || 0);
+                                  const theoryMarks = Number(item?.theoryMarks || 0);
+                                  const practicalMarks = Number(item?.practicalMarks || 0);
+                                  const computedMarks = theoryMarks + practicalMarks;
+                                  const totalMarks = Number(computedMarks);
+                                  const totalFullMarks = fullMarksTheory + fullMarksPractical;
+                                  return (
+                                    <tr key={index} className="hover:bg-gray-50">
+                                      <td className="px-4 py-3">{index + 1}</td>
+                                      {/* <td className="px-4 py-3">{subjectCode}</td> */}
+                                      <td className="px-4 py-3">{subjectName}</td>
+                                      {/* <td className="px-4 py-3 text-center">{passingMarksTheory}</td>
+                                      <td className="px-4 py-3 text-center">{passingMarksPractical}</td> */}
+                                      <td className="px-4 py-3 text-center">{`${theoryMarks}/${fullMarksTheory}`}</td>
+                                      <td className="px-4 py-3 text-center">{`${practicalMarks}/${fullMarksPractical}`}</td>
+                                      <td className="px-4 py-3 text-center font-medium">{`${totalMarks}/${totalFullMarks}`}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${item?.resultStatus === "PASS" ? "bg-green-100 text-green-700" : item?.resultStatus === "FAIL" ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700"}`}
+                                        >
+                                          {item?.resultStatus || "N/A"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  );
+                                },
+                              )
                             )}
                           </tbody>
                         </table>
@@ -770,7 +892,7 @@ export default function ProfileContent() {
                   </div>
                 )}
 
-                {activeTab === "health" && (
+                {/* {activeTab === "health" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Heart className="h-5 w-5" />
@@ -823,7 +945,7 @@ export default function ProfileContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {activeTab === "emergency" && (
                   <div className="space-y-6">
@@ -880,7 +1002,7 @@ export default function ProfileContent() {
                   </div>
                 )}
 
-                {activeTab === "transport" && (
+                {/* {activeTab === "transport" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Car className="h-5 w-5" />
@@ -933,9 +1055,9 @@ export default function ProfileContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
 
-                {activeTab === "accommodation" && (
+                {/* {activeTab === "accommodation" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Home className="h-5 w-5" />
@@ -988,7 +1110,7 @@ export default function ProfileContent() {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
               </CardContent>
             </Card>
           </div>

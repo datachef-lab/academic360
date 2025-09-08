@@ -1,6 +1,10 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
-import { Student, studentModel } from "@repo/db/schemas/models/user";
+import {
+  personalDetailsModel,
+  Student,
+  studentModel,
+} from "@repo/db/schemas/models/user";
 import { StudentType } from "@/types/user/student.js";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import { degreeModel } from "@repo/db/schemas/models/resources";
@@ -8,7 +12,10 @@ import { marksheetModel } from "@repo/db/schemas/models/academics";
 
 import { processClassBySemesterNumber } from "@/features/academics/services/class.service.js";
 import { StudentDto } from "@repo/db/dtos/user/index.js";
-import { applicationFormModel } from "@repo/db/schemas";
+import {
+  admissionGeneralInfoModel,
+  applicationFormModel,
+} from "@repo/db/schemas";
 
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as specializationService from "@/features/resources/services/specialization.service";
@@ -76,9 +83,7 @@ export async function findById(id: number): Promise<StudentDto | null> {
   return await modelToDto(foundStudent);
 }
 
-export async function findStudentByUserId(
-  userId: number,
-): Promise<StudentDto | null> {
+export async function findByUserId(userId: number): Promise<StudentDto | null> {
   const [foundStudent] = await db
     .select()
     .from(studentModel)
@@ -515,6 +520,16 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     null,
   ]);
 
+  const [generalInfo] = await db
+    .select()
+    .from(admissionGeneralInfoModel)
+    .where(eq(admissionGeneralInfoModel.id, applicationForm?.admissionId!));
+
+  const [personalDetails] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, generalInfo?.personalDetailsId!));
+
   return {
     ...props,
     applicationFormAbstract: applicationForm,
@@ -523,5 +538,6 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     section,
     shift,
     currentBatch,
+    personalDetails,
   };
 }
