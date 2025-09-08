@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+// import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
@@ -16,7 +16,7 @@ export const districtModel = pgTable("districts", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createdistrictSchema = createInsertSchema(districtModel);
+export const createdistrictSchema = createInsertSchema(districtModel) as z.ZodTypeAny;
 
 export type district = z.infer<typeof createdistrictSchema>;
 

@@ -335,11 +335,11 @@ const FeesStructurePage: React.FC = () => {
       console.log("fetching fees structures, res.data: -", res.data);
 
       if (res.data.length > 0) {
-        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == res.data[0].feesReceiptTypeId);
+        const tmpSelectedFeesReceiptType = feesReceiptTypes.find((ele) => ele.id == res.data[0]?.feesReceiptTypeId);
         console.log("tmpSelectedFeesReceiptType:", tmpSelectedFeesReceiptType);
         const tmpArr = res.data.filter((ele) => ele.feesReceiptTypeId == tmpSelectedFeesReceiptType?.id);
         console.log("tmpArr:", tmpArr);
-        const tmpSelectedShift = tmpArr[0].shift;
+        const tmpSelectedShift = tmpArr[0]?.shift;
         console.log("tmpSelectedShift:", tmpSelectedShift);
         const tmpFilteredFeesStructures = tmpArr.filter(
           (ele) => ele.feesReceiptTypeId === tmpSelectedFeesReceiptType?.id && ele.shift?.id === tmpSelectedShift?.id,
@@ -387,14 +387,14 @@ const FeesStructurePage: React.FC = () => {
   // Auto-select first academic year if not set
   useEffect(() => {
     if (!selectedAcademicYear && academicYears.length > 0) {
-      setSelectedAcademicYear(academicYears[0]);
+      setSelectedAcademicYear(academicYears[0] || null);
     }
   }, [academicYears, selectedAcademicYear]);
 
   // Auto-select first course for the selected year if not set
   useEffect(() => {
     if (!selectedCourse && coursesForSelectedYear.length > 0) {
-      setSelectedCourse(coursesForSelectedYear[0]);
+      setSelectedCourse(coursesForSelectedYear[0] || null);
     }
   }, [coursesForSelectedYear, selectedCourse]);
 

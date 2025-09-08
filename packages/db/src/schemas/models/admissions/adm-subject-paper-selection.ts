@@ -23,7 +23,7 @@ export const admSubjectPaperSelectionModel = pgTable("adm_subject_paper_selectio
     .$onUpdate(() => new Date()),
 });
 
-export const createAdmSubjectPaperSelectionModel = createInsertSchema(admSubjectPaperSelectionModel);
+export const createAdmSubjectPaperSelectionModel = createInsertSchema(admSubjectPaperSelectionModel) as z.ZodTypeAny;
 
 export type AdmSubjectPaperSelection = z.infer<typeof createAdmSubjectPaperSelectionModel>;
 

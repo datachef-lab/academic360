@@ -50,7 +50,7 @@ export const personalDetailsModel = pgTable("personal_details", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createPersonalDetailsSchema = createInsertSchema(personalDetailsModel);
+export const createPersonalDetailsSchema = createInsertSchema(personalDetailsModel) as z.ZodTypeAny;
 
 export type PersonalDetails = z.infer<typeof createPersonalDetailsSchema>;
 

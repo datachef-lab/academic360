@@ -23,7 +23,7 @@ export const noticeModel = pgTable("notices", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createNoticeSchema = createInsertSchema(noticeModel);
+export const createNoticeSchema = createInsertSchema(noticeModel) as z.ZodTypeAny;
 
 export type Notice = z.infer<typeof createNoticeSchema>;
 

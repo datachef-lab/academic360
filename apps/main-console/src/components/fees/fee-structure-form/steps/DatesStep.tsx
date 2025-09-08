@@ -1,8 +1,8 @@
 import React from "react";
-import { DatePicker, InputNumber, Table, Switch,  } from "antd";
+import { DatePicker, InputNumber, Table, Switch } from "antd";
 import dayjs from "dayjs";
 import { FeesStructureDto, CreateFeesStructureDto } from "@/types/fees";
-import {  CloseCircleTwoTone, CheckCircleTwoTone } from "@ant-design/icons";
+import { CloseCircleTwoTone, CheckCircleTwoTone } from "@ant-design/icons";
 
 type DatesStepProps =
   | {
@@ -16,16 +16,26 @@ type DatesStepProps =
       setFeesStructure: React.Dispatch<React.SetStateAction<FeesStructureDto>>;
     };
 
+type InstalmentT =
+  | NonNullable<FeesStructureDto["instalments"]>[number]
+  | NonNullable<CreateFeesStructureDto["instalments"]>[number];
+
 export const DatesStep: React.FC<DatesStepProps> = (props) => {
   const { formType, feesStructure, setFeesStructure } = props;
   const isAdd = formType === "ADD";
 
   // Handlers for updating fields
   const handleInputChangeAdd = (field: keyof CreateFeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
   const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({ ...prev, [field]: value }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const disablePastDates = (current: dayjs.Dayjs) => current && current < dayjs().startOf("day");
@@ -96,7 +106,11 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
   // Handlers for installment table
   const handleInstalmentChange = (index: number, field: string, value: unknown) => {
     const newInstalments = [...(feesStructure.instalments || [])];
-    newInstalments[index] = { ...newInstalments[index], [field]: value };
+    newInstalments[index] = {
+      ...newInstalments[index],
+      [field]: value,
+      feesStructureId: newInstalments[index]?.feesStructureId || 0,
+    } as InstalmentT;
     if (isAdd) {
       handleInputChangeAdd("instalments", newInstalments);
     } else {
@@ -118,13 +132,18 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
   const handleSmartInstalmentAmount = (index: number, value: string | number | null | undefined) => {
     if (!hasInstallments || !feesStructure.instalments) return handleInstalmentChange(index, "baseAmount", value);
     // Prevent non-numeric input and leading zeros
-    let numericValue = typeof value === 'string' ? value.replace(/[^0-9]/g, '').replace(/^0+(?!$)/, '') : value;
+    let numericValue = typeof value === "string" ? value.replace(/[^0-9]/g, "").replace(/^0+(?!$)/, "") : value;
     // If empty, treat as zero
-    if (numericValue === '' || numericValue === null || numericValue === undefined) numericValue = 0;
+    if (numericValue === "" || numericValue === null || numericValue === undefined) numericValue = 0;
     numericValue = Number(numericValue) || 0;
     // (No clamping here, allow unknown value)
     const newInstalments = [...feesStructure.instalments];
-    newInstalments[index] = { ...newInstalments[index], baseAmount: numericValue };
+    newInstalments[index] = {
+      ...newInstalments[index],
+      baseAmount: numericValue,
+      feesStructureId: newInstalments[index]?.feesStructureId ?? 0,
+      instalmentNumber: newInstalments[index]?.instalmentNumber ?? index + 1,
+    } as InstalmentT;
     if (isAdd) {
       handleInputChangeAdd("instalments", newInstalments);
     } else {
@@ -203,9 +222,7 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
           <div className="flex items-center gap-3">
             <span className="mr-2">Do you want to have installments?</span>
             <Switch checked={hasInstallments} onChange={handleInstallmentsToggle} />
-            {hasInstallments && (
-              <span className="text-base font-semibold text-purple-700">2</span>
-            )}
+            {hasInstallments && <span className="text-base font-semibold text-purple-700">2</span>}
           </div>
         </div>
       </div>
@@ -238,7 +255,11 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                 render: (_: unknown, __: unknown, idx: number) => idx + 1,
               },
               {
-                title: <span>Base Amount <span className="text-gray-500">(₹)</span></span>,
+                title: (
+                  <span>
+                    Base Amount <span className="text-gray-500">(₹)</span>
+                  </span>
+                ),
                 dataIndex: "baseAmount",
                 width: 120,
                 render: (val: number, row: unknown, idx: number) => {
@@ -258,7 +279,7 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
                           handleSmartInstalmentAmount(idx, v);
                         }}
                         stringMode={false}
-                        parser={(value: string | undefined) => Number(value ? value.replace(/[^0-9]/g, '') : '0')}
+                        parser={(value: string | undefined) => Number(value ? value.replace(/[^0-9]/g, "") : "0")}
                         className="w-full"
                         inputMode="numeric"
                         maxLength={maxLength}
@@ -319,7 +340,8 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
           />
           {showInstalmentWarning && (
             <div className="mt-2 text-red-600 font-medium">
-              The sum of all installment base amounts must equal the total base amount set in Fee Configuration (₹{totalBaseAmount}).
+              The sum of all installment base amounts must equal the total base amount set in Fee Configuration (₹
+              {totalBaseAmount}).
             </div>
           )}
         </div>
@@ -328,4 +350,4 @@ export const DatesStep: React.FC<DatesStepProps> = (props) => {
   );
 };
 
-export default DatesStep; 
+export default DatesStep;

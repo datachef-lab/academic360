@@ -20,7 +20,7 @@ export const paperSelectionModel = pgTable("paper_selections", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createPaperSelectionSchema = createInsertSchema(paperSelectionModel);
+export const createPaperSelectionSchema = createInsertSchema(paperSelectionModel) as z.ZodTypeAny;
 
 export type SubjectPaperSelection = z.infer<typeof createPaperSelectionSchema>;
 

@@ -13,7 +13,7 @@ export const nationalityModel = pgTable("nationality", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createNationalitySchema = createInsertSchema(nationalityModel);
+export const createNationalitySchema = createInsertSchema(nationalityModel) as z.ZodTypeAny;
 
 export type Nationality = z.infer<typeof createNationalitySchema>;
 

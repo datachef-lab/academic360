@@ -206,8 +206,8 @@ const ProgramCoursesPage = () => {
         fetchProgramCourses();
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
@@ -261,7 +261,15 @@ const ProgramCoursesPage = () => {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array" });
           const sheetName = workbook.SheetNames[0];
+          if (!sheetName) {
+            resolve({ isValid: false, errors: [{ message: "No sheets found in workbook" }], warnings: [] });
+            return;
+          }
           const sheet = workbook.Sheets[sheetName];
+          if (!sheet) {
+            resolve({ isValid: false, errors: [{ message: "Sheet not found in workbook" }], warnings: [] });
+            return;
+          }
           const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
           const rowsArr = Array.isArray(rows) ? rows : [];
@@ -336,7 +344,7 @@ const ProgramCoursesPage = () => {
               totalSemesters,
               affiliationName,
               regulationTypeName,
-            ] = row;
+            ] = row || [];
 
             if (
               !streamName ||
@@ -426,7 +434,17 @@ const ProgramCoursesPage = () => {
 
   const handleDownloadTemplate = () => {
     // Create template data using names instead of IDs
-    const templateData = [];
+    const templateData: Array<{
+      Stream: string;
+      Course: string;
+      CourseType: string;
+      CourseLevel: string;
+      Duration: number;
+      TotalSemesters: number;
+      Affiliation: string;
+      RegulationType: string;
+      Disabled: boolean;
+    }> = [];
 
     if (
       streams.length > 0 &&
@@ -438,14 +456,14 @@ const ProgramCoursesPage = () => {
     ) {
       // Use first available names from each category
       templateData.push({
-        Stream: streams[0].name,
-        Course: courses[0].name,
-        CourseType: courseTypes[0].name,
-        CourseLevel: courseLevels[0].name,
+        Stream: streams[0]?.name || "Example Stream",
+        Course: courses[0]?.name || "Example Course",
+        CourseType: courseTypes[0]?.name || "Example Type",
+        CourseLevel: courseLevels[0]?.name || "Example Level",
         Duration: 3,
         TotalSemesters: 6,
-        Affiliation: affiliations[0].name,
-        RegulationType: regulationTypes[0].name,
+        Affiliation: affiliations[0]?.name || "Example Affiliation",
+        RegulationType: regulationTypes[0]?.name || "Example Regulation",
         Disabled: true,
       });
 
@@ -459,14 +477,14 @@ const ProgramCoursesPage = () => {
         regulationTypes.length > 1
       ) {
         templateData.push({
-          Stream: streams[1].name,
-          Course: courses[1].name,
-          CourseType: courseTypes[1].name,
-          CourseLevel: courseLevels[1].name,
+          Stream: streams[1]?.name || "Example Stream 2",
+          Course: courses[1]?.name || "Example Course 2",
+          CourseType: courseTypes[1]?.name || "Example Type 2",
+          CourseLevel: courseLevels[1]?.name || "Example Level 2",
           Duration: 2,
           TotalSemesters: 4,
-          Affiliation: affiliations[1].name,
-          RegulationType: regulationTypes[1].name,
+          Affiliation: affiliations[1]?.name || "Example Affiliation 2",
+          RegulationType: regulationTypes[1]?.name || "Example Regulation 2",
           Disabled: true,
         });
       }

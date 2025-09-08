@@ -12,7 +12,7 @@ export const degreeModel = pgTable("degree", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDegreeSchema = createInsertSchema(degreeModel);
+export const createDegreeSchema = createInsertSchema(degreeModel) as z.ZodTypeAny;
 
 export type Degree = z.infer<typeof createDegreeSchema>;
 

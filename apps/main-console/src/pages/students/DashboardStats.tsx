@@ -8,7 +8,7 @@ import { GraduationBarChart } from "@/components/home/GraduationBarChart";
 // import { MyPieChart } from "@/components/home/MyPieChart";
 
 const academicYears: string[] = [
-    // "2023-24", "2022-23", "2021-22", "2020-21"
+  // "2023-24", "2022-23", "2021-22", "2020-21"
 ];
 
 export default function DashboardStats() {
@@ -22,13 +22,15 @@ export default function DashboardStats() {
       {/* Academic Year Dropdown */}
       <div className="flex items-center gap-4">
         <span className="font-semibold">Academic Year:</span>
-        <Select value={year} onValueChange={setYear}>
+        <Select value={year ?? ""} onValueChange={setYear}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Select year" />
           </SelectTrigger>
           <SelectContent>
             {academicYears.map((y) => (
-              <SelectItem key={y} value={y}>{y}</SelectItem>
+              <SelectItem key={y} value={y}>
+                {y}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -66,4 +68,4 @@ export default function DashboardStats() {
       <GraduationBarChart />
     </div>
   );
-} 
+}

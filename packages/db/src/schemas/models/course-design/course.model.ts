@@ -17,7 +17,7 @@ export const courseModel = pgTable('courses', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createCourseModel = createInsertSchema(courseModel);
+export const createCourseModel = createInsertSchema(courseModel) as z.ZodTypeAny;
 
 export type Course = z.infer<typeof createCourseModel>;
 

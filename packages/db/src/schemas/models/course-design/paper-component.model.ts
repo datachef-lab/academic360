@@ -18,7 +18,7 @@ export const paperComponentModel = pgTable("paper_components", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createPaperComponentSchema = createInsertSchema(paperComponentModel);
+export const createPaperComponentSchema = createInsertSchema(paperComponentModel) as z.ZodTypeAny;
 
 export type PaperComponent = z.infer<typeof createPaperComponentSchema>;
 

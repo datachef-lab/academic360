@@ -38,7 +38,7 @@ export default function MarksheetPage() {
         {/* Right Panel - Tabs for Years */}
         <ResizablePanel className="w-1/4">
           {existingFiles.length > 0 ? (
-            <Tabs defaultValue={existingFiles[0].year.toString()} className="w-full">
+            <Tabs defaultValue={existingFiles[0]?.year.toString()} className="w-full">
               {/* Tabs List - Scrollable for better UX */}
               <TabsList className="w-full flex justify-start gap-2 border-b">
                 {existingFiles.map((file) => (

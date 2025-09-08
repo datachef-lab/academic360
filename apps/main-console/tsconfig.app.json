@@ -1,6 +1,7 @@
 {
   "extends": "@repo/typescript-config/react-library.json",
   "compilerOptions": {
+    "baseUrl": ".",
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.jsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -8,8 +9,8 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@repo/db/*": ["../../packages/db/src/*"],
+      "@/*": ["./src/*", "../../packages/db/src/*"],
+      "@repo/db/*": ["../../packages/db/src/*"]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
@@ -21,6 +22,7 @@
 
     /* Linting */
     "strict": true,
+    "noImplicitAny": false,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,

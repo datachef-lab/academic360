@@ -34,7 +34,7 @@ interface PaperEditModalProps {
   academicYears: AcademicYear[];
   courses: Course[];
   classes: Class[];
-  givenPaper: Paper,
+  givenPaper: Paper;
   paperId?: number; // New prop for paper ID
 }
 
@@ -106,7 +106,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             fullMarks: 0,
             credit: 0,
             paperId: 0, // Default to 0 for new papers
-          }))
+          })),
         );
       }
     }
@@ -123,7 +123,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
     const availableComponents = examComponents.filter((ec) => !selectedComponentIds.includes(ec.id!));
     if (availableComponents.length > 0) {
       const newComponent: PaperComponent = {
-        examComponent: availableComponents[0],
+        examComponent: availableComponents[0]!,
         paperId: form.id || 0,
         fullMarks: 0,
         credit: 0,
@@ -138,11 +138,12 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
     setComponents((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  const updateComponent = useCallback((index: number, field: keyof PaperComponent, value: string | number | ExamComponent) => {
-    setComponents((prev) =>
-      prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp))
-    );
-  }, []);
+  const updateComponent = useCallback(
+    (index: number, field: keyof PaperComponent, value: string | number | ExamComponent) => {
+      setComponents((prev) => prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp)));
+    },
+    [],
+  );
 
   const handleClose = useCallback(() => {
     setForm({});
@@ -300,7 +301,11 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                   <div>
                     <Label htmlFor="courseId">Course</Label>
                     <Select
-                      value={form.programCourseId !== undefined && form.programCourseId !== null ? form.programCourseId.toString() : ""}
+                      value={
+                        form.programCourseId !== undefined && form.programCourseId !== null
+                          ? form.programCourseId.toString()
+                          : ""
+                      }
                       onValueChange={(value) => handleChange("programCourseId", Number(value))}
                     >
                       <SelectTrigger className="mt-1">
@@ -319,7 +324,11 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                   <div>
                     <Label htmlFor="subjectTypeId">Subject Type</Label>
                     <Select
-                      value={form.subjectTypeId !== undefined && form.subjectTypeId !== null ? form.subjectTypeId.toString() : ""}
+                      value={
+                        form.subjectTypeId !== undefined && form.subjectTypeId !== null
+                          ? form.subjectTypeId.toString()
+                          : ""
+                      }
                       onValueChange={(value) => handleChange("subjectTypeId", Number(value))}
                     >
                       <SelectTrigger className="mt-1">
@@ -402,14 +411,20 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                               .map((comp, i) => (i !== index ? comp.examComponent?.id : null))
                               .filter((id) => id !== null);
                             const availableComponents = examComponents.filter(
-                              (ec) => ec.id === component.examComponent?.id || !otherSelectedIds.includes(ec.id!)
+                              (ec) => ec.id === component.examComponent?.id || !otherSelectedIds.includes(ec.id!),
                             );
                             return (
                               <TableRow key={index} className="hover:bg-gray-50">
                                 <TableCell>
                                   <Select
                                     value={component.examComponent?.id ? component.examComponent.id.toString() : ""}
-                                    onValueChange={(value) => updateComponent(index, "examComponent", examComponents.find(ec => ec.id === Number(value))!)}
+                                    onValueChange={(value) =>
+                                      updateComponent(
+                                        index,
+                                        "examComponent",
+                                        examComponents.find((ec) => ec.id === Number(value))!,
+                                      )
+                                    }
                                   >
                                     <SelectTrigger className="w-full">
                                       <SelectValue placeholder="Select component" />
@@ -473,11 +488,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             </Button>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={handleFormSubmit}
-              disabled={isLoading}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
+            <Button onClick={handleFormSubmit} disabled={isLoading} className="bg-purple-600 hover:bg-purple-700">
               {isLoading ? "Saving..." : form.id ? "Update Paper" : "Create Paper"}
             </Button>
           </div>

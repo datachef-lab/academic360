@@ -69,7 +69,7 @@ import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandator
 
 import WhitelistedCategoriesPage from "./features/academic-year-setup/pages/whitelisted-categories-page";
 import AlternativeSubjectsPage from "./features/academic-year-setup/pages/alternative-subjects-page";
-import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
+// import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 
@@ -131,7 +131,6 @@ const router = createBrowserRouter(
                 { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
-
               ],
             },
           ],

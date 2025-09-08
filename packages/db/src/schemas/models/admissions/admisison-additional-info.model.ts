@@ -5,8 +5,8 @@ import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-o
 import { departmentModel, familyModel } from "@/schemas/models/user";
 import { disabilityTypeEnum } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
-import { annualIncomeModel, bloodGroupModel, categoryModel, religionModel } from "@/schemas/models/resources";
-import { bankBranchModel } from "../payments";
+import { annualIncomeModel } from "@/schemas/models/resources";
+// import { bankBranchModel } from "../payments";
 import { programCourseModel } from "../course-design";
 
 export const admissionAdditionalInfoModel = pgTable("admission_additional_info", {
@@ -55,7 +55,7 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
-export const createAdmissionAdditionalInfoSchema = createInsertSchema(admissionAdditionalInfoModel);
+export const createAdmissionAdditionalInfoSchema = createInsertSchema(admissionAdditionalInfoModel) as z.ZodTypeAny;
 
 export type AdmissionAdditionalInfo = z.infer<typeof createAdmissionAdditionalInfoSchema>;
 

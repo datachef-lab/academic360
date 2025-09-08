@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { pgTable, serial, varchar, boolean, timestamp, integer, text } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
-import { personalDetailsModel } from "./personalDetails.model";
+// import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),
@@ -23,7 +23,7 @@ export const userModel = pgTable('users', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createUserSchema = createInsertSchema(userModel);
+export const createUserSchema = createInsertSchema(userModel) as z.ZodTypeAny;
 
 export type User = z.infer<typeof createUserSchema>;
 

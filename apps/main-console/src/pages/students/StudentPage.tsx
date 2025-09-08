@@ -10,8 +10,6 @@ import { useState } from "react";
 // import { motion } from "framer-motion";
 import { Tabs } from "@/components/ui/tabs";
 
-
-
 const studentTabs = [
   { label: "Overview", icon: <User size={16} />, endpoint: "/overview" },
   { label: "Personal", icon: <IdCard size={16} />, endpoint: "/personal-details" },
@@ -28,12 +26,13 @@ const studentTabs = [
 export default function StudentPage() {
   const { studentId } = useParams();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState(() => {
+  type StudentTab = (typeof studentTabs)[number];
+  const [activeTab, setActiveTab] = useState<StudentTab>(() => {
     if (location.state?.activeTab) {
-      const matchingTab = studentTabs.find(tab => tab.label === location.state.activeTab.label);
-      return matchingTab || studentTabs[0];
+      const matchingTab = studentTabs.find((tab) => tab.label === location.state.activeTab.label);
+      return matchingTab ?? studentTabs[0]!;
     }
-    return studentTabs[0];
+    return studentTabs[0]!;
   });
 
   const { data } = useQuery({
@@ -46,7 +45,6 @@ export default function StudentPage() {
 
   return (
     <>
-
       {/* <div className="lg:hidden fixed bottom-4 right-4 z-50">
         <button
           onClick={() => document.getElementById('mobile-nav')?.classList.toggle('translate-x-full')}
@@ -57,8 +55,8 @@ export default function StudentPage() {
       </div> */}
 
       <div className="w-full flex h-full  overflow-hidden">
-        <Tabs defaultValue={activeTab.label} className="w-[80%]">
-          <StudentPanel studentTabs={studentTabs} activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Tabs defaultValue={activeTab?.label ?? ""} className="w-[80%]">
+          <StudentPanel studentTabs={studentTabs} activeTab={activeTab!} setActiveTab={setActiveTab} />
 
           {/* Mobile Navigation Panel */}
           {/* <div
@@ -83,7 +81,6 @@ export default function StudentPage() {
 
           <div className="lg:col-span-9 h-[calc(100vh-2rem)] px-2 overflow-y-auto">
             <div className="space-y-4 sm:space-y-6 pb-6  drop-shadow-md">
-
               {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -203,9 +200,8 @@ export default function StudentPage() {
               </div>
             </motion.div> */}
 
-
               <div className="bg-white/10 rounded-2xl">
-                <StudentContent activeTab={activeTab} studentId={Number(studentId)} />
+                <StudentContent activeTab={activeTab!} studentId={Number(studentId)} />
               </div>
             </div>
           </div>
@@ -227,10 +223,11 @@ export default function StudentPage() {
             <div className="text-lg font-bold text-white mb-1 text-center w-full truncate">{data?.name}</div>
             <div className="flex flex-wrap gap-2 mt-1 mb-2">
               <Badge
-                className={`px-2 py-1 text-xs font-medium rounded-full ${data?.active
-                  ? "bg-emerald-500/90 hover:bg-emerald-600 text-white"
-                  : "bg-red-500/90 hover:bg-red-500 text-white"
-                  }`}
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  data?.active
+                    ? "bg-emerald-500/90 hover:bg-emerald-600 text-white"
+                    : "bg-red-500/90 hover:bg-red-500 text-white"
+                }`}
               >
                 {data?.active ? "Active" : "Inactive"}
               </Badge>
@@ -246,17 +243,17 @@ export default function StudentPage() {
             {/* Details grid */}
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 w-full text-xs text-gray-700">
               <div className="font-semibold text-gray-500">Roll No.:</div>
-              <div>{data?.academicIdentifier?.rollNumber || '-'}</div>
+              <div>{data?.academicIdentifier?.rollNumber || "-"}</div>
               <div className="font-semibold text-gray-500">Reg. No.:</div>
               <div>{data?.academicIdentifier?.registrationNumber}</div>
               <div className="font-semibold text-gray-500">Course:</div>
-              <div>{data?.academicIdentifier?.course?.name || '-'}</div>
+              <div>{data?.academicIdentifier?.course?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Section:</div>
-              <div>{data?.academicIdentifier?.section || '-'}</div>
+              <div>{data?.academicIdentifier?.section || "-"}</div>
               <div className="font-semibold text-gray-500">Shift:</div>
-              <div>{data?.shift || '-'}</div>
+              <div>{data?.shift || "-"}</div>
               <div className="font-semibold text-gray-500">Email:</div>
-              <div>{data?.personalDetails?.email || '-'}</div>
+              <div>{data?.personalDetails?.email || "-"}</div>
             </div>
           </div>
         </div>
@@ -276,7 +273,6 @@ export default function StudentPage() {
          </div>
       </div> */}
       </div>
-
     </>
   );
 }

@@ -9,7 +9,7 @@ import Footer from "./Footer";
 import { Input } from "@/components/ui/input";
 import { Marksheet } from "@/types/academics/marksheet";
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import { User } from "@/types/user/user";
+// import { User } from "@/types/user/user";
 import { Subject } from "@/types/academics/subject";
 import InputInitials from "./InputInitials";
 import { getSearchedStudentsByRollNumber } from "@/services/student";
@@ -17,6 +17,7 @@ import { Student } from "@/types/user/student";
 import { Framework } from "@/types/enums";
 // import { Stream } from "@/types/academics/stream";
 import { InputBox } from "./InputBox";
+import { UserDto } from "@/dtos/user";
 
 const columns = [
   "Course Code (Course Type)",
@@ -76,8 +77,8 @@ const MarksheetCCF = () => {
         remarks: null,
         source: "ADDED",
         file: null,
-        createdByUser: user as User,
-        updatedByUser: user as User,
+        createdByUser: (user as UserDto)!,
+        updatedByUser: (user as UserDto)!,
         createdAt: new Date(),
         updatedAt: new Date(),
         subjects: [],

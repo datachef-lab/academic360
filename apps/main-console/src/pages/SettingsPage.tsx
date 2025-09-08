@@ -42,11 +42,11 @@ const settingsCategories = [
 ];
 
 export default function Settings() {
-  const [activeSetting, setActiveSetting] = useState(settingsCategories[0].tabs[0]);
+  const [activeSetting, setActiveSetting] = useState(settingsCategories[0]!.tabs[0]);
   const [activeResourceSection, setActiveResourceSection] = useState("");
 
   const handleResourceSectionChange = (section: string) => {
-    const foundTab = settingsCategories[0].tabs.find((tab) => tab.label === section);
+    const foundTab = settingsCategories[0]!.tabs.find((tab) => tab.label === section);
     if (foundTab) {
       setActiveSetting(foundTab);
       setActiveResourceSection(section);
@@ -106,7 +106,7 @@ export default function Settings() {
                 <Boxes className="h-8 w-8 drop-shadow-xl text-white" />
               </motion.div>
               <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white">{activeSetting.label}</h2>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">{activeSetting!.label}</h2>
                 <p className="text-sm text-white/80 font-medium">
                   Customize your preferences and manage configurations effortlessly.
                 </p>
@@ -121,7 +121,7 @@ export default function Settings() {
             />
           </motion.div>
           <div className="overflow-auto">
-            <SettingsContent activeSetting={activeSetting} />
+            <SettingsContent activeSetting={activeSetting!} />
           </div>
         </div>
 

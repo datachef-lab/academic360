@@ -11,7 +11,8 @@ export const academicYearModel = pgTable("academic_years", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAcademicYearSchema = createInsertSchema(academicYearModel);
+
+const createAcademicYearSchema = createInsertSchema(academicYearModel);
 
 export type AcademicYear = z.infer<typeof createAcademicYearSchema>;
 

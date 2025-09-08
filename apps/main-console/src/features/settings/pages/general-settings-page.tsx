@@ -105,7 +105,7 @@ export default function GeneralSettingsPage() {
                             src={previewImages[settingItem.id!]}
                             alt="Preview"
                             className="h-20 w-20 object-contain rounded-md cursor-pointer hover:scale-105 transition-transform"
-                            onClick={() => setZoomedImage(previewImages[settingItem.id!])}
+                            onClick={() => setZoomedImage(previewImages[settingItem.id!] ?? null)}
                           />
                         ) : (
                           <p>No image</p>

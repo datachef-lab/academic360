@@ -16,7 +16,7 @@ export const boardResultStatusModel = pgTable("board_result_status", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBoardResultStatusSchema = createInsertSchema(boardResultStatusModel);
+export const createBoardResultStatusSchema = createInsertSchema(boardResultStatusModel) as z.ZodTypeAny;
 
 export type BoardResultStatus = z.infer<typeof createBoardResultStatusSchema>;
 

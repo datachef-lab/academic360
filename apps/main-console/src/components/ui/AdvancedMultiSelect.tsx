@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
-import { CheckIcon,  ChevronDown,  WandSparkles } from "lucide-react";
+import { CheckIcon, ChevronDown, WandSparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
@@ -128,7 +128,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     {
       options,
       onValueChange,
-    //   variant,
+      //   variant,
       defaultValue = [],
       placeholder = "Select options",
       animation = 0,
@@ -141,7 +141,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       searchable = true,
       emptyIndicator,
       autoSize = true,
-    //   singleLine = false,
+      //   singleLine = false,
       popoverClassName,
       disabled = false,
       responsive,
@@ -304,7 +304,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     const getAllOptions = React.useCallback((): MultiSelectOption[] => {
       if (options.length === 0) return [];
       let allOptions: MultiSelectOption[];
-      if ("heading" in options[0]) {
+      const firstOption = options[0];
+      if (firstOption && "heading" in firstOption) {
         allOptions = (options as MultiSelectGroup[]).flatMap((group) => group.options);
       } else {
         allOptions = options as MultiSelectOption[];
@@ -347,7 +348,8 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     const filteredOptions = React.useMemo(() => {
       if (!searchable || !searchValue) return options;
       if (options.length === 0) return [];
-      if ("heading" in options[0]) {
+      const firstOption = options[0];
+      if (firstOption && "heading" in firstOption) {
         const groups = options as MultiSelectGroup[];
         return groups
           .map((group) => ({
@@ -459,7 +461,6 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen} modal={modalPopover}>
         <PopoverTrigger asChild>
           <Button
-
             ref={buttonRef}
             {...props}
             variant={"default"}
@@ -635,12 +636,12 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                 onValueChange={setSearchValue}
               />
             )}
-                          <CommandList
-                className={cn(
-                  "max-h-[35vh] overflow-y-auto multiselect-scrollbar",
-                  screenSize === "mobile" && "max-h-[45vh]",
-                  "overscroll-behavior-y-contain",
-                )}
+            <CommandList
+              className={cn(
+                "max-h-[35vh] overflow-y-auto multiselect-scrollbar",
+                screenSize === "mobile" && "max-h-[45vh]",
+                "overscroll-behavior-y-contain",
+              )}
             >
               <CommandEmpty>{emptyIndicator || "No results found."}</CommandEmpty>{" "}
               {!hideSelectAll && !searchValue && (
@@ -664,7 +665,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                 </CommandGroup>
               )}
               {/* Render options or groups */}
-              {filteredOptions.length > 0 && "heading" in filteredOptions[0] ? (
+              {filteredOptions.length > 0 && filteredOptions[0] && "heading" in filteredOptions[0] ? (
                 (filteredOptions as MultiSelectGroup[]).map((group) => (
                   <CommandGroup key={group.heading} heading={group.heading}>
                     {group.options.map((option) => {

@@ -17,7 +17,7 @@ export const noticeAttachmentModel = pgTable("notice_attachments", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createNoticeAttachmentSchema = createInsertSchema(noticeAttachmentModel);
+export const createNoticeAttachmentSchema = createInsertSchema(noticeAttachmentModel) as z.ZodTypeAny;
 
 export type NoticeAttachment = z.infer<typeof createNoticeAttachmentSchema>;
 

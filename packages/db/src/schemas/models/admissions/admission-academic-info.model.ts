@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 
-import { programCourseModel, specializationModel, streamModel } from "@/schemas/models/course-design";
+import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
 import { boardResultStatusType } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { boardModel, institutionModel, languageMediumModel } from "@/schemas/models/resources";
@@ -32,7 +32,7 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     rank: integer(),
     totalPoints: doublePrecision(),
     aggregate: doublePrecision(),
-    
+
     subjectStudied: varchar("subject_studied", { length: 255 }),
     lastSchoolId: integer("last_school_id_fk").references(() => institutionModel.id),
     lastSchoolName: varchar("last_school_name", { length: 755 }),
@@ -40,7 +40,7 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
 
     indexNumber1: varchar("index_number_1", { length: 255 }),
     indexNumber2: varchar("index_number_2", { length: 255 }),
-    
+
     registrationNumber: varchar("registration_number", { length: 255 }),
     rollNumber: varchar("roll_number", { length: 255 }),
     schoolNumber: varchar("school_number", { length: 255 }),
@@ -54,7 +54,7 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     studiedUpToClass: integer(),
 
     specializationId: integer().references(() => specializationModel.id),
-    
+
     // streamId: integer("stream_id_fk").references(() => streamModel.id).notNull(),
     bestOfFour: doublePrecision(),
     totalScore: doublePrecision(),
@@ -83,7 +83,7 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
         .$onUpdate(() => new Date()),
 });
 
-export const createAdmissionAcademicInfoSchema = createInsertSchema(
+export const createAdmissionAcademicInfoSchema: z.ZodTypeAny = createInsertSchema(
     admissionAcademicInfoModel,
 );
 

@@ -12,7 +12,7 @@ export const occupationModel = pgTable("occupations", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createOccupationSchema = createInsertSchema(occupationModel);
+export const createOccupationSchema = createInsertSchema(occupationModel) as z.ZodTypeAny;
 
 export type Occupation = z.infer<typeof createOccupationSchema>;
 

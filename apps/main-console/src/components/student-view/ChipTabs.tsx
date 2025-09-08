@@ -1,20 +1,15 @@
 import { motion } from "framer-motion";
 import { Dispatch, SetStateAction, useState } from "react";
 
-const tabs = ["Academic (39)", "Administrative (17)", "Co-curricular/Sports/Cultural (13)", "Examination (5)",""];
+const tabs = ["Academic (39)", "Administrative (17)", "Co-curricular/Sports/Cultural (13)", "Examination (5)"];
 
 const ChipTabs = () => {
-  const [selected, setSelected] = useState(tabs[0]);
+  const [selected, setSelected] = useState(tabs[0]!);
 
   return (
     <div className="px-4 py-1 bg-gray-50 flex items-center flex-wrap gap-2 sm:gap-3 ">
       {tabs.map((tab) => (
-        <Chip
-          text={tab}
-          selected={selected === tab}
-          setSelected={setSelected}
-          key={tab}
-        />
+        <Chip text={tab} selected={selected === tab} setSelected={setSelected} key={tab} />
       ))}
     </div>
   );
@@ -33,9 +28,7 @@ const Chip = ({
     <button
       onClick={() => setSelected(text)}
       className={`${
-        selected
-          ? "text-white"
-          : "text-slate-800 hover:text-slate-800 hover:bg-slate-200"
+        selected ? "text-white" : "text-slate-800 hover:text-slate-800 hover:bg-slate-200"
       } text-xs transition-colors px-3.5 py-2 rounded-md relative`}
     >
       <span className="relative z-10">{text}</span>

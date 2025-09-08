@@ -17,7 +17,7 @@ export const batchStudentPaperModel = pgTable("batch_student_papers", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBatchStudentPaperSchema = createInsertSchema(batchStudentPaperModel);
+export const createBatchStudentPaperSchema = createInsertSchema(batchStudentPaperModel) as z.ZodTypeAny;
 
 export type BatchStudentPaper = z.infer<typeof createBatchStudentPaperSchema>;
 

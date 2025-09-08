@@ -273,9 +273,12 @@ export default function FileUpload() {
     try {
       const data = await uploadedFile.arrayBuffer();
       const workbook = XLSX.read(data, { type: "array" });
-      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const firstSheetName = workbook.SheetNames[0];
+      if (!firstSheetName) throw new Error("No sheets found in workbook");
+      const firstSheet = workbook.Sheets[firstSheetName];
+      if (!firstSheet) throw new Error("Sheet not found in workbook");
       const sheetData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
-console.log(sheetData)
+      console.log(sheetData);
       const headers = sheetData[0]?.map((h) => h?.toString().trim()) || [];
 
       const missingHeaders = expectedHeaders.filter((h) => !headers.includes(h));
@@ -313,10 +316,7 @@ console.log(sheetData)
 
   return (
     <>
-      <form
-        onSubmit={handleUpload}
-        className="bg-transparent flex gap-3 border-none shadow-none max-w-none p-0 "
-      >
+      <form onSubmit={handleUpload} className="bg-transparent flex gap-3 border-none shadow-none max-w-none p-0 ">
         <div className="flex">
           <Input type="file" onChange={handleFileChange} />
         </div>

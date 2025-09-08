@@ -14,7 +14,7 @@ export const emergencyContactModel = pgTable("emergency_contacts", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createEmergencyContactSchema = createInsertSchema(emergencyContactModel);
+export const createEmergencyContactSchema = createInsertSchema(emergencyContactModel) as z.ZodTypeAny;
 
 export type EmergencyContact = z.infer<typeof createEmergencyContactSchema>;
 

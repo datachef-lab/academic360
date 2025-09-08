@@ -10,7 +10,7 @@ export const disabilityCodeModel = pgTable("disability_codes", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDisabilityCodeSchema = createInsertSchema(disabilityCodeModel);
+export const createDisabilityCodeSchema = createInsertSchema(disabilityCodeModel) as z.ZodTypeAny;
 
 export type Disability = z.infer<typeof createDisabilityCodeSchema>;
 

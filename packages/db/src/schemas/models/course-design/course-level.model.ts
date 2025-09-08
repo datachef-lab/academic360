@@ -12,7 +12,7 @@ export const courseLevelModel = pgTable('course_levels', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createCourseLevelModel = createInsertSchema(courseLevelModel);
+export const createCourseLevelModel = createInsertSchema(courseLevelModel) as z.ZodTypeAny;
 
 export type CourseLevel = z.infer<typeof createCourseLevelModel>;
 

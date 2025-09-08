@@ -1,4 +1,4 @@
-import { Affiliation, Course, CourseLevel, CourseType, Degree, ExamComponent, RegulationType, Paper, PaperComponent, ProgramCourse, Stream, Topic, CourseT, DegreeT, PaperComponentT, ExamComponentT, PaperT, TopicT, ProgramCourseT, StreamT, CourseTypeT, CourseLevelT, AffiliationT, RegulationTypeT, SubjectT } from "@/schemas/models";
+import { CourseT, DegreeT, PaperComponentT, ExamComponentT, PaperT, TopicT, ProgramCourseT, StreamT, CourseTypeT, CourseLevelT, AffiliationT, RegulationTypeT, SubjectT } from "@/schemas/models";
 
 export interface CourseDto extends Omit<CourseT, "degreeId"> {
     degree: DegreeT | null;

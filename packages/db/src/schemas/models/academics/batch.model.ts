@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+// import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
@@ -19,7 +19,7 @@ export const batchModel = pgTable('batches', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBatchSchema = createInsertSchema(batchModel);
+export const createBatchSchema = createInsertSchema(batchModel) as z.ZodTypeAny;
 
 export type Batch = z.infer<typeof createBatchSchema>;
 

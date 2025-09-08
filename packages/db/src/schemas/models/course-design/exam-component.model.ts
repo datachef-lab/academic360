@@ -13,7 +13,7 @@ export const examComponentModel = pgTable("exam_components", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createExamComponentSchema = createInsertSchema(examComponentModel);
+export const createExamComponentSchema = createInsertSchema(examComponentModel) as z.ZodTypeAny;
 
 export type ExamComponent = z.infer<typeof createExamComponentSchema>;
 

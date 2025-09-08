@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { doublePrecision, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { doublePrecision, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { subjectResultStatusType } from "@/schemas/enums";
 import { admissionAcademicInfoModel, boardSubjectModel, gradeModel } from "@/schemas/models/admissions";
@@ -26,7 +26,7 @@ export const studentAcademicSubjectModel = pgTable("student_academic_subjects", 
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStudentAcademicSubjectsSchema = createInsertSchema(studentAcademicSubjectModel);
+export const createStudentAcademicSubjectsSchema = createInsertSchema(studentAcademicSubjectModel) as z.ZodTypeAny;
 
 export type StudentAcademicSubjects = z.infer<typeof createStudentAcademicSubjectsSchema>;
 

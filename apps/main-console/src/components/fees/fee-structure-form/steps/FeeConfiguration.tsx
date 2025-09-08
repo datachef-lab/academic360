@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { FeesStructureDto, FeesComponent, FeesHead, FeesReceiptType, CreateFeesStructureDto } from "@/types/fees";
-import { Select,  } from "antd";
+import { Select } from "antd";
 // import dayjs from "dayjs";
 import { Course } from "@/types/course-design";
 import { Shift } from "@/types/academics/shift";
@@ -39,15 +39,18 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
   // const MIN_ROWS = 8; // Set a minimum number of rows to display
 
   // Helper type guards
-  const isAdd = formType === 'ADD';
-  const isEdit = formType === 'EDIT';
+  const isAdd = formType === "ADD";
+  const isEdit = formType === "EDIT";
 
   // Separate handlers for add/edit mode
   // const handleInputChangeAdd = (field: keyof CreateFeesStructureDto, value: unknown) => {
   //   (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, [field]: value }));
   // };
   const handleInputChangeEdit = (field: keyof FeesStructureDto, value: unknown) => {
-    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, [field]: value }));
+    (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   useEffect(() => {
@@ -62,9 +65,14 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
         remarks: "",
       }));
       if (isAdd) {
-        (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+        (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
+          (prev: CreateFeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }),
+        );
       } else {
-        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: defaultComponents as FeesComponent[] }));
+        (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
+          ...prev,
+          components: defaultComponents as FeesComponent[],
+        }));
       }
     }
   }, []);
@@ -157,10 +165,12 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
   // Use correct type for handleRemoveComponent
   const handleRemoveComponent = (index: number) => {
     if (isAdd) {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({
-        ...prev,
-        components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
-      }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
+        (prev: CreateFeesStructureDto) => ({
+          ...prev,
+          components: prev.components.filter((_: FeesComponent, i: number) => i !== index),
+        }),
+      );
     } else {
       (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
         ...prev,
@@ -176,11 +186,16 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
     value: FeesComponent[K],
   ) => {
     const newComponents = [...feesStructure.components];
-    newComponents[index][field] = value;
+    newComponents[index]![field] = value;
     if (isAdd) {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)((prev: CreateFeesStructureDto) => ({ ...prev, components: newComponents }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<CreateFeesStructureDto>>)(
+        (prev: CreateFeesStructureDto) => ({ ...prev, components: newComponents }),
+      );
     } else {
-      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({ ...prev, components: newComponents }));
+      (setFeesStructure as React.Dispatch<React.SetStateAction<FeesStructureDto>>)((prev: FeesStructureDto) => ({
+        ...prev,
+        components: newComponents,
+      }));
     }
   };
 
@@ -258,24 +273,16 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
             </div> */}
           </div>
 
-          <div className="flex items-end gap-4">
-            {/* Removed advance for fields */}
-          </div>
+          <div className="flex items-end gap-4">{/* Removed advance for fields */}</div>
         </div>
 
         {/* Bottom Row */}
         <div className="flex items-end gap-9 justify-between">
-          <div className="flex items-center gap-2">
-            {/* Removed Fee Collection Start/End */}
-          </div>
+          <div className="flex items-center gap-2">{/* Removed Fee Collection Start/End */}</div>
 
-          <div className="flex justify-center gap-2 items-center">
-            {/* Removed Installments */}
-          </div>
+          <div className="flex justify-center gap-2 items-center">{/* Removed Installments */}</div>
 
-          <div className="flex items-center gap-2">
-            {/* Removed Online Start/End */}
-          </div>
+          <div className="flex items-center gap-2">{/* Removed Online Start/End */}</div>
         </div>
       </div>
 
@@ -353,9 +360,10 @@ export const FeeConfiguration: React.FC<FeeConfigurationProps> = (props) => {
                       bordered={false}
                     >
                       {feeHeads
-                        .filter((head) =>
-                          // Show this head if it's not selected in any other component, or if it's the current value for this row
-                          !feesStructure.components.some((c, i) => i !== index && c.feesHeadId === head.id)
+                        .filter(
+                          (head) =>
+                            // Show this head if it's not selected in any other component, or if it's the current value for this row
+                            !feesStructure.components.some((c, i) => i !== index && c.feesHeadId === head.id),
                         )
                         .map((head) => (
                           <Select.Option key={head.id} value={head.id!}>

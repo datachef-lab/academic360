@@ -19,7 +19,7 @@ export const sessionModel = pgTable("sessions", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-const createSessionSchema = createInsertSchema(sessionModel);
+const createSessionSchema: z.ZodTypeAny = createInsertSchema(sessionModel);
 
 export type Session = z.infer<typeof createSessionSchema>;
 

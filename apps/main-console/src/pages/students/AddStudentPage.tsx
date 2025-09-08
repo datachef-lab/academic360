@@ -13,7 +13,6 @@ import {
   Building,
   Heart,
   AlertTriangle,
-
   UserPlus2,
 } from "lucide-react";
 import PersonalDetailsForm from "@/components/forms/student/PersonalDetailsForm";
@@ -34,10 +33,9 @@ import FamilyDetailsForm from "@/components/forms/student/FamilyDetailsForm";
 import { AddressDetailsForm } from "@/components/forms/student/AdressDetailsForm";
 import { Address } from "@/types/resources/address";
 import { Student } from "@/types/user/student";
-import { useStudentSubmission } from '@/hooks/useStudentSubmission';
+import { useStudentSubmission } from "@/hooks/useStudentSubmission";
 import { toast } from "sonner";
 import { Family } from "@/types/user/family";
-
 
 export interface StudentFormData {
   personalDetails: PersonalDetails;
@@ -130,7 +128,7 @@ export default function AddStudentPage() {
     //   });
     // }
   });
- 
+
   const [formData, setFormData] = useState<StudentFormData>({
     personalDetails: {} as PersonalDetails,
     familyDetails: {} as Family,
@@ -179,12 +177,9 @@ export default function AddStudentPage() {
   const next = () => {
     if (current < steps.length - 1) {
       if (!completedSteps.includes(current)) {
-        toast.warning(
-          "Please complete the current step before proceeding",
-          {
-            icon: <AlertTriangle className="text-yellow-500" />,
-          }
-        );
+        toast.warning("Please complete the current step before proceeding", {
+          icon: <AlertTriangle className="text-yellow-500" />,
+        });
         return;
       }
 
@@ -209,12 +204,9 @@ export default function AddStudentPage() {
     if (completedSteps.includes(stepIndex) || stepIndex <= current) {
       setCurrent(stepIndex);
     } else {
-      toast.warning(
-        "Please complete the previous steps first",
-        {
-          icon: <AlertTriangle className="text-yellow-500" />,
-        }
-      );
+      toast.warning("Please complete the previous steps first", {
+        icon: <AlertTriangle className="text-yellow-500" />,
+      });
     }
   };
 
@@ -232,25 +224,23 @@ export default function AddStudentPage() {
       | { student?: Student; personalDetails: PersonalDetails },
   ) => {
     try {
-      const stepKey = steps[stepIndex].key as keyof StudentFormData;
-      
+      const stepKey = steps[stepIndex]?.key as keyof StudentFormData;
+
       // Handle special case for personal details form
       if (stepKey === "personalDetails" && "personalDetails" in data) {
         setFormData((prev) => ({
           ...prev,
           personalDetails: data.personalDetails,
         }));
-       
       } else {
         setFormData((prev) => ({
           ...prev,
           [stepKey]: data,
         }));
-     
       }
 
       handleStepComplete(stepIndex);
-      
+
       // Auto-proceed to next step if not the last step
       if (stepIndex < steps.length - 1) {
         setTimeout(() => {
@@ -280,29 +270,56 @@ export default function AddStudentPage() {
 
     try {
       await submitStudentData(formData);
-        // Reset form after successful submission
-        // console.log(JSON.stringify(formData,null,2));
-        // setCurrent(0);
-        // setCompletedSteps([]);
-        // setFormData({
-        //   personalDetails: {} as PersonalDetails,
-        //   familyDetails: {  } as Parent,
-        //   addressDetails: {} as Address,
-        //   healthDetails: {} as Health,
-        //   emergencyContact: {} as EmergencyContact,
-        //   academicHistory: {} as AcademicHistory,
-        //   AcademicIdentifier: {} as AcademicIdentifier,
-        //   accommodation: {} as Accommodation,
-        // });
+      // Reset form after successful submission
+      // console.log(JSON.stringify(formData,null,2));
+      // setCurrent(0);
+      // setCompletedSteps([]);
+      // setFormData({
+      //   personalDetails: {} as PersonalDetails,
+      //   familyDetails: {  } as Parent,
+      //   addressDetails: {} as Address,
+      //   healthDetails: {} as Health,
+      //   emergencyContact: {} as EmergencyContact,
+      //   academicHistory: {} as AcademicHistory,
+      //   AcademicIdentifier: {} as AcademicIdentifier,
+      //   accommodation: {} as Accommodation,
+      // });
     } catch (error) {
       // Error handling is already done in the hook
-      console.error('Failed to submit student data:', error);
-    
+      console.error("Failed to submit student data:", error);
     }
   };
 
-  const CurrentForm = steps[current].content;
-  const currentStepKey = steps[current].key as keyof StudentFormData;
+  type StepFormProps = {
+    onSubmit: (
+      data:
+        | PersonalDetails
+        | Family
+        | Health
+        | EmergencyContact
+        | AcademicHistory
+        | AcademicIdentifier
+        | Accommodation
+        | Address
+        | { student?: Student; personalDetails: PersonalDetails },
+    ) => void;
+    initialData:
+      | PersonalDetails
+      | Family
+      | Health
+      | EmergencyContact
+      | AcademicHistory
+      | AcademicIdentifier
+      | Accommodation
+      | Address;
+  };
+
+  const CurrentForm = steps[current]?.content as React.ComponentType<StepFormProps> | undefined;
+  const currentStepKey = steps[current]?.key as keyof StudentFormData;
+
+  if (!CurrentForm) {
+    return null;
+  }
 
   return (
     <div className="h-full p-4  bg-gradient-to-br from-purple-50 to-white ">
@@ -351,85 +368,89 @@ export default function AddStudentPage() {
           <div className="grid border rounded-xl grid-cols-1 lg:grid-cols-4 gap-0  ">
             {/* Stepper - Left Column */}
             <div className="lg:col-span-1  p-6 border-r border-gray-200 ">
-             <div className="mt-8 ">
-             <div className="relative ">
-                {/* Animated Progress Line */}
-                <motion.div
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: 1 }}
-                  transition={{ duration: 0.8, ease: "easeInOut" }}
-                  className="absolute left-5 top-0 h-full w-0.5 bg-gray-200 origin-top"
-                >
+              <div className="mt-8 ">
+                <div className="relative ">
+                  {/* Animated Progress Line */}
                   <motion.div
                     initial={{ scaleY: 0 }}
-                    animate={{ scaleY: completedSteps.length / steps.length }}
-                    transition={{ duration: 0.8, delay: 0.3, ease: "easeInOut" }}
-                    className="h-full w-full bg-blue-500 origin-top"
-                  />
-                </motion.div>
-
-                <div className="space-y-8 pl-8">
-                  {steps.map((step, index) => (
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: 0.8, ease: "easeInOut" }}
+                    className="absolute left-5 top-0 h-full w-0.5 bg-gray-200 origin-top"
+                  >
                     <motion.div
-                      key={index}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      onClick={() => handleStepClick(index)}
-                      className={`flex items-start gap-4 cursor-pointer transition-all duration-200 ${
-                        current === index
-                          ? "text-blue-600"
-                          : completedSteps.includes(index)
-                            ? "text-green-600"
-                            : "text-gray-500"
-                      }`}
-                    >
-                      <div
-                        className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${
+                      initial={{ scaleY: 0 }}
+                      animate={{ scaleY: completedSteps.length / steps.length }}
+                      transition={{ duration: 0.8, delay: 0.3, ease: "easeInOut" }}
+                      className="h-full w-full bg-blue-500 origin-top"
+                    />
+                  </motion.div>
+
+                  <div className="space-y-8 pl-8">
+                    {steps.map((step, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        onClick={() => handleStepClick(index)}
+                        className={`flex items-start gap-4 cursor-pointer transition-all duration-200 ${
                           current === index
-                            ? "bg-blue-100"
+                            ? "text-blue-600"
                             : completedSteps.includes(index)
-                              ? "bg-green-100"
-                              : "bg-gray-100"
+                              ? "text-green-600"
+                              : "text-gray-500"
                         }`}
                       >
-                        {completedSteps.includes(index) ? (
-                          <CheckCircle2 className="w-5 h-5" />
-                        ) : current === index ? (
-                          step.activeIcon
-                        ) : (
-                          step.icon
-                        )}
-                      </div>
-                      <div>
-                        <h3
-                          className={`font-medium ${
+                        <div
+                          className={`flex items-center justify-center w-10 h-10 rounded-full flex-shrink-0 ${
                             current === index
-                              ? "text-blue-600"
+                              ? "bg-blue-100"
                               : completedSteps.includes(index)
-                                ? "text-green-600"
-                                : "text-gray-700"
+                                ? "bg-green-100"
+                                : "bg-gray-100"
                           }`}
                         >
-                          {step.title}
-                        </h3>
-                        <p
-                          className={`text-sm ${
-                            current === index
-                              ? "text-blue-400"
-                              : completedSteps.includes(index)
-                                ? "text-green-400"
-                                : "text-gray-400"
-                          }`}
-                        >
-                          {completedSteps.includes(index) ? "Completed" : current === index ? "In Progress" : "Pending"}
-                        </p>
-                      </div>
-                    </motion.div>
-                  ))}
+                          {completedSteps.includes(index) ? (
+                            <CheckCircle2 className="w-5 h-5" />
+                          ) : current === index ? (
+                            step.activeIcon
+                          ) : (
+                            step.icon
+                          )}
+                        </div>
+                        <div>
+                          <h3
+                            className={`font-medium ${
+                              current === index
+                                ? "text-blue-600"
+                                : completedSteps.includes(index)
+                                  ? "text-green-600"
+                                  : "text-gray-700"
+                            }`}
+                          >
+                            {step.title}
+                          </h3>
+                          <p
+                            className={`text-sm ${
+                              current === index
+                                ? "text-blue-400"
+                                : completedSteps.includes(index)
+                                  ? "text-green-400"
+                                  : "text-gray-400"
+                            }`}
+                          >
+                            {completedSteps.includes(index)
+                              ? "Completed"
+                              : current === index
+                                ? "In Progress"
+                                : "Pending"}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
               </div>
-             </div>
             </div>
 
             {/* Form Content - Right Column */}
@@ -456,9 +477,9 @@ export default function AddStudentPage() {
                       completedSteps.includes(current) ? "bg-green-100 text-green-600" : "bg-blue-100 text-blue-600"
                     }`}
                   >
-                    {completedSteps.includes(current) ? <CheckCircle2 className="w-6 h-6" /> : steps[current].icon}
+                    {completedSteps.includes(current) ? <CheckCircle2 className="w-6 h-6" /> : steps[current]?.icon}
                   </div>
-                  <h2 className="text-2xl font-semibold text-gray-800">{steps[current].title}</h2>
+                  <h2 className="text-2xl font-semibold text-gray-800">{steps[current]?.title}</h2>
                 </div>
                 <p className="text-gray-500 ml-12">Please fill in the required information</p>
               </div>
@@ -480,10 +501,8 @@ export default function AddStudentPage() {
                     }
                   />
                 </div>
-
-             
               </div>
-   {/* Navigation Buttons */}
+              {/* Navigation Buttons */}
               <div className="flex justify-between mt-12 pt-6 border-t border-gray-200">
                 <motion.button
                   whileHover={{ x: -2 }}

@@ -467,6 +467,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.15
+      drizzle-zod:
+        specifier: 0.5.1
+        version: 0.5.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -876,8 +879,8 @@ importers:
         specifier: 0.44.5
         version: 0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7)
       drizzle-zod:
-        specifier: ^0.6.1
-        version: 0.6.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
+        specifier: ^0.5.1
+        version: 0.5.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
       pg:
         specifier: ^8.16.3
         version: 8.16.3
@@ -4418,6 +4421,12 @@ packages:
         optional: true
       sqlite3:
         optional: true
+
+  drizzle-zod@0.5.1:
+    resolution: {integrity: sha512-C/8bvzUH/zSnVfwdSibOgFjLhtDtbKYmkbPbUCq46QZyZCH6kODIMSOgZ8R7rVjoI+tCj3k06MRJMDqsIeoS4A==}
+    peerDependencies:
+      drizzle-orm: 0.44.5
+      zod: '*'
 
   drizzle-zod@0.6.1:
     resolution: {integrity: sha512-huEbUgnsuR8tupnmLiyB2F1I2H9dswI3GfM36IbIqx9i0YUeYjRsDpJVyFVeziUvI1ogT9JHRL2Q03cC4QmvxA==}
@@ -11978,6 +11987,11 @@ snapshots:
       pg: 8.16.3
       postgres: 3.4.7
 
+  drizzle-zod@0.5.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
+    dependencies:
+      drizzle-orm: 0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7)
+      zod: 3.25.76
+
   drizzle-zod@0.6.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76):
     dependencies:
       drizzle-orm: 0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7)
@@ -12318,7 +12332,7 @@ snapshots:
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.57.1)
       eslint-plugin-react: 7.37.5(eslint@8.57.1)
       eslint-plugin-react-hooks: 5.0.0-canary-7118f5dd7-20230705(eslint@8.57.1)
@@ -12361,7 +12375,7 @@ snapshots:
       tinyglobby: 0.2.14
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -12376,7 +12390,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9

@@ -22,15 +22,13 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
   const [slabOptions, setSlabOptions] = useState<FeesSlab[]>([]);
 
   // DEBUG: Log slabs and mappings on every render
-  console.log('SlabCreation slabs:', slabs);
-  console.log('SlabCreation feesSlabMappings:', feesSlabMappings);
+  console.log("SlabCreation slabs:", slabs);
+  console.log("SlabCreation feesSlabMappings:", feesSlabMappings);
 
   // Remove default population useEffect here
   useEffect(() => {
     // Only show slabs not already used in feesSlabMappings
-    const tmpSlabOptions = slabs.filter(
-      (slb) => !feesSlabMappings.some((ele) => ele.feesSlabId === slb.id)
-    );
+    const tmpSlabOptions = slabs.filter((slb) => !feesSlabMappings.some((ele) => ele.feesSlabId === slb.id));
     setSlabOptions(tmpSlabOptions);
   }, [slabs, feesSlabMappings]);
 
@@ -78,7 +76,12 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
     const updatedSlabMappings = [...feesSlabMappings];
     const slabMappingIndex = updatedSlabMappings.findIndex((sy) => sy.feesSlabId === slabId);
     if (slabMappingIndex > -1) {
-      updatedSlabMappings[slabMappingIndex] = { ...updatedSlabMappings[slabMappingIndex], feeConcessionRate: concessionRate };
+      updatedSlabMappings[slabMappingIndex] = {
+        ...updatedSlabMappings[slabMappingIndex],
+        feeConcessionRate: concessionRate,
+        feesStructureId: updatedSlabMappings[slabMappingIndex]?.feesStructureId || 0,
+        feesSlabId: updatedSlabMappings[slabMappingIndex]?.feesSlabId || 0,
+      };
       setFormFeesStructure((prev: T) => {
         if (isCreateFeesStructureDto(prev)) {
           return {
@@ -101,6 +104,8 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
     }
     // Add the first available missing slab
     const missingSlab = slabOptions[0];
+    if (!missingSlab) return;
+
     const newSlabMapping: FeesSlabMapping = {
       id: Date.now(),
       feesSlabId: missingSlab.id!,
@@ -128,18 +133,20 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
 
     const updatedFeesSlabMappings = feesSlabMappings.filter((_ele, index) => index != removeIndex);
 
-    const updatedSlabOptions = slabOptions.filter(ele => !updatedFeesSlabMappings.find(x => x.feesSlabId == ele.id));
+    const updatedSlabOptions = slabOptions.filter(
+      (ele) => !updatedFeesSlabMappings.find((x) => x.feesSlabId == ele.id),
+    );
 
     setFormFeesStructure((prev: T) => {
       if (isCreateFeesStructureDto(prev)) {
         return {
           ...prev,
-          feesSlabMappings: updatedFeesSlabMappings
+          feesSlabMappings: updatedFeesSlabMappings,
         } as T;
       } else {
         return {
           ...prev,
-          feesSlabMappings: updatedFeesSlabMappings
+          feesSlabMappings: updatedFeesSlabMappings,
         } as T;
       }
     });
@@ -212,7 +219,10 @@ export function SlabCreation<T extends CreateFeesStructureDto | FeesStructureDto
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button onClick={() => handleRemoveSlab(feesSlabMapping.feesSlabId!)} className="text-red-600 hover:text-red-900">
+                  <button
+                    onClick={() => handleRemoveSlab(feesSlabMapping.feesSlabId!)}
+                    className="text-red-600 hover:text-red-900"
+                  >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </td>

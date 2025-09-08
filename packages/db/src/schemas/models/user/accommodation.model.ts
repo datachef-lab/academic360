@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { relations } from "drizzle-orm";
+// import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
@@ -16,17 +16,10 @@ export const accommodationModel = pgTable("accommodation", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAccommodationSchema = createInsertSchema(accommodationModel);
-
-// Schema for updates that excludes timestamp fields
-export const updateAccommodationSchema = createAccommodationSchema.omit({ 
-    id: true, 
-    createdAt: true, 
-    updatedAt: true 
-});
+export const createAccommodationSchema = createInsertSchema(accommodationModel) as z.ZodTypeAny;
 
 export type Accommodation = z.infer<typeof createAccommodationSchema>;
 
-export type AccommodationUpdate = z.infer<typeof updateAccommodationSchema>;
+// export type AccommodationUpdate = z.infer<typeof updateAccommodationSchema>;
 
 export type AccommodationT = typeof createAccommodationSchema._type;

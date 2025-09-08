@@ -19,7 +19,12 @@ import { toast } from "sonner";
 import { ExamComponentForm } from "./exam-component-form";
 import { ExamComponent } from "@/types/course-design";
 import { getAllExamComponent } from "@/services/exam-component.service";
-import { createExamComponent, updateExamComponent, deleteExamComponent, DeleteResult } from "@/services/course-design.api";
+import {
+  createExamComponent,
+  updateExamComponent,
+  deleteExamComponent,
+  DeleteResult,
+} from "@/services/course-design.api";
 
 const ExamComponentesPage = () => {
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
@@ -90,8 +95,8 @@ const ExamComponentesPage = () => {
       const data = new Uint8Array(e.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: "array" });
       const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(sheet);
+      const sheet = workbook.Sheets[sheetName!];
+      const jsonData = XLSX.utils.sheet_to_json(sheet!);
       toast.success("Parsed " + jsonData.length + " items from sheet");
     };
     reader.readAsArrayBuffer(bulkFile);
@@ -112,8 +117,8 @@ const ExamComponentesPage = () => {
         setExamComponents(Array.isArray(refreshed.payload) ? refreshed.payload : []);
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }

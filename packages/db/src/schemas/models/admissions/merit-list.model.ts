@@ -12,7 +12,7 @@ export const meritListModel = pgTable("merit_lists", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createMeritListSchema = createInsertSchema(meritListModel);
+export const createMeritListSchema = createInsertSchema(meritListModel) as z.ZodTypeAny;
 
 export type MeritList = z.infer<typeof createMeritListSchema>;
 

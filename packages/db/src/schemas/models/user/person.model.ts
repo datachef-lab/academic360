@@ -43,7 +43,7 @@ export const personRelations = relations(personModel, ({ one }) => ({
     })
 }));
 
-export const createPersonSchema = createInsertSchema(personModel);
+export const createPersonSchema = createInsertSchema(personModel) as z.ZodTypeAny;
 
 export type Person = z.infer<typeof createPersonSchema>;
 

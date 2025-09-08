@@ -13,7 +13,7 @@ export const affiliationModel = pgTable('affiliations', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAffiliationModel = createInsertSchema(affiliationModel);
+export const createAffiliationModel = createInsertSchema(affiliationModel) as z.ZodTypeAny;
 
 export type Affiliation = z.infer<typeof createAffiliationModel>;
 

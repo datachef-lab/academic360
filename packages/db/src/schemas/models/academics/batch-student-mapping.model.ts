@@ -17,7 +17,7 @@ export const batchStudentMappingModel = pgTable("batch_student_mappings", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBatchStudentMappingSchema = createInsertSchema(batchStudentMappingModel);
+export const createBatchStudentMappingSchema = createInsertSchema(batchStudentMappingModel) as z.ZodTypeAny;
 
 export type BatchStudentMapping = z.infer<typeof createBatchStudentMappingSchema>;
 

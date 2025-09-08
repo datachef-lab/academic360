@@ -12,7 +12,7 @@ export const qualificationModel = pgTable("qualifications", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createQualificationSchema = createInsertSchema(qualificationModel);
+export const createQualificationSchema = createInsertSchema(qualificationModel) as z.ZodTypeAny;
 
 export type Qualification = z.infer<typeof createQualificationSchema>;
 

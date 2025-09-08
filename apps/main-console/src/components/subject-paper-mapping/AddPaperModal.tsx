@@ -105,14 +105,16 @@ export default function AddPaperModal({
   ]);
 
   const handleAddPaper = () => {
+    const base = inputPaper[0];
     setInputPaper((prevPapers) => [
       ...prevPapers,
       {
-        ...inputPaper[0],
         name: "",
-        code: "",
+        subjectId: base?.subjectId ?? 0,
+        affiliationId: base?.affiliationId ?? 0,
+        regulationTypeId: base?.regulationTypeId ?? 0,
         subjectTypeId: 0,
-        isOptional: false,
+        academicYearId: base?.academicYearId ?? 0,
         programCourses: [],
         classes: [],
         components: examComponents.map((examComponent) => ({
@@ -121,6 +123,11 @@ export default function AddPaperModal({
           fullMarks: 0,
           credit: 0,
         })),
+        code: "",
+        isOptional: false,
+        sequence: null,
+        disabled: false,
+        topics: [],
       },
     ]);
   };
@@ -151,9 +158,9 @@ export default function AddPaperModal({
     }
     console.log("Papers:", papers);
 
-    const formattedPapers = [];
+    const formattedPapers: Paper[] = [];
     for (let i = 0; i < papers.length; i++) {
-      const paper = papers[i];
+      const paper = papers[i]!;
       if (
         !paper.subjectTypeId ||
         !paper.programCourseId ||
@@ -174,13 +181,13 @@ export default function AddPaperModal({
             return comp;
           }
         })
-        .filter((comp) => comp !== undefined);
+        .filter((comp): comp is (typeof paper.components)[number] => comp !== undefined);
 
-      formattedPapers.push({ ...paper, components: components });
+      formattedPapers.push({ ...paper, components: components as typeof paper.components });
     }
 
     try {
-      const response = await createPaper(formattedPapers);
+      const response = await createPaper(formattedPapers as Paper[]);
       console.log("create papers response:", response);
       toast.success("Papers saved successfully");
     } catch (error) {
@@ -209,18 +216,30 @@ export default function AddPaperModal({
     value: number,
   ) => {
     setInputPaper((prevPapers) => {
-      const updatedPapers = [...prevPapers];
-      const updatedComponents = [...updatedPapers[paperIndex].components];
-      if (updatedComponents[componentIndex]) {
-        updatedComponents[componentIndex] = {
-          ...updatedComponents[componentIndex],
-          [field]: value,
-        };
-      }
-      updatedPapers[paperIndex] = {
-        ...updatedPapers[paperIndex],
-        components: updatedComponents,
+      const existingPaper = prevPapers[paperIndex];
+      if (!existingPaper) return prevPapers;
+
+      const baseComponents = existingPaper.components ?? [];
+      if (!baseComponents[componentIndex]) return prevPapers;
+
+      const updatedComponents = [...baseComponents];
+      const prevComponent = updatedComponents[componentIndex]!;
+      updatedComponents[componentIndex] = {
+        ...prevComponent,
+        paperId: prevComponent.paperId ?? 0,
+        examComponent: prevComponent.examComponent!,
+        [field]: value,
       };
+
+      const updatedPaper: InputPaper = {
+        ...existingPaper,
+        components: updatedComponents,
+        programCourses: existingPaper.programCourses ?? [],
+        classes: existingPaper.classes ?? [],
+      };
+
+      const updatedPapers = [...prevPapers];
+      updatedPapers[paperIndex] = updatedPaper;
       return updatedPapers;
     });
   };
@@ -230,7 +249,7 @@ export default function AddPaperModal({
       <div className="flex mb-5 gap-2 items-center">
         <div className="flex w-[95%] gap-2 items-center">
           <Select
-            value={inputPaper[0].subjectId ? inputPaper[0].subjectId.toString() : ""}
+            value={inputPaper[0]?.subjectId ? inputPaper[0].subjectId.toString() : ""}
             onValueChange={(value) => {
               const newPapers = inputPaper.map((paper) => ({
                 ...paper,
@@ -251,7 +270,7 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={inputPaper[0].affiliationId ? inputPaper[0].affiliationId.toString() : ""}
+            value={inputPaper[0]?.affiliationId ? inputPaper[0].affiliationId.toString() : ""}
             onValueChange={(value) => {
               const newPapers = inputPaper.map((paper) => ({
                 ...paper,
@@ -272,7 +291,7 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={inputPaper[0].regulationTypeId ? inputPaper[0].regulationTypeId.toString() : ""}
+            value={inputPaper[0]?.regulationTypeId ? inputPaper[0].regulationTypeId.toString() : ""}
             onValueChange={(value) => {
               const newPapers = inputPaper.map((paper) => ({
                 ...paper,
@@ -293,7 +312,7 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
           <Select
-            value={inputPaper[0].academicYearId ? inputPaper[0].academicYearId.toString() : ""}
+            value={inputPaper[0]?.academicYearId ? inputPaper[0].academicYearId.toString() : ""}
             onValueChange={(value) => {
               const newPapers = inputPaper.map((paper) => ({
                 ...paper,
@@ -322,14 +341,14 @@ export default function AddPaperModal({
             className="ml-2"
             onClick={handleAddPaper}
             disabled={
-              !inputPaper[0].subjectId ||
+              !inputPaper[0]?.subjectId ||
               inputPaper[0].subjectId === 0 ||
-              !inputPaper[0].affiliationId ||
-              inputPaper[0].affiliationId === 0 ||
-              !inputPaper[0].regulationTypeId ||
-              inputPaper[0].regulationTypeId === 0 ||
-              !inputPaper[0].academicYearId ||
-              inputPaper[0].academicYearId === 0
+              !inputPaper[0]?.affiliationId ||
+              inputPaper[0]?.affiliationId === 0 ||
+              !inputPaper[0]?.regulationTypeId ||
+              inputPaper[0]?.regulationTypeId === 0 ||
+              !inputPaper[0]?.academicYearId ||
+              inputPaper[0]?.academicYearId === 0
             }
           >
             Add Paper

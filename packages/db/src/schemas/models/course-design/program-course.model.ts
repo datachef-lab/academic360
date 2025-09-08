@@ -27,8 +27,8 @@ export const programCourseModel = pgTable("program_courses", {
 });
 
 // Zod Schemas for validation
-export const insertProgramCourseSchema = createInsertSchema(programCourseModel);
-export const selectProgramCourseSchema = createSelectSchema(programCourseModel);
+export const insertProgramCourseSchema = createInsertSchema(programCourseModel) as z.ZodTypeAny;
+export const selectProgramCourseSchema: z.ZodTypeAny = createSelectSchema(programCourseModel);
 export type ProgramCourse = z.infer<typeof selectProgramCourseSchema>;
 export type NewProgramCourse = z.infer<typeof insertProgramCourseSchema>;
 

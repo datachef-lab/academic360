@@ -44,62 +44,62 @@
 
 import { Student } from "@/types/user/student";
 import { StudentSearchType } from "../tables/users/student-search-column";
-import { Religion } from "@/types/resources/religion.types";
-import { Category } from "@/types/resources/category.types";
-import { Specialization } from "@/types/resources/specialization";
+// import { Religion } from "@/types/resources/religion.types";
+// import { Category } from "@/types/resources/category.types";
+// import { Specialization } from "@/types/resources/specialization";
 
 export function formattedStudent(content: Student[]) {
-    const formattedArr: StudentSearchType[] = [];
-    const profileBaseUrl = import.meta.env.VITE_STUDENT_PROFILE_URL || 'https://74.207.233.48:8443/hrclIRP/studentimages';
-    
-    //console.log("Profile base URL being used:", profileBaseUrl);
+  const formattedArr: StudentSearchType[] = [];
+  const profileBaseUrl = import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
 
-    for (let i = 0; i < content.length; i++) {
-        const { academicIdentifier, personalDetails, specialization, ...props } = content[i];
+  //console.log("Profile base URL being used:", profileBaseUrl);
 
-        let obj: StudentSearchType = {
-            ...props,
-            registrationNumber: null,
-            rollNumber: null,
-            uid: null,
-            nationality: null,
-            gender: null,
-            religion: null,
-            category: null,
-            // stream: null,
-            specialization: null,
-            avatar: undefined,
-        };
+  for (let i = 0; i < content.length; i++) {
+    const { ...props } = content[i];
 
-        if (academicIdentifier) {
-            const { registrationNumber, rollNumber, uid } = academicIdentifier;
-            obj = { ...obj, registrationNumber, rollNumber, uid };
-        }
+    const obj: StudentSearchType = {
+      ...props,
+      registrationNumber: null,
+      rollNumber: null,
+      uid: null,
+      nationality: null,
+      gender: null,
+      religion: null,
+      category: null,
+      // stream: null,
+      specialization: null,
+      avatar: undefined,
+    };
 
-        if (personalDetails) {
-            const { religion, gender, category } = personalDetails;
-            obj = { ...obj, religion: religion as Religion, gender, category: category as Category };
-        }
+    // if (academicIdentifier) {
+    //     const { registrationNumber, rollNumber, uid } = academicIdentifier;
+    //     obj = { ...obj, registrationNumber, rollNumber, uid };
+    // }
 
-        if (specialization) {
-            obj = { ...obj, specialization: specialization as Specialization };
-        }
+    // if (personalDetails) {
+    //     const { religion, gender, category } = personalDetails;
+    //     obj = { ...obj, religion: religion as Religion, gender, category: category as Category };
+    // }
 
-        if (obj.uid) {
-            const avatarUrl = `${profileBaseUrl}/Student_Image_${obj.uid}.jpg`;
-            obj.avatar = avatarUrl;
-            //console.log(`Generated avatar URL for student ${props.name} (UID: ${obj.uid}):`, avatarUrl);
-        } else if (props.id) {
-            const avatarUrl = `${profileBaseUrl}/Student_Image_${props.id}.jpg`;
-            obj.avatar = avatarUrl;
-            //console.log(`Generated avatar URL for student ${props.name} (ID: ${props.id}):`, avatarUrl);
-        } else {
-            obj.avatar = `${profileBaseUrl}/default.jpg`;
-            //console.log(`Using default avatar for student ${props.name} (no ID or UID)`);
-        }
+    // if (specialization) {
+    //     obj = { ...obj, specialization: specialization as Specialization };
+    // }
 
-        formattedArr.push(obj);
+    if (obj.uid) {
+      const avatarUrl = `${profileBaseUrl}/Student_Image_${obj.uid}.jpg`;
+      obj.avatar = avatarUrl;
+      //console.log(`Generated avatar URL for student ${props.name} (UID: ${obj.uid}):`, avatarUrl);
+    } else if (props.id) {
+      const avatarUrl = `${profileBaseUrl}/Student_Image_${props.id}.jpg`;
+      obj.avatar = avatarUrl;
+      //console.log(`Generated avatar URL for student ${props.name} (ID: ${props.id}):`, avatarUrl);
+    } else {
+      obj.avatar = `${profileBaseUrl}/default.jpg`;
+      //console.log(`Using default avatar for student ${props.name} (no ID or UID)`);
     }
 
-    return formattedArr;
+    formattedArr.push(obj);
+  }
+
+  return formattedArr;
 }

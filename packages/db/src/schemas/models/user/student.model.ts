@@ -56,7 +56,7 @@ export const studentRelations = relations(studentModel, ({ one }) => ({
     }),
 }))
 
-export const createStudentSchema = createInsertSchema(studentModel);
+export const createStudentSchema = createInsertSchema(studentModel) as z.ZodTypeAny;
 export type Student = z.infer<typeof createStudentSchema>;
 
 export type StudentT = typeof createStudentSchema._type;

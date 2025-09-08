@@ -56,9 +56,9 @@ const recentActivities: {
   status: string;
   date: string;
 }[] = [
-//   { name: "John Doe", type: "Admission", status: "Paid", date: "2024-04-10" },
-//   { name: "Jane Smith", type: "Fee Payment", status: "Unpaid", date: "2024-04-09" },
-//   { name: "Alice Brown", type: "Admission", status: "Pending", date: "2024-04-08" },
+  //   { name: "John Doe", type: "Admission", status: "Paid", date: "2024-04-10" },
+  //   { name: "Jane Smith", type: "Fee Payment", status: "Unpaid", date: "2024-04-09" },
+  //   { name: "Alice Brown", type: "Admission", status: "Pending", date: "2024-04-08" },
 ];
 
 function getAcademicYearLabel(startYear: number) {
@@ -182,7 +182,7 @@ export default function HomePage() {
   React.useEffect(() => {
     if (academicYears.length > 0) {
       const current = academicYears.find((y) => y.isCurrentYear);
-      setSelectedYear(current?.id ?? academicYears[0].id ?? "");
+      setSelectedYear(current?.id ?? academicYears[0]!.id ?? "");
     }
   }, [academicYears]);
 

@@ -52,17 +52,11 @@ export const addressRelations = relations(addressModel, ({ one }) => ({
     })
 }));
 
-export const createAddressSchema = createInsertSchema(addressModel);
+export const createAddressSchema = createInsertSchema(addressModel) as z.ZodTypeAny;
 
-// Schema for updates that excludes timestamp fields
-export const updateAddressSchema = createAddressSchema.omit({ 
-    id: true, 
-    createdAt: true, 
-    updatedAt: true 
-});
 
 export type Address = z.infer<typeof createAddressSchema>;
 
-export type AddressUpdate = z.infer<typeof updateAddressSchema>;
+// export type AddressUpdate = z.infer<typeof updateAddressSchema>;
 
 export type AddressT = typeof createAddressSchema._type;

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { pgTable, serial, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 
-import { bankAccountTypeEnum, userTypeEnum } from "@/schemas/enums";
+import { bankAccountTypeEnum } from "@/schemas/enums";
 import { personalDetailsModel } from "./personalDetails.model";
 import { userModel } from "./user.model";
 import { studentCategoryModel } from "../admissions";
@@ -75,7 +75,7 @@ export const staffModel = pgTable('staffs', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStaffSchema = createInsertSchema(staffModel);
+export const createStaffSchema = createInsertSchema(staffModel) as z.ZodTypeAny;
 
 export type Staff = z.infer<typeof createStaffSchema>;
 

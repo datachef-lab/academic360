@@ -408,7 +408,7 @@ export default function ApplicationsPage() {
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const getPageNumbers = () => {
-    const pages = [];
+    const pages: (number | string)[] = [];
     const maxVisiblePages = 5;
 
     if (totalPages <= maxVisiblePages) {
@@ -434,7 +434,7 @@ export default function ApplicationsPage() {
   };
 
   const handleRowSelect = (id: number | undefined) => {
-    if (typeof id !== 'number') return;
+    if (typeof id !== "number") return;
     setSelectedRows((prev) => (prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]));
   };
 
@@ -442,7 +442,9 @@ export default function ApplicationsPage() {
     if (selectAll) {
       setSelectedRows([]);
     } else {
-      setSelectedRows(applications.map((app) => (app as ApplicationFormDto).id).filter((id): id is number => typeof id === 'number'));
+      setSelectedRows(
+        applications.map((app) => (app as ApplicationFormDto).id).filter((id): id is number => typeof id === "number"),
+      );
     }
     setSelectAll(!selectAll);
   };
@@ -475,7 +477,9 @@ export default function ApplicationsPage() {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admission Details - {admission?.academicYear?.year ?? year}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Admission Details - {admission?.academicYear?.year ?? year}
+          </h1>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => alert("Downloading report...")}>
               <FileText className="w-4 h-4 mr-2" />
@@ -754,27 +758,31 @@ export default function ApplicationsPage() {
               <TableBody className="bg-white divide-y divide-gray-200">
                 {applications.length > 0 ? (
                   applications.map((app) => {
-                    const appId = typeof app.id === 'number' ? app.id : undefined;
-                    const name = app.generalInfo ? `${app.generalInfo.firstName} ${app.generalInfo.middleName ?? ''} ${app.generalInfo.lastName}`.trim() : '-';
-                    const gender = app.generalInfo?.gender ?? '-';
-                    const category = app.generalInfo?.categoryId ?? '-';
-                    const religion = app.generalInfo?.religionId ?? '-';
-                    const isGujarati = app.generalInfo?.isGujarati ? 'Yes' : 'No';
-                    const submittedAt = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : '-';
+                    const appId = typeof app.id === "number" ? app.id : undefined;
+                    const name = app.generalInfo
+                      ? `${app.generalInfo.firstName} ${app.generalInfo.middleName ?? ""} ${app.generalInfo.lastName}`.trim()
+                      : "-";
+                    const gender = app.generalInfo?.gender ?? "-";
+                    const category = app.generalInfo?.categoryId ?? "-";
+                    const religion = app.generalInfo?.religionId ?? "-";
+                    const isGujarati = app.generalInfo?.isGujarati ? "Yes" : "No";
+                    const submittedAt = app.createdAt ? new Date(app.createdAt).toLocaleDateString() : "-";
                     return (
                       <TableRow
                         key={appId}
-                        className={`hover:bg-gray-50 transition-colors duration-150 ${typeof appId === 'number' && selectedRows.includes(appId) ? "bg-blue-50" : ""}`}
+                        className={`hover:bg-gray-50 transition-colors duration-150 ${typeof appId === "number" && selectedRows.includes(appId) ? "bg-blue-50" : ""}`}
                       >
                         <TableCell className="w-12 px-6 py-4">
                           <input
                             type="checkbox"
-                            checked={typeof appId === 'number' && selectedRows.includes(appId)}
+                            checked={typeof appId === "number" && selectedRows.includes(appId)}
                             onChange={() => handleRowSelect(appId)}
                             className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                           />
                         </TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{typeof appId === 'number' ? appId : ''}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {typeof appId === "number" ? appId : ""}
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{name}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
                           <span
@@ -790,7 +798,9 @@ export default function ApplicationsPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{religion}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{gender}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">{isGujarati}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                          {isGujarati}
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">-</TableCell>
                       </TableRow>
@@ -869,17 +879,15 @@ export default function ApplicationsPage() {
                           >
                             ...
                           </span>
-                        ) : (
-                          typeof page === 'number' ? (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
-                            >
-                              {page}
-                            </button>
-                          ) : null
-                        ),
+                        ) : typeof page === "number" ? (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === page ? "z-10 bg-blue-50 border-blue-500 text-blue-600" : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"}`}
+                          >
+                            {page}
+                          </button>
+                        ) : null,
                       )}
                       <button
                         onClick={() => handlePageChange(currentPage + 1)}

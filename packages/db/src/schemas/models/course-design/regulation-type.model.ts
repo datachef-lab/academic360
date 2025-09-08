@@ -12,7 +12,7 @@ export const regulationTypeModel = pgTable('regulation_types', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createRegulationTypeModel = createInsertSchema(regulationTypeModel);
+export const createRegulationTypeModel = createInsertSchema(regulationTypeModel) as z.ZodTypeAny;
 
 export type RegulationType = z.infer<typeof createRegulationTypeModel>; 
 

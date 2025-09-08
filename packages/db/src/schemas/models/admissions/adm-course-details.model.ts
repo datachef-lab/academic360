@@ -1,6 +1,6 @@
 import { doublePrecision, boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { studentModel, userModel } from "../user";
-import { programCourseModel, specializationModel, streamModel } from "../course-design";
+import { userModel } from "../user";
+import { specializationModel, streamModel } from "../course-design";
 import { classModel, shiftModel } from "../academics";
 import { eligibilityCriteriaModel } from "./eligibility-criteria.model";
 import { studentCategoryModel } from "./adm-student-category.model";
@@ -160,7 +160,7 @@ export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAdmissionCourseDetails = createInsertSchema(admissionCourseDetailsModel);
+export const createAdmissionCourseDetails = createInsertSchema(admissionCourseDetailsModel) as z.ZodTypeAny;
 
 export type AdmissionCourseDetails = z.infer<typeof createAdmissionCourseDetails>;
 

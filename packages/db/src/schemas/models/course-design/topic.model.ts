@@ -16,7 +16,7 @@ export const topicModel = pgTable("topics", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createTopicSchema = createInsertSchema(topicModel);
+export const createTopicSchema = createInsertSchema(topicModel) as z.ZodTypeAny;
 
 export type Topic = z.infer<typeof createTopicSchema>;
 

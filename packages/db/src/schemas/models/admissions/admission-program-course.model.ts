@@ -24,7 +24,7 @@ export const admissionProgramCourseModel = pgTable("admission_program_courses", 
     remarks: text("remarks"),
 });
 
-export const createAdmissionProgramCourseSchema = createInsertSchema(admissionProgramCourseModel);
+export const createAdmissionProgramCourseSchema = createInsertSchema(admissionProgramCourseModel) as z.ZodTypeAny;
 
 export type AdmissionProgramCourse = z.infer<typeof createAdmissionProgramCourseSchema>;
 
