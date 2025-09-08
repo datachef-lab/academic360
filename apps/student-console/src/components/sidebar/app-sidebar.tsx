@@ -94,7 +94,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <Image
                   width={32}
                   height={32}
-                  src={`${process.env.NEXT_PUBLIC_URL!}/logo.jpeg`}
+                  src={`https://besc.academic360.app/student-console/logo.jpeg`}
                   alt={"BESC Logo"}
                   className="w-8 h-8 rounded-lg object-cover"
                 />
