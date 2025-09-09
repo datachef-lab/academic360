@@ -115,7 +115,10 @@ export async function findClassById(id: number) {
 export async function createClass(
   data: Omit<Class, "id" | "createdAt" | "updatedAt">,
 ) {
-  const [newClass] = await db.insert(classModel).values(data).returning();
+  const [newClass] = await db
+    .insert(classModel)
+    .values(data as any)
+    .returning();
   return newClass;
 }
 

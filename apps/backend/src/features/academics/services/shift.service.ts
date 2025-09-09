@@ -39,7 +39,10 @@ export async function findById(id: number): Promise<Shift | null> {
 export async function createShift(
   data: Omit<Shift, "id" | "createdAt" | "updatedAt">,
 ): Promise<Shift> {
-  const [created] = await db.insert(shiftModel).values(data).returning();
+  const [created] = await db
+    .insert(shiftModel)
+    .values(data as any)
+    .returning();
   return created;
 }
 

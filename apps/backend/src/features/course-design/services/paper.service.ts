@@ -229,7 +229,7 @@ export async function updatePaperWithComponents(
 
   // Create new paper components
   const validComponents = data.components.filter(
-    (component) => component?.fullMarks! > 0 || component?.credit! > 0,
+    (component: any) => component?.fullMarks! > 0 || component?.credit! > 0,
   );
 
   console.log("Valid components to create:", validComponents);

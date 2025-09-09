@@ -44,7 +44,7 @@ export async function createProgramCourse(
 
   const [created] = await db
     .insert(programCourseModel)
-    .values(data)
+    .values(data as any)
     .returning();
   return created;
 }

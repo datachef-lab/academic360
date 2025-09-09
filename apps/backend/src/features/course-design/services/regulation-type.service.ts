@@ -47,7 +47,7 @@ export async function createRegulationType(
   if (existingRegulationType) return null;
   const [created] = await db
     .insert(regulationTypeModel)
-    .values(data)
+    .values(data as any)
     .returning();
   return created;
 }
