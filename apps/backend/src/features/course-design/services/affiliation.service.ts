@@ -174,11 +174,29 @@ export const bulkUploadAffiliations = async (
       });
       continue;
     }
+
+    const trimmedName = name.trim();
+
+    // Check for duplicates: name
+    const existingWithName = await db
+      .select()
+      .from(affiliationModel)
+      .where(eq(affiliationModel.name, trimmedName));
+
+    if (existingWithName.length > 0) {
+      errors.push({
+        row: i + 2,
+        data: row,
+        error: `Affiliation with name "${trimmedName}" already exists`,
+      });
+      continue;
+    }
+
     try {
       const created = await db
         .insert(affiliationModel)
         .values({
-          name: name.trim(),
+          name: trimmedName,
           shortName: shortName ? String(shortName).trim() : null,
           sequence:
             sequence !== undefined && sequence !== null && sequence !== ""

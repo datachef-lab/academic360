@@ -1,10 +1,7 @@
 import { NextFunction, Response, Request } from "express";
 import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
-import {
-  createAddressSchema,
-  updateAddressSchema,
-} from "@repo/db/schemas/models/user";
+import { createAddressSchema } from "@repo/db/schemas/models/user";
 import {
   addAddress,
   findAddressById,
@@ -127,7 +124,7 @@ export const updateAddress = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parseResult = updateAddressSchema.safeParse(req.body);
+    const parseResult = createAddressSchema.safeParse(req.body);
     if (!parseResult.success) {
       res
         .status(400)

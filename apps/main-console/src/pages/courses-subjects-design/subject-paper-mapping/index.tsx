@@ -28,14 +28,14 @@ import {
   getAcademicYears,
   getProgramCourses,
   getPapers,
-//   BulkUploadRow,
-//   BulkUploadError,
+  //   BulkUploadRow,
+  //   BulkUploadError,
   updatePaperWithComponents,
   getCourses,
-//   createPaper,
+  //   createPaper,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
-// import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 import type {
   Subject,
   Affiliation,
@@ -56,7 +56,7 @@ import { AcademicYear } from "@/types/academics/academic-year";
 import { PaperEditModal } from "./paper-edit-modal";
 
 const SubjectPaperMappingPage = () => {
-  //   const { accessToken } = useAuth();
+  const { accessToken, displayFlag } = useAuth();
 
   const [searchText, setSearchText] = React.useState("");
 
@@ -220,7 +220,6 @@ const SubjectPaperMappingPage = () => {
         subjectTypesRes,
         academicYearRes,
         examComponentsRes,
-        academicYearsRes,
         programCourseRes,
         classesRes,
         courseRes,
@@ -231,7 +230,6 @@ const SubjectPaperMappingPage = () => {
         getSubjectTypes(),
         getAcademicYears(),
         getExamComponents(),
-        getAcademicYears(),
         getProgramCourses(),
         getAllClasses(),
         getCourses(),
@@ -280,16 +278,16 @@ const SubjectPaperMappingPage = () => {
       );
 
       setFiltersObj({
-        subjectId: subjectsRes[0]?.id || null,
-        affiliationId: affiliationsRes[0]?.id || null,
-        regulationTypeId: regulationTypesRes[0]?.id || null,
-        academicYearId: academicYearsRes[0]?.id || null,
+        subjectId: null, // Don't filter initially - show all data
+        affiliationId: null,
+        regulationTypeId: null,
+        academicYearId: null,
         searchText: "",
         page: 1,
         limit: 10,
       });
 
-      // Fetch filtered data
+      // Fetch all data initially
       await fetchFilteredData();
 
       setError(null);
@@ -330,9 +328,12 @@ const SubjectPaperMappingPage = () => {
   }, [fetchFilteredData]);
 
   useEffect(() => {
-    fetchData();
+    // Only fetch data when authentication is ready
+    if (displayFlag && accessToken) {
+      fetchData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [displayFlag, accessToken]);
 
   const handlePaperEditSubmit = async (data: Paper) => {
     console.log("Paper edit submitted with data:", data);
@@ -780,6 +781,19 @@ const SubjectPaperMappingPage = () => {
   //     }
   //   };
 
+  // Show loading while authentication is in progress
+  if (!displayFlag || !accessToken) {
+    return (
+      <div className="p-4">
+        <Card className="border-none">
+          <CardContent className="flex items-center justify-center h-64">
+            <div className="text-center">Authenticating...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="p-4">
@@ -913,7 +927,7 @@ const SubjectPaperMappingPage = () => {
           <div className="sticky top-[72px] z-40 bg-background p-4 border-b flex flex-wrap items-center gap-2 mb-0 justify-between">
             <div className="flex flex-wrap gap-2 items-center">
               <Select
-                value={filtersObj.affiliationId?.toString() ?? ""}
+                value={filtersObj.affiliationId?.toString() ?? "all"}
                 onValueChange={(value) =>
                   setFiltersObj((prev) => ({ ...prev, affiliationId: value === "all" ? null : Number(value) }))
                 }
@@ -931,7 +945,7 @@ const SubjectPaperMappingPage = () => {
                 </SelectContent>
               </Select>
               <Select
-                value={filtersObj.academicYearId?.toString() ?? ""}
+                value={filtersObj.academicYearId?.toString() ?? "all"}
                 onValueChange={(value) =>
                   setFiltersObj((prev) => ({ ...prev, academicYearId: value === "all" ? null : Number(value) }))
                 }
@@ -949,7 +963,7 @@ const SubjectPaperMappingPage = () => {
                 </SelectContent>
               </Select>
               <Select
-                value={filtersObj.regulationTypeId?.toString() ?? ""}
+                value={filtersObj.regulationTypeId?.toString() ?? "all"}
                 onValueChange={(value) =>
                   setFiltersObj((prev) => ({ ...prev, regulationTypeId: value === "all" ? null : Number(value) }))
                 }
@@ -967,7 +981,7 @@ const SubjectPaperMappingPage = () => {
                 </SelectContent>
               </Select>
               <Select
-                value={filtersObj.subjectId?.toString() ?? ""}
+                value={filtersObj.subjectId?.toString() ?? "all"}
                 onValueChange={(value) =>
                   setFiltersObj((prev) => ({ ...prev, subjectId: value === "all" ? null : Number(value) }))
                 }

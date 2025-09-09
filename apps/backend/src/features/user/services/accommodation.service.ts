@@ -3,8 +3,7 @@ import {
   Accommodation,
   accommodationModel,
   createAccommodationSchema,
-  updateAccommodationSchema,
-  AccommodationUpdate,
+  AccommodationT,
 } from "@repo/db/schemas/models/user";
 import { addAddress, findAddressById, saveAddress } from "./address.service.js";
 import { db } from "@/db/index.js";
@@ -26,8 +25,8 @@ function validateAccommodationInput(data: Omit<AccommodationType, "id">) {
 }
 
 // Validate input using Zod schema for updates
-function validateAccommodationUpdateInput(data: AccommodationUpdate) {
-  const parseResult = updateAccommodationSchema.safeParse(data);
+function validateAccommodationUpdateInput(data: AccommodationT) {
+  const parseResult = createAccommodationSchema.safeParse(data);
   if (!parseResult.success) {
     const error = new Error(
       "Validation failed: " + JSON.stringify(parseResult.error.issues),

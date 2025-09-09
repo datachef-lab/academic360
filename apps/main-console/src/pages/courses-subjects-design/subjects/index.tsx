@@ -11,14 +11,20 @@ import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@
 import {
   AlertDialog,
   AlertDialogContent,
-  // AlertDialogHeader,
-  // AlertDialogTitle,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 import { Button } from "@/components/ui/button";
 import { Subject } from "@/types/course-design";
-import { getAllSubjects, createSubject, updateSubject, bulkUploadSubjects, BulkUploadResult } from "@/services/subject.api";
+import {
+  getAllSubjects,
+  createSubject,
+  updateSubject,
+  bulkUploadSubjects,
+  BulkUploadResult,
+} from "@/services/subject.api";
 import { deleteSubject, DeleteResult } from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
@@ -38,13 +44,13 @@ const SubjectsPage = () => {
   React.useEffect(() => {
     setLoading(true);
     getAllSubjects()
-      .then(res => {
+      .then((res) => {
         const subjectsData = Array.isArray(res) ? res : [];
         setSubjects(subjectsData);
         setError(null);
       })
       .catch((error) => {
-        console.error('Error fetching subjects:', error);
+        console.error("Error fetching subjects:", error);
         setError("Failed to fetch subjects");
         setSubjects([]);
       })
@@ -56,7 +62,12 @@ const SubjectsPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleSubmit = async (data: { name: string; code?: string | null; sequence?: number | null; disabled: boolean }) => {
+  const handleSubmit = async (data: {
+    name: string;
+    code?: string | null;
+    sequence?: number | null;
+    disabled: boolean;
+  }) => {
     setIsSubmitting(true);
     try {
       const subjectData = {
@@ -65,7 +76,7 @@ const SubjectsPage = () => {
         sequence: data.sequence || null,
         disabled: data.disabled,
       };
-      
+
       if (selectedSubject?.id) {
         // Update
         await updateSubject(selectedSubject.id, subjectData);
@@ -104,8 +115,8 @@ const SubjectsPage = () => {
         setSubjects(Array.isArray(fresh) ? fresh : []);
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
@@ -116,25 +127,24 @@ const SubjectsPage = () => {
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
-    
+
     setIsBulkUploading(true);
     try {
       const result = await bulkUploadSubjects(bulkFile);
       setBulkUploadResult(result);
-      
+
       if (result.summary.successful > 0) {
         toast.success(`Successfully uploaded ${result.summary.successful} subjects`);
         // Re-fetch the list to show new data
         const freshSubjects = await getAllSubjects();
         setSubjects(Array.isArray(freshSubjects) ? freshSubjects : []);
       }
-      
+
       if (result.summary.failed > 0) {
         toast.error(`${result.summary.failed} subjects failed to upload`);
       }
-      
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -148,16 +158,16 @@ const SubjectsPage = () => {
         Name: "Introduction to Programming",
         Code: "CS101",
         Sequence: 1,
-        Status: "Active"
+        Status: "Active",
       },
       {
-        Name: "Data Structures", 
+        Name: "Data Structures",
         Code: "CS201",
         Sequence: 2,
-        Status: "Active"
-      }
+        Status: "Active",
+      },
     ];
-    
+
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Subjects Template");
@@ -167,7 +177,7 @@ const SubjectsPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getAllSubjects();
-      const data = res.map(subject => ({
+      const data = res.map((subject) => ({
         ID: subject.id,
         Name: subject.name,
         Code: subject.code || "-",
@@ -203,27 +213,28 @@ const SubjectsPage = () => {
         "Row Number": error.row,
         "Error Message": error.error,
         "Original Data": JSON.stringify(error.data),
-        "Name": (error.data as unknown as string[])[0] || "",
-        "Code": (error.data as unknown as string[])[1] || "",
-        "Sequence": (error.data as unknown as string[])[2] || "",
-        "Status": (error.data as unknown as string[])[3] || ""
+        Name: (error.data as unknown as string[])[0] || "",
+        Code: (error.data as unknown as string[])[1] || "",
+        Sequence: (error.data as unknown as string[])[2] || "",
+        Status: (error.data as unknown as string[])[3] || "",
       }));
 
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Subjects");
       XLSX.writeFile(wb, "failed-subjects-upload.xlsx");
-      
+
       toast.success("Failed data downloaded successfully");
     } catch {
       toast.error("Failed to download error data");
     }
   };
 
-  const filteredSubjects = (Array.isArray(subjects) ? subjects : []).filter((subject) =>
-    (subject.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (subject.code ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (subject.sequence?.toString() ?? '').includes(searchText.toLowerCase())
+  const filteredSubjects = (Array.isArray(subjects) ? subjects : []).filter(
+    (subject) =>
+      (subject.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (subject.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (subject.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
 
   return (
@@ -243,7 +254,7 @@ const SubjectsPage = () => {
                 <Button variant="outline">
                   <Upload className="mr-2 h-4 w-4" />
                   Bulk Upload
-                </Button> 
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
@@ -259,13 +270,13 @@ const SubjectsPage = () => {
                       Download the template to see the required format
                     </span>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Upload Excel File</label>
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full p-2 border rounded"
                     />
                   </div>
@@ -284,39 +295,30 @@ const SubjectsPage = () => {
                           <span className="font-medium">Failed:</span> {bulkUploadResult.summary.failed}
                         </div>
                       </div>
-                      
-                                             {bulkUploadResult.errors.length > 0 && (
-                         <div className="space-y-2">
-                           <div className="flex items-center justify-between">
-                             <h5 className="font-medium text-red-600">Errors:</h5>
-                             <Button 
-                               variant="outline" 
-                               size="sm" 
-                               onClick={handleDownloadFailedData}
-                               className="text-xs"
-                             >
-                               <Download className="mr-1 h-3 w-3" />
-                               Download Failed Data
-                             </Button>
-                           </div>
-                           <div className="max-h-40 overflow-y-auto space-y-1">
-                             {bulkUploadResult.errors.map((error) => (
-                               <div key={error.row} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                 <span className="font-medium">Row {error.row}:</span> {error.error}
-                               </div>
-                             ))}
-                           </div>
-                         </div>
-                       )}
+
+                      {bulkUploadResult.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <h5 className="font-medium text-red-600">Errors:</h5>
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
+                              <Download className="mr-1 h-3 w-3" />
+                              Download Failed Data
+                            </Button>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1">
+                            {bulkUploadResult.errors.map((error) => (
+                              <div key={error.row} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                <span className="font-medium">Row {error.row}:</span> {error.error}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button variant="outline" onClick={handleCloseBulkUpload}>
@@ -334,9 +336,9 @@ const SubjectsPage = () => {
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
-                <DialogHeader>
-                  <DialogTitle>{selectedSubject ? "Edit Subject" : "Add New Subject"}</DialogTitle>
-                </DialogHeader>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{selectedSubject ? "Edit Subject" : "Add New Subject"}</AlertDialogTitle>
+                </AlertDialogHeader>
                 <SubjectForm
                   initialData={selectedSubject}
                   onSubmit={handleSubmit}
@@ -349,36 +351,47 @@ const SubjectsPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>ID</TableHead>
-                    <TableHead style={{ width: 250, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
+                    <TableHead style={{ width: 250, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                      <TableCell colSpan={6} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
                     </TableRow>
                   ) : filteredSubjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No subjects found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        No subjects found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredSubjects.map((subject) => (

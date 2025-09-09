@@ -17,10 +17,17 @@ export interface BulkUploadResult {
 
 export async function createSubject(data: Subject) {
   const { id, createdAt, updatedAt, ...props } = data;
+
+  // Check if subject with same name and code already exists
   const [existingSubject] = await db
     .select()
     .from(subjectModel)
-    .where(and(ilike(subjectModel.code, data.code!.trim())));
+    .where(
+      and(
+        eq(subjectModel.name, data.name),
+        data.code ? eq(subjectModel.code, data.code) : undefined,
+      ),
+    );
 
   if (existingSubject) return null;
 
@@ -74,7 +81,29 @@ export const bulkUploadSubjects = async (
           continue;
         }
 
-        // Check if code is unique (if provided)
+        // Check if name + code combination is unique (most important validation)
+        if (subjectData.code) {
+          const existingWithNameAndCode = await db
+            .select()
+            .from(subjectModel)
+            .where(
+              and(
+                eq(subjectModel.name, subjectData.name),
+                eq(subjectModel.code, subjectData.code),
+              ),
+            );
+
+          if (existingWithNameAndCode.length > 0) {
+            result.errors.push({
+              row: rowNumber,
+              data: row,
+              error: `Subject with name "${subjectData.name}" and code "${subjectData.code}" already exists`,
+            });
+            continue;
+          }
+        }
+
+        // Check if code is unique (if provided and no name+code duplicate found)
         if (subjectData.code) {
           const existingWithCode = await db
             .select()

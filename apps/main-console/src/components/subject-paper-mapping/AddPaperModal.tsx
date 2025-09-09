@@ -190,6 +190,7 @@ export default function AddPaperModal({
       const response = await createPaper(formattedPapers as Paper[]);
       console.log("create papers response:", response);
       toast.success("Papers saved successfully");
+      onCancel(); // Close the modal after successful submission
     } catch (error) {
       console.log(error);
       toast.error("Papers doesn't saved");
@@ -197,8 +198,6 @@ export default function AddPaperModal({
       setPapers([defaultPaper]); // Reset to default paper after submission
       fetchData();
     }
-
-    // onCancel();
   };
 
   const update = (index: number, newData: InputPaper) => {

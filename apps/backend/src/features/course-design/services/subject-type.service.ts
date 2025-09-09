@@ -3,7 +3,7 @@ import {
   SubjectType,
   subjectTypeModel,
 } from "@repo/db/schemas/models/course-design";
-import { countDistinct, eq } from "drizzle-orm";
+import { and, countDistinct, eq } from "drizzle-orm";
 import { paperModel } from "@repo/db/schemas/models/course-design";
 import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
@@ -157,12 +157,38 @@ export const bulkUploadSubjectTypes = async (
       });
       continue;
     }
+
+    const trimmedName = name.trim();
+    const trimmedCode = code ? String(code).trim() : null;
+
+    // Check for duplicates: name + code combination
+    if (trimmedCode) {
+      const existingWithNameAndCode = await db
+        .select()
+        .from(subjectTypeModel)
+        .where(
+          and(
+            eq(subjectTypeModel.name, trimmedName),
+            eq(subjectTypeModel.code, trimmedCode),
+          ),
+        );
+
+      if (existingWithNameAndCode.length > 0) {
+        errors.push({
+          row: i + 2,
+          data: row,
+          error: `Subject type with name "${trimmedName}" and code "${trimmedCode}" already exists`,
+        });
+        continue;
+      }
+    }
+
     try {
       const created = await db
         .insert(subjectTypeModel)
         .values({
-          name: name.trim(),
-          code: code ? String(code).trim() : null,
+          name: trimmedName,
+          code: trimmedCode,
           sequence:
             sequence !== undefined && sequence !== null && sequence !== ""
               ? Number(sequence)

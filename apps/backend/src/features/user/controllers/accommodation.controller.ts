@@ -3,7 +3,7 @@ import { handleError } from "@/utils/handleError.js";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import {
   createAccommodationSchema,
-  updateAccommodationSchema,
+  AccommodationT,
 } from "@repo/db/schemas/models/user";
 import {
   addAccommodation,
@@ -192,7 +192,7 @@ export const updateAccommodation = async (
         .json(new ApiResponse(400, "INVALID_ID", null, "Invalid ID format"));
       return;
     }
-    const parseResult = updateAccommodationSchema.safeParse(req.body);
+    const parseResult = createAccommodationSchema.safeParse(req.body);
     if (!parseResult.success) {
       res
         .status(400)

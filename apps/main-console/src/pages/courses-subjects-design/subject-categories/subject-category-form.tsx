@@ -103,7 +103,16 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
             <FormItem>
               <FormLabel>Sequence</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="Enter sequence" {...field} value={Number(field.value)} />
+                <Input
+                  type="number"
+                  placeholder="Enter sequence"
+                  {...field}
+                  value={field.value ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    field.onChange(value === "" ? null : Number(value));
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

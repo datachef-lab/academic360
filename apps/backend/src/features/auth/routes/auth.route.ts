@@ -14,7 +14,7 @@ import passport from "passport";
 
 const router = express.Router();
 
-router.post("/", validateData(createUserSchema), createUser);
+router.post("/", createUser);
 
 router.post("/login", loginLimiter, login);
 

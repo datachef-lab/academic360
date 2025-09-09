@@ -3,8 +3,6 @@ import {
   Address,
   addressModel,
   createAddressSchema,
-  updateAddressSchema,
-  AddressUpdate,
 } from "@repo/db/schemas/models/user";
 import {
   countryModel,
@@ -32,8 +30,8 @@ function validateAddressInput(data: Omit<Address, "id">) {
 }
 
 // Validate input using Zod schema for updates
-function validateAddressUpdateInput(data: AddressUpdate) {
-  const parseResult = updateAddressSchema.safeParse(data);
+function validateAddressUpdateInput(data: Address) {
+  const parseResult = createAddressSchema.safeParse(data);
   if (!parseResult.success) {
     const error = new Error(
       "Validation failed: " + JSON.stringify(parseResult.error.issues),
@@ -72,7 +70,7 @@ export async function getAllAddresses(): Promise<Address[]> {
 
 export async function saveAddress(
   id: number,
-  address: AddressUpdate,
+  address: Address,
 ): Promise<Address | null> {
   const [foundAddress] = await db
     .select()
