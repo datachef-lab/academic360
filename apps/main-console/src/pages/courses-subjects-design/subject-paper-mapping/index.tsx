@@ -972,6 +972,7 @@ const SubjectPaperMappingPage = () => {
                 <AddPaperModal
                   dropdownData={{
                     subjectTypes,
+                    courseTypes,
                     subjects,
                     courses: courses,
                     affiliations,

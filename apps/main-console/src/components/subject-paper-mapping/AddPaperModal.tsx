@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { createPaper } from "@/services/course-design.api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { MultiSelect } from "@/components/ui/AdvancedMultiSelect";
-
+import { CourseType } from "@/schemas";
 interface InputPaper extends Omit<Paper, "programCourseId" | "classId"> {
   programCourses: number[];
   classes: number[];
@@ -35,6 +35,7 @@ interface AddModalProps {
     regulationTypes: RegulationType[];
     subjectTypes: SubjectType[];
     courses: Course[];
+    courseTypes: CourseType[];
     examComponents: ExamComponent[];
     academicYears: AcademicYear[];
     programCourses: ProgramCourse[];
@@ -56,6 +57,7 @@ export default function AddPaperModal({
     academicYears,
     programCourses,
     classes,
+    courseTypes,
   },
 }: AddModalProps) {
   const [defaultPaper] = useState<Paper>({
@@ -396,7 +398,7 @@ export default function AddPaperModal({
                   className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
-                  label: "Applicable Course",
+                  label: "Applicable Program Course",
                   className: "w-48 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
@@ -510,7 +512,7 @@ export default function AddPaperModal({
                         .map(
                           (programCourseItem) =>
                             programCourseItem.regulationTypeId === field.regulationTypeId && {
-                              label: courses.find((crs) => crs.id == programCourseItem.courseId)?.name ?? "",
+                              label: `${courses.find((crs) => crs.id == programCourseItem.courseId)?.name} (${courseTypes.find((crs) => crs.id == programCourseItem.courseTypeId)?.shortName ?? "-"})`,
                               value: programCourseItem.id?.toString() || "",
                             },
                         )
