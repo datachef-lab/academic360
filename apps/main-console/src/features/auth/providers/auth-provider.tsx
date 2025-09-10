@@ -51,6 +51,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [navigate]);
 
   const generateNewToken = useCallback(async (): Promise<string | null> => {
+    // Don't make API call if we're on the login page
+    if (window.location.pathname === "/") {
+      return null;
+    }
+
     try {
       const response = await axiosInstance.get<ApiResonse<{ accessToken: string; user: UserDto }>>(
         "/auth/refresh",
@@ -63,14 +68,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return response.data.payload.accessToken;
     } catch (error) {
       console.error("Failed to generate new token:", error);
-      alert("Session expired or failed to authenticate. Please log in again.");
+      // Only show alert if we're not on the login page
+      if (window.location.pathname !== "/") {
+        alert("Session expired or failed to authenticate. Please log in again.");
+      }
       logout();
       return null;
     }
   }, [logout]);
 
   useEffect(() => {
-    if (accessToken === null) {
+    if (accessToken === null && window.location.pathname !== "/") {
       console.log("generating accessToken...!");
       generateNewToken();
     }
