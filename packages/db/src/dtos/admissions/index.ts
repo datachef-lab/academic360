@@ -1,6 +1,7 @@
 import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardT, ClassT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
+import { BoardSubjectNameT } from "@/schemas/models/admissions/board-subject-name.model";
 
 export interface AdmissionCourseDetailsDto extends Omit<AdmissionCourseDetailsT, "streamId" | "programCourseId" | "classId" | "shiftId" | "eligibilityCriteriaId" | "studentCategoryId"> {
     stream: Stream | null;
@@ -23,8 +24,8 @@ export interface AdmissionGeneralInfoDto extends Omit<AdmissionGeneralInfoT, "el
     transportDetails: TransportDetailsT | null;
 }
 
-export interface BoardSubjectDto extends Omit<BoardSubjectT, "subjectId"> {
-    subject: SubjectT;
+export interface BoardSubjectDto extends Omit<BoardSubjectT, "boardSubjectNameId"> {
+    boardSubjectName: BoardSubjectNameT;
 }
 export interface StudentAcademicSubjectsDto extends Omit<StudentAcademicSubjectsT, "boardSubjectId"> {
     boardSubject: BoardSubjectDto;

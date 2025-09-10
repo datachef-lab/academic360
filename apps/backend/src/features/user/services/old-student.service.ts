@@ -12,6 +12,8 @@ import {
   OldMeritList,
   OldStudentCategory,
   OldBoardSubjectMappingSub,
+  OldBoardSubjectName,
+  OldBoardSubjectMapping,
 } from "@repo/db/legacy-system-types/admissions";
 import {
   OldCityMaintab,
@@ -138,6 +140,7 @@ import {
   OldSession,
 } from "@repo/db/legacy-system-types/academics";
 import { addDegree } from "@/features/resources/services/degree.service";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
 
 const BATCH_SIZE = 500;
 
@@ -725,6 +728,7 @@ async function addAdmAcademSubjects(
     // Create Board and subject mapping and use that mapping as fk in student-adm-academic-subject
     const boardSubject = await addBoardSubject(
       oldAdmAcademicSubject.subjectId!,
+      oldAcademicDetails.boardId!,
     );
 
     if (!boardSubject) {
@@ -803,58 +807,73 @@ async function addAdmAdditionalInfo(
 }
 
 async function addBoardSubject(
-  oldSubjectId: number,
+  oldAdmRelevantSubjectId: number,
+  oldBoardId: number,
 ): Promise<BoardSubject | undefined> {
-  const [[oldSubject]] = (await mysqlConnection.query(`
-        SELECT *
-        FROM subject
-        WHERE id = ${oldSubjectId};
-    `)) as [OldSubject[], any];
-
-  if (!oldSubject) {
-    // throw new Error(`No academic | subject found for academic subject ID: ${oldSubjectId}`);
-    console.log(
-      `No academic | subject found for academic subject ID: ${oldSubjectId}`,
-    );
-    return undefined;
-  }
-
-  const [[boardSubjectSubMapping]] = (await mysqlConnection.query(`
-        SELECT *
-        FROM boardsubjectmappingsub
-        WHERE subjectid = ${oldSubjectId};
-    `)) as [OldBoardSubjectMappingSub[], any];
-
-  if (!boardSubjectSubMapping) {
-    throw new Error(
-      `No board subject mapping found for subject ID: ${oldSubjectId}`,
-    );
-  }
-
   const [[oldBoard]] = (await mysqlConnection.query(`
         SELECT *
         FROM board
-        WHERE id = ${boardSubjectSubMapping.parent_id};
+        WHERE id = ${oldBoardId};
     `)) as [OldBoard[], any];
 
   if (!oldBoard) {
-    throw new Error(
-      `No board found for board ID: ${boardSubjectSubMapping.parent_id}`,
-    );
+    return undefined;
   }
 
   const board = await addBoard(oldBoard.id!);
 
-  if (!board) {
-    throw new Error(`No board found for board ID: ${oldBoard.id}`);
+  const [[oldBoardSubjectMappingMain]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM boardsubjectmappingmain
+        WHERE boardid = ${oldBoardId};
+    `)) as [OldBoardSubjectMapping[], any];
+
+  const [[boardSubjectSubMapping]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM boardsubjectmappingsub
+        WHERE
+            subjectid = ${oldAdmRelevantSubjectId} 
+            AND parent_id = ${oldBoardSubjectMappingMain.id};
+    `)) as [OldBoardSubjectMappingSub[], any];
+
+  if (!boardSubjectSubMapping) {
+    console.log(
+      `No board subject mapping found for subject ID: ${oldAdmRelevantSubjectId}`,
+    );
+    return undefined;
   }
 
-  const foundSubject = await addSubject(oldSubjectId);
-  if (!foundSubject) {
-    throw new Error(`No subject found for subject ID: ${oldSubjectId}`);
+  const [[oldBoardSubjectName]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM admrelevantpaper
+        WHERE id = ${boardSubjectSubMapping.subjectid};
+    `)) as [OldBoardSubjectName[], any];
+
+  let [foundBoardSubjectName] = await db
+    .select()
+    .from(boardSubjectNameModel)
+    .where(
+      and(
+        ilike(boardSubjectNameModel.name, oldBoardSubjectName.paperName.trim()),
+        eq(
+          boardSubjectNameModel.legacyBoardSubjectNameId,
+          oldBoardSubjectName.id!,
+        ),
+      ),
+    );
+
+  if (!foundBoardSubjectName) {
+    const [newBoardSubjectName] = await db
+      .insert(boardSubjectNameModel)
+      .values({
+        name: oldBoardSubjectName.paperName.trim(),
+        legacyBoardSubjectNameId: oldBoardSubjectName.id!,
+      })
+      .returning();
+    foundBoardSubjectName = newBoardSubjectName;
   }
 
-  const [existingBoardSubject] = await db
+  const foundBoardSubject = await db
     .select()
     .from(boardSubjectModel)
     .where(
@@ -864,12 +883,12 @@ async function addBoardSubject(
           boardSubjectSubMapping.id,
         ),
         eq(boardSubjectModel.boardId, board.id!),
-        eq(boardSubjectModel.subjectId, foundSubject.id!),
+        eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
       ),
     );
 
-  if (existingBoardSubject) {
-    return existingBoardSubject;
+  if (foundBoardSubject) {
+    return foundBoardSubject;
   }
 
   const [newBoardSubject] = await db
@@ -877,7 +896,7 @@ async function addBoardSubject(
     .values({
       legacyBoardSubjectMappingSubId: boardSubjectSubMapping.id,
       boardId: board.id!,
-      subjectId: foundSubject.id!,
+      boardSubjectNameId: foundBoardSubjectName.id!,
       fullMarksTheory: boardSubjectSubMapping.thfull || 0,
       passingMarksTheory: boardSubjectSubMapping.thpass || 0,
       fullMarksPractical: boardSubjectSubMapping.pracfull || 0,
@@ -1743,74 +1762,6 @@ export async function addAccommodation(
     .returning();
 
   return newAccommodation;
-}
-
-async function addAddress({
-  cityId,
-  districtId,
-  stateId,
-  countryId,
-  otherCity,
-  otherDistrict,
-  otherState,
-  otherCountry,
-  pincode,
-  landmark,
-  postofficeId,
-  addressLine,
-  localityType,
-  phone,
-  otherPostoffice,
-  otherPoliceStation,
-  policeStationId,
-}: {
-  cityId: number;
-  districtId: number;
-  stateId: number;
-  countryId: number;
-  otherCity: string;
-  otherDistrict: string;
-  otherState: string;
-  otherCountry: string;
-  pincode: string;
-  landmark: string;
-  postofficeId: number;
-  addressLine: string;
-  localityType: string;
-  phone: string;
-  otherPostoffice: string;
-  otherPoliceStation: string;
-  policeStationId: number;
-}): Promise<Address> {
-  const [address] = await db
-    .insert(addressModel)
-    .values({
-      cityId: cityId,
-      districtId: districtId,
-      stateId: stateId,
-      countryId: countryId,
-      otherCity: otherCity,
-      otherDistrict: otherDistrict,
-      otherState: otherState,
-      otherPostoffice: otherPostoffice,
-      otherPoliceStation: otherPoliceStation,
-      otherCountry: otherCountry,
-      pincode: pincode,
-      policeStationId: policeStationId,
-      landmark: landmark,
-      postofficeId: postofficeId,
-      addressLine: addressLine?.trim(),
-      localityType:
-        localityType === "URBAN"
-          ? "URBAN"
-          : localityType === "RURAL"
-            ? "RURAL"
-            : null,
-      phone: phone?.trim(),
-    })
-    .returning();
-
-  return address;
 }
 
 export async function addOccupation(name: string, legacyOccupationId: number) {
@@ -3602,62 +3553,6 @@ async function addAdmSubjectPaperSelection(
         studentId,
         admissionCourseDetailsId,
         paperId,
-      })
-      .returning()
-  )[0];
-}
-
-async function addSubjectType(oldSubjectTypeId: number | null) {
-  if (!oldSubjectTypeId) return null;
-
-  const [[subjectTypeRow]] = (await mysqlConnection.query(`
-        SELECT * FROM subjecttype WHERE id = ${oldSubjectTypeId}
-    `)) as [OldSubjectType[], any];
-
-  if (!subjectTypeRow) return null;
-
-  const [foundSubjectType] = await db
-    .select()
-    .from(subjectTypeModel)
-    .where(ilike(subjectTypeModel.name, subjectTypeRow.subjectTypeName.trim()));
-
-  if (foundSubjectType) return foundSubjectType;
-
-  return (
-    await db
-      .insert(subjectTypeModel)
-      .values({
-        legacySubjectTypeId: oldSubjectTypeId,
-        name: subjectTypeRow.subjectTypeName.trim(),
-        code: subjectTypeRow.shortname?.trim(),
-      })
-      .returning()
-  )[0];
-}
-
-async function addSubject(oldSubjectId: number | null) {
-  if (!oldSubjectId) return null;
-
-  const [[subjectRow]] = (await mysqlConnection.query(`
-        SELECT * FROM subject WHERE id = ${oldSubjectId}
-    `)) as [OldSubject[], any];
-
-  if (!subjectRow) return null;
-
-  const [foundSubject] = await db
-    .select()
-    .from(subjectModel)
-    .where(ilike(subjectModel.name, subjectRow.subjectName.trim()));
-
-  if (foundSubject) return foundSubject;
-
-  return (
-    await db
-      .insert(subjectModel)
-      .values({
-        legacySubjectId: oldSubjectId,
-        name: subjectRow.subjectName.trim(),
-        code: subjectRow.univcode?.trim(),
       })
       .returning()
   )[0];

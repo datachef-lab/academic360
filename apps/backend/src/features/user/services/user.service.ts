@@ -69,6 +69,7 @@ import { annualIncomeModel } from "@repo/db/schemas/models/resources";
 import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
 import * as studentService from "./student.service.js";
 import * as staffService from "./staff.service.js";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model.js";
 
 export async function addUser(user: User) {
   // Hash the password before storing it in the database
@@ -548,16 +549,20 @@ async function mapStudentAcademicSubjectToDto(
     .from(boardSubjectModel)
     .where(eq(boardSubjectModel.id, boardSubjectId));
 
-  const [subject] = await db
+  const [boardSubjectName] = await db
     .select()
-    .from(subjectModel)
-    .where(eq(subjectModel.id, boardSubject.subjectId));
+    .from(boardSubjectNameModel)
+    .where(eq(boardSubjectNameModel.id, boardSubject.boardSubjectNameId));
+  //   const [subject] = await db
+  //     .select()
+  //     .from(subjectModel)
+  //     .where(eq(subjectModel.id, boardSubject.boardSubjectNameId));
 
   return {
     ...s,
     boardSubject: {
       ...boardSubject,
-      subject: subject!,
+      boardSubjectName,
     },
   } as StudentAcademicSubjectsDto;
 }

@@ -460,3 +460,9 @@ export interface OldBoardSubjectMappingSub {
     pracfull: number | null;
     pracpass: number | null;
 }
+
+export interface OldBoardSubjectName {
+    readonly id: number;
+    paperName: string;
+    code: string | null;
+}
