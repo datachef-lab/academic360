@@ -9,7 +9,7 @@ import {
   bulkUploadPapersHandler,
 } from "../controllers/paper.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
-import { uploadExcelMiddleware } from "@/middlewares/uploadExcelMiddleware.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = express.Router();
 

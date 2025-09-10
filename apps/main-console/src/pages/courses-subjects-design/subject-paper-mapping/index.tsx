@@ -67,7 +67,17 @@ const SubjectPaperMappingPage = () => {
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
-  const [bulkUploadResult, setBulkUploadResult] = React.useState<any>(null);
+  const [bulkUploadResult, setBulkUploadResult] = React.useState<{
+    summary: {
+      total: number;
+      successful: number;
+      failed: number;
+    };
+    errors: Array<{
+      row: number;
+      error: string;
+    }>;
+  } | null>(null);
   const [isPaperEditModalOpen, setIsPaperEditModalOpen] = React.useState(false);
   const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<Paper | null>(null);
 
@@ -878,11 +888,37 @@ const SubjectPaperMappingPage = () => {
                   <input
                     type="file"
                     accept=".xlsx,.xls,.csv"
-                    onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      setBulkFile(e.target.files?.[0] || null);
+                      setBulkUploadResult(null); // Clear previous results
+                    }}
                   />
-                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
-                    Upload
+                  <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading}>
+                    {isBulkUploading ? "Uploading..." : "Upload"}
                   </Button>
+
+                  {bulkUploadResult && (
+                    <div className="mt-4 p-4 bg-gray-50 rounded-md">
+                      <h4 className="font-medium mb-2">Upload Results:</h4>
+                      <div className="text-sm space-y-1">
+                        <p>Total: {bulkUploadResult.summary?.total || 0}</p>
+                        <p className="text-green-600">Successful: {bulkUploadResult.summary?.successful || 0}</p>
+                        <p className="text-red-600">Failed: {bulkUploadResult.summary?.failed || 0}</p>
+                      </div>
+                      {bulkUploadResult.errors && bulkUploadResult.errors.length > 0 && (
+                        <div className="mt-2">
+                          <p className="font-medium text-red-600">Errors:</p>
+                          <ul className="text-xs text-red-600 max-h-32 overflow-y-auto">
+                            {bulkUploadResult.errors.map((error, index: number) => (
+                              <li key={index}>
+                                Row {error.row}: {error.error}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
