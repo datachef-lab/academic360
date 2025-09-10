@@ -9,7 +9,7 @@ import {
   deletePaperSafe,
   updatePaperWithComponents,
   createPapers,
-  bulkUploadPapers,
+  //   bulkUploadPapers,
 } from "@/features/course-design/services/paper.service.js";
 import { PaperDto } from "@/types/course-design/index.type.js";
 import { socketService } from "@/services/socketService";
@@ -150,39 +150,39 @@ export const updatePaperWithComponentsHandler = async (
   }
 };
 
-export const bulkUploadPapersHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    if (!req.file) {
-      res
-        .status(400)
-        .json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
-      return;
-    }
+// export const bulkUploadPapersHandler = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) => {
+//   try {
+//     if (!req.file) {
+//       res
+//         .status(400)
+//         .json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
+//       return;
+//     }
 
-    const uploadSessionId =
-      req.body.uploadSessionId || req.query.uploadSessionId;
-    const io = socketService.getIO();
+//     const uploadSessionId =
+//       req.body.uploadSessionId || req.query.uploadSessionId;
+//     const io = socketService.getIO();
 
-    const result = await bulkUploadPapers(req.file.path, io, uploadSessionId);
+//     // const result = await bulkUploadPapers(req.file.path, io, uploadSessionId);
 
-    const response = {
-      success: result.success,
-      errors: result.errors,
-      summary: {
-        total: result.summary.total,
-        successful: result.summary.successful,
-        failed: result.summary.failed,
-      },
-    };
+//     const response = {
+//       success: result.success,
+//       errors: result.errors,
+//       summary: {
+//         total: result.summary.total,
+//         successful: result.summary.successful,
+//         failed: result.summary.failed,
+//       },
+//     };
 
-    res
-      .status(200)
-      .json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
+//     res
+//       .status(200)
+//       .json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
+//   } catch (error) {
+//     handleError(error, res, next);
+//   }
+// };
