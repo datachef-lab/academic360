@@ -1,5 +1,16 @@
-10-09-2025	00:12:49	ce01acc8-dea4-4965-bef9-d01a4bbd792b	GET	/api/users/5/profile	http://localhost:3000
-10-09-2025	00:12:49	2aa7fa68-98ae-4226-8adc-f872403ee737	GET	/api/users/5/profile	http://localhost:3000
-10-09-2025	00:12:49	53eb0d89-2d53-4c06-84e5-e5144bc14877	OPTIONS	/api/users/5/profile	http://localhost:3000
-10-09-2025	00:12:44	5121cb3b-44ed-4ca6-917b-de488090a050	POST	/auth/login	http://localhost:3000
-10-09-2025	00:12:44	472ecbf7-2f0a-4b9f-b829-b474a9b79748	OPTIONS	/auth/login	http://localhost:3000
+10-09-2025	10:02:23	d0e613fd-c0ff-4539-ac7e-0419db4df226	GET	/api/course-design/papers/query?id=3	http://localhost:5173
+10-09-2025	10:02:23	8dcb2e98-9330-45f6-8315-97f4f1ca7a36	OPTIONS	/api/course-design/papers/query?id=3	http://localhost:5173
+10-09-2025	10:02:17	6944a33c-709f-48dd-b999-7722d1bf5fd4	GET	/api/course-design/papers/query?id=3	http://localhost:5173
+10-09-2025	10:02:17	26b5fc65-afa4-495f-9984-2f7365f21478	OPTIONS	/api/course-design/papers/query?id=3	http://localhost:5173
+10-09-2025	10:02:14	e657a34e-0dda-4dbf-a675-2153ed0936b9	GET	/api/course-design/papers	http://localhost:5173
+10-09-2025	10:02:14	838edf71-4d88-4ea0-a4bf-4bffe8517f75	GET	/api/course-design/papers	http://localhost:5173
+10-09-2025	10:02:14	cfffec19-edc7-43a1-89cb-547df064ec31	GET	/api/course-design/papers	http://localhost:5173
+10-09-2025	10:02:14	c1a397d2-9060-4884-8089-7c47261edb0d	GET	/api/course-design/papers	http://localhost:5173
+10-09-2025	10:02:14	37957ac5-55f8-492b-90aa-8f944deac28e	GET	/api/course-design/papers	http://localhost:5173
+10-09-2025	10:02:14	871c339e-09e7-4656-aa29-3989650111f5	GET	/api/v1/academics/all	http://localhost:5173
+10-09-2025	10:02:14	fd394554-f656-4403-9efd-5255cba038f6	GET	/api/course-design/subject-types	http://localhost:5173
+3
+173
+3
+5173
+3
