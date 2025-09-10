@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1757069020081,
-      "tag": "0000_abnormal_true_believers",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1757225865023,
-      "tag": "0001_confused_husk",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1757275326438,
-      "tag": "0002_bitter_unus",
+      "when": 1757479569932,
+      "tag": "0000_cold_guardsmen",
       "breakpoints": true
     }
   ]

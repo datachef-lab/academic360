@@ -1,5 +1,5 @@
 {
-  "id": "d441d33a-2e75-4c09-a57d-f49b460a3148",
+  "id": "e673659c-ed58-4e99-b6d9-8d6c933c4eb3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4912,6 +4912,13 @@
           "columns": [
             "sequence"
           ]
+        },
+        "unique_course_name": {
+          "name": "unique_course_name",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
         }
       },
       "policies": {},
@@ -5437,7 +5444,20 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "unique_program_course": {
+          "name": "unique_program_course",
+          "nullsNotDistinct": false,
+          "columns": [
+            "stream_id_fk",
+            "course_id_fk",
+            "course_type_id_fk",
+            "course_level_id_fk",
+            "affiliation_id_fk",
+            "regulation_type_id_fk"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -8628,7 +8648,7 @@
           "name": "uid",
           "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "rfid_number": {
           "name": "rfid_number",
@@ -8843,7 +8863,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "students_uid_unique": {
+          "name": "students_uid_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "uid"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -9904,9 +9932,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "other_nationality_id_fk": {
-          "name": "other_nationality_id_fk",
-          "type": "integer",
+        "other_nationality": {
+          "name": "other_nationality",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
@@ -10027,19 +10055,6 @@
           "tableTo": "nationality",
           "columnsFrom": [
             "nationality_id_fk"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "personal_details_other_nationality_id_fk_nationality_id_fk": {
-          "name": "personal_details_other_nationality_id_fk_nationality_id_fk",
-          "tableFrom": "personal_details",
-          "tableTo": "nationality",
-          "columnsFrom": [
-            "other_nationality_id_fk"
           ],
           "columnsTo": [
             "id"

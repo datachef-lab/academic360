@@ -652,7 +652,8 @@ CREATE TABLE "courses" (
 	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "courses_sequence_unique" UNIQUE("sequence")
+	CONSTRAINT "courses_sequence_unique" UNIQUE("sequence"),
+	CONSTRAINT "unique_course_name" UNIQUE("name")
 );
 --> statement-breakpoint
 CREATE TABLE "exam_components" (
@@ -707,7 +708,8 @@ CREATE TABLE "program_courses" (
 	"regulation_type_id_fk" integer,
 	"is_active" boolean DEFAULT true,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "unique_program_course" UNIQUE("stream_id_fk","course_id_fk","course_type_id_fk","course_level_id_fk","affiliation_id_fk","regulation_type_id_fk")
 );
 --> statement-breakpoint
 CREATE TABLE "regulation_types" (
@@ -1185,7 +1187,7 @@ CREATE TABLE "students" (
 	"application_id_fk" integer,
 	"program_course_id_fk" integer NOT NULL,
 	"specialization_id_fk" integer,
-	"uid" varchar(255),
+	"uid" varchar(255) NOT NULL,
 	"rfid_number" varchar(255),
 	"cu_form_number" varchar(255),
 	"registration_number" varchar(255),
@@ -1206,7 +1208,8 @@ CREATE TABLE "students" (
 	"leaving_date" timestamp,
 	"leaving_reason" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "students_uid_unique" UNIQUE("uid")
 );
 --> statement-breakpoint
 CREATE TABLE "accommodation" (
@@ -1351,7 +1354,7 @@ CREATE TABLE "personal_details" (
 	"mobile_number" varchar(15) NOT NULL,
 	"emergency_contact_number" varchar(15),
 	"nationality_id_fk" integer,
-	"other_nationality_id_fk" integer,
+	"other_nationality" varchar(255),
 	"voter_id" varchar(255),
 	"passport_number" varchar(255),
 	"aadhaar_card_number" varchar(16),
@@ -1580,7 +1583,6 @@ ALTER TABLE "person" ADD CONSTRAINT "person_qualification_id_fk_qualifications_i
 ALTER TABLE "person" ADD CONSTRAINT "person_occupation_id_fk_occupations_id_fk" FOREIGN KEY ("occupation_id_fk") REFERENCES "public"."occupations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "person" ADD CONSTRAINT "person_office_addres_id_fk_address_id_fk" FOREIGN KEY ("office_addres_id_fk") REFERENCES "public"."address"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_nationality_id_fk_nationality_id_fk" FOREIGN KEY ("nationality_id_fk") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_other_nationality_id_fk_nationality_id_fk" FOREIGN KEY ("other_nationality_id_fk") REFERENCES "public"."nationality"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_religion_id_fk_religion_id_fk" FOREIGN KEY ("religion_id_fk") REFERENCES "public"."religion"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_category_id_fk_categories_id_fk" FOREIGN KEY ("category_id_fk") REFERENCES "public"."categories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "personal_details" ADD CONSTRAINT "personal_details_mother_tongue_language_medium_id_fk_language_medium_id_fk" FOREIGN KEY ("mother_tongue_language_medium_id_fk") REFERENCES "public"."language_medium"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
