@@ -24,7 +24,7 @@ import {
   getRegulationTypes,
   getExamComponents,
   getSubjectTypes,
-  //   bulkUploadSubjectPapers,
+  bulkUploadSubjectPapers,
   getAcademicYears,
   getProgramCourses,
   getPapers,
@@ -32,6 +32,7 @@ import {
   //   BulkUploadError,
   updatePaperWithComponents,
   getCourses,
+  getCourseTypes,
   //   createPaper,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
@@ -48,6 +49,7 @@ import type {
   PaperComponent,
   ProgramCourse,
   Course,
+  CourseType,
 } from "@/types/course-design";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
@@ -64,6 +66,8 @@ const SubjectPaperMappingPage = () => {
   const [selectedPaper, setSelectedPaper] = React.useState<Paper | null>(null);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
+  const [isBulkUploading, setIsBulkUploading] = React.useState(false);
+  const [bulkUploadResult, setBulkUploadResult] = React.useState<any>(null);
   const [isPaperEditModalOpen, setIsPaperEditModalOpen] = React.useState(false);
   const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<Paper | null>(null);
 
@@ -90,6 +94,7 @@ const SubjectPaperMappingPage = () => {
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
   const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
   const [courses, setCourses] = React.useState<Course[]>([]);
+  const [courseTypes, setCourseTypes] = React.useState<CourseType[]>([]);
   const [classes, setClasses] = React.useState<Class[]>([]);
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -223,6 +228,7 @@ const SubjectPaperMappingPage = () => {
         programCourseRes,
         classesRes,
         courseRes,
+        courseTypesRes,
       ] = await Promise.all([
         getSubjects(),
         getAffiliations(),
@@ -233,6 +239,7 @@ const SubjectPaperMappingPage = () => {
         getProgramCourses(),
         getAllClasses(),
         getCourses(),
+        getCourseTypes(),
       ]);
 
       //   console.log("API Responses:", {
@@ -262,6 +269,7 @@ const SubjectPaperMappingPage = () => {
       setAcademicYears(Array.isArray(academicYearRes) ? academicYearRes : []);
       setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
       setCourses(Array.isArray(courseRes) ? courseRes : []);
+      setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
       setClasses(
         Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
       );
@@ -406,6 +414,31 @@ const SubjectPaperMappingPage = () => {
   //       setIsFormSubmitting(false);
   //     }
   //   };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) return;
+
+    setIsBulkUploading(true);
+    try {
+      const result = await bulkUploadSubjectPapers(bulkFile);
+      setBulkUploadResult(result);
+
+      if (result.summary.successful > 0) {
+        toast.success(`Successfully uploaded ${result.summary.successful} papers`);
+        // Re-fetch the data to show new papers
+        // You might want to add a fetch function here
+      }
+
+      if (result.summary.failed > 0) {
+        toast.error(`${result.summary.failed} papers failed to upload`);
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      toast.error(`Bulk upload failed: ${errorMessage}`);
+    } finally {
+      setIsBulkUploading(false);
+    }
+  };
 
   const handleDownloadTemplate = () => {
     // Create template data with headers
@@ -847,10 +880,7 @@ const SubjectPaperMappingPage = () => {
                     accept=".xlsx,.xls,.csv"
                     onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                   />
-                  <Button
-                    //   onClick={handleBulkUpload}
-                    disabled={!bulkFile}
-                  >
+                  <Button onClick={handleBulkUpload} disabled={!bulkFile}>
                     Upload
                   </Button>
                 </div>
@@ -1222,8 +1252,9 @@ const SubjectPaperMappingPage = () => {
           subjectTypes={subjectTypes}
           examComponents={examComponents}
           academicYears={academicYears}
-          //   programCourses={programCourses}
+          programCourses={programCourses}
           courses={courses}
+          courseTypes={courseTypes}
           classes={classes}
           paperId={selectedPaperForEdit?.id}
         />

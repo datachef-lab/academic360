@@ -38,10 +38,8 @@ export default function BasicInfo({ student }: { student: StudentDto }) {
         </div>
 
         <div className="flex items-center justify-between py-2">
-          <span className="text-gray-500 text-sm">Shift & Session</span>
-          <span className="font-semibold text-gray-800 text-base">
-            {student?.shift?.name || "N/A"} | {""}
-          </span>
+          <span className="text-gray-500 text-sm">Shift</span>
+          <span className="font-semibold text-gray-800 text-base">{student?.shift?.name || "N/A"}</span>
         </div>
       </CardContent>
     </Card>

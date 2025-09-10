@@ -67,6 +67,12 @@ const nextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "besc.academic360.app",
+        port: "",
+        pathname: "/student-console/**",
+      },
     ],
   },
 

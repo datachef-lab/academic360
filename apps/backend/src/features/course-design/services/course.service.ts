@@ -30,6 +30,35 @@ export interface BulkUploadResult {
   };
 }
 
+export async function loadOldCourses() {
+  const [oldCourses] = (await mysqlConnection.query(`
+    SELECT * FROM course;
+  `)) as [OldCourse[], any];
+
+  for (let i = 0; i < oldCourses.length; i++) {
+    const oldCourse = oldCourses[i];
+    console.log("loading old course", oldCourse);
+    const [foundCourse] = await db
+      .select()
+      .from(courseModel)
+      .where(
+        and(
+          ilike(courseModel.name, oldCourse.courseName.trim()),
+          eq(courseModel.legacyCourseId, oldCourse.id!),
+        ),
+      );
+    if (foundCourse) continue;
+    await db
+      .insert(courseModel)
+      .values({
+        legacyCourseId: oldCourse.id!,
+        name: oldCourse.courseName.trim(),
+        shortName: oldCourse.courseSName?.trim(),
+      })
+      .returning();
+  }
+}
+
 export const bulkUploadCourses = async (
   filePath: string,
   io?: any,
@@ -71,6 +100,23 @@ export const bulkUploadCourses = async (
           result.summary.failed++;
           continue;
         }
+
+        // Check for duplicates before insertion
+        const existingCourse = await db
+          .select()
+          .from(courseModel)
+          .where(eq(courseModel.name, courseData.name));
+
+        if (existingCourse.length > 0) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: `Course with name "${courseData.name}" already exists`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
         // Insert the course
         const [newCourse] = await db
           .insert(courseModel)

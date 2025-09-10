@@ -318,6 +318,30 @@ export const bulkUploadProgramCourses = async (
         continue;
       }
 
+      // Check for duplicates before insertion
+      const existingProgramCourse = await db
+        .select()
+        .from(programCourseModel)
+        .where(
+          and(
+            eq(programCourseModel.streamId, streamId),
+            eq(programCourseModel.courseId, courseId),
+            eq(programCourseModel.courseTypeId, courseTypeId),
+            eq(programCourseModel.courseLevelId, courseLevelId),
+            eq(programCourseModel.affiliationId, affiliationId),
+            eq(programCourseModel.regulationTypeId, regulationTypeId),
+          ),
+        );
+
+      if (existingProgramCourse.length > 0) {
+        unprocessedData.push({
+          row: i + 2,
+          data: row,
+          reason: `Program course with this combination already exists (Stream: ${streamName}, Course: ${courseName}, Course Type: ${courseTypeName}, Course Level: ${courseLevelName}, Affiliation: ${affiliationName}, Regulation: ${regulationTypeName})`,
+        });
+        continue;
+      }
+
       const created = await db
         .insert(programCourseModel)
         .values({

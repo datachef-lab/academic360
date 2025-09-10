@@ -1,54 +1,39 @@
-09-09-2025	10:32:57	31dcaecb-5573-4f3a-ac3c-164900de2ffd	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:56	129b489f-9b83-4da0-b7a8-28070994646b	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:56	fdc0baac-d838-4ab4-b3b2-8563f188c39c	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:56	4ab39b9f-877f-459e-9f36-b575ce7de5ac	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:56	faa8877f-47ff-4b72-9338-aff5613712c3	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:56	d7159e7d-7f16-4a44-b850-5531c40552d0	GET	/api/course-design/regulation-types	http://localhost:5173
-09-09-2025	10:32:56	335e6ce3-1211-46e2-a9a2-81fdf57e7f07	GET	/api/course-design/program-courses	http://localhost:5173
-09-09-2025	10:32:56	04c933f3-e6e8-4dde-b340-0987a503b6e6	GET	/api/v1/academics/all	http://localhost:5173
-09-09-2025	10:32:56	f146b974-e00a-4881-8c33-8d5dbf7f78a6	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:55	eee91e24-32de-47be-b8c4-a505e26cf58b	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:55	9d94add9-9325-4fc3-9246-536ea05f9cc2	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:55	dc6a4b5c-010c-4b51-9cba-b03d03548c3c	GET	/api/course-design/papers	http://localhost:5173
-09-09-2025	10:32:55	03752a90-0a76-4430-8c87-4fb88b9ddbaf	GET	/api/course-design/affiliations	http://localhost:5173
-09-09-2025	10:32:55	5f61e1de-3ca0-401f-a5d6-500db8469ba5	GET	/api/course-design/program-courses	http://localhost:5173
-09-09-2025	10:32:55	f8195e0a-49ab-4e54-bc22-8ce70e5a06ee	GET	/api/course-design/regulation-types	http://localhost:5173
-09-09-2025	10:32:55	9e7d2cda-71da-48e4-bde9-4a8f69d6445b	GET	/api/course-design/affiliations	http://localhost:5173
-09-09-2025	10:32:55	235c2750-2d73-44ed-9298-392c71e9f2b7	OPTIONS	/api/course-design/course-types	http://localhost:5173
-09-09-2025	10:32:55	c7cc0d38-b9b0-464a-b23c-c51693955b8e	OPTIONS	/api/course-design/course-types	http://localhost:5173
-09-09-2025	10:32:55	34d6b2d7-a17d-468f-94ac-155dd8d10299	GET	/api/classes	http://localhost:5173
-09-09-2025	10:32:55	0cba2d27-feeb-442e-ba04-e19632fd0e20	GET	/api/course-design/exam-components	http://localhost:5173
-09-09-2025	10:32:55	296b1b89-bf22-47de-aeaf-a6077a4eb8e9	GET	/api/course-design/affiliations	http://localhost:5173
-09-09-2025	10:32:55	f3907bb7-2ee0-4699-b456-9dc76aaa84f0	GET	/api/course-design/regulation-types	http://localhost:5173
-09-09-2025	10:32:55	19e05f6c-eca3-4c6e-96cf-99557f394232	GET	/api/course-design/subjects	http://localhost:5173
-09-09-2025	10:32:55	c4429e71-e216-4f85-a4e3-6cf12c38a458	GET	/api/v1/academics/all	http://localhost:5173
-09-09-2025	10:32:55	d87613ac-743b-4306-af3f-0e-0e6bef9279ab	GET	/api/course-design/subject-types	http://localhost:5173
+09-09-2025	23:54:32	896cc4e7-974c-4327-8e26-c795c0a9fe9f	GET	/api/v1/settings/file/4	undefined
+09-09-2025	23:54:30	3eeb0511-6a22-459d-9be2-080fa0295598	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:54:30	9ca8fc31-7990-43f0-b24c-e48687bc4182	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:54:30	a2fc4c56-b137-45a9-851a-bff4510df8dc	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:54:30	cee5f46c-10dc-4640-bbe0-254d4c3fc61c	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:53:34	a500a54b-7f47-494a-9352-399677449988	GET	/api/v1/settings/file/4	undefined
+09-09-2025	23:53:32	f82cc64d-ca79-4cf0-9a2c-5b945d3b5bab	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:53:32	42862235-9b69-425c-8ebc-8a3cec7b2051	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:53:32	11e48fee-cdac-447b-b3cb-0101c7ccc697	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:53:32	72923f7c-b5dc-42a9-bf1b-4dc044594dc0	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:51:43	bf34b265-fd0c-4eb8-a996-0cafee9f671a	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:51:43	667e1a04-094a-47f1-a353-7d489da42c7e	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:51:29	074d7fa7-e031-4f65-8a6d-ba2a69cdc963	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:51:29	cdbb5101-cf5d-4bb1-b47c-605bd54b77b0	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:51:15	495d192c-e51a-4001-829f-df2c78bd55fb	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:51:15	869714b6-dbbd-4ce5-98b1-6d28a6932bdc	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:46:32	4607f82b-74e4-4dbe-909f-4b36f9d400ea	GET	/api/v1/settings/file/4	undefined
+09-09-2025	23:46:30	2a62420c-354a-499a-a75a-fa218d2177f0	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:46:30	7ad87302-1464-4173-93c9-713e272299fb	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:46:30	48e54e85-c906-4cb7-acc1-6c764e09b355	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:46:30	f32ae584-8208-4df1-b628-ba50754971d9	GET	/api/v1/settings	http://localhost:5173
+09-09-2025	23:46:06	3a664770-5eb2-4f86-aff6-a1f8d3691789	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:46:06	5d80cb73-6625-4ee2-b37a-aafe167c3a88	GET	/auth/refresh	http://localhost:5173
+09-09-2025	23:41:51	00daa3ba-30aa-472f-8ad2-5d9fad55bdc0	GET	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:41:50	ee29053c-40da-4d17-b592-5e61028b6ce6	GET	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:41:50	ef0c9e0d-5974-4960-bab6-0b899dbd1eb3	GET	/api/course-design/courses	http://localhost:5173
+09-09-2025	23:41:50	e366dd8a-47e3-4855-9899-b6b0c78d375f	GET	/api/v1/academics/all	http://localhost:5173
+host:5173
+09-09-2025	23:41:50	37b94487-c47d-45fa-99e9-2acdb4883b0c	OPTIONS	/api/course-design/subject-types	http://localhost:5173
+09-09-2025	23:41:50	c4134d09-0da2-46e4-b03d-7aee00fe3f89	OPTIONS	/api/course-design/affiliations	http://localhost:5173
+09-09-2025	23:41:50	02cb8aba-4140-40de-afc7-e0c2fc2a050b	POST	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:41:50	04da70e4-8ee5-4b89-9657-f91c3c685f03	OPTIONS	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:36:27	e5d5be72-ba27-47fe-a869-3ebde8b5e738	GET	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:36:27	4387dbb5-48da-4d8e-a226-263af267fd14	GET	/api/course-design/papers	http://localhost:5173
+09-09-2025	23:36:27	82e53796-6b34-4840-9073-c536146ed05f	GET	/api/course-design/exam-components	http://localhost:5173
+173
 73
-73
-73
-73
-73
-3
-73
-
-
-3
-
-
-
-
-
-3
-
-
-
-
-
-
-
-3
-
-
-
-
-
+5173
+173

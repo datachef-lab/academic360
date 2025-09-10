@@ -1,9 +1,10 @@
-import { db } from "@/db/index.js";
+import { db, mysqlConnection } from "@/db/index.js";
 import { Subject, subjectModel } from "@repo/db/schemas/models/course-design";
 import { and, countDistinct, eq, ilike } from "drizzle-orm";
 import { paperModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
+import { OldSubject } from "@repo/db/legacy-system-types/admissions";
 
 // Bulk upload interface
 export interface BulkUploadResult {
@@ -13,6 +14,37 @@ export interface BulkUploadResult {
     data: unknown[];
     error: string;
   }>;
+}
+
+export async function loadOldSubjects() {
+  const [oldSubjects] = (await mysqlConnection.query(`
+        SELECT * FROM subject;
+    `)) as [OldSubject[], any];
+
+  for (let i = 0; i < oldSubjects.length; i++) {
+    const oldSubject = oldSubjects[i];
+    console.log("loading old subject", oldSubject);
+    const [foundSubject] = await db
+      .select()
+      .from(subjectModel)
+      .where(
+        and(
+          ilike(subjectModel.name, oldSubject.subjectName!.trim()),
+          eq(subjectModel.legacySubjectId, oldSubject.id!),
+        ),
+      );
+    if (foundSubject) continue;
+    await db
+      .insert(subjectModel)
+      .values({
+        legacySubjectId: oldSubject.id!,
+        name: oldSubject.subjectName!.trim(),
+        code: oldSubject.univcode?.trim(),
+      })
+      .returning();
+  }
+
+  return oldSubjects;
 }
 
 export async function createSubject(data: Subject) {

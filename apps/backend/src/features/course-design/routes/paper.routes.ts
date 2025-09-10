@@ -6,8 +6,10 @@ import {
   updatePaperHandler,
   deletePaperHandler,
   updatePaperWithComponentsHandler,
+  bulkUploadPapersHandler,
 } from "../controllers/paper.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
+import { uploadExcelMiddleware } from "@/middlewares/uploadExcelMiddleware.js";
 
 const router = express.Router();
 
@@ -16,6 +18,9 @@ router.use(verifyJWT);
 
 // Create a new paper
 router.post("/", createPaperHandler);
+
+// Bulk upload papers
+router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadPapersHandler);
 
 // Get a paper by ID
 router.get("/:id", getPaperByIdHandler);

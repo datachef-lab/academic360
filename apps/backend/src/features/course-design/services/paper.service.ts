@@ -40,6 +40,160 @@ export interface BulkUploadResult {
   };
 }
 
+// Bulk upload papers
+export const bulkUploadPapers = async (
+  filePath: string,
+  io?: any,
+  uploadSessionId?: string,
+): Promise<BulkUploadResult> => {
+  const result: BulkUploadResult = {
+    success: [],
+    errors: [],
+    summary: { total: 0, successful: 0, failed: 0 },
+  };
+
+  try {
+    const workbook = XLSX.readFile(filePath);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+    result.summary.total = data.length - 1;
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as any[];
+      const rowNumber = i + 1;
+
+      try {
+        const paperData = {
+          subjectId: row[0] ? parseInt(row[0].toString()) : null,
+          affiliationId: row[1] ? parseInt(row[1].toString()) : null,
+          regulationTypeId: row[2] ? parseInt(row[2].toString()) : null,
+          academicYearId: row[3] ? parseInt(row[3].toString()) : null,
+          subjectTypeId: row[4] ? parseInt(row[4].toString()) : null,
+          programCourseId: row[5] ? parseInt(row[5].toString()) : null,
+          classId: row[6] ? parseInt(row[6].toString()) : null,
+          name: row[7]?.toString()?.trim(),
+          code: row[8]?.toString()?.trim(),
+          isOptional:
+            row[9]?.toString()?.toLowerCase() === "true" || row[9] === true,
+          sequence: row[10] ? parseInt(row[10].toString()) : null,
+          isActive:
+            row[11]?.toString()?.toLowerCase() !== "false" && row[11] !== false,
+        };
+
+        // Validate required fields
+        if (
+          !paperData.subjectId ||
+          !paperData.affiliationId ||
+          !paperData.regulationTypeId ||
+          !paperData.academicYearId ||
+          !paperData.subjectTypeId ||
+          !paperData.programCourseId ||
+          !paperData.classId ||
+          !paperData.name ||
+          !paperData.code
+        ) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: "All required fields must be provided",
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // Check for duplicates (name + code combination)
+        const existingPaper = await db
+          .select()
+          .from(paperModel)
+          .where(
+            and(
+              eq(paperModel.name, paperData.name),
+              eq(paperModel.code, paperData.code),
+            ),
+          );
+
+        if (existingPaper.length > 0) {
+          result.errors.push({
+            row: rowNumber,
+            data: row,
+            error: `Paper with name "${paperData.name}" and code "${paperData.code}" already exists`,
+          });
+          result.summary.failed++;
+          continue;
+        }
+
+        // Insert the paper
+        const [newPaper] = await db
+          .insert(paperModel)
+          .values({
+            subjectId: paperData.subjectId,
+            affiliationId: paperData.affiliationId,
+            regulationTypeId: paperData.regulationTypeId,
+            academicYearId: paperData.academicYearId,
+            subjectTypeId: paperData.subjectTypeId,
+            programCourseId: paperData.programCourseId,
+            classId: paperData.classId,
+            name: paperData.name,
+            code: paperData.code,
+            isOptional: paperData.isOptional,
+            sequence: paperData.sequence ?? undefined,
+            isActive: paperData.isActive,
+          })
+          .returning();
+
+        result.success.push(newPaper);
+        result.summary.successful++;
+      } catch (error: unknown) {
+        console.error(`Error processing row ${rowNumber}:`, error);
+        result.errors.push({
+          row: rowNumber,
+          data: row,
+          error: error instanceof Error ? error.message : "Unknown error",
+        });
+        result.summary.failed++;
+      }
+
+      // Emit progress
+      if (io && uploadSessionId) {
+        io.to(uploadSessionId).emit("bulk-upload-progress", {
+          processed: i,
+          total: data.length - 1,
+          percent: Math.round((i / (data.length - 1)) * 100),
+        });
+      }
+    }
+
+    // Clean up file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Emit completion
+    if (io && uploadSessionId) {
+      if (result.errors.length > 0) {
+        io.to(uploadSessionId).emit("bulk-upload-failed", {
+          errorCount: result.errors.length,
+        });
+      } else {
+        io.to(uploadSessionId).emit("bulk-upload-done", {
+          successCount: result.success.length,
+        });
+      }
+    }
+
+    return result;
+  } catch (error: unknown) {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    throw new Error(
+      `Failed to process Excel file: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+};
+
 export async function createPaper(data: PaperDto) {
   const { components, topics, ...props } = data;
 

@@ -155,15 +155,13 @@ export default function ProfileContent() {
                   <div className="space-y-3 mt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">College Roll Number</span>
-                      <span className="font-semibold">
-                        {applicationForm?.courseApplication?.[0]?.classRollNumber || "N/A"}
-                      </span>
+                      <span className="font-semibold">{student?.classRollNumber || "N/A"}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Admission Year</span>
                       <span className="font-semibold">
                         {applicationForm?.courseApplication?.[0]?.applicationTimestamp
-                          ? new Date(applicationForm.courseApplication[0].applicationTimestamp).getFullYear()
+                          ? new Date(applicationForm.courseApplication[0].appNumber).getFullYear()
                           : "N/A"}
                       </span>
                     </div>
@@ -186,15 +184,7 @@ export default function ProfileContent() {
             <Card className="mb-6">
               <CardContent className="p-0 overflow-x-auto">
                 <div className="flex border-b whitespace-nowrap">
-                  {[
-                    { id: "personal", label: "Personal", icon: User },
-                    { id: "family", label: "Family", icon: Users },
-                    { id: "application", label: "Application", icon: FileText },
-                    // { id: "health", label: "Health", icon: Heart },
-                    { id: "emergency", label: "Emergency", icon: AlertTriangle },
-                    // { id: "transport", label: "Transport", icon: Car },
-                    // { id: "accommodation", label: "Accommodation", icon: Home },
-                  ].map((tab) => (
+                  {[{ id: "personal", label: "Personal", icon: User }].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
@@ -223,6 +213,18 @@ export default function ProfileContent() {
                         Personal Information
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Application Number */}
+                        <div className="space-y-2">
+                          <label htmlFor="applicationNo" className="text-sm font-medium text-gray-700">
+                            Application Number
+                          </label>
+                          <Input
+                            id="applicationNo"
+                            value={applicationForm?.courseApplication?.[0]?.appNumber || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
                         <div className="space-y-2">
                           <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
                             Full Name
@@ -333,6 +335,53 @@ export default function ProfileContent() {
                             className={!isEditing ? "bg-gray-50" : ""}
                           />
                         </div>
+                        {/* Father Name */}
+                        <div className="space-y-2">
+                          <label htmlFor="fatherNamePersonal" className="text-sm font-medium text-gray-700">
+                            Father's Name
+                          </label>
+                          <Input
+                            id="fatherNamePersonal"
+                            value={familyDetails?.father?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        {/* Mother Name */}
+                        <div className="space-y-2">
+                          <label htmlFor="motherNamePersonal" className="text-sm font-medium text-gray-700">
+                            Mother's Name
+                          </label>
+                          <Input
+                            id="motherNamePersonal"
+                            value={familyDetails?.mother?.name || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        {/* Emails */}
+                        <div className="space-y-2">
+                          <label htmlFor="personalEmail" className="text-sm font-medium text-gray-700">
+                            Personal Email ID
+                          </label>
+                          <Input
+                            id="personalEmail"
+                            value={personalDetails?.email || user?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label htmlFor="institutionalEmail" className="text-sm font-medium text-gray-700">
+                            Institutional Email ID
+                          </label>
+                          <Input
+                            id="institutionalEmail"
+                            value={(user as any)?.institutionalemail || student?.personalDetails?.email || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
+                        </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="motherTongue" className="text-sm font-medium text-gray-700">
                             Mother Tongue
@@ -406,16 +455,51 @@ export default function ProfileContent() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <label htmlFor="resPincode" className="text-sm font-medium text-gray-700">
-                                  Pincode
+                                <label htmlFor="resDistrict" className="text-sm font-medium text-gray-700">
+                                  District
                                 </label>
                                 <Input
-                                  id="resPincode"
-                                  value={personalDetails?.residentialAddress?.pincode || ""}
+                                  id="resDistrict"
+                                  value={personalDetails?.residentialAddress?.otherDistrict || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
                               </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="resPostOffice" className="text-sm font-medium text-gray-700">
+                                  Post Office
+                                </label>
+                                <Input
+                                  id="resPostOffice"
+                                  value={personalDetails?.residentialAddress?.otherPostoffice || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="resPoliceStation" className="text-sm font-medium text-gray-700">
+                                  Police Station
+                                </label>
+                                <Input
+                                  id="resPoliceStation"
+                                  value={personalDetails?.residentialAddress?.otherPoliceStation || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <label htmlFor="resPincode" className="text-sm font-medium text-gray-700">
+                                Pincode
+                              </label>
+                              <Input
+                                id="resPincode"
+                                value={personalDetails?.residentialAddress?.pincode || ""}
+                                disabled={!isEditing}
+                                className={!isEditing ? "bg-gray-50" : ""}
+                              />
                             </div>
                           </div>
                         </div>
@@ -471,6 +555,43 @@ export default function ProfileContent() {
                                 />
                               </div>
                               <div className="space-y-2">
+                                <label htmlFor="mailDistrict" className="text-sm font-medium text-gray-700">
+                                  District
+                                </label>
+                                <Input
+                                  id="mailDistrict"
+                                  value={personalDetails?.mailingAddress?.otherDistrict || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
+                                <label htmlFor="mailPostOffice" className="text-sm font-medium text-gray-700">
+                                  Post Office
+                                </label>
+                                <Input
+                                  id="mailPostOffice"
+                                  value={personalDetails?.mailingAddress?.otherPostoffice || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label htmlFor="mailPoliceStation" className="text-sm font-medium text-gray-700">
+                                  Police Station
+                                </label>
+                                <Input
+                                  id="mailPoliceStation"
+                                  value={personalDetails?.mailingAddress?.otherPoliceStation || ""}
+                                  disabled={!isEditing}
+                                  className={!isEditing ? "bg-gray-50" : ""}
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-2">
                                 <label htmlFor="mailPincode" className="text-sm font-medium text-gray-700">
                                   Pincode
                                 </label>
@@ -489,7 +610,7 @@ export default function ProfileContent() {
                   </div>
                 )}
 
-                {activeTab === "family" && (
+                {false && activeTab === "family" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <Users className="h-5 w-5" />
@@ -719,7 +840,7 @@ export default function ProfileContent() {
                   </div>
                 )}
 
-                {activeTab === "application" && (
+                {false && activeTab === "application" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <GraduationCap className="h-5 w-5" />
@@ -732,7 +853,7 @@ export default function ProfileContent() {
                         </label>
                         <Input
                           id="course"
-                          value={`${student?.programCourse?.course?.name || ""}${student?.programCourse?.courseType?.shortName ? ` (${student.programCourse.courseType.shortName})` : ""}`}
+                          value={`${student?.programCourse?.course?.name || ""}${student?.programCourse?.courseType?.shortName ? ` (${student?.programCourse?.courseType?.shortName})` : ""}`}
                           disabled
                           className="bg-gray-50"
                         />
@@ -947,7 +1068,7 @@ export default function ProfileContent() {
                   </div>
                 )} */}
 
-                {activeTab === "emergency" && (
+                {false && activeTab === "emergency" && (
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                       <AlertTriangle className="h-5 w-5" />

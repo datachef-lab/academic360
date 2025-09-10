@@ -15,6 +15,8 @@ import {
   ExamComponent,
   Course,
   PaperComponent,
+  ProgramCourse,
+  CourseType,
 } from "@/types/course-design";
 import { toast } from "sonner";
 import { getPaperById } from "@/services/course-design.api";
@@ -32,7 +34,9 @@ interface PaperEditModalProps {
   subjectTypes: SubjectType[];
   examComponents: ExamComponent[];
   academicYears: AcademicYear[];
+  programCourses: ProgramCourse[];
   courses: Course[];
+  courseTypes: CourseType[];
   classes: Class[];
   givenPaper: Paper;
   paperId?: number; // New prop for paper ID
@@ -49,7 +53,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   subjectTypes,
   examComponents,
   academicYears,
+  programCourses,
   courses,
+  courseTypes,
   classes,
   givenPaper,
   paperId,
@@ -58,6 +64,31 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   const [form, setForm] = useState<Partial<Paper>>({});
   const [components, setComponents] = useState<PaperComponent[]>([]);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
+
+  // Create lookup objects for constructing program course names
+  const coursesLookup: Record<number, string> = React.useMemo(() => {
+    return courses.reduce(
+      (acc, course) => {
+        if (course.id) {
+          acc[course.id] = course.name;
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
+  }, [courses]);
+
+  const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
+    return courseTypes.reduce(
+      (acc, courseType) => {
+        if (courseType.id) {
+          acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
+        }
+        return acc;
+      },
+      {} as Record<number, string>,
+    );
+  }, [courseTypes]);
 
   // Single useEffect to handle both editing and creating
   useEffect(() => {
@@ -312,9 +343,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                         <SelectValue placeholder="Select course" />
                       </SelectTrigger>
                       <SelectContent>
-                        {courses.map((course) => (
-                          <SelectItem key={course.id} value={course.id?.toString() || ""}>
-                            {course.name}
+                        {programCourses.map((programCourse) => (
+                          <SelectItem key={programCourse.id} value={programCourse.id?.toString() || ""}>
+                            {`${coursesLookup[programCourse.courseId] ?? "-"} (${courseTypeShortNamesLookup[programCourse.courseTypeId] ?? "-"})`}
                           </SelectItem>
                         ))}
                       </SelectContent>

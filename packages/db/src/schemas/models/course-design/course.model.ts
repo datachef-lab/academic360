@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, serial, timestamp, varchar, unique } from "drizzle-orm/pg-core";
 
 import { courseHeaderModel } from "./course-header.model";
 
@@ -15,7 +15,10 @@ export const courseModel = pgTable('courses', {
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => ({
+    // Unique constraint to prevent duplicate course names
+    uniqueCourseName: unique("unique_course_name").on(table.name),
+}));
 
 export const createCourseModel = createInsertSchema(courseModel) as z.ZodTypeAny;
 

@@ -1,17 +1,47 @@
-import { db } from "@/db/index.js";
+import { db, mysqlConnection } from "@/db/index.js";
 import {
   SubjectType,
   subjectTypeModel,
 } from "@repo/db/schemas/models/course-design";
-import { and, countDistinct, eq } from "drizzle-orm";
+import { and, countDistinct, eq, ilike } from "drizzle-orm";
 import { paperModel } from "@repo/db/schemas/models/course-design";
 import { SubjectTypeSchema } from "@/types/course-design/index.js";
 import { z } from "zod";
 import XLSX from "xlsx";
 import fs from "fs";
+import { OldSubjectType } from "@repo/db/legacy-system-types/admissions";
 
 // Types
 export type SubjectTypeData = z.infer<typeof SubjectTypeSchema>;
+
+export async function loadOldSubjectTypes() {
+  const [oldSubjectTypes] = (await mysqlConnection.query(`
+    SELECT * FROM subjecttype;
+  `)) as [OldSubjectType[], any];
+
+  for (let i = 0; i < oldSubjectTypes.length; i++) {
+    const oldSubjectType = oldSubjectTypes[i];
+    console.log("loading old subject type", oldSubjectType);
+    const [foundSubjectType] = await db
+      .select()
+      .from(subjectTypeModel)
+      .where(
+        and(
+          ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName!.trim()),
+          eq(subjectTypeModel.legacySubjectTypeId, oldSubjectType.id!),
+        ),
+      );
+    if (foundSubjectType) continue;
+    await db
+      .insert(subjectTypeModel)
+      .values({
+        legacySubjectTypeId: oldSubjectType.id!,
+        name: oldSubjectType.subjectTypeName!.trim(),
+        code: oldSubjectType.shortname?.trim(),
+      })
+      .returning();
+  }
+}
 
 // Create a new subject type
 export const createSubjectType = async (subjectTypeData: SubjectType) => {

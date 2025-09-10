@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { pgTable, timestamp, integer, boolean, serial } from "drizzle-orm/pg-core";
+import { pgTable, timestamp, integer, boolean, serial, unique } from "drizzle-orm/pg-core";
 
 import {
     streamModel,
@@ -24,7 +24,17 @@ export const programCourseModel = pgTable("program_courses", {
     isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+}, (table) => ({
+    // Unique constraint to prevent duplicate program courses
+    uniqueProgramCourse: unique("unique_program_course").on(
+        table.streamId,
+        table.courseId,
+        table.courseTypeId,
+        table.courseLevelId,
+        table.affiliationId,
+        table.regulationTypeId
+    ),
+}));
 
 // Zod Schemas for validation
 export const insertProgramCourseSchema = createInsertSchema(programCourseModel) as z.ZodTypeAny;

@@ -12,7 +12,7 @@ import {
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Eye } from "lucide-react";
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -104,6 +104,17 @@ export default function AddPaperModal({
     },
   ]);
 
+  // New state for showing selected items
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // Set the last row as active by default when inputPaper changes
+  React.useEffect(() => {
+    if (inputPaper.length > 1) {
+      setSelectedRowIndex(inputPaper.length - 1);
+    }
+  }, [inputPaper.length]);
+
   const handleAddPaper = () => {
     const base = inputPaper[0];
     setInputPaper((prevPapers) => [
@@ -136,6 +147,27 @@ export default function AddPaperModal({
     if (inputPaper.length > 1) {
       setInputPaper((prevPapers) => prevPapers.filter((_, i) => i !== removeIndex));
     }
+  };
+
+  const handleSave = () => {
+    setIsSaved(true);
+    toast.success("Data saved successfully. Click Confirm to submit.");
+  };
+
+  const handleEyeClick = (rowIndex: number) => {
+    setSelectedRowIndex(selectedRowIndex === rowIndex ? null : rowIndex);
+  };
+
+  const getProgramCourseName = (programCourseId: number) => {
+    const programCourse = programCourses.find((pc) => pc.id === programCourseId);
+    if (!programCourse) return "Unknown Course";
+    const course = courses.find((c) => c.id === programCourse.courseId);
+    return course ? course.name : "Unknown Course";
+  };
+
+  const getClassName = (classId: number) => {
+    const classItem = classes.find((c) => c.id === classId);
+    return classItem ? classItem.name : "Unknown Class";
   };
 
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -244,7 +276,7 @@ export default function AddPaperModal({
   };
 
   return (
-    <form onSubmit={handleFormSubmit}>
+    <form onSubmit={handleFormSubmit} className="h-[80vh] flex flex-col">
       <div className="flex mb-5 gap-2 items-center">
         <div className="flex w-[95%] gap-2 items-center">
           <Select
@@ -354,40 +386,40 @@ export default function AddPaperModal({
           </Button>
         </div>
       </div>
-      <div className="overflow-hidden">
-        <div className="h-[calc(100vh-269px)] overflow-y-auto border border-black rounded-none">
+      <div className="flex-1 overflow-hidden">
+        <div className="h-[500px] overflow-y-auto border border-black rounded-none">
           <div className="sticky top-0 z-50 bg-white border-b border-black">
             <div className="flex border-b border-black bg-[#f3f4f6]">
               {[
                 {
                   label: "Subject Type",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Applicable Course",
-                  className: "w-48 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-48 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Semester",
-                  className: "w-24 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-24 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Name",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Code",
-                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Is Optional",
-                  className: "w-20 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "w-20 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
                   label: "Paper Component & Marks",
-                  className: "flex-1 p-2 border-r border-black font-medium flex items-center justify-center",
+                  className: "flex-1 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
-                { label: "Actions", className: "w-20 p-2 font-medium flex items-center justify-center" },
+                { label: "Actions", className: "w-20 p-2 font-medium flex items-center justify-center text-sm" },
               ].map((header) => (
                 <div key={header.label} className={`${header.className}`}>
                   {header.label}
@@ -408,7 +440,7 @@ export default function AddPaperModal({
                   {examComponents.map((component) => (
                     <div
                       key={component.id}
-                      className="flex-1 p-1 text-center font-medium text-sm border-r border-black flex items-center justify-center"
+                      className="flex-1 p-2 text-center font-medium text-sm border-r border-black flex items-center justify-center"
                     >
                       {component.code}
                     </div>
@@ -429,10 +461,10 @@ export default function AddPaperModal({
                 <div className="flex">
                   {examComponents.map((component) => (
                     <React.Fragment key={component.id}>
-                      <div className="flex-1 font-medium p-1 text-center border-r border-black flex items-center justify-center">
+                      <div className="flex-1 font-medium p-2 text-center border-r border-black flex items-center justify-center text-sm">
                         Marks
                       </div>
-                      <div className="flex-1 font-medium p-1 text-center border-r border-black flex items-center justify-center">
+                      <div className="flex-1 font-medium p-2 text-center border-r border-black flex items-center justify-center text-sm">
                         Credit
                       </div>
                     </React.Fragment>
@@ -445,7 +477,12 @@ export default function AddPaperModal({
 
           <div className="bg-white">
             {inputPaper.map((field, paperIndex) => (
-              <div key={field.id} className="flex border-b border-black hover:bg-gray-50">
+              <div
+                key={field.id}
+                className={`flex border-b border-black hover:bg-gray-50 ${
+                  selectedRowIndex === paperIndex ? "bg-blue-50 border-blue-200" : ""
+                }`}
+              >
                 <div className="w-32 p-2 border-r border-black flex items-center justify-center">
                   <Select
                     value={field.subjectTypeId ? field.subjectTypeId.toString() : ""}
@@ -453,7 +490,7 @@ export default function AddPaperModal({
                       update(paperIndex, { ...field, subjectTypeId: Number(value) });
                     }}
                   >
-                    <SelectTrigger className="w-full border-0 p-1 h-8 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <SelectTrigger className="w-full border-0 p-1 h-8 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm">
                       <SelectValue placeholder="Select Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -517,7 +554,7 @@ export default function AddPaperModal({
                   </Select> */}
                 </div>
 
-                <div className="w-24 p-1 border-r border-black flex items-center justify-center">
+                <div className="w-24 p-2 border-r border-black flex items-center justify-center">
                   <MultiSelect
                     options={classes.map((classItem) => ({
                       label: classItem.name,
@@ -552,7 +589,7 @@ export default function AddPaperModal({
                     }}
                     placeholder="Paper Name"
                     rows={1}
-                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words"
+                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none whitespace-pre-wrap break-words text-sm"
                     style={{ minHeight: "2rem", maxHeight: "6rem", overflow: "auto" }}
                   />
                 </div>
@@ -564,7 +601,7 @@ export default function AddPaperModal({
                       update(paperIndex, { ...field, code: e.target.value });
                     }}
                     placeholder="Paper Code"
-                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full border-0 p-1 h-8 bg-transparent text-center focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                   />
                 </div>
 
@@ -611,7 +648,7 @@ export default function AddPaperModal({
                               value={component?.fullMarks || 0}
                               onChange={handleMarksChange}
                               placeholder="0"
-                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                             />
                           </div>
                           <div
@@ -622,7 +659,7 @@ export default function AddPaperModal({
                               value={component?.credit || 0}
                               onChange={handleCreditChange}
                               placeholder="0"
-                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              className="w-full h-full text-center border-0 p-1 bg-transparent focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
                             />
                           </div>
                         </div>
@@ -631,7 +668,21 @@ export default function AddPaperModal({
                   </div>
                 </div>
 
-                <div className="w-20 p-2 flex items-center justify-center">
+                <div className="w-20 p-2 flex items-center justify-center space-x-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEyeClick(paperIndex)}
+                    className={`h-8 w-8 p-0 ${
+                      selectedRowIndex === paperIndex
+                        ? "bg-blue-100 text-blue-600 hover:bg-blue-200"
+                        : "hover:bg-gray-100"
+                    }`}
+                    title="View selected courses and classes"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -639,6 +690,7 @@ export default function AddPaperModal({
                     onClick={() => removePaper(paperIndex)}
                     // disabled={fields.length <= 1}
                     className="h-8 w-8 p-0"
+                    title="Remove paper"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -649,21 +701,76 @@ export default function AddPaperModal({
         </div>
       </div>
 
+      {/* Selected Items Display */}
+      {selectedRowIndex !== null && inputPaper[selectedRowIndex] && (
+        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Items for Row {selectedRowIndex + 1}:</h3>
+
+          <div className="flex gap-6">
+            {/* Program Courses */}
+            {inputPaper[selectedRowIndex].programCourses.length > 0 && (
+              <div className="flex-1">
+                <h4 className="text-xs font-medium text-gray-600 mb-1">Program Courses:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {inputPaper[selectedRowIndex].programCourses.map((programCourseId) => (
+                    <span
+                      key={programCourseId}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200"
+                    >
+                      {getProgramCourseName(programCourseId)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Classes/Semesters */}
+            {inputPaper[selectedRowIndex].classes.length > 0 && (
+              <div className="flex-1">
+                <h4 className="text-xs font-medium text-gray-600 mb-1">Classes/Semesters:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {inputPaper[selectedRowIndex].classes.map((classId) => (
+                    <span
+                      key={classId}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200"
+                    >
+                      {getClassName(classId)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {inputPaper[selectedRowIndex].programCourses.length === 0 &&
+            inputPaper[selectedRowIndex].classes.length === 0 && (
+              <p className="text-sm text-gray-500">No courses or classes selected for this row.</p>
+            )}
+        </div>
+      )}
+
       {/* {errors.papers && errors.papers.message && (
         <p className="text-sm text-red-500">{errors.papers.message}</p>
       )} */}
 
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          className="bg-blue-600 text-white hover:bg-blue-700"
-          disabled={isLoading || inputPaper.length === 0}
-        >
-          {isLoading ? "Saving..." : "Save Mapping"}
-        </Button>
+      <div className="flex justify-between pt-4">
+        <div className="flex space-x-2">
+          <Button type="button" variant="outline" onClick={handleSave} disabled={isLoading || inputPaper.length === 0}>
+            Save
+          </Button>
+        </div>
+        <div className="flex space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            disabled={isLoading || inputPaper.length === 0 || !isSaved}
+          >
+            {isLoading ? "Submitting..." : "Confirm"}
+          </Button>
+        </div>
       </div>
     </form>
   );

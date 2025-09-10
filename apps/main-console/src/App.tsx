@@ -72,6 +72,7 @@ import AlternativeSubjectsPage from "./features/academic-year-setup/pages/altern
 // import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
+import UnderConstructionPage from "./pages/under-construction-page";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -101,6 +102,10 @@ const router = createBrowserRouter(
           element: <Outlet />,
           children: [
             { path: "", element: <AcademicYearSetupPage /> },
+            { path: "admission-stats", element: <UnderConstructionPage /> },
+            { path: "eligibility-criteria", element: <UnderConstructionPage /> },
+            { path: "merit-criteria", element: <UnderConstructionPage /> },
+            { path: "board-subjects", element: <UnderConstructionPage /> },
             {
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,
