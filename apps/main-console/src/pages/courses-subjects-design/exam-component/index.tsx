@@ -222,14 +222,14 @@ const ExamComponentesPage = () => {
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
               <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
+                <TableHeader style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60 }}>ID</TableHead>
-                    <TableHead style={{ width: 320 }}>Name</TableHead>
-                    <TableHead style={{ width: 320 }}>Code</TableHead>
-                    <TableHead style={{ width: 140 }}>Short Name</TableHead>
-                    <TableHead style={{ width: 100 }}>Status</TableHead>
-                    <TableHead style={{ width: 140 }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -4,7 +4,7 @@ import {
   ProgramCourse,
   NewProgramCourse,
 } from "@repo/db/schemas/models/course-design";
-import { and, countDistinct, eq, ilike } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@repo/db/schemas/models/course-design";
@@ -37,6 +37,8 @@ export async function createProgramCourse(
         eq(programCourseModel.courseLevelId, data.courseLevelId!),
         eq(programCourseModel.affiliationId, data.affiliationId!),
         eq(programCourseModel.regulationTypeId, data.regulationTypeId!),
+        eq(programCourseModel.duration, data.duration!),
+        eq(programCourseModel.totalSemesters, data.totalSemesters!),
       ),
     );
 
@@ -65,6 +67,55 @@ export async function updateProgramCourse(
   id: number,
   data: Partial<ProgramCourse>,
 ) {
+  // Ensure we are not creating a duplicate with the updated values
+  const candidate = {
+    streamId: data.streamId,
+    courseId: data.courseId,
+    courseTypeId: data.courseTypeId,
+    courseLevelId: data.courseLevelId,
+    affiliationId: data.affiliationId,
+    regulationTypeId: data.regulationTypeId,
+    duration: data.duration,
+    totalSemesters: data.totalSemesters,
+  };
+
+  const allDefined = Object.values(candidate).every(
+    (v) => v !== undefined && v !== null,
+  );
+  if (allDefined) {
+    const [dup] = await db
+      .select()
+      .from(programCourseModel)
+      .where(
+        and(
+          eq(programCourseModel.streamId, candidate.streamId as number),
+          eq(programCourseModel.courseId, candidate.courseId as number),
+          eq(programCourseModel.courseTypeId, candidate.courseTypeId as number),
+          eq(
+            programCourseModel.courseLevelId,
+            candidate.courseLevelId as number,
+          ),
+          eq(
+            programCourseModel.affiliationId,
+            candidate.affiliationId as number,
+          ),
+          eq(
+            programCourseModel.regulationTypeId,
+            candidate.regulationTypeId as number,
+          ),
+          eq(programCourseModel.duration, candidate.duration as number),
+          eq(
+            programCourseModel.totalSemesters,
+            candidate.totalSemesters as number,
+          ),
+          ne(programCourseModel.id, id),
+        ),
+      );
+    if (dup) {
+      return null; // indicate duplicate
+    }
+  }
+
   const { id: idObj, createdAt, updatedAt, ...props } = data;
   const [updated] = await db
     .update(programCourseModel)
@@ -330,6 +381,8 @@ export const bulkUploadProgramCourses = async (
             eq(programCourseModel.courseLevelId, courseLevelId),
             eq(programCourseModel.affiliationId, affiliationId),
             eq(programCourseModel.regulationTypeId, regulationTypeId),
+            eq(programCourseModel.duration, Number(duration)),
+            eq(programCourseModel.totalSemesters, Number(totalSemesters)),
           ),
         );
 

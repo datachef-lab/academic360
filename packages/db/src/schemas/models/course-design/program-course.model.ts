@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
-import { pgTable, timestamp, integer, boolean, serial, unique } from "drizzle-orm/pg-core";
+import { pgTable, timestamp, integer, boolean, serial, varchar } from "drizzle-orm/pg-core";
 
 import {
     streamModel,
@@ -13,6 +13,8 @@ import {
 
 export const programCourseModel = pgTable("program_courses", {
     id: serial().primaryKey(),
+    name: varchar("name", { length: 500 }),
+    shortName: varchar("short_name", { length: 500 }),
     streamId: integer("stream_id_fk").references(() => streamModel.id),
     courseId: integer("course_id_fk").references(() => courseModel.id),
     courseTypeId: integer("course_type_id_fk").references(() => courseTypeModel.id),
@@ -24,21 +26,11 @@ export const programCourseModel = pgTable("program_courses", {
     isActive: boolean("is_active").default(true),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-    // Unique constraint to prevent duplicate program courses
-    uniqueProgramCourse: unique("unique_program_course").on(
-        table.streamId,
-        table.courseId,
-        table.courseTypeId,
-        table.courseLevelId,
-        table.affiliationId,
-        table.regulationTypeId
-    ),
-}));
+});
 
 // Zod Schemas for validation
-export const insertProgramCourseSchema = createInsertSchema(programCourseModel) as z.ZodTypeAny;
-export const selectProgramCourseSchema: z.ZodTypeAny = createSelectSchema(programCourseModel);
+export const insertProgramCourseSchema = createInsertSchema(programCourseModel);
+export const selectProgramCourseSchema = createSelectSchema(programCourseModel);
 export type ProgramCourse = z.infer<typeof selectProgramCourseSchema>;
 export type NewProgramCourse = z.infer<typeof insertProgramCourseSchema>;
 

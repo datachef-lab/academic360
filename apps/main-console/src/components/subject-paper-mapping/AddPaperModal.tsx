@@ -1,14 +1,15 @@
 import { Class } from "@/types/academics/class";
-import {
+import type {
   Affiliation,
   Course,
   ExamComponent,
   Paper,
+  PaperComponent,
   ProgramCourse,
   RegulationType,
   Subject,
   SubjectType,
-} from "@/types/course-design";
+} from "@repo/db";
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../ui/button";
@@ -210,12 +211,12 @@ export default function AddPaperModal({
       }
 
       const components = paper.components
-        .map((comp) => {
+        .map((comp: PaperComponent) => {
           if (comp.fullMarks !== null || comp.fullMarks != 0 || comp.credit !== null || comp.credit != 0) {
             return comp;
           }
         })
-        .filter((comp): comp is (typeof paper.components)[number] => comp !== undefined);
+        .filter((comp: PaperComponent): comp is PaperComponent => comp !== undefined);
 
       formattedPapers.push({ ...paper, components: components as typeof paper.components });
     }
@@ -366,6 +367,7 @@ export default function AddPaperModal({
             </SelectContent>
           </Select>
         </div>
+
         <div className="flex items-center">
           <Button
             type="button"
@@ -394,7 +396,7 @@ export default function AddPaperModal({
             <div className="flex border-b border-black bg-[#f3f4f6]">
               {[
                 {
-                  label: "Subject Type",
+                  label: "Subject Category",
                   className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
@@ -534,7 +536,7 @@ export default function AddPaperModal({
                         classes: updatedClasses,
                       });
                     }}
-                    placeholder="Select Courses"
+                    placeholder="Select Program Courses"
                     modalPopover={true}
                   />
                   {/* <Select
@@ -619,8 +621,12 @@ export default function AddPaperModal({
                 <div className="flex-1 border-r border-black">
                   <div className="flex h-full">
                     {examComponents.map((examComponent) => {
-                      const component = field.components.find((c) => c.examComponent.id === examComponent.id);
-                      const componentIndex = field.components.findIndex((c) => c.examComponent.id === examComponent.id);
+                      const component = field.components.find(
+                        (c: PaperComponent) => c.examComponent.id === examComponent.id,
+                      );
+                      const componentIndex = field.components.findIndex(
+                        (c: PaperComponent) => c.examComponent.id === examComponent.id,
+                      );
 
                       const handleMarksChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                         const value = e.target.value;

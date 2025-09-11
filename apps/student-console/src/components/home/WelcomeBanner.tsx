@@ -22,7 +22,7 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
           <Calendar className="w-4 h-4" />
           <span>{dateString}</span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-1">Welcome back, {(user?.name as string) || "Student"}!</h1>
+        <h1 className="text-3xl md:text-4xl font-bold mb-1">Welcome {(user?.name as string) || "Student"}!</h1>
         <p className="text-base opacity-90 max-w-md">Always stay updated in your student portal</p>
 
         {/* Notification button - Moved to be part of the welcome text section */}

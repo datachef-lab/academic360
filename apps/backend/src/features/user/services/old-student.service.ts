@@ -873,7 +873,7 @@ async function addBoardSubject(
     foundBoardSubjectName = newBoardSubjectName;
   }
 
-  const foundBoardSubject = await db
+  const [foundBoardSubject] = await db
     .select()
     .from(boardSubjectModel)
     .where(

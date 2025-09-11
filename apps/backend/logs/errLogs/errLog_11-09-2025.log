@@ -1,0 +1,5 @@
+11-09-2025	09:33:51	f4a14a7c-ba73-4ee7-9989-f83a63afd5b0	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+11-09-2025	09:33:51	56fdb971-ed97-4dc7-ad89-01a0fd7bf9be	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
+11-09-2025	09:33:51	164eb377-643a-49a8-9cd6-4b154f62e853	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
+11-09-2025	09:33:51	3dd225d6-9f75-4568-bba5-253bb05cb13a	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
+11-09-2025	09:33:51	e377eeb3-abf7-4381-b4e1-fc5d040bbe5f	TokenExpiredError: jwt expired	GET	/api/classes	http://localhost:5173

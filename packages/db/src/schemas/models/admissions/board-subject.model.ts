@@ -3,7 +3,7 @@ import { boolean, doublePrecision, integer, pgTable, serial, timestamp } from "d
 import { createInsertSchema } from "drizzle-zod";
 
 
-import { subjectModel } from "../course-design";
+// import { subjectModel } from "../course-design";
 import { boardModel } from "../resources";
 import { boardSubjectNameModel } from "./board-subject-name.model";
 
@@ -21,7 +21,7 @@ export const boardSubjectModel = pgTable("board_subjects", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBoardSubjects = createInsertSchema(boardSubjectModel) as z.ZodTypeAny;
+export const createBoardSubjects = createInsertSchema(boardSubjectModel);
 
 export type BoardSubject = z.infer<typeof createBoardSubjects>;
 

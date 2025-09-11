@@ -1,4 +1,5 @@
 import React from "react";
+// import { AxiosError } from "axios";
 import { ProgramCourseForm } from "./program-course-form";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -15,15 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  ProgramCourse,
-  Stream,
-  Course,
-  CourseType,
-  CourseLevel,
-  Affiliation,
-  RegulationType,
-} from "@/types/course-design";
+import type { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db";
 import {
   getProgramCourses,
   createProgramCourse,
@@ -101,17 +94,17 @@ const ProgramCoursesPage = () => {
     );
   }, [courseTypes]);
 
-  const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
-    return courseTypes.reduce(
-      (acc, courseType) => {
-        if (courseType.id) {
-          acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
-        }
-        return acc;
-      },
-      {} as Record<number, string>,
-    );
-  }, [courseTypes]);
+  //   const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
+  //     return courseTypes.reduce(
+  //       (acc, courseType) => {
+  //         if (courseType.id) {
+  //           acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
+  //         }
+  //         return acc;
+  //       },
+  //       {} as Record<number, string>,
+  //     );
+  //   }, [courseTypes]);
 
   const courseLevelsLookup: Record<number, string> = React.useMemo(() => {
     return courseLevels.reduce(
@@ -226,17 +219,27 @@ const ProgramCoursesPage = () => {
     setIsFormSubmitting(true);
     try {
       if (selectedProgramCourse) {
-        await updateProgramCourse(selectedProgramCourse.id!, data);
+        const updated = await updateProgramCourse(selectedProgramCourse.id!, data);
+        // Some APIs return null on duplicate; handle that explicitly
+        if (!updated) {
+          toast.error(
+            "Duplicate program course: same stream, course, type, level, affiliation, regulation, duration and semesters already exists.",
+          );
+          return;
+        }
         toast.success("Program course updated successfully");
       } else {
-        await createProgramCourse(data);
+        const created = await createProgramCourse(data);
+        console.log("created", created);
         toast.success("Program course created successfully");
       }
       setIsFormOpen(false);
       fetchProgramCourses();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`);
+      setTimeout(() => {
+        toast.error(`Failed to ${selectedProgramCourse ? "update" : "create"} program course: ${errorMessage}`);
+      }, 2000);
     } finally {
       setIsFormSubmitting(false);
     }
@@ -514,15 +517,15 @@ const ProgramCoursesPage = () => {
       const res = await getProgramCourses();
       const data = (Array.isArray(res) ? res : []).map((pc: ProgramCourse) => ({
         ID: pc.id,
-        Stream: streamsLookup[pc.streamId] ?? "-",
-        Course: coursesLookup[pc.courseId] ?? "-",
-        CourseType: courseTypesLookup[pc.courseTypeId] ?? "-",
-        CourseLevel: courseLevelsLookup[pc.courseLevelId] ?? "-",
+        Stream: pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-",
+        Course: pc.courseId ? (coursesLookup[pc.courseId] ?? "-") : "-",
+        CourseType: pc.courseTypeId ? (courseTypesLookup[pc.courseTypeId] ?? "-") : "-",
+        CourseLevel: pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-",
         Duration: pc.duration,
         TotalSemesters: pc.totalSemesters,
-        Affiliation: affiliationsLookup[pc.affiliationId] ?? "-",
-        RegulationType: regulationTypesLookup[pc.regulationTypeId] ?? "-",
-        Status: !pc.disabled ? "Active" : "Inactive",
+        Affiliation: pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-",
+        RegulationType: pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-",
+        Status: pc.isActive ? "Active" : "Inactive",
         "Created At": pc.createdAt,
         "Updated At": pc.updatedAt,
       }));
@@ -597,12 +600,12 @@ const ProgramCoursesPage = () => {
 
   const filteredProgramCourses = programCourses.filter((pc) =>
     Object.values({
-      stream: streamsLookup[pc.streamId] ?? "-",
-      course: coursesLookup[pc.courseId] ?? "-",
-      courseType: courseTypesLookup[pc.courseTypeId] ?? "-",
-      courseLevel: courseLevelsLookup[pc.courseLevelId] ?? "-",
-      affiliation: affiliationsLookup[pc.affiliationId] ?? "-",
-      regulationType: regulationTypesLookup[pc.regulationTypeId] ?? "-",
+      stream: pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-",
+      course: pc.courseId ? (coursesLookup[pc.courseId] ?? "-") : "-",
+      courseType: pc.courseTypeId ? (courseTypesLookup[pc.courseTypeId] ?? "-") : "-",
+      courseLevel: pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-",
+      affiliation: pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-",
+      regulationType: pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-",
     })
       .join(" ")
       .toLowerCase()
@@ -817,12 +820,12 @@ const ProgramCoursesPage = () => {
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[600px]" style={{ tableLayout: "fixed" }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
+              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader style={{ position: "sticky", top: 0, zIndex: 30, background: "#f3f4f6" }}>
                   <TableRow>
                     <TableHead style={{ width: 40 }}>#</TableHead>
                     <TableHead style={{ width: 90 }}>Stream</TableHead>
-                    <TableHead style={{ width: 120 }}>Course (Type)</TableHead>
+                    <TableHead style={{ width: 120 }}>Name</TableHead>
                     <TableHead style={{ width: 70 }}>Course Level</TableHead>
                     <TableHead style={{ width: 90 }}>Affiliated To</TableHead>
                     <TableHead style={{ width: 90 }}>Regulation Type</TableHead>
@@ -841,18 +844,20 @@ const ProgramCoursesPage = () => {
                     filteredProgramCourses.map((pc, idx) => (
                       <TableRow key={pc.id} className="group">
                         <TableCell>{idx + 1}</TableCell>
-                        <TableCell>{streamsLookup[pc.streamId] ?? "-"}</TableCell>
+                        <TableCell>{pc.streamId ? (streamsLookup[pc.streamId] ?? "-") : "-"}</TableCell>
                         <TableCell>
-                          <div>{`${coursesLookup[pc.courseId] ?? "-"} (${courseTypeShortNamesLookup[pc.courseTypeId] ?? "-"})`}</div>
+                          <div>{pc.name}</div>
                           <div className="text-xs text-muted-foreground mt-1">
                             Duration: {pc.duration} year{pc.duration > 1 ? "s" : ""} | Sems: {pc.totalSemesters}
                           </div>
                         </TableCell>
-                        <TableCell>{courseLevelsLookup[pc.courseLevelId] ?? "-"}</TableCell>
-                        <TableCell>{affiliationsLookup[pc.affiliationId] ?? "-"}</TableCell>
-                        <TableCell>{regulationTypesLookup[pc.regulationTypeId] ?? "-"}</TableCell>
+                        <TableCell>{pc.courseLevelId ? (courseLevelsLookup[pc.courseLevelId] ?? "-") : "-"}</TableCell>
+                        <TableCell>{pc.affiliationId ? (affiliationsLookup[pc.affiliationId] ?? "-") : "-"}</TableCell>
                         <TableCell>
-                          {!pc.disabled ? (
+                          {pc.regulationTypeId ? (regulationTypesLookup[pc.regulationTypeId] ?? "-") : "-"}
+                        </TableCell>
+                        <TableCell>
+                          {pc.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>

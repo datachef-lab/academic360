@@ -16,36 +16,36 @@ export interface BulkUploadResult {
   }>;
 }
 
-export async function loadOldSubjects() {
-  const [oldSubjects] = (await mysqlConnection.query(`
-        SELECT * FROM subject;
-    `)) as [OldSubject[], any];
+// export async function loadOldSubjects() {
+//   const [oldSubjects] = (await mysqlConnection.query(`
+//         SELECT * FROM subject;
+//     `)) as [OldSubject[], any];
 
-  for (let i = 0; i < oldSubjects.length; i++) {
-    const oldSubject = oldSubjects[i];
-    console.log("loading old subject", oldSubject);
-    const [foundSubject] = await db
-      .select()
-      .from(subjectModel)
-      .where(
-        and(
-          ilike(subjectModel.name, oldSubject.subjectName!.trim()),
-          eq(subjectModel.legacySubjectId, oldSubject.id!),
-        ),
-      );
-    if (foundSubject) continue;
-    await db
-      .insert(subjectModel)
-      .values({
-        legacySubjectId: oldSubject.id!,
-        name: oldSubject.subjectName!.trim(),
-        code: oldSubject.univcode?.trim(),
-      })
-      .returning();
-  }
+//   for (let i = 0; i < oldSubjects.length; i++) {
+//     const oldSubject = oldSubjects[i];
+//     console.log("loading old subject", oldSubject);
+//     const [foundSubject] = await db
+//       .select()
+//       .from(subjectModel)
+//       .where(
+//         and(
+//           ilike(subjectModel.name, oldSubject.subjectName!.trim()),
+//           eq(subjectModel.legacySubjectId, oldSubject.id!),
+//         ),
+//       );
+//     if (foundSubject) continue;
+//     await db
+//       .insert(subjectModel)
+//       .values({
+//         legacySubjectId: oldSubject.id!,
+//         name: oldSubject.subjectName!.trim(),
+//         code: oldSubject.univcode?.trim(),
+//       })
+//       .returning();
+//   }
 
-  return oldSubjects;
-}
+//   return oldSubjects;
+// }
 
 export async function createSubject(data: Subject) {
   const { id, createdAt, updatedAt, ...props } = data;
@@ -240,6 +240,7 @@ export async function getAllSubjects() {
 
 export async function updateSubject(id: number, data: Partial<Subject>) {
   const { id: idObj, createdAt, updatedAt, ...props } = data;
+  // TODO: Check if name and code are unique
   const [updated] = await db
     .update(subjectModel)
     .set(props)

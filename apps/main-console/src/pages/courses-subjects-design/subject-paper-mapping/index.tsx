@@ -50,7 +50,7 @@ import type {
   ProgramCourse,
   Course,
   CourseType,
-} from "@/types/course-design";
+} from "@repo/db";
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
 import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
@@ -86,6 +86,7 @@ const SubjectPaperMappingPage = () => {
     affiliationId: null as number | null,
     regulationTypeId: null as number | null,
     academicYearId: null as number | null,
+    classId: null as number | null,
     searchText: "",
     page: 1,
     limit: 10,
@@ -163,6 +164,11 @@ const SubjectPaperMappingPage = () => {
           filteredPapers = filteredPapers.filter((paper) => paper.academicYearId === filtersObj.academicYearId);
         }
 
+        // Filter by class/semester
+        if (filtersObj.classId) {
+          filteredPapers = filteredPapers.filter((paper) => paper.classId === filtersObj.classId);
+        }
+
         // Filter by search text
         if (searchText) {
           const searchLower = searchText.toLowerCase();
@@ -172,6 +178,10 @@ const SubjectPaperMappingPage = () => {
               paper.code?.toLowerCase().includes(searchLower) ||
               subjects
                 .find((s) => s.id === paper.subjectId)
+                ?.name?.toLowerCase()
+                .includes(searchLower) ||
+              classes
+                .find((cls) => cls.id === paper.classId)
                 ?.name?.toLowerCase()
                 .includes(searchLower),
           );
@@ -300,6 +310,7 @@ const SubjectPaperMappingPage = () => {
         affiliationId: null,
         regulationTypeId: null,
         academicYearId: null,
+        classId: null,
         searchText: "",
         page: 1,
         limit: 10,
@@ -382,8 +393,8 @@ const SubjectPaperMappingPage = () => {
         disabled: data.disabled,
         components:
           data.components
-            ?.filter((comp) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
-            .map((comp) => ({
+            ?.filter((comp: any) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
+            .map((comp: any) => ({
               examComponent: {
                 id: comp.examComponent.id!,
               },
@@ -1065,6 +1076,24 @@ const SubjectPaperMappingPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select
+                value={filtersObj.classId?.toString() ?? "all"}
+                onValueChange={(value) =>
+                  setFiltersObj((prev) => ({ ...prev, classId: value === "all" ? null : Number(value) }))
+                }
+              >
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="All Semesters" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Semesters</SelectItem>
+                  {classes.map((cls) => (
+                    <SelectItem key={cls.id!} value={cls.id!.toString()}>
+                      {cls.name.split(" ")[1] || cls.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Input
               placeholder="Search..."
@@ -1092,13 +1121,13 @@ const SubjectPaperMappingPage = () => {
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "14%" }}
                   >
-                    Course
+                    Program Course
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "20%" }}
                   >
-                    Paper Name
+                    Subject & Paper
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
@@ -1110,7 +1139,7 @@ const SubjectPaperMappingPage = () => {
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
                     style={{ width: "12%" }}
                   >
-                    Subject Type
+                    Subject Category
                   </div>
                   <div
                     className="flex-shrink-0 text-gray-500 font-bold p-3 border-r flex items-center justify-center"
@@ -1160,9 +1189,7 @@ const SubjectPaperMappingPage = () => {
                         {idx + 1}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        {courses.find(
-                          (crs) => crs.id === programCourses.find((ele) => ele.id == sp.programCourseId)?.courseId,
-                        )?.name ?? "-"}
+                        {programCourses.find((ele) => ele.id == sp.programCourseId)?.name ?? "-"}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
                         <p>

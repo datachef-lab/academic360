@@ -199,11 +199,9 @@ export default function AlternativeSubjectsPage() {
             <div>
               <CardTitle className="flex items-center">
                 <XCircle className="mr-2 h-8 w-8 border rounded-md p-1 border-slate-400" />
-                Alternative Subjects
+                Related Subjects
               </CardTitle>
-              <div className="text-muted-foreground">
-                Configure alternative subjects mapping for each program-course.
-              </div>
+              <div className="text-muted-foreground">Configure related subjects mapping for each program-course.</div>
             </div>
             <div className="flex items-center gap-2">
               <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={openAddDialog}>
@@ -220,7 +218,7 @@ export default function AlternativeSubjectsPage() {
         <div className="bg-background p-4 border border-gray-200 rounded-lg flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
             <Input
-              placeholder="Search major or alternatives..."
+              placeholder="Search major or related subjects..."
               className="w-64"
               value={tableData.searchTerm}
               onChange={(e) => tableData.setSearchTerm(e.target.value)}
@@ -271,10 +269,10 @@ export default function AlternativeSubjectsPage() {
                       Subject Category
                     </TableHead>
                     <TableHead className="bg-gray-100 font-semibold text-gray-900 w-56 border-r border-gray-300">
-                      Targeted Subject
+                      Subject
                     </TableHead>
                     <TableHead className="bg-gray-100 font-semibold text-gray-900 border-r border-gray-300">
-                      Alternative Subjects
+                      Related Subjects
                     </TableHead>
                     <TableHead className="bg-gray-100 font-semibold text-gray-900 w-24 border-r border-gray-300">
                       Status
@@ -369,7 +367,7 @@ export default function AlternativeSubjectsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-[90rem] w-[98vw] h-[85vh] flex flex-col overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Alternative Subjects</DialogTitle>
+            <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Related Subjects</DialogTitle>
             <DialogDescription>Use the table below to add one or more mappings, then save.</DialogDescription>
           </DialogHeader>
 
@@ -382,8 +380,8 @@ export default function AlternativeSubjectsPage() {
                       <TableHead className="w-16 border-r border-gray-300">Sr. No.</TableHead>
                       <TableHead className="w-[24rem] border-r border-gray-300">Program-Course</TableHead>
                       <TableHead className="w-36 border-r border-gray-300">Subject Category</TableHead>
-                      <TableHead className="w-48 border-r border-gray-300">Targeted Subject</TableHead>
-                      <TableHead className="w-[22rem] border-r border-gray-300">Alternative Subjects</TableHead>
+                      <TableHead className="w-48 border-r border-gray-300">Subject</TableHead>
+                      <TableHead className="w-[22rem] border-r border-gray-300">Related Subjects</TableHead>
                       <TableHead className="text-center w-24">Action</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -562,7 +560,7 @@ export default function AlternativeSubjectsPage() {
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <Label>Targeted Subject</Label>
+                  <Label>Subject</Label>
                   <Select value={editTargetSubject} onValueChange={setEditTargetSubject}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select targeted subject" />

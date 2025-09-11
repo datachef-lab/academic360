@@ -973,8 +973,9 @@ export default function ProfileContent() {
                             ) : (
                               applicationForm!.academicInfo!.subjects!.map(
                                 (item: StudentAcademicSubjectsDto, index: number) => {
-                                  const subjectCode = item?.boardSubject?.subject?.code || "";
-                                  const subjectName = item?.boardSubject?.subject?.name || `Subject ${index + 1}`;
+                                  const subjectCode = item?.boardSubject?.boardSubjectName?.code || "";
+                                  const subjectName =
+                                    item?.boardSubject?.boardSubjectName?.name || `Subject ${index + 1}`;
                                   const fullMarksTheory = Number(item?.boardSubject?.fullMarksTheory || 0);
                                   const passingMarksTheory = Number(item?.boardSubject?.passingMarksTheory || 0);
                                   const fullMarksPractical = Number(item?.boardSubject?.fullMarksPractical || 0);

@@ -18,7 +18,7 @@ import { loadAffiliation } from "@/features/course-design/services/affiliation.s
 import { loadCourseLevel } from "@/features/course-design/services/course-level.service";
 import { loadCourseType } from "@/features/course-design/services/course-type.service";
 import { loadRegulationType } from "@/features/course-design/services/regulation-type.service";
-import { loadOldSubjects } from "@/features/course-design/services/subject.service";
+// import { loadOldSubjects } from "@/features/course-design/services/subject.service";
 import { loadOldCourses } from "@/features/course-design/services/course.service";
 import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
 
@@ -54,9 +54,9 @@ export const connectToDatabase = async () => {
     loadCourseLevel();
     loadCourseType();
     loadRegulationType();
-    loadOldSubjects();
-    loadOldCourses();
-    loadOldSubjectTypes();
+    // loadOldSubjects();
+    // loadOldCourses();
+    // loadOldSubjectTypes();
   } catch (error) {
     console.log(process.env.DATABASE_URL);
     console.error("[backend] - Failed to connect to the database: ⚠", error);

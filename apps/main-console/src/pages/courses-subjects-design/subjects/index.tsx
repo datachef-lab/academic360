@@ -394,9 +394,9 @@ const SubjectsPage = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredSubjects.map((subject) => (
+                    filteredSubjects.map((subject, index) => (
                       <TableRow key={subject.id} className="group">
-                        <TableCell style={{ width: 60 }}>{subject.id}</TableCell>
+                        <TableCell style={{ width: 60 }}>{index + 1}</TableCell>
                         <TableCell style={{ width: 250 }}>{subject.name}</TableCell>
                         <TableCell style={{ width: 120 }}>{subject.code || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{subject.sequence || "-"}</TableCell>

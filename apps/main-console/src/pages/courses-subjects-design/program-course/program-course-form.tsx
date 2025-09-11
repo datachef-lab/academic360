@@ -8,46 +8,43 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import type { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@/types/course-design";
-import { getStreams, getCourses, getCourseTypes, getCourseLevels, getAffiliations, getRegulationTypes } from "@/services/course-design.api";
+  getStreams,
+  getCourses,
+  getCourseTypes,
+  getCourseLevels,
+  getAffiliations,
+  getRegulationTypes,
+} from "@/services/course-design.api";
 
 const programCourseSchema = z.object({
-  streamId: z.number().min(1, "Stream is required"),
-  courseId: z.number().min(1, "Course is required"),
-  courseTypeId: z.number().min(1, "Course type is required"),
-  courseLevelId: z.number().min(1, "Course level is required"),
+  streamId: z.number().nullable(),
+  courseId: z.number().nullable(),
+  courseTypeId: z.number().nullable(),
+  courseLevelId: z.number().nullable(),
   duration: z.number().min(1, "Duration must be at least 1 year"),
   totalSemesters: z.number().min(1, "Total semesters must be at least 1"),
-  affiliationId: z.number().min(1, "Affiliation is required"),
-  regulationTypeId: z.number().min(1, "Regulation type is required"),
-  disabled: z.boolean().default(true),
+  affiliationId: z.number().nullable(),
+  regulationTypeId: z.number().nullable(),
+  name: z.string().nullable(),
+  shortName: z.string().nullable(),
+  isActive: z.boolean().default(true),
 });
 
 type ProgramCourseFormValues = z.infer<typeof programCourseSchema>;
 
 interface ProgramCourseFormProps {
   initialData?: ProgramCourse | null;
-  onSubmit: (data: Omit<ProgramCourse, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<ProgramCourse, "id" | "createdAt" | "updatedAt">) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export function ProgramCourseForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-}: ProgramCourseFormProps) {
+export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading = false }: ProgramCourseFormProps) {
   const isEdit = !!initialData;
-  
+
   // State for dropdown options
   const [streams, setStreams] = useState<Stream[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -62,15 +59,16 @@ export function ProgramCourseForm({
     const fetchOptions = async () => {
       try {
         setLoadingOptions(true);
-        const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] = await Promise.all([
-          getStreams(),
-          getCourses(),
-          getCourseTypes(),
-          getCourseLevels(),
-          getAffiliations(),
-          getRegulationTypes(),
-        ]);
-        
+        const [streamsData, coursesData, courseTypesData, courseLevelsData, affiliationsData, regulationTypesData] =
+          await Promise.all([
+            getStreams(),
+            getCourses(),
+            getCourseTypes(),
+            getCourseLevels(),
+            getAffiliations(),
+            getRegulationTypes(),
+          ]);
+
         setStreams((streamsData as Stream[]) || []);
         setCourses((coursesData as Course[]) || []);
         setCourseTypes((courseTypesData as CourseType[]) || []);
@@ -78,7 +76,7 @@ export function ProgramCourseForm({
         setAffiliations((affiliationsData as Affiliation[]) || []);
         setRegulationTypes((regulationTypesData as RegulationType[]) || []);
       } catch (error) {
-        console.error('Error fetching dropdown options:', error);
+        console.error("Error fetching dropdown options:", error);
       } finally {
         setLoadingOptions(false);
       }
@@ -86,19 +84,21 @@ export function ProgramCourseForm({
 
     fetchOptions();
   }, []);
-  
+
   const form = useForm<ProgramCourseFormValues>({
     resolver: zodResolver(programCourseSchema),
     defaultValues: {
-      streamId: initialData?.streamId || 0,
-      courseId: initialData?.courseId || 0,
-      courseTypeId: initialData?.courseTypeId || 0,
-      courseLevelId: initialData?.courseLevelId || 0,
+      streamId: initialData?.streamId || null,
+      courseId: initialData?.courseId || null,
+      courseTypeId: initialData?.courseTypeId || null,
+      courseLevelId: initialData?.courseLevelId || null,
       duration: initialData?.duration || 3,
       totalSemesters: initialData?.totalSemesters || 6,
-      affiliationId: initialData?.affiliationId || 0,
-      regulationTypeId: initialData?.regulationTypeId || 0,
-      disabled: initialData?.disabled ?? true,
+      affiliationId: initialData?.affiliationId || null,
+      regulationTypeId: initialData?.regulationTypeId || null,
+      name: initialData?.name || "",
+      shortName: initialData?.shortName || "",
+      isActive: initialData?.isActive ?? true,
     },
   });
 
@@ -113,34 +113,57 @@ export function ProgramCourseForm({
         totalSemesters: initialData.totalSemesters,
         affiliationId: initialData.affiliationId,
         regulationTypeId: initialData.regulationTypeId,
-        disabled: initialData.disabled,
+        name: initialData.name || "",
+        shortName: initialData.shortName || "",
+        isActive: initialData.isActive ?? true,
       });
     } else {
       form.reset({
-        streamId: 0,
-        courseId: 0,
-        courseTypeId: 0,
-        courseLevelId: 0,
+        streamId: null,
+        courseId: null,
+        courseTypeId: null,
+        courseLevelId: null,
         duration: 3,
         totalSemesters: 6,
-        affiliationId: 0,
-        regulationTypeId: 0,
-        disabled: false,
+        affiliationId: null,
+        regulationTypeId: null,
+        name: "",
+        shortName: "",
+        isActive: true,
       });
     }
   }, [initialData, form]);
+
+  // Auto-compose name from course + (courseType.shortName) whenever selection changes
+  useEffect(() => {
+    const selectedCourse = courses.find((c) => c.id === form.getValues("courseId"));
+    const selectedCourseType = courseTypes.find((ct) => ct.id === form.getValues("courseTypeId"));
+    const courseName = selectedCourse?.name?.trim() || "";
+    const courseTypeShort =
+      (selectedCourseType as CourseType)?.shortName ||
+      (selectedCourseType as CourseType)?.code ||
+      selectedCourseType?.name ||
+      "";
+    const composed = courseTypeShort ? `${courseName} (${courseTypeShort})`.trim() : courseName;
+    if (composed && form.getValues("name") !== composed) {
+      form.setValue("name", composed, { shouldDirty: true });
+    }
+    // Keep shortName optional; do not auto-fill. Let users type if they want.
+  }, [courses, courseTypes, form.watch("courseId"), form.watch("courseTypeId")]);
 
   const handleSubmit = (data: ProgramCourseFormValues) => {
     onSubmit({
       streamId: data.streamId,
       courseId: data.courseId,
+      name: data.name?.trim() || null,
       courseTypeId: data.courseTypeId,
       courseLevelId: data.courseLevelId,
       duration: data.duration,
       totalSemesters: data.totalSemesters,
       affiliationId: data.affiliationId,
       regulationTypeId: data.regulationTypeId,
-      disabled: data.disabled,
+      shortName: data.shortName?.trim() || null,
+      isActive: data.isActive,
     });
   };
 
@@ -263,13 +286,13 @@ export function ProgramCourseForm({
               <FormItem>
                 <FormLabel>Duration (years)</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min={1}
-                    placeholder="Enter duration" 
-                    {...field} 
+                    placeholder="Enter duration"
+                    {...field}
                     onChange={(e) => field.onChange(Number(e.target.value))}
-                    disabled={isLoading} 
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -284,13 +307,13 @@ export function ProgramCourseForm({
               <FormItem>
                 <FormLabel>Total Semesters</FormLabel>
                 <FormControl>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     min={1}
-                    placeholder="Enter total semesters" 
-                    {...field} 
+                    placeholder="Enter total semesters"
+                    {...field}
                     onChange={(e) => field.onChange(Number(e.target.value))}
-                    disabled={isLoading} 
+                    disabled={isLoading}
                   />
                 </FormControl>
                 <FormMessage />
@@ -349,21 +372,46 @@ export function ProgramCourseForm({
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Auto-composed name" {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="shortName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Short Name (optional)</FormLabel>
+                <FormControl>
+                  <Input placeholder="Leave empty if not needed" {...field} value={field.value || ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         <FormField
           control={form.control}
-          name="disabled"
+          name="isActive"
           render={() => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
               <FormControl>
                 <Controller
-                  name="disabled"
+                  name="isActive"
                   control={form.control}
                   render={({ field }) => (
-                    <Switch
-                      checked={!field.value}
-                      onCheckedChange={(checked) => field.onChange(!checked)}
-                      disabled={isLoading}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
                   )}
                 />
               </FormControl>
@@ -375,26 +423,14 @@ export function ProgramCourseForm({
         />
 
         <div className="flex justify-end space-x-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-          >
-            {isLoading
-              ? "Saving..."
-              : isEdit
-              ? "Update Program Course"
-              : "Create Program Course"}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : isEdit ? "Update Program Course" : "Create Program Course"}
           </Button>
         </div>
       </form>
     </Form>
   );
-} 
+}

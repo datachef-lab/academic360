@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, X } from "lucide-react";
-import {
+import type {
   Subject,
   Affiliation,
   RegulationType,
@@ -17,7 +17,7 @@ import {
   PaperComponent,
   ProgramCourse,
   CourseType,
-} from "@/types/course-design";
+} from "@repo/db";
 import { toast } from "sonner";
 import { getPaperById } from "@/services/course-design.api";
 import { Class } from "@/types/academics/class";
@@ -54,8 +54,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   examComponents,
   academicYears,
   programCourses,
-  courses,
-  courseTypes,
+  //   courses,
   classes,
   givenPaper,
   paperId,
@@ -66,29 +65,29 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
 
   // Create lookup objects for constructing program course names
-  const coursesLookup: Record<number, string> = React.useMemo(() => {
-    return courses.reduce(
-      (acc, course) => {
-        if (course.id) {
-          acc[course.id] = course.name;
-        }
-        return acc;
-      },
-      {} as Record<number, string>,
-    );
-  }, [courses]);
+  //   const coursesLookup: Record<number, string> = React.useMemo(() => {
+  //     return courses.reduce(
+  //       (acc, course) => {
+  //         if (course.id) {
+  //           acc[course.id] = course.name;
+  //         }
+  //         return acc;
+  //       },
+  //       {} as Record<number, string>,
+  //     );
+  //   }, [courses]);
 
-  const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
-    return courseTypes.reduce(
-      (acc, courseType) => {
-        if (courseType.id) {
-          acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
-        }
-        return acc;
-      },
-      {} as Record<number, string>,
-    );
-  }, [courseTypes]);
+  //   const courseTypeShortNamesLookup: Record<number, string> = React.useMemo(() => {
+  //     return courseTypes.reduce(
+  //       (acc, courseType) => {
+  //         if (courseType.id) {
+  //           acc[courseType.id] = courseType.shortName || courseType.name.charAt(0);
+  //         }
+  //         return acc;
+  //       },
+  //       {} as Record<number, string>,
+  //     );
+  //   }, [courseTypes]);
 
   // Single useEffect to handle both editing and creating
   useEffect(() => {
@@ -330,7 +329,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                 {/* Paper Details */}
                 <div className="grid grid-cols-4 gap-4">
                   <div>
-                    <Label htmlFor="courseId">Course</Label>
+                    <Label htmlFor="courseId">Program Course</Label>
                     <Select
                       value={
                         form.programCourseId !== undefined && form.programCourseId !== null
@@ -345,7 +344,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                       <SelectContent>
                         {programCourses.map((programCourse) => (
                           <SelectItem key={programCourse.id} value={programCourse.id?.toString() || ""}>
-                            {`${coursesLookup[programCourse.courseId] ?? "-"} (${courseTypeShortNamesLookup[programCourse.courseTypeId] ?? "-"})`}
+                            {programCourse.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

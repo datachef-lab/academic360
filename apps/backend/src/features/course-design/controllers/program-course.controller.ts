@@ -20,13 +20,13 @@ export const createProgramCourseHandler = async (
     const created = await createProgramCourse(req.body);
     if (!created) {
       res
-        .status(400)
+        .status(409)
         .json(
           new ApiResponse(
-            400,
-            "BAD_REQUEST",
+            409,
+            "CONFLICT",
             null,
-            "Program course already exists",
+            "Program course already exists with same stream, course, type, level, affiliation, regulation, duration and semesters",
           ),
         );
       return;
@@ -42,6 +42,7 @@ export const createProgramCourseHandler = async (
         ),
       );
   } catch (error) {
+    console.log(error);
     handleError(error, res, next);
   }
 };
@@ -111,6 +112,21 @@ export const updateProgramCourseHandler = async (
     const id = Number(req.params.id);
     const updated = await updateProgramCourse(id, req.body);
     if (!updated) {
+      // Distinguish duplicate vs not found by trying to find the record by id
+      const found = await findById(id);
+      if (found) {
+        res
+          .status(409)
+          .json(
+            new ApiResponse(
+              409,
+              "CONFLICT",
+              null,
+              "Program course already exists with same stream, course, type, level, affiliation, regulation, duration and semesters",
+            ),
+          );
+        return;
+      }
       res
         .status(404)
         .json(

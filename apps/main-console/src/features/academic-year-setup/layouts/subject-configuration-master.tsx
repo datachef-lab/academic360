@@ -14,7 +14,7 @@ const configurationLinks = [
     icon: Link,
   },
   {
-    title: "Rule 3: - Restricted Grouping",
+    title: "Rule 3: - Related Subjects Grouping",
     url: "/dashboard/academic-year-setup/subject-configurations/restricted-groupings",
     icon: XCircle,
   },
