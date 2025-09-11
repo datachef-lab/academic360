@@ -144,7 +144,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
 
   // Handlers for each field
   const handleChange = (field: keyof Paper, value: string | number | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev: Paper) => ({ ...prev, [field]: value }));
   };
 
   // Component handlers
