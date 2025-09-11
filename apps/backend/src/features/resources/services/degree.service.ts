@@ -78,6 +78,7 @@ export async function createDegree(
   const [newDegree] = await db
     .insert(degreeModel)
     .values({
+      name: data.name,
       ...data,
       createdAt: new Date(),
       updatedAt: new Date(),
