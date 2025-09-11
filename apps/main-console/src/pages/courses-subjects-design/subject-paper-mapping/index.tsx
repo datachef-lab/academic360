@@ -393,8 +393,8 @@ const SubjectPaperMappingPage = () => {
         disabled: data.disabled,
         components:
           data.components
-            ?.filter((comp: any) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
-            .map((comp: any) => ({
+            ?.filter((comp) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null)
+            .map((comp) => ({
               examComponent: {
                 id: comp.examComponent.id!,
               },
