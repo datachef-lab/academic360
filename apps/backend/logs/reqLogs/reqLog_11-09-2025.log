@@ -1,1 +1,7 @@
-11-09-2025	10:26:17	c41a4224-2ff7-4abc-aca4-15f91c51651d	GET	/api/course-design/regulation-types	http://localhost:5173
+11-09-2025	12:50:20	43de7977-6369-4931-98e1-1f924a69f006	DELETE	/api/course-design/courses/2	http://localhost:5173
+11-09-2025	12:50:15	76703afe-01c1-4f0b-9fc4-23f0ef118986	DELETE	/api/course-design/courses/2	http://localhost:5173
+11-09-2025	12:50:15	ed7224e8-7ff0-496f-aba8-38298e0c17b7	OPTIONS	/api/course-design/courses/2	http://localhost:5173
+11-09-2025	12:50:12	78dce687-dbe0-45ae-95e4-e34087b9261b	DELETE	/api/course-design/courses/1	http://localhost:5173
+11-09-2025	12:50:12	6463f9af-ef40-44e2-bf22-31d0dba4eee5	OPTIONS	/api/course-design/courses/1	http://localhost:5173
+11-09-2025	12:50:06	b25da80a-e4e8-407d-bfcc-897168640910	GET	/api/degree	http://localhost:5173
+11-09-2025	12:50:06	53e495ec-9d28-4fac-8a2c-7b092e58bc01	GET	/api/degree	http://localhost:5173

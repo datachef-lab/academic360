@@ -1,3 +1,7 @@
+11-09-2025	12:50:06	d8c78f9b-26ef-4e48-b7e2-d071764cfa9a	Error: Failed query: select "id", "legacy_degree_id", "name", "level", "sequence", "disabled", "created_at", "updated_at" from "degree" order by "degree"."sequence"
+params: 	GET	/api/degree	http://localhost:5173
+11-09-2025	12:50:06	aeb524c7-03fe-4e5e-a639-d41da6551ec7	Error: Failed query: select "id", "legacy_degree_id", "name", "level", "sequence", "disabled", "created_at", "updated_at" from "degree" order by "degree"."sequence"
+params: 	GET	/api/degree	http://localhost:5173
 11-09-2025	09:33:51	f4a14a7c-ba73-4ee7-9989-f83a63afd5b0	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 11-09-2025	09:33:51	56fdb971-ed97-4dc7-ad89-01a0fd7bf9be	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
 11-09-2025	09:33:51	164eb377-643a-49a8-9cd6-4b154f62e853	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173

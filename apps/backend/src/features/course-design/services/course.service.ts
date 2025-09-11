@@ -1,6 +1,14 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import { CourseDto } from "@/types/course-design/index.type.js";
-import { Course, courseModel, createCourseModel } from "@repo/db/schemas";
+import {
+  Course,
+  courseModel,
+  createCourseModel,
+  admissionCourseDetailsModel,
+  admissionProgramCourseModel,
+  feesStructureModel,
+  admissionAcademicInfoModel,
+} from "@repo/db/schemas";
 import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 // import { StreamType } from "@/types/academics/stream.js";
 // import { findStreamById } from "./stream.service.js";
@@ -10,10 +18,10 @@ import { OldCourse } from "@/types/old-data/old-course.js";
 // import { studentModel } from "@/features/user/models/student.model.js";
 
 import { OldStudent } from "@/types/old-student.js";
-import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
-import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
-import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
-import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
+// import { feesStructureModel } from "@/features/fees/models/fees-structure.model.js";
+// import { admissionCourseModel } from "@/features/admissions/models/admission-course.model.js";
+// import { admissionAcademicInfoModel } from "@/features/admissions/models/admission-academic-info.model.js";
+// import { admissionCourseApplication } from "@/features/admissions/models/admission-course-application.model.js";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { batchModel } from "@repo/db/schemas/models/academics";
 import XLSX from "xlsx";
@@ -271,42 +279,57 @@ export async function deleteCourseSafe(id: number) {
     [{ batchCount }],
     [{ studyMaterialCount }],
     [{ admAcademicInfoCount }],
-    [{ admCourseAppCount }],
-    [{ admCourseCount }],
+    [{ admCourseDetailsCount }],
+    [{ admProgramCourseCount }],
     [{ programCourseCount }],
     [{ feesStructureCount }],
   ] = await Promise.all([
     db
       .select({ batchCount: countDistinct(batchModel.id) })
       .from(batchModel)
-      .where(eq(batchModel.classId, id)),
-    db
-      .select({ studyMaterialCount: sql<number>`0` })
-      .from(courseModel)
-      .where(eq(courseModel.id, id)),
+      .leftJoin(
+        programCourseModel,
+        eq(batchModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(programCourseModel.courseId, id)),
     db
       .select({
         admAcademicInfoCount: countDistinct(admissionAcademicInfoModel.id),
       })
       .from(admissionAcademicInfoModel)
-      .where(eq(admissionAcademicInfoModel.previouslyRegisteredCourseId, id)),
-    db
-      .select({
-        admCourseAppCount: countDistinct(admissionCourseApplication.id),
-      })
-      .from(admissionCourseApplication)
       .leftJoin(
-        admissionCourseModel,
+        programCourseModel,
         eq(
-          admissionCourseModel.id,
-          admissionCourseApplication.admissionCourseId,
+          admissionAcademicInfoModel.previouslyRegisteredProgramCourseId,
+          programCourseModel.id,
         ),
       )
-      .where(eq(admissionCourseModel.courseId, id)),
+      .where(eq(programCourseModel.courseId, id)),
     db
-      .select({ admCourseCount: countDistinct(admissionCourseModel.id) })
-      .from(admissionCourseModel)
-      .where(eq(admissionCourseModel.courseId, id)),
+      .select({
+        admCourseDetailsCount: countDistinct(admissionCourseDetailsModel.id),
+      })
+      .from(admissionCourseDetailsModel)
+      .leftJoin(
+        admissionProgramCourseModel,
+        eq(
+          admissionCourseDetailsModel.admissionProgramCourseId,
+          admissionProgramCourseModel.id,
+        ),
+      )
+      .leftJoin(
+        programCourseModel,
+        eq(admissionProgramCourseModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(programCourseModel.courseId, id)),
+    db
+      .select({ admCourseCount: countDistinct(admissionProgramCourseModel.id) })
+      .from(admissionProgramCourseModel)
+      .leftJoin(
+        programCourseModel,
+        eq(admissionProgramCourseModel.programCourseId, programCourseModel.id),
+      )
+      .where(eq(programCourseModel.courseId, id)),
     db
       .select({ programCourseCount: countDistinct(programCourseModel.id) })
       .from(programCourseModel)
