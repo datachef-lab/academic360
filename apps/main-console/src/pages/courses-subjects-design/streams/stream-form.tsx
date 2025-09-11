@@ -14,8 +14,10 @@ const streamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   code: z.string().min(1, "Code is required"),
   shortName: z.string().optional().nullable(),
+  ugPrefix: z.string().optional().nullable(),
+  pgPrefix: z.string().optional().nullable(),
   sequence: z.number().optional().nullable(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 });
 
 type StreamFormValues = z.infer<typeof streamSchema>;
@@ -27,14 +29,9 @@ interface StreamFormProps {
   isLoading?: boolean;
 }
 
-export function StreamForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-}: StreamFormProps) {
+export function StreamForm({ initialData, onSubmit, onCancel, isLoading = false }: StreamFormProps) {
   const isEdit = !!initialData;
-  
+
   const {
     register,
     handleSubmit,
@@ -46,8 +43,11 @@ export function StreamForm({
       name: initialData?.name || "",
       code: initialData?.code || "",
       shortName: initialData?.shortName || "",
+      ugPrefix: initialData?.ugPrefix || "",
+      pgPrefix: initialData?.pgPrefix || "",
       sequence: initialData?.sequence || null,
-      disabled: initialData?.disabled ?? false,
+      isActive: (initialData?.isActive ??
+        (initialData?.disabled !== undefined ? !initialData.disabled : true)) as boolean,
     },
   });
 
@@ -57,16 +57,21 @@ export function StreamForm({
         name: initialData.name,
         code: initialData.code || "",
         shortName: initialData.shortName || "",
+        ugPrefix: initialData.ugPrefix || "",
+        pgPrefix: initialData.pgPrefix || "",
         sequence: initialData.sequence || null,
-        disabled: initialData.disabled,
+        isActive: (initialData.isActive ??
+          (initialData.disabled !== undefined ? !initialData.disabled : true)) as boolean,
       });
     } else {
       reset({
         name: "",
         code: "",
         shortName: "",
+        ugPrefix: "",
+        pgPrefix: "",
         sequence: null,
-        disabled: false,
+        isActive: true,
       });
     }
   }, [initialData, reset]);
@@ -86,9 +91,7 @@ export function StreamForm({
             disabled={isLoading}
             className={errors.name ? "border-red-500" : ""}
           />
-          {errors.name && (
-            <p className="text-sm text-red-600">{errors.name.message}</p>
-          )}
+          {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-2">
@@ -103,9 +106,7 @@ export function StreamForm({
             disabled={isLoading}
             className={errors.code ? "border-red-500" : ""}
           />
-          {errors.code && (
-            <p className="text-sm text-red-600">{errors.code.message}</p>
-          )}
+          {errors.code && <p className="text-sm text-red-600">{errors.code.message}</p>}
         </div>
 
         <div className="space-y-2">
@@ -118,11 +119,30 @@ export function StreamForm({
             disabled={isLoading}
             className={errors.shortName ? "border-red-500" : ""}
           />
-          {errors.shortName && (
-            <p className="text-sm text-red-600">
-              {errors.shortName.message}
-            </p>
-          )}
+          {errors.shortName && <p className="text-sm text-red-600">{errors.shortName.message}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="ugPrefix">UG Prefix</Label>
+            <Input
+              id="ugPrefix"
+              type="text"
+              placeholder="Enter UG prefix (optional)"
+              {...register("ugPrefix")}
+              disabled={isLoading}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pgPrefix">PG Prefix</Label>
+            <Input
+              id="pgPrefix"
+              type="text"
+              placeholder="Enter PG prefix (optional)"
+              {...register("pgPrefix")}
+              disabled={isLoading}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -135,46 +155,26 @@ export function StreamForm({
             disabled={isLoading}
             className={errors.sequence ? "border-red-500" : ""}
           />
-          {errors.sequence && (
-            <p className="text-sm text-red-600">
-              {errors.sequence.message}
-            </p>
-          )}
+          {errors.sequence && <p className="text-sm text-red-600">{errors.sequence.message}</p>}
         </div>
 
         <div className="flex items-center space-x-2">
-          <Checkbox
-            id="disabled"
-            {...register("disabled")}
-            disabled={isLoading}
-          />
+          <Checkbox id="isActive" {...register("isActive")} disabled={isLoading} />
           <Label
-            htmlFor="disabled"
+            htmlFor="isActive"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            Disabled
+            Active
           </Label>
         </div>
       </div>
 
       <div className="flex justify-end space-x-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading
-            ? "Saving..."
-            : isEdit
-            ? "Update Stream"
-            : "Create Stream"}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Saving..." : isEdit ? "Update Stream" : "Create Stream"}
         </Button>
       </div>
     </form>

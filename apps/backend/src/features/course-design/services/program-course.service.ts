@@ -3,8 +3,9 @@ import {
   programCourseModel,
   ProgramCourse,
   NewProgramCourse,
+  ProgramCourseT,
 } from "@repo/db/schemas/models/course-design";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, countDistinct, eq, ilike, ne, inArray } from "drizzle-orm";
 import XLSX from "xlsx";
 import fs from "fs";
 import { streamModel } from "@repo/db/schemas/models/course-design";
@@ -23,8 +24,144 @@ import * as affiliationService from "./affiliation.service.js";
 import * as regulationTypeService from "./regulation-type.service.js";
 import * as streamService from "./stream.service.js";
 
+// Compose program-course name using current related records
+function composeProgramCourseName(args: {
+  streamUgPrefix?: string | null;
+  streamPgPrefix?: string | null;
+  courseName?: string | null;
+  courseTypeShort?: string | null;
+  isPG: boolean;
+}): string {
+  const { streamUgPrefix, streamPgPrefix, courseName, courseTypeShort, isPG } =
+    args;
+  const prefix = (isPG ? streamPgPrefix : streamUgPrefix) || "";
+  const left = prefix.trim();
+  const right = courseTypeShort ? ` (${courseTypeShort})` : "";
+  return [left, (courseName || "").trim()].filter(Boolean).join(" ") + right;
+}
+
+export async function recomposeProgramCourseNamesFor(filter: {
+  streamId?: number;
+  courseId?: number;
+  courseTypeId?: number;
+  courseLevelId?: number;
+}) {
+  const whereClauses: any[] = [];
+  if (filter.streamId)
+    whereClauses.push(eq(programCourseModel.streamId, filter.streamId));
+  if (filter.courseId)
+    whereClauses.push(eq(programCourseModel.courseId, filter.courseId));
+  if (filter.courseTypeId)
+    whereClauses.push(eq(programCourseModel.courseTypeId, filter.courseTypeId));
+  if (filter.courseLevelId)
+    whereClauses.push(
+      eq(programCourseModel.courseLevelId, filter.courseLevelId),
+    );
+
+  if (whereClauses.length === 0) return;
+
+  const pcs = await db
+    .select()
+    .from(programCourseModel)
+    .where(
+      whereClauses.length === 1
+        ? whereClauses[0]
+        : (and as any)(...whereClauses),
+    );
+
+  if (pcs.length === 0) return;
+
+  // Preload lookups
+  const streamIds = Array.from(
+    new Set(pcs.map((p) => p.streamId).filter(Boolean)),
+  ) as number[];
+  const courseIds = Array.from(
+    new Set(pcs.map((p) => p.courseId).filter(Boolean)),
+  ) as number[];
+  const courseTypeIds = Array.from(
+    new Set(pcs.map((p) => p.courseTypeId).filter(Boolean)),
+  ) as number[];
+  const courseLevelIds = Array.from(
+    new Set(pcs.map((p) => p.courseLevelId).filter(Boolean)),
+  ) as number[];
+
+  const [streams, courses, courseTypes, courseLevels] = await Promise.all([
+    streamIds.length
+      ? db
+          .select()
+          .from(streamModel)
+          .where(
+            streamIds.length === 1
+              ? eq(streamModel.id, streamIds[0])
+              : inArray(streamModel.id, streamIds),
+          )
+      : Promise.resolve([] as any[]),
+    courseIds.length
+      ? db
+          .select()
+          .from(courseModel)
+          .where(
+            courseIds.length === 1
+              ? eq(courseModel.id, courseIds[0])
+              : inArray(courseModel.id, courseIds),
+          )
+      : Promise.resolve([] as any[]),
+    courseTypeIds.length
+      ? db
+          .select()
+          .from(courseTypeModel)
+          .where(
+            courseTypeIds.length === 1
+              ? eq(courseTypeModel.id, courseTypeIds[0])
+              : inArray(courseTypeModel.id, courseTypeIds),
+          )
+      : Promise.resolve([] as any[]),
+    courseLevelIds.length
+      ? db
+          .select()
+          .from(courseLevelModel)
+          .where(
+            courseLevelIds.length === 1
+              ? eq(courseLevelModel.id, courseLevelIds[0])
+              : inArray(courseLevelModel.id, courseLevelIds),
+          )
+      : Promise.resolve([] as any[]),
+  ]);
+
+  const sMap = Object.fromEntries(streams.map((s) => [s.id, s]));
+  const cMap = Object.fromEntries(courses.map((c) => [c.id, c]));
+  const ctMap = Object.fromEntries(courseTypes.map((ct) => [ct.id, ct]));
+  const clMap = Object.fromEntries(courseLevels.map((cl) => [cl.id, cl]));
+
+  for (const pc of pcs) {
+    const s = pc.streamId ? sMap[pc.streamId] : undefined;
+    const c = pc.courseId ? cMap[pc.courseId] : undefined;
+    const ct = pc.courseTypeId ? ctMap[pc.courseTypeId] : undefined;
+    const cl = pc.courseLevelId ? clMap[pc.courseLevelId] : undefined;
+    if (!s || !c || !ct || !cl) continue;
+
+    const isPG = /post\s*grad|pg|postgrad|master|m\.|ph\.?d|doctor/i.test(
+      `${cl.shortName || ""} ${cl.name || ""}`,
+    );
+    const composed = composeProgramCourseName({
+      streamUgPrefix: s.ugPrefix ?? null,
+      streamPgPrefix: s.pgPrefix ?? null,
+      courseName: c.name ?? null,
+      courseTypeShort: ct.shortName || ct.name || null,
+      isPG,
+    });
+
+    if (pc.name !== composed) {
+      await db
+        .update(programCourseModel)
+        .set({ name: composed })
+        .where(eq(programCourseModel.id, pc.id));
+    }
+  }
+}
+
 export async function createProgramCourse(
-  data: Omit<ProgramCourse, "id" | "createdAt" | "updatedAt">,
+  data: Omit<ProgramCourseT, "id" | "createdAt" | "updatedAt">,
 ) {
   const [existingProgramCourse] = await db
     .select()
@@ -44,9 +181,11 @@ export async function createProgramCourse(
 
   if (existingProgramCourse) return null;
 
+  //   const { name, ...rest } = data;
+
   const [created] = await db
     .insert(programCourseModel)
-    .values(data as any)
+    .values(data)
     .returning();
   return created;
 }

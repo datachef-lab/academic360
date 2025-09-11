@@ -179,8 +179,11 @@ export interface Stream {
   name: string;
   shortName: string | null;
   code: string | null;
+  ugPrefix?: string | null;
+  pgPrefix?: string | null;
   sequence: number | null;
-  disabled: boolean;
+  isActive?: boolean | null;
+  disabled?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -4,6 +4,7 @@ import { db } from "@/db/index.js";
 // import { courseLevelModel, CourseLevel } from "@repo/db/schemas/models";
 
 import { countDistinct, eq, ilike } from "drizzle-orm";
+import { recomposeProgramCourseNamesFor } from "./program-course.service.js";
 import { programCourseModel } from "@repo/db/schemas";
 // import { insertCourseLevelSchema } from "../models/course-level.model";
 import { z } from "zod";
@@ -212,6 +213,9 @@ export const updateCourseLevel = async (
     .set(props)
     .where(eq(courseLevelModel.id, +id))
     .returning();
+  if (props.shortName !== undefined || props.name !== undefined) {
+    await recomposeProgramCourseNamesFor({ courseLevelId: +id });
+  }
   return updatedCourseLevel.length > 0 ? updatedCourseLevel[0] : null;
 };
 

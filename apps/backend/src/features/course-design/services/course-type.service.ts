@@ -4,6 +4,7 @@ import { countDistinct, eq, ilike } from "drizzle-orm";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
+import { recomposeProgramCourseNamesFor } from "./program-course.service.js";
 
 // Bulk upload interface
 export interface BulkUploadResult {
@@ -191,6 +192,9 @@ export async function updateCourseType(id: number, data: Partial<CourseType>) {
     .set(props)
     .where(eq(courseTypeModel.id, id))
     .returning();
+  if (props.shortName !== undefined || props.name !== undefined) {
+    await recomposeProgramCourseNamesFor({ courseTypeId: id });
+  }
   return updated;
 }
 

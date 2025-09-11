@@ -58,7 +58,6 @@ export default function AddPaperModal({
     academicYears,
     programCourses,
     classes,
-    courseTypes,
   },
 }: AddModalProps) {
   const [defaultPaper] = useState<Paper>({
@@ -514,7 +513,7 @@ export default function AddPaperModal({
                         .map(
                           (programCourseItem) =>
                             programCourseItem.regulationTypeId === field.regulationTypeId && {
-                              label: `${courses.find((crs) => crs.id == programCourseItem.courseId)?.name} (${courseTypes.find((crs) => crs.id == programCourseItem.courseTypeId)?.shortName ?? "-"})`,
+                              label: programCourseItem.name,
                               value: programCourseItem.id?.toString() || "",
                             },
                         )

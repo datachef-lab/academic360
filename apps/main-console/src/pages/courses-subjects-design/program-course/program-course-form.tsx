@@ -134,22 +134,49 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
     }
   }, [initialData, form]);
 
-  // Auto-compose name from course + (courseType.shortName) whenever selection changes
+  // Auto-compose Program Course name based on pattern:
+  // [Stream.(ugPrefix|pgPrefix)] + ' ' + [Course.name] + ' ' + ([CourseType.shortName])
   useEffect(() => {
-    const selectedCourse = courses.find((c) => c.id === form.getValues("courseId"));
-    const selectedCourseType = courseTypes.find((ct) => ct.id === form.getValues("courseTypeId"));
+    const courseId = form.getValues("courseId");
+    const courseTypeId = form.getValues("courseTypeId");
+    const streamId = form.getValues("streamId");
+    const courseLevelId = form.getValues("courseLevelId");
+
+    const selectedCourse = courses.find((c) => c.id === courseId);
+    const selectedCourseType = courseTypes.find((ct) => ct.id === courseTypeId);
+    const selectedStream = streams.find((s) => s.id === streamId);
+    const selectedLevel = courseLevels.find((cl) => cl.id === courseLevelId);
+
     const courseName = selectedCourse?.name?.trim() || "";
+
+    const levelNameForCheck = `${selectedLevel?.shortName || ""} ${selectedLevel?.name || ""}`.toLowerCase();
+    const isPG = /(post\s*grad|pg|postgrad|master|m\.|ph\.?d|doctor)/i.test(levelNameForCheck);
+    const streamPrefix = (isPG ? selectedStream?.pgPrefix : selectedStream?.ugPrefix)?.trim();
+
     const courseTypeShort =
       (selectedCourseType as CourseType)?.shortName ||
       (selectedCourseType as CourseType)?.code ||
       selectedCourseType?.name ||
       "";
-    const composed = courseTypeShort ? `${courseName} (${courseTypeShort})`.trim() : courseName;
+
+    // Use level short name and stream prefix as-is (they may already include dots), separated by one space
+    const left = `${streamPrefix || ""}`;
+    const right = courseTypeShort ? ` (${courseTypeShort})` : "";
+    const composed = [left, courseName].filter(Boolean).join(" ") + right;
+
     if (composed && form.getValues("name") !== composed) {
       form.setValue("name", composed, { shouldDirty: true });
     }
-    // Keep shortName optional; do not auto-fill. Let users type if they want.
-  }, [courses, courseTypes, form.watch("courseId"), form.watch("courseTypeId")]);
+  }, [
+    streams,
+    courses,
+    courseTypes,
+    courseLevels,
+    form.watch("streamId"),
+    form.watch("courseId"),
+    form.watch("courseTypeId"),
+    form.watch("courseLevelId"),
+  ]);
 
   const handleSubmit = (data: ProgramCourseFormValues) => {
     onSubmit({
@@ -378,9 +405,9 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel>Name (auto)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Auto-composed name" {...field} value={field.value || ""} />
+                  <Input placeholder="Auto-composed name" {...field} value={field.value || ""} readOnly />
                 </FormControl>
                 <FormMessage />
               </FormItem>

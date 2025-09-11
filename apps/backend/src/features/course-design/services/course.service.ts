@@ -1,6 +1,7 @@
 import { db, mysqlConnection } from "@/db/index.js";
 import { CourseDto } from "@/types/course-design/index.type.js";
 import { Course, courseModel, createCourseModel } from "@repo/db/schemas";
+import { recomposeProgramCourseNamesFor } from "./program-course.service.js";
 import { and, count, countDistinct, eq, ilike, sql } from "drizzle-orm";
 // import { StreamType } from "@/types/academics/stream.js";
 // import { findStreamById } from "./stream.service.js";
@@ -245,6 +246,10 @@ export async function updateCourse(
     .returning();
 
   const formattedCourse = await courseFormatResponse(updatedCourse);
+
+  if (props.name !== undefined) {
+    await recomposeProgramCourseNamesFor({ courseId: id });
+  }
 
   return formattedCourse;
 }

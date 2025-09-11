@@ -37,13 +37,13 @@ const StreamsPage = () => {
   React.useEffect(() => {
     setLoading(true);
     getAllStreams()
-      .then(res => {
+      .then((res) => {
         const streamsData = Array.isArray(res) ? res : [];
         setStreams(streamsData);
         setError(null);
       })
       .catch((error) => {
-        console.error('Error fetching streams:', error);
+        console.error("Error fetching streams:", error);
         setError("Failed to fetch streams");
         setStreams([]);
       })
@@ -59,34 +59,44 @@ const StreamsPage = () => {
     try {
       const result: DeleteResult = await deleteStream(id);
       if (result.success) {
-        setStreams(prev => prev.filter(s => s.id !== id));
+        setStreams((prev) => prev.filter((s) => s.id !== id));
         toast.success(result.message || "Stream deleted successfully");
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
-    } catch  {
+    } catch {
       toast.error("Failed to delete stream");
     }
   };
 
-  const handleSubmit = async (data: { name: string; code: string; shortName?: string | null; sequence?: number | null; disabled: boolean }) => {
+  const handleSubmit = async (data: {
+    name: string;
+    code: string;
+    shortName?: string | null;
+    ugPrefix?: string | null;
+    pgPrefix?: string | null;
+    sequence?: number | null;
+    isActive: boolean;
+  }) => {
     setIsSubmitting(true);
     try {
-      const streamData: Omit<Stream, 'id' | 'createdAt' | 'updatedAt'> = {
+      const streamData: Omit<Stream, "id" | "createdAt" | "updatedAt"> = {
         name: data.name,
         code: data.code,
         shortName: data.shortName || null,
+        ugPrefix: data.ugPrefix || null,
+        pgPrefix: data.pgPrefix || null,
         sequence: data.sequence || null,
-        disabled: data.disabled,
+        isActive: data.isActive,
       };
-      
+
       if (selectedStream?.id) {
         // Update
-        await updateStream(Number(String(selectedStream.id).split(':')[0]), streamData);
+        await updateStream(Number(String(selectedStream.id).split(":")[0]), streamData);
         toast.success("Stream updated successfully");
       } else {
         // Create
@@ -115,25 +125,24 @@ const StreamsPage = () => {
 
   const handleBulkUpload = async () => {
     if (!bulkFile) return;
-    
+
     setIsBulkUploading(true);
     try {
       const result = await bulkUploadStreams(bulkFile);
       setBulkUploadResult(result);
-      
+
       if (result.summary.successful > 0) {
         toast.success(`Successfully uploaded ${result.summary.successful} streams`);
         // Re-fetch the list to show new data
         const freshStreams = await getAllStreams();
         setStreams(Array.isArray(freshStreams) ? freshStreams : []);
       }
-      
+
       if (result.summary.failed > 0) {
         toast.error(`${result.summary.failed} streams failed to upload`);
       }
-      
     } catch (error: unknown) {
-      toast.error(`Bulk upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Bulk upload failed: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsBulkUploading(false);
     }
@@ -146,18 +155,22 @@ const StreamsPage = () => {
         Name: "Science",
         Code: "SCI",
         "Short Name": "Sci",
+        "UG Prefix": "UG",
+        "PG Prefix": "PG",
         Sequence: 1,
-        Status: "Active"
+        Status: "Active",
       },
       {
-        Name: "Commerce", 
+        Name: "Commerce",
         Code: "COM",
         "Short Name": "Comm",
+        "UG Prefix": "UG",
+        "PG Prefix": "PG",
         Sequence: 2,
-        Status: "Active"
-      }
+        Status: "Active",
+      },
     ];
-    
+
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Streams Template");
@@ -167,11 +180,13 @@ const StreamsPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getAllStreams();
-      const data = res.map(stream => ({
+      const data = res.map((stream) => ({
         ID: stream.id,
         Name: stream.name,
         Code: stream.code || "-",
         "Short Name": stream.shortName || "-",
+        "UG Prefix": stream.ugPrefix || "-",
+        "PG Prefix": stream.pgPrefix || "-",
         Sequence: stream.sequence || "-",
         Status: stream.disabled ? "Inactive" : "Active",
         "Created At": stream.createdAt,
@@ -206,11 +221,11 @@ const StreamsPage = () => {
           "Row Number": error.row,
           "Error Message": error.error,
           "Original Data": JSON.stringify(error.data),
-          "Name": (errorData.Name as string) || "",
-          "Code": (errorData.Code as string) || "",
+          Name: (errorData.Name as string) || "",
+          Code: (errorData.Code as string) || "",
           "Short Name": (errorData["Short Name"] as string) || "",
-          "Sequence": (errorData.Sequence as string) || "",
-          "Status": (errorData.Status as string) || ""
+          Sequence: (errorData.Sequence as string) || "",
+          Status: (errorData.Status as string) || "",
         };
       });
 
@@ -218,18 +233,21 @@ const StreamsPage = () => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Streams");
       XLSX.writeFile(wb, "failed-streams-upload.xlsx");
-      
+
       toast.success("Failed data downloaded successfully");
     } catch {
       toast.error("Failed to download error data");
     }
   };
 
-  const filteredStreams = (Array.isArray(streams) ? streams : []).filter((stream) =>
-    (stream.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (stream.code ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (stream.shortName ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (stream.sequence?.toString() ?? '').includes(searchText.toLowerCase())
+  const filteredStreams = (Array.isArray(streams) ? streams : []).filter(
+    (stream) =>
+      (stream.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (stream.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (stream.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (stream.ugPrefix ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (stream.pgPrefix ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (stream.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
 
   return (
@@ -249,7 +267,7 @@ const StreamsPage = () => {
                 <Button variant="outline">
                   <Upload className="mr-2 h-4 w-4" />
                   Bulk Upload
-                </Button> 
+                </Button>
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
@@ -265,14 +283,16 @@ const StreamsPage = () => {
                       Download the template to see the required format
                     </span>
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label htmlFor="bulk-upload-file" className="text-sm font-medium">Upload Excel File</Label>
+                    <Label htmlFor="bulk-upload-file" className="text-sm font-medium">
+                      Upload Excel File
+                    </Label>
                     <Input
                       id="bulk-upload-file"
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full"
                     />
                   </div>
@@ -290,21 +310,23 @@ const StreamsPage = () => {
                           </div>
                           <div className="text-center p-3 bg-green-50 rounded-lg">
                             <div className="font-semibold text-green-900">Successful</div>
-                            <div className="text-2xl font-bold text-green-600">{bulkUploadResult.summary.successful}</div>
+                            <div className="text-2xl font-bold text-green-600">
+                              {bulkUploadResult.summary.successful}
+                            </div>
                           </div>
                           <div className="text-center p-3 bg-red-50 rounded-lg">
                             <div className="font-semibold text-red-900">Failed</div>
                             <div className="text-2xl font-bold text-red-600">{bulkUploadResult.summary.failed}</div>
                           </div>
                         </div>
-                        
+
                         {bulkUploadResult.errors.length > 0 && (
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <h5 className="font-medium text-red-600">Errors:</h5>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={handleDownloadFailedData}
                                 className="text-xs"
                               >
@@ -315,7 +337,7 @@ const StreamsPage = () => {
                             <div className="max-h-40 overflow-y-auto space-y-2">
                               {bulkUploadResult.errors.map((error, index) => (
                                 <div key={index} className="text-xs p-3 bg-red-50 border border-red-200 rounded-lg">
-                                  <span className="font-medium text-red-800">Row {error.row}:</span> 
+                                  <span className="font-medium text-red-800">Row {error.row}:</span>
                                   <span className="text-red-700 ml-1">{error.error}</span>
                                 </div>
                               ))}
@@ -327,11 +349,7 @@ const StreamsPage = () => {
                   )}
 
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
                     <Button variant="outline" onClick={handleCloseBulkUpload}>
@@ -364,37 +382,50 @@ const StreamsPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
               <Download className="h-4 w-4" /> Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>ID</TableHead>
-                    <TableHead style={{ width: 200, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
-                    <TableHead style={{ width: 150, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Sequence</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
+                    <TableHead style={{ width: 200, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
+                    <TableHead style={{ width: 150, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>UG Prefix</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>PG Prefix</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Sequence</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={7} className="text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-red-500">{error}</TableCell>
+                      <TableCell colSpan={7} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
                     </TableRow>
                   ) : filteredStreams.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">No streams found.</TableCell>
+                      <TableCell colSpan={7} className="text-center">
+                        No streams found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredStreams.map((stream) => (
@@ -403,6 +434,8 @@ const StreamsPage = () => {
                         <TableCell style={{ width: 200 }}>{stream.name}</TableCell>
                         <TableCell style={{ width: 120 }}>{stream.code || "-"}</TableCell>
                         <TableCell style={{ width: 150 }}>{stream.shortName || "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{stream.ugPrefix || "-"}</TableCell>
+                        <TableCell style={{ width: 120 }}>{stream.pgPrefix || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{stream.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
                           {stream.disabled ? (

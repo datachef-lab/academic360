@@ -1,6 +1,7 @@
 import { db } from "@/db/index.js";
 import { Stream, streamModel } from "@repo/db/schemas/models/course-design";
 import { countDistinct, eq, ilike } from "drizzle-orm";
+import { recomposeProgramCourseNamesFor } from "./program-course.service.js";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
@@ -140,6 +141,10 @@ export async function updateStream(id: number, data: Partial<Stream>) {
     .set(props)
     .where(eq(streamModel.id, id))
     .returning();
+  if (props.ugPrefix !== undefined || props.pgPrefix !== undefined) {
+    // Update names for affected program courses
+    await recomposeProgramCourseNamesFor({ streamId: id });
+  }
   return updated;
 }
 
