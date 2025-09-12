@@ -15,8 +15,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { RegulationType } from "@/types/course-design";
-import { getRegulationTypes, createRegulationType, updateRegulationType, deleteRegulationType, bulkUploadRegulationTypes, BulkUploadResult, DeleteResult } from "@/services/course-design.api";
+import type { RegulationType } from "@repo/db";
+import {
+  getRegulationTypes,
+  createRegulationType,
+  updateRegulationType,
+  deleteRegulationType,
+  bulkUploadRegulationTypes,
+  BulkUploadResult,
+  DeleteResult,
+} from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 
 const RegulationTypesPage = () => {
@@ -65,13 +73,13 @@ const RegulationTypesPage = () => {
         fetchRegulationTypes();
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to delete regulation type: ${errorMessage}`);
     }
   };
@@ -81,7 +89,7 @@ const RegulationTypesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (data: Omit<RegulationType, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleFormSubmit = async (data: Omit<RegulationType, "id" | "createdAt" | "updatedAt">) => {
     setIsFormSubmitting(true);
     try {
       if (selectedRegulationType) {
@@ -95,7 +103,7 @@ const RegulationTypesPage = () => {
       fetchRegulationTypes();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to ${selectedRegulationType ? 'update' : 'create'} regulation type: ${errorMessage}`);
+      toast.error(`Failed to ${selectedRegulationType ? "update" : "create"} regulation type: ${errorMessage}`);
     } finally {
       setIsFormSubmitting(false);
     }
@@ -120,7 +128,7 @@ const RegulationTypesPage = () => {
         toast.error(`${result.summary.failed} regulation types failed to upload`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -166,15 +174,17 @@ const RegulationTypesPage = () => {
       return;
     }
     try {
-      const failedData = bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }) => ({
-        "Row Number": error.row,
-        "Error Message": error.error,
-        "Original Data": JSON.stringify(error.data),
-        Name: error.data[0] || "",
-        "Short Name": error.data[1] || "",
-        Sequence: error.data[2] || "",
-        Disabled: error.data[3] || ""
-      }));
+      const failedData = bulkUploadResult.errors.map(
+        (error: { row: number; error: string; data: Record<string, unknown> }) => ({
+          "Row Number": error.row,
+          "Error Message": error.error,
+          "Original Data": JSON.stringify(error.data),
+          Name: error.data[0] || "",
+          "Short Name": error.data[1] || "",
+          Sequence: error.data[2] || "",
+          Disabled: error.data[3] || "",
+        }),
+      );
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Regulation Types");
@@ -185,9 +195,10 @@ const RegulationTypesPage = () => {
     }
   };
 
-  const filteredRegulationTypes = regulationTypes.filter((type) =>
-    type.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (type.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
+  const filteredRegulationTypes = regulationTypes.filter(
+    (type) =>
+      type.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      (type.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false),
   );
 
   if (loading) {
@@ -252,7 +263,7 @@ const RegulationTypesPage = () => {
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full p-2 border rounded"
                     />
                   </div>
@@ -274,36 +285,36 @@ const RegulationTypesPage = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleDownloadFailedData}
-                              className="text-xs"
-                            >
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-1">
-                            {bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }, index: number) => (
-                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                <span className="font-medium">Row {error.row}:</span> {error.error}
-                              </div>
-                            ))}
+                            {bulkUploadResult.errors.map(
+                              (error: { row: number; error: string; data: Record<string, unknown> }, index: number) => (
+                                <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                  <span className="font-medium">Row {error.row}:</span> {error.error}
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkFile(null); setBulkUploadResult(null); }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsBulkUploadOpen(false);
+                        setBulkFile(null);
+                        setBulkUploadResult(null);
+                      }}
+                    >
                       Close
                     </Button>
                   </div>
@@ -323,7 +334,9 @@ const RegulationTypesPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedRegulationType ? "Edit Regulation Type" : "Add New Regulation Type"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedRegulationType ? "Edit Regulation Type" : "Add New Regulation Type"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <RegulationTypeForm
                   initialData={selectedRegulationType}
@@ -337,28 +350,35 @@ const RegulationTypesPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" onClick={handleDownloadAll}>
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>#</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRegulationTypes.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">No regulation types found.</TableCell>
+                      <TableCell colSpan={5} className="text-center">
+                        No regulation types found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredRegulationTypes.map((type, idx) => (

@@ -1,5 +1,5 @@
 // import { UserDataTable } from "@/pages/DataTableTest";
-import { CourseType } from "@/types/course-design";
+import type { CourseType } from "@repo/db";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Layers, Download, Upload, Trash2 } from "lucide-react";
 import React from "react";
@@ -70,16 +70,16 @@ const CourseTypesPage = () => {
     try {
       const result: DeleteResult = await deleteCourseType(id);
       if (result.success) {
-        setCourseTypes(prev => prev.filter(ct => ct.id !== id));
+        setCourseTypes((prev) => prev.filter((ct) => ct.id !== id));
         toast.success(result.message || "Course type deleted successfully");
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
-    } catch  {
+    } catch {
       toast.error("Failed to delete course type");
     }
   };
@@ -136,7 +136,7 @@ const CourseTypesPage = () => {
         toast.error(`${result.summary.failed} course types failed to upload`);
       }
     } catch {
-      toast.error(`Bulk upload failed: ${ "Unknown error"}`);
+      toast.error(`Bulk upload failed: ${"Unknown error"}`);
     } finally {
       setIsBulkUploading(false);
     }

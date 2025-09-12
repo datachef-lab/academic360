@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Affiliation } from "@/types/course-design";
+import type { Affiliation } from "@repo/db";
 import { Form, FormControl, FormField, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,19 +21,14 @@ type AffiliationFormValues = z.infer<typeof affiliationSchema>;
 
 interface AffiliationFormProps {
   initialData?: Affiliation | null;
-  onSubmit: (data: Omit<Affiliation, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onSubmit: (data: Omit<Affiliation, "id" | "createdAt" | "updatedAt">) => void;
   onCancel: () => void;
   isLoading?: boolean;
 }
 
-export function AffiliationForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-}: AffiliationFormProps) {
+export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = false }: AffiliationFormProps) {
   const isEdit = !!initialData;
-  
+
   const form = useForm<AffiliationFormValues>({
     resolver: zodResolver(affiliationSchema),
     defaultValues: {
@@ -85,12 +80,10 @@ export function AffiliationForm({
           render={({ field }) => (
             <FormControl>
               <div className="space-y-2">
-                <FormLabel>Name <span className="text-red-500">*</span></FormLabel>
-                <Input
-                  placeholder="Enter affiliation name"
-                  {...field}
-                  disabled={isLoading}
-                />
+                <FormLabel>
+                  Name <span className="text-red-500">*</span>
+                </FormLabel>
+                <Input placeholder="Enter affiliation name" {...field} disabled={isLoading} />
                 <FormMessage />
               </div>
             </FormControl>
@@ -104,12 +97,7 @@ export function AffiliationForm({
             <FormControl>
               <div className="space-y-2">
                 <FormLabel>Short Name</FormLabel>
-                <Input
-                  placeholder="Enter short name"
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isLoading}
-                />
+                <Input placeholder="Enter short name" {...field} value={field.value ?? ""} disabled={isLoading} />
                 <FormMessage />
               </div>
             </FormControl>
@@ -144,12 +132,7 @@ export function AffiliationForm({
             <FormControl>
               <div className="space-y-2">
                 <FormLabel>Remarks</FormLabel>
-                <Textarea
-                  placeholder="Enter remarks"
-                  {...field}
-                  value={field.value ?? ""}
-                  disabled={isLoading}
-                />
+                <Textarea placeholder="Enter remarks" {...field} value={field.value ?? ""} disabled={isLoading} />
                 <FormMessage />
               </div>
             </FormControl>
@@ -166,16 +149,10 @@ export function AffiliationForm({
                   name="disabled"
                   control={form.control}
                   render={({ field }) => (
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                      disabled={isLoading}
-                    />
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
                   )}
                 />
-                <FormLabel className="text-sm font-normal">
-                  Disabled
-                </FormLabel>
+                <FormLabel className="text-sm font-normal">Disabled</FormLabel>
                 <FormMessage />
               </div>
             </FormControl>
@@ -183,27 +160,14 @@ export function AffiliationForm({
         />
 
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="flex-1"
-          >
-            {isLoading
-              ? "Saving..."
-              : isEdit
-              ? "Update Affiliation"
-              : "Create Affiliation"}
+          <Button type="submit" disabled={isLoading} className="flex-1">
+            {isLoading ? "Saving..." : isEdit ? "Update Affiliation" : "Create Affiliation"}
           </Button>
         </div>
       </form>
     </Form>
   );
-} 
+}

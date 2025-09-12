@@ -14,8 +14,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { SubjectCategoryForm } from "./subject-category-form";
-import { SubjectType } from "@/types/course-design";
-import { getSubjectTypes, createSubjectType, updateSubjectType, deleteSubjectType, bulkUploadSubjectTypes, DeleteResult } from "@/services/course-design.api";
+import type { SubjectType } from "@repo/db";
+import {
+  getSubjectTypes,
+  createSubjectType,
+  updateSubjectType,
+  deleteSubjectType,
+  bulkUploadSubjectTypes,
+  DeleteResult,
+} from "@/services/course-design.api";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
@@ -66,8 +73,8 @@ const SubjectCategoriesPage = () => {
         fetchCategories();
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
@@ -81,7 +88,7 @@ const SubjectCategoriesPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (data: Omit<SubjectType, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleFormSubmit = async (data: Omit<SubjectType, "id" | "createdAt" | "updatedAt">) => {
     try {
       if (selectedCategory && selectedCategory.id) {
         await updateSubjectType(selectedCategory.id, data);
@@ -111,7 +118,7 @@ const SubjectCategoriesPage = () => {
         toast.error(`${result.summary.failed} subject categories failed to upload`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -166,7 +173,7 @@ const SubjectCategoriesPage = () => {
           Name: (errorData.Name as string) || "",
           Code: (errorData.Code as string) || "",
           Sequence: (errorData.Sequence as string) || "",
-          Disabled: (errorData.Disabled as string) || ""
+          Disabled: (errorData.Disabled as string) || "",
         };
       });
       const ws = XLSX.utils.json_to_sheet(failedData);
@@ -175,14 +182,15 @@ const SubjectCategoriesPage = () => {
       XLSX.writeFile(wb, "failed-subject-types-upload.xlsx");
       toast.success("Failed data downloaded successfully");
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to download error data: ${errorMessage}`);
     }
   };
 
-  const filteredCategories = categories.filter((category) =>
-    (category.name ?? '').toLowerCase().includes(searchText.toLowerCase()) ||
-    (category.code ?? '').toLowerCase().includes(searchText.toLowerCase())
+  const filteredCategories = categories.filter(
+    (category) =>
+      (category.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
+      (category.code ?? "").toLowerCase().includes(searchText.toLowerCase()),
   );
 
   return (
@@ -223,7 +231,7 @@ const SubjectCategoriesPage = () => {
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full p-2 border rounded"
                     />
                   </div>
@@ -245,12 +253,7 @@ const SubjectCategoriesPage = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleDownloadFailedData}
-                              className="text-xs"
-                            >
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
@@ -267,14 +270,17 @@ const SubjectCategoriesPage = () => {
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkFile(null); setBulkUploadResult(null); }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsBulkUploadOpen(false);
+                        setBulkFile(null);
+                        setBulkUploadResult(null);
+                      }}
+                    >
                       Close
                     </Button>
                   </div>
@@ -294,7 +300,9 @@ const SubjectCategoriesPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedCategory ? "Edit Subject Category" : "Add New Subject Category"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedCategory ? "Edit Subject Category" : "Add New Subject Category"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <SubjectCategoryForm
                   initialData={selectedCategory}
@@ -308,36 +316,47 @@ const SubjectCategoriesPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
             <Button variant="outline" onClick={() => {}}>
               <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[700px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Code</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>#</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Code</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        Loading...
+                      </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-red-500">{error}</TableCell>
+                      <TableCell colSpan={6} className="text-center text-red-500">
+                        {error}
+                      </TableCell>
                     </TableRow>
                   ) : filteredCategories.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No subject categories found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        No subject categories found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredCategories.map((category, idx) => (

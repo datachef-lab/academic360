@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CourseType } from "@/types/course-design";
+import type { CourseType } from "@repo/db";
 import { Controller } from "react-hook-form";
 
 // Form validation schema
@@ -25,12 +25,7 @@ interface CourseTypeFormProps {
   isSubmitting: boolean;
 }
 
-export function CourseTypeForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isSubmitting,
-}: CourseTypeFormProps) {
+export function CourseTypeForm({ initialData, onSubmit, onCancel, isSubmitting }: CourseTypeFormProps) {
   const defaultValues: CourseTypeFormValues = {
     name: initialData?.name || "",
     shortName: initialData?.shortName || "",
@@ -38,7 +33,12 @@ export function CourseTypeForm({
     disabled: initialData?.disabled || false,
   };
 
-  const { register, handleSubmit, formState: { errors }, control } = useForm<CourseTypeFormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    control,
+  } = useForm<CourseTypeFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
@@ -61,11 +61,9 @@ export function CourseTypeForm({
           id="name"
           placeholder="Enter course type name"
           {...register("name")}
-          className={errors.name ? 'border-red-500' : ''}
+          className={errors.name ? "border-red-500" : ""}
         />
-        {errors.name && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
-        )}
+        {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -74,11 +72,9 @@ export function CourseTypeForm({
           id="shortName"
           placeholder="Enter short name (optional)"
           {...register("shortName")}
-          className={errors.shortName ? 'border-red-500' : ''}
+          className={errors.shortName ? "border-red-500" : ""}
         />
-        {errors.shortName && (
-          <p className="text-sm text-red-500">{errors.shortName.message}</p>
-        )}
+        {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -88,35 +84,22 @@ export function CourseTypeForm({
           type="number"
           placeholder="Enter sequence number"
           {...register("sequence", { valueAsNumber: true })}
-          className={errors.sequence ? 'border-red-500' : ''}
+          className={errors.sequence ? "border-red-500" : ""}
         />
-        {errors.sequence && (
-          <p className="text-sm text-red-500">{errors.sequence.message}</p>
-        )}
+        {errors.sequence && <p className="text-sm text-red-500">{errors.sequence.message}</p>}
       </div>
 
       <div className="flex items-center space-x-2">
         <Controller
           name="disabled"
           control={control}
-          render={({ field }) => (
-            <Checkbox
-              id="disabled"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
-          )}
+          render={({ field }) => <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />}
         />
         <Label htmlFor="disabled">Disabled</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>

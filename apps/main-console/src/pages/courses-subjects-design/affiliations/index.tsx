@@ -14,8 +14,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Affiliation } from "@/types/course-design";
-import { getAffiliations, createAffiliation, updateAffiliation, deleteAffiliation, BulkUploadResult, bulkUploadAffiliations, DeleteResult } from "@/services/course-design.api";
+import type { Affiliation } from "@repo/db";
+import {
+  getAffiliations,
+  createAffiliation,
+  updateAffiliation,
+  deleteAffiliation,
+  BulkUploadResult,
+  bulkUploadAffiliations,
+  DeleteResult,
+} from "@/services/course-design.api";
 import { AffiliationForm } from "./affiliation-form";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -67,13 +75,13 @@ const AffiliationsPage = () => {
         fetchAffiliations();
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Failed to delete affiliation: ${errorMessage}`);
     }
   };
@@ -83,7 +91,7 @@ const AffiliationsPage = () => {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = async (data: Omit<Affiliation, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const handleFormSubmit = async (data: Omit<Affiliation, "id" | "createdAt" | "updatedAt">) => {
     setIsFormSubmitting(true);
     try {
       if (selectedAffiliation) {
@@ -97,7 +105,7 @@ const AffiliationsPage = () => {
       fetchAffiliations();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      toast.error(`Failed to ${selectedAffiliation ? 'update' : 'create'} affiliation: ${errorMessage}`);
+      toast.error(`Failed to ${selectedAffiliation ? "update" : "create"} affiliation: ${errorMessage}`);
     } finally {
       setIsFormSubmitting(false);
     }
@@ -123,7 +131,7 @@ const AffiliationsPage = () => {
         toast.error(`${result.summary.failed} affiliations failed to upload`);
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast.error(`Bulk upload failed: ${errorMessage}`);
     } finally {
       setIsBulkUploading(false);
@@ -134,7 +142,13 @@ const AffiliationsPage = () => {
     // Create template data
     const templateData = [
       { Name: "University of Calcutta", "Short Name": "CU", Sequence: 1, Disabled: false, Remarks: "Main university" },
-      { Name: "West Bengal State University", "Short Name": "WBSU", Sequence: 2, Disabled: false, Remarks: "State university" },
+      {
+        Name: "West Bengal State University",
+        "Short Name": "WBSU",
+        Sequence: 2,
+        Disabled: false,
+        Remarks: "State university",
+      },
     ];
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
@@ -159,7 +173,7 @@ const AffiliationsPage = () => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Affiliations");
       XLSX.writeFile(wb, "affiliations.xlsx");
-    } catch  {
+    } catch {
       toast.error("Failed to download affiliations");
     }
   };
@@ -170,16 +184,18 @@ const AffiliationsPage = () => {
       return;
     }
     try {
-      const failedData = bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }) => ({
-        "Row Number": error.row,
-        "Error Message": error.error,
-        "Original Data": JSON.stringify(error.data),
-        Name: error.data[0] || "",
-        "Short Name": error.data[1] || "",
-        Sequence: error.data[2] || "",
-        Disabled: error.data[3] || "",
-        Remarks: error.data[4] || ""
-      }));
+      const failedData = bulkUploadResult.errors.map(
+        (error: { row: number; error: string; data: Record<string, unknown> }) => ({
+          "Row Number": error.row,
+          "Error Message": error.error,
+          "Original Data": JSON.stringify(error.data),
+          Name: error.data[0] || "",
+          "Short Name": error.data[1] || "",
+          Sequence: error.data[2] || "",
+          Disabled: error.data[3] || "",
+          Remarks: error.data[4] || "",
+        }),
+      );
       const ws = XLSX.utils.json_to_sheet(failedData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Failed Affiliations");
@@ -190,10 +206,11 @@ const AffiliationsPage = () => {
     }
   };
 
-  const filteredAffiliations = affiliations.filter((aff) =>
-    aff.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    (aff.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
-    (aff.remarks?.toLowerCase().includes(searchText.toLowerCase()) ?? false)
+  const filteredAffiliations = affiliations.filter(
+    (aff) =>
+      aff.name.toLowerCase().includes(searchText.toLowerCase()) ||
+      (aff.shortName?.toLowerCase().includes(searchText.toLowerCase()) ?? false) ||
+      (aff.remarks?.toLowerCase().includes(searchText.toLowerCase()) ?? false),
   );
 
   if (loading) {
@@ -258,7 +275,7 @@ const AffiliationsPage = () => {
                     <input
                       type="file"
                       accept=".xlsx,.xls,.csv"
-                      onChange={e => setBulkFile(e.target.files?.[0] || null)}
+                      onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
                       className="w-full p-2 border rounded"
                     />
                   </div>
@@ -281,36 +298,36 @@ const AffiliationsPage = () => {
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <h5 className="font-medium text-red-600">Errors:</h5>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={handleDownloadFailedData}
-                              className="text-xs"
-                            >
+                            <Button variant="outline" size="sm" onClick={handleDownloadFailedData} className="text-xs">
                               <Download className="mr-1 h-3 w-3" />
                               Download Failed Data
                             </Button>
                           </div>
                           <div className="max-h-40 overflow-y-auto space-y-1">
-                            {bulkUploadResult.errors.map((error: { row: number; error: string; data: Record<string, unknown> }, index: number) => (
-                              <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
-                                <span className="font-medium">Row {error.row}:</span> {error.error}
-                              </div>
-                            ))}
+                            {bulkUploadResult.errors.map(
+                              (error: { row: number; error: string; data: Record<string, unknown> }, index: number) => (
+                                <div key={index} className="text-xs p-2 bg-red-50 border border-red-200 rounded">
+                                  <span className="font-medium">Row {error.row}:</span> {error.error}
+                                </div>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
                     </div>
                   )}
                   <div className="flex gap-2">
-                    <Button 
-                      onClick={handleBulkUpload} 
-                      disabled={!bulkFile || isBulkUploading}
-                      className="flex-1"
-                    >
+                    <Button onClick={handleBulkUpload} disabled={!bulkFile || isBulkUploading} className="flex-1">
                       {isBulkUploading ? "Uploading..." : "Upload"}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkFile(null); setBulkUploadResult(null); }}>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsBulkUploadOpen(false);
+                        setBulkFile(null);
+                        setBulkUploadResult(null);
+                      }}
+                    >
                       Close
                     </Button>
                   </div>
@@ -330,7 +347,9 @@ const AffiliationsPage = () => {
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>{selectedAffiliation ? "Edit Affiliation" : "Add New Affiliation"}</AlertDialogTitle>
+                  <AlertDialogTitle>
+                    {selectedAffiliation ? "Edit Affiliation" : "Add New Affiliation"}
+                  </AlertDialogTitle>
                 </AlertDialogHeader>
                 <AffiliationForm
                   initialData={selectedAffiliation}
@@ -344,25 +363,32 @@ const AffiliationsPage = () => {
         </CardHeader>
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input placeholder="Search..." className="w-64" value={searchText} onChange={e => setSearchText(e.target.value)} />
+            <Input
+              placeholder="Search..."
+              className="w-64"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+            />
           </div>
-          <div className="relative" style={{ height: '600px' }}>
+          <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: 'fixed' }}>
-                <TableHeader className="sticky top-0 z-10" style={{ background: '#f3f4f6' }}>
+              <Table className="border rounded-md min-w-[900px]" style={{ tableLayout: "fixed" }}>
+                <TableHeader className="sticky top-0 z-10" style={{ background: "#f3f4f6" }}>
                   <TableRow>
-                    <TableHead style={{ width: 60, background: '#f3f4f6', color: '#374151' }}>#</TableHead>
-                    <TableHead style={{ width: 220, background: '#f3f4f6', color: '#374151' }}>Name</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Short Name</TableHead>
-                    <TableHead style={{ width: 320, background: '#f3f4f6', color: '#374151' }}>Remarks</TableHead>
-                    <TableHead style={{ width: 120, background: '#f3f4f6', color: '#374151' }}>Status</TableHead>
-                    <TableHead style={{ width: 140, background: '#f3f4f6', color: '#374151' }}>Actions</TableHead>
+                    <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>#</TableHead>
+                    <TableHead style={{ width: 220, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
+                    <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Remarks</TableHead>
+                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
+                    <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredAffiliations.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center">No affiliations found.</TableCell>
+                      <TableCell colSpan={6} className="text-center">
+                        No affiliations found.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     filteredAffiliations.map((aff, idx) => (
@@ -380,12 +406,7 @@ const AffiliationsPage = () => {
                         </TableCell>
                         <TableCell style={{ width: 120 }}>
                           <div className="flex space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(aff)}
-                              className="h-5 w-5 p-0"
-                            >
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(aff)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button
@@ -411,4 +432,4 @@ const AffiliationsPage = () => {
   );
 };
 
-export default AffiliationsPage; 
+export default AffiliationsPage;

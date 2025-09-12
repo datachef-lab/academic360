@@ -6,17 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 // import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Course } from "@/types/course-design";
+import type { Course } from "@repo/db";
 import { Degree } from "@/types/resources/degree.types";
 import { findAllDegrees } from "@/services/degree.service";
 import { useEffect, useState } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Controller } from "react-hook-form";
 
 interface CourseFormProps {
@@ -37,12 +31,7 @@ const formSchema = z.object({
 
 type CourseFormValues = z.infer<typeof formSchema>;
 
-export function CourseForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isSubmitting,
-}: CourseFormProps) {
+export function CourseForm({ initialData, onSubmit, onCancel, isSubmitting }: CourseFormProps) {
   const [degrees, setDegrees] = useState<Degree[]>([]);
   const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
 
@@ -54,7 +43,14 @@ export function CourseForm({
     degreeId: initialData?.degree?.id || null,
   };
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control } = useForm<CourseFormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    control,
+  } = useForm<CourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
@@ -77,7 +73,7 @@ export function CourseForm({
   }, []);
 
   const handleFormSubmit = (data: CourseFormValues) => {
-    const selectedDegree = degrees.find(d => d.id === data.degreeId);
+    const selectedDegree = degrees.find((d) => d.id === data.degreeId);
     const courseData: Course = {
       name: data.name,
       shortName: data.shortName || null,
@@ -98,11 +94,9 @@ export function CourseForm({
           id="name"
           placeholder="Enter course name"
           {...register("name")}
-          className={errors.name ? 'border-red-500' : ''}
+          className={errors.name ? "border-red-500" : ""}
         />
-        {errors.name && (
-          <p className="text-sm text-red-500">{errors.name.message}</p>
-        )}
+        {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -111,11 +105,9 @@ export function CourseForm({
           id="shortName"
           placeholder="Enter short name (optional)"
           {...register("shortName")}
-          className={errors.shortName ? 'border-red-500' : ''}
+          className={errors.shortName ? "border-red-500" : ""}
         />
-        {errors.shortName && (
-          <p className="text-sm text-red-500">{errors.shortName.message}</p>
-        )}
+        {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -124,27 +116,29 @@ export function CourseForm({
           value={watch("degreeId")?.toString() || "none"}
           onValueChange={(value) => setValue("degreeId", value === "none" ? null : parseInt(value))}
         >
-          <SelectTrigger className={errors.degreeId ? 'border-red-500' : ''}>
+          <SelectTrigger className={errors.degreeId ? "border-red-500" : ""}>
             <SelectValue placeholder="Select a degree" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
             {isLoadingDegrees ? (
-              <SelectItem value="loading" disabled>Loading degrees...</SelectItem>
-            ) : (
-              Array.isArray(degrees) ? degrees.map((degree) => (
+              <SelectItem value="loading" disabled>
+                Loading degrees...
+              </SelectItem>
+            ) : Array.isArray(degrees) ? (
+              degrees.map((degree) => (
                 <SelectItem key={degree.id} value={degree.id?.toString() || "0"}>
                   {degree.name}
                 </SelectItem>
-              )) : (
-                <SelectItem value="error" disabled>Error loading degrees</SelectItem>
-              )
+              ))
+            ) : (
+              <SelectItem value="error" disabled>
+                Error loading degrees
+              </SelectItem>
             )}
           </SelectContent>
         </Select>
-        {errors.degreeId && (
-          <p className="text-sm text-red-500">{errors.degreeId.message}</p>
-        )}
+        {errors.degreeId && <p className="text-sm text-red-500">{errors.degreeId.message}</p>}
       </div>
 
       <div className="space-y-2">
@@ -154,35 +148,22 @@ export function CourseForm({
           type="number"
           placeholder="Enter sequence number"
           {...register("sequence", { valueAsNumber: true })}
-          className={errors.sequence ? 'border-red-500' : ''}
+          className={errors.sequence ? "border-red-500" : ""}
         />
-        {errors.sequence && (
-          <p className="text-sm text-red-500">{errors.sequence.message}</p>
-        )}
+        {errors.sequence && <p className="text-sm text-red-500">{errors.sequence.message}</p>}
       </div>
 
       <div className="flex items-center space-x-2">
         <Controller
           name="disabled"
           control={control}
-          render={({ field }) => (
-            <Checkbox
-              id="disabled"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
-          )}
+          render={({ field }) => <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />}
         />
         <Label htmlFor="disabled">Disabled</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isSubmitting}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>

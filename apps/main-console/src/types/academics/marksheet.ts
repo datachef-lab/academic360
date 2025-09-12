@@ -1,4 +1,4 @@
-import { UserDto } from "@/dtos/user";
+import { UserDto } from "@repo/db/dtos/user";
 import { AcademicIdentifier } from "../user/academic-identifier";
 
 import { AcademicYear } from "./academic-year";

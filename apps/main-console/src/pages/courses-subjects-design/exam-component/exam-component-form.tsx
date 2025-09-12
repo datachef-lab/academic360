@@ -1,6 +1,3 @@
-
-
-
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -9,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Controller } from "react-hook-form";
-import { ExamComponent } from "@/types/course-design";
-
+import type { ExamComponent } from "@repo/db";
 
 interface ExamComponentFormProps {
   initialData?: ExamComponent | null;
@@ -50,13 +46,12 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
   });
 
   const handleFormSubmit = (data: ExamComponentFormValues) => {
-
     onSubmit({
-        disabled: data.disabled,
-        name: data.name,
-        code: data?.code,
-        shortName: data.shortName,
-        sequence: 0,
+      disabled: data.disabled,
+      name: data.name,
+      code: data?.code,
+      shortName: data.shortName,
+      sequence: 0,
     });
   };
 
@@ -83,8 +78,6 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
         />
         {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
-
-
 
       <div className="space-y-2">
         <Label htmlFor="sequence">Sequence</Label>

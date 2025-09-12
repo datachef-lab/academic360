@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Subject } from "@/types/course-design";
+import type { Subject } from "@repo/db";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -24,14 +24,9 @@ interface SubjectFormProps {
   isLoading?: boolean;
 }
 
-export function SubjectForm({
-  initialData,
-  onSubmit,
-  onCancel,
-  isLoading = false,
-}: SubjectFormProps) {
+export function SubjectForm({ initialData, onSubmit, onCancel, isLoading = false }: SubjectFormProps) {
   const isEdit = !!initialData;
-  
+
   const {
     register,
     handleSubmit,
@@ -44,7 +39,7 @@ export function SubjectForm({
       name: initialData?.name || "",
       code: initialData?.code || "",
       sequence: initialData?.sequence || null,
-      disabled: initialData?.disabled ?? false,
+      disabled: initialData?.isActive ?? false,
     },
   });
 
@@ -54,7 +49,7 @@ export function SubjectForm({
         name: initialData.name || "",
         code: initialData.code || "",
         sequence: initialData.sequence || null,
-        disabled: initialData.disabled ?? false,
+        disabled: initialData.isActive ?? false,
       });
     } else {
       reset({
@@ -80,15 +75,11 @@ export function SubjectForm({
             {...register("name")}
             disabled={isLoading}
           />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
+          {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>}
         </div>
 
         <div>
-          <Label htmlFor="code">
-            Code
-          </Label>
+          <Label htmlFor="code">Code</Label>
           <Input
             id="code"
             type="text"
@@ -96,15 +87,11 @@ export function SubjectForm({
             {...register("code")}
             disabled={isLoading}
           />
-          {errors.code && (
-            <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
-          )}
+          {errors.code && <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>}
         </div>
 
         <div>
-          <Label htmlFor="sequence">
-            Sequence
-          </Label>
+          <Label htmlFor="sequence">Sequence</Label>
           <Input
             id="sequence"
             type="number"
@@ -112,9 +99,7 @@ export function SubjectForm({
             {...register("sequence", { valueAsNumber: true })}
             disabled={isLoading}
           />
-          {errors.sequence && (
-            <p className="mt-1 text-sm text-red-600">{errors.sequence.message}</p>
-          )}
+          {errors.sequence && <p className="mt-1 text-sm text-red-600">{errors.sequence.message}</p>}
         </div>
 
         <div className="flex items-center space-x-2">
@@ -122,38 +107,19 @@ export function SubjectForm({
             name="disabled"
             control={control}
             render={({ field: { value, onChange } }) => (
-              <Checkbox
-                id="disabled"
-                checked={value}
-                onCheckedChange={onChange}
-                disabled={isLoading}
-              />
+              <Checkbox id="disabled" checked={value} onCheckedChange={onChange} disabled={isLoading} />
             )}
           />
-          <Label htmlFor="disabled">
-            Disabled
-          </Label>
+          <Label htmlFor="disabled">Disabled</Label>
         </div>
       </div>
 
       <div className="flex justify-end space-x-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
           Cancel
         </Button>
-        <Button
-          type="submit"
-          disabled={isLoading}
-        >
-          {isLoading
-            ? "Saving..."
-            : isEdit
-            ? "Update Subject"
-            : "Create Subject"}
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Saving..." : isEdit ? "Update Subject" : "Create Subject"}
         </Button>
       </div>
     </form>

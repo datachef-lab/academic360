@@ -24,7 +24,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
-import { Course } from "@/types/course-design";
+import type { Course } from "@repo/db";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   getCourses,
@@ -49,7 +49,7 @@ const CoursesPage = () => {
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [bulkUploadResult, setBulkUploadResult] = React.useState<BulkUploadResult | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
-  const  setUploadProgress = React.useState(0)[1];
+  const setUploadProgress = React.useState(0)[1];
 
   React.useEffect(() => {
     setLoading(true);
@@ -118,7 +118,9 @@ const CoursesPage = () => {
 
     setIsBulkUploading(true);
     try {
-      const result = await bulkUploadCourses(bulkFile, (uploadProgress) => {setUploadProgress(uploadProgress)});
+      const result = await bulkUploadCourses(bulkFile, (uploadProgress) => {
+        setUploadProgress(uploadProgress);
+      });
       setBulkUploadResult(result);
 
       if (result.summary.successful > 0) {
@@ -193,12 +195,12 @@ const CoursesPage = () => {
         setCourses(Array.isArray(fresh) ? fresh : []);
       } else {
         const details = (result.records || [])
-          .filter(r => r.count > 0)
-          .map(r => `${r.type}: ${r.count}`)
+          .filter((r) => r.count > 0)
+          .map((r) => `${r.type}: ${r.count}`)
           .join(", ");
         toast.error(`${result.message}${details ? ` — ${details}` : ""}`);
       }
-    } catch  {
+    } catch {
       toast.error("Failed to delete course");
     }
   };
