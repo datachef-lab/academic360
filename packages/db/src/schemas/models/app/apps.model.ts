@@ -15,7 +15,7 @@ export const appsModel = pgTable("apps", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAppsSchema = createInsertSchema(appsModel) as z.ZodTypeAny;
+export const createAppsSchema = createInsertSchema(appsModel);
 
 export type Apps = z.infer<typeof createAppsSchema>;
 

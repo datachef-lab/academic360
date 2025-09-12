@@ -20,7 +20,7 @@ export const feesReceiptTypeModel = pgTable("fees_receipt_types", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesReceiptTypeSchema = createInsertSchema(feesReceiptTypeModel) as z.ZodTypeAny;
+export const createFeesReceiptTypeSchema = createInsertSchema(feesReceiptTypeModel);
 
 export type FeesReceiptType = z.infer<typeof createFeesReceiptTypeSchema>;
 

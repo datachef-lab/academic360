@@ -53,7 +53,7 @@ export const healthModel = pgTable("health", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createHealthSchema = createInsertSchema(healthModel) as z.ZodTypeAny;
+export const createHealthSchema = createInsertSchema(healthModel);
 
 export type Health = z.infer<typeof createHealthSchema>;
 

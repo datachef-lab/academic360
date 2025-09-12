@@ -53,7 +53,7 @@ export const paperModel = pgTable("papers", {
         .$onUpdate(() => new Date()),
 });
 
-export const createPaperModel = createInsertSchema(paperModel) as z.ZodTypeAny;
+export const createPaperModel = createInsertSchema(paperModel);
 
 export type Paper = z.infer<typeof createPaperModel>;
 

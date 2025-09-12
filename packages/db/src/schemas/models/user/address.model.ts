@@ -52,7 +52,7 @@ export const addressRelations = relations(addressModel, ({ one }) => ({
     })
 }));
 
-export const createAddressSchema = createInsertSchema(addressModel) as z.ZodTypeAny;
+export const createAddressSchema = createInsertSchema(addressModel);
 
 
 export type Address = z.infer<typeof createAddressSchema>;

@@ -12,7 +12,7 @@ export const specializationModel = pgTable("specializations", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createSpecializationSchema = createInsertSchema(specializationModel) as z.ZodTypeAny;
+export const createSpecializationSchema = createInsertSchema(specializationModel);
 
 export type Specialization = z.infer<typeof createSpecializationSchema>;
 

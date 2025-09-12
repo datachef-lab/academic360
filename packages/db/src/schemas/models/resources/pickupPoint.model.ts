@@ -10,7 +10,7 @@ export const pickupPointModel = pgTable("pickup_point", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createPickupPointSchema = createInsertSchema(pickupPointModel) as z.ZodTypeAny;
+export const createPickupPointSchema = createInsertSchema(pickupPointModel);
 
 export type PickupPoint = z.infer<typeof createPickupPointSchema>;
 

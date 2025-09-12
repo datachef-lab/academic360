@@ -19,7 +19,7 @@ export const instalmentModel = pgTable("instalments", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createInstalmentSchema = createInsertSchema(instalmentModel) as z.ZodTypeAny;
+export const createInstalmentSchema = createInsertSchema(instalmentModel);
 
 export type Instalment = z.infer<typeof createInstalmentSchema>; 
 

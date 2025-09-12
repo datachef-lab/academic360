@@ -35,7 +35,7 @@ export const applicationFormModel = pgTable("application_forms", {
     remarks: text("remarks"),
 });
 
-export const createApplicationFormSchema = createInsertSchema(applicationFormModel) as z.ZodTypeAny;
+export const createApplicationFormSchema = createInsertSchema(applicationFormModel);
 
 export type ApplicationForm = z.infer<typeof createApplicationFormSchema>;
 

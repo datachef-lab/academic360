@@ -15,7 +15,7 @@ export const streamModel = pgTable('streams', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStreamModel = createInsertSchema(streamModel) as z.ZodTypeAny;
+export const createStreamModel = createInsertSchema(streamModel);
 
 export type Stream = z.infer<typeof createStreamModel>;
 

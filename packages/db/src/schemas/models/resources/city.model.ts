@@ -25,7 +25,7 @@ export const cityRelations = relations(cityModel, ({ one }) => ({
     })
 }));
 
-export const createCitySchema = createInsertSchema(cityModel) as z.ZodTypeAny;
+export const createCitySchema = createInsertSchema(cityModel);
 
 export type City = z.infer<typeof createCitySchema>;
 

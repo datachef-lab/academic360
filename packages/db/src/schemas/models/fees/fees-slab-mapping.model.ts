@@ -17,7 +17,7 @@ export const feesSlabMappingModel = pgTable("fees_slab_mapping", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesSlabMappingSchema = createInsertSchema(feesSlabMappingModel) as z.ZodTypeAny;
+export const createFeesSlabMappingSchema = createInsertSchema(feesSlabMappingModel);
 
 export type FeesSlabMapping = z.infer<typeof createFeesSlabMappingSchema>;
 

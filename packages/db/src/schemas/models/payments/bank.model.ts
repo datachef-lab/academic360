@@ -15,7 +15,7 @@ export const bankModel = pgTable("banks", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBankSchema = createInsertSchema(bankModel) as z.ZodTypeAny;
+export const createBankSchema = createInsertSchema(bankModel);
 
 export type Bank = z.infer<typeof createBankSchema>;
 

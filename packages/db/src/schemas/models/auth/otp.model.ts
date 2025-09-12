@@ -14,7 +14,7 @@ export const otpModel = pgTable("otps", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createOtpSchema = createInsertSchema(otpModel) as z.ZodTypeAny;
+export const createOtpSchema = createInsertSchema(otpModel);
 
 export type Otp = z.infer<typeof createOtpSchema>;
 

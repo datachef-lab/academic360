@@ -23,7 +23,7 @@ export const gradeModel = pgTable("grade", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createGradeSchema = createInsertSchema(gradeModel) as z.ZodTypeAny;
+export const createGradeSchema = createInsertSchema(gradeModel);
 
 export type grade = z.infer<typeof createGradeSchema>;
 

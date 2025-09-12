@@ -20,7 +20,7 @@ export const boardModel = pgTable("boards", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBoardSchema = createInsertSchema(boardModel) as z.ZodTypeAny;
+export const createBoardSchema = createInsertSchema(boardModel);
 
 export type Board = z.infer<typeof createBoardSchema>;
 

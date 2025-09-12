@@ -75,7 +75,7 @@ export const staffModel = pgTable('staffs', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStaffSchema = createInsertSchema(staffModel) as z.ZodTypeAny;
+export const createStaffSchema = createInsertSchema(staffModel);
 
 export type Staff = z.infer<typeof createStaffSchema>;
 

@@ -16,7 +16,7 @@ export const accommodationModel = pgTable("accommodation", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAccommodationSchema = createInsertSchema(accommodationModel) as z.ZodTypeAny;
+export const createAccommodationSchema = createInsertSchema(accommodationModel);
 
 export type Accommodation = z.infer<typeof createAccommodationSchema>;
 

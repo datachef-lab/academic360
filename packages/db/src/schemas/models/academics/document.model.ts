@@ -12,7 +12,7 @@ export const documentModel = pgTable("documents", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDocumentModel = createInsertSchema(documentModel) as z.ZodTypeAny;
+export const createDocumentModel = createInsertSchema(documentModel);
 
 export type Document = z.infer<typeof createDocumentModel>;
 

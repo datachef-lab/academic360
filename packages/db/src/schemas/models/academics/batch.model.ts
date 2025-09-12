@@ -19,7 +19,7 @@ export const batchModel = pgTable('batches', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBatchSchema = createInsertSchema(batchModel) as z.ZodTypeAny;
+export const createBatchSchema = createInsertSchema(batchModel);
 
 export type Batch = z.infer<typeof createBatchSchema>;
 

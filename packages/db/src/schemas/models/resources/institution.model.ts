@@ -29,7 +29,7 @@ export const degreeRelations = relations(institutionModel, ({ one }) => ({
     }),
 }));
 
-export const createInstitutionSchema = createInsertSchema(institutionModel) as z.ZodTypeAny;
+export const createInstitutionSchema = createInsertSchema(institutionModel);
 
 export type Institution = z.infer<typeof createInstitutionSchema>;
 

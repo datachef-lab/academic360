@@ -12,7 +12,7 @@ export const languageMediumModel = pgTable("language_medium", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createLanguageSchema = createInsertSchema(languageMediumModel) as z.ZodTypeAny;
+export const createLanguageSchema = createInsertSchema(languageMediumModel);
 
 export type LanguageMedium = z.infer<typeof createLanguageSchema>;
 

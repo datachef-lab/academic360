@@ -16,7 +16,7 @@ export const transportModel = pgTable("transport", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createTransportSchema = createInsertSchema(transportModel) as z.ZodTypeAny;
+export const createTransportSchema = createInsertSchema(transportModel);
 
 export type Transport = z.infer<typeof createTransportSchema>;
 

@@ -11,7 +11,7 @@ export const sectionModel =  pgTable('sections', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 })
 
-export const createSectionModel = createInsertSchema(sectionModel) as z.ZodTypeAny;
+export const createSectionModel = createInsertSchema(sectionModel);
 
 export type Section = z.infer<typeof createSectionModel>;
 

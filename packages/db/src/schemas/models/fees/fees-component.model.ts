@@ -21,7 +21,7 @@ export const feesComponentModel = pgTable("fees_components", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesComponentSchema = createInsertSchema(feesComponentModel) as z.ZodTypeAny;
+export const createFeesComponentSchema = createInsertSchema(feesComponentModel);
 
 export type FeesComponent = z.infer<typeof createFeesComponentSchema>;
 

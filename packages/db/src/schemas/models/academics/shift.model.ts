@@ -13,7 +13,7 @@ export const shiftModel = pgTable('shifts', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createShiftModel = createInsertSchema(shiftModel) as z.ZodTypeAny;
+export const createShiftModel = createInsertSchema(shiftModel);
 
 export type Shift = z.infer<typeof createShiftModel>;
 

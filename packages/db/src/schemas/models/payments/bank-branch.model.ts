@@ -14,7 +14,7 @@ export const bankBranchModel = pgTable("bank_branches", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBankBranchSchema = createInsertSchema(bankBranchModel) as z.ZodTypeAny;
+export const createBankBranchSchema = createInsertSchema(bankBranchModel);
 
 export type BankBranch = z.infer<typeof createBankBranchSchema>;
 

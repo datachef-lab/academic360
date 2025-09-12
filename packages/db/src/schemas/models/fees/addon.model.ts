@@ -10,7 +10,7 @@ export const addonModel = pgTable("addons", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAddOnSchema = createInsertSchema(addonModel) as z.ZodTypeAny;
+export const createAddOnSchema = createInsertSchema(addonModel);
 
 export type AddOn = z.infer<typeof createAddOnSchema>;
 

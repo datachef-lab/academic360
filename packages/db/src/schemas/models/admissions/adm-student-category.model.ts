@@ -20,7 +20,7 @@ export const studentCategoryModel = pgTable("student_category", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStudentCategorySchema = createInsertSchema(studentCategoryModel) as z.ZodTypeAny;
+export const createStudentCategorySchema = createInsertSchema(studentCategoryModel);
 
 export type StudentCategory = z.infer<typeof createStudentCategorySchema>;
 

@@ -26,7 +26,7 @@ export const paymentModel = pgTable("payments", {
     remarks: text("remarks"),
 });
 
-export const createPaymentSchema = createInsertSchema(paymentModel) as z.ZodTypeAny;
+export const createPaymentSchema = createInsertSchema(paymentModel);
 
 export type Payment = z.infer<typeof createPaymentSchema>;
 

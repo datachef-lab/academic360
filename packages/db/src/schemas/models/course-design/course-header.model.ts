@@ -12,7 +12,7 @@ export const courseHeaderModel = pgTable('course_headers', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createCourseHeaderSchema = createInsertSchema(courseHeaderModel) as z.ZodTypeAny;
+export const createCourseHeaderSchema = createInsertSchema(courseHeaderModel);
 
 export type CourseHeader = z.infer<typeof createCourseHeaderSchema>;
 

@@ -11,7 +11,7 @@ export const annualIncomeModel = pgTable("annual_incomes", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createAnnualIncomeSchema = createInsertSchema(annualIncomeModel) as z.ZodTypeAny;
+export const createAnnualIncomeSchema = createInsertSchema(annualIncomeModel);
 
 export type AnnualIncome = z.infer<typeof createAnnualIncomeSchema>;
 

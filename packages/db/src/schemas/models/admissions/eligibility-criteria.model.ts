@@ -23,7 +23,7 @@ export const eligibilityCriteriaModel = pgTable("eligibility_criteria", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const eligibilityCriteriaSchema = createInsertSchema(eligibilityCriteriaModel) as z.ZodTypeAny;
+export const eligibilityCriteriaSchema = createInsertSchema(eligibilityCriteriaModel);
 
 export type EligibilityCriteria = z.infer<typeof eligibilityCriteriaSchema>;
 

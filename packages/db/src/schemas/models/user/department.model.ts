@@ -13,7 +13,7 @@ export const departmentModel = pgTable("departments", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createDepartmentSchema = createInsertSchema(departmentModel) as z.ZodTypeAny;
+export const createDepartmentSchema = createInsertSchema(departmentModel);
 
 export type Department = z.infer<typeof createDepartmentSchema>;
 

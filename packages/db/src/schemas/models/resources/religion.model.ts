@@ -12,7 +12,7 @@ export const religionModel = pgTable("religion", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createReligionSchema = createInsertSchema(religionModel) as z.ZodTypeAny;
+export const createReligionSchema = createInsertSchema(religionModel);
 
 export type Religion = z.infer<typeof createReligionSchema>;
 

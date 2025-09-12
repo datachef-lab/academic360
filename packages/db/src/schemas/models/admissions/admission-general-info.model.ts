@@ -62,7 +62,7 @@ export const admissionGeneralInfoModel = pgTable("admission_general_info", {
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
-export const createAdmissionGeneralInfoSchema = createInsertSchema(admissionGeneralInfoModel) as z.ZodTypeAny;
+export const createAdmissionGeneralInfoSchema = createInsertSchema(admissionGeneralInfoModel);
 
 export type AdmissionGeneralInfo = z.infer<typeof createAdmissionGeneralInfoSchema>;
 

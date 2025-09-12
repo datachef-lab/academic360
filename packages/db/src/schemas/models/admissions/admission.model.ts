@@ -31,7 +31,7 @@ export const admissionModel = pgTable("admissions", {
     .$onUpdate(() => new Date()),
   remarks: text("remarks"),
 });
-export const createAdmissionSchema = createInsertSchema(admissionModel) as z.ZodTypeAny;
+export const createAdmissionSchema = createInsertSchema(admissionModel);
 
 export type Admission = z.infer<typeof createAdmissionSchema>;
 

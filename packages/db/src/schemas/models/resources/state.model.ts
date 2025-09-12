@@ -23,7 +23,7 @@ export const stateRelations = relations(stateModel, ({ one }) => ({
     })
 }));
 
-export const createStateSchema = createInsertSchema(stateModel) as z.ZodTypeAny;
+export const createStateSchema = createInsertSchema(stateModel);
 
 export type State = z.infer<typeof createStateSchema>;
 

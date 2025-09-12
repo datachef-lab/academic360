@@ -12,7 +12,7 @@ export const bloodGroupModel = pgTable("blood_group", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createBloodGroupSchema = createInsertSchema(bloodGroupModel) as z.ZodTypeAny;
+export const createBloodGroupSchema = createInsertSchema(bloodGroupModel);
 
 export type BloodGroup = z.infer<typeof createBloodGroupSchema>;
 

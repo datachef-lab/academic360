@@ -41,7 +41,7 @@ export const marksheetModel = pgTable("marksheets", {
         .$onUpdate(() => new Date()),
 });
 
-export const createMarksheetModel = createInsertSchema(marksheetModel) as z.ZodTypeAny;
+export const createMarksheetModel = createInsertSchema(marksheetModel);
 
 export type Marksheet = z.infer<typeof createMarksheetModel>;
 

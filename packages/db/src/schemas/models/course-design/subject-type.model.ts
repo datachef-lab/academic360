@@ -13,7 +13,7 @@ export const subjectTypeModel = pgTable("subject_types", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createSubjectTypeSchema = createInsertSchema(subjectTypeModel) as z.ZodTypeAny;
+export const createSubjectTypeSchema = createInsertSchema(subjectTypeModel);
 
 export type SubjectType = z.infer<typeof createSubjectTypeSchema>;
 

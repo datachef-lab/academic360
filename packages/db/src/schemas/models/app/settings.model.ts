@@ -14,7 +14,7 @@ export const settingsModel = pgTable("settings", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createSettingsSchema = createInsertSchema(settingsModel) as z.ZodTypeAny;
+export const createSettingsSchema = createInsertSchema(settingsModel);
 
 export type Settings = z.infer<typeof createSettingsSchema>;
 

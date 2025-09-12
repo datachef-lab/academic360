@@ -10,7 +10,7 @@ export const cancelSourceModel = pgTable("cancel_sources", {
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createCancelSourceSchema = createInsertSchema(cancelSourceModel) as z.ZodTypeAny;
+export const createCancelSourceSchema = createInsertSchema(cancelSourceModel);
 
 export type CancelSource = z.infer<typeof createCancelSourceSchema>;        
 

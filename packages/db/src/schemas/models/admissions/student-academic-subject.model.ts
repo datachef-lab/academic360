@@ -26,7 +26,7 @@ export const studentAcademicSubjectModel = pgTable("student_academic_subjects", 
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createStudentAcademicSubjectsSchema = createInsertSchema(studentAcademicSubjectModel) as z.ZodTypeAny;
+export const createStudentAcademicSubjectsSchema = createInsertSchema(studentAcademicSubjectModel);
 
 export type StudentAcademicSubjects = z.infer<typeof createStudentAcademicSubjectsSchema>;
 

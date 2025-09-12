@@ -32,7 +32,7 @@ export const feesStructureModel = pgTable("fees_structures", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesStructureSchema = createInsertSchema(feesStructureModel) as z.ZodTypeAny;
+export const createFeesStructureSchema = createInsertSchema(feesStructureModel);
 
 export type FeesStructure = z.infer<typeof createFeesStructureSchema>;
 

@@ -30,7 +30,7 @@ export const familyModel = pgTable("family_details", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFamilySchema = createInsertSchema(familyModel) as z.ZodTypeAny;
+export const createFamilySchema = createInsertSchema(familyModel);
 
 export type Family = z.infer<typeof createFamilySchema>;
 

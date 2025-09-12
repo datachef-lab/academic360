@@ -12,7 +12,7 @@ export const feesSlabModel = pgTable("fees_slab", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createFeesSlabSchema = createInsertSchema(feesSlabModel) as z.ZodTypeAny;
+export const createFeesSlabSchema = createInsertSchema(feesSlabModel);
 
 export type FeesSlab = z.infer<typeof createFeesSlabSchema>;
 

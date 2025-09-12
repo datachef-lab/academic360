@@ -16,7 +16,7 @@ export const districtModel = pgTable("districts", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createdistrictSchema = createInsertSchema(districtModel) as z.ZodTypeAny;
+export const createdistrictSchema = createInsertSchema(districtModel);
 
 export type district = z.infer<typeof createdistrictSchema>;
 

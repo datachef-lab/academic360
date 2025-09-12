@@ -23,7 +23,7 @@ export const userModel = pgTable('users', {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createUserSchema = createInsertSchema(userModel) as z.ZodTypeAny;
+export const createUserSchema = createInsertSchema(userModel);
 
 export type User = z.infer<typeof createUserSchema>;
 

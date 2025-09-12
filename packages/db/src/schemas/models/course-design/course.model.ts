@@ -20,7 +20,7 @@ export const courseModel = pgTable('courses', {
     uniqueCourseName: unique("unique_course_name").on(table.name),
 }));
 
-export const createCourseModel = createInsertSchema(courseModel) as z.ZodTypeAny;
+export const createCourseModel = createInsertSchema(courseModel);
 
 export type Course = z.infer<typeof createCourseModel>;
 

@@ -19,7 +19,7 @@ export const marksheetPaperComponentMappingModel = pgTable("marksheet_paper_comp
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const createMarksheetPaperComponentMappingSchema = createInsertSchema(marksheetPaperComponentMappingModel) as z.ZodTypeAny;
+export const createMarksheetPaperComponentMappingSchema = createInsertSchema(marksheetPaperComponentMappingModel);
 
 export type MarksheetPaperComponentMapping = z.infer<typeof createMarksheetPaperComponentMappingSchema>;
 
