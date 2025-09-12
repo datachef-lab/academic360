@@ -14,6 +14,7 @@ import type {
   CourseLevel,
   ExamComponent,
   Stream,
+  PaperDto,
 } from "@repo/db";
 import { ApiResonse } from "@/types/api-response";
 // import { Stream } from '@/pages/courses-subjects-design/streams/columns';
@@ -349,29 +350,8 @@ export const deleteCourseLevel = async (id: number) => {
 };
 
 // Update a paper with components
-export const updatePaperWithComponents = (
-  paperId: number,
-  data: {
-    name: string;
-    subjectId: number;
-    affiliationId: number;
-    regulationTypeId: number;
-    academicYearId: number;
-    programCourseId: number;
-    subjectTypeId: number;
-    classId: number;
-    code: string;
-    isOptional: boolean;
-    disabled: boolean;
-    components: Array<{
-      examComponent: {
-        id: number;
-      };
-      fullMarks: number;
-      credit: number;
-    }>;
-  },
-) => axiosInstance.put(`${BASE}/papers/${paperId}/with-components`, data);
+export const updatePaperWithComponents = (paperId: number, data: PaperDto) =>
+  axiosInstance.put(`${BASE}/papers/${paperId}/with-components`, data);
 
 // Bulk upload subject papers
 export const bulkUploadSubjectPapers = async (file: File): Promise<BulkUploadResult> => {

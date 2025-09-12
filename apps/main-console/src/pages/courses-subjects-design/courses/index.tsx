@@ -24,7 +24,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
-import type { Course } from "@repo/db";
+import { Course } from "@repo/db";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   getCourses,
@@ -72,7 +72,6 @@ const CoursesPage = () => {
     (course) =>
       (course.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (course.shortName ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
-      (course.degree?.name ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
       (course.sequence?.toString() ?? "").includes(searchText.toLowerCase()),
   );
 
@@ -172,8 +171,8 @@ const CoursesPage = () => {
         ID: course.id,
         Name: course.name,
         "Short Name": course.shortName,
-        Degree: course.degree?.name ?? "-",
-        Status: course.disabled ? "Inactive" : "Active",
+
+        Status: !course.isActive ? "Inactive" : "Active",
         "Created At": course.createdAt,
         "Updated At": course.updatedAt,
       }));
@@ -341,7 +340,7 @@ const CoursesPage = () => {
                     <TableHead style={{ width: 60, background: "#f3f4f6", color: "#374151" }}>ID</TableHead>
                     <TableHead style={{ width: 320, background: "#f3f4f6", color: "#374151" }}>Name</TableHead>
                     <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Short Name</TableHead>
-                    <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Degree</TableHead>
+                    {/* <TableHead style={{ width: 120, background: "#f3f4f6", color: "#374151" }}>Degree</TableHead> */}
                     <TableHead style={{ width: 100, background: "#f3f4f6", color: "#374151" }}>Status</TableHead>
                     <TableHead style={{ width: 140, background: "#f3f4f6", color: "#374151" }}>Actions</TableHead>
                   </TableRow>
@@ -371,9 +370,9 @@ const CoursesPage = () => {
                         <TableCell style={{ width: 60 }}>{course.id}</TableCell>
                         <TableCell style={{ width: 320 }}>{course.name}</TableCell>
                         <TableCell style={{ width: 140 }}>{course.shortName}</TableCell>
-                        <TableCell style={{ width: 120 }}>{course.degree?.name ?? "-"}</TableCell>
+                        {/* <TableCell style={{ width: 120 }}>{course.degree?.name ?? "-"}</TableCell> */}
                         <TableCell style={{ width: 100 }}>
-                          {course.disabled === true ? (
+                          {course.isActive === true ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

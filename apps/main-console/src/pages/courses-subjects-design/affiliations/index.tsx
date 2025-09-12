@@ -164,7 +164,7 @@ const AffiliationsPage = () => {
         Name: aff.name,
         "Short Name": aff.shortName || "-",
         Sequence: aff.sequence || "-",
-        Disabled: aff.disabled ? "Yes" : "No",
+        "Is Active": aff.isActive ? "Yes" : "No",
         Remarks: aff.remarks || "-",
         "Created At": aff.createdAt,
         "Updated At": aff.updatedAt,
@@ -398,7 +398,7 @@ const AffiliationsPage = () => {
                         <TableCell style={{ width: 120 }}>{aff.shortName ?? "-"}</TableCell>
                         <TableCell style={{ width: 320 }}>{aff.remarks ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {!aff.disabled ? (
+                          {aff.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>

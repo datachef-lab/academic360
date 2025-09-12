@@ -10,11 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 // import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
+// Form schema and types
 const regulationTypeSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  shortName: z.string().optional().nullable(),
-  sequence: z.number().optional().nullable(),
-  disabled: z.boolean().default(false),
+  name: z.string().min(1, "Name is required"),
+  shortName: z.string().nullable().optional(),
+  sequence: z.number().nullable().optional(),
+  isActive: z.boolean().default(true),
 });
 
 type RegulationTypeFormValues = z.infer<typeof regulationTypeSchema>;
@@ -32,10 +33,10 @@ export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading 
   const form = useForm<RegulationTypeFormValues>({
     resolver: zodResolver(regulationTypeSchema),
     defaultValues: {
-      name: initialData?.name || "",
-      shortName: initialData?.shortName || "",
-      sequence: initialData?.sequence || 0,
-      disabled: initialData?.disabled ?? false,
+      name: initialData?.name ?? "",
+      shortName: initialData?.shortName ?? "",
+      sequence: initialData?.sequence ?? null,
+      isActive: initialData?.isActive ?? true,
     },
   });
 
@@ -43,16 +44,16 @@ export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading 
     if (initialData) {
       form.reset({
         name: initialData.name,
-        shortName: initialData.shortName || "",
-        sequence: initialData.sequence || 0,
-        disabled: initialData.disabled,
+        shortName: initialData.shortName ?? "",
+        sequence: initialData.sequence ?? null,
+        isActive: Boolean(initialData.isActive),
       });
     } else {
       form.reset({
         name: "",
         shortName: "",
-        sequence: 0,
-        disabled: false,
+        sequence: null,
+        isActive: true,
       });
     }
   }, [initialData, form]);
@@ -61,8 +62,8 @@ export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading 
     onSubmit({
       name: data.name,
       shortName: data.shortName || null,
-      sequence: data.sequence || null,
-      disabled: data.disabled,
+      sequence: data.sequence ?? null,
+      isActive: data.isActive,
     });
   };
 
@@ -122,20 +123,24 @@ export function RegulationTypeForm({ initialData, onSubmit, onCancel, isLoading 
 
         <FormField
           control={form.control}
-          name="disabled"
+          name="isActive"
           render={() => (
             <FormItem className="flex flex-row items-start space-x-3 space-y-0">
               <FormControl>
                 <Controller
-                  name="disabled"
+                  name="isActive"
                   control={form.control}
                   render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
+                    <Checkbox
+                      checked={!!field.value}
+                      onCheckedChange={(checked) => field.onChange(Boolean(checked))}
+                      disabled={isLoading}
+                    />
                   )}
                 />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>Disabled</FormLabel>
+                <FormLabel>Active</FormLabel>
               </div>
             </FormItem>
           )}

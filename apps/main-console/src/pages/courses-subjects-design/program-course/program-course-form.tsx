@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import type { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db";
+import { ProgramCourse, Stream, Course, CourseType, CourseLevel, Affiliation, RegulationType } from "@repo/db";
 import {
   getStreams,
   getCourses,
@@ -155,7 +155,7 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
 
     const courseTypeShort =
       (selectedCourseType as CourseType)?.shortName ||
-      (selectedCourseType as CourseType)?.code ||
+      (selectedCourseType as CourseType)?.shortName ||
       selectedCourseType?.name ||
       "";
 

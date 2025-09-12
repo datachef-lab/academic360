@@ -36,7 +36,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
       name: initialData?.name || "",
       code: initialData?.code || "",
       sequence: initialData?.sequence ?? null,
-      disabled: initialData?.disabled ?? false,
+      disabled: initialData?.isActive ?? false,
     },
   });
 
@@ -46,7 +46,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
         name: initialData.name || "",
         code: initialData.code || "",
         sequence: initialData.sequence ?? null,
-        disabled: initialData.disabled ?? false,
+        disabled: initialData.isActive ?? false,
       });
     } else {
       form.reset({
@@ -63,7 +63,7 @@ export const SubjectCategoryForm: React.FC<SubjectCategoryFormProps> = ({
       name: values.name,
       code: values.code || null,
       sequence: values.sequence ?? null,
-      disabled: values.disabled,
+      isActive: values.disabled,
     });
   }
 

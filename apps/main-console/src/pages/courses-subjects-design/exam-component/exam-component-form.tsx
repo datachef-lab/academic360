@@ -21,7 +21,7 @@ const formSchema = z.object({
   shortName: z.string().nullable(),
   code: z.string().nullable(),
   sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(false),
 });
 
 type ExamComponentFormValues = z.infer<typeof formSchema>;
@@ -32,7 +32,7 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
     code: initialData?.code || "",
     shortName: initialData?.shortName || "",
     sequence: initialData?.sequence || 0,
-    disabled: initialData?.disabled || false,
+    isActive: initialData?.isActive || false,
   };
 
   const {
@@ -47,7 +47,7 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
 
   const handleFormSubmit = (data: ExamComponentFormValues) => {
     onSubmit({
-      disabled: data.disabled,
+      isActive: data.isActive,
       name: data.name,
       code: data?.code,
       shortName: data.shortName,
@@ -105,11 +105,11 @@ export function ExamComponentForm({ initialData, onSubmit, onCancel, isSubmittin
 
       <div className="flex items-center space-x-2">
         <Controller
-          name="disabled"
+          name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => <Checkbox id="isActive" checked={field.value} onCheckedChange={field.onChange} />}
         />
-        <Label htmlFor="disabled">Disabled</Label>
+        <Label htmlFor="isActive">Active</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">

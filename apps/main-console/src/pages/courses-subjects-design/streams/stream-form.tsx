@@ -47,7 +47,7 @@ export function StreamForm({ initialData, onSubmit, onCancel, isLoading = false 
       pgPrefix: initialData?.pgPrefix || "",
       sequence: initialData?.sequence || null,
       isActive: (initialData?.isActive ??
-        (initialData?.disabled !== undefined ? !initialData.disabled : true)) as boolean,
+        (initialData?.isActive !== undefined ? !initialData.isActive : true)) as boolean,
     },
   });
 
@@ -61,7 +61,7 @@ export function StreamForm({ initialData, onSubmit, onCancel, isLoading = false 
         pgPrefix: initialData.pgPrefix || "",
         sequence: initialData.sequence || null,
         isActive: (initialData.isActive ??
-          (initialData.disabled !== undefined ? !initialData.disabled : true)) as boolean,
+          (initialData.isActive !== undefined ? !initialData.isActive : true)) as boolean,
       });
     } else {
       reset({

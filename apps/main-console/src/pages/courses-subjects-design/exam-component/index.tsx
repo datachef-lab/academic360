@@ -17,7 +17,7 @@ import * as XLSX from "xlsx";
 import { toast } from "sonner";
 
 import { ExamComponentForm } from "./exam-component-form";
-import type { ExamComponent } from "@repo/db";
+import { ExamComponent } from "@repo/db";
 import { getAllExamComponent } from "@/services/exam-component.service";
 import {
   createExamComponent,
@@ -42,7 +42,7 @@ const ExamComponentesPage = () => {
     getAllExamComponent()
       .then((res) => {
         const data = Array.isArray(res.payload) ? res.payload : [];
-        setExamComponents(data);
+        setExamComponents(data as ExamComponent[]);
         setError(null);
       })
       .catch(() => {
@@ -72,7 +72,7 @@ const ExamComponentesPage = () => {
       }
       setIsFormOpen(false);
       setSelectedExamComponent(null);
-      getAllExamComponent().then((data) => setExamComponents(data.payload));
+      getAllExamComponent().then((data) => setExamComponents(data.payload as ExamComponent[]));
     } catch (err) {
       console.log(err);
       toast.error("Failed to save examComponent");
@@ -114,7 +114,7 @@ const ExamComponentesPage = () => {
       if (result.success) {
         toast.success(result.message || "Exam component deleted successfully");
         const refreshed = await getAllExamComponent();
-        setExamComponents(Array.isArray(refreshed.payload) ? refreshed.payload : []);
+        setExamComponents(Array.isArray(refreshed.payload) ? (refreshed.payload as ExamComponent[]) : []);
       } else {
         const details = (result.records || [])
           .filter((r) => r.count > 0)
@@ -259,7 +259,7 @@ const ExamComponentesPage = () => {
                         <TableCell style={{ width: 320 }}>{comp.code}</TableCell>
                         <TableCell style={{ width: 140 }}>{comp.shortName}</TableCell>
                         <TableCell style={{ width: 100 }}>
-                          {comp.disabled ? (
+                          {comp.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

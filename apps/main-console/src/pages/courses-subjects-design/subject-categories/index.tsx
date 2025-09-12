@@ -145,7 +145,7 @@ const SubjectCategoriesPage = () => {
         Name: cat.name,
         Code: cat.code || "-",
         Sequence: cat.sequence || "-",
-        Disabled: cat.disabled ? "Yes" : "No",
+        Disabled: cat.isActive ? "Yes" : "No",
         "Created At": cat.createdAt,
         "Updated At": cat.updatedAt,
       }));
@@ -365,7 +365,7 @@ const SubjectCategoriesPage = () => {
                         <TableCell style={{ width: 220 }}>{category.name}</TableCell>
                         <TableCell style={{ width: 120 }}>{category.code}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {category.disabled ? (
+                          {category.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

@@ -7,10 +7,7 @@ import { Label } from "@/components/ui/label";
 // import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import type { Course } from "@repo/db";
-import { Degree } from "@/types/resources/degree.types";
-import { findAllDegrees } from "@/services/degree.service";
-import { useEffect, useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// removed unused degree hooks
 import { Controller } from "react-hook-form";
 
 interface CourseFormProps {
@@ -25,61 +22,39 @@ const formSchema = z.object({
   name: z.string().min(1, "Name is required"),
   shortName: z.string().nullable().optional(),
   sequence: z.number().min(0, "Sequence must be a positive number").nullable().optional(),
-  disabled: z.boolean().default(false),
-  degreeId: z.number().nullable().optional(),
+  isActive: z.boolean().default(false),
 });
 
 type CourseFormValues = z.infer<typeof formSchema>;
 
 export function CourseForm({ initialData, onSubmit, onCancel, isSubmitting }: CourseFormProps) {
-  const [degrees, setDegrees] = useState<Degree[]>([]);
-  const [isLoadingDegrees, setIsLoadingDegrees] = useState(true);
+  // removed degrees for now; backend Course does not require it in form
 
   const defaultValues: CourseFormValues = {
     name: initialData?.name || "",
     shortName: initialData?.shortName || "",
     sequence: initialData?.sequence || 0,
-    disabled: initialData?.disabled || false,
-    degreeId: initialData?.degree?.id || null,
+    isActive: initialData?.isActive || false,
   };
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setValue,
-    watch,
+    // setValue,
+    // watch,
     control,
   } = useForm<CourseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues,
   });
 
-  // Fetch degrees on component mount
-  useEffect(() => {
-    const fetchDegrees = async () => {
-      try {
-        setIsLoadingDegrees(true);
-        const degreesData = await findAllDegrees();
-        setDegrees(degreesData);
-      } catch (error) {
-        console.error("Error fetching degrees:", error);
-      } finally {
-        setIsLoadingDegrees(false);
-      }
-    };
-
-    fetchDegrees();
-  }, []);
-
   const handleFormSubmit = (data: CourseFormValues) => {
-    const selectedDegree = degrees.find((d) => d.id === data.degreeId);
     const courseData: Course = {
       name: data.name,
       shortName: data.shortName || null,
       sequence: data.sequence || null,
-      disabled: data.disabled,
-      degree: selectedDegree || null,
+      isActive: data.isActive,
       createdAt: initialData?.createdAt || new Date(),
       updatedAt: new Date(),
     };
@@ -110,36 +85,7 @@ export function CourseForm({ initialData, onSubmit, onCancel, isSubmitting }: Co
         {errors.shortName && <p className="text-sm text-red-500">{errors.shortName.message}</p>}
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="degree">Degree</Label>
-        <Select
-          value={watch("degreeId")?.toString() || "none"}
-          onValueChange={(value) => setValue("degreeId", value === "none" ? null : parseInt(value))}
-        >
-          <SelectTrigger className={errors.degreeId ? "border-red-500" : ""}>
-            <SelectValue placeholder="Select a degree" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            {isLoadingDegrees ? (
-              <SelectItem value="loading" disabled>
-                Loading degrees...
-              </SelectItem>
-            ) : Array.isArray(degrees) ? (
-              degrees.map((degree) => (
-                <SelectItem key={degree.id} value={degree.id?.toString() || "0"}>
-                  {degree.name}
-                </SelectItem>
-              ))
-            ) : (
-              <SelectItem value="error" disabled>
-                Error loading degrees
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
-        {errors.degreeId && <p className="text-sm text-red-500">{errors.degreeId.message}</p>}
-      </div>
+      {/* Degree selection removed for now */}
 
       <div className="space-y-2">
         <Label htmlFor="sequence">Sequence</Label>
@@ -155,11 +101,11 @@ export function CourseForm({ initialData, onSubmit, onCancel, isSubmitting }: Co
 
       <div className="flex items-center space-x-2">
         <Controller
-          name="disabled"
+          name="isActive"
           control={control}
-          render={({ field }) => <Checkbox id="disabled" checked={field.value} onCheckedChange={field.onChange} />}
+          render={({ field }) => <Checkbox id="isActive" checked={!!field.value} onCheckedChange={field.onChange} />}
         />
-        <Label htmlFor="disabled">Disabled</Label>
+        <Label htmlFor="isActive">Active</Label>
       </div>
 
       <div className="flex justify-end space-x-4 pt-4">

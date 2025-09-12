@@ -11,14 +11,14 @@ import type {
   Affiliation,
   RegulationType,
   SubjectType,
-  Paper,
   ExamComponent,
   Course,
-  PaperComponent,
   ProgramCourse,
   CourseType,
   AcademicYear,
   Class,
+  PaperDto,
+  PaperComponentDto,
 } from "@repo/db";
 import { toast } from "sonner";
 import { getPaperById } from "@/services/course-design.api";
@@ -26,14 +26,10 @@ import { getPaperById } from "@/services/course-design.api";
 // import { AcademicYear } from "@/types/academics/academic-year";
 
 // Extended Paper type with components for frontend use
-interface PaperWithComponents extends Paper {
-  components?: PaperComponent[];
-}
-
 interface PaperEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: Paper) => void;
+  onSubmit: (data: PaperDto) => void;
   isLoading?: boolean;
   subjects: Subject[];
   affiliations: Affiliation[];
@@ -45,7 +41,7 @@ interface PaperEditModalProps {
   courses: Course[];
   courseTypes: CourseType[];
   classes: Class[];
-  givenPaper: PaperWithComponents;
+  givenPaper: PaperDto;
   paperId?: number; // New prop for paper ID
 }
 
@@ -67,8 +63,8 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   paperId,
 }) => {
   // State for all fields
-  const [form, setForm] = useState<Partial<Paper>>({});
-  const [components, setComponents] = useState<PaperComponent[]>([]);
+  const [form, setForm] = useState<Partial<PaperDto>>({});
+  const [components, setComponents] = useState<PaperComponentDto[]>([]);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
 
   // Create lookup objects for constructing program course names
@@ -140,7 +136,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
         });
         setComponents(
           examComponents.map((component) => ({
-            examComponentId: component.id!,
+            examComponent: component,
             fullMarks: 0,
             credit: 0,
             paperId: 0, // Default to 0 for new papers
@@ -151,17 +147,17 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   }, [isOpen, paperId, givenPaper, examComponents]);
 
   // Handlers for each field
-  const handleChange = (field: keyof Paper, value: string | number | boolean) => {
+  const handleChange = (field: keyof PaperDto, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   // Component handlers
   const addComponent = useCallback(() => {
-    const selectedComponentIds = components.map((comp) => comp.examComponentId);
+    const selectedComponentIds = components.map((comp) => comp.examComponent.id);
     const availableComponents = examComponents.filter((ec) => !selectedComponentIds.includes(ec.id!));
     if (availableComponents.length > 0) {
-      const newComponent: PaperComponent = {
-        examComponentId: availableComponents[0]!.id!,
+      const newComponent: PaperComponentDto = {
+        examComponent: availableComponents[0]!,
         paperId: form.id || 0,
         fullMarks: 0,
         credit: 0,
@@ -177,7 +173,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   }, []);
 
   const updateComponent = useCallback(
-    (index: number, field: keyof PaperComponent, value: string | number | ExamComponent) => {
+    (index: number, field: keyof PaperComponentDto, value: string | number | ExamComponent) => {
       setComponents((prev) => prev.map((comp, i) => (i === index ? { ...comp, [field]: value } : comp)));
     },
     [],
@@ -191,10 +187,12 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
 
   const handleFormSubmit = async () => {
     try {
-      const data: Paper = {
+      const data: PaperDto = {
         ...form,
+        name: form.name || "",
         components,
-      } as Paper;
+        topics: form.topics ?? [],
+      } as PaperDto;
       await onSubmit(data);
       handleClose();
     } catch {
@@ -446,17 +444,23 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                         <TableBody>
                           {components.map((component, index) => {
                             const otherSelectedIds = components
-                              .map((comp, i) => (i !== index ? comp.examComponentId : null))
+                              .map((comp, i) => (i !== index ? comp.examComponent?.id : null))
                               .filter((id) => id !== null);
                             const availableComponents = examComponents.filter(
-                              (ec) => ec.id === component.examComponentId || !otherSelectedIds.includes(ec.id!),
+                              (ec) => ec.id === component.examComponent?.id || !otherSelectedIds.includes(ec.id!),
                             );
                             return (
                               <TableRow key={index} className="hover:bg-gray-50">
                                 <TableCell>
                                   <Select
-                                    value={component.examComponentId ? component.examComponentId.toString() : ""}
-                                    onValueChange={(value) => updateComponent(index, "examComponentId", Number(value))}
+                                    value={component.examComponent?.id ? component.examComponent.id.toString() : ""}
+                                    onValueChange={(value) =>
+                                      updateComponent(
+                                        index,
+                                        "examComponent",
+                                        examComponents.find((ec) => ec.id === Number(value))!,
+                                      )
+                                    }
                                   >
                                     <SelectTrigger className="w-full">
                                       <SelectValue placeholder="Select component" />

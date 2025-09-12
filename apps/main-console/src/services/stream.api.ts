@@ -1,6 +1,6 @@
 import { ApiResonse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import { Stream } from "@/types/course-design";
+import { Stream } from "@repo/db";
 
 export interface BulkUploadResult {
   success: Stream[];

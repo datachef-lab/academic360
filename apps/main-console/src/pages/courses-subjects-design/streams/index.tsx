@@ -188,7 +188,7 @@ const StreamsPage = () => {
         "UG Prefix": stream.ugPrefix || "-",
         "PG Prefix": stream.pgPrefix || "-",
         Sequence: stream.sequence || "-",
-        Status: stream.disabled ? "Inactive" : "Active",
+        Status: stream.isActive ? "Inactive" : "Active",
         "Created At": stream.createdAt,
         "Updated At": stream.updatedAt,
       }));
@@ -438,7 +438,7 @@ const StreamsPage = () => {
                         <TableCell style={{ width: 120 }}>{stream.pgPrefix || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{stream.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {stream.disabled ? (
+                          {stream.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

@@ -13,7 +13,7 @@ const affiliationSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   shortName: z.string().optional().nullable(),
   sequence: z.number().optional().nullable(),
-  disabled: z.boolean().default(false),
+  isActive: z.boolean().default(false),
   remarks: z.string().optional().nullable(),
 });
 
@@ -35,7 +35,7 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
       name: initialData?.name || "",
       shortName: initialData?.shortName || "",
       sequence: initialData?.sequence || null,
-      disabled: initialData?.disabled ?? false,
+      isActive: initialData?.isActive ?? false,
       remarks: initialData?.remarks || "",
     },
   });
@@ -46,7 +46,7 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
         name: initialData.name,
         shortName: initialData.shortName || "",
         sequence: initialData.sequence || null,
-        disabled: initialData.disabled,
+        isActive: initialData.isActive ?? false,
         remarks: initialData.remarks || "",
       });
     } else {
@@ -54,7 +54,7 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
         name: "",
         shortName: "",
         sequence: null,
-        disabled: false,
+        isActive: false,
         remarks: "",
       });
     }
@@ -65,7 +65,7 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
       name: data.name,
       shortName: data.shortName || null,
       sequence: data.sequence || null,
-      disabled: data.disabled,
+      isActive: data.isActive,
       remarks: data.remarks || null,
     };
     onSubmit(affiliationData);
@@ -141,18 +141,18 @@ export function AffiliationForm({ initialData, onSubmit, onCancel, isLoading = f
 
         <FormField
           control={form.control}
-          name="disabled"
+          name="isActive"
           render={() => (
             <FormControl>
               <div className="flex items-center space-x-2">
                 <Controller
-                  name="disabled"
+                  name="isActive"
                   control={form.control}
                   render={({ field }) => (
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
+                    <Checkbox checked={!!field.value} onCheckedChange={field.onChange} disabled={isLoading} />
                   )}
                 />
-                <FormLabel className="text-sm font-normal">Disabled</FormLabel>
+                <FormLabel className="text-sm font-normal">Active</FormLabel>
                 <FormMessage />
               </div>
             </FormControl>

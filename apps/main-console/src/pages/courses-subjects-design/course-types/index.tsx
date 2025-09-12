@@ -173,7 +173,7 @@ const CourseTypesPage = () => {
         Name: courseType.name,
         "Short Name": courseType.shortName || "-",
         Sequence: courseType.sequence || "-",
-        Status: courseType.disabled ? "Inactive" : "Active",
+        Status: !courseType.isActive ? "Inactive" : "Active",
         "Created At": courseType.createdAt,
         "Updated At": courseType.updatedAt,
       }));
@@ -392,7 +392,7 @@ const CourseTypesPage = () => {
                         <TableCell style={{ width: 200 }}>{courseType.shortName || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{courseType.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {courseType.disabled ? (
+                          {!courseType.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

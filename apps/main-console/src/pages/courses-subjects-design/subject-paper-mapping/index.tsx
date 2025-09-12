@@ -44,9 +44,9 @@ import type {
   SubjectType,
 
   // ExamComponent,
-  Paper,
+  PaperDto,
   ExamComponent,
-  PaperComponent,
+  PaperComponentDto,
   ProgramCourse,
   Course,
   CourseType,
@@ -63,7 +63,7 @@ const SubjectPaperMappingPage = () => {
   const [searchText, setSearchText] = React.useState("");
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedPaper, setSelectedPaper] = React.useState<Paper | null>(null);
+  const [selectedPaper, setSelectedPaper] = React.useState<PaperDto | null>(null);
   const [isBulkUploadOpen, setIsBulkUploadOpen] = React.useState(false);
   const [bulkFile, setBulkFile] = React.useState<File | null>(null);
   const [isBulkUploading, setIsBulkUploading] = React.useState(false);
@@ -79,7 +79,7 @@ const SubjectPaperMappingPage = () => {
     }>;
   } | null>(null);
   const [isPaperEditModalOpen, setIsPaperEditModalOpen] = React.useState(false);
-  const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<Paper | null>(null);
+  const [selectedPaperForEdit, setSelectedPaperForEdit] = React.useState<PaperDto | null>(null);
 
   const [filtersObj, setFiltersObj] = useState({
     subjectId: null as number | null,
@@ -117,7 +117,7 @@ const SubjectPaperMappingPage = () => {
   const [error, setError] = useState<string | null>(null);
   //   const [isFormSubmitting, setIsFormSubmitting] = React.useState(false);
 
-  const [papers, setPapers] = React.useState<Paper[]>([]);
+  const [papers, setPapers] = React.useState<PaperDto[]>([]);
   //   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
 
   //   const [programCourses, setProgramCourses] = React.useState<Course[]>([]);
@@ -142,7 +142,7 @@ const SubjectPaperMappingPage = () => {
       // Ensure result is an array before filtering
       if (Array.isArray(result)) {
         // Apply client-side filtering
-        let filteredPapers = result as Paper[];
+        let filteredPapers = result as PaperDto[];
 
         // Filter by subject
         if (filtersObj.subjectId) {
@@ -364,7 +364,7 @@ const SubjectPaperMappingPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [displayFlag, accessToken]);
 
-  const handlePaperEditSubmit = async (data: Paper) => {
+  const handlePaperEditSubmit = async (data: PaperDto) => {
     console.log("Paper edit submitted with data:", data);
     console.log("Selected paper for edit:", selectedPaperForEdit);
     try {
@@ -379,7 +379,7 @@ const SubjectPaperMappingPage = () => {
       });
 
       // Transform the data to match the API expected format
-      const updateData = {
+      const updateData: PaperDto = {
         classId: data.classId,
         name: data.name,
         subjectId: data.subjectId,
@@ -389,19 +389,19 @@ const SubjectPaperMappingPage = () => {
         programCourseId: data.programCourseId,
         subjectTypeId: data.subjectTypeId,
         code: data.code,
+        topics: data.topics,
         isOptional: data.isOptional,
-        disabled: data.disabled,
+        isActive: data.isActive,
         components:
           data.components
             ?.filter(
-              (comp: PaperComponent) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
+              (comp: PaperComponentDto) => comp.examComponent?.id && comp.fullMarks !== null && comp.credit !== null,
             )
-            .map((comp: PaperComponent) => ({
-              examComponent: {
-                id: comp.examComponent.id!,
-              },
-              fullMarks: comp.fullMarks!,
-              credit: comp.credit!,
+            .map((comp: PaperComponentDto) => ({
+              paperId: comp.paperId!,
+              examComponent: comp.examComponent!,
+              fullMarks: comp.fullMarks ?? 0,
+              credit: comp.credit ?? 0,
             })) || [],
       };
 
@@ -1182,7 +1182,7 @@ const SubjectPaperMappingPage = () => {
                     {!Array.isArray(papers) ? "Error loading data" : "No subject paper mappings found."}
                   </div>
                 ) : (
-                  papers.map((sp: Paper, idx: number) => (
+                  papers.map((sp: PaperDto, idx: number) => (
                     <div key={sp.id} className="flex border-b hover:bg-gray-50 group" style={{ minWidth: "950px" }}>
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
@@ -1222,7 +1222,7 @@ const SubjectPaperMappingPage = () => {
                         {/* Display exam component names */}
                         <div className="flex flex-wrap gap-1">
                           {sp.components && sp.components.length > 0 ? (
-                            sp.components.map((component: PaperComponent, compIdx: number) => (
+                            sp.components.map((component: PaperComponentDto, compIdx: number) => (
                               <Badge key={compIdx} variant="outline" className="text-xs">
                                 {component.examComponent.name}
                               </Badge>
@@ -1309,9 +1309,9 @@ const SubjectPaperMappingPage = () => {
             setIsPaperEditModalOpen(false);
             //   setSelectedPaperForEdit(null);
           }}
-          onSubmit={handlePaperEditSubmit}
+          onSubmit={(data: PaperDto) => handlePaperEditSubmit(data)}
           isLoading={false}
-          givenPaper={selectedPaperForEdit!}
+          givenPaper={selectedPaperForEdit as PaperDto}
           subjects={subjects}
           affiliations={affiliations}
           regulationTypes={regulationTypes}

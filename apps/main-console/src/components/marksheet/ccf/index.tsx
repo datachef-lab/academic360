@@ -17,7 +17,7 @@ import { Student } from "@/types/user/student";
 import { Framework } from "@/types/enums";
 // import { Stream } from "@/types/academics/stream";
 import { InputBox } from "./InputBox";
-import { UserDto } from "@/dtos/user";
+import { UserDto } from "@repo/db/dtos/user";
 
 const columns = [
   "Course Code (Course Type)",

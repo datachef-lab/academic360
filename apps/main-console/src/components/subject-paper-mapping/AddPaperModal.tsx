@@ -4,7 +4,8 @@ import type {
   Course,
   ExamComponent,
   Paper,
-  PaperComponent,
+  PaperComponentDto,
+  PaperDto,
   ProgramCourse,
   RegulationType,
   Subject,
@@ -20,8 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { createPaper } from "@/services/course-design.api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { MultiSelect } from "@/components/ui/AdvancedMultiSelect";
-import { CourseType } from "@/schemas";
-interface InputPaper extends Omit<Paper, "programCourseId" | "classId"> {
+import { CourseType } from "@repo/db/schemas";
+interface InputPaper extends Omit<PaperDto, "programCourseId" | "classId"> {
   programCourses: number[];
   classes: number[];
 }
@@ -60,7 +61,7 @@ export default function AddPaperModal({
     classes,
   },
 }: AddModalProps) {
-  const [defaultPaper] = useState<Paper>({
+  const [defaultPaper] = useState<PaperDto>({
     name: "",
     subjectId: 0, // No default value
     affiliationId: 0, // No default value
@@ -72,16 +73,16 @@ export default function AddPaperModal({
     components: examComponents.map((examComponent) => ({
       paperId: 0, // This will be set when the paper is created
       examComponent,
-      fullMarks: null,
-      credit: null,
+      fullMarks: 0,
+      credit: 0,
     })),
     code: "",
     isOptional: false,
     sequence: null,
-    disabled: false,
+    isActive: true,
     topics: [],
   });
-  const setPapers = useState<Paper[]>([defaultPaper])[1];
+  const setPapers = useState<PaperDto[]>([defaultPaper])[1];
   const [inputPaper, setInputPaper] = useState<InputPaper[]>([
     {
       name: "",
@@ -95,13 +96,14 @@ export default function AddPaperModal({
       components: examComponents.map((examComponent) => ({
         paperId: 0, // This will be set when the paper is created
         examComponent,
-        fullMarks: null,
-        credit: null,
+        fullMarks: 0,
+
+        credit: 0,
       })),
       code: "",
       isOptional: false,
       sequence: null,
-      disabled: false,
+      isActive: true,
       topics: [],
     },
   ]);
@@ -175,7 +177,7 @@ export default function AddPaperModal({
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const papers: Paper[] = [];
+    const papers: PaperDto[] = [];
     console.log(papers);
     for (const paper of inputPaper) {
       for (const programCourseId of paper.programCourses) {
@@ -192,7 +194,7 @@ export default function AddPaperModal({
     }
     console.log("Papers:", papers);
 
-    const formattedPapers: Paper[] = [];
+    const formattedPapers: PaperDto[] = [];
     for (let i = 0; i < papers.length; i++) {
       const paper = papers[i]!;
       if (
@@ -210,12 +212,13 @@ export default function AddPaperModal({
       }
 
       const components = paper.components
-        .map((comp: PaperComponent) => {
+        .map((comp: PaperComponentDto) => {
           if (comp.fullMarks !== null || comp.fullMarks != 0 || comp.credit !== null || comp.credit != 0) {
             return comp;
           }
+          return undefined;
         })
-        .filter((comp: PaperComponent): comp is PaperComponent => comp !== undefined);
+        .filter((comp): comp is PaperComponentDto => comp !== undefined);
 
       formattedPapers.push({ ...paper, components: components as typeof paper.components });
     }
@@ -610,7 +613,7 @@ export default function AddPaperModal({
 
                 <div className="w-20 p-2 border-r border-black flex items-center justify-center">
                   <Checkbox
-                    checked={field.isOptional}
+                    checked={field.isOptional ?? false}
                     onCheckedChange={(checked) => {
                       update(paperIndex, { ...field, isOptional: checked as boolean });
                     }}
@@ -621,10 +624,10 @@ export default function AddPaperModal({
                   <div className="flex h-full">
                     {examComponents.map((examComponent) => {
                       const component = field.components.find(
-                        (c: PaperComponent) => c.examComponent.id === examComponent.id,
+                        (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
                       );
                       const componentIndex = field.components.findIndex(
-                        (c: PaperComponent) => c.examComponent.id === examComponent.id,
+                        (c: PaperComponentDto) => c.examComponent.id === examComponent.id,
                       );
 
                       const handleMarksChange = (e: React.ChangeEvent<HTMLInputElement>) => {

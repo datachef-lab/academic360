@@ -155,7 +155,7 @@ const RegulationTypesPage = () => {
         Name: type.name,
         "Short Name": type.shortName || "-",
         Sequence: type.sequence || "-",
-        Disabled: type.disabled ? "Yes" : "No",
+        Active: type.isActive ? "Yes" : "No",
         "Created At": type.createdAt,
         "Updated At": type.updatedAt,
       }));
@@ -387,7 +387,7 @@ const RegulationTypesPage = () => {
                         <TableCell style={{ width: 220 }}>{type.name}</TableCell>
                         <TableCell style={{ width: 220 }}>{type.shortName ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {!type.disabled ? (
+                          {!type.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>
