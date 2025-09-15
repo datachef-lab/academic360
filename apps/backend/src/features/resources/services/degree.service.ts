@@ -6,34 +6,30 @@ import {
 import { eq } from "drizzle-orm";
 
 const degrees: Degree[] = [
-  { name: "Class X", level: "SECONDARY", sequence: 1 },
-  { name: "Class XII", level: "HIGHER_SECONDARY", sequence: 2 },
-  { name: "Graduation", level: "UNDER_GRADUATE", sequence: 3 },
-  { name: "Post Graduation", level: "POST_GRADUATE", sequence: 4 },
-  { name: "Ph.D / D.Phil", level: "DOCTORATE", sequence: 5 },
-  { name: "M.Phil", level: "POST_GRADUATE", sequence: 6 },
-  { name: "Graduation With Spl Honours", level: "UNDER_GRADUATE", sequence: 7 },
+  { name: "Class X", sequence: 1 },
+  { name: "Class XII", sequence: 2 },
+  { name: "Graduation", sequence: 3 },
+  { name: "Post Graduation", sequence: 4 },
+  { name: "Ph.D / D.Phil", sequence: 5 },
+  { name: "M.Phil", sequence: 6 },
+  { name: "Graduation With Spl Honours", sequence: 7 },
   {
     name: "B. Com Honours with Accounts & Finance",
-    level: "UNDER_GRADUATE",
     sequence: 8,
   },
   {
     name: "B. Com Honours with Marketing",
-    level: "UNDER_GRADUATE",
     sequence: 9,
   },
   {
     name: "B. Com Honours with Taxation",
-    level: "UNDER_GRADUATE",
     sequence: 10,
   },
   {
     name: "B. Com Honours with E-Business",
-    level: "UNDER_GRADUATE",
     sequence: 11,
   },
-  { name: "B.A. English Honours", level: "UNDER_GRADUATE", sequence: 12 },
+  { name: "B.A. English Honours", sequence: 12 },
 ];
 
 export async function loadDegree() {
@@ -78,7 +74,6 @@ export async function createDegree(
   const [newDegree] = await db
     .insert(degreeModel)
     .values({
-      name: data.name,
       ...data,
       createdAt: new Date(),
       updatedAt: new Date(),

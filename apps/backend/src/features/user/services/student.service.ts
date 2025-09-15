@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import {
   personalDetailsModel,
@@ -16,6 +16,16 @@ import {
   admissionGeneralInfoModel,
   applicationFormModel,
 } from "@repo/db/schemas";
+import { promotionModel } from "@repo/db/schemas/models/batches";
+import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
+import { boardResultStatusModel } from "@repo/db/schemas/models/resources";
+import {
+  sessionModel,
+  classModel,
+  sectionModel,
+  shiftModel,
+} from "@repo/db/schemas/models/academics";
+import { programCourseModel } from "@repo/db/schemas/models/course-design";
 
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as specializationService from "@/features/resources/services/specialization.service";
@@ -530,6 +540,96 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     .from(personalDetailsModel)
     .where(eq(personalDetailsModel.id, generalInfo?.personalDetailsId!));
 
+  // Fetch latest promotion for the student
+  const [latestPromotion] = await db
+    .select()
+    .from(promotionModel)
+    .where(eq(promotionModel.studentId, student.id as number))
+    .orderBy(desc(promotionModel.startDate), desc(promotionModel.createdAt))
+    .limit(1);
+
+  let currentPromotion = null;
+  if (latestPromotion) {
+    const [promStatus, boardResStatus, sess, cls, sec, shf, progCourse] =
+      await Promise.all([
+        db
+          .select()
+          .from(promotionStatusModel)
+          .where(eq(promotionStatusModel.id, latestPromotion.promotionStatusId))
+          .then((r) => r[0] ?? null),
+        latestPromotion.boardResultStatusId
+          ? db
+              .select()
+              .from(boardResultStatusModel)
+              .where(
+                eq(
+                  boardResultStatusModel.id,
+                  latestPromotion.boardResultStatusId,
+                ),
+              )
+              .then((r) => r[0] ?? null)
+          : Promise.resolve(null),
+        db
+          .select()
+          .from(sessionModel)
+          .where(eq(sessionModel.id, latestPromotion.sessionId))
+          .then((r) => r[0] ?? null),
+        db
+          .select()
+          .from(classModel)
+          .where(eq(classModel.id, latestPromotion.classId))
+          .then((r) => r[0] ?? null),
+        db
+          .select()
+          .from(sectionModel)
+          .where(eq(sectionModel.id, latestPromotion.sectionId))
+          .then((r) => r[0] ?? null),
+        db
+          .select()
+          .from(shiftModel)
+          .where(eq(shiftModel.id, latestPromotion.shiftId))
+          .then((r) => r[0] ?? null),
+        // Use service for ProgramCourse to build ProgramCourseDto
+        programCourseService.findById(latestPromotion.programCourseId),
+      ]);
+
+    if (promStatus && sess && cls && sec && shf && progCourse) {
+      currentPromotion = {
+        id: latestPromotion.id,
+        legacyHistoricalRecordId:
+          latestPromotion.legacyHistoricalRecordId ?? null,
+        studentId: latestPromotion.studentId,
+        programCourseId: latestPromotion.programCourseId,
+        sessionId: latestPromotion.sessionId,
+        shiftId: latestPromotion.shiftId,
+        classId: latestPromotion.classId,
+        sectionId: latestPromotion.sectionId,
+        isAlumni: latestPromotion.isAlumni,
+        dateOfJoining: latestPromotion.dateOfJoining,
+        classRollNumber: latestPromotion.classRollNumber,
+        rollNumber: latestPromotion.rollNumber ?? null,
+        rollNumberSI: latestPromotion.rollNumberSI ?? null,
+        examNumber: latestPromotion.examNumber ?? null,
+        examSerialNumber: latestPromotion.examSerialNumber ?? null,
+        promotionStatusId: latestPromotion.promotionStatusId,
+        boardResultStatusId: latestPromotion.boardResultStatusId ?? null,
+        startDate: latestPromotion.startDate ?? null,
+        endDate: latestPromotion.endDate ?? null,
+        remarks: latestPromotion.remarks ?? null,
+        createdAt: latestPromotion.createdAt ?? new Date(),
+        updatedAt: latestPromotion.updatedAt ?? new Date(),
+        // Expanded relations per PromotionDto
+        promotionStatus: promStatus,
+        boardResultStatus: boardResStatus!,
+        session: sess,
+        class: cls,
+        section: sec,
+        shift: shf,
+        programCourse: progCourse!,
+      } as any; // will align to PromotionDto shape
+    }
+  }
+
   return {
     ...props,
     applicationFormAbstract: applicationForm,
@@ -538,6 +638,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     section,
     shift,
     currentBatch,
+    currentPromotion,
     personalDetails,
   };
 }

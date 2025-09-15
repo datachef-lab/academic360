@@ -150,9 +150,7 @@ export const updateDegree = async (
       {};
 
     if (name !== undefined) updateData.name = name;
-    if (level !== undefined) updateData.level = level;
     if (sequence !== undefined) updateData.sequence = sequence;
-    if (disabled !== undefined) updateData.disabled = disabled;
 
     const updatedDegree = await updateDegreeService(Number(id), updateData);
 

@@ -21,6 +21,13 @@ import { classModel } from "@repo/db/schemas/models/academics";
 import { topicModel } from "@repo/db/schemas/models/course-design";
 import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
 import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
+import { getSubjectById } from "./subject.service";
+import { findById as findAffiliationById } from "@/features/course-design/services/affiliation.service.js";
+import { findById as findRegulationTypeById } from "@/features/course-design/services/regulation-type.service.js";
+import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
+import { getSubjectTypeById } from "./subject-type.service";
+import { findById as findProgramCourseById } from "@/features/course-design/services/program-course.service.js";
+import { findClassById } from "@/features/academics/services/class.service";
 // import { findCourseById } from "./course.service";
 // import { findAcademicYearById } from "@/features/academics/services/academic-year.service";
 // import { findClassById } from "@/features/academics/services/class.service";
@@ -29,6 +36,27 @@ import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
 // import { getRegulationTypeById } from "./regulation-type.service";
 // import { getSubjectTypeById } from "./subject-type.service";
 // import { getPaperComponentById } from "../controllers/paper-component.controller";
+
+// Separate detailed DTO for expanded responses (embedded entities)
+export interface PaperDetailedDto
+  extends Omit<
+    PaperDto,
+    | "subjectId"
+    | "affiliationId"
+    | "regulationTypeId"
+    | "academicYearId"
+    | "subjectTypeId"
+    | "programCourseId"
+    | "classId"
+  > {
+  subject: unknown;
+  affiliation: unknown;
+  regulationType: unknown;
+  academicYear: unknown;
+  subjectType: unknown;
+  programCourse: unknown;
+  class: unknown;
+}
 
 export interface BulkUploadResult {
   success: Paper[];
@@ -298,6 +326,16 @@ export async function getPaperById(id: number) {
   return await modelToDto(paper as Paper);
 }
 
+// Detailed version (embedded relations)
+export async function getPaperDetailedById(id: number) {
+  const [paper] = await db
+    .select()
+    .from(paperModel)
+    .where(eq(paperModel.id, id));
+  if (!paper) return null;
+  return await modelToDetailedDto(paper as Paper);
+}
+
 export async function getAllPapers() {
   const papers = await db.select().from(paperModel);
 
@@ -338,8 +376,6 @@ export async function updatePaperWithComponents(
 ) {
   console.log("Updating paper with components:", { id, data });
   console.log("Received data fields:", data);
-
-  // const { academicYear, components, subject, } = data;
 
   // Find the class ID based on semester name
   console.log("Looking for class with name:", data.classId);
@@ -482,11 +518,90 @@ export async function modelToDto(paper: Paper): Promise<PaperDto | null> {
   const components = await findPaperComponentsByPaperId(paper.id!);
   const topics = await getTopicsByPaperId(paper.id!);
 
+  const subject = await getSubjectById(paper.subjectId as number);
+  const affiliation = await findAffiliationById(paper.affiliationId as number);
+  const regulationType = await findRegulationTypeById(
+    paper.regulationTypeId as number,
+  );
+  const academicYear = await findAcademicYearById(
+    paper.academicYearId as number,
+  );
+  const subjectType = await getSubjectTypeById(String(paper.subjectTypeId));
+  const programCourse = await findProgramCourseById(
+    paper.programCourseId as number,
+  );
+  const classRecord = await findClassById(paper.classId as number);
+
+  if (
+    !subject ||
+    !affiliation ||
+    !regulationType ||
+    !academicYear ||
+    !subjectType ||
+    !programCourse ||
+    !classRecord
+  ) {
+    return null;
+  }
+
   return {
     ...paper,
     topics,
     components,
-  };
+    subjectId: subject.id!,
+    subjectTypeId: Number(subjectType.id!),
+    affiliationId: affiliation.id!,
+    regulationTypeId: regulationType.id!,
+    academicYearId: academicYear.id!,
+    programCourseId: programCourse.id!,
+    classId: classRecord.id!,
+  } as unknown as PaperDto;
+}
+
+export async function modelToDetailedDto(
+  paper: Paper,
+): Promise<PaperDetailedDto | null> {
+  const components = await findPaperComponentsByPaperId(paper.id!);
+  const topics = await getTopicsByPaperId(paper.id!);
+
+  const subject = await getSubjectById(paper.subjectId as number);
+  const affiliation = await findAffiliationById(paper.affiliationId as number);
+  const regulationType = await findRegulationTypeById(
+    paper.regulationTypeId as number,
+  );
+  const academicYear = await findAcademicYearById(
+    paper.academicYearId as number,
+  );
+  const subjectType = await getSubjectTypeById(String(paper.subjectTypeId));
+  const programCourse = await findProgramCourseById(
+    paper.programCourseId as number,
+  );
+  const classRecord = await findClassById(paper.classId as number);
+
+  if (
+    !subject ||
+    !affiliation ||
+    !regulationType ||
+    !academicYear ||
+    !subjectType ||
+    !programCourse ||
+    !classRecord
+  ) {
+    return null;
+  }
+
+  return {
+    ...paper,
+    topics,
+    components,
+    subject,
+    affiliation,
+    regulationType,
+    academicYear,
+    subjectType,
+    programCourse,
+    class: classRecord,
+  } as unknown as PaperDetailedDto;
 }
 
 // export const bulkUploadCourses = async (

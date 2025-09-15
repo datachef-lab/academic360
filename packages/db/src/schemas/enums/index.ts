@@ -252,3 +252,9 @@ export const bankAccountTypeEnum = pgEnum("bank_account_type", [
     "RECURRING_DEPOSIT",
     "OTHER",
 ]);
+
+export const promotionStatusTypeEnum = pgEnum("promotion_status_type", [
+    "REGULAR",
+    "READMISSION",
+    "CASUAL",
+]);

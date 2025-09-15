@@ -4,8 +4,10 @@ import { AlertCircle, Info } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { fetchStudentSubjectSelections, StudentSubjectSelectionDto, PaperDto } from "@/services/subject-selection";
 
-export default function SubjectSelectionForm() {
+export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => void }) {
   const { user } = useAuth();
   const { student } = useStudent();
   const [step, setStep] = useState<1 | 2>(1);
@@ -14,49 +16,88 @@ export default function SubjectSelectionForm() {
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
 
+  const [selections, setSelections] = useState<StudentSubjectSelectionDto[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
-  const [minor2, setMinor2] = useState(""); // Minor II (Semester III & IV) - auto-assigned
+  const [minor2, setMinor2] = useState(""); // Minor II (Semester III & IV)
   const [idc1, setIdc1] = useState(""); // IDC 1 (Semester I)
   const [idc2, setIdc2] = useState(""); // IDC 2 (Semester II)
   const [idc3, setIdc3] = useState(""); // IDC 3 (Semester III)
+  // Dynamic per-category selections
+  const [idcSem1, setIdcSem1] = useState<string>("");
+  const [idcSem2, setIdcSem2] = useState<string>("");
+  const [idcSem3, setIdcSem3] = useState<string>("");
+  const [minorSem12, setMinorSem12] = useState<string>("");
+  const [minorSem34, setMinorSem34] = useState<string>("");
   const [aec3, setAec3] = useState(""); // AEC 3 (Semester III)
   const [cvac2, setCvac2] = useState(""); // CVAC 2 (Semester I)
   const [cvac4, setCvac4] = useState(""); // CVAC 4 (Semester II)
 
-  // Mock data - in real implementation, this would come from backend
-  const [admissionMinorSubjects] = useState(["History", "Geography"]); // Pre-admission choices
-  const [availableIdcSubjects] = useState([
-    "Philosophy",
-    "Sociology",
-    "Psychology",
-    "Economics",
-    "Anthropology",
-    "Political Science",
-    "Mathematics",
-    "Statistics",
-  ]);
-  const [availableAecSubjects] = useState(["Alternative English", "Hindi", "Bengali", "Sanskrit"]);
-  const [availableCvac4Options] = useState([
-    "Value-Oriented Life Skill Education",
-    "Environmental Science",
-    "Computer Science",
-  ]);
+  // Options populated from backend (fallback to demo if none)
+  const [admissionMinorSubjects, setAdmissionMinorSubjects] = useState<string[]>([]);
+  const [availableIdcSubjects, setAvailableIdcSubjects] = useState<string[]>([]);
+  const [availableAecSubjects] = useState([]);
+  const [availableCvac4Options] = useState([]);
 
   // Fix for shadcn Select type issues in some contexts
   const SelectTriggerFixed = SelectTrigger as React.ComponentType<any>;
   const SelectContentFixed = SelectContent as React.ComponentType<any>;
   const SelectItemFixed = SelectItem as React.ComponentType<any>;
 
-  // Auto-assign Minor II when Minor I is selected
+  // Removed auto-assign for Minor II; user must select Minor II explicitly
+  const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
+  const [minorMismatch, setMinorMismatch] = useState(false);
+
+  // Load paper options from backend
   useEffect(() => {
-    if (minor1 && admissionMinorSubjects.includes(minor1)) {
-      const remainingSubject = admissionMinorSubjects.find((subject) => subject !== minor1);
-      setMinor2(remainingSubject || "");
-    } else {
-      setMinor2("");
+    const run = async () => {
+      if (!student?.id) return;
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const resp = await fetchStudentSubjectSelections(student.id);
+        console.log("subject-selection-form data", resp);
+
+        const groups = resp.studentSubjectsSelection ?? [];
+        setSelections(groups);
+
+        // Capture earlier Minor selections (do not preselect in dropdowns)
+        const earlier = resp.selectedMinorSubjects ?? [];
+        const earlierMinor1 = earlier[0]?.id ? earlier[0].name || earlier[0].code || "" : "";
+        const earlierMinor2 = earlier[1]?.id ? earlier[1].name || earlier[1].code || "" : "";
+        setEarlierMinorSelections([earlierMinor1, earlierMinor2].filter(Boolean));
+
+        // Derive groups
+        const getLabel = (p: PaperDto) => p?.name || p?.code || "";
+        const isMinor = (n: string) => n.toUpperCase().includes("MINOR") || n.toUpperCase() === "MN";
+        const isIDC = (n: string) => n.toUpperCase().includes("INTER DISCIPLINARY") || n.toUpperCase().includes("IDC");
+
+        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || ""));
+        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || ""));
+        setAdmissionMinorSubjects(minorGroup?.paperOptions?.map(getLabel).filter(Boolean) || []);
+        setAvailableIdcSubjects(idcGroup?.paperOptions?.map(getLabel).filter(Boolean) || []);
+      } catch (e: any) {
+        setLoadError(e?.message || "Failed to load subject selections");
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [student?.id]);
+
+  // Show non-blocking alert whenever current Minor pair differs from earlier saved pair
+  useEffect(() => {
+    if (earlierMinorSelections.length === 0) {
+      setMinorMismatch(false);
+      return;
     }
-  }, [minor1, admissionMinorSubjects]);
+    const prev = [...earlierMinorSelections].sort().join("||");
+    const current = [minor1, minor2].filter(Boolean).sort().join("||");
+    setMinorMismatch(Boolean(current) && Boolean(prev) && current !== prev);
+  }, [minor1, minor2, earlierMinorSelections]);
 
   // Highlight document section when field is focused
   const handleFieldFocus = (fieldType: string) => {
@@ -78,14 +119,17 @@ export default function SubjectSelectionForm() {
   const validateForm = () => {
     const newErrors: string[] = [];
 
+    const shouldAskForAec = availableAecSubjects.length > 0;
+    const shouldAskForCvac = availableCvac4Options.length > 0;
+
     // Required field validation
     if (!minor1) newErrors.push("Minor I subject is required");
     if (!idc1) newErrors.push("IDC 1 subject is required");
     if (!idc2) newErrors.push("IDC 2 subject is required");
     if (!idc3) newErrors.push("IDC 3 subject is required");
-    if (!aec3) newErrors.push("AEC 3 subject is required");
-    if (!cvac2) newErrors.push("CVAC 2 subject is required");
-    if (!cvac4) newErrors.push("CVAC 4 subject is required");
+    if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
+    if (shouldAskForCvac && !cvac2) newErrors.push("CVAC 2 subject is required");
+    if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
     // Business rule validation
     if (minor1 && idc1 && minor1 === idc1) {
@@ -124,6 +168,7 @@ export default function SubjectSelectionForm() {
 
   const handleNext = () => {
     if (validateForm()) {
+      // Do not block; mismatch is informational only
       setStep(2);
     }
   };
@@ -143,7 +188,7 @@ export default function SubjectSelectionForm() {
   const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden">
+    <div className="w-full h-full flex flex-col overflow-hidden ">
       {/* Student Information Section - Fixed */}
       {/* <div className="bg-blue-800 shadow-2xl rounded-2xl border-0 p-8 mb-6 flex-shrink-0">
         <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-4">
@@ -237,7 +282,7 @@ export default function SubjectSelectionForm() {
       </div> */}
 
       {/* Mobile toggle */}
-      <div className="lg:hidden mt-2 mb-2">
+      <div className="lg:hidden mt-2 mb-2 ">
         <button
           type="button"
           onClick={() => setShowStudentInfoMobile((v) => !v)}
@@ -255,7 +300,7 @@ export default function SubjectSelectionForm() {
       >
         <div className="flex items-center gap-2 justify-between py-2 mb-3 text-xl border-b">
           <div className="text-white">Student Information</div>
-          <div className="text-blue-100 text-sm font-normal">Academic Year 2024-25</div>
+          {/* <div className="text-blue-100 text-sm font-normal">{student?.currentPromotion?.session?.name}</div> */}
         </div>
         <div className="grid grid-cols-5 gap-8">
           <div className="space-y-3 text-center">
@@ -264,18 +309,16 @@ export default function SubjectSelectionForm() {
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">{student?.id}</p>
+            <p className="text-base font-bold text-white">{student?.uid}</p>
           </div>
           {/* Roll number may be unavailable on StudentDto */}
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">N/A</p>
+            <p className="text-base font-bold text-white">{student?.currentPromotion?.rollNumber}</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
-            <p className="text-base font-bold text-white">
-              {student?.programCourse?.course?.name} ({student?.programCourse?.courseType?.shortName})
-            </p>
+            <p className="text-base font-bold text-white">{student?.currentPromotion?.programCourse?.name}</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
@@ -302,7 +345,7 @@ export default function SubjectSelectionForm() {
             )}
             <button
               type="button"
-              onClick={() => alert("Open notes: scroll to Important Notes & Guide section for detailed rules.")}
+              onClick={() => openNotes?.()}
               className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 hover:bg-gray-50"
             >
               <Info className="w-4 h-4" /> View Notes
@@ -322,128 +365,140 @@ export default function SubjectSelectionForm() {
           </div>
 
           {step === 1 && (
-            <div className="grid lg:grid-cols-3 grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-4">
+              {/* Removed: Available Paper Options preview */}
               {/* Minor Subjects */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
-                <Select value={minor1} onValueChange={setMinor1} onOpenChange={(o) => o && handleFieldFocus("minor")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select Minor I" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {admissionMinorSubjects.map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-2 min-h-[84px]">
+                  <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
+                  <Select value={minor1} onValueChange={setMinor1} onOpenChange={(o) => o && handleFieldFocus("minor")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <SelectValue placeholder="Select Minor I" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {admissionMinorSubjects
+                        .filter((s) => s !== minor2)
+                        .map((subject) => (
+                          <SelectItemFixed key={subject} value={subject}>
+                            {subject}
+                          </SelectItemFixed>
+                        ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 min-h-[84px]">
+                  <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
+                  <Select value={minor2} onValueChange={setMinor2} onOpenChange={(o) => o && handleFieldFocus("minor")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <SelectValue placeholder="Select Minor II" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {admissionMinorSubjects
+                        .filter((s) => s !== minor1)
+                        .map((subject) => (
+                          <SelectItemFixed key={subject} value={subject}>
+                            {subject}
+                          </SelectItemFixed>
+                        ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
-                <select
-                  value={minor2}
-                  disabled
-                  className="w-full p-2.5 border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed shadow-sm"
-                >
-                  <option value="">{minor2 || "Auto-assigned"}</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
-                <Select value={aec3} onValueChange={setAec3} onOpenChange={(o) => o && handleFieldFocus("aec")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select AEC 3" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {availableAecSubjects.map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
-              </div>
+              {availableAecSubjects.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
+                  <Select value={aec3} onValueChange={setAec3} onOpenChange={(o) => o && handleFieldFocus("aec")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                      <SelectValue placeholder="Select AEC 3" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {availableAecSubjects.map((subject) => (
+                        <SelectItemFixed key={subject} value={subject}>
+                          {subject}
+                        </SelectItemFixed>
+                      ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
+              )}
 
               {/* IDC Subjects */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
-                <Select value={idc1} onValueChange={setIdc1} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select IDC 1" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {getFilteredIdcOptions(idc1).map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
-              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="space-y-2 min-h-[84px]">
+                  <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
+                  <Select value={idc1} onValueChange={setIdc1} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <SelectValue placeholder="Select IDC 1" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {getFilteredIdcOptions(idc1).map((subject) => (
+                        <SelectItemFixed key={subject} value={subject}>
+                          {subject}
+                        </SelectItemFixed>
+                      ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
-                <Select value={idc2} onValueChange={setIdc2} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select IDC 2" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {getFilteredIdcOptions(idc2).map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
-              </div>
+                <div className="space-y-2 min-h-[84px]">
+                  <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
+                  <Select value={idc2} onValueChange={setIdc2} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <SelectValue placeholder="Select IDC 2" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {getFilteredIdcOptions(idc2).map((subject) => (
+                        <SelectItemFixed key={subject} value={subject}>
+                          {subject}
+                        </SelectItemFixed>
+                      ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
-                <Select value={idc3} onValueChange={setIdc3} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select IDC 3" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {getFilteredIdcOptions(idc3).map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
+                <div className="space-y-2 min-h-[84px]">
+                  <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
+                  <Select value={idc3} onValueChange={setIdc3} onOpenChange={(o) => o && handleFieldFocus("idc")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
+                      <SelectValue placeholder="Select IDC 3" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>
+                      {getFilteredIdcOptions(idc3).map((subject) => (
+                        <SelectItemFixed key={subject} value={subject}>
+                          {subject}
+                        </SelectItemFixed>
+                      ))}
+                    </SelectContentFixed>
+                  </Select>
+                </div>
               </div>
 
               {/* CVAC Subjects */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">CVAC 2 (Semester I)</label>
-                <Select value={cvac2} onValueChange={setCvac2} onOpenChange={(o) => o && handleFieldFocus("cvac")}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select CVAC 2" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    <SelectItemFixed value="constitutional-values">Constitutional Values</SelectItemFixed>
-                  </SelectContentFixed>
-                </Select>
-              </div>
+              {availableCvac4Options.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">CVAC 2 (Semester I)</label>
+                  <Select value={cvac2} onValueChange={setCvac2} onOpenChange={(o) => o && handleFieldFocus("cvac")}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                      <SelectValue placeholder="Select CVAC 2" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>{/* options from API when available */}</SelectContentFixed>
+                  </Select>
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
-                <Select value={cvac4} onValueChange={setCvac4}>
-                  <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                    <SelectValue placeholder="Select CVAC 4" />
-                  </SelectTriggerFixed>
-                  <SelectContentFixed>
-                    {availableCvac4Options.map((subject) => (
-                      <SelectItemFixed key={subject} value={subject}>
-                        {subject}
-                      </SelectItemFixed>
-                    ))}
-                  </SelectContentFixed>
-                </Select>
-              </div>
+              {availableCvac4Options.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
+                  <Select value={cvac4} onValueChange={setCvac4}>
+                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
+                      <SelectValue placeholder="Select CVAC 4" />
+                    </SelectTriggerFixed>
+                    <SelectContentFixed>{/* options from API when available */}</SelectContentFixed>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">{/* Empty space for grid alignment */}</div>
             </div>
@@ -551,6 +606,24 @@ export default function SubjectSelectionForm() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Step 1 inline errors (shown above Next) */}
+          {step === 1 && errors.length > 0 && (
+            <div id="form-error" className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                {errors.map((error, index) => (
+                  <li key={index}>{error}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Non-blocking Minor mismatch notice */}
+          {step === 1 && minorMismatch && errors.length === 0 && (
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
+              Your current Minor I & II combination differs from the previously saved selection.
+            </div>
           )}
 
           {/* Action Buttons */}

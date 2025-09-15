@@ -2298,7 +2298,7 @@ export const createOldStudent = async (
     // await loadPaperSubjects();
 
     await loadData(true);
-    await loadData(false);
+    // await loadData(false);
 
     res
       .status(201)

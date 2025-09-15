@@ -157,19 +157,11 @@ export default function ProfileContent() {
                       <span className="text-sm text-gray-600">College Roll Number</span>
                       <span className="font-semibold">{student?.classRollNumber || "N/A"}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Admission Year</span>
-                      <span className="font-semibold">
-                        {applicationForm?.courseApplication?.[0]?.applicationTimestamp
-                          ? new Date(applicationForm.courseApplication[0].appNumber).getFullYear()
-                          : "N/A"}
-                      </span>
-                    </div>
+
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">Program Course</span>
                       <span className="font-semibold text-right text-xs">
-                        {courseNameFromStudent}
-                        {courseTypeFromStudent ? ` (${courseTypeFromStudent})` : ""}
+                        {student?.currentPromotion?.programCourse?.name}
                       </span>
                     </div>
                   </div>
@@ -364,23 +356,13 @@ export default function ProfileContent() {
                           <label htmlFor="personalEmail" className="text-sm font-medium text-gray-700">
                             Personal Email ID
                           </label>
-                          <Input
-                            id="personalEmail"
-                            value={personalDetails?.email || user?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          <Input id="personalEmail" value={user?.email || ""} disabled className="bg-gray-50" />
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="institutionalEmail" className="text-sm font-medium text-gray-700">
                             Institutional Email ID
                           </label>
-                          <Input
-                            id="institutionalEmail"
-                            value={(user as any)?.institutionalemail || student?.personalDetails?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          <Input id="institutionalEmail" value={user?.email || ""} disabled className="bg-gray-50" />
                         </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="motherTongue" className="text-sm font-medium text-gray-700">

@@ -1,0 +1,1 @@
+ALTER TABLE "admission_course_details" ALTER COLUMN "student_category_id_fk" DROP NOT NULL;

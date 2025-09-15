@@ -7,14 +7,14 @@ import { applicationFormModel } from "../models/application-form.model.js";
 import { and, eq, ilike } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { findAdmissionById } from "./admission.service.js";
-import { findApplicationFormById } from "./application-form.service.js";
+import { findApplicationFormModelById } from "./application-form.service.js";
 import { sendZeptoMail } from "@/notifications/zepto-mailer.js";
 
 // CREATE
 export async function createGeneralInfo(
   generalInfo: Omit<AdmissionGeneralInfo, "id" | "createdAt" | "updatedAt">,
 ) {
-  const applicationForm = await findApplicationFormById(
+  const applicationForm = await findApplicationFormModelById(
     Number(generalInfo.applicationFormId),
   );
   if (!applicationForm) {
@@ -106,7 +106,7 @@ export async function findByLoginIdAndPassword(
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
       // Fetch the application-form entry
-      const applicationForm = await findApplicationFormById(
+      const applicationForm = await findApplicationFormModelById(
         user.applicationFormId,
       );
 

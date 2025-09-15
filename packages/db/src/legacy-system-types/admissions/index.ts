@@ -466,3 +466,11 @@ export interface OldBoardSubjectName {
     paperName: string;
     code: string | null;
 }
+
+export interface OldBoardResultStatus {
+    id: number;
+    name: string;
+    spcltype: string;
+    pos: number;
+    flag: boolean;
+}

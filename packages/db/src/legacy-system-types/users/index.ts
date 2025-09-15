@@ -389,3 +389,28 @@ export interface OldStaff {
     dateofconfirmation: Date | string | null;
     dateofprobation: Date | string | null;
 }
+
+export interface OldHistoricalRecord {
+    id: number;
+    index_col: number;
+    parent_id: number;
+    courseId: number;
+    classId: number;
+    sectionId: number;
+    shiftId: number;
+    present: boolean;
+    startDate: Date | string | null;
+    endDate: Date | string | null;
+    sessionid: number;
+    alumni: boolean;
+    rollNo: number;
+    dateofJoining: Date | string | null;
+    instid: number;
+    promotionstatus: number;
+    boardresultid: number;
+    univrollno: string | null;
+    univrollnosi: string | null;
+    exmno: string | null;
+    exmsrl: string | null;
+    specialisation: string | null;
+}

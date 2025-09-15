@@ -1,10 +1,25 @@
 import { db } from "@/db/index.js";
+import { StudentAcademicSubjectsDto } from "@repo/db/dtos";
 import {
-  studentAcademicSubjects,
+  academicYearModel,
+  paperModel,
+  sessionModel,
+  studentModel,
+} from "@repo/db/schemas";
+import {
+  admissionAcademicInfoModel,
+  admissionModel,
+  applicationFormModel,
+  boardSubjectModel,
+  boardSubjectNameModel,
+  studentAcademicSubjectModel,
   StudentAcademicSubjects,
-} from "../models/student-academic-subject.model.js";
+} from "@repo/db/schemas/models/admissions";
 import { and, eq } from "drizzle-orm";
-type StudentAcademicSubjectInsert = typeof studentAcademicSubjects.$inferInsert;
+import * as relatedSubjectService from "../../subject-selection/services/related-subject-main.service";
+
+type StudentAcademicSubjectInsert =
+  typeof studentAcademicSubjectModel.$inferInsert;
 
 // CREATE or UPDATE
 export async function createSubject(
@@ -12,26 +27,23 @@ export async function createSubject(
 ) {
   const [existingEntry] = await db
     .select()
-    .from(studentAcademicSubjects)
+    .from(studentAcademicSubjectModel)
     .where(
       and(
         eq(
-          studentAcademicSubjects.admissionAcademicInfoId,
+          studentAcademicSubjectModel.admissionAcademicInfoId,
           subject.admissionAcademicInfoId,
         ),
-        eq(
-          studentAcademicSubjects.academicSubjectId,
-          subject.academicSubjectId,
-        ),
+        eq(studentAcademicSubjectModel.boardSubjectId, subject.boardSubjectId),
       ),
     );
 
   if (existingEntry) {
     // Update existing subject
     const [updatedSubject] = await db
-      .update(studentAcademicSubjects)
+      .update(studentAcademicSubjectModel)
       .set(subject)
-      .where(eq(studentAcademicSubjects.id, existingEntry.id))
+      .where(eq(studentAcademicSubjectModel.id, existingEntry.id))
       .returning();
     return {
       subject: updatedSubject,
@@ -40,7 +52,7 @@ export async function createSubject(
   }
 
   const [newSubject] = await db
-    .insert(studentAcademicSubjects)
+    .insert(studentAcademicSubjectModel)
     .values(subject)
     .returning();
 
@@ -54,8 +66,8 @@ export async function createSubject(
 export async function findSubjectById(id: number) {
   const [subject] = await db
     .select()
-    .from(studentAcademicSubjects)
-    .where(eq(studentAcademicSubjects.id, id));
+    .from(studentAcademicSubjectModel)
+    .where(eq(studentAcademicSubjectModel.id, id));
 
   return subject || null;
 }
@@ -63,18 +75,44 @@ export async function findSubjectById(id: number) {
 // READ all for a specific academic info
 export async function findSubjectsByAcademicInfoId(
   admissionAcademicInfoId: number,
-) {
+): Promise<StudentAcademicSubjectsDto[]> {
   const subjects = await db
     .select()
-    .from(studentAcademicSubjects)
+    .from(studentAcademicSubjectModel)
     .where(
       eq(
-        studentAcademicSubjects.admissionAcademicInfoId,
+        studentAcademicSubjectModel.admissionAcademicInfoId,
         admissionAcademicInfoId,
       ),
     );
 
-  return subjects;
+  return await Promise.all(
+    subjects.map((subject) => mapStudentAcademicSubjectToDto(subject)),
+  );
+}
+
+async function mapStudentAcademicSubjectToDto(
+  s: StudentAcademicSubjects,
+): Promise<StudentAcademicSubjectsDto> {
+  const { boardSubjectId, ...rest } = s;
+
+  const [boardSubject] = await db
+    .select()
+    .from(boardSubjectModel)
+    .where(eq(boardSubjectModel.id, boardSubjectId));
+
+  const [boardSubjectName] = await db
+    .select()
+    .from(boardSubjectNameModel)
+    .where(eq(boardSubjectNameModel.id, boardSubject?.boardSubjectNameId));
+
+  return {
+    ...rest,
+    boardSubject: {
+      ...boardSubject!,
+      boardSubjectName: boardSubjectName!,
+    },
+  };
 }
 
 // UPDATE
@@ -84,9 +122,9 @@ export async function updateSubject(
   if (!subject.id) throw new Error("Subject ID is required for update.");
 
   const [updated] = await db
-    .update(studentAcademicSubjects)
+    .update(studentAcademicSubjectModel)
     .set(subject)
-    .where(eq(studentAcademicSubjects.id, subject.id))
+    .where(eq(studentAcademicSubjectModel.id, subject.id))
     .returning();
 
   return updated;
@@ -95,8 +133,8 @@ export async function updateSubject(
 // DELETE
 export async function deleteSubject(id: number) {
   const [deleted] = await db
-    .delete(studentAcademicSubjects)
-    .where(eq(studentAcademicSubjects.id, id))
+    .delete(studentAcademicSubjectModel)
+    .where(eq(studentAcademicSubjectModel.id, id))
     .returning();
 
   return deleted !== undefined;

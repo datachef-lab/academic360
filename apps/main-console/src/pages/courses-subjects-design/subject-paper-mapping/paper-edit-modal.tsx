@@ -45,6 +45,23 @@ interface PaperEditModalProps {
   paperId?: number; // New prop for paper ID
 }
 
+// Local editable shape used by the form (FK ids + core fields)
+type EditablePaper = {
+  id?: number;
+  name?: string;
+  code?: string;
+  affiliationId?: number;
+  regulationTypeId?: number;
+  programCourseId?: number;
+  classId?: number;
+  academicYearId?: number;
+  subjectId?: number;
+  subjectTypeId?: number;
+  isOptional?: boolean;
+  isActive?: boolean;
+  topics?: unknown[];
+};
+
 export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   isOpen,
   onClose,
@@ -63,7 +80,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   paperId,
 }) => {
   // State for all fields
-  const [form, setForm] = useState<Partial<PaperDto>>({});
+  const [form, setForm] = useState<EditablePaper>({});
   const [components, setComponents] = useState<PaperComponentDto[]>([]);
   const [isLoadingPaper, setIsLoadingPaper] = useState(false);
 
@@ -103,7 +120,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             console.log("paper in paper-edit fetch", res);
             const paperData = res.data.payload;
             if (paperData) {
-              setForm(paperData);
+              setForm({ ...(paperData as EditablePaper) });
               // Note: components are loaded separately as they're not part of the Paper type
               setComponents([]);
             }
@@ -115,10 +132,41 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           .finally(() => {
             setIsLoadingPaper(false);
           });
-      } else if (givenPaper && givenPaper.id) {
+      } else if (givenPaper) {
         // Use givenPaper if provided
-        setForm({ ...givenPaper });
-        setComponents(givenPaper.components || []);
+        const gp = givenPaper as unknown as {
+          id?: number;
+          name?: string;
+          code?: string;
+          affiliationId?: number;
+          regulationTypeId?: number;
+          programCourseId?: number;
+          classId?: number;
+          academicYearId?: number;
+          subjectId?: number;
+          subjectTypeId?: number;
+          isOptional?: boolean;
+          isActive?: boolean;
+          topics?: unknown[];
+          components?: PaperComponentDto[];
+        };
+        setForm({
+          id: gp.id,
+          name: gp.name,
+          code: gp.code,
+          affiliationId: gp.affiliationId,
+          regulationTypeId: gp.regulationTypeId,
+          programCourseId: gp.programCourseId,
+          classId: gp.classId,
+          academicYearId: gp.academicYearId,
+          subjectId: gp.subjectId,
+          subjectTypeId: gp.subjectTypeId,
+          isOptional: gp.isOptional,
+          isActive: gp.isActive,
+          topics: gp.topics,
+        });
+        const comps = gp.components ?? [];
+        setComponents(comps);
       } else {
         // Initialize with default values for new paper
         setForm({
@@ -147,7 +195,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   }, [isOpen, paperId, givenPaper, examComponents]);
 
   // Handlers for each field
-  const handleChange = (field: keyof PaperDto, value: string | number | boolean) => {
+  const handleChange = (field: keyof EditablePaper, value: string | number | boolean) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -158,7 +206,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
     if (availableComponents.length > 0) {
       const newComponent: PaperComponentDto = {
         examComponent: availableComponents[0]!,
-        paperId: form.id || 0,
+        paperId: paperId ?? 0,
         fullMarks: 0,
         credit: 0,
       };
@@ -166,7 +214,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
     } else {
       toast.error("All exam components have already been added");
     }
-  }, [components, examComponents, form.id]);
+  }, [components, examComponents, paperId]);
 
   const removeComponent = useCallback((index: number) => {
     setComponents((prev) => prev.filter((_, i) => i !== index));
@@ -188,10 +236,10 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
   const handleFormSubmit = async () => {
     try {
       const data: PaperDto = {
-        ...form,
+        ...(form as unknown as PaperDto),
         name: form.name || "",
         components,
-        topics: form.topics ?? [],
+        topics: Array.isArray(form.topics) ? (form.topics as unknown[]) : [],
       } as PaperDto;
       await onSubmit(data);
       handleClose();
@@ -525,7 +573,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           </div>
           <div className="flex items-center gap-3">
             <Button onClick={handleFormSubmit} disabled={isLoading} className="bg-purple-600 hover:bg-purple-700">
-              {isLoading ? "Saving..." : form.id ? "Update Paper" : "Create Paper"}
+              {isLoading ? "Saving..." : paperId ? "Update Paper" : "Create Paper"}
             </Button>
           </div>
         </div>

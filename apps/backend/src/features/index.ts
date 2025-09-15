@@ -51,6 +51,20 @@ import {
   topicRouter,
   cascadingDropdownsRouter,
 } from "./course-design/routes/index.js";
+import {
+  relatedSubjectMainRoutes,
+  relatedSubjectSubRoutes,
+  restrictedGroupingMainRoutes,
+  restrictedGroupingClassRoutes,
+  restrictedGroupingSubjectRoutes,
+  restrictedGroupingProgramCourseRoutes,
+  subjectSpecificPassingRoutes,
+} from "./subject-selection/routes/index.js";
+import {
+  boardRouter,
+  boardSubjectNameRouter,
+  boardSubjectRouter,
+} from "./admissions/index.js";
 
 export {
   documentRouter,
@@ -98,4 +112,14 @@ export {
   subjectRouter,
   topicRouter,
   cascadingDropdownsRouter,
+  relatedSubjectMainRoutes,
+  relatedSubjectSubRoutes,
+  restrictedGroupingMainRoutes,
+  restrictedGroupingClassRoutes,
+  restrictedGroupingSubjectRoutes,
+  restrictedGroupingProgramCourseRoutes,
+  subjectSpecificPassingRoutes,
+  boardRouter,
+  boardSubjectNameRouter,
+  boardSubjectRouter,
 };

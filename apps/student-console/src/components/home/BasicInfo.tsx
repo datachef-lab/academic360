@@ -11,20 +11,24 @@ export default function BasicInfo({ student }: { student: StudentDto }) {
       </CardHeader>
       <CardContent className="px-5 pb-2 pt-0 space-y-0">
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-500 text-sm">Course</span>
-          <span className="font-semibold text-gray-800 text-base">{student?.programCourse?.course?.name}</span>
+          <span className="text-gray-500 text-sm">ProgramCourse</span>
+          <span className="font-semibold text-gray-800 text-base">
+            {student?.currentPromotion?.programCourse?.name}
+          </span>
         </div>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">
             Semester
             <span className="text-red-500">{student.active ? "*" : ""}</span>
           </span>
-          <span className="font-semibold text-gray-800 text-base">{""}</span>
+          <span className="font-semibold text-gray-800 text-base">{student.currentPromotion?.class?.name}</span>
         </div>
 
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">Section</span>
-          <span className="font-semibold text-gray-800 text-base">{student.section?.name || "N/A"}</span>
+          <span className="font-semibold text-gray-800 text-base">
+            {student.currentPromotion?.section?.name || "N/A"}
+          </span>
         </div>
 
         <div className="flex items-center justify-between py-2 border-b border-gray-100">

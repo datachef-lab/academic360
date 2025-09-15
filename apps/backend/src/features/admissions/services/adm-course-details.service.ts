@@ -44,6 +44,19 @@ export async function findAdmCourseDetailsByStudentId(
   return await modelToDto(foundAdmCourseDetails);
 }
 
+export async function findAdmCourseDetailsByApplicationFormId(
+  applicationFormId: number,
+): Promise<AdmissionCourseDetailsDto[]> {
+  const courseDetails = await db
+    .select()
+    .from(admissionCourseDetailsModel)
+    .where(
+      eq(admissionCourseDetailsModel.applicationFormId, applicationFormId),
+    );
+
+  return await Promise.all(courseDetails.map((course) => modelToDto(course)));
+}
+
 async function modelToDto(
   model: AdmissionCourseDetails,
 ): Promise<AdmissionCourseDetailsDto> {

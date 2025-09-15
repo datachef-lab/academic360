@@ -3,9 +3,9 @@ import { BookOpen, Layers, FileText, GraduationCap, Lightbulb, Info, AlertTriang
 
 export default function Instructions({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`h-full flex flex-col ${compact ? "" : ""}`}>
+    <div className={`h-full w-full flex flex-col ${compact ? "" : ""}`}>
       {/* Fixed Header - Even Smaller Height */}
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 mb-3 flex-shrink-0">
+      <div className="bg-white rounded-xl w-full shadow-lg border border-gray-100 mb-3 flex-shrink-0">
         <div className="p-2 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-sm">

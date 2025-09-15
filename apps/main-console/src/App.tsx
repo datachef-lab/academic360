@@ -73,6 +73,10 @@ import AlternativeSubjectsPage from "./features/academic-year-setup/pages/altern
 import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import UnderConstructionPage from "./pages/under-construction-page";
+import AdmissionBoardMaster from "./features/academic-year-setup/layouts/admission-board-master";
+import BoardPage from "./features/academic-year-setup/pages/board-page";
+import BoardSubjectNamePage from "./features/academic-year-setup/pages/board-subject-name-page";
+import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject-page";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -105,7 +109,15 @@ const router = createBrowserRouter(
             { path: "admission-stats", element: <UnderConstructionPage /> },
             { path: "eligibility-criteria", element: <UnderConstructionPage /> },
             { path: "merit-criteria", element: <UnderConstructionPage /> },
-            { path: "board-subjects", element: <UnderConstructionPage /> },
+            {
+              path: "board-subjects",
+              element: <AdmissionBoardMaster />,
+              children: [
+                { path: "", element: <BoardPage /> },
+                { path: "board-subject-names", element: <BoardSubjectNamePage /> },
+                { path: "board-subjects", element: <BoardSubjectPage /> },
+              ],
+            },
             {
               path: "course-design",
               element: <courseSubjectModule.CoursesSubjectsMaster />,

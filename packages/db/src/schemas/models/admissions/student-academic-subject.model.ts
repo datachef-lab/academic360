@@ -11,9 +11,6 @@ export const studentAcademicSubjectModel = pgTable("student_academic_subjects", 
     admissionAcademicInfoId: integer("admission_academic_info_id_fk")
         .references(() => admissionAcademicInfoModel.id)
         .notNull(),
-    // academicSubjectId: integer("academic_subject_id_fk")
-    //     .references(() => academicSubjectModel.id)
-    //     .notNull(),
     boardSubjectId: integer("board_subject_id_fk")
         .references(() => boardSubjectModel.id)
         .notNull(),

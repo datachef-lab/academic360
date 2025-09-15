@@ -3,7 +3,25 @@ import {
   ApplicationForm,
   applicationFormModel,
 } from "../models/application-form.model.js";
-import { ApplicationFormDto } from "@/types/admissions/index.js";
+import {
+  ApplicationFormDto,
+  AdmissionGeneralInfoDto,
+  AdmissionAdditionalInfoDto,
+} from "@repo/db/dtos/admissions";
+import {
+  EligibilityCriteriaT,
+  StudentCategoryT,
+  PersonalDetailsT,
+  UserT,
+  HealthT,
+  AccommodationT,
+  EmergencyContactT,
+  BankBranchT,
+  TransportDetailsT,
+  AnnualIncomeT,
+  FamilyT,
+  PaymentT,
+} from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import {
   checkExistingEntry,
@@ -19,6 +37,7 @@ import {
   deleteAdmissionAdditionalInfo,
   findAdditionalInfoByApplicationFormId,
 } from "./admission-additional-info.service.js";
+import { findAdmCourseDetailsByApplicationFormId } from "./adm-course-details.service.js";
 import {
   deletePayment,
   findPaymentInfoByApplicationFormId,
@@ -72,6 +91,15 @@ export async function findApplicationFormById(id: number) {
   const dto = await formatAppform(form);
 
   return dto;
+}
+
+export async function findApplicationFormModelById(id: number) {
+  const [form] = await db
+    .select()
+    .from(applicationFormModel)
+    .where(eq(applicationFormModel.id, id));
+
+  return form;
 }
 
 // READ by Admission ID
@@ -181,19 +209,33 @@ export async function formatAppform(
 ): Promise<ApplicationFormDto | null> {
   if (!form) return null;
 
+  const { admissionId, ...formWithoutExcluded } = form;
   const dto: ApplicationFormDto = {
-    ...form,
+    ...formWithoutExcluded,
+    applicationNumber: form.applicationNumber || "",
+    blockedBy: null as UserT | null,
+    admApprovedBy: null as UserT | null,
     generalInfo: null,
     academicInfo: null,
     courseApplication: null,
     additionalInfo: null,
-    paymentInfo: null,
-    currentStep: 0,
+    paymentInfo: null as PaymentT | null,
   };
 
   const generalInfo = await findGeneralInfoByApplicationFormId(form.id!);
   dto.generalInfo = generalInfo
-    ? (generalInfo as ApplicationFormDto["generalInfo"])
+    ? ({
+        ...generalInfo,
+        eligibilityCriteria: null as EligibilityCriteriaT | null,
+        studentCategory: null as StudentCategoryT | null,
+        personalDetails: null as PersonalDetailsT | null,
+        spqtaApprovedBy: null as UserT | null,
+        health: null as HealthT | null,
+        accommodation: null as AccommodationT | null,
+        emergencyContact: null as EmergencyContactT | null,
+        bankBranch: null as BankBranchT | null,
+        transportDetails: null as TransportDetailsT | null,
+      } as AdmissionGeneralInfoDto)
     : null;
 
   dto.academicInfo = await findAcademicInfoByApplicationFormId(form.id!);
@@ -203,10 +245,14 @@ export async function formatAppform(
     const sportsInfo = await getSportsInfoByAdditionalInfoId(
       additionalInfo.id!,
     );
-    dto.additionalInfo = await findAdditionalInfoByApplicationFormId(form.id!);
+    dto.additionalInfo = {
+      ...additionalInfo,
+      annualIncome: null as AnnualIncomeT | null,
+      familyDetails: null as FamilyT | null,
+    } as AdmissionAdditionalInfoDto;
   }
 
-  dto.courseApplication = await findCourseApplicationByApplicationFormId(
+  dto.courseApplication = await findAdmCourseDetailsByApplicationFormId(
     form.id!,
   );
 

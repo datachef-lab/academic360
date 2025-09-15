@@ -208,6 +208,9 @@ importers:
       '@types/socket.io':
         specifier: ^3.0.1
         version: 3.0.2
+      '@types/string-similarity':
+        specifier: ^4.0.2
+        version: 4.0.2
       axios:
         specifier: ^1.11.0
         version: 1.11.0
@@ -274,9 +277,15 @@ importers:
       pg:
         specifier: ^8.16.3
         version: 8.16.3
+      qs:
+        specifier: ^6.14.0
+        version: 6.14.0
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
+      string-similarity:
+        specifier: ^4.0.4
+        version: 4.0.4
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -3322,6 +3331,9 @@ packages:
   '@types/socket.io@3.0.2':
     resolution: {integrity: sha512-pu0sN9m5VjCxBZVK8hW37ZcMe8rjn4HHggBN5CbaRTvFwv5jOmuIRZEuddsBPa9Th0ts0SIo3Niukq+95cMBbQ==}
     deprecated: This is a stub types definition. socket.io provides its own type definitions, so you do not need this installed.
+
+  '@types/string-similarity@4.0.2':
+    resolution: {integrity: sha512-LkJQ/jsXtCVMK+sKYAmX/8zEq+/46f1PTQw7YtmQwb74jemS1SlNLmARM2Zml9DgdDTWKAtc5L13WorpHPDjDA==}
 
   '@types/use-sync-external-store@0.0.6':
     resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
@@ -6451,6 +6463,10 @@ packages:
     resolution: {integrity: sha512-+38qI9SOr8tfZ4QmJNplMUxqjbe7LKvvZgWdExBOmd+egZTtjLB67Gu0HRX3u/XOq7UU2Nx6nsjvS16Z9uwfpg==}
     engines: {node: '>=0.6'}
 
+  qs@6.14.0:
+    resolution: {integrity: sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w==}
+    engines: {node: '>=0.6'}
+
   queue-lit@1.5.2:
     resolution: {integrity: sha512-tLc36IOPeMAubu8BkW8YDBV+WyIgKlYU7zUNs0J5Vk9skSZ4JfGlPOqplP0aHdfv7HL0B2Pg6nwiq60Qc6M2Hw==}
     engines: {node: '>=12'}
@@ -7226,6 +7242,10 @@ packages:
 
   string-convert@0.2.1:
     resolution: {integrity: sha512-u/1tdPl4yQnPBjnVrmdLo9gtuLvELKsAoRapekWggdiQNvvvum+jYF329d84NAa660KQw7pB2n36KrIKVoXa3A==}
+
+  string-similarity@4.0.4:
+    resolution: {integrity: sha512-/q/8Q4Bl4ZKAPjj8WerIBJWALKkaPRfrvhfF8k/B23i4nzrlRj2/go1m90In7nG/3XDSbOo0+pu6RvCTM9RGMQ==}
+    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
   string-width@1.0.2:
     resolution: {integrity: sha512-0XsVpQLnVCXHJfyEs8tC0zpTVIr5PKKsQtkT29IwupnPTjtPmQ3xT/4yCREF9hYkV/3M3kzcUTSAZT6a6h81tw==}
@@ -10857,6 +10877,8 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@types/string-similarity@4.0.2': {}
+
   '@types/use-sync-external-store@0.0.6': {}
 
   '@types/uuid@9.0.8': {}
@@ -14340,6 +14362,10 @@ snapshots:
     dependencies:
       side-channel: 1.1.0
 
+  qs@6.14.0:
+    dependencies:
+      side-channel: 1.1.0
+
   queue-lit@1.5.2: {}
 
   queue-microtask@1.2.3: {}
@@ -15365,6 +15391,8 @@ snapshots:
   string-argv@0.3.2: {}
 
   string-convert@0.2.1: {}
+
+  string-similarity@4.0.4: {}
 
   string-width@1.0.2:
     dependencies:

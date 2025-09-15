@@ -85,6 +85,9 @@ import {
   sportsInfoRouter,
   studentAcademicSubjectRouter,
   academicSubjectRouter,
+  boardRouter,
+  boardSubjectNameRouter,
+  boardSubjectRouter,
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
@@ -103,6 +106,16 @@ import {
   examComponentRouter,
   cascadingDropdownsRouter,
 } from "@/features/course-design/routes/index.js";
+import {
+  relatedSubjectMainRoutes,
+  relatedSubjectSubRoutes,
+  restrictedGroupingMainRoutes,
+  restrictedGroupingClassRoutes,
+  restrictedGroupingSubjectRoutes,
+  restrictedGroupingProgramCourseRoutes,
+  subjectSpecificPassingRoutes,
+  studentSubjectsRoutes,
+} from "@/features/subject-selection/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
 
@@ -327,6 +340,9 @@ app.use(
   studentAcademicSubjectRouter,
 );
 app.use("/api/admissions/academic-subject", academicSubjectRouter);
+app.use("/api/admissions/boards", boardRouter);
+app.use("/api/admissions/board-subject-names", boardSubjectNameRouter);
+app.use("/api/admissions/board-subjects", boardSubjectRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 
@@ -359,6 +375,35 @@ app.use("/api/course-design/course-levels", courseLevelRouter);
 app.use("/api/course-design/exam-components", examComponentRouter);
 app.use("/api/course-design/specializations", specializationRouter);
 app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+
+// Subject Selection routes
+app.use(
+  "/api/subject-selection/related-subject-mains",
+  relatedSubjectMainRoutes,
+);
+app.use("/api/subject-selection/related-subject-subs", relatedSubjectSubRoutes);
+app.use(
+  "/api/subject-selection/restricted-grouping-mains",
+  restrictedGroupingMainRoutes,
+);
+app.use(
+  "/api/subject-selection/restricted-grouping-classes",
+  restrictedGroupingClassRoutes,
+);
+app.use(
+  "/api/subject-selection/restricted-grouping-subjects",
+  restrictedGroupingSubjectRoutes,
+);
+app.use(
+  "/api/subject-selection/restricted-grouping-program-courses",
+  restrictedGroupingProgramCourseRoutes,
+);
+app.use(
+  "/api/subject-selection/subject-specific-passings",
+  subjectSpecificPassingRoutes,
+);
+app.use("/api/subject-selection", studentSubjectsRoutes);
+
 app.use("/api/bulk-upload", bulkUploadRouter);
 
 app.all("*", (req: Request, res: Response) => {

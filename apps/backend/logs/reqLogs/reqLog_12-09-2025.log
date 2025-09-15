@@ -1,0 +1,5 @@
+12-09-2025	15:28:07	b9e5ae01-eae9-45f9-b30e-dbce194ca6cd	POST	/auth/login	http://localhost:5173
+12-09-2025	15:28:07	0bf08eac-5772-44e5-b372-ea7da46697b2	OPTIONS	/auth/login	http://localhost:5173
+12-09-2025	15:28:01	a97d67a4-07d4-4fd2-aba5-be7c319e5c06	GET	/api/v1/settings/file/5	undefined
+12-09-2025	15:28:01	afbc94f5-ca4f-49d9-b188-377bd999c391	GET	/api/v1/settings	http://localhost:5173
+12-09-2025	15:28:01	787f128a-413d-482b-9e47-6c22de22f936	GET	/api/v1/settings	http://localhost:5173

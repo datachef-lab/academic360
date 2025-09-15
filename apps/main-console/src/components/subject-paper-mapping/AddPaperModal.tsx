@@ -1,11 +1,10 @@
 import { Class } from "@/types/academics/class";
-import type {
+import {
   Affiliation,
   Course,
   ExamComponent,
   Paper,
   PaperComponentDto,
-  PaperDto,
   ProgramCourse,
   RegulationType,
   Subject,
@@ -22,9 +21,26 @@ import { createPaper } from "@/services/course-design.api";
 import { AcademicYear } from "@/types/academics/academic-year";
 import { MultiSelect } from "@/components/ui/AdvancedMultiSelect";
 import { CourseType } from "@repo/db/schemas";
-interface InputPaper extends Omit<PaperDto, "programCourseId" | "classId"> {
+interface InputPaper {
+  id?: number;
+  name: string;
+  code: string;
+  subjectId: number;
+  affiliationId: number;
+  regulationTypeId: number;
+  subjectTypeId: number;
+  academicYearId: number;
   programCourses: number[];
   classes: number[];
+  components: PaperComponentDto[];
+  isOptional: boolean;
+  sequence: number | null;
+  isActive: boolean;
+  topics: unknown[];
+}
+
+interface PaperWithComponents extends Paper {
+  components: PaperComponentDto[];
 }
 
 interface AddModalProps {
@@ -61,15 +77,15 @@ export default function AddPaperModal({
     classes,
   },
 }: AddModalProps) {
-  const [defaultPaper] = useState<PaperDto>({
+  const defaultPaper: InputPaper = {
     name: "",
     subjectId: 0, // No default value
     affiliationId: 0, // No default value
     regulationTypeId: 0, // No default value
     subjectTypeId: 0, // No default value
     academicYearId: 0, // No default value
-    programCourseId: 0, // No default value
-    classId: 0, // Allow multiple semesters/classes
+    programCourses: [], // No default value
+    classes: [], // Allow multiple semesters/classes
     components: examComponents.map((examComponent) => ({
       paperId: 0, // This will be set when the paper is created
       examComponent,
@@ -81,32 +97,9 @@ export default function AddPaperModal({
     sequence: null,
     isActive: true,
     topics: [],
-  });
-  const setPapers = useState<PaperDto[]>([defaultPaper])[1];
-  const [inputPaper, setInputPaper] = useState<InputPaper[]>([
-    {
-      name: "",
-      subjectId: 0, // No default value
-      affiliationId: 0, // No default value
-      regulationTypeId: 0, // No default value
-      subjectTypeId: 0, // No default value
-      academicYearId: 0, // No default value
-      programCourses: [], // No default value
-      classes: [], // Allow multiple semesters/classes
-      components: examComponents.map((examComponent) => ({
-        paperId: 0, // This will be set when the paper is created
-        examComponent,
-        fullMarks: 0,
+  };
 
-        credit: 0,
-      })),
-      code: "",
-      isOptional: false,
-      sequence: null,
-      isActive: true,
-      topics: [],
-    },
-  ]);
+  const [inputPaper, setInputPaper] = useState<InputPaper[]>([defaultPaper]);
 
   // New state for showing selected items
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
@@ -141,7 +134,7 @@ export default function AddPaperModal({
         code: "",
         isOptional: false,
         sequence: null,
-        disabled: false,
+        isActive: true,
         topics: [],
       },
     ]);
@@ -177,24 +170,25 @@ export default function AddPaperModal({
   const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const papers: PaperDto[] = [];
+    const papers: PaperWithComponents[] = [];
     console.log(papers);
     for (const paper of inputPaper) {
       for (const programCourseId of paper.programCourses) {
         for (const classId of paper.classes) {
-          const { programCourses, classes, ...rest } = paper;
+          const { programCourses, classes, components, ...rest } = paper;
           console.log(classes, programCourses);
           papers.push({
             ...rest,
             programCourseId: programCourseId,
             classId: classId,
-          });
+            components: components,
+          } as PaperWithComponents);
         }
       }
     }
     console.log("Papers:", papers);
 
-    const formattedPapers: PaperDto[] = [];
+    const formattedPapers: PaperWithComponents[] = [];
     for (let i = 0; i < papers.length; i++) {
       const paper = papers[i]!;
       if (
@@ -220,11 +214,11 @@ export default function AddPaperModal({
         })
         .filter((comp): comp is PaperComponentDto => comp !== undefined);
 
-      formattedPapers.push({ ...paper, components: components as typeof paper.components });
+      formattedPapers.push({ ...paper, components: components });
     }
 
     try {
-      const response = await createPaper(formattedPapers as Paper[]);
+      const response = await createPaper(formattedPapers);
       console.log("create papers response:", response);
       toast.success("Papers saved successfully");
       onCancel(); // Close the modal after successful submission
@@ -232,7 +226,7 @@ export default function AddPaperModal({
       console.log(error);
       toast.error("Papers doesn't saved");
     } finally {
-      setPapers([defaultPaper]); // Reset to default paper after submission
+      setInputPaper([defaultPaper]); // Reset to default paper after submission
       fetchData();
     }
   };

@@ -14,6 +14,7 @@ import {
   OldBoardSubjectMappingSub,
   OldBoardSubjectName,
   OldBoardSubjectMapping,
+  OldBoardResultStatus,
 } from "@repo/db/legacy-system-types/admissions";
 import {
   OldCityMaintab,
@@ -30,7 +31,11 @@ interface OldLanguageMedium {
   readonly id: number;
   name: string;
 }
-import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
+import {
+  OldHistoricalRecord,
+  OldStaff,
+  OldStudent,
+} from "@repo/db/legacy-system-types/users";
 import {
   addressModel,
   annualIncomeModel,
@@ -119,6 +124,12 @@ import {
   sectionModel,
   admissionAdditionalInfoModel,
   transportDetailsModel,
+  Class,
+  RegulationType,
+  Affiliation,
+  BoardResultStatus,
+  boardResultStatusModel,
+  Section,
 } from "@repo/db/schemas";
 import { AdmissionCourseDetailsT } from "@repo/db/schemas/models/admissions/adm-course-details.model";
 // import { processStudent } from "../controllers/oldStudent.controller"; // Removed to avoid conflict
@@ -137,10 +148,18 @@ import {
   OldAcademicDetails,
   OldAcademicYear,
   OldBoard,
+  OldSection,
   OldSession,
 } from "@repo/db/legacy-system-types/academics";
 import { addDegree } from "@/features/resources/services/degree.service";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
+import {
+  PromotionInsertSchema,
+  promotionModel,
+  PromotionT,
+} from "@repo/db/schemas/models/batches/promotions.model";
+import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
+import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
 
 const BATCH_SIZE = 500;
 
@@ -162,7 +181,8 @@ async function fetchData(
                 coursedetails cd
             WHERE 
                 cd.id = s.admissionid
-                AND pd.id = cd.parent_id;
+                AND pd.id = cd.parent_id
+                AND cd.courseid = 64;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -174,6 +194,7 @@ async function fetchData(
             WHERE 
                 cd.id = s.admissionid
                 AND pd.id = cd.parent_id
+                AND cd.courseid = 64
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -187,7 +208,8 @@ async function fetchData(
                 coursedetails cd
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
-                AND cd.parent_id = pd.id;
+                AND cd.parent_id = pd.id
+                AND cd.courseid = 64;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -198,6 +220,7 @@ async function fetchData(
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
                 AND cd.parent_id = pd.id
+                AND cd.courseid = 64
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -247,28 +270,6 @@ export async function loadData(byIsTransferred: boolean) {
   }
 
   console.log("Application forms migrated successfully");
-
-  // if (byIsTransferred) {
-  //     const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
-  //     const totalBatches = Math.uuceil(totalRows / BATCH_SIZE); // Calculate total number of batches
-  //     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
-  //         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
-
-  //         const { oldDataArr } = await fetchData(byIsTransferred, offset, BATCH_SIZE);
-
-  //         for (let i = 0; i < oldDataArr.length; i++) {
-  //             // Fetch the related studentpersonalDetail
-  //             try {
-  //                 await processApplicationForm(oldDataArr[i]);
-  //                 const name = [oldDataArr[i]?.firstName, oldDataArr[i]?.middleName, oldDataArr[i]?.lastName].filter(Boolean).join(' ');
-  //                 console.log(`Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`);
-  //             } catch (error) {
-  //                 console.log(error)
-  //             }
-
-  //         }
-  //     }
-  // }
 
   // await loadAllStaffs();
 }
@@ -328,7 +329,7 @@ async function addAdmissionApplicationForm(
   if (!oldSession) {
     throw new Error("No session info found");
   }
-  console.log("oldSession", oldSession);
+  // console.log("oldSession", oldSession);
   const [[oldAcademicYear]] = (await mysqlConnection.query(`
         SELECT *
         FROM accademicyear
@@ -345,7 +346,7 @@ async function addAdmissionApplicationForm(
     .select()
     .from(academicYearModel)
     .where(
-      and(
+      or(
         ilike(academicYearModel.year, academicYearName),
         eq(academicYearModel.legacyAcademicYearId, oldAcademicYear.id),
       ),
@@ -368,7 +369,7 @@ async function addAdmissionApplicationForm(
     .select()
     .from(sessionModel)
     .where(
-      and(
+      or(
         eq(sessionModel.legacySessionId, oldSession.id!),
         eq(sessionModel.academicYearId, foundAcademicYear.id),
         eq(sessionModel.name, oldSession.sessionName),
@@ -466,7 +467,7 @@ async function addAdmGeneralInformation(
   let personalDetails = await addPersonalDetails(oldAdmStudentPersonalDetails);
 
   let accommodation: Accommodation | null = null;
-  if (oldStudent.placeofstay) {
+  if (oldStudent && oldStudent.placeofstay) {
     accommodation = await addAccommodation(
       oldStudent.placeofstay,
       oldStudent.placeofstayaddr || "",
@@ -475,7 +476,12 @@ async function addAdmGeneralInformation(
     );
   }
 
-  let emergencyContact = await addEmergencyContact(oldStudent);
+  let emergencyContact: EmergencyContact | null = null;
+  if (oldStudent) {
+    emergencyContact = await addEmergencyContact(
+      oldStudent as unknown as EmergencyContact,
+    );
+  }
 
   // let family = await addFamily(oldAdmStudentPersonalDetails, oldStudent); // TO BE ADDED IN Add Student
 
@@ -589,6 +595,7 @@ async function addAdmAcademicInfo(
   const [admAcademicInfo] = await db
     .insert(admissionAcademicInfoModel)
     .values({
+      legacyAcademicInfoId: oldAcademicDetails.id,
       applicationFormId: applicationForm.id!,
       boardId: finalBoard.id as number,
 
@@ -643,6 +650,7 @@ async function addAdmAcademicInfo(
 async function addAdmCourseApps(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
+  oldAcademicDetails: OldAcademicDetails,
 ) {
   const [oldAdmCourseDetails] = (await mysqlConnection.query(`
         SELECT *
@@ -650,10 +658,23 @@ async function addAdmCourseApps(
         WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
     `)) as [OldCourseDetails[], any];
 
+  console.log(
+    "oldAdmCourseDetails",
+    oldAdmCourseDetails.map((courseDetail) => courseDetail.id),
+  );
   for (let i = 0; i < oldAdmCourseDetails.length; i++) {
     const oldCourseDetail = oldAdmCourseDetails[i];
 
-    await processOldCourseDetails(oldCourseDetail, applicationForm);
+    const newAdmissionCourseDetails = await processOldCourseDetails(
+      oldCourseDetail,
+      applicationForm,
+    );
+    console.log(
+      "newAdmissionCourseDetails",
+      newAdmissionCourseDetails,
+      "created newAdmissionCourseDetails?.id:",
+      newAdmissionCourseDetails?.id,
+    );
   }
 }
 
@@ -683,20 +704,24 @@ async function processAdmissionApplicationForm(
     return undefined;
   }
 
-  const admAcademSubjects = await addAdmAcademSubjects(
+  const { oldAcademicDetails } = await addAdmAcademSubjects(
     oldAdmStudentPersonalDetails,
     applicationForm,
     admAcademicInfo,
   );
 
-  await addAdmCourseApps(oldAdmStudentPersonalDetails, applicationForm);
+  await addAdmCourseApps(
+    oldAdmStudentPersonalDetails,
+    applicationForm,
+    oldAcademicDetails,
+  );
 
   const admAdditionalInfo = await addAdmAdditionalInfo(
     oldAdmStudentPersonalDetails,
     applicationForm,
   );
 
-  return applicationForm;
+  return { applicationForm, oldAcademicDetails };
 }
 
 async function addAdmAcademSubjects(
@@ -726,7 +751,7 @@ async function addAdmAcademSubjects(
     const oldAdmAcademicSubject = admAcademicSubjects[i];
 
     // Create Board and subject mapping and use that mapping as fk in student-adm-academic-subject
-    const boardSubject = await addBoardSubject(
+    let boardSubject = await addBoardSubject(
       oldAdmAcademicSubject.subjectId!,
       oldAcademicDetails.boardId!,
     );
@@ -737,7 +762,71 @@ async function addAdmAcademSubjects(
       console.log(
         `No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`,
       );
-      continue;
+
+      const [[oldAdmRelevantSubject]] = (await mysqlConnection.query(`
+                SELECT * FROM admrelevantpaper WHERE id = ${oldAdmAcademicSubject.subjectId};
+            `)) as [OldBoardSubjectName[], any];
+
+      let [foundBoardSubjectName] = await db
+        .select()
+        .from(boardSubjectNameModel)
+        .where(
+          ilike(
+            boardSubjectNameModel.name,
+            oldAdmRelevantSubject.paperName.trim(),
+          ),
+        );
+
+      if (!foundBoardSubjectName) {
+        const [newBoardSubjectName] = await db
+          .insert(boardSubjectNameModel)
+          .values({
+            name: oldAdmRelevantSubject.paperName.trim(),
+          })
+          .returning();
+        foundBoardSubjectName = newBoardSubjectName;
+      }
+
+      const foundBoard = await addBoard(oldAcademicDetails.boardId!);
+
+      const [foundBoardSubject] = await db
+        .select()
+        .from(boardSubjectModel)
+        .where(
+          and(
+            eq(boardSubjectModel.boardId, foundBoard?.id!),
+            eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
+            eq(
+              boardSubjectModel.passingMarksTheory,
+              oldAdmAcademicSubject.theoryPassMarks || 0,
+            ),
+            eq(
+              boardSubjectModel.passingMarksPractical,
+              oldAdmAcademicSubject.practicalPassMarks || 0,
+            ),
+            eq(
+              boardSubjectModel.fullMarksTheory,
+              oldAdmAcademicSubject.theoryFullMarks || 0,
+            ),
+            eq(
+              boardSubjectModel.fullMarksPractical,
+              oldAdmAcademicSubject.practicalFullMarks || 0,
+            ),
+          ),
+        );
+
+      const [newBoardSubject] = await db
+        .insert(boardSubjectModel)
+        .values({
+          boardId: foundBoard?.id!,
+          boardSubjectNameId: foundBoardSubjectName.id!,
+          passingMarksTheory: oldAdmAcademicSubject.theoryPassMarks || 0,
+          passingMarksPractical: oldAdmAcademicSubject.practicalPassMarks || 0,
+          fullMarksTheory: oldAdmAcademicSubject.theoryFullMarks || 0,
+          fullMarksPractical: oldAdmAcademicSubject.practicalFullMarks || 0,
+        })
+        .returning();
+      boardSubject = newBoardSubject;
     }
 
     const [existingSubject] = await db
@@ -775,6 +864,8 @@ async function addAdmAcademSubjects(
       });
     }
   }
+
+  return { oldAcademicDetails, admAcademicSubjects };
 }
 
 async function addAdmAdditionalInfo(
@@ -822,13 +913,23 @@ async function addBoardSubject(
 
   const board = await addBoard(oldBoard.id!);
 
-  const [[oldBoardSubjectMappingMain]] = (await mysqlConnection.query(`
+  const [oldBoardSubjectMappingMains] = (await mysqlConnection.query(`
         SELECT *
         FROM boardsubjectmappingmain
         WHERE boardid = ${oldBoardId};
     `)) as [OldBoardSubjectMapping[], any];
 
-  const [[boardSubjectSubMapping]] = (await mysqlConnection.query(`
+  if (
+    !oldBoardSubjectMappingMains ||
+    oldBoardSubjectMappingMains.length === 0
+  ) {
+    console.warn(`No boardsubjectmappingmain found for boardId: ${oldBoardId}`);
+    return undefined;
+  }
+
+  const oldBoardSubjectMappingMain = oldBoardSubjectMappingMains[0];
+
+  const [boardSubjectSubMappings] = (await mysqlConnection.query(`
         SELECT *
         FROM boardsubjectmappingsub
         WHERE
@@ -836,18 +937,27 @@ async function addBoardSubject(
             AND parent_id = ${oldBoardSubjectMappingMain.id};
     `)) as [OldBoardSubjectMappingSub[], any];
 
+  const boardSubjectSubMapping = boardSubjectSubMappings?.[0];
   if (!boardSubjectSubMapping) {
     console.log(
-      `No board subject mapping found for subject ID: ${oldAdmRelevantSubjectId}`,
+      `No old-board-subject mapping found for subject ID: ${oldAdmRelevantSubjectId}`,
     );
     return undefined;
   }
 
-  const [[oldBoardSubjectName]] = (await mysqlConnection.query(`
+  const [oldBoardSubjectNames] = (await mysqlConnection.query(`
         SELECT *
         FROM admrelevantpaper
         WHERE id = ${boardSubjectSubMapping.subjectid};
     `)) as [OldBoardSubjectName[], any];
+
+  const oldBoardSubjectName = oldBoardSubjectNames?.[0];
+  if (!oldBoardSubjectName) {
+    console.warn(
+      `No admrelevantpaper found for id: ${boardSubjectSubMapping.subjectid}`,
+    );
+    return undefined;
+  }
 
   let [foundBoardSubjectName] = await db
     .select()
@@ -882,7 +992,7 @@ async function addBoardSubject(
           boardSubjectModel.legacyBoardSubjectMappingSubId,
           boardSubjectSubMapping.id,
         ),
-        eq(boardSubjectModel.boardId, board.id!),
+        eq(boardSubjectModel.boardId, board?.id!),
         eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
       ),
     );
@@ -895,7 +1005,7 @@ async function addBoardSubject(
     .insert(boardSubjectModel)
     .values({
       legacyBoardSubjectMappingSubId: boardSubjectSubMapping.id,
-      boardId: board.id!,
+      boardId: board?.id!,
       boardSubjectNameId: foundBoardSubjectName.id!,
       fullMarksTheory: boardSubjectSubMapping.thfull || 0,
       passingMarksTheory: boardSubjectSubMapping.thpass || 0,
@@ -929,7 +1039,9 @@ export async function processApplicationForm(
   const [[oldCourseDetails]] = (await mysqlConnection.query(`
         SELECT * 
         FROM coursedetails
-        WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
+        WHERE 
+            parent_id = ${oldAdmStudentPersonalDetails.id}
+            AND transferred = true;
     `)) as [OldCourseDetails[], any];
 
   if (!oldCourseDetails) {
@@ -944,15 +1056,24 @@ export async function processApplicationForm(
         WHERE admissionId = ${oldCourseDetails.id};
     `)) as [OldStudent[], any];
 
+  if (!oldStudent) {
+    console.warn(
+      `No studentpersonaldetails found for admissionId: ${oldCourseDetails.id}`,
+    );
+    return undefined;
+  }
+
   // Do the admission application form
-  const applicationForm = await processAdmissionApplicationForm(
+  const admApp = await processAdmissionApplicationForm(
     oldStudent,
     oldAdmStudentPersonalDetails,
   );
 
-  if (!applicationForm) {
+  if (!admApp?.applicationForm) {
     return undefined;
   }
+
+  const { applicationForm, oldAcademicDetails } = admApp;
 
   const [existingAdmCourseDetails] = await db
     .select()
@@ -994,16 +1115,30 @@ export async function processApplicationForm(
     .from(academicYearModel)
     .where(eq(academicYearModel.id, session?.academicYearId as number));
 
+  console.log(
+    "oldStudent",
+    oldStudent,
+    "oldstudent_id:",
+    oldStudent?.id,
+    oldStudent?.name,
+  );
+
   const user = await addUser(
     oldAdmStudentPersonalDetails,
     "STUDENT",
-    oldStudent.codeNumber,
+    oldStudent?.codeNumber ??
+      `STD-${oldAdmStudentPersonalDetails.id}-${applicationForm.id}`,
   );
 
   if (!user) {
+    console.log(
+      "in processApplicationForm(), student-type user not added for application form ID: ",
+      applicationForm.id,
+    );
     return undefined;
   }
 
+  console.log("in processApplicationForm(), added student", user.email);
   const [foundAdmissionProgramCourse] = await db
     .select()
     .from(admissionProgramCourseModel)
@@ -1032,6 +1167,13 @@ export async function processApplicationForm(
     user,
     foundProgramCourse,
     applicationForm,
+    existingAdmCourseDetails,
+  );
+
+  await addPromotion(
+    student.id!,
+    applicationForm,
+    oldStudent.id!,
     existingAdmCourseDetails,
   );
 
@@ -1178,9 +1320,170 @@ export async function processApplicationForm(
     existingAdmCourseDetails,
     academicYear,
     student.id!,
+    oldAcademicDetails.boardId!,
   );
 
   return student;
+}
+
+async function addPromotion(
+  studentId: number,
+  applicationForm: ApplicationForm,
+  oldStudentId: number,
+  admissionCourseDetails: AdmissionCourseDetails,
+) {
+  const [foundAdmission] = await db
+    .select()
+    .from(admissionModel)
+    .where(eq(admissionModel.id, applicationForm.admissionId!));
+
+  const [[oldHistoricalRecord]] = (await mysqlConnection.query(`
+        SELECT * FROM historicalrecord WHERE parent_id = ${oldStudentId}
+    `)) as [OldHistoricalRecord[], any];
+
+  const [foundSession] = await db
+    .select()
+    .from(sessionModel)
+    .where(eq(sessionModel.id, foundAdmission?.sessionId!));
+
+  const foundClass = await addClass(oldHistoricalRecord?.classId!);
+
+  const [foundAdmissionProgramCourse] = await db
+    .select()
+    .from(admissionProgramCourseModel)
+    .where(
+      eq(
+        admissionProgramCourseModel.id,
+        admissionCourseDetails.admissionProgramCourseId,
+      ),
+    );
+
+  const [foundProgramCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(
+      eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId!),
+    );
+
+  const [[oldPromotionStatus]] = (await mysqlConnection.query(`
+        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord?.promotionstatus}
+    `)) as [OldPromotionStatus[], any];
+
+  let [foundPromotionStatus] = await db
+    .select()
+    .from(promotionStatusModel)
+    .where(
+      eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
+    );
+
+  if (!foundPromotionStatus) {
+    foundPromotionStatus = (
+      await db
+        .insert(promotionStatusModel)
+        .values({
+          legacyPromotionStatusId: oldPromotionStatus?.id!,
+          name: oldPromotionStatus?.name!,
+          type: oldPromotionStatus?.spltype.toUpperCase().trim() as
+            | "REGULAR"
+            | "READMISSION"
+            | "CASUAL",
+        })
+        .returning()
+    )[0];
+  }
+
+  let foundBoardResultStatus: BoardResultStatus | undefined;
+  if (oldHistoricalRecord?.boardresultid) {
+    foundBoardResultStatus = (
+      await db
+        .select()
+        .from(boardResultStatusModel)
+        .where(
+          eq(
+            boardResultStatusModel.legacyBoardResultStatusId,
+            oldHistoricalRecord?.boardresultid!,
+          ),
+        )
+    )[0];
+
+    if (!foundBoardResultStatus) {
+      const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
+                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord?.boardresultid}
+            `)) as [OldBoardResultStatus[], any];
+      foundBoardResultStatus = (
+        await db
+          .insert(boardResultStatusModel)
+          .values({
+            legacyBoardResultStatusId: oldBoardResultStatus?.id!,
+            name: oldBoardResultStatus?.name!,
+            spclType: oldBoardResultStatus?.spcltype,
+          })
+          .returning()
+      )[0];
+    }
+  }
+
+  const foundSection = await addSection(oldHistoricalRecord?.sectionId!);
+
+  await db.insert(promotionModel).values({
+    studentId: studentId,
+    sectionId: foundSection?.id,
+    legacyHistoricalRecordId: oldHistoricalRecord?.id!,
+    programCourseId: foundProgramCourse?.id!,
+    sessionId: foundSession?.id!,
+    shiftId: admissionCourseDetails.shiftId!,
+    classId: foundClass?.id!,
+    classRollNumber: String(oldHistoricalRecord?.rollNo!),
+    dateOfJoining: oldHistoricalRecord?.dateofJoining!,
+    promotionStatusId: foundPromotionStatus?.id!,
+    boardResultStatusId: foundBoardResultStatus?.id!,
+    startDate: oldHistoricalRecord?.startDate,
+    endDate: oldHistoricalRecord?.endDate,
+    remarks: oldHistoricalRecord?.specialisation,
+    rollNumber: oldHistoricalRecord?.univrollno,
+    rollNumberSI: oldHistoricalRecord?.univrollnosi,
+    examNumber: oldHistoricalRecord?.exmno,
+    examSerialNumber: oldHistoricalRecord?.exmsrl,
+  } as PromotionInsertSchema);
+}
+
+async function addSection(oldSectionId: number): Promise<Section | undefined> {
+  const [rows] = (await mysqlConnection.query(
+    `SELECT * FROM section WHERE id = ${oldSectionId}`,
+  )) as [OldSection[], any];
+
+  const [oldSection] = rows;
+
+  if (!oldSection) {
+    throw new Error("Section not found");
+  }
+
+  const [existingSection] = await db
+    .select()
+    .from(sectionModel)
+    .where(
+      and(
+        eq(sectionModel.name, oldSection.sectionName.trim()),
+        eq(sectionModel.legacySectionId, oldSection.id!),
+      ),
+    );
+
+  let newSection: Section | undefined;
+  if (existingSection) {
+    return existingSection;
+  } else {
+    newSection = (
+      await db
+        .insert(sectionModel)
+        .values({
+          name: oldSection.sectionName.trim(),
+          legacySectionId: oldSection.id!,
+        })
+        .returning()
+    )[0];
+  }
+
+  return newSection;
 }
 
 async function addInstitution(
@@ -1255,37 +1558,37 @@ async function addInstitution(
   return newInstitution;
 }
 
-async function addLanguageMediumById(
-  oldLanguageMediumId: number,
-): Promise<LanguageMedium | null> {
-  const [rows] = (await mysqlConnection.query(
-    `SELECT * FROM languagemedium WHERE id = ${oldLanguageMediumId}`,
-  )) as [OldLanguageMedium[], any];
+// async function addLanguageMediumById(
+//     oldLanguageMediumId: number,
+// ): Promise<LanguageMedium | null> {
+//     const [rows] = (await mysqlConnection.query(
+//         `SELECT * FROM languagemedium WHERE id = ${oldLanguageMediumId}`,
+//     )) as [OldLanguageMedium[], any];
 
-  const [oldLanguageMedium] = rows;
+//     const [oldLanguageMedium] = rows;
 
-  if (!oldLanguageMedium) {
-    return null;
-  }
+//     if (!oldLanguageMedium) {
+//         return null;
+//     }
 
-  const [existingLanguage] = await db
-    .select()
-    .from(languageMediumModel)
-    .where(eq(languageMediumModel.name, oldLanguageMedium.name.trim()));
-  if (existingLanguage) {
-    return existingLanguage;
-  }
+//     const [existingLanguage] = await db
+//         .select()
+//         .from(languageMediumModel)
+//         .where(eq(languageMediumModel.name, oldLanguageMedium.name.trim()));
+//     if (existingLanguage) {
+//         return existingLanguage;
+//     }
 
-  const [newLanguage] = await db
-    .insert(languageMediumModel)
-    .values({
-      name: oldLanguageMedium.name.trim(),
-      legacyLanguageMediumId: oldLanguageMediumId,
-    })
-    .returning();
+//     const [newLanguage] = await db
+//         .insert(languageMediumModel)
+//         .values({
+//             name: oldLanguageMedium.name.trim(),
+//             legacyLanguageMediumId: oldLanguageMediumId,
+//         })
+//         .returning();
 
-  return newLanguage;
-}
+//     return newLanguage;
+// }
 
 export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   const [rows] = (await mysqlConnection.query(
@@ -2140,7 +2443,15 @@ function isOldStudent(x: OldStudent | OldStaff): x is OldStudent {
   return "transferred" in x;
 }
 
-async function addHealth(details: OldStudent | OldStaff) {
+async function addHealth(
+  details: OldStudent | OldStaff | null | undefined,
+): Promise<Health | null> {
+  if (!details) {
+    console.warn(
+      "addHealth(): details is undefined/null; skipping health creation.",
+    );
+    return null;
+  }
   let bloodGroup: BloodGroup | undefined;
 
   // Resolve blood group if legacy id present
@@ -2155,8 +2466,8 @@ async function addHealth(details: OldStudent | OldStaff) {
   }
 
   // Normalize values to match schema types
-  const eyeLeftRaw = details.eyePowerLeft;
-  const eyeRightRaw = details.eyePowerRight;
+  const eyeLeftRaw = details?.eyePowerLeft;
+  const eyeRightRaw = details?.eyePowerRight;
   const eyeLeft =
     eyeLeftRaw !== undefined && eyeLeftRaw !== null && eyeLeftRaw !== ""
       ? Number(eyeLeftRaw)
@@ -2166,8 +2477,8 @@ async function addHealth(details: OldStudent | OldStaff) {
       ? Number(eyeRightRaw)
       : undefined;
 
-  const heightVal = isOldStudent(details) ? details.height : details.height;
-  const weightVal = isOldStudent(details) ? details.weight : details.weight;
+  const heightVal = details?.height;
+  const weightVal = details?.weight;
 
   const height =
     heightVal !== undefined && heightVal !== null
@@ -2586,25 +2897,30 @@ async function processOldCourseDetails(
   courseDetails: OldCourseDetails,
   applicationForm: ApplicationForm,
 ) {
+  console.log(
+    "in processOldCourseDetails(), oldcourseDetails",
+    courseDetails.id,
+    "this will be used in line 2946",
+  );
   const [[oldCourse]] = (await mysqlConnection.query(`
         SELECT * FROM course WHERE id = ${courseDetails.courseid}`)) as [
     OldCourse[],
     any,
   ];
 
-  const [existingAdmOldCourseDetails] = await db
-    .select()
-    .from(admissionCourseDetailsModel)
-    .where(
-      eq(
-        admissionCourseDetailsModel.applicationFormId,
-        applicationForm.id as number,
-      ),
-    );
+  // const [existingAdmOldCourseDetails] = await db
+  //     .select()
+  //     .from(admissionCourseDetailsModel)
+  //     .where(
+  //         eq(
+  //             admissionCourseDetailsModel.applicationFormId,
+  //             applicationForm.id as number,
+  //         ),
+  //     );
 
-  if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
+  // if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
 
-  const course = await addCourse(courseDetails.courseid);
+  // const course = await addCourse(courseDetails.courseid);
 
   const classData = await addClass(courseDetails.classid);
 
@@ -2627,84 +2943,89 @@ async function processOldCourseDetails(
   const bankBranchOther = courseDetails.feespaymentbrnchothr;
   const bankOther = courseDetails.feespaidtype;
 
-  let stream: Stream | undefined;
-  console.log("course?.name", course?.name);
+  // let stream: Stream | undefined;
+  // console.log("course?.name", course?.name);
 
-  // Remove dots and normalize the course name for comparison
-  const normalizedCourseName = course?.name
-    .toLowerCase()
-    .replace(/\./g, "")
-    .trim();
+  // // Remove dots and normalize the course name for comparison
+  // const normalizedCourseName = course?.name
+  //     .toLowerCase()
+  //     .replace(/\./g, "")
+  //     .trim();
 
-  if (normalizedCourseName?.includes("bsc")) {
-    stream = await addStream({
-      name: "Science & Technology",
-      code: "Sci.",
-      shortName: "Sci.",
-      isActive: true,
-    });
-  } else if (normalizedCourseName?.includes("ba")) {
-    stream = await addStream({
-      name: "Arts & Humanities",
-      code: "Arts",
-      shortName: "Arts",
-      isActive: true,
-    });
-  } else if (
-    ((normalizedCourseName?.includes("(h)") ||
-      normalizedCourseName?.includes("(g)")) &&
-      normalizedCourseName?.includes("bcom")) ||
-    normalizedCourseName?.includes("bba")
+  // if (normalizedCourseName?.includes("bsc")) {
+  //     stream = await addStream({
+  //         name: "Science & Technology",
+  //         code: "Sci.",
+  //         shortName: "Sci.",
+  //         isActive: true,
+  //     });
+  // } else if (normalizedCourseName?.includes("ba")) {
+  //     stream = await addStream({
+  //         name: "Arts & Humanities",
+  //         code: "Arts",
+  //         shortName: "Arts",
+  //         isActive: true,
+  //     });
+  // } else if (
+  //     ((normalizedCourseName?.includes("(h)") ||
+  //         normalizedCourseName?.includes("(g)")) &&
+  //         normalizedCourseName?.includes("bcom")) ||
+  //     normalizedCourseName?.includes("bba")
+  // ) {
+  //     stream = await addStream({
+  //         name: "Commerce & Management",
+  //         code: "Com.",
+  //         shortName: "Com.",
+  //     });
+  // }
+
+  // // Default stream for courses that don't match the above patterns
+  // if (!stream) {
+  //     throw new Error("Stream not found...!");
+  // }
+
+  // let courseType: CourseType | undefined;
+  // if (oldCourse.courseName.toLowerCase().trim().includes("(h)")) {
+  //     courseType = (
+  //         await db
+  //             .select()
+  //             .from(courseTypeModel)
+  //             .where(and(ilike(courseTypeModel.name, "Honours")))
+  //     )[0];
+  //     if (!courseType) {
+  //         throw new Error("Course Type not found...!");
+  //     }
+  // } else if (oldCourse.courseName.toLowerCase().trim().includes("(g)")) {
+  //     courseType = (
+  //         await db
+  //             .select()
+  //             .from(courseTypeModel)
+  //             .where(and(ilike(courseTypeModel.name, "General")))
+  //     )[0];
+  //     if (!courseType) {
+  //         throw new Error("Course Type not found...!");
+  //     }
+  // }
+
+  let programCourseName = oldCourse.courseName!.trim();
+  console.log("oldCourse.courseName", oldCourse);
+  if (
+    oldCourse.courseName.trim().toLowerCase().includes("Business Economics")
   ) {
-    stream = await addStream({
-      name: "Commerce & Management",
-      code: "Com.",
-      shortName: "Com.",
-    });
+    console.log("Business course", oldCourse.courseName);
   }
 
-  // Default stream for courses that don't match the above patterns
-  if (!stream) {
-    throw new Error("Stream not found...!");
-  }
+  const [programCourse] = await db
+    .select()
+    .from(programCourseModel)
+    .where(and(ilike(programCourseModel.name, oldCourse.courseName!.trim())));
 
-  let courseType: CourseType | undefined;
-  if (oldCourse.courseName.toLowerCase().trim().includes("(h)")) {
-    courseType = (
-      await db
-        .select()
-        .from(courseTypeModel)
-        .where(and(ilike(courseTypeModel.name, "Honours")))
-    )[0];
-    if (!courseType) {
-      throw new Error("Course Type not found...!");
-    }
-  } else if (oldCourse.courseName.toLowerCase().trim().includes("(g)")) {
-    courseType = (
-      await db
-        .select()
-        .from(courseTypeModel)
-        .where(and(ilike(courseTypeModel.name, "General")))
-    )[0];
-    if (!courseType) {
-      throw new Error("Course Type not found...!");
-    }
-  }
+  console.log("programCourse", programCourse);
 
-  // Default course type for courses that don't have (H) or (G)
-  if (!courseType) {
-    courseType = (
-      await db
-        .select()
-        .from(courseTypeModel)
-        .where(and(ilike(courseTypeModel.name, "Regular")))
-    )[0];
-    if (!courseType) {
-      throw new Error("Course Type 'Regular' not found...!");
-    }
+  if (!programCourse) {
+    console.log("programCourse not found");
+    return null;
   }
-
-  const programCourse = await addProgramCourse(stream, course!, courseType!);
 
   const [admission] = await db
     .select()
@@ -2718,7 +3039,7 @@ async function processOldCourseDetails(
     .from(admissionProgramCourseModel)
     .where(
       and(
-        eq(admissionProgramCourseModel.id, programCourse.id as number),
+        eq(admissionProgramCourseModel.id, programCourse.id! as number),
         eq(admissionProgramCourseModel.admissionId, admission?.id as number),
       ),
     );
@@ -2793,10 +3114,14 @@ async function processOldCourseDetails(
   }
 
   // Ensure required foreign keys are present
-  if (!stream?.id || !shift?.id || !classData?.id || !studenrCategory?.id) {
-    throw new Error(
+  if (!shift?.id || !classData?.id) {
+    console.log(
       "Missing required IDs for admission_course_details (stream/shift/class/studentCategory)",
     );
+    console.log(
+      `in line 2946, shift?.id: ${shift?.id}, classData?.id: ${classData?.id}, studenrCategory?.id: ${studenrCategory?.id}  for old-ourseDetails.id: ${courseDetails.id}`,
+    );
+    return null;
   }
 
   const insertValues: AdmissionCourseDetailsT = {
@@ -2804,11 +3129,11 @@ async function processOldCourseDetails(
     legacyCourseDetailsId: courseDetails.id,
     isTransferred: !!courseDetails.transferred,
     admissionProgramCourseId: existingAdmissionProgramCourse.id!,
-    streamId: stream.id,
+    streamId: programCourse.streamId!,
     classId: classData.id!,
     shiftId: shift.id,
     eligibilityCriteriaId: eligibilityCriteria?.id,
-    studentCategoryId: studenrCategory.id,
+    studentCategoryId: studenrCategory?.id,
 
     rfidNumber: courseDetails.rfidno ? String(courseDetails.rfidno) : "",
     classRollNumber: courseDetails.rollNumber
@@ -2978,14 +3303,6 @@ async function processOldCourseDetails(
     isCancelled: !!courseDetails.cancelled,
     // cancelSourceId: courseDetails.cancelsourceid ? Number(courseDetails.cancelsourceid) : undefined,
     cancelRemarks: courseDetails.cancelremarks || undefined,
-    // cancelDate: courseDetails.canceldate ? new Date(courseDetails.canceldate) : undefined,
-    // cancelById: courseDetails.canceluserid ? Number(courseDetails.canceluserid) : undefined,
-    // cancelEntryDate: courseDetails.cancelentrydt ? new Date(courseDetails.cancelentrydt) : undefined,
-    // chkeoi: !!courseDetails.chkeoi,
-    // eoidate: courseDetails.eoidate ? new Date(courseDetails.eoidate) : undefined,
-    // eoicount: courseDetails.eoicount ? Number(courseDetails.eoicount) : undefined,
-    // eoihistory: courseDetails.eoihistory || undefined,
-    // noofoptry: courseDetails.noofoptry ? Number(courseDetails.noofoptry) : undefined,
 
     freeshipPercentageApplied: courseDetails.freeshippercapplied
       ? Number(courseDetails.freeshippercapplied)
@@ -3000,7 +3317,7 @@ async function processOldCourseDetails(
     .values(insertValues)
     .returning();
 
-  console.log("newAdmissionCourseDetails", newAdmissionCourseDetails);
+  // console.log("newAdmissionCourseDetails", newAdmissionCourseDetails);
   return newAdmissionCourseDetails;
 }
 
@@ -3009,6 +3326,7 @@ async function getSubjectRelatedFields(
   newAdmissionCourseDetails: AdmissionCourseDetails,
   academicYear: AcademicYear,
   studentId: number,
+  oldBoardId: number,
 ) {
   const [admissionProgramCourse] = await db
     .select()
@@ -3028,15 +3346,15 @@ async function getSubjectRelatedFields(
     throw new Error("Admission Program Course not found...!");
   }
 
-  const [programCourse] = await db
-    .select()
-    .from(programCourseModel)
-    .where(
-      eq(
-        programCourseModel.id,
-        admissionProgramCourse.programCourseId as number,
-      ),
-    );
+  // const [programCourse] = await db
+  //     .select()
+  //     .from(programCourseModel)
+  //     .where(
+  //         eq(
+  //             programCourseModel.id,
+  //             admissionProgramCourse.programCourseId as number,
+  //         ),
+  //     );
 
   const [foundAffiliation] = await db
     .select()
@@ -3061,13 +3379,14 @@ async function getSubjectRelatedFields(
 
   if (!foundClass) {
     // Create semester 1 class if it doesn't exist
-    [foundClass] = await db
-      .insert(classModel)
-      .values({
-        name: oldClass.classname!.trim(),
-        type: "SEMESTER",
-      })
-      .returning();
+    // [foundClass] = await db
+    //     .insert(classModel)
+    //     .values({
+    //         name: oldClass.classname!.trim(),
+    //         type: "SEMESTER",
+    //     })
+    //     .returning();
+    throw new Error("Class not found...!");
   }
 
   let [foundRegulationType] = await db
@@ -3076,14 +3395,15 @@ async function getSubjectRelatedFields(
     .where(ilike(regulationTypeModel.shortName, "CCF"));
 
   if (!foundRegulationType) {
-    const newRegulationType = await db
-      .insert(regulationTypeModel)
-      .values({
-        name: "CCF",
-        shortName: "CCF",
-      })
-      .returning();
-    foundRegulationType = newRegulationType[0];
+    // const newRegulationType = await db
+    //     .insert(regulationTypeModel)
+    //     .values({
+    //         name: "CCF",
+    //         shortName: "CCF",
+    //     })
+    //     .returning();
+    // foundRegulationType = newRegulationType[0];
+    throw new Error("Regulation Type not found...!");
   }
 
   const [oldCvSubjectSelections] = (await mysqlConnection.query(`
@@ -3103,71 +3423,31 @@ async function getSubjectRelatedFields(
     const [[oldSubject]] = (await mysqlConnection.query(
       `SELECT * FROM subject WHERE id = ${oldCvSubjectSelection.subjectid}`,
     )) as [OldSubject[], any];
-    let [[oldSubjectType]] = (await mysqlConnection.query(
-      `SELECT * FROM subjecttype WHERE id = ${oldCvSubjectSelection.subjecttypeid}`,
-    )) as [OldSubjectType[], any];
-    let [foundSubject] = await db
-      .select()
-      .from(subjectModel)
-      .where(ilike(subjectModel.name, oldSubject.subjectName.trim()));
-    if (!foundSubject) {
-      const newSubject = await db
-        .insert(subjectModel)
-        .values({
-          name: oldSubject.subjectName.trim(),
-          code: oldSubject.univcode?.trim(),
-        })
-        .returning();
-      foundSubject = newSubject[0];
+
+    if (!oldSubject) {
+      console.warn(
+        `No subject found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+      );
+      continue;
     }
 
-    let [foundSubjectType] = await db
-      .select()
-      .from(subjectTypeModel)
-      .where(
-        ilike(subjectTypeModel.name, oldSubjectType.subjectTypeName.trim()),
-      );
-    if (!foundSubjectType) {
-      const newSubjectType = await db
-        .insert(subjectTypeModel)
-        .values({
-          name: oldSubjectType.subjectTypeName.trim(),
-        })
-        .returning();
-      foundSubjectType = newSubjectType[0];
-    }
+    // const foundBoardSubject = await addBoardSubject(oldAdmRelevantSubject.id, oldBoardId);
 
-    let [foundPaper] = await db
-      .select()
-      .from(paperModel)
-      .where(
-        and(
-          eq(paperModel.subjectId, foundSubject.id!),
-          eq(paperModel.affiliationId, foundAffiliation.id!),
-          eq(paperModel.regulationTypeId, foundRegulationType.id!),
-          eq(paperModel.academicYearId, academicYear.id!),
-          eq(paperModel.subjectTypeId, foundSubjectType.id!),
-          eq(paperModel.programCourseId, programCourse.id!),
-          eq(paperModel.classId, foundClass.id!),
-        ),
-      );
+    const foundPaper = await findPaper(
+      oldCvSubjectSelection,
+      foundAffiliation,
+      foundClass,
+      foundRegulationType,
+      admissionProgramCourse.programCourseId!,
+      academicYear,
+      oldSubject,
+    );
+
     if (!foundPaper) {
-      const newPaper = await db
-        .insert(paperModel)
-        .values({
-          name: "",
-          code: "",
-          affiliationId: foundAffiliation.id!,
-          regulationTypeId: foundRegulationType.id!,
-          subjectId: foundSubject.id!,
-          subjectTypeId: foundSubjectType.id!,
-          programCourseId: programCourse.id!,
-          classId: foundClass.id!,
-          isOptional: false,
-          academicYearId: academicYear.id!,
-        })
-        .returning();
-      foundPaper = newPaper[0];
+      console.warn(
+        `No paper found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+      );
+      continue;
     }
 
     console.log("oldCvSubjectSelection", oldCvSubjectSelection.id);
@@ -3180,73 +3460,136 @@ async function getSubjectRelatedFields(
   }
 }
 
-async function addProgramCourse(
-  stream: Stream | undefined,
-  course: Course,
-  courseType: CourseType,
+async function findPaper(
+  oldCvSubjectSelection: OldCvSubjectSelection,
+  foundAffiliation: Affiliation,
+  foundClass: Class,
+  foundRegulationType: RegulationType,
+  programCourseId: number,
+  academicYear: AcademicYear,
+  oldSubject: OldSubject,
 ) {
-  if (!stream || !course || !courseType) {
-    throw new Error("Stream, Course or Course Type not found...!");
+  console.log("in findPaper(), oldSubject", oldSubject);
+  const [foundSubject] = await db
+    .select()
+    .from(subjectModel)
+    .where(ilike(subjectModel.name, oldSubject.subjectName.trim()));
+
+  if (!foundSubject) {
+    console.warn(
+      `Subject not found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+    );
+    return null;
   }
 
-  const [foundCourseLevel] = await db
+  const [foundSubjectType] = await db
     .select()
-    .from(courseLevelModel)
-    .where(eq(courseLevelModel.name, "Undergraduate"));
-  if (!foundCourseLevel) {
-    throw new Error("Course Level not found...!");
+    .from(subjectTypeModel)
+    .where(
+      eq(subjectTypeModel.id, 24),
+    ); /* 24 is the id of the subject type "MN" */
+
+  if (!foundSubjectType) {
+    console.warn(
+      `Subject Type not found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+    );
+    return null;
   }
 
-  const [foundAffiliation] = await db
+  const [foundPaper] = await db
     .select()
-    .from(affiliationModel)
-    .where(ilike(affiliationModel.shortName, "CU"));
-
-  if (!foundAffiliation) {
-    throw new Error("Affiliation not found...!");
-  }
-
-  const [foundRegulationType] = await db
-    .select()
-    .from(regulationTypeModel)
-    .where(ilike(regulationTypeModel.shortName, "ccf"));
-
-  if (!foundRegulationType) {
-    throw new Error("Regulation Type not found...!");
-  }
-
-  const [foundProgramCourse] = await db
-    .select()
-    .from(programCourseModel)
+    .from(paperModel)
     .where(
       and(
-        eq(programCourseModel.streamId, stream.id!),
-        eq(programCourseModel.courseId, course.id!),
-        eq(programCourseModel.courseTypeId, courseType.id!),
-        eq(programCourseModel.courseLevelId, foundCourseLevel.id!),
-        eq(programCourseModel.affiliationId, foundAffiliation.id!),
-        eq(programCourseModel.regulationTypeId, foundRegulationType.id!),
+        eq(paperModel.affiliationId, foundAffiliation.id!),
+        eq(paperModel.regulationTypeId, foundRegulationType.id!),
+        eq(paperModel.academicYearId, academicYear.id!),
+        eq(paperModel.subjectTypeId, foundSubjectType?.id!),
+        eq(paperModel.programCourseId, programCourseId!),
+        eq(paperModel.subjectId, foundSubject?.id!),
+        eq(paperModel.classId, foundClass.id!),
       ),
     );
 
-  if (foundProgramCourse) return foundProgramCourse;
+  console.log("foundPaper", foundPaper);
 
-  const newProgramCourse = await db
-    .insert(programCourseModel)
-    .values({
-      streamId: stream.id!,
-      courseId: course.id!,
-      courseTypeId: courseType.id!,
-      courseLevelId: foundCourseLevel.id!,
-      affiliationId: foundAffiliation.id!,
-      regulationTypeId: foundRegulationType.id!,
-      duration: 4,
-      totalSemesters: 8,
-    })
-    .returning();
+  if (!foundPaper) {
+    console.warn(
+      `Paper not found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+    );
+    return null;
+  }
 
-  return newProgramCourse[0];
+  return foundPaper;
 }
+
+// async function addProgramCourse(
+//     stream: Stream | undefined,
+//     course: Course,
+//     courseType: CourseType,
+// ) {
+//     if (!stream || !course || !courseType) {
+//         throw new Error("Stream, Course or Course Type not found...!");
+//     }
+
+//     const [foundCourseLevel] = await db
+//         .select()
+//         .from(courseLevelModel)
+//         .where(eq(courseLevelModel.name, "Undergraduate"));
+//     if (!foundCourseLevel) {
+//         throw new Error("Course Level not found...!");
+//     }
+
+//     const [foundAffiliation] = await db
+//         .select()
+//         .from(affiliationModel)
+//         .where(ilike(affiliationModel.shortName, "CU"));
+
+//     if (!foundAffiliation) {
+//         throw new Error("Affiliation not found...!");
+//     }
+
+//     const [foundRegulationType] = await db
+//         .select()
+//         .from(regulationTypeModel)
+//         .where(ilike(regulationTypeModel.shortName, "ccf"));
+
+//     if (!foundRegulationType) {
+//         throw new Error("Regulation Type not found...!");
+//     }
+
+//     const [foundProgramCourse] = await db
+//         .select()
+//         .from(programCourseModel)
+//         .where(
+//             and(
+//                 eq(programCourseModel.streamId, stream.id!),
+//                 eq(programCourseModel.courseId, course.id!),
+//                 eq(programCourseModel.courseTypeId, courseType.id!),
+//                 eq(programCourseModel.courseLevelId, foundCourseLevel.id!),
+//                 eq(programCourseModel.affiliationId, foundAffiliation.id!),
+//                 eq(programCourseModel.regulationTypeId, foundRegulationType.id!),
+//             ),
+//         );
+
+//     if (foundProgramCourse) return foundProgramCourse;
+
+//     const newProgramCourse = await db
+//         .insert(programCourseModel)
+//         .values({
+//             streamId: stream.id!,
+//             courseId: course.id!,
+//             courseTypeId: courseType.id!,
+//             courseLevelId: foundCourseLevel.id!,
+//             affiliationId: foundAffiliation.id!,
+//             regulationTypeId: foundRegulationType.id!,
+//             duration: 4,
+//             totalSemesters: 8,
+//         })
+//         .returning();
+
+//     return newProgramCourse[0];
+// }
 
 async function addStudentCategory(oldStudentCategoryId: number | null) {
   if (!oldStudentCategoryId) return null;
@@ -3269,14 +3612,18 @@ async function addStudentCategory(oldStudentCategoryId: number | null) {
   const course = await addCourse(studentCategoryRow.courseId);
   const classSem = await addClass(studentCategoryRow.classId);
 
+  if (!course || !classSem) {
+    return null;
+  }
+
   return (
     await db
       .insert(studentCategoryModel)
       .values({
         legacyStudentCategoryId: oldStudentCategoryId,
         name: studentCategoryRow.studentCName.trim(),
-        courseId: course?.id || 0,
-        classId: classSem?.id || 0,
+        courseId: course?.id,
+        classId: classSem?.id,
         documentRequired: !!studentCategoryRow.document,
       })
       .returning()
@@ -3299,15 +3646,15 @@ async function addClass(oldClassId: number | null) {
 
   if (foundClass) return foundClass;
 
-  return (
-    await db
-      .insert(classModel)
-      .values({
-        name: classRow.classname!.trim(),
-        type: classRow.type === "year" ? "YEAR" : "SEMESTER",
-      })
-      .returning()
-  )[0];
+  //   return (
+  //     await db
+  //       .insert(classModel)
+  //       .values({
+  //         name: classRow.classname!.trim(),
+  //         type: classRow.type === "year" ? "YEAR" : "SEMESTER",
+  //       })
+  //       .returning()
+  //   )[0];
 }
 
 async function addStream(stream: Stream) {
@@ -3337,29 +3684,29 @@ async function addCourse(oldCourseId: number | null) {
   if (foundCourse) return foundCourse;
 
   // Get the next available sequence number by finding the max sequence
-  const existingCourses = await db
-    .select({ sequence: courseModel.sequence })
-    .from(courseModel)
-    .orderBy(courseModel.sequence);
+  //   const existingCourses = await db
+  //     .select({ sequence: courseModel.sequence })
+  //     .from(courseModel)
+  //     .orderBy(courseModel.sequence);
 
-  // Find the highest sequence number and add 1
-  const maxSequence =
-    existingCourses.length > 0
-      ? Math.max(...existingCourses.map((c) => c.sequence || 0))
-      : 0;
-  const nextSequence = maxSequence + 1;
+  //   // Find the highest sequence number and add 1
+  //   const maxSequence =
+  //     existingCourses.length > 0
+  //       ? Math.max(...existingCourses.map((c) => c.sequence || 0))
+  //       : 0;
+  //   const nextSequence = maxSequence + 1;
 
-  return (
-    await db
-      .insert(courseModel)
-      .values({
-        name: courseRow.courseName.trim(),
-        shortName: courseRow.courseSName?.trim(),
-        legacyCourseId: oldCourseId,
-        sequence: nextSequence,
-      })
-      .returning()
-  )[0];
+  //   return (
+  //     await db
+  //       .insert(courseModel)
+  //       .values({
+  //         name: courseRow.courseName.trim(),
+  //         shortName: courseRow.courseSName?.trim(),
+  //         legacyCourseId: oldCourseId,
+  //         sequence: nextSequence,
+  //       })
+  //       .returning()
+  //   )[0];
 }
 
 async function addEligibilityCriteria(oldEligibilityId: number | null) {
@@ -3538,7 +3885,10 @@ async function addAdmSubjectPaperSelection(
           cvSubjectSelectionRow.id,
         ),
         eq(admSubjectPaperSelectionModel.studentId, studentId),
-        eq(admSubjectPaperSelectionModel.studentId, admissionCourseDetailsId),
+        eq(
+          admSubjectPaperSelectionModel.admissionCourseDetailsId,
+          admissionCourseDetailsId,
+        ),
         eq(admSubjectPaperSelectionModel.paperId, paperId),
       ),
     );

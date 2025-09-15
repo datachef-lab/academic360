@@ -37,8 +37,7 @@ export const admissionCourseDetailsModel = pgTable("admission_course_details", {
     eligibilityCriteriaId: integer("eligibility_criteria_id_fk")
         .references(() => eligibilityCriteriaModel.id, { onDelete: "cascade", onUpdate: "cascade" }),
     studentCategoryId: integer("student_category_id_fk")
-        .references(() => studentCategoryModel.id, { onDelete: "cascade", onUpdate: "cascade" })
-        .notNull(),
+        .references(() => studentCategoryModel.id, { onDelete: "cascade", onUpdate: "cascade" }),
     rfidNumber: varchar({ length: 50 }),
     classRollNumber: varchar({ length: 50 }).notNull(),
     appNumber: varchar({ length: 50 }).notNull(),

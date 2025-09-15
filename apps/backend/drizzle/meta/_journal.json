@@ -29,6 +29,20 @@
       "when": 1757586864649,
       "tag": "0003_mixed_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1757873939806,
+      "tag": "0004_dry_nico_minoru",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1757878137883,
+      "tag": "0005_colossal_hex",
+      "breakpoints": true
     }
   ]
 }

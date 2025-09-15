@@ -10,3 +10,6 @@ export { default as sportsCategoryRouter } from "./routes/sports-category.route.
 export { default as sportsInfoRouter } from "./routes/sports-info.route.js";
 export { default as studentAcademicSubjectRouter } from "./routes/student-academic-subject.route.js";
 export { default as academicSubjectRouter } from "./routes/academic-subject.route.js";
+export { default as boardRouter } from "./routes/board.routes.js";
+export { default as boardSubjectNameRouter } from "./routes/board-subject-name.routes.js";
+export { default as boardSubjectRouter } from "./routes/board-subject.routes.js";
