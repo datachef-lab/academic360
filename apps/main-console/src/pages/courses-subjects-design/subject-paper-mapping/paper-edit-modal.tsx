@@ -121,8 +121,9 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
             const paperData = res.data.payload;
             if (paperData) {
               setForm({ ...(paperData as EditablePaper) });
-              // Note: components are loaded separately as they're not part of the Paper type
-              setComponents([]);
+              // Load existing components from payload (backend includes them)
+              const fetchedComponents = (paperData as unknown as { components?: PaperComponentDto[] }).components || [];
+              setComponents(fetchedComponents);
             }
           })
           .catch((error) => {

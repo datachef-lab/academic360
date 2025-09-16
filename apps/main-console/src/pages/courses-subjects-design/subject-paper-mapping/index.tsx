@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Download, Upload, Edit } from "lucide-react";
+import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, RefreshCw } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -27,13 +27,14 @@ import {
   bulkUploadSubjectPapers,
   getAcademicYears,
   getProgramCourses,
-  getPapers,
+  getPapersPaginated,
   //   BulkUploadRow,
   //   BulkUploadError,
   updatePaperWithComponents,
   getCourses,
   getCourseTypes,
   //   createPaper,
+  PaginatedResponse,
 } from "@/services/course-design.api";
 import { getAllClasses } from "@/services/classes.service";
 import { useAuth } from "@/features/auth/hooks/use-auth";
@@ -87,6 +88,9 @@ const SubjectPaperMappingPage = () => {
     regulationTypeId: null as number | null,
     academicYearId: null as number | null,
     classId: null as number | null,
+    programCourseId: null as number | null,
+    subjectTypeId: null as number | null,
+    isOptional: null as boolean | null,
     searchText: "",
     page: 1,
     limit: 10,
@@ -112,6 +116,9 @@ const SubjectPaperMappingPage = () => {
   const [totalPages, setTotalPages] = React.useState(1);
   const [totalItems, setTotalItems] = React.useState(0);
   const [itemsPerPage] = React.useState(10);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
+  const [isDownloading, setIsDownloading] = React.useState(false);
+  const [downloadProgress, setDownloadProgress] = React.useState(0);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,12 +133,19 @@ const SubjectPaperMappingPage = () => {
   const fetchFilteredData = React.useCallback(async () => {
     console.log("Fetching papers data");
     try {
-      const result = await getPapers();
-      console.log("API Response:", result);
-
-      // Handle null/undefined response
-      if (!result) {
-        console.error("API returned null/undefined result");
+      // Server-side pagination and filtering
+      const paged = await getPapersPaginated(currentPage, itemsPerPage, {
+        subjectId: filtersObj.subjectId,
+        affiliationId: filtersObj.affiliationId,
+        regulationTypeId: filtersObj.regulationTypeId,
+        academicYearId: filtersObj.academicYearId,
+        subjectTypeId: filtersObj.subjectTypeId,
+        programCourseId: filtersObj.programCourseId,
+        classId: filtersObj.classId,
+        isOptional: filtersObj.isOptional,
+        searchText: searchText || null,
+      });
+      if (!paged) {
         setPapers([]);
         setTotalPages(1);
         setTotalItems(0);
@@ -139,72 +153,12 @@ const SubjectPaperMappingPage = () => {
         return;
       }
 
-      // Ensure result is an array before filtering
-      if (Array.isArray(result)) {
-        // Apply client-side filtering
-        let filteredPapers = result as PaperDto[];
-
-        // Filter by subject
-        if (filtersObj.subjectId) {
-          filteredPapers = filteredPapers.filter((paper) => paper.subjectId === filtersObj.subjectId);
-        }
-
-        // Filter by affiliation
-        if (filtersObj.affiliationId) {
-          filteredPapers = filteredPapers.filter((paper) => paper.affiliationId === filtersObj.affiliationId);
-        }
-
-        // Filter by regulation type
-        if (filtersObj.regulationTypeId) {
-          filteredPapers = filteredPapers.filter((paper) => paper.regulationTypeId === filtersObj.regulationTypeId);
-        }
-
-        // Filter by academic year
-        if (filtersObj.academicYearId) {
-          filteredPapers = filteredPapers.filter((paper) => paper.academicYearId === filtersObj.academicYearId);
-        }
-
-        // Filter by class/semester
-        if (filtersObj.classId) {
-          filteredPapers = filteredPapers.filter((paper) => paper.classId === filtersObj.classId);
-        }
-
-        // Filter by search text
-        if (searchText) {
-          const searchLower = searchText.toLowerCase();
-          filteredPapers = filteredPapers.filter(
-            (paper) =>
-              paper.name?.toLowerCase().includes(searchLower) ||
-              paper.code?.toLowerCase().includes(searchLower) ||
-              subjects
-                .find((s) => s.id === paper.subjectId)
-                ?.name?.toLowerCase()
-                .includes(searchLower) ||
-              classes
-                .find((cls) => cls.id === paper.classId)
-                ?.name?.toLowerCase()
-                .includes(searchLower),
-          );
-        }
-
-        setPapers(filteredPapers);
-        setTotalPages(1); // For now, set to 1 since we're not paginating
-        setTotalItems(filteredPapers.length);
-
-        console.log("Set papers:", filteredPapers);
-        console.log("Total pages:", 1);
-        console.log("Total items:", filteredPapers.length);
-      } else {
-        console.error("API returned non-array result:", result);
-        setPapers([]);
-        setTotalPages(1);
-        setTotalItems(0);
-        toast.error("Invalid data format received from server");
-      }
+      setPapers((paged.content as unknown as PaperDto[]) || []);
+      setTotalPages(paged.totalPages || 1);
+      setTotalItems(paged.totalElements || 0);
     } catch (error: unknown) {
       console.error("Error fetching filtered data:", error);
 
-      // Check for authentication error
       if (error instanceof AxiosError && error.response?.status === 401) {
         toast.error("Authentication failed. Please log in again.");
         setError("Authentication failed. Please log in again.");
@@ -212,12 +166,11 @@ const SubjectPaperMappingPage = () => {
         toast.error("Failed to fetch filtered data");
       }
 
-      // Set empty array on error to prevent map error
       setPapers([]);
       setTotalPages(1);
       setTotalItems(0);
     }
-  }, [filtersObj, searchText, subjects]);
+  }, [currentPage, itemsPerPage, filtersObj, searchText]);
 
   // Fetch filtered data when filters change
   useEffect(() => {
@@ -226,16 +179,20 @@ const SubjectPaperMappingPage = () => {
     searchText,
     currentPage,
     itemsPerPage,
-    programCourses.length,
-    classes.length,
-    subjects.length,
-    affiliations.length,
-    regulationTypes.length,
-    academicYears.length,
+    filtersObj.subjectId,
+    filtersObj.affiliationId,
+    filtersObj.regulationTypeId,
+    filtersObj.academicYearId,
+    filtersObj.classId,
+    filtersObj.programCourseId,
+    filtersObj.subjectTypeId,
+    filtersObj.isOptional,
     fetchFilteredData,
   ]);
 
   const fetchData = useCallback(async () => {
+    // Always fetch fresh data (no caching)
+    console.log("Fetching fresh data");
     setLoading(true);
     try {
       const [
@@ -293,6 +250,7 @@ const SubjectPaperMappingPage = () => {
       setClasses(
         Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
       );
+
       console.log(
         "Classes data set:",
         Array.isArray(classesRes) ? classesRes : (classesRes as unknown as { payload: Class[] })?.payload || [],
@@ -311,6 +269,9 @@ const SubjectPaperMappingPage = () => {
         regulationTypeId: null,
         academicYearId: null,
         classId: null,
+        programCourseId: null,
+        subjectTypeId: null,
+        isOptional: null,
         searchText: "",
         page: 1,
         limit: 10,
@@ -420,6 +381,188 @@ const SubjectPaperMappingPage = () => {
   const handleAddNew = () => {
     setSelectedPaper(null);
     setIsFormOpen(true);
+  };
+
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    toast.info("Preparing download...");
+
+    try {
+      // First, get total count to calculate progress
+      console.log("Getting total count for download with filters:", filtersObj);
+      setDownloadProgress(5);
+      toast.info("Calculating total records...");
+
+      // Use larger page size for initial count to reduce API calls
+      const firstPage = await getPapersPaginated(1, 100, {
+        subjectId: filtersObj.subjectId,
+        affiliationId: filtersObj.affiliationId,
+        regulationTypeId: filtersObj.regulationTypeId,
+        academicYearId: filtersObj.academicYearId,
+        subjectTypeId: filtersObj.subjectTypeId,
+        programCourseId: filtersObj.programCourseId,
+        classId: filtersObj.classId,
+        isOptional: filtersObj.isOptional,
+        searchText: searchText || undefined,
+      });
+
+      const totalRecords = firstPage.totalElements;
+      const totalPages = firstPage.totalPages;
+      const pageSize = 100; // Larger page size for download (10x faster)
+
+      console.log(`Total records to download: ${totalRecords} across ${totalPages} pages`);
+      toast.info(`Found ${totalRecords} records across ${totalPages} pages. Starting download...`);
+
+      // Collect all data with parallel fetching for maximum speed
+      const allData: PaperDto[] = [];
+
+      // Process pages in batches of 5 for parallel fetching
+      const batchSize = 5;
+      const totalBatches = Math.ceil(totalPages / batchSize);
+
+      for (let batch = 0; batch < totalBatches; batch++) {
+        const startPage = batch * batchSize + 1;
+        const endPage = Math.min(startPage + batchSize - 1, totalPages);
+
+        const batchProgress = Math.round((batch / totalBatches) * 80) + 5; // 5-85% for data fetching
+        setDownloadProgress(batchProgress);
+
+        console.log(`Fetching batch ${batch + 1}/${totalBatches} (pages ${startPage}-${endPage})...`);
+        toast.info(`Fetching batch ${batch + 1}/${totalBatches} (${allData.length}/${totalRecords} records)`);
+
+        // Fetch multiple pages in parallel
+        const pagePromises: Promise<PaginatedResponse<PaperDto>>[] = [];
+        for (let page = startPage; page <= endPage; page++) {
+          pagePromises.push(
+            getPapersPaginated(page, pageSize, {
+              subjectId: filtersObj.subjectId,
+              affiliationId: filtersObj.affiliationId,
+              regulationTypeId: filtersObj.regulationTypeId,
+              academicYearId: filtersObj.academicYearId,
+              subjectTypeId: filtersObj.subjectTypeId,
+              programCourseId: filtersObj.programCourseId,
+              classId: filtersObj.classId,
+              isOptional: filtersObj.isOptional,
+              searchText: searchText || undefined,
+            }),
+          );
+        }
+
+        // Wait for all pages in this batch to complete
+        const batchResults = await Promise.all(pagePromises);
+
+        // Add all results to our data array
+        for (const pageData of batchResults) {
+          allData.push(...pageData.content);
+        }
+
+        // Small delay between batches to prevent overwhelming the server
+        if (batch < totalBatches - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+
+      console.log(`Fetched all data for download: ${allData.length} papers`);
+      setDownloadProgress(85);
+      toast.info(`Fetched ${allData.length} records, preparing Excel...`);
+
+      // Simulate progress based on actual data processing
+      const progressInterval = setInterval(() => {
+        setDownloadProgress((prev) => {
+          if (prev >= 95) return prev;
+          return prev + Math.random() * 5;
+        });
+      }, 100);
+
+      // Prepare Excel data from ALL fetched data
+      const excelData = allData.map((paper, index) => {
+        // Find related data from the already loaded dropdowns
+        const subject = subjects.find((s) => s.id === paper.subjectId);
+        const affiliation = affiliations.find((a) => a.id === paper.affiliationId);
+        const regulationType = regulationTypes.find((rt) => rt.id === paper.regulationTypeId);
+        const academicYear = academicYears.find((ay) => ay.id === paper.academicYearId);
+        const subjectType = subjectTypes.find((st) => st.id === paper.subjectTypeId);
+        const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
+        const classInfo = classes.find((c) => c.id === paper.classId);
+
+        return {
+          "Sr. No.": index + 1,
+          "Program Course": programCourse?.name || "-",
+          "Subject & Paper": paper.name || "-",
+          "Subject Name": subject?.name || "-",
+          "Paper Code": paper.code || "-",
+          "Subject Category": subjectType?.code || "-",
+          "Subject Category Name": subjectType?.name || "-",
+          Semester: classInfo?.name?.split(" ")[1] || "-",
+          "Is Optional": paper.isOptional ? "No" : "Yes",
+          Affiliation: affiliation?.name || "-",
+          "Regulation Type": regulationType?.name || "-",
+          "Academic Year": academicYear?.year || "-",
+          "Exam Components": paper.components?.map((comp) => comp.examComponent?.name).join(", ") || "No components",
+        };
+      });
+
+      console.log("Excel data prepared:", excelData.length, "rows");
+
+      // Create Excel file using XLSX library
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 8 }, // Sr. No.
+        { wch: 30 }, // Program Course
+        { wch: 25 }, // Subject & Paper
+        { wch: 25 }, // Subject Name
+        { wch: 15 }, // Paper Code
+        { wch: 15 }, // Subject Category
+        { wch: 20 }, // Subject Category Name
+        { wch: 10 }, // Semester
+        { wch: 12 }, // Is Optional
+        { wch: 20 }, // Affiliation
+        { wch: 15 }, // Regulation Type
+        { wch: 15 }, // Academic Year
+        { wch: 30 }, // Exam Components
+      ];
+      ws["!cols"] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Subject Paper Mapping");
+
+      // Generate buffer
+      console.log("Generating Excel buffer...");
+      const buffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+
+      clearInterval(progressInterval);
+      setDownloadProgress(100);
+
+      // Create blob from buffer
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      console.log("Blob created, size:", blob.size);
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `subject-paper-mapping-${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Download completed! ${allData.length} records exported.`);
+    } catch (error: unknown) {
+      console.error("Download failed:", error);
+      toast.error(`Download failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setTimeout(() => {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+      }, 1000);
+    }
   };
 
   //   const handleFormSubmit = async (data: Paper) => {
@@ -886,6 +1029,15 @@ const SubjectPaperMappingPage = () => {
             <div className="text-muted-foreground">Map subject papers to programCourses.</div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => fetchData()}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh Data
+            </Button>
             <Dialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline">
@@ -1006,96 +1158,372 @@ const SubjectPaperMappingPage = () => {
         <CardContent className="px-0">
           <div className="sticky top-[72px] z-40 bg-background p-4 border-b flex flex-wrap items-center gap-2 mb-0 justify-between">
             <div className="flex flex-wrap gap-2 items-center">
-              <Select
-                value={filtersObj.affiliationId?.toString() ?? "all"}
-                onValueChange={(value) =>
-                  setFiltersObj((prev) => ({ ...prev, affiliationId: value === "all" ? null : Number(value) }))
-                }
-              >
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="All Affiliations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Affiliations</SelectItem>
-                  {affiliations.map((a) => (
-                    <SelectItem key={a.id!} value={a.id!.toString()}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filtersObj.academicYearId?.toString() ?? "all"}
-                onValueChange={(value) =>
-                  setFiltersObj((prev) => ({ ...prev, academicYearId: value === "all" ? null : Number(value) }))
-                }
-              >
-                <SelectTrigger className="w-52">
-                  <SelectValue placeholder="All Academic Years" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Academic Years</SelectItem>
-                  {academicYears.map((ay) => (
-                    <SelectItem key={ay.id!} value={ay.id!.toString()}>
-                      {ay.year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filtersObj.regulationTypeId?.toString() ?? "all"}
-                onValueChange={(value) =>
-                  setFiltersObj((prev) => ({ ...prev, regulationTypeId: value === "all" ? null : Number(value) }))
-                }
-              >
-                <SelectTrigger className="w-52">
-                  <SelectValue placeholder="All Regulation Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Regulation Types</SelectItem>
-                  {regulationTypes.map((rt) => (
-                    <SelectItem key={rt.id!} value={rt.id!.toString()}>
-                      {rt.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filtersObj.subjectId?.toString() ?? "all"}
-                onValueChange={(value) =>
-                  setFiltersObj((prev) => ({ ...prev, subjectId: value === "all" ? null : Number(value) }))
-                }
-              >
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="All Subjects" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Subjects</SelectItem>
-                  {subjects.map((s) => (
-                    <SelectItem key={s.id!} value={s.id!.toString()}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={filtersObj.classId?.toString() ?? "all"}
-                onValueChange={(value) =>
-                  setFiltersObj((prev) => ({ ...prev, classId: value === "all" ? null : Number(value) }))
-                }
-              >
-                <SelectTrigger className="w-44">
-                  <SelectValue placeholder="All Semesters" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Semesters</SelectItem>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id!} value={cls.id!.toString()}>
-                      {cls.name.split(" ")[1] || cls.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">Filters</Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Filter Subject Papers</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-2">
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Affiliation</div>
+                      <Select
+                        value={filtersObj.affiliationId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({ ...prev, affiliationId: value === "all" ? null : Number(value) }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Affiliations" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Affiliations</SelectItem>
+                          {affiliations.map((a) => (
+                            <SelectItem key={a.id!} value={a.id!.toString()}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Academic Year</div>
+                      <Select
+                        value={filtersObj.academicYearId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({ ...prev, academicYearId: value === "all" ? null : Number(value) }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Academic Years" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Academic Years</SelectItem>
+                          {academicYears.map((ay) => (
+                            <SelectItem key={ay.id!} value={ay.id!.toString()}>
+                              {ay.year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Regulation Type</div>
+                      <Select
+                        value={filtersObj.regulationTypeId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            regulationTypeId: value === "all" ? null : Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Regulation Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Regulation Types</SelectItem>
+                          {regulationTypes.map((rt) => (
+                            <SelectItem key={rt.id!} value={rt.id!.toString()}>
+                              {rt.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Subject</div>
+                      <Select
+                        value={filtersObj.subjectId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({ ...prev, subjectId: value === "all" ? null : Number(value) }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Subjects" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Subjects</SelectItem>
+                          {subjects.map((s) => (
+                            <SelectItem key={s.id!} value={s.id!.toString()}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Semester</div>
+                      <Select
+                        value={filtersObj.classId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({ ...prev, classId: value === "all" ? null : Number(value) }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Semesters" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Semesters</SelectItem>
+                          {classes.map((cls) => (
+                            <SelectItem key={cls.id!} value={cls.id!.toString()}>
+                              {cls.name.split(" ")[1] || cls.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Program Course</div>
+                      <Select
+                        value={filtersObj.programCourseId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            programCourseId: value === "all" ? null : Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Program Courses" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Program Courses</SelectItem>
+                          {programCourses.map((pc) => (
+                            <SelectItem key={pc.id!} value={pc.id!.toString()}>
+                              {pc.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Subject Type</div>
+                      <Select
+                        value={filtersObj.subjectTypeId?.toString() ?? "all"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({ ...prev, subjectTypeId: value === "all" ? null : Number(value) }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Subject Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Subject Types</SelectItem>
+                          {subjectTypes.map((st) => (
+                            <SelectItem key={st.id!} value={st.id!.toString()}>
+                              {st.code ?? ""}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Is Optional</div>
+                      <Select
+                        value={filtersObj.isOptional === null ? "all" : filtersObj.isOptional ? "true" : "false"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            isOptional: value === "all" ? null : value === "true",
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All Papers" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Papers</SelectItem>
+                          <SelectItem value="true">Optional Papers</SelectItem>
+                          <SelectItem value="false">Non-Optional Papers</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({
+                          ...prev,
+                          subjectId: null,
+                          affiliationId: null,
+                          regulationTypeId: null,
+                          academicYearId: null,
+                          classId: null,
+                          programCourseId: null,
+                          subjectTypeId: null,
+                          isOptional: null,
+                          searchText: "",
+                          page: 1,
+                          limit: itemsPerPage,
+                        }));
+                      }}
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setCurrentPage(1);
+                        setIsFilterOpen(false);
+                        fetchFilteredData();
+                      }}
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Active Filters Badges */}
+              <div className="flex flex-wrap items-center gap-2 ml-2">
+                {filtersObj.affiliationId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-purple-300 text-purple-700 bg-purple-50 flex items-center gap-1"
+                  >
+                    {affiliations.find((a) => a.id === filtersObj.affiliationId)?.name || "Affiliation"}
+                    <button
+                      aria-label="Clear affiliation filter"
+                      className="ml-1 hover:text-purple-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, affiliationId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.academicYearId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
+                  >
+                    {academicYears.find((ay) => ay.id === filtersObj.academicYearId)?.year || "Year"}
+                    <button
+                      aria-label="Clear academic year filter"
+                      className="ml-1 hover:text-slate-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, academicYearId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.regulationTypeId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-teal-300 text-teal-700 bg-teal-50 flex items-center gap-1"
+                  >
+                    {regulationTypes.find((rt) => rt.id === filtersObj.regulationTypeId)?.name || "Regulation"}
+                    <button
+                      aria-label="Clear regulation filter"
+                      className="ml-1 hover:text-teal-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, regulationTypeId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.subjectId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50 flex items-center gap-1"
+                  >
+                    {subjects.find((s) => s.id === filtersObj.subjectId)?.name || "Subject"}
+                    <button
+                      aria-label="Clear subject filter"
+                      className="ml-1 hover:text-indigo-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, subjectId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.classId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-orange-300 text-orange-700 bg-orange-50 flex items-center gap-1"
+                  >
+                    {classes.find((c) => c.id === filtersObj.classId)?.name || "Semester"}
+                    <button
+                      aria-label="Clear semester filter"
+                      className="ml-1 hover:text-orange-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, classId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.programCourseId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
+                  >
+                    {programCourses.find((pc) => pc.id === filtersObj.programCourseId)?.name || "Program Course"}
+                    <button
+                      aria-label="Clear program course filter"
+                      className="ml-1 hover:text-blue-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, programCourseId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.subjectTypeId && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50 flex items-center gap-1"
+                  >
+                    {subjectTypes.find((st) => st.id === filtersObj.subjectTypeId)?.code || "Subject Type"}
+                    <button
+                      aria-label="Clear subject type filter"
+                      className="ml-1 hover:text-emerald-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, subjectTypeId: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtersObj.isOptional !== null && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-rose-300 text-rose-700 bg-rose-50 flex items-center gap-1"
+                  >
+                    {filtersObj.isOptional ? "Optional Papers" : "Non-Optional Papers"}
+                    <button
+                      aria-label="Clear is optional filter"
+                      className="ml-1 hover:text-rose-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, isOptional: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
             </div>
             <Input
               placeholder="Search..."
@@ -1103,10 +1531,24 @@ const SubjectPaperMappingPage = () => {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
             />
-            <Button variant="outline" onClick={() => {}}>
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
+            <div className="relative">
+              <Button variant="outline" onClick={() => handleDownload()} disabled={isDownloading}>
+                {isDownloading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download All"}
+              </Button>
+              {isDownloading && (
+                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
           <div className="relative z-50 bg-white" style={{ height: "600px" }}>
             <div className="overflow-y-auto text-[14px] overflow-x-auto h-full border rounded-md">
@@ -1191,14 +1633,20 @@ const SubjectPaperMappingPage = () => {
                         {idx + 1}
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex items-center" style={{ width: "14%" }}>
-                        {programCourses.find((ele) => ele.id == sp.programCourseId)?.name ?? "-"}
+                        <Badge variant="outline" className="text-xs border-blue-300 text-blue-700 bg-blue-50">
+                          {programCourses.find((ele) => ele.id == sp.programCourseId)?.name ?? "-"}
+                        </Badge>
                       </div>
                       <div className="flex-shrink-0 p-3 border-r flex flex-col" style={{ width: "20%" }}>
                         <p>
                           {sp.name ?? "-"}
                           {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
                         </p>
-                        <p>({subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"})</p>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">
+                            {subjects.find((s) => s.id === sp.subjectId)?.name ?? "-"}
+                          </Badge>
+                        </div>
                       </div>
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
@@ -1210,20 +1658,28 @@ const SubjectPaperMappingPage = () => {
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "12%" }}
                       >
-                        {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.code ?? "-"}
+                        <Badge variant="outline" className="text-xs border-emerald-300 text-emerald-700 bg-emerald-50">
+                          {subjectTypes.find((st) => st.id === sp.subjectTypeId)?.code ?? "-"}
+                        </Badge>
                       </div>
                       <div
                         className="flex-shrink-0 p-3 border-r flex items-center justify-center"
                         style={{ width: "10%" }}
                       >
-                        {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
+                        <Badge variant="outline" className="text-xs border-orange-300 text-orange-700 bg-orange-50">
+                          {classes.find((cls) => cls.id === sp.classId)?.name.split(" ")[1] ?? "-"}
+                        </Badge>
                       </div>
                       <div className="flex-shrink-0 p-3 border-r" style={{ width: "21%" }}>
                         {/* Display exam component names */}
                         <div className="flex flex-wrap gap-1">
                           {sp.components && sp.components.length > 0 ? (
                             sp.components.map((component: PaperComponentDto, compIdx: number) => (
-                              <Badge key={compIdx} variant="outline" className="text-xs">
+                              <Badge
+                                key={compIdx}
+                                variant="outline"
+                                className="text-xs border-red-300 text-red-700 bg-red-50"
+                              >
                                 {component.examComponent.name}
                               </Badge>
                             ))

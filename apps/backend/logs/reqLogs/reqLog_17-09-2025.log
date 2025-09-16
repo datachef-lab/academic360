@@ -1,0 +1,7 @@
+17-09-2025	03:55:14	ed1d9980-04c1-4b30-afc5-c96bc8e6fcbc	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+17-09-2025	03:55:12	991bbad0-ba58-4f09-bbbb-e374c85c0efe	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+17-09-2025	03:55:11	02e29205-1f1f-4879-9427-995f4a75f360	GET	/api/users/5/profile	http://localhost:3000
+17-09-2025	03:55:11	4566866d-0fb3-4a27-a9e8-a8be9aa2f8da	GET	/api/users/5/profile	http://localhost:3000
+17-09-2025	03:55:11	efb3beaa-b1a3-4bbd-a706-33cf0e417b75	OPTIONS	/api/users/5/profile	http://localhost:3000
+17-09-2025	03:55:04	5e8c9778-dcde-4631-a823-417e65b41041	POST	/auth/login	http://localhost:3000
+17-09-2025	03:51:59	62d13bb1-36b2-4090-8bdf-d86b2dab18b8	POST	/auth/login	http://localhost:3000

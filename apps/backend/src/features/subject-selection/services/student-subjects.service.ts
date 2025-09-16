@@ -14,6 +14,7 @@ import {
   sessionModel,
   studentModel,
 } from "@repo/db/schemas";
+import { classModel } from "@repo/db/schemas/models/academics";
 import * as classService from "@/features/academics/services/class.service";
 import * as shiftService from "@/features/academics/services/shift.service";
 import * as paperService from "@/features/course-design/services/paper.service";
@@ -100,16 +101,50 @@ export async function findSubjectsSelections(studentId: number) {
   const { foundAdmAcademicInfo, foundAcademicYear } =
     await findHierarchy(studentId);
 
-  const studentSubjects =
-    await studentAcademicSubjectService.findSubjectsByAcademicInfoId(
+  // Parallel fetch of all required data
+  const [
+    studentSubjects,
+    studentSelectedMinorSubjects,
+    relatedSubjects,
+    subjectTypesWithPapers,
+  ] = await Promise.all([
+    studentAcademicSubjectService.findSubjectsByAcademicInfoId(
       foundAdmAcademicInfo?.id,
-    );
+    ),
+    db
+      .select()
+      .from(admSubjectPaperSelectionModel)
+      .where(eq(admSubjectPaperSelectionModel.studentId, studentId)),
+    relatedSubjectService.findByAcademicYearIdAndProgramCourseId(
+      foundAcademicYear?.id,
+      foundProgramCourse?.id!,
+    ),
+    // Optimized query: Get all subject types with their papers in one query
+    db
+      .select({
+        subjectType: subjectTypeModel,
+        paper: paperModel,
+        subject: subjectModel,
+        class: classModel,
+      })
+      .from(paperModel)
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id))
+      .where(
+        and(
+          eq(paperModel.academicYearId, foundAcademicYear?.id),
+          eq(paperModel.programCourseId, foundProgramCourse?.id!),
+          eq(paperModel.isActive, true),
+          eq(paperModel.isOptional, true),
+        ),
+      ),
+  ]);
 
-  const studentSelectedMinorSubjects = await db
-    .select()
-    .from(admSubjectPaperSelectionModel)
-    .where(eq(admSubjectPaperSelectionModel.studentId, studentId));
-
+  // Process selected minor subjects in parallel
   const selectedMinorDetailedList = await Promise.all(
     studentSelectedMinorSubjects.map(async (selection) => {
       const [foundPaper] = await db
@@ -125,61 +160,34 @@ export async function findSubjectsSelections(studentId: number) {
     (subject): subject is paperService.PaperDetailedDto => subject !== null,
   );
 
-  // Fetch the related subjects for the program course
-  const relatedSubjects =
-    await relatedSubjectService.findByAcademicYearIdAndProgramCourseId(
-      foundAcademicYear?.id,
-      foundProgramCourse?.id!,
-    );
+  // Group papers by subject type
+  const papersBySubjectType = new Map<number, any[]>();
+  for (const row of subjectTypesWithPapers) {
+    if (!row.subjectType) continue;
 
-  // Fetch the subject types for the academic year and program course
-  const subjectTypeIds = (
-    await db
-      .select({
-        subjectTypeId: paperModel.subjectTypeId,
-      })
-      .from(paperModel)
-      .where(
-        and(
-          eq(paperModel.academicYearId, foundAcademicYear?.id),
-          eq(paperModel.programCourseId, foundProgramCourse?.id!),
-          eq(paperModel.classId, foundClass?.id!),
-        ),
-      )
-      .groupBy(paperModel.subjectTypeId)
-  ).map((paper) => paper.subjectTypeId);
+    const subjectTypeId = row.subjectType.id;
+    if (!papersBySubjectType.has(subjectTypeId)) {
+      papersBySubjectType.set(subjectTypeId, []);
+    }
+    papersBySubjectType.get(subjectTypeId)!.push({
+      paper: row.paper,
+      subject: row.subject,
+      class: row.class,
+      subjectType: row.subjectType,
+    });
+  }
 
   const studentSubjectsSelection = [];
-  for (const subjectTypeId of subjectTypeIds) {
-    const [foundSubjectType] = await db
-      .select()
-      .from(subjectTypeModel)
-      .where(eq(subjectTypeModel.id, subjectTypeId));
-
-    const papers = await db
-      .select()
-      .from(paperModel)
-      .where(
-        and(
-          eq(paperModel.subjectTypeId, subjectTypeId),
-          eq(paperModel.classId, foundClass?.id!),
-          eq(paperModel.programCourseId, foundProgramCourse?.id!),
-          eq(paperModel.academicYearId, foundAcademicYear?.id!),
-        ),
-      );
-
+  for (const [subjectTypeId, papers] of papersBySubjectType) {
+    const subjectType = papers[0].subjectType;
     const paperOptions = [];
-    for (const paper of papers) {
-      const [foundSubject] = await db
-        .select()
-        .from(subjectModel)
-        .where(eq(subjectModel.id, paper.subjectId));
 
+    for (const { paper, subject } of papers) {
       // Fetch the subject which is common name in subject and board subject name
       const relatedSubjectMainDto = relatedSubjects.find(
         (rsbj) =>
           rsbj.subjectType.id === subjectTypeId &&
-          isSubjectMatch(rsbj.boardSubjectName.name, foundSubject?.name || ""),
+          isSubjectMatch(rsbj.boardSubjectName.name, subject?.name || ""),
       );
 
       // Check the condition
@@ -222,7 +230,7 @@ export async function findSubjectsSelections(studentId: number) {
 
     // Add the paper options to the student subjects selection
     studentSubjectsSelection.push({
-      subjectType: foundSubjectType,
+      subjectType,
       paperOptions,
     });
   }

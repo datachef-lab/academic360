@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,77 +20,56 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { subjectSelectionApi, RelatedSubjectMainDto } from "@/services/subject-selection.api";
 
-// Mock data
-const restrictedGroupings = [
-  {
-    id: 1,
-    groupName: "Accounting Conflict",
-    description: "Cannot take both basic and advanced accounting in same semester",
-    subjects: ["Basic Accounting", "Advanced Accounting", "Cost Accounting"],
-    programCourses: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    subjectCategory: "MAJOR",
-    isActive: true,
-  },
-  {
-    id: 2,
-    groupName: "Programming Prerequisites",
-    description: "Advanced programming requires basic programming completion",
-    subjects: ["Java Programming", "Advanced Java", "Spring Framework"],
-    programCourses: ["BCA - Computer Applications", "B.Sc (IT) - Information Technology"],
-    subjectCategory: "DSCC",
-    isActive: true,
-  },
-  {
-    id: 3,
-    groupName: "Mathematics Foundation",
-    description: "Statistics requires mathematics foundation",
-    subjects: ["Business Mathematics", "Statistics", "Operations Research"],
-    programCourses: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    subjectCategory: "AECC",
-    isActive: true,
-  },
-  {
-    id: 4,
-    groupName: "Language Restriction",
-    description: "Cannot take multiple foreign languages simultaneously",
-    subjects: ["French", "German", "Spanish"],
-    programCourses: [
-      "B.COM (H) - Commerce & Management",
-      "BBA - Business Administration",
-      "BCA - Computer Applications",
-    ],
-    subjectCategory: "VAC",
-    isActive: false,
-  },
-  {
-    id: 5,
-    groupName: "Minor Alternatives",
-    description: "Minor stream with alternative choices",
-    subjects: ["Environmental Studies", "Sociology", "Psychology"],
-    programCourses: ["B.COM (H) - Commerce & Management"],
-    subjectCategory: "MINOR",
-    isActive: true,
-  },
-];
-
-const programCourses = [
-  "B.COM (H) - Commerce & Management",
-  "BBA - Business Administration",
-  "BCA - Computer Applications",
-  "B.Sc (IT) - Information Technology",
-];
+// UI shape derived from backend DTOs
+type UIGrouping = {
+  id: number;
+  programCourses: string[];
+  subjectCategory: string;
+  subjects: string[]; // [target, ...alternatives]
+  isActive: boolean;
+};
 
 // Consistent outline color for alternative subject badges
 const altBadgeColor = "bg-indigo-50 text-indigo-700 border-indigo-300";
 
 export default function AlternativeSubjectsPage() {
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
+  const [groupings, setGroupings] = useState<UIGrouping[]>([]);
+  const [, setLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await subjectSelectionApi.listRelatedSubjectMains();
+        if (!isMounted) return;
+        const mapped: UIGrouping[] = (data as RelatedSubjectMainDto[]).map((dto) => ({
+          id: dto.id,
+          programCourses: [dto.programCourse.name],
+          subjectCategory: dto.subjectType.code || dto.subjectType.name,
+          subjects: [dto.boardSubjectName.name, ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName.name)],
+          isActive: dto.id ? true : true, // backend has isActive on main; keep true fallback
+        }));
+        setGroupings(mapped);
+      } catch {
+        // handled by interceptor toast/UI globally
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Use table pagination hook
-  const tableData = useTablePagination({
-    data: restrictedGroupings,
-    searchFields: ["groupName", "description"],
+  const tableData = useTablePagination<UIGrouping>({
+    data: groupings,
+    searchFields: ["subjectCategory", "subjects"],
     initialItemsPerPage: 10,
   });
 
@@ -117,9 +97,15 @@ export default function AlternativeSubjectsPage() {
 
   const allSubjects = useMemo(() => {
     const set = new Set<string>();
-    restrictedGroupings.forEach((g) => g.subjects.forEach((s) => set.add(s)));
+    groupings.forEach((g) => g.subjects.forEach((s) => set.add(s)));
     return Array.from(set);
-  }, []);
+  }, [groupings]);
+
+  const programCourses = useMemo(() => {
+    const set = new Set<string>();
+    groupings.forEach((g) => g.programCourses.forEach((p) => set.add(p)));
+    return Array.from(set);
+  }, [groupings]);
 
   type DialogRow = {
     programCourse: string;
@@ -153,7 +139,7 @@ export default function AlternativeSubjectsPage() {
     setIsDialogOpen(true);
   };
 
-  const openEditDialog = (grouping: (typeof restrictedGroupings)[number]) => {
+  const openEditDialog = (grouping: UIGrouping) => {
     setDialogMode("edit");
     setDialogRows([
       {

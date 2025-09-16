@@ -2,6 +2,7 @@ import express from "express";
 import {
   createPaperHandler,
   deletePaperHandler,
+  downloadPapersHandler,
   getAllPapersHandler,
   getPaperByIdHandler,
   updatePaperHandler,
@@ -10,6 +11,8 @@ import {
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
+// Download papers (must be before /:id route)
+router.get("/download", downloadPapersHandler);
 router.use(verifyJWT);
 router.post("/", createPaperHandler);
 router.get("/", getAllPapersHandler);

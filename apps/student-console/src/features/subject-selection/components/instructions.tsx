@@ -36,12 +36,12 @@ export default function Instructions({ compact = false }: { compact?: boolean })
               </div>
 
               {/* Introduction */}
-              <div className="border border-gray-200 rounded-lg p-3">
+              {/* <div className="border border-gray-200 rounded-lg p-3">
                 <p className="text-gray-700 leading-relaxed text-sm">
                   Before selecting your subjects, please read the following notes carefully to ensure clarity on the
                   selection process. These notes are provided here for your reference and guidance.
                 </p>
-              </div>
+              </div> */}
 
               {/* Subject Categories - Clean Ordered Lists */}
               <div className="space-y-4">

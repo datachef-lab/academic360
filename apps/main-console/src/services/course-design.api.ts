@@ -51,9 +51,46 @@ export type DeleteResult = {
   records: Array<{ count: number; type: string }>;
 };
 
+export interface PaginatedResponse<T> {
+  content: T[];
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalElements: number;
+}
+
 // Papers
 export const getPapers = async () => {
   const res = await axiosInstance.get<ApiResonse<Paper[]>>(`${BASE}/papers`);
+  return res.data.payload;
+};
+export const getPapersPaginated = async (
+  page: number,
+  pageSize: number,
+  filters?: {
+    subjectId?: number | null;
+    affiliationId?: number | null;
+    regulationTypeId?: number | null;
+    academicYearId?: number | null;
+    subjectTypeId?: number | null;
+    programCourseId?: number | null;
+    classId?: number | null;
+    isOptional?: boolean | null;
+    searchText?: string | null;
+  },
+) => {
+  const params: Record<string, any> = { page, pageSize };
+  if (filters?.subjectId) params.subjectId = filters.subjectId;
+  if (filters?.affiliationId) params.affiliationId = filters.affiliationId;
+  if (filters?.regulationTypeId) params.regulationTypeId = filters.regulationTypeId;
+  if (filters?.academicYearId) params.academicYearId = filters.academicYearId;
+  if (filters?.subjectTypeId) params.subjectTypeId = filters.subjectTypeId;
+  if (filters?.programCourseId) params.programCourseId = filters.programCourseId;
+  if (filters?.classId) params.classId = filters.classId;
+  if (filters?.isOptional !== null && filters?.isOptional !== undefined) params.isOptional = filters.isOptional;
+  if (filters?.searchText) params.searchText = filters.searchText;
+
+  const res = await axiosInstance.get<ApiResonse<PaginatedResponse<PaperDto>>>(`${BASE}/papers`, { params });
   return res.data.payload;
 };
 export const getPaper = (id: number) => axiosInstance.get<Paper>(`${BASE}/papers/${id}`);
@@ -352,6 +389,36 @@ export const deleteCourseLevel = async (id: number) => {
 // Update a paper with components
 export const updatePaperWithComponents = (paperId: number, data: PaperDto) =>
   axiosInstance.put(`${BASE}/papers/${paperId}/with-components`, data);
+
+// Download papers with filters
+export const downloadPapers = async (filters?: {
+  subjectId?: number | null;
+  affiliationId?: number | null;
+  regulationTypeId?: number | null;
+  academicYearId?: number | null;
+  subjectTypeId?: number | null;
+  programCourseId?: number | null;
+  classId?: number | null;
+  isOptional?: boolean | null;
+  searchText?: string | null;
+}) => {
+  const params: Record<string, any> = {};
+  if (filters?.subjectId) params.subjectId = filters.subjectId;
+  if (filters?.affiliationId) params.affiliationId = filters.affiliationId;
+  if (filters?.regulationTypeId) params.regulationTypeId = filters.regulationTypeId;
+  if (filters?.academicYearId) params.academicYearId = filters.academicYearId;
+  if (filters?.subjectTypeId) params.subjectTypeId = filters.subjectTypeId;
+  if (filters?.programCourseId) params.programCourseId = filters.programCourseId;
+  if (filters?.classId) params.classId = filters.classId;
+  if (filters?.isOptional !== null && filters?.isOptional !== undefined) params.isOptional = filters.isOptional;
+  if (filters?.searchText) params.searchText = filters.searchText;
+
+  const res = await axiosInstance.get(`${BASE}/papers/download`, {
+    params,
+    responseType: "blob",
+  });
+  return res.data;
+};
 
 // Bulk upload subject papers
 export const bulkUploadSubjectPapers = async (file: File): Promise<BulkUploadResult> => {

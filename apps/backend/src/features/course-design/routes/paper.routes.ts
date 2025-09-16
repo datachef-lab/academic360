@@ -6,11 +6,15 @@ import {
   updatePaperHandler,
   deletePaperHandler,
   updatePaperWithComponentsHandler,
+  downloadPapersHandler,
 } from "../controllers/paper.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import { uploadExcelMiddleware } from "@/middlewares/uploadMiddleware.middleware.js";
 
 const router = express.Router();
+
+// Download papers (must be before /:id route)
+router.get("/download", downloadPapersHandler);
 
 // Apply JWT verification to all routes
 router.use(verifyJWT);
@@ -21,11 +25,19 @@ router.post("/", createPaperHandler);
 // Bulk upload papers
 // router.post("/bulk-upload", uploadExcelMiddleware, bulkUploadPapersHandler);
 
-// Get a paper by ID
-router.get("/:id", getPaperByIdHandler);
+// Test download endpoint
+router.get("/test-download", (req, res) => {
+  res.json({
+    message: "Download endpoint is working",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Get all papers
 router.get("/", getAllPapersHandler);
+
+// Get a paper by ID
+router.get("/:id", getPaperByIdHandler);
 
 // Update a paper
 router.put("/:id", updatePaperHandler);

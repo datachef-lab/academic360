@@ -156,12 +156,13 @@ export default function DashboardLayout({
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">{user?.payload?.uid} </span>
               <Avatar
-              // src={getStudentImage(user?.payload.uid!)}
+              // src={getStudentImage(user?.payload?.uid!)}
               // alt={user?.name || "User"}
               // className="h-10 w-10 rounded-full border border-gray-200 ring-1 ring-gray-100 bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center text-sm font-semibold shadow-sm hover:ring-indigo-200 transition"
               >
-                <AvatarImage src={getStudentImageUrl(user?.payload.uid!)} />
+                <AvatarImage src={user?.payload?.uid ? getStudentImageUrl(user.payload.uid) : undefined} />
               </Avatar>
               {/* {(() => {
                 const initials = (user?.name || "U")

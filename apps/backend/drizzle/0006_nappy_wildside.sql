@@ -1,0 +1,19 @@
+CREATE INDEX "idx_papers_subject_id" ON "papers" USING btree ("subject_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_affiliation_id" ON "papers" USING btree ("affiliation_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_regulation_type_id" ON "papers" USING btree ("regulation_type_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_academic_year_id" ON "papers" USING btree ("academic_year_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_subject_type_id" ON "papers" USING btree ("subject_type_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_program_course_id" ON "papers" USING btree ("programe_course_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_class_id" ON "papers" USING btree ("class_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_name" ON "papers" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "idx_papers_code" ON "papers" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "idx_papers_is_optional" ON "papers" USING btree ("is_optional");--> statement-breakpoint
+CREATE INDEX "idx_papers_created_at" ON "papers" USING btree ("created_at");--> statement-breakpoint
+CREATE INDEX "idx_papers_id" ON "papers" USING btree ("id");--> statement-breakpoint
+CREATE INDEX "idx_papers_filters" ON "papers" USING btree ("subject_id_fk","affiliation_id_fk","regulation_type_id_fk");--> statement-breakpoint
+CREATE INDEX "idx_papers_search" ON "papers" USING btree ("name","code","is_optional");--> statement-breakpoint
+CREATE INDEX "idx_papers_active" ON "papers" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "idx_subjects_name" ON "subjects" USING btree ("name");--> statement-breakpoint
+CREATE INDEX "idx_subjects_code" ON "subjects" USING btree ("code");--> statement-breakpoint
+CREATE INDEX "idx_subjects_active" ON "subjects" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "idx_subjects_legacy_id" ON "subjects" USING btree ("legacy_subject_id");

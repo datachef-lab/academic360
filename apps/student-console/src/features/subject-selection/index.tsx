@@ -25,7 +25,7 @@ export default function SubjectSelection() {
         <button
           type="button"
           onClick={() => setOpenMobileNotes(true)}
-          className="lg:hidden fixed bottom-6 right-6 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-lg bg-blue-600 text-white"
+          className="lg:hidden fixed top-6 right-6 z-20 inline-flex items-center gap-2 px-4 py-2 rounded-full shadow-lg bg-blue-600 text-white"
           aria-label="View notes"
         >
           <Info className="w-4 h-4" /> Notes

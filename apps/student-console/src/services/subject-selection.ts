@@ -1,6 +1,7 @@
 export interface SubjectTypeDto {
   id: number;
   name: string;
+  code?: string | null;
 }
 
 export interface PaperDto {
@@ -8,6 +9,7 @@ export interface PaperDto {
   name?: string | null;
   code?: string | null;
   subject?: { id: number; name?: string | null } | null;
+  class?: { id: number; name?: string | null } | null;
 }
 
 export interface StudentSubjectSelectionDto {

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { AlertCircle, Info } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, Info, Loader2 } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -33,19 +33,16 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [minorSem12, setMinorSem12] = useState<string>("");
   const [minorSem34, setMinorSem34] = useState<string>("");
   const [aec3, setAec3] = useState(""); // AEC 3 (Semester III)
-  const [cvac2, setCvac2] = useState(""); // CVAC 2 (Semester I)
   const [cvac4, setCvac4] = useState(""); // CVAC 4 (Semester II)
 
-  // Options populated from backend (fallback to demo if none)
-  const [admissionMinorSubjects, setAdmissionMinorSubjects] = useState<string[]>([]);
-  const [availableIdcSubjects, setAvailableIdcSubjects] = useState<string[]>([]);
-  const [availableAecSubjects] = useState([]);
-  const [availableCvac4Options] = useState([]);
-
-  // Fix for shadcn Select type issues in some contexts
-  const SelectTriggerFixed = SelectTrigger as React.ComponentType<any>;
-  const SelectContentFixed = SelectContent as React.ComponentType<any>;
-  const SelectItemFixed = SelectItem as React.ComponentType<any>;
+  // Options populated from backend (semester-wise lists)
+  const [admissionMinor1Subjects, setAdmissionMinor1Subjects] = useState<string[]>([]); // Sem I & II
+  const [admissionMinor2Subjects, setAdmissionMinor2Subjects] = useState<string[]>([]); // Sem III & IV
+  const [availableIdcSem1Subjects, setAvailableIdcSem1Subjects] = useState<string[]>([]);
+  const [availableIdcSem2Subjects, setAvailableIdcSem2Subjects] = useState<string[]>([]);
+  const [availableIdcSem3Subjects, setAvailableIdcSem3Subjects] = useState<string[]>([]);
+  const [availableAecSubjects, setAvailableAecSubjects] = useState<string[]>([]);
+  const [availableCvacOptions, setAvailableCvacOptions] = useState<string[]>([]);
 
   // Removed auto-assign for Minor II; user must select Minor II explicitly
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
@@ -64,21 +61,79 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const groups = resp.studentSubjectsSelection ?? [];
         setSelections(groups);
 
-        // Capture earlier Minor selections (do not preselect in dropdowns)
-        const earlier = resp.selectedMinorSubjects ?? [];
-        const earlierMinor1 = earlier[0]?.id ? earlier[0].name || earlier[0].code || "" : "";
-        const earlierMinor2 = earlier[1]?.id ? earlier[1].name || earlier[1].code || "" : "";
-        setEarlierMinorSelections([earlierMinor1, earlierMinor2].filter(Boolean));
-
         // Derive groups
-        const getLabel = (p: PaperDto) => p?.name || p?.code || "";
-        const isMinor = (n: string) => n.toUpperCase().includes("MINOR") || n.toUpperCase() === "MN";
-        const isIDC = (n: string) => n.toUpperCase().includes("INTER DISCIPLINARY") || n.toUpperCase().includes("IDC");
+        const getLabel = (p: PaperDto) => p?.subject?.name || "";
+        const romanMap: Record<string, string> = { "1": "I", "2": "II", "3": "III", "4": "IV", "5": "V", "6": "VI" };
+        const extractSemesterRoman = (name?: string | null): string => {
+          if (!name) return "";
+          const upper = String(name).toUpperCase();
+          const romanMatch = upper.match(/\b(I|II|III|IV|V|VI)\b/);
+          if (romanMatch) return romanMatch[1];
+          const digitMatch = upper.match(/\b([1-6])\b/);
+          if (digitMatch) return romanMap[digitMatch[1]] || "";
+          return "";
+        };
+        const getSemesterRoman = (p: PaperDto) => extractSemesterRoman(p?.class?.name);
+        const isSem = (p: PaperDto, roman: string) => getSemesterRoman(p) === roman;
+        const isMinor = (n: string, c?: string | null) =>
+          (n ?? "").toUpperCase().includes("MINOR") || (c ?? "").toUpperCase() === "MN";
+        const isIDC = (n: string, c?: string | null) =>
+          (n ?? "").toUpperCase().includes("INTERDISCIPLINARY") ||
+          (n ?? "").toUpperCase().includes("INTER DISCIPLINARY") ||
+          (c ?? "").toUpperCase() === "IDC";
+        const isAEC = (n: string, c?: string | null) =>
+          (n ?? "").toUpperCase().includes("ABILITY ENHANCEMENT") || (c ?? "").toUpperCase() === "AEC";
+        const isCVAC = (n: string, c?: string | null) =>
+          (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") || (c ?? "").toUpperCase() === "CVAC";
 
-        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || ""));
-        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || ""));
-        setAdmissionMinorSubjects(minorGroup?.paperOptions?.map(getLabel).filter(Boolean) || []);
-        setAvailableIdcSubjects(idcGroup?.paperOptions?.map(getLabel).filter(Boolean) || []);
+        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code!));
+        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code!));
+        const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code!));
+        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code!));
+
+        const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
+
+        // Minor I: semesters I & II
+        const minorSem1And2 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "I") || isSem(p, "II"));
+        // Minor II: semesters III & IV
+        const minorSem3And4 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+
+        // IDC by semester
+        const idcSem1Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "I"));
+        const idcSem2Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
+        const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
+
+        // AEC 3: semester III
+        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
+
+        setAdmissionMinor1Subjects(dedupe(minorSem1And2.map(getLabel)));
+        setAdmissionMinor2Subjects(dedupe(minorSem3And4.map(getLabel)));
+
+        // IDC per semester lists
+        setAvailableIdcSem1Subjects(dedupe(idcSem1Papers.map(getLabel)));
+        setAvailableIdcSem2Subjects(dedupe(idcSem2Papers.map(getLabel)));
+        setAvailableIdcSem3Subjects(dedupe(idcSem3Papers.map(getLabel)));
+        setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
+        setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
+
+        // Save semester labels for use in filtering at render time
+        setIdcSem1("I");
+        setIdcSem2("II");
+        setIdcSem3("III");
+        setMinorSem12("I,II");
+        setMinorSem34("III,IV");
+
+        // Capture earlier Minor selections strictly by subject name
+        const earlier = resp.selectedMinorSubjects ?? [];
+        const subjectNameFromMinor = (paper: PaperDto | undefined): string => {
+          if (!paper?.id) return "";
+          if (paper.subject?.name) return paper.subject.name || "";
+          const match = minorGroup?.paperOptions?.find((po) => po.id === paper.id);
+          return match?.subject?.name || ""; // never fall back to paper name
+        };
+        const earlierMinor1 = subjectNameFromMinor(earlier[0]);
+        const earlierMinor2 = subjectNameFromMinor(earlier[1]);
+        setEarlierMinorSelections([earlierMinor1, earlierMinor2].filter(Boolean));
       } catch (e: any) {
         setLoadError(e?.message || "Failed to load subject selections");
       } finally {
@@ -120,7 +175,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     const newErrors: string[] = [];
 
     const shouldAskForAec = availableAecSubjects.length > 0;
-    const shouldAskForCvac = availableCvac4Options.length > 0;
+    const shouldAskForCvac = availableCvacOptions.length > 0;
 
     // Required field validation
     if (!minor1) newErrors.push("Minor I subject is required");
@@ -128,7 +183,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     if (!idc2) newErrors.push("IDC 2 subject is required");
     if (!idc3) newErrors.push("IDC 3 subject is required");
     if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
-    if (shouldAskForCvac && !cvac2) newErrors.push("CVAC 2 subject is required");
     if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
     // Business rule validation
@@ -174,9 +228,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   };
   const handleBack = () => setStep(1);
 
-  // Filter out Minor subjects from IDC options
-  const getFilteredIdcOptions = (currentIdcValue: string) => {
-    return availableIdcSubjects.filter(
+  // Filter out Minor subjects from IDC options (per list)
+  const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
+    return sourceList.filter(
       (subject) =>
         subject !== minor1 &&
         subject !== minor2 &&
@@ -186,6 +240,27 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
   const [showTips, setShowTips] = useState(true);
   const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
+
+  // Loading skeleton component for dropdowns
+  const LoadingDropdown = ({ label }: { label: string }) => (
+    <div className="space-y-2 min-h-[84px]">
+      <label className="text-sm font-semibold text-gray-700">{label}</label>
+      <div className="w-full border border-gray-300 rounded-md h-10 flex items-center justify-center bg-gray-50">
+        <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+        <span className="ml-2 text-sm text-gray-500">Loading options...</span>
+      </div>
+    </div>
+  );
+
+  // Helper function to convert subject arrays to combobox format
+  const convertToComboboxData = (subjects: string[], excludeValues: string[] = []) => {
+    return subjects
+      .filter((subject) => !excludeValues.includes(subject))
+      .map((subject) => ({
+        value: subject,
+        label: subject,
+      }));
+  };
 
   return (
     <div className="w-full h-full flex flex-col overflow-hidden ">
@@ -282,7 +357,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       </div> */}
 
       {/* Mobile toggle */}
-      <div className="lg:hidden mt-2 mb-2 ">
+      {/* <div className="lg:hidden mt-2 mb-2 ">
         <button
           type="button"
           onClick={() => setShowStudentInfoMobile((v) => !v)}
@@ -293,14 +368,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           </svg>
           {showStudentInfoMobile ? "Hide" : "Show"} Student Info
         </button>
-      </div>
+      </div> */}
 
-      <div
+      {/* <div
         className={`bg-blue-600 mt-2 mb-4 text-white font-bold p-2 rounded-lg ${showStudentInfoMobile ? "block" : "hidden"} lg:block`}
       >
         <div className="flex items-center gap-2 justify-between py-2 mb-3 text-xl border-b">
           <div className="text-white">Student Information</div>
-          {/* <div className="text-blue-100 text-sm font-normal">{student?.currentPromotion?.session?.name}</div> */}
+          
         </div>
         <div className="grid grid-cols-5 gap-8">
           <div className="space-y-3 text-center">
@@ -311,7 +386,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
             <p className="text-base font-bold text-white">{student?.uid}</p>
           </div>
-          {/* Roll number may be unavailable on StudentDto */}
+          
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
             <p className="text-base font-bold text-white">{student?.currentPromotion?.rollNumber}</p>
@@ -325,11 +400,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             <p className="text-base font-bold text-white">{student?.shift?.name}</p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Form Section - No Scrolling */}
       <div className="flex-1 overflow-hidden">
-        <div className="shadow-lg rounded-xl bg-white p-6 border border-gray-100 h-full overflow-y-auto">
+        <div className="shadow-lg rounded-xl bg-white mt-6 md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
             {showTips && (
@@ -343,25 +418,61 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 </button>
               </div>
             )}
-            <button
+            {/* <button
               type="button"
               onClick={() => openNotes?.()}
               className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 hover:bg-gray-50"
             >
               <Info className="w-4 h-4" /> View Notes
-            </button>
+            </button> */}
           </div>
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-2">
+            <h2 className="text-xl font-bold text-gray-800 mb-8">
               {step === 1
                 ? "Semester-wise Subject Selection for Calcutta University Registration"
                 : "Preview Your Selections"}
             </h2>
             <p className="text-gray-600 text-sm">
-              {step === 1
-                ? "Please select your subjects according to the guidelines"
-                : "Review and confirm declarations before saving"}
+              {step === 1 ? (
+                <>
+                  <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
+                    <AlertCircle className="w-4 h-4 mt-0.5" />
+                    <div className="text-sm">
+                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
+                      selection process. These notes are provided here for your reference and guidance.
+                    </div>
+                    {/* <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
+                      Dismiss
+                    </button> */}
+                  </div>
+                  {/* <div className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400">
+                    <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
+                      Before You Begin
+                    </h4>
+                    <p className="text-blue-700 text-sm leading-relaxed">
+                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
+                      selection process. These notes are provided here for your reference and guidance.
+                    </p>
+                  </div> */}
+                </>
+              ) : (
+                "Review and confirm declarations before saving"
+              )}
             </p>
+            {loading && (
+              <div className="mt-3 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Loading subject options...</span>
+              </div>
+            )}
+            {loadError && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">Error loading subjects: {loadError}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {step === 1 && (
@@ -369,136 +480,115 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               {/* Removed: Available Paper Options preview */}
               {/* Minor Subjects */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-2 min-h-[84px]">
-                  <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
-                  <Select value={minor1} onValueChange={setMinor1} onOpenChange={(o) => o && handleFieldFocus("minor")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                      <SelectValue placeholder="Select Minor I" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {admissionMinorSubjects
-                        .filter((s) => s !== minor2)
-                        .map((subject) => (
-                          <SelectItemFixed key={subject} value={subject}>
-                            {subject}
-                          </SelectItemFixed>
-                        ))}
-                    </SelectContentFixed>
-                  </Select>
-                </div>
+                {loading ? (
+                  <>
+                    <LoadingDropdown label="Minor I (Semester I & II)" />
+                    <LoadingDropdown label="Minor II (Semester III & IV)" />
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2 min-h-[84px]">
+                      <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(admissionMinor1Subjects, [minor2])}
+                        value={minor1}
+                        onChange={setMinor1}
+                        placeholder="Select Minor I"
+                        className="w-full"
+                      />
+                    </div>
 
-                <div className="space-y-2 min-h-[84px]">
-                  <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
-                  <Select value={minor2} onValueChange={setMinor2} onOpenChange={(o) => o && handleFieldFocus("minor")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                      <SelectValue placeholder="Select Minor II" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {admissionMinorSubjects
-                        .filter((s) => s !== minor1)
-                        .map((subject) => (
-                          <SelectItemFixed key={subject} value={subject}>
-                            {subject}
-                          </SelectItemFixed>
-                        ))}
-                    </SelectContentFixed>
-                  </Select>
-                </div>
+                    <div className="space-y-2 min-h-[84px]">
+                      <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(admissionMinor2Subjects, [minor1])}
+                        value={minor2}
+                        onChange={setMinor2}
+                        placeholder="Select Minor II"
+                        className="w-full"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
-              {availableAecSubjects.length > 0 && (
+              {loading ? (
+                <LoadingDropdown label="AEC 3 (Semester III)" />
+              ) : availableAecSubjects.length > 0 ? (
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
-                  <Select value={aec3} onValueChange={setAec3} onOpenChange={(o) => o && handleFieldFocus("aec")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                      <SelectValue placeholder="Select AEC 3" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {availableAecSubjects.map((subject) => (
-                        <SelectItemFixed key={subject} value={subject}>
-                          {subject}
-                        </SelectItemFixed>
-                      ))}
-                    </SelectContentFixed>
-                  </Select>
+                  <Combobox
+                    dataArr={convertToComboboxData(availableAecSubjects)}
+                    value={aec3}
+                    onChange={setAec3}
+                    placeholder="Select AEC 3"
+                    className="w-full"
+                  />
                 </div>
-              )}
+              ) : null}
 
               {/* IDC Subjects */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="space-y-2 min-h-[84px]">
-                  <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
-                  <Select value={idc1} onValueChange={setIdc1} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                      <SelectValue placeholder="Select IDC 1" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {getFilteredIdcOptions(idc1).map((subject) => (
-                        <SelectItemFixed key={subject} value={subject}>
-                          {subject}
-                        </SelectItemFixed>
-                      ))}
-                    </SelectContentFixed>
-                  </Select>
-                </div>
+                {loading ? (
+                  <>
+                    <LoadingDropdown label="IDC 1 (Semester I)" />
+                    <LoadingDropdown label="IDC 2 (Semester II)" />
+                    <LoadingDropdown label="IDC 3 (Semester III)" />
+                  </>
+                ) : (
+                  <>
+                    <div className="space-y-2 min-h-[84px]">
+                      <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem1Subjects, idc1))}
+                        value={idc1}
+                        onChange={setIdc1}
+                        placeholder="Select IDC 1"
+                        className="w-full"
+                      />
+                    </div>
 
-                <div className="space-y-2 min-h-[84px]">
-                  <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
-                  <Select value={idc2} onValueChange={setIdc2} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                      <SelectValue placeholder="Select IDC 2" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {getFilteredIdcOptions(idc2).map((subject) => (
-                        <SelectItemFixed key={subject} value={subject}>
-                          {subject}
-                        </SelectItemFixed>
-                      ))}
-                    </SelectContentFixed>
-                  </Select>
-                </div>
+                    <div className="space-y-2 min-h-[84px]">
+                      <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem2Subjects, idc2))}
+                        value={idc2}
+                        onChange={setIdc2}
+                        placeholder="Select IDC 2"
+                        className="w-full"
+                      />
+                    </div>
 
-                <div className="space-y-2 min-h-[84px]">
-                  <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
-                  <Select value={idc3} onValueChange={setIdc3} onOpenChange={(o) => o && handleFieldFocus("idc")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500 h-10 overflow-hidden text-ellipsis whitespace-nowrap">
-                      <SelectValue placeholder="Select IDC 3" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>
-                      {getFilteredIdcOptions(idc3).map((subject) => (
-                        <SelectItemFixed key={subject} value={subject}>
-                          {subject}
-                        </SelectItemFixed>
-                      ))}
-                    </SelectContentFixed>
-                  </Select>
-                </div>
+                    <div className="space-y-2 min-h-[84px]">
+                      <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem3Subjects, idc3))}
+                        value={idc3}
+                        onChange={setIdc3}
+                        placeholder="Select IDC 3"
+                        className="w-full"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* CVAC Subjects */}
-              {availableCvac4Options.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">CVAC 2 (Semester I)</label>
-                  <Select value={cvac2} onValueChange={setCvac2} onOpenChange={(o) => o && handleFieldFocus("cvac")}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                      <SelectValue placeholder="Select CVAC 2" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>{/* options from API when available */}</SelectContentFixed>
-                  </Select>
-                </div>
-              )}
 
-              {availableCvac4Options.length > 0 && (
+              {loading ? (
+                <LoadingDropdown label="CVAC 4 (Semester II)" />
+              ) : availableCvacOptions.length > 0 ? (
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
-                  <Select value={cvac4} onValueChange={setCvac4}>
-                    <SelectTriggerFixed className="w-full border-gray-300 focus:ring-2 focus:ring-blue-500">
-                      <SelectValue placeholder="Select CVAC 4" />
-                    </SelectTriggerFixed>
-                    <SelectContentFixed>{/* options from API when available */}</SelectContentFixed>
-                  </Select>
+                  <Combobox
+                    dataArr={convertToComboboxData(availableCvacOptions)}
+                    value={cvac4}
+                    onChange={setCvac4}
+                    placeholder="Select CVAC 4"
+                    className="w-full"
+                  />
                 </div>
-              )}
+              ) : null}
 
               <div className="space-y-2">{/* Empty space for grid alignment */}</div>
             </div>
@@ -552,10 +642,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       <tr className="hover:bg-gray-50">
                         <td className="border p-2 font-medium text-gray-700">AEC 3 (Semester III)</td>
                         <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">CVAC 2 (Semester I)</td>
-                        <td className="border p-2 text-gray-800">{cvac2 || "-"}</td>
                       </tr>
                       <tr className="hover:bg-gray-50">
                         <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
@@ -622,7 +708,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           {/* Non-blocking Minor mismatch notice */}
           {step === 1 && minorMismatch && errors.length === 0 && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
-              Your current Minor I & II combination differs from the previously saved selection.
+              <div>Your current Minor I & II combination differs from the previously saved selection.</div>
+              <div className="mt-1 text-sm">
+                Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
+                <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>
+              </div>
             </div>
           )}
 
@@ -631,9 +721,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             {step === 1 && (
               <button
                 onClick={handleNext}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm flex items-center gap-2"
               >
-                Next
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Loading..." : "Next"}
               </button>
             )}
             {step === 2 && (

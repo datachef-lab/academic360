@@ -90,8 +90,38 @@ export const login = async (
       return;
     }
 
-    if (app === "student-console") {
-      const { payload, ...rest } = foundUser;
+    // Check if request is from student console
+    const origin = req.get("origin") || req.get("referer") || "";
+    const isStudentConsole =
+      app === "student-console" ||
+      origin.includes("localhost:3000") ||
+      origin.includes("student-console");
+
+    let userWithPayload: any = foundUser;
+
+    // If it's a student console request, fetch student data in payload
+    if (isStudentConsole) {
+      console.log(
+        "🎓 Student console request detected, fetching student data...",
+      );
+
+      // Format user with payload (student data)
+      const formattedUser = await userService.modelToDto(foundUser);
+      if (!formattedUser) {
+        console.log("❌ Student data not found, returning 401");
+        res
+          .status(401)
+          .json(
+            new ApiError(
+              401,
+              "Student data not found. Please contact support.",
+            ),
+          );
+        return;
+      }
+
+      userWithPayload = formattedUser;
+      console.log("✅ Student data fetched successfully");
     }
 
     const accessToken = generateToken(
@@ -125,7 +155,7 @@ export const login = async (
         new ApiResponse(
           200,
           "SUCCESS",
-          { accessToken, user: foundUser },
+          { accessToken, user: userWithPayload },
           "Login successful",
         ),
       );
@@ -209,15 +239,46 @@ export const refresh = async (
           return;
         }
 
-        // Format user with payload (student data)
-        const foundUser = await userService.modelToDto(rawUser);
-        if (!foundUser) {
-          res.status(401).json(new ApiError(404, "User formatting failed"));
-          return;
+        // Check if request is from student console
+        const origin = req.get("origin") || req.get("referer") || "";
+        const isStudentConsole =
+          origin.includes("localhost:3000") ||
+          origin.includes("student-console");
+
+        let userWithPayload: any = rawUser;
+
+        // If it's a student console request, fetch student data in payload
+        if (isStudentConsole) {
+          console.log(
+            "🎓 Student console refresh request detected, fetching student data...",
+          );
+
+          // Format user with payload (student data)
+          const formattedUser = await userService.modelToDto(rawUser);
+          if (!formattedUser) {
+            console.log(
+              "❌ Student data not found during refresh, returning 401",
+            );
+            res
+              .status(401)
+              .json(
+                new ApiError(
+                  401,
+                  "Student data not found. Please contact support.",
+                ),
+              );
+            return;
+          }
+
+          userWithPayload = formattedUser;
+          console.log("✅ Student data fetched successfully during refresh");
         }
 
         const accessToken = generateToken(
-          { id: foundUser.id!, type: foundUser.type as User["type"] },
+          {
+            id: userWithPayload.id as number,
+            type: userWithPayload.type as User["type"],
+          },
           process.env.ACCESS_TOKEN_SECRET!,
           process.env.ACCESS_TOKEN_EXPIRY! as StringValue,
         );
@@ -228,7 +289,7 @@ export const refresh = async (
             new ApiResponse(
               200,
               "SUCCESS",
-              { accessToken, user: foundUser },
+              { accessToken, user: userWithPayload },
               "Token refreshed",
             ),
           );

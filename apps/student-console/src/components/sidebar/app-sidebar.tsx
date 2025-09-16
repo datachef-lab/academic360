@@ -18,9 +18,11 @@ import {
 import Image from "next/image";
 
 import { useStudent } from "@/providers/student-provider";
+// import { useAuth } from "@/hooks/use-auth";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
+  //   const { user } = useAuth();
   const { accessControl } = useStudent();
   console.log("pathname:", pathname);
 

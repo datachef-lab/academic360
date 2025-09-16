@@ -1,31 +1,20 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { CheckIcon, ChevronsUpDownIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import * as React from "react";
+import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ComboboxProps = {
-  dataArr: { value: string; label: string }[]
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
-  disabled?: boolean
-}
+  dataArr: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+};
 
 export function Combobox({
   dataArr,
@@ -35,24 +24,15 @@ export function Combobox({
   className = "",
   disabled = false,
 }: ComboboxProps) {
-  const [open, setOpen] = React.useState(false)
-  const [search, setSearch] = React.useState("")
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
 
   // Filter options by label (case-insensitive, robust)
   const filtered = search
-    ? dataArr.filter((item) =>
-        (item.label || "")
-          .toLowerCase()
-          .trim()
-          .includes(search.toLowerCase().trim())
-      )
-    : dataArr
+    ? dataArr.filter((item) => (item.label || "").toLowerCase().trim().includes(search.toLowerCase().trim()))
+    : dataArr;
 
-  console.log("Filtered options:", filtered, "Search:", search)
-
-  const selectedLabel = value
-    ? dataArr.find((item) => item.value === value)?.label
-    : ""
+  const selectedLabel = value ? dataArr.find((item) => item.value === value)?.label : "";
 
   return (
     <Popover open={open && !disabled} onOpenChange={setOpen}>
@@ -64,7 +44,14 @@ export function Combobox({
           className={cn("justify-between w-full", className)}
           disabled={disabled}
         >
-          {selectedLabel || placeholder}
+          <div className="flex items-center gap-2">
+            <span>{selectedLabel || placeholder}</span>
+            {!selectedLabel && dataArr.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({dataArr.length} option{dataArr.length !== 1 ? "s" : ""})
+              </span>
+            )}
+          </div>
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -77,23 +64,23 @@ export function Combobox({
           />
           <CommandList>
             <CommandEmpty>No options found.</CommandEmpty>
+            {filtered.length > 0 && (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
+                {filtered.length} option{filtered.length !== 1 ? "s" : ""} available
+              </div>
+            )}
             <CommandGroup>
               {filtered.map((item) => (
                 <CommandItem
                   key={item.value}
                   value={item.label}
                   onSelect={(currentValue) => {
-                    onChange(item.value)
-                    setOpen(false)
-                    setSearch("")
+                    onChange(item.value);
+                    setOpen(false);
+                    setSearch("");
                   }}
                 >
-                  <CheckIcon
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === item.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
+                  <CheckIcon className={cn("mr-2 h-4 w-4", value === item.value ? "opacity-100" : "opacity-0")} />
                   {item.label}
                 </CommandItem>
               ))}
@@ -102,5 +89,5 @@ export function Combobox({
         </Command>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

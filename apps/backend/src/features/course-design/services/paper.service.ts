@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { eq, and, ilike, countDistinct } from "drizzle-orm";
+import { eq, and, or, ilike, countDistinct, desc, SQL } from "drizzle-orm";
 import { Paper, paperModel } from "@repo/db/schemas/models/course-design";
 import { PaperDto } from "@repo/db/dtos/course-design";
 import {
@@ -344,6 +344,244 @@ export async function getAllPapers() {
       papers.map(async (paper) => await modelToDto(paper as Paper)),
     )
   ).filter((paper) => paper !== null) as PaperDto[]; // Ensure we return only valid PaperDto objects
+}
+
+export async function getPapersPaginated(
+  page: number = 1,
+  pageSize: number = 10,
+) {
+  const [{ total }] = await db
+    .select({ total: countDistinct(paperModel.id) })
+    .from(paperModel);
+
+  const offset = (Math.max(1, page) - 1) * Math.max(1, pageSize);
+
+  const rows = await db
+    .select()
+    .from(paperModel)
+    .orderBy(desc(paperModel.id))
+    .limit(Math.max(1, pageSize))
+    .offset(offset);
+
+  const content = (
+    await Promise.all(
+      rows.map(async (paper) => await modelToDto(paper as Paper)),
+    )
+  ).filter(Boolean) as PaperDto[];
+
+  const totalElements = Number(total || 0);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalElements / Math.max(1, pageSize)),
+  );
+
+  return {
+    content,
+    page: Math.max(1, page),
+    pageSize: Math.max(1, pageSize),
+    totalPages,
+    totalElements,
+  };
+}
+
+interface PaperFilters {
+  subjectId?: number;
+  affiliationId?: number;
+  regulationTypeId?: number;
+  academicYearId?: number;
+  subjectTypeId?: number;
+  programCourseId?: number;
+  classId?: number;
+  isOptional?: boolean;
+  searchText?: string;
+}
+
+export async function getPapersFilteredPaginated(
+  filters: PaperFilters,
+  page: number = 1,
+  pageSize: number = 10,
+) {
+  // Build basic filter conditions first
+  const conditions: SQL[] = [] as unknown as SQL[];
+  if (filters.subjectId)
+    conditions.push(eq(paperModel.subjectId, filters.subjectId));
+  if (filters.affiliationId)
+    conditions.push(eq(paperModel.affiliationId, filters.affiliationId));
+  if (filters.regulationTypeId)
+    conditions.push(eq(paperModel.regulationTypeId, filters.regulationTypeId));
+  if (filters.academicYearId)
+    conditions.push(eq(paperModel.academicYearId, filters.academicYearId));
+  if (filters.subjectTypeId)
+    conditions.push(eq(paperModel.subjectTypeId, filters.subjectTypeId));
+  if (filters.programCourseId)
+    conditions.push(eq(paperModel.programCourseId, filters.programCourseId));
+  if (filters.classId) conditions.push(eq(paperModel.classId, filters.classId));
+  if (filters.isOptional !== undefined)
+    conditions.push(eq(paperModel.isOptional, filters.isOptional));
+
+  // Import models only when needed
+  const { subjectModel } = await import(
+    "@repo/db/schemas/models/course-design"
+  );
+  const { affiliationModel } = await import(
+    "@repo/db/schemas/models/course-design"
+  );
+  const { regulationTypeModel } = await import(
+    "@repo/db/schemas/models/course-design"
+  );
+  const { academicYearModel } = await import(
+    "@repo/db/schemas/models/academics"
+  );
+  const { subjectTypeModel } = await import(
+    "@repo/db/schemas/models/course-design"
+  );
+  const { programCourseModel } = await import(
+    "@repo/db/schemas/models/course-design"
+  );
+  const { classModel } = await import("@repo/db/schemas/models/academics");
+
+  // Add search conditions if searchText is provided
+  let searchConditions: SQL[] = [];
+  if (filters.searchText && filters.searchText.trim()) {
+    const searchPattern = `%${filters.searchText.trim().toLowerCase()}%`;
+    searchConditions = [
+      ilike(paperModel.name, searchPattern),
+      ilike(paperModel.code, searchPattern),
+      ilike(subjectModel.name, searchPattern),
+      ilike(affiliationModel.name, searchPattern),
+      ilike(regulationTypeModel.name, searchPattern),
+      ilike(academicYearModel.year, searchPattern),
+      ilike(subjectTypeModel.name, searchPattern),
+      ilike(subjectTypeModel.code, searchPattern),
+      ilike(programCourseModel.name, searchPattern),
+      ilike(classModel.name, searchPattern),
+    ];
+  }
+
+  // Combine all conditions
+  const allConditions = [...conditions];
+  if (searchConditions.length > 0) {
+    allConditions.push(or(...searchConditions) as SQL);
+  }
+
+  const finalWhereClause =
+    allConditions.length > 0 ? (and(...allConditions) as SQL) : undefined;
+
+  // Ultra-optimized query - minimal joins for maximum speed
+  let baseQuery;
+  let countQuery;
+
+  if (filters.searchText && filters.searchText.trim()) {
+    // Only join tables that are actually searched
+    baseQuery = db
+      .select()
+      .from(paperModel)
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(
+        affiliationModel,
+        eq(paperModel.affiliationId, affiliationModel.id),
+      )
+      .leftJoin(
+        regulationTypeModel,
+        eq(paperModel.regulationTypeId, regulationTypeModel.id),
+      )
+      .leftJoin(
+        academicYearModel,
+        eq(paperModel.academicYearId, academicYearModel.id),
+      )
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(
+        programCourseModel,
+        eq(paperModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id));
+
+    countQuery = db
+      .select({ total: countDistinct(paperModel.id) })
+      .from(paperModel)
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(
+        affiliationModel,
+        eq(paperModel.affiliationId, affiliationModel.id),
+      )
+      .leftJoin(
+        regulationTypeModel,
+        eq(paperModel.regulationTypeId, regulationTypeModel.id),
+      )
+      .leftJoin(
+        academicYearModel,
+        eq(paperModel.academicYearId, academicYearModel.id),
+      )
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(
+        programCourseModel,
+        eq(paperModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id))
+      .where(finalWhereClause as any);
+  } else {
+    // Ultra-fast query - NO JOINS when no search
+    baseQuery = db.select().from(paperModel);
+
+    countQuery = db
+      .select({ total: countDistinct(paperModel.id) })
+      .from(paperModel)
+      .where(finalWhereClause as any);
+  }
+
+  // Execute count and data queries in parallel for better performance
+  const [countResult, rows] = await Promise.all([
+    countQuery,
+    baseQuery
+      .where(finalWhereClause as any)
+      .orderBy(desc(paperModel.id))
+      .limit(Math.max(1, pageSize))
+      .offset((Math.max(1, page) - 1) * Math.max(1, pageSize)),
+  ]);
+
+  const [{ total }] = countResult;
+
+  // Optimize data transformation
+  const content = rows.map((row) => {
+    // Handle both joined and non-joined query results
+    const paper = (row as any).papers || row;
+    return {
+      id: paper.id,
+      name: paper.name,
+      code: paper.code,
+      subjectId: paper.subjectId,
+      affiliationId: paper.affiliationId,
+      regulationTypeId: paper.regulationTypeId,
+      academicYearId: paper.academicYearId,
+      subjectTypeId: paper.subjectTypeId,
+      programCourseId: paper.programCourseId,
+      classId: paper.classId,
+      isOptional: paper.isOptional,
+      components: (paper as any).components || [],
+      createdAt: paper.createdAt,
+      updatedAt: paper.updatedAt,
+    } as PaperDto;
+  });
+
+  const totalElements = Number(total || 0);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalElements / Math.max(1, pageSize)),
+  );
+
+  return {
+    content,
+    page: Math.max(1, page),
+    pageSize: Math.max(1, pageSize),
+    totalPages,
+    totalElements,
+  };
 }
 
 export async function updatePaper(id: number, data: PaperDto) {
