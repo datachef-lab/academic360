@@ -21,7 +21,7 @@ export default function ApiConfigurationPage() {
 
   useEffect(() => {
     findAllSettings().then((data) => {
-      setSettings(data.payload.filter((ele) => ele.variant === "API_CONFIG"));
+      setSettings(data.payload.filter((ele: any) => ele.variant === "API_CONFIG"));
     });
   }, []);
 

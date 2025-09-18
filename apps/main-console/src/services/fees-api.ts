@@ -1,10 +1,10 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
-import { 
-  FeesStructureDto, 
-  FeesHead, 
-  FeesSlab, 
-  FeesReceiptType, 
+import {
+  FeesStructureDto,
+  FeesHead,
+  FeesSlab,
+  FeesReceiptType,
   AddOn,
   FeesComponent,
   StudentFeesMapping,
@@ -28,27 +28,29 @@ export interface NewFeesStructure {
   instalmentStartDate?: Date | null;
   instalmentEndDate?: Date | null;
   feesReceiptTypeId?: number | null;
-  shift?: 'MORNING' | 'EVENING' | null;
+  shift?: "MORNING" | "EVENING" | null;
   academicYearId?: number;
   courseId?: number;
   advanceForCourseId?: number | null;
-  components?: Omit<FeesComponent, 'id' | 'feesStructureId' | 'createdAt' | 'updatedAt'>[];
+  components?: Omit<FeesComponent, "id" | "feesStructureId" | "createdAt" | "updatedAt">[];
 }
 
 // Get all fees structures
-export async function getAllFeesStructures(): Promise<ApiResonse<FeesStructureDto[]>> {
+export async function getAllFeesStructures(): Promise<ApiResponse<FeesStructureDto[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/structure`);
   return response.data;
 }
 
 // Get a single fees structure
-export async function getFeesStructure(feesStructureId: number): Promise<ApiResonse<FeesStructureDto>> {
+export async function getFeesStructure(feesStructureId: number): Promise<ApiResponse<FeesStructureDto>> {
   const response = await axiosInstance.get(`${BASE_PATH}/structure/${feesStructureId}`);
   return response.data;
 }
 
 // Create a new fees structure
-export async function createFeesStructure(newFeesStructure: CreateFeesStructureDto): Promise<ApiResonse<FeesStructureDto>> {
+export async function createFeesStructure(
+  newFeesStructure: CreateFeesStructureDto,
+): Promise<ApiResponse<FeesStructureDto>> {
   const response = await axiosInstance.post(`${BASE_PATH}/structure`, newFeesStructure);
   return response.data;
 }
@@ -66,13 +68,16 @@ export async function checkFeesStructureExists(payload: {
 }
 
 // Update a fees structure
-export async function updateFeesStructure(feesStructureId: number, feesStructure: Partial<FeesStructureDto>): Promise<ApiResonse<FeesStructureDto>> {
+export async function updateFeesStructure(
+  feesStructureId: number,
+  feesStructure: Partial<FeesStructureDto>,
+): Promise<ApiResponse<FeesStructureDto>> {
   const response = await axiosInstance.put(`${BASE_PATH}/structure/${feesStructureId}`, feesStructure);
   return response.data;
 }
 
 // Delete a fees structure
-export async function deleteFeesStructure(feesStructureId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesStructure(feesStructureId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/structure/${feesStructureId}`);
   return response.data;
 }
@@ -92,25 +97,28 @@ export async function getAllFeesHeads(): Promise<FeesHead[]> {
 }
 
 // Get a single fees head
-export async function getFeesHead(feesHeadId: number): Promise<ApiResonse<FeesHead>> {
+export async function getFeesHead(feesHeadId: number): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.get(`${BASE_PATH}/heads/${feesHeadId}`);
   return response.data;
 }
 
 // Create a new fees head
-export async function createFeesHead(newFeesHead: NewFeesHead): Promise<ApiResonse<FeesHead>> {
+export async function createFeesHead(newFeesHead: NewFeesHead): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.post(`${BASE_PATH}/heads`, newFeesHead);
   return response.data;
 }
 
 // Update a fees head
-export async function updateFeesHead(feesHeadId: number, feesHead: Partial<NewFeesHead>): Promise<ApiResonse<FeesHead>> {
+export async function updateFeesHead(
+  feesHeadId: number,
+  feesHead: Partial<NewFeesHead>,
+): Promise<ApiResponse<FeesHead>> {
   const response = await axiosInstance.put(`${BASE_PATH}/heads/${feesHeadId}`, feesHead);
   return response.data;
 }
 
 // Delete a fees head
-export async function deleteFeesHead(feesHeadId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesHead(feesHeadId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/heads/${feesHeadId}`);
   return response.data;
 }
@@ -126,30 +134,33 @@ export interface NewFeesSlab {
 // Get all fees slabs
 export async function getAllFeesSlabs(): Promise<FeesSlab[]> {
   const response = await axiosInstance.get(`${BASE_PATH}/slabs`);
-  console.log("fees slabs:", response.data)
+  console.log("fees slabs:", response.data);
   return response.data;
 }
 
 // Get a single fees slab
-export async function getFeesSlab(feesSlabId: number): Promise<ApiResonse<FeesSlab>> {
+export async function getFeesSlab(feesSlabId: number): Promise<ApiResponse<FeesSlab>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slabs/${feesSlabId}`);
   return response.data;
 }
 
 // Create a new fees slab
-export async function createFeesSlab(newFeesSlab: NewFeesSlab): Promise<ApiResonse<FeesSlab>> {
+export async function createFeesSlab(newFeesSlab: NewFeesSlab): Promise<ApiResponse<FeesSlab>> {
   const response = await axiosInstance.post(`${BASE_PATH}/slabs`, newFeesSlab);
   return response.data;
 }
 
 // Update a fees slab
-export async function updateFeesSlab(feesSlabId: number, feesSlab: Partial<NewFeesSlab>): Promise<ApiResonse<FeesSlab>> {
+export async function updateFeesSlab(
+  feesSlabId: number,
+  feesSlab: Partial<NewFeesSlab>,
+): Promise<ApiResponse<FeesSlab>> {
   const response = await axiosInstance.put(`${BASE_PATH}/slabs/${feesSlabId}`, feesSlab);
   return response.data;
 }
 
 // Delete a fees slab
-export async function deleteFeesSlab(feesSlabId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesSlab(feesSlabId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/slabs/${feesSlabId}`);
   return response.data;
 }
@@ -175,25 +186,30 @@ export async function getAllFeesReceiptTypes(): Promise<FeesReceiptType[]> {
 }
 
 // Get a single fees receipt type
-export async function getFeesReceiptType(feesReceiptTypeId: number): Promise<ApiResonse<FeesReceiptType>> {
+export async function getFeesReceiptType(feesReceiptTypeId: number): Promise<ApiResponse<FeesReceiptType>> {
   const response = await axiosInstance.get(`${BASE_PATH}/receipt-types/${feesReceiptTypeId}`);
   return response.data;
 }
 
 // Create a new fees receipt type
-export async function createFeesReceiptType(newFeesReceiptType: NewFeesReceiptType): Promise<ApiResonse<FeesReceiptType>> {
+export async function createFeesReceiptType(
+  newFeesReceiptType: NewFeesReceiptType,
+): Promise<ApiResponse<FeesReceiptType>> {
   const response = await axiosInstance.post(`${BASE_PATH}/receipt-types`, newFeesReceiptType);
   return response.data;
 }
 
 // Update a fees receipt type
-export async function updateFeesReceiptType(feesReceiptTypeId: number, feesReceiptType: Partial<NewFeesReceiptType>): Promise<ApiResonse<FeesReceiptType>> {
+export async function updateFeesReceiptType(
+  feesReceiptTypeId: number,
+  feesReceiptType: Partial<NewFeesReceiptType>,
+): Promise<ApiResponse<FeesReceiptType>> {
   const response = await axiosInstance.put(`${BASE_PATH}/receipt-types/${feesReceiptTypeId}`, feesReceiptType);
   return response.data;
 }
 
 // Delete a fees receipt type
-export async function deleteFeesReceiptType(feesReceiptTypeId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesReceiptType(feesReceiptTypeId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/receipt-types/${feesReceiptTypeId}`);
   return response.data;
 }
@@ -205,31 +221,31 @@ export interface NewAddOn {
 }
 
 // Get all addons
-export async function getAllAddons(): Promise<ApiResonse<AddOn[]>> {
+export async function getAllAddons(): Promise<ApiResponse<AddOn[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons`);
   return response.data;
 }
 
 // Get a single addon
-export async function getAddon(addonId: number): Promise<ApiResonse<AddOn>> {
+export async function getAddon(addonId: number): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.get(`${BASE_PATH}/addons/${addonId}`);
   return response.data;
 }
 
 // Create a new addon
-export async function createAddon(newAddon: NewAddOn): Promise<ApiResonse<AddOn>> {
+export async function createAddon(newAddon: NewAddOn): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.post(`${BASE_PATH}/addons`, newAddon);
   return response.data;
 }
 
 // Update an addon
-export async function updateAddon(addonId: number, addon: Partial<NewAddOn>): Promise<ApiResonse<AddOn>> {
+export async function updateAddon(addonId: number, addon: Partial<NewAddOn>): Promise<ApiResponse<AddOn>> {
   const response = await axiosInstance.put(`${BASE_PATH}/addons/${addonId}`, addon);
   return response.data;
 }
 
 // Delete an addon
-export async function deleteAddon(addonId: number): Promise<ApiResonse<void>> {
+export async function deleteAddon(addonId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/addons/${addonId}`);
   return response.data;
 }
@@ -246,31 +262,34 @@ export interface NewFeesComponent {
 }
 
 // Get all fees components
-export async function getAllFeesComponents(): Promise<ApiResonse<FeesComponent[]>> {
+export async function getAllFeesComponents(): Promise<ApiResponse<FeesComponent[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/components`);
   return response.data;
 }
 
 // Get a single fees component
-export async function getFeesComponent(feesComponentId: number): Promise<ApiResonse<FeesComponent>> {
+export async function getFeesComponent(feesComponentId: number): Promise<ApiResponse<FeesComponent>> {
   const response = await axiosInstance.get(`${BASE_PATH}/components/${feesComponentId}`);
   return response.data;
 }
 
 // Create a new fees component
-export async function createFeesComponent(newFeesComponent: NewFeesComponent): Promise<ApiResonse<FeesComponent>> {
+export async function createFeesComponent(newFeesComponent: NewFeesComponent): Promise<ApiResponse<FeesComponent>> {
   const response = await axiosInstance.post(`${BASE_PATH}/components`, newFeesComponent);
   return response.data;
 }
 
 // Update a fees component
-export async function updateFeesComponent(feesComponentId: number, feesComponent: Partial<NewFeesComponent>): Promise<ApiResonse<FeesComponent>> {
+export async function updateFeesComponent(
+  feesComponentId: number,
+  feesComponent: Partial<NewFeesComponent>,
+): Promise<ApiResponse<FeesComponent>> {
   const response = await axiosInstance.put(`${BASE_PATH}/components/${feesComponentId}`, feesComponent);
   return response.data;
 }
 
 // Delete a fees component
-export async function deleteFeesComponent(feesComponentId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesComponent(feesComponentId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/components/${feesComponentId}`);
   return response.data;
 }
@@ -294,62 +313,73 @@ export interface NewStudentFeesMapping {
 }
 
 // Get all student fees mappings
-export async function getAllStudentFeesMappings(): Promise<ApiResonse<StudentFeesMapping[]>> {
+export async function getAllStudentFeesMappings(): Promise<ApiResponse<StudentFeesMapping[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/student-fees-mappings`);
   return response.data;
 }
 
 // Get a single student fees mapping
-export async function getStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResonse<StudentFeesMapping>> {
+export async function getStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<StudentFeesMapping>> {
   const response = await axiosInstance.get(`${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`);
   return response.data;
 }
 
 // Create a new student fees mapping
-export async function createStudentFeesMapping(newStudentFeesMapping: NewStudentFeesMapping): Promise<ApiResonse<StudentFeesMapping>> {
+export async function createStudentFeesMapping(
+  newStudentFeesMapping: NewStudentFeesMapping,
+): Promise<ApiResponse<StudentFeesMapping>> {
   const response = await axiosInstance.post(`${BASE_PATH}/student-fees-mappings`, newStudentFeesMapping);
   return response.data;
 }
 
 // Update a student fees mapping
-export async function updateStudentFeesMapping(studentFeesMappingId: number, studentFeesMapping: Partial<NewStudentFeesMapping>): Promise<ApiResonse<StudentFeesMapping>> {
-  const response = await axiosInstance.put(`${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`, studentFeesMapping);
+export async function updateStudentFeesMapping(
+  studentFeesMappingId: number,
+  studentFeesMapping: Partial<NewStudentFeesMapping>,
+): Promise<ApiResponse<StudentFeesMapping>> {
+  const response = await axiosInstance.put(
+    `${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`,
+    studentFeesMapping,
+  );
   return response.data;
 }
 
 // Delete a student fees mapping
-export async function deleteStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResonse<void>> {
+export async function deleteStudentFeesMapping(studentFeesMappingId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/student-fees-mappings/${studentFeesMappingId}`);
   return response.data;
 }
 
 // ==================== FEES SLAB YEAR MAPPING APIs ====================
 // Get all fees slab years
-export async function getAllFeesSlabYears(): Promise<ApiResonse<FeesSlabMapping[]>> {
+export async function getAllFeesSlabYears(): Promise<ApiResponse<FeesSlabMapping[]>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings`);
   return response.data;
 }
 
 // Get a single fees slab year
-export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResonse<FeesSlabMapping>> {
+export async function getFeesSlabYear(feesSlabYearId: number): Promise<ApiResponse<FeesSlabMapping>> {
   const response = await axiosInstance.get(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`);
   return response.data;
 }
 
 // Create a new fees slab year
-export async function createFeesSlabYear(FeesSlabMapping: FeesSlabMapping): Promise<ApiResonse<FeesSlabMapping>> {
+export async function createFeesSlabYear(FeesSlabMapping: FeesSlabMapping): Promise<ApiResponse<FeesSlabMapping>> {
   const response = await axiosInstance.post(`${BASE_PATH}/slab-year-mappings`, FeesSlabMapping);
   return response.data;
 }
 
 // Update a fees slab year
-export async function updateFeesSlabYear(feesSlabYearId: number, feesSlabYear: Partial<FeesSlabMapping>): Promise<ApiResonse<FeesSlabMapping>> {
+export async function updateFeesSlabYear(
+  feesSlabYearId: number,
+  feesSlabYear: Partial<FeesSlabMapping>,
+): Promise<ApiResponse<FeesSlabMapping>> {
   const response = await axiosInstance.put(`${BASE_PATH}/slab-year-mappings/${feesSlabYearId}`, feesSlabYear);
   return response.data;
 }
 
 // Delete a fees slab year
-export async function deleteFeesSlabYear(feesSlabYearId: number): Promise<ApiResonse<void>> {
+export async function deleteFeesSlabYear(feesSlabYearId: number): Promise<ApiResponse<void>> {
   const response = await axiosInstance.delete(`${BASE_PATH}/slab-years/${feesSlabYearId}`);
   return response.data;
 }
@@ -376,14 +406,16 @@ export const getCoursesFromFeesStructures = async (academicYearId: number) => {
 };
 
 export const getFeesStructuresByAcademicYearAndCourse = async (academicYearId: number, courseId: number) => {
-  const response = await axiosInstance.get(`${BASE_PATH}/structure/by-academic-year-and-course/${academicYearId}/${courseId}`);
+  const response = await axiosInstance.get(
+    `${BASE_PATH}/structure/by-academic-year-and-course/${academicYearId}/${courseId}`,
+  );
   return response.data;
 };
 
 export const getFeesDesignAbstractLevel = async (academicYearId?: number, courseId?: number) => {
   const params = new URLSearchParams();
-  if (academicYearId) params.append('academicYearId', academicYearId.toString());
-  if (courseId) params.append('courseId', courseId.toString());
+  if (academicYearId) params.append("academicYearId", academicYearId.toString());
+  if (courseId) params.append("courseId", courseId.toString());
   const response = await axiosInstance.get(`${BASE_PATH}/structure/design-abstract-level?${params.toString()}`);
   return response.data;
 };

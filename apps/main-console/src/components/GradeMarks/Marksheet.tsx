@@ -1,18 +1,11 @@
-import  { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { findMarksheetsByStudentId } from '@/services/marksheet-apis';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from '@/components/ui/table';
-import { Pencil, Eye } from 'lucide-react';
-import { useMarksheetSkeleton } from './useMarksheetSkeleton';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router-dom";
+import { findMarksheetsByStudentId } from "@/services/marksheet-apis";
+import { Button } from "@/components/ui/button";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Pencil, Eye } from "lucide-react";
+import { useMarksheetSkeleton } from "./useMarksheetSkeleton";
 
 type MarksheetRow = {
   id?: number;
@@ -26,12 +19,12 @@ const Marksheet = () => {
   const navigate = useNavigate();
   const { MarksheetSkeleton } = useMarksheetSkeleton();
 
-  const pathParts = location.pathname.split('/');
-  const studentIdx = pathParts.findIndex((p) => p === 'search-students');
+  const pathParts = location.pathname.split("/");
+  const studentIdx = pathParts.findIndex((p) => p === "search-students");
   const studentId = studentIdx !== -1 ? pathParts[studentIdx + 1] : undefined;
 
   const marksheetsQuery = useQuery({
-    queryKey: ['marksheets', studentId],
+    queryKey: ["marksheets", studentId],
     queryFn: async () => {
       if (!studentId) return [];
       const res = await findMarksheetsByStudentId(Number(studentId));
@@ -44,16 +37,17 @@ const Marksheet = () => {
   });
 
   // Collect marksheets and determine unique years/semesters
-  const marksheets: MarksheetRow[] = useMemo(() =>
-    (marksheetsQuery.data || [])
-      .filter((m) => m && typeof m === 'object' && m.year && m.semester)
-      .map((m) => ({
-        id: m.id,
-        year: m.year,
-        semester: m.semester,
-        ...m,
-      })),
-    [marksheetsQuery.data]
+  const marksheets: MarksheetRow[] = useMemo(
+    () =>
+      (marksheetsQuery.data || [])
+        .filter((m: any) => m && typeof m === "object" && m.year && m.semester)
+        .map((m: any) => ({
+          id: m.id,
+          year: m.year,
+          semester: m.semester,
+          ...m,
+        })),
+    [marksheetsQuery.data],
   );
 
   // Dynamically extract unique years and semesters from the data
@@ -79,10 +73,7 @@ const Marksheet = () => {
   const isLoading = marksheetsQuery.isLoading;
   const isError = marksheetsQuery.isError;
   if (isLoading) {
-    return <MarksheetSkeleton 
-      yearCount={years.length || 3} 
-      semesterCount={semesters.length || 3} 
-    />;
+    return <MarksheetSkeleton yearCount={years.length || 3} semesterCount={semesters.length || 3} />;
   }
   if (isError) {
     return <div className="p-8 text-center text-red-500">Failed to load marksheets.</div>;
@@ -92,14 +83,14 @@ const Marksheet = () => {
   }
 
   const handleEdit = (marksheet: MarksheetRow) => {
-    if(marksheet.id){
-       navigate(`/home/search-students/${studentId}/${marksheet.id}?semester=${marksheet.semester}`);
+    if (marksheet.id) {
+      navigate(`/home/search-students/${studentId}/${marksheet.id}?semester=${marksheet.semester}`);
     }
   };
 
   const handleView = (marksheet: MarksheetRow) => {
     if (marksheet.id) {
-       navigate(`/home/search-students/${studentId}/${marksheet.id}`);
+      navigate(`/home/search-students/${studentId}/${marksheet.id}`);
     }
   };
 
@@ -117,35 +108,28 @@ const Marksheet = () => {
                   Year/Semester
                 </TableHead>
                 {semesters.map((sem, index) => (
-                  <TableHead 
-                    key={String(sem)} 
+                  <TableHead
+                    key={String(sem)}
                     className={`border-b text-center font-semibold text-gray-700 py-3 sm:py-5 min-w-[120px] ${
-                      index === semesters.length - 1 ? '' : 'border-r'
+                      index === semesters.length - 1 ? "" : "border-r"
                     }`}
                   >
-                   Sem {sem}
+                    Sem {sem}
                   </TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {years.map((year, rowIdx) => (
-                <TableRow 
-                  key={String(year)} 
-                  className={`${
-                    rowIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                  }`}
-                >
-                  <TableCell className="border-r text-center font-medium text-gray-700 py-3 sm:py-5">
-                    {year}
-                  </TableCell>
+                <TableRow key={String(year)} className={`${rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}`}>
+                  <TableCell className="border-r text-center font-medium text-gray-700 py-3 sm:py-5">{year}</TableCell>
                   {semesters.map((sem, index) => {
                     const m = marksheetMap[`${year}-${sem}`];
                     return (
-                      <TableCell 
-                        key={String(sem)} 
+                      <TableCell
+                        key={String(sem)}
                         className={`text-center bg-white py-3 sm:py-5 ${
-                          index === semesters.length - 1 ? '' : 'border-r'
+                          index === semesters.length - 1 ? "" : "border-r"
                         }`}
                       >
                         {m ? (

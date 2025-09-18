@@ -26,6 +26,7 @@ import { getProgramCourses, getSubjectTypes } from "@/services/course-design.api
 import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/admissions.service";
 import type { ProgramCourse, SubjectType } from "@repo/db";
 import { toast as sonnerToast } from "sonner";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
 // import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs
@@ -41,6 +42,7 @@ type UIGrouping = {
 const altBadgeColor = "bg-indigo-50 text-indigo-700 border-indigo-300";
 
 export default function AlternativeSubjectsPage() {
+  const { currentAcademicYear } = useAcademicYear();
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
   const [groupings, setGroupings] = useState<UIGrouping[]>([]);
   const [, setLoading] = useState(false);
@@ -547,11 +549,15 @@ export default function AlternativeSubjectsPage() {
             </div>
 
             {/* Scrollable Body */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto border border-gray-300 rounded-md">
               <Table className="table-fixed">
                 <TableBody>
                   {paginatedGroupings.map((grouping, index) => (
-                    <TableRow key={grouping.id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <TableRow
+                      key={grouping.id}
+                      className="border-b-2 border-gray-300 hover:bg-gray-50"
+                      style={{ borderBottom: "2px solid #d1d5db" }}
+                    >
                       <TableCell className="w-16 border-r border-gray-300">{startIndex + index + 1}</TableCell>
                       <TableCell className="w-64 border-r border-gray-300">{grouping.programCourses[0]}</TableCell>
                       <TableCell className="w-40 border-r border-gray-300">
@@ -629,11 +635,27 @@ export default function AlternativeSubjectsPage() {
         <DialogContent className="max-w-[90rem] w-[98vw] flex flex-col">
           <DialogHeader>
             <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Related Subjects</DialogTitle>
-            <DialogDescription>Use the table below to add one or more mappings, then save.</DialogDescription>
+            <DialogDescription>
+              {dialogMode === "add" ? (
+                <>
+                  Use the table below to add one or more mappings, then save.
+                  {currentAcademicYear && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                      <strong>Note:</strong> These mappings will be created for the academic year{" "}
+                      <span className="font-semibold text-blue-700">{currentAcademicYear.year}</span>
+                      {currentAcademicYear.isCurrentYear === true && <span className="text-green-600"> (Current)</span>}
+                      .
+                    </div>
+                  )}
+                </>
+              ) : (
+                "Edit the related subjects mapping below."
+              )}
+            </DialogDescription>
           </DialogHeader>
 
           {dialogMode === "add" ? (
-            <div className="border rounded-md flex-1 min-h-[18rem]">
+            <div className="border-2 border-gray-300 rounded-md flex-1 min-h-[18rem]">
               <div className="h-[60vh] overflow-auto">
                 <Table className="table-fixed">
                   <TableHeader className="sticky top-0 z-10 bg-gray-100">
@@ -648,7 +670,11 @@ export default function AlternativeSubjectsPage() {
                   </TableHeader>
                   <TableBody>
                     {dialogRows.map((row, idx) => (
-                      <TableRow key={idx} className="hover:bg-gray-50">
+                      <TableRow
+                        key={idx}
+                        className="border-b-2 border-gray-300 hover:bg-gray-50"
+                        style={{ borderBottom: "2px solid #d1d5db" }}
+                      >
                         <TableCell className="border-r border-gray-200">{idx + 1}</TableCell>
                         <TableCell className="border-r border-gray-200">
                           <Select

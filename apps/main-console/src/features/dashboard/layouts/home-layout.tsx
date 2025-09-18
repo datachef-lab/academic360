@@ -143,22 +143,23 @@ export default function HomeLayout() {
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="light">
-      <SidebarProvider className="w-screen overflow-x-hidden">
-        <AppSidebar />
-        <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
-          <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              {/* <SidebarTrigger className="-ml-1" /> */}
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-                    <BreadcrumbSeparator />
-                  </BreadcrumbItem>
+    accessToken && (
+      <ThemeProvider defaultTheme="light">
+        <SidebarProvider className="w-screen overflow-x-hidden">
+          <AppSidebar />
+          <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
+            <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+              <div className="flex items-center gap-2 px-4">
+                {/* <SidebarTrigger className="-ml-1" /> */}
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>Academics</BreadcrumbLink>
+                      <BreadcrumbSeparator />
+                    </BreadcrumbItem>
 
-                  {/* {pathSegments.map((segment, index) => {
+                    {/* {pathSegments.map((segment, index) => {
                     const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
 
                     return (
@@ -171,93 +172,94 @@ export default function HomeLayout() {
                     );
                   })} */}
 
-                  {pathSegments.map((segment, index) => {
-                    const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
-                    const Icon = pathIconMap[segment];
+                    {pathSegments.map((segment, index) => {
+                      const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+                      const Icon = pathIconMap[segment];
 
-                    return (
-                      <BreadcrumbItem key={index}>
-                        <BreadcrumbLink asChild>
-                          <Link
-                            to={path}
-                            className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors"
-                          >
-                            {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-                            <span className="capitalize">{segment.replace(/-/g, " ")}</span>
-                          </Link>
-                        </BreadcrumbLink>
-                        <BreadcrumbSeparator />
-                      </BreadcrumbItem>
-                    );
-                  })}
-                </BreadcrumbList>
-              </Breadcrumb>
-            </div>
-            <div className="flex items-center mr-2 gap-2">
-              {/* Search Button */}
-              <Button
-                variant="outline"
-                className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
-                onClick={() => setOpen(true)}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                <span className="hidden lg:inline-flex">Search...</span>
-                <span className="inline-flex lg:hidden">Search</span>
-                <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-              <NavUser />
-              {/* <NotifcationPanel /> */}
-              {/* <ModeToggle /> */}
-            </div>
-          </header>
-          <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
-            {accessToken && <Outlet />}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
-
-      {/* Command Dialog for Spotlight Search */}
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {Object.entries(
-            searchData.reduce(
-              (acc, item) => {
-                const category = item.category;
-                if (!acc[category]) {
-                  acc[category] = [];
-                }
-                acc[category].push(item);
-                return acc;
-              },
-              {} as Record<string, typeof searchData>,
-            ),
-          ).map(([category, items]) => (
-            <CommandGroup key={category} heading={category}>
-              {items.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={item.title}
-                  onSelect={() => {
-                    setOpen(false);
-                    window.location.href = item.href;
-                  }}
-                  className="flex items-center gap-2"
+                      return (
+                        <BreadcrumbItem key={index}>
+                          <BreadcrumbLink asChild>
+                            <Link
+                              to={path}
+                              className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors"
+                            >
+                              {Icon && <Icon className="w-4 h-4 text-gray-500" />}
+                              <span className="capitalize">{segment.replace(/-/g, " ")}</span>
+                            </Link>
+                          </BreadcrumbLink>
+                          <BreadcrumbSeparator />
+                        </BreadcrumbItem>
+                      );
+                    })}
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <div className="flex items-center mr-2 gap-2">
+                {/* Search Button */}
+                <Button
+                  variant="outline"
+                  className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+                  onClick={() => setOpen(true)}
                 >
-                  <item.icon className="h-4 w-4" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{item.title}</span>
-                    <span className="text-xs text-muted-foreground">{item.description}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
-    </ThemeProvider>
+                  <Search className="mr-2 h-4 w-4" />
+                  <span className="hidden lg:inline-flex">Search...</span>
+                  <span className="inline-flex lg:hidden">Search</span>
+                  <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </Button>
+                <NavUser />
+                {/* <NotifcationPanel /> */}
+                {/* <ModeToggle /> */}
+              </div>
+            </header>
+            <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
+              {accessToken && <Outlet />}
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+
+        {/* Command Dialog for Spotlight Search */}
+        <CommandDialog open={open} onOpenChange={setOpen}>
+          <CommandInput placeholder="Type a command or search..." />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            {Object.entries(
+              searchData.reduce(
+                (acc, item) => {
+                  const category = item.category;
+                  if (!acc[category]) {
+                    acc[category] = [];
+                  }
+                  acc[category].push(item);
+                  return acc;
+                },
+                {} as Record<string, typeof searchData>,
+              ),
+            ).map(([category, items]) => (
+              <CommandGroup key={category} heading={category}>
+                {items.map((item) => (
+                  <CommandItem
+                    key={item.href}
+                    value={item.title}
+                    onSelect={() => {
+                      setOpen(false);
+                      window.location.href = item.href;
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-xs text-muted-foreground">{item.description}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+          </CommandList>
+        </CommandDialog>
+      </ThemeProvider>
+    )
   );
 }

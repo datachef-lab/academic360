@@ -1,5 +1,5 @@
-import { ApiResonse } from "@/types/api-response";
-import type { PaginatedResponse } from "@/types/commons/paginated-response";
+import { ApiResponse } from "@/types/api-response";
+import type { PaginatedResponse } from "@/types/pagination";
 import api from "@/utils/api";
 import { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 
@@ -18,10 +18,10 @@ const BASE_URL = "/api/subject-selection/restricted-grouping-mains";
 
 export const restrictedGroupingApi = {
   async listRestrictedGroupingMains() {
-    const res = await api.get<ApiResonse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>>(
+    const res = await api.get<ApiResponse<RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] }>>(
       `${BASE_URL}`,
     );
-    const p = res.data.payload as any;
+    const p = res.data.payload as RestrictedGroupingMainDto[] | { content: RestrictedGroupingMainDto[] };
     return Array.isArray(p) ? p : (p?.content ?? []);
   },
   async listRestrictedGroupingMainsPaginated(params: {
@@ -30,23 +30,23 @@ export const restrictedGroupingApi = {
     search?: string;
     subjectType?: string;
   }) {
-    const res = await api.get<ApiResonse<PaginatedResponse<RestrictedGroupingMainDto>>>(`${BASE_URL}`, { params });
+    const res = await api.get<ApiResponse<PaginatedResponse<RestrictedGroupingMainDto>>>(`${BASE_URL}`, { params });
     return res.data.payload;
   },
   async getRestrictedGroupingMain(id: number) {
-    const res = await api.get<ApiResonse<RestrictedGroupingMainDto>>(`${BASE_URL}/${id}`);
+    const res = await api.get<ApiResponse<RestrictedGroupingMainDto>>(`${BASE_URL}/${id}`);
     return res.data.payload;
   },
   async createRestrictedGroupingMain(payload: CreateRestrictedGroupingMainInput) {
-    const res = await api.post<ApiResonse<RestrictedGroupingMainDto>>(`${BASE_URL}`, payload);
+    const res = await api.post<ApiResponse<RestrictedGroupingMainDto>>(`${BASE_URL}`, payload);
     return res.data.payload;
   },
   async updateRestrictedGroupingMain(id: number, payload: UpdateRestrictedGroupingMainInput) {
-    const res = await api.put<ApiResonse<RestrictedGroupingMainDto>>(`${BASE_URL}/${id}`, payload);
+    const res = await api.put<ApiResponse<RestrictedGroupingMainDto>>(`${BASE_URL}/${id}`, payload);
     return res.data.payload;
   },
   async deleteRestrictedGroupingMain(id: number) {
-    const res = await api.delete<ApiResonse<unknown>>(`${BASE_URL}/${id}`);
+    const res = await api.delete<ApiResponse<unknown>>(`${BASE_URL}/${id}`);
     return res.data.payload;
   },
 };

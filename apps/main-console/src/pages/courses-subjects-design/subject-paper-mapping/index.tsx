@@ -25,7 +25,6 @@ import {
   getExamComponents,
   getSubjectTypes,
   bulkUploadSubjectPapers,
-  getAcademicYears,
   getProgramCourses,
   getPapersPaginated,
   //   BulkUploadRow,
@@ -55,11 +54,12 @@ import type {
 import { Class } from "@/types/academics/class";
 import { AxiosError } from "axios";
 import AddPaperModal from "@/components/subject-paper-mapping/AddPaperModal";
-import { AcademicYear } from "@/types/academics/academic-year";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
 import { PaperEditModal } from "./paper-edit-modal";
 
 const SubjectPaperMappingPage = () => {
   const { accessToken, displayFlag } = useAuth();
+  const { currentAcademicYear, availableAcademicYears } = useAcademicYear();
 
   const [searchText, setSearchText] = React.useState("");
 
@@ -105,7 +105,7 @@ const SubjectPaperMappingPage = () => {
   const [affiliations, setAffiliations] = React.useState<Affiliation[]>([]);
   const [regulationTypes, setRegulationTypes] = React.useState<RegulationType[]>([]);
   const [subjectTypes, setSubjectTypes] = React.useState<SubjectType[]>([]);
-  const [academicYears, setAcademicYears] = React.useState<AcademicYear[]>([]);
+  // Academic years now come from Redux state via useAcademicYear hook
   const [examComponents, setExamComponents] = React.useState<ExamComponent[]>([]);
   const [programCourses, setProgramCourses] = React.useState<ProgramCourse[]>([]);
   const [courses, setCourses] = React.useState<Course[]>([]);
@@ -200,7 +200,6 @@ const SubjectPaperMappingPage = () => {
         affiliationsRes,
         regulationTypesRes,
         subjectTypesRes,
-        academicYearRes,
         examComponentsRes,
         programCourseRes,
         classesRes,
@@ -211,7 +210,6 @@ const SubjectPaperMappingPage = () => {
         getAffiliations(),
         getRegulationTypes(),
         getSubjectTypes(),
-        getAcademicYears(),
         getExamComponents(),
         getProgramCourses(),
         getAllClasses(),
@@ -243,7 +241,7 @@ const SubjectPaperMappingPage = () => {
       setRegulationTypes(Array.isArray(regulationTypesRes) ? regulationTypesRes : []);
       setSubjectTypes(Array.isArray(subjectTypesRes) ? subjectTypesRes : []);
       setExamComponents(Array.isArray(examComponentsRes) ? examComponentsRes : []);
-      setAcademicYears(Array.isArray(academicYearRes) ? academicYearRes : []);
+      // Academic years now come from Redux state
       setProgramCourses(Array.isArray(programCourseRes) ? programCourseRes : []);
       setCourses(Array.isArray(courseRes) ? courseRes : []);
       setCourseTypes(Array.isArray(courseTypesRes) ? courseTypesRes : []);
@@ -263,11 +261,12 @@ const SubjectPaperMappingPage = () => {
               [],
       );
 
+      // Set filters with current academic year as default
       setFiltersObj({
-        subjectId: null, // Don't filter initially - show all data
+        subjectId: null,
         affiliationId: null,
         regulationTypeId: null,
-        academicYearId: null,
+        academicYearId: currentAcademicYear?.id || null, // Default to current academic year
         classId: null,
         programCourseId: null,
         subjectTypeId: null,
@@ -309,13 +308,13 @@ const SubjectPaperMappingPage = () => {
       setRegulationTypes([]);
       setSubjectTypes([]);
       setExamComponents([]);
-      setAcademicYears([]);
+      // Academic years come from Redux state, don't reset them
       setProgramCourses([]);
       setClasses([]);
     } finally {
       setLoading(false);
     }
-  }, [fetchFilteredData]);
+  }, [fetchFilteredData, currentAcademicYear]);
 
   useEffect(() => {
     // Only fetch data when authentication is ready
@@ -481,7 +480,7 @@ const SubjectPaperMappingPage = () => {
         const subject = subjects.find((s) => s.id === paper.subjectId);
         const affiliation = affiliations.find((a) => a.id === paper.affiliationId);
         const regulationType = regulationTypes.find((rt) => rt.id === paper.regulationTypeId);
-        const academicYear = academicYears.find((ay) => ay.id === paper.academicYearId);
+        const academicYear = availableAcademicYears.find((ay) => ay.id === paper.academicYearId);
         const subjectType = subjectTypes.find((st) => st.id === paper.subjectTypeId);
         const programCourse = programCourses.find((pc) => pc.id === paper.programCourseId);
         const classInfo = classes.find((c) => c.id === paper.classId);
@@ -1143,7 +1142,7 @@ const SubjectPaperMappingPage = () => {
                     affiliations,
                     regulationTypes,
                     examComponents,
-                    academicYears,
+                    academicYears: availableAcademicYears,
                     programCourses,
                     classes,
                   }}
@@ -1201,9 +1200,14 @@ const SubjectPaperMappingPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="all">All Academic Years</SelectItem>
-                          {academicYears.map((ay) => (
+                          {availableAcademicYears.map((ay) => (
                             <SelectItem key={ay.id!} value={ay.id!.toString()}>
                               {ay.year}
+                              {ay.isCurrentYear === true && (
+                                <span className="ml-2 px-1 py-0.5 text-xs bg-green-100 text-green-700 rounded">
+                                  Current
+                                </span>
+                              )}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1402,7 +1406,7 @@ const SubjectPaperMappingPage = () => {
                     variant="outline"
                     className="text-xs border-slate-300 text-slate-700 bg-slate-50 flex items-center gap-1"
                   >
-                    {academicYears.find((ay) => ay.id === filtersObj.academicYearId)?.year || "Year"}
+                    {availableAcademicYears.find((ay) => ay.id === filtersObj.academicYearId)?.year || "Year"}
                     <button
                       aria-label="Clear academic year filter"
                       className="ml-1 hover:text-slate-900"
@@ -1773,7 +1777,7 @@ const SubjectPaperMappingPage = () => {
           regulationTypes={regulationTypes}
           subjectTypes={subjectTypes}
           examComponents={examComponents}
-          academicYears={academicYears}
+          academicYears={availableAcademicYears}
           programCourses={programCourses}
           courses={courses}
           courseTypes={courseTypes}

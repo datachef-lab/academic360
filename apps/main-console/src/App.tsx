@@ -116,7 +116,7 @@ const router = createBrowserRouter(
               children: [
                 { path: "", element: <BoardPage /> },
                 { path: "board-subject-names", element: <BoardSubjectNamePage /> },
-                { path: "board-subjects", element: <BoardSubjectPage /> },
+                { path: "board-subject-mappings", element: <BoardSubjectPage /> },
               ],
             },
             {

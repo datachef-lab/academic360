@@ -3,7 +3,7 @@ import axiosInstance from "@/utils/api";
 import { DataTable } from "@/components/ui/data-table";
 import { useQuery, RefetchOptions, QueryObserverResult, useQueryClient } from "@tanstack/react-query";
 import { User } from "@/types/user/user";
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 import { ColumnDef, PaginationState } from "@tanstack/react-table";
 import { userColumns } from "../tables/users/user-column";
@@ -38,13 +38,7 @@ import { Country } from "@/types/resources/country.types";
 import { State } from "@/types/resources/state.types";
 import { City } from "@/types/resources/city.types";
 import { AnnualIncome } from "@/types/resources/annual-income.types";
-import { 
-  Plus, 
-  FileUp,
-  FileDown,
-  UserPlus,
-  Download,
-} from "lucide-react";
+import { Plus, FileUp, FileDown, UserPlus, Download } from "lucide-react";
 import { DynamicModal } from "./DynamicModal";
 
 type SettingsContentProps = {
@@ -58,9 +52,27 @@ type SettingsContentProps = {
   isAdmin?: boolean;
 };
 
-type SettingsRow = BloodGroup | Nationality | State | City | AnnualIncome | User | BoardUniversity | Institution | Category | Degree | LanguageMedium | ResourceDocument | Occupation | Qualification | Record<string, unknown>;
+type SettingsRow =
+  | BloodGroup
+  | Nationality
+  | State
+  | City
+  | AnnualIncome
+  | User
+  | BoardUniversity
+  | Institution
+  | Category
+  | Degree
+  | LanguageMedium
+  | ResourceDocument
+  | Occupation
+  | Qualification
+  | Record<string, unknown>;
 
-async function fetchData({ activeSetting, page = 1, pageSize = 10 }: SettingsContentProps, onEditRow?: (rowData: SettingsRow) => void) {
+async function fetchData(
+  { activeSetting, page = 1, pageSize = 10 }: SettingsContentProps,
+  onEditRow?: (rowData: SettingsRow) => void,
+) {
   let url = `/api${activeSetting.endpoint}?page=${page}&pageSize=${pageSize}`;
   url += activeSetting.label === "All Users" ? `&isAdmin=${true}` : "";
   console.log("URL", url);
@@ -68,39 +80,84 @@ async function fetchData({ activeSetting, page = 1, pageSize = 10 }: SettingsCon
 
   switch (activeSetting.label) {
     case "All Users":
-      return { data: response.data as ApiResonse<PaginatedResponse<User>>, columns: userColumns };
+      return { data: response.data as ApiResponse<PaginatedResponse<User>>, columns: userColumns };
     case "Board Universities":
-      return { data: response.data as ApiResonse<PaginatedResponse<BoardUniversity>>, columns: boardUniversityColumns(onEditRow as (rowData: BoardUniversity) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<BoardUniversity>>,
+        columns: boardUniversityColumns(onEditRow as (rowData: BoardUniversity) => void),
+      };
     case "Institutions":
-      return { data: response.data as ApiResonse<PaginatedResponse<Institution>>, columns: institutionColumns(onEditRow as (rowData: Institution) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Institution>>,
+        columns: institutionColumns(onEditRow as (rowData: Institution) => void),
+      };
     case "Categories":
-      return { data: response.data as ApiResonse<PaginatedResponse<Category>>, columns: categoryColumns(onEditRow as (rowData: Category) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Category>>,
+        columns: categoryColumns(onEditRow as (rowData: Category) => void),
+      };
     case "Degree":
-      return { data: response.data as ApiResonse<PaginatedResponse<Degree>>, columns: degreeColumns(onEditRow as (rowData: Degree) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Degree>>,
+        columns: degreeColumns(onEditRow as (rowData: Degree) => void),
+      };
     case "Religion":
-      return { data: response.data as ApiResonse<PaginatedResponse<Religion>>, columns: religionColumns(onEditRow as (rowData: Religion) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Religion>>,
+        columns: religionColumns(onEditRow as (rowData: Religion) => void),
+      };
     case "Language Medium":
-      return { data: response.data as ApiResonse<PaginatedResponse<LanguageMedium>>, columns: languageMediumColumns(onEditRow as (rowData: LanguageMedium) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<LanguageMedium>>,
+        columns: languageMediumColumns(onEditRow as (rowData: LanguageMedium) => void),
+      };
     case "Documents":
-      return { data: response.data as ApiResonse<PaginatedResponse<ResourceDocument>>, columns: documentColumns(onEditRow as (rowData: ResourceDocument) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<ResourceDocument>>,
+        columns: documentColumns(onEditRow as (rowData: ResourceDocument) => void),
+      };
     case "Blood Groups":
-      return { data: response.data as ApiResonse<PaginatedResponse<BloodGroup>>, columns: bloodGroupColumns(onEditRow as (rowData: BloodGroup) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<BloodGroup>>,
+        columns: bloodGroupColumns(onEditRow as (rowData: BloodGroup) => void),
+      };
     case "Occupation":
-      return { data: response.data as ApiResonse<PaginatedResponse<Occupation>>, columns: occupationColumns(onEditRow as (rowData: Occupation) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Occupation>>,
+        columns: occupationColumns(onEditRow as (rowData: Occupation) => void),
+      };
     case "Qualifications":
-      return { data: response.data as ApiResonse<PaginatedResponse<Qualification>>, columns: qualificationColumns(onEditRow as (rowData: Qualification) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Qualification>>,
+        columns: qualificationColumns(onEditRow as (rowData: Qualification) => void),
+      };
     case "Nationality":
-      return { data: response.data as ApiResonse<PaginatedResponse<Nationality>>, columns: nationalityColumns(onEditRow as (rowData: Nationality) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Nationality>>,
+        columns: nationalityColumns(onEditRow as (rowData: Nationality) => void),
+      };
     case "Country":
-      return { data: response.data as ApiResonse<PaginatedResponse<Country>>, columns: countryColumns(onEditRow as (rowData: Country) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<Country>>,
+        columns: countryColumns(onEditRow as (rowData: Country) => void),
+      };
     case "State":
-      return { data: response.data as ApiResonse<PaginatedResponse<State>>, columns: stateColumns(onEditRow as (rowData: State) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<State>>,
+        columns: stateColumns(onEditRow as (rowData: State) => void),
+      };
     case "City":
-      return { data: response.data as ApiResonse<PaginatedResponse<City>>, columns: cityColumns(onEditRow as (rowData: City) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<City>>,
+        columns: cityColumns(onEditRow as (rowData: City) => void),
+      };
     case "Annual Income":
-      return { data: response.data as ApiResonse<PaginatedResponse<AnnualIncome>>, columns: annualIncomeColumns(onEditRow as (rowData: AnnualIncome) => void) };
+      return {
+        data: response.data as ApiResponse<PaginatedResponse<AnnualIncome>>,
+        columns: annualIncomeColumns(onEditRow as (rowData: AnnualIncome) => void),
+      };
     default:
-      return { data: response.data as ApiResonse<PaginatedResponse<User>>, columns: userColumns };
+      return { data: response.data as ApiResponse<PaginatedResponse<User>>, columns: userColumns };
   }
 }
 
@@ -117,107 +174,110 @@ const getOptionalToolsConfig = (settingLabel: string) => {
         { icon: UserPlus, label: "Add User", action: "add-user", variant: "default" },
         { icon: FileUp, label: "Import Users", action: "import-users", variant: "outline" },
         { icon: FileDown, label: "Export Users", action: "export-users", variant: "outline" },
-        { icon: Download, label: "Download Template", action: "download-template", variant: "secondary" }
-      ]
+        { icon: Download, label: "Download Template", action: "download-template", variant: "secondary" },
+      ],
     },
     "Board Universities": {
       buttons: [
         { icon: Plus, label: "Add Board/University", action: "add-board-university", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-board-university", variant: "outline" },
-      ]
+      ],
     },
-    "Institutions": {
+    Institutions: {
       buttons: [
-        { icon: Plus, label: "Add Institution", action: "add-institution", variant: "default" },  
+        { icon: Plus, label: "Add Institution", action: "add-institution", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-institutions", variant: "outline" },
-      ]
+      ],
     },
-    "Categories": {
+    Categories: {
       buttons: [
         { icon: Plus, label: "Add Category", action: "add-category", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-categories", variant: "outline" },
-      ]
+      ],
     },
-    "Degree": {
+    Degree: {
       buttons: [
         { icon: Plus, label: "Add Degree", action: "add-degree", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-degrees", variant: "outline" },
-      ]
+      ],
     },
-    "Religion": {
+    Religion: {
       buttons: [
         { icon: Plus, label: "Add Religion", action: "add-religion", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-religions", variant: "outline" },
-      ]
+      ],
     },
     "Language Medium": {
       buttons: [
         { icon: Plus, label: "Add Language", action: "add-language", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-languages", variant: "outline" },
-      ]
+      ],
     },
-    "Documents": {
+    Documents: {
       buttons: [
         { icon: Plus, label: "Add Document", action: "add-document", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-documents", variant: "outline" },
-      ]
+      ],
     },
     "Blood Groups": {
       buttons: [
         { icon: Plus, label: "Add Blood Group", action: "add-blood-group", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-blood-groups", variant: "outline" },
-      ]
+      ],
     },
-    "Occupation": {
+    Occupation: {
       buttons: [
         { icon: Plus, label: "Add Occupation", action: "add-occupation", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-occupations", variant: "outline" },
-      ]
+      ],
     },
-    "Qualifications": {
+    Qualifications: {
       buttons: [
         { icon: Plus, label: "Add Qualification", action: "add-qualification", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-qualifications", variant: "outline" },
-      ]
+      ],
     },
-    "Nationality": {
+    Nationality: {
       buttons: [
         { icon: Plus, label: "Add Nationality", action: "add-nationality", variant: "default" },
-        { icon: Download, label: "Download All", action: "download-all-nationalities", variant: "outline" }      ]
+        { icon: Download, label: "Download All", action: "download-all-nationalities", variant: "outline" },
+      ],
     },
-    "Country": {
+    Country: {
       buttons: [
         { icon: Plus, label: "Add Country", action: "add-country", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-countries", variant: "outline" },
-      ]
+      ],
     },
-    "State": {
+    State: {
       buttons: [
         { icon: Plus, label: "Add State", action: "add-state", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-states", variant: "outline" },
-      ]
+      ],
     },
-    "City": {
+    City: {
       buttons: [
         { icon: Plus, label: "Add City", action: "add-city", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-cities", variant: "outline" },
-      ]
+      ],
     },
     "Annual Income": {
       buttons: [
         { icon: Plus, label: "Add Income Range", action: "add-income-range", variant: "default" },
         { icon: Download, label: "Download All", action: "download-all-income-ranges", variant: "outline" },
-      ]
-    }
+      ],
+    },
   };
 
-  return configs[settingLabel as keyof typeof configs] || {
-    buttons: [
-      { icon: Plus, label: "Add", action: "add", variant: "default" },
-      { icon: FileUp, label: "Import", action: "import", variant: "outline" },
-      { icon: FileDown, label: "Export", action: "export", variant: "outline" }
-    ]
-  };
+  return (
+    configs[settingLabel as keyof typeof configs] || {
+      buttons: [
+        { icon: Plus, label: "Add", action: "add", variant: "default" },
+        { icon: FileUp, label: "Import", action: "import", variant: "outline" },
+        { icon: FileDown, label: "Export", action: "export", variant: "outline" },
+      ],
+    }
+  );
 };
 
 // Utility to flatten any object to Record<string, string | number | boolean | null>
@@ -225,12 +285,7 @@ function toFormData(obj: SettingsRow | undefined): Record<string, string | numbe
   if (!obj) return undefined;
   const result: Record<string, string | number | boolean | null> = {};
   Object.entries(obj).forEach(([key, value]) => {
-    if (
-      typeof value === 'string' ||
-      typeof value === 'number' ||
-      typeof value === 'boolean' ||
-      value === null
-    ) {
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) {
       result[key] = value;
     }
   });
@@ -279,18 +334,25 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
   const { isLoading: isFetchingDefault } = useQuery({
     queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
     queryFn: async () => {
-      const { data, columns: tableCol } = await fetchData({
-        activeSetting,
-        page: pagination.pageIndex + 1,
-        pageSize: pagination.pageSize,
-        isAdmin: activeSetting.label === "All Users" ? true : false,
-      }, handleEditRow);
+      const { data, columns: tableCol } = await fetchData(
+        {
+          activeSetting,
+          page: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          isAdmin: activeSetting.label === "All Users" ? true : false,
+        },
+        handleEditRow,
+      );
       console.log(data);
       setColumns(tableCol as ColumnDef<unknown, unknown>[]);
 
       // Handle different response structures
-      let content: SettingsRow[] = [], page: number, pageSize: number, totalElements: number, totalPages: number;
-      
+      let content: SettingsRow[] = [],
+        page: number,
+        pageSize: number,
+        totalElements: number,
+        totalPages: number;
+
       if (data.payload && Array.isArray(data.payload)) {
         // Direct array response (like categories)
         content = data.payload;
@@ -349,7 +411,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
   // Handle button actions
   const handleButtonAction = (action: string) => {
     console.log(`Action triggered: ${action} for ${activeSetting.label}`);
-    
+
     // Determine modal type based on action
     let modalType = "";
     if (action.includes("select-file")) {
@@ -367,7 +429,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
       type: modalType,
       action: action,
       settingType: activeSetting.label,
-      editId: typeof modalState.editId === 'number' ? modalState.editId : undefined,
+      editId: typeof modalState.editId === "number" ? modalState.editId : undefined,
     });
   };
 
@@ -478,7 +540,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
       action: "edit-entity",
       settingType: activeSetting.label,
       editData: rowData,
-      editId: typeof (rowData as { id?: number }).id === 'number' ? (rowData as { id?: number }).id : undefined,
+      editId: typeof (rowData as { id?: number }).id === "number" ? (rowData as { id?: number }).id : undefined,
     });
   };
 
@@ -496,7 +558,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
         setDataLength={setDataLength}
         refetch={refetch as (options?: RefetchOptions) => Promise<QueryObserverResult<unknown[] | undefined, Error>>}
       />
-      
+
       {/* Dynamic Modal */}
       <DynamicModal
         isOpen={modalState.isOpen}
@@ -510,7 +572,7 @@ export default function SettingsContent({ activeSetting }: SettingsContentProps)
           closeModal();
           // Invalidate the main data query to refetch data
           queryClient.invalidateQueries({
-            queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }]
+            queryKey: [activeSetting.label, { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
           });
         }}
       />

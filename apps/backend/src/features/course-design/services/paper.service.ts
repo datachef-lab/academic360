@@ -547,27 +547,16 @@ export async function getPapersFilteredPaginated(
 
   const [{ total }] = countResult;
 
-  // Optimize data transformation
-  const content = rows.map((row) => {
-    // Handle both joined and non-joined query results
-    const paper = (row as any).papers || row;
-    return {
-      id: paper.id,
-      name: paper.name,
-      code: paper.code,
-      subjectId: paper.subjectId,
-      affiliationId: paper.affiliationId,
-      regulationTypeId: paper.regulationTypeId,
-      academicYearId: paper.academicYearId,
-      subjectTypeId: paper.subjectTypeId,
-      programCourseId: paper.programCourseId,
-      classId: paper.classId,
-      isOptional: paper.isOptional,
-      components: (paper as any).components || [],
-      createdAt: paper.createdAt,
-      updatedAt: paper.updatedAt,
-    } as PaperDto;
-  });
+  // Transform data using modelToDto to get proper components
+  const content = (
+    await Promise.all(
+      rows.map(async (row) => {
+        // Handle both joined and non-joined query results
+        const paper = (row as any).papers || row;
+        return await modelToDto(paper as Paper);
+      }),
+    )
+  ).filter(Boolean) as PaperDto[];
 
   const totalElements = Number(total || 0);
   const totalPages = Math.max(

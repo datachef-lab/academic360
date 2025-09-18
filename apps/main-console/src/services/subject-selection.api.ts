@@ -1,4 +1,4 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 import api from "@/utils/api";
 import { RelatedSubjectMainDto, RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
@@ -27,7 +27,7 @@ const BASE_SUB = "/api/subject-selection/related-subject-subs";
 export const subjectSelectionApi = {
   // Related Subject Main
   async listRelatedSubjectMains() {
-    const res = await api.get<ApiResonse<RelatedSubjectMainDto[] | { content: RelatedSubjectMainDto[] }>>(
+    const res = await api.get<ApiResponse<RelatedSubjectMainDto[] | { content: RelatedSubjectMainDto[] }>>(
       `${BASE_MAIN}`,
     );
     const p = res.data.payload;
@@ -40,37 +40,37 @@ export const subjectSelectionApi = {
     programCourse?: string;
     subjectType?: string;
   }) {
-    const res = await api.get<ApiResonse<PaginatedResponse<RelatedSubjectMainDto>>>(`${BASE_MAIN}`, { params });
+    const res = await api.get<ApiResponse<PaginatedResponse<RelatedSubjectMainDto>>>(`${BASE_MAIN}`, { params });
     return res.data.payload;
   },
   async getRelatedSubjectMain(id: number) {
-    const res = await api.get<ApiResonse<RelatedSubjectMainDto>>(`${BASE_MAIN}/${id}`);
+    const res = await api.get<ApiResponse<RelatedSubjectMainDto>>(`${BASE_MAIN}/${id}`);
     return res.data.payload;
   },
   async createRelatedSubjectMain(payload: CreateRelatedSubjectMainInput) {
-    const res = await api.post<ApiResonse<RelatedSubjectMainDto>>(`${BASE_MAIN}`, payload);
+    const res = await api.post<ApiResponse<RelatedSubjectMainDto>>(`${BASE_MAIN}`, payload);
     return res.data.payload;
   },
   async updateRelatedSubjectMain(id: number, payload: UpdateRelatedSubjectMainInput) {
-    const res = await api.put<ApiResonse<RelatedSubjectMainDto>>(`${BASE_MAIN}/${id}`, payload);
+    const res = await api.put<ApiResponse<RelatedSubjectMainDto>>(`${BASE_MAIN}/${id}`, payload);
     return res.data.payload;
   },
   async deleteRelatedSubjectMain(id: number) {
-    const res = await api.delete<ApiResonse<unknown>>(`${BASE_MAIN}/${id}`);
+    const res = await api.delete<ApiResponse<unknown>>(`${BASE_MAIN}/${id}`);
     return res.data.payload;
   },
 
   // Related Subject Sub
   async listRelatedSubjectSubsByMain(mainId: number) {
-    const res = await api.get<ApiResonse<RelatedSubjectSubDto[]>>(`${BASE_SUB}/main/${mainId}`);
+    const res = await api.get<ApiResponse<RelatedSubjectSubDto[]>>(`${BASE_SUB}/main/${mainId}`);
     return res.data.payload;
   },
   async createRelatedSubjectSub(payload: CreateRelatedSubjectSubInput) {
-    const res = await api.post<ApiResonse<RelatedSubjectSubDto>>(`${BASE_SUB}`, payload);
+    const res = await api.post<ApiResponse<RelatedSubjectSubDto>>(`${BASE_SUB}`, payload);
     return res.data.payload;
   },
   async deleteRelatedSubjectSub(id: number) {
-    const res = await api.delete<ApiResonse<unknown>>(`${BASE_SUB}/${id}`);
+    const res = await api.delete<ApiResponse<unknown>>(`${BASE_SUB}/${id}`);
     return res.data.payload;
   },
 };

@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Download, Edit, Trash2, BookText } from "lucide-react";
+import { PlusCircle, Download, Edit, BookText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import {
@@ -15,137 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import type { BoardSubjectName } from "@repo/db";
+import { boardSubjectNameService, type BoardSubjectNameDto } from "@/services/board-subject-name.service";
 
-// Mock data for demonstration
-const mockBoardSubjectNames: BoardSubjectName[] = [
-  {
-    id: 1,
-    name: "Mathematics",
-    code: "MATH",
-    sequence: 1,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    name: "Physics",
-    code: "PHY",
-    sequence: 2,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    name: "Chemistry",
-    code: "CHEM",
-    sequence: 3,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 4,
-    name: "Biology",
-    code: "BIO",
-    sequence: 4,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 5,
-    name: "English",
-    code: "ENG",
-    sequence: 5,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 6,
-    name: "History",
-    code: "HIST",
-    sequence: 6,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 7,
-    name: "Geography",
-    code: "GEO",
-    sequence: 7,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 8,
-    name: "Computer Science",
-    code: "CS",
-    sequence: 8,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 9,
-    name: "Economics",
-    code: "ECO",
-    sequence: 9,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 10,
-    name: "Political Science",
-    code: "PS",
-    sequence: 10,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 11,
-    name: "Sociology",
-    code: "SOC",
-    sequence: 11,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 12,
-    name: "Psychology",
-    code: "PSY",
-    sequence: 12,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 13,
-    name: "Hindi",
-    code: "HIN",
-    sequence: 13,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 14,
-    name: "Environmental Science",
-    code: "EVS",
-    sequence: 14,
-    isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-];
+// Mock data removed - now using real API
 
 const BoardSubjectNameForm = ({
   initialData,
@@ -153,8 +25,8 @@ const BoardSubjectNameForm = ({
   onCancel,
   isLoading,
 }: {
-  initialData: BoardSubjectName | null;
-  onSubmit: (data: any) => void;
+  initialData: BoardSubjectNameDto | null;
+  onSubmit: (data: { name: string; code?: string | null; sequence?: number | null; isActive: boolean }) => void;
   onCancel: () => void;
   isLoading: boolean;
 }) => {
@@ -232,41 +104,60 @@ const BoardSubjectNameForm = ({
 };
 
 export default function BoardSubjectNamePage() {
-  const [subjectNames, setSubjectNames] = React.useState<BoardSubjectName[]>(mockBoardSubjectNames);
-  const [loading] = React.useState<boolean>(false);
-  const [error] = React.useState<string | null>(null);
+  const [subjectNames, setSubjectNames] = React.useState<BoardSubjectNameDto[]>([]);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [searchText, setSearchText] = React.useState("");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedSubjectName, setSelectedSubjectName] = React.useState<BoardSubjectName | null>(null);
+  const [selectedSubjectName, setSelectedSubjectName] = React.useState<BoardSubjectNameDto | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleEdit = (subjectName: BoardSubjectName) => {
+  // Load subject names on component mount
+  React.useEffect(() => {
+    loadSubjectNames();
+  }, []);
+
+  const loadSubjectNames = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await boardSubjectNameService.getAll();
+      setSubjectNames(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load subject names");
+      toast.error("Failed to load subject names");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (subjectName: BoardSubjectNameDto) => {
     setSelectedSubjectName(subjectName);
     setIsFormOpen(true);
   };
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: {
+    name: string;
+    code?: string | null;
+    sequence?: number | null;
+    isActive: boolean;
+  }) => {
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
       if (selectedSubjectName?.id) {
-        setSubjectNames((prev) =>
-          prev.map((sn) =>
-            sn.id === selectedSubjectName.id ? { ...sn, ...data, updatedAt: new Date().toISOString() } : sn,
-          ),
-        );
+        // Update existing subject name
+        const updatedSubjectName = await boardSubjectNameService.update(selectedSubjectName.id, data);
+        setSubjectNames((prev) => prev.map((sn) => (sn.id === selectedSubjectName.id ? updatedSubjectName : sn)));
         toast.success("Subject name updated successfully");
       } else {
-        const nextId = Math.max(...subjectNames.map((s) => s.id || 0)) + 1;
-        setSubjectNames((prev) => [
-          ...prev,
-          { id: nextId, ...data, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        ]);
+        // Create new subject name
+        const newSubjectName = await boardSubjectNameService.create(data);
+        setSubjectNames((prev) => [...prev, newSubjectName]);
         toast.success("Subject name created successfully");
       }
       setIsFormOpen(false);
-    } catch (e) {
-      toast.error("Failed to save subject name");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save subject name");
     } finally {
       setIsSubmitting(false);
     }
@@ -282,15 +173,7 @@ export default function BoardSubjectNamePage() {
     setIsFormOpen(true);
   };
 
-  const onDelete = async (id: number) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setSubjectNames((prev) => prev.filter((sn) => sn.id !== id));
-      toast.success("Subject name deleted successfully");
-    } catch {
-      toast.error("Failed to delete subject name");
-    }
-  };
+  // Delete functionality removed per requirements
 
   const handleDownloadAll = () => {
     try {
@@ -424,14 +307,6 @@ export default function BoardSubjectNamePage() {
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(sn)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => onDelete(sn.id!)}
-                              className="h-5 w-5 p-0"
-                            >
-                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>

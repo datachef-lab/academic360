@@ -1,0 +1,19 @@
+19-09-2025	01:22:32	841083e3-5de8-4575-afc2-982310c75833	Error: read ECONNRESET	GET	/api/students/old-data	undefined
+19-09-2025	00:31:37	faaf6b03-6c1b-4847-805e-91d388269a10	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:20:38	c5281977-7d3a-47d6-83fb-90fee784282a	Error: Failed query: select "id", "legacy_country_id", "name", "sequence", "disabled", "created_at", "updated_at" from "countries" where "countries"."id" = $1
+params: 1	GET	/api/address	http://localhost:5173
+19-09-2025	00:20:38	32ae2fd6-232d-45d4-9474-5bf76f7fe2d2	Error: Failed query: select "id", "legacy_country_id", "name", "sequence", "disabled", "created_at", "updated_at" from "countries" where "countries"."id" = $1
+params: 1	GET	/api/address	http://localhost:5173
+19-09-2025	00:15:37	ead5e241-61d3-4aa3-86ad-9f86bda4dc05	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:07:26	d5ee179f-1a49-448f-bbe4-8064fce5ce4d	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:06:30	5495a871-cf33-4d99-8577-71b6b621199c	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:06:20	9508220a-4d22-4b9d-aa99-e1cfdd7d2048	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:06:17	7ce6319e-2af8-4373-a9ac-ee594a732b9d	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:05:19	ef35aaa2-6a59-413b-94e3-c4cff0fd61e2	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:05:06	5f830f65-02f3-4a98-94fa-c28caf498641	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:04:54	f63b4f98-7038-4a14-91ea-566fff9a7863	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:04:00	be354243-06f4-4162-bfed-725ad128e085	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:03:51	47d101cc-bf5e-4d46-8bb1-b2d9558cf1df	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:03:45	783d05eb-749e-433e-8e79-fab8d5e3eeac	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:02:54	0bc70021-783e-4293-bbcb-535b48c3e5b3	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+19-09-2025	00:02:45	25eb5f15-a032-4b30-acab-02c598365578	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173

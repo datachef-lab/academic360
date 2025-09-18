@@ -1,10 +1,10 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { Health } from "@/types/user/health";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/health";
 
-export async function getAllHealthDetails(): Promise<ApiResonse<Health[]>> {
+export async function getAllHealthDetails(): Promise<ApiResponse<Health[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -13,7 +13,7 @@ export async function getAllHealthDetails(): Promise<ApiResonse<Health[]>> {
   }
 }
 
-export async function getHealthDetailById(id: number): Promise<ApiResonse<Health | null>> {
+export async function getHealthDetailById(id: number): Promise<ApiResponse<Health | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +22,7 @@ export async function getHealthDetailById(id: number): Promise<ApiResonse<Health
   }
 }
 
-export async function getHealthDetailByStudentId(studentId: number): Promise<ApiResonse<Health | null>> {
+export async function getHealthDetailByStudentId(studentId: number): Promise<ApiResponse<Health | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -31,7 +31,7 @@ export async function getHealthDetailByStudentId(studentId: number): Promise<Api
   }
 }
 
-export async function createHealthDetail(payload: Partial<Health>): Promise<ApiResonse<Health>> {
+export async function createHealthDetail(payload: Partial<Health>): Promise<ApiResponse<Health>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -40,7 +40,7 @@ export async function createHealthDetail(payload: Partial<Health>): Promise<ApiR
   }
 }
 
-export async function updateHealthDetail(id: number, payload: Partial<Health>): Promise<ApiResonse<Health>> {
+export async function updateHealthDetail(id: number, payload: Partial<Health>): Promise<ApiResponse<Health>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;
@@ -49,7 +49,7 @@ export async function updateHealthDetail(id: number, payload: Partial<Health>): 
   }
 }
 
-export async function deleteHealthDetail(id: number): Promise<ApiResonse<null>> {
+export async function deleteHealthDetail(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -58,7 +58,7 @@ export async function deleteHealthDetail(id: number): Promise<ApiResonse<null>> 
   }
 }
 
-export async function deleteHealthDetailByStudentId(studentId: number): Promise<ApiResonse<null>> {
+export async function deleteHealthDetailByStudentId(studentId: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

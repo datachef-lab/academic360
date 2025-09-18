@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, ReactNode, createContext, useC
 import axiosInstance from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { UserDto } from "@repo/db/dtos/user";
 export interface AuthContextType {
   user: UserDto | null;
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     try {
-      const response = await axiosInstance.get<ApiResonse<{ accessToken: string; user: UserDto }>>(
+      const response = await axiosInstance.get<ApiResponse<{ accessToken: string; user: UserDto }>>(
         "/auth/refresh",
         { withCredentials: true }, // Include cookies in the request
       );

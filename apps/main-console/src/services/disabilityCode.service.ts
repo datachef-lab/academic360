@@ -1,10 +1,10 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { DisabilityCode } from "@/types/user/disability-code";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/disability-codes";
 
-export async function getAllDisabilityCodes(): Promise<ApiResonse<DisabilityCode[]>> {
+export async function getAllDisabilityCodes(): Promise<ApiResponse<DisabilityCode[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -13,7 +13,7 @@ export async function getAllDisabilityCodes(): Promise<ApiResonse<DisabilityCode
   }
 }
 
-export async function getDisabilityCodeById(id: number): Promise<ApiResonse<DisabilityCode | null>> {
+export async function getDisabilityCodeById(id: number): Promise<ApiResponse<DisabilityCode | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +22,7 @@ export async function getDisabilityCodeById(id: number): Promise<ApiResonse<Disa
   }
 }
 
-export async function createDisabilityCode(payload: Partial<DisabilityCode>): Promise<ApiResonse<DisabilityCode>> {
+export async function createDisabilityCode(payload: Partial<DisabilityCode>): Promise<ApiResponse<DisabilityCode>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -31,7 +31,10 @@ export async function createDisabilityCode(payload: Partial<DisabilityCode>): Pr
   }
 }
 
-export async function updateDisabilityCode(id: number, payload: Partial<DisabilityCode>): Promise<ApiResonse<DisabilityCode>> {
+export async function updateDisabilityCode(
+  id: number,
+  payload: Partial<DisabilityCode>,
+): Promise<ApiResponse<DisabilityCode>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;
@@ -40,7 +43,7 @@ export async function updateDisabilityCode(id: number, payload: Partial<Disabili
   }
 }
 
-export async function deleteDisabilityCode(id: number): Promise<ApiResonse<null>> {
+export async function deleteDisabilityCode(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;

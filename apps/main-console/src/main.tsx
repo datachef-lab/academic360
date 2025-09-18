@@ -7,6 +7,8 @@ import { Toaster } from "sonner";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SettingsProvider } from "./features/settings/providers/settings-provider";
+import { Provider } from "react-redux";
+import { store } from "./store/store";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -24,13 +26,15 @@ const root = createRoot(rootElement);
 
 root.render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <ErrorProvider>
-        <SettingsProvider>
-          <App />
-        </SettingsProvider>
-      </ErrorProvider>
-      <Toaster />
-    </QueryClientProvider>
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <ErrorProvider>
+          <SettingsProvider>
+            <App />
+          </SettingsProvider>
+        </ErrorProvider>
+        <Toaster />
+      </QueryClientProvider>
+    </Provider>
   </StrictMode>,
 );

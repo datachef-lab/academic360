@@ -3,12 +3,6 @@ import { useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-// import {
-//   DropdownMenu,
-//   DropdownMenuContent,
-//   DropdownMenuItem,
-//   DropdownMenuTrigger,
-// } from "@/components/ui/dropdown-menu";
 import {
   Settings,
   Home,
@@ -20,29 +14,21 @@ import {
   ChevronDown,
   Calendar,
 } from "lucide-react";
-// import { toast } from "sonner";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
-// import { UserAvatar } from "@/hooks/UserAvatar";
 import { SearchStudentModal } from "./SearchStudentModal";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
 import { useSettings } from "@/features/settings/hooks/use-settings";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// import { useSettings } from "@/features/settings/providers/settings-provider";
 
-// Academic year data
-const academicYears = [
-  { value: "2024-25", label: "2024-25" },
-  { value: "2023-24", label: "2023-24" },
-  { value: "2022-23", label: "2022-23" },
-  { value: "2021-22", label: "2021-22" },
-];
+// Remove hardcoded academic years - now using Redux state
 
 // Navigation data
 const data = {
@@ -117,10 +103,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { settings } = useSettings();
   const currentPath = location.pathname;
   const { user, accessToken, displayFlag } = useAuth();
-  //   const setIsLoggingOut = React.useState(false)[1];
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
-  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState("2024-25");
+
+  // Academic Year Management with Redux
+  const {
+    currentAcademicYear,
+    availableAcademicYears,
+    loading: academicYearLoading,
+    error: academicYearError,
+    loadAcademicYears,
+    setCurrentYear,
+  } = useAcademicYear();
+
+  // Load academic years only when access token is available
+  React.useEffect(() => {
+    if (accessToken && availableAcademicYears.length === 0) {
+      loadAcademicYears();
+    }
+  }, [accessToken, availableAcademicYears.length, loadAcademicYears]);
 
   React.useEffect(() => {}, [settings]);
 
@@ -170,7 +171,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console Panel
                     </h1>
                     <p className="text-xs text-purple-200 truncate">
-                      {academicYears.find((year) => year.value === selectedAcademicYear)?.label || "Select Year"}
+                      {academicYearLoading
+                        ? "Loading..."
+                        : academicYearError
+                          ? "Error loading year"
+                          : currentAcademicYear?.year || "Select Year"}
                     </p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
@@ -183,19 +188,32 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     Select Academic Year
                   </div>
                   <div className="border-t border-gray-100 mt-2 pt-2">
-                    {academicYears.map((year) => (
-                      <DropdownMenuItem
-                        key={year.value}
-                        onClick={() => setSelectedAcademicYear(year.value)}
-                        className="flex items-center gap-2 cursor-pointer px-2 py-1.5"
-                      >
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">{year.label}</span>
-                        {selectedAcademicYear === year.value && (
-                          <div className="ml-auto h-2 w-2 bg-purple-600 rounded-full" />
-                        )}
-                      </DropdownMenuItem>
-                    ))}
+                    {academicYearLoading ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">Loading academic years...</div>
+                    ) : academicYearError ? (
+                      <div className="px-2 py-1.5 text-sm text-red-500">Error: {academicYearError}</div>
+                    ) : availableAcademicYears.length === 0 ? (
+                      <div className="px-2 py-1.5 text-sm text-gray-500">No academic years found</div>
+                    ) : (
+                      availableAcademicYears.map((year) => (
+                        <DropdownMenuItem
+                          key={year.id}
+                          onClick={() => setCurrentYear(year)}
+                          className="flex items-center gap-2 cursor-pointer px-2 py-1.5"
+                        >
+                          <Calendar className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm">{year.year}</span>
+                          {year.isCurrentYear === true && (
+                            <Badge variant="outline" className="ml-auto text-xs">
+                              Current
+                            </Badge>
+                          )}
+                          {currentAcademicYear?.id === year.id && (
+                            <div className="ml-auto h-2 w-2 bg-purple-600 rounded-full" />
+                          )}
+                        </DropdownMenuItem>
+                      ))
+                    )}
                   </div>
                 </div>
               </DropdownMenuContent>

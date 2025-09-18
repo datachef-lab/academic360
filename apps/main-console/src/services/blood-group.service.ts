@@ -1,10 +1,6 @@
 import axiosInstance from "@/utils/api";
-import { ApiResonse } from "@/types/api-response";
-import {
-  BloodGroup,
-  CreateBloodGroupPayload,
-  UpdateBloodGroupPayload,
-} from "@/types/resources/blood-group.types";
+import { ApiResponse } from "@/types/api-response";
+import { BloodGroup, CreateBloodGroupPayload, UpdateBloodGroupPayload } from "@/types/resources/blood-group.types";
 
 // ============================================================================
 // BLOOD GROUP SERVICE
@@ -12,7 +8,7 @@ import {
 
 /**
  * Blood Group Service
- * 
+ *
  * This service handles all CRUD operations for the Blood Group module.
  * It provides type-safe API communication with the backend.
  */
@@ -27,10 +23,10 @@ import {
  */
 export async function getAllBloodGroups(): Promise<BloodGroup[]> {
   try {
-    const response = await axiosInstance.get('/api/blood-groups');
+    const response = await axiosInstance.get("/api/blood-groups");
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching blood groups:', error);
+    console.error("Error fetching blood groups:", error);
     throw error;
   }
 }
@@ -43,7 +39,7 @@ export async function getAllBloodGroups(): Promise<BloodGroup[]> {
 export async function getBloodGroupById(id: number): Promise<BloodGroup> {
   try {
     if (!id) {
-      throw new Error('Blood group ID is required');
+      throw new Error("Blood group ID is required");
     }
 
     const response = await axiosInstance.get(`/api/blood-groups/${id}`);
@@ -60,10 +56,10 @@ export async function getBloodGroupById(id: number): Promise<BloodGroup> {
  */
 export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
   try {
-    const response = await axiosInstance.get('/api/blood-groups?disabled=false');
+    const response = await axiosInstance.get("/api/blood-groups?disabled=false");
     return response.data.payload;
   } catch (error) {
-    console.error('Error fetching active blood groups:', error);
+    console.error("Error fetching active blood groups:", error);
     throw error;
   }
 }
@@ -80,13 +76,13 @@ export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
 export async function createBloodGroup(payload: CreateBloodGroupPayload): Promise<BloodGroup> {
   try {
     if (!payload.type || payload.type.trim().length === 0) {
-      throw new Error('Blood group type is required');
+      throw new Error("Blood group type is required");
     }
 
-    const response = await axiosInstance.post('/api/blood-groups', payload);
+    const response = await axiosInstance.post("/api/blood-groups", payload);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating blood group:', error);
+    console.error("Error creating blood group:", error);
     throw error;
   }
 }
@@ -104,11 +100,11 @@ export async function createBloodGroup(payload: CreateBloodGroupPayload): Promis
 export async function updateBloodGroup(id: number, payload: UpdateBloodGroupPayload): Promise<BloodGroup> {
   try {
     if (!id) {
-      throw new Error('Blood group ID is required');
+      throw new Error("Blood group ID is required");
     }
 
     if (payload.type !== undefined && payload.type.trim().length === 0) {
-      throw new Error('Blood group type cannot be empty');
+      throw new Error("Blood group type cannot be empty");
     }
 
     const response = await axiosInstance.put(`/api/blood-groups/${id}`, payload);
@@ -122,9 +118,9 @@ export async function updateBloodGroup(id: number, payload: UpdateBloodGroupPayl
 /**
  * Update blood group type only (legacy function for backward compatibility)
  * @param data - Object containing id and type
- * @returns Promise<ApiResonse<BloodGroup[]>> - API response
+ * @returns Promise<ApiResponse<BloodGroup[]>> - API response
  */
-export async function updateBloodGroupType(data: { id: number; type: string }): Promise<ApiResonse<BloodGroup[]>> {
+export async function updateBloodGroupType(data: { id: number; type: string }): Promise<ApiResponse<BloodGroup[]>> {
   try {
     console.log("blood group is coming....", data);
     const response = await axiosInstance.put(`/api/blood-groups/${data.id}`, data);
@@ -147,7 +143,7 @@ export async function updateBloodGroupType(data: { id: number; type: string }): 
 export async function deleteBloodGroup(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Blood group ID is required');
+      throw new Error("Blood group ID is required");
     }
 
     await axiosInstance.delete(`/api/blood-groups/${id}`);
@@ -169,13 +165,13 @@ export async function deleteBloodGroup(id: number): Promise<void> {
 export async function createMultipleBloodGroups(payloads: CreateBloodGroupPayload[]): Promise<BloodGroup[]> {
   try {
     if (!payloads || payloads.length === 0) {
-      throw new Error('At least one blood group payload is required');
+      throw new Error("At least one blood group payload is required");
     }
 
-    const response = await axiosInstance.post('/api/blood-groups/bulk', payloads);
+    const response = await axiosInstance.post("/api/blood-groups/bulk", payloads);
     return response.data.payload;
   } catch (error) {
-    console.error('Error creating multiple blood groups:', error);
+    console.error("Error creating multiple blood groups:", error);
     throw error;
   }
 }
@@ -186,17 +182,17 @@ export async function createMultipleBloodGroups(payloads: CreateBloodGroupPayloa
  * @returns Promise<BloodGroup[]> - Array of updated blood groups
  */
 export async function updateMultipleBloodGroups(
-  updates: Array<{ id: number; payload: UpdateBloodGroupPayload }>
+  updates: Array<{ id: number; payload: UpdateBloodGroupPayload }>,
 ): Promise<BloodGroup[]> {
   try {
     if (!updates || updates.length === 0) {
-      throw new Error('At least one blood group update is required');
+      throw new Error("At least one blood group update is required");
     }
 
-    const response = await axiosInstance.put('/api/blood-groups/bulk', updates);
+    const response = await axiosInstance.put("/api/blood-groups/bulk", updates);
     return response.data.payload;
   } catch (error) {
-    console.error('Error updating multiple blood groups:', error);
+    console.error("Error updating multiple blood groups:", error);
     throw error;
   }
 }
@@ -216,12 +212,10 @@ export async function searchBloodGroups(searchTerm: string): Promise<BloodGroup[
       return getAllBloodGroups();
     }
 
-    const response = await axiosInstance.get(
-      `/api/blood-groups/search?q=${encodeURIComponent(searchTerm.trim())}`
-    );
+    const response = await axiosInstance.get(`/api/blood-groups/search?q=${encodeURIComponent(searchTerm.trim())}`);
     return response.data.payload;
   } catch (error) {
-    console.error('Error searching blood groups:', error);
+    console.error("Error searching blood groups:", error);
     throw error;
   }
 }
@@ -234,16 +228,14 @@ export async function searchBloodGroups(searchTerm: string): Promise<BloodGroup[
  */
 export async function getBloodGroupsPaginated(
   page: number = 1,
-  limit: number = 10
+  limit: number = 10,
 ): Promise<{ data: BloodGroup[]; total: number; page: number; limit: number }> {
   try {
-    const response = await axiosInstance.get(
-      `/api/blood-groups?page=${page}&limit=${limit}`
-    );
-    
+    const response = await axiosInstance.get(`/api/blood-groups?page=${page}&limit=${limit}`);
+
     // Extract pagination info from response headers or data
-    const total = parseInt(response.headers['x-total-count'] || '0');
-    
+    const total = parseInt(response.headers["x-total-count"] || "0");
+
     return {
       data: response.data.payload,
       total,
@@ -251,7 +243,7 @@ export async function getBloodGroupsPaginated(
       limit,
     };
   } catch (error) {
-    console.error('Error fetching paginated blood groups:', error);
+    console.error("Error fetching paginated blood groups:", error);
     throw error;
   }
 }
@@ -271,12 +263,10 @@ export async function checkBloodGroupExists(type: string): Promise<boolean> {
       return false;
     }
 
-    const response = await axiosInstance.get(
-      `/api/blood-groups?type=${encodeURIComponent(type.trim())}`
-    );
+    const response = await axiosInstance.get(`/api/blood-groups?type=${encodeURIComponent(type.trim())}`);
     return response.data.payload.length > 0;
   } catch (error) {
-    console.error('Error checking blood group existence:', error);
+    console.error("Error checking blood group existence:", error);
     return false;
   }
 }
@@ -288,8 +278,8 @@ export async function checkBloodGroupExists(type: string): Promise<boolean> {
 export async function getBloodGroupStats(): Promise<{ total: number; active: number; disabled: number }> {
   try {
     const [allResponse, activeResponse] = await Promise.all([
-      axiosInstance.get('/api/blood-groups'),
-      axiosInstance.get('/api/blood-groups?disabled=false'),
+      axiosInstance.get("/api/blood-groups"),
+      axiosInstance.get("/api/blood-groups?disabled=false"),
     ]);
 
     const total = allResponse.data.payload.length;
@@ -298,7 +288,7 @@ export async function getBloodGroupStats(): Promise<{ total: number; active: num
 
     return { total, active, disabled };
   } catch (error) {
-    console.error('Error fetching blood group statistics:', error);
+    console.error("Error fetching blood group statistics:", error);
     throw error;
   }
 }
@@ -312,25 +302,25 @@ export const bloodGroupService = {
   getAllBloodGroups,
   getBloodGroupById,
   getActiveBloodGroups,
-  
+
   // Create operations
   createBloodGroup,
-  
+
   // Update operations
   updateBloodGroup,
   updateBloodGroupType, // Legacy function
-  
+
   // Delete operations
   deleteBloodGroup,
-  
+
   // Bulk operations
   createMultipleBloodGroups,
   updateMultipleBloodGroups,
-  
+
   // Search and filter operations
   searchBloodGroups,
   getBloodGroupsPaginated,
-  
+
   // Utility functions
   checkBloodGroupExists,
   getBloodGroupStats,

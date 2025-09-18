@@ -181,8 +181,7 @@ async function fetchData(
                 coursedetails cd
             WHERE 
                 cd.id = s.admissionid
-                AND pd.id = cd.parent_id
-                AND cd.courseid = 64;
+                AND pd.id = cd.parent_id;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -194,7 +193,6 @@ async function fetchData(
             WHERE 
                 cd.id = s.admissionid
                 AND pd.id = cd.parent_id
-                AND cd.courseid = 64
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -208,8 +206,7 @@ async function fetchData(
                 coursedetails cd
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
-                AND cd.parent_id = pd.id
-                AND cd.courseid = 64;
+                AND cd.parent_id = pd.id;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -220,7 +217,6 @@ async function fetchData(
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
                 AND cd.parent_id = pd.id
-                AND cd.courseid = 64
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -2371,8 +2367,8 @@ export async function addDistrict(oldDistrictId: number) {
     .from(districtModel)
     .where(
       and(
-        eq(districtModel.cityId, city.id),
         ilike(districtModel.name, oldDistrict.name.trim()),
+        eq(districtModel.cityId, city.id),
       ),
     );
   if (existingDistrict) {
@@ -3128,7 +3124,15 @@ async function processOldCourseDetails(
     const [existingCancelSource] = await db
       .select()
       .from(cancelSourceModel)
-      .where(eq(cancelSourceModel.name, oldCancelSource.name));
+      .where(
+        and(
+          ilike(cancelSourceModel.name, oldCancelSource.name.trim()),
+          eq(
+            cancelSourceModel.legacyCancelSourceId,
+            courseDetails.cancelsourceid,
+          ),
+        ),
+      );
     if (existingCancelSource) {
       cancelSource = existingCancelSource;
     } else {

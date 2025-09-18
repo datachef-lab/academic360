@@ -1,46 +1,44 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useError } from './useError';
+import { useState, useEffect, useCallback } from "react";
+import { useError } from "./useError";
 import {
   // Fees Structure
 
   createFeesStructure,
   updateFeesStructure,
   deleteFeesStructure,
-  
+
   // Fees Heads
   getAllFeesHeads,
   createFeesHead,
   updateFeesHead,
   deleteFeesHead,
-  
+
   // Fees Slabs
   getAllFeesSlabs,
   createFeesSlab,
   updateFeesSlab,
   deleteFeesSlab,
-  
+
   // Fees Receipt Types
   getAllFeesReceiptTypes,
   createFeesReceiptType,
   updateFeesReceiptType,
   deleteFeesReceiptType,
-  
+
   // Addons
   getAllAddons,
   createAddon,
   updateAddon,
   deleteAddon,
-  
+
   // Student Fees Mapping
   getAllStudentFeesMappings,
   createStudentFeesMapping,
   updateStudentFeesMapping,
   deleteStudentFeesMapping,
-  
   createFeesSlabYear,
-
   getAllFeesSlabYears,
-} from '@/services/fees-api';
+} from "@/services/fees-api";
 import {
   FeesStructureDto,
   FeesHead,
@@ -50,17 +48,15 @@ import {
   StudentFeesMapping,
   FeesSlabMapping,
   CreateFeesStructureDto,
-  
-} from '@/types/fees';
-import {AcademicYear } from "@/types/academics/academic-year"
-import { Course } from '@/types/course-design';
+} from "@/types/fees";
+import { AcademicYear } from "@/types/academics/academic-year";
+import { Course } from "@/types/course-design";
 import {
   getFeesStructures,
   getAcademicYearsFromFeesStructures,
   getCoursesFromFeesStructures,
   getFeesStructuresByAcademicYearAndCourse,
-  
-} from '@/services/fees-api';
+} from "@/services/fees-api";
 
 // ==================== FEES STRUCTURE HOOKS ====================
 
@@ -75,7 +71,7 @@ export const useFeesStructures = () => {
       const data = await getFeesStructures();
       setFeesStructures(data);
     } catch {
-      showError({ message: 'Failed to fetch fees structures' });
+      showError({ message: "Failed to fetch fees structures" });
     } finally {
       setLoading(false);
     }
@@ -87,7 +83,7 @@ export const useFeesStructures = () => {
       await fetchFeesStructures();
       return response.payload;
     } catch {
-      showError({ message: 'Failed to create fees structure' });
+      showError({ message: "Failed to create fees structure" });
       return null;
     }
   }, []);
@@ -98,7 +94,7 @@ export const useFeesStructures = () => {
       await fetchFeesStructures();
       return response.payload;
     } catch {
-      showError({ message: 'Failed to update fees structure' });
+      showError({ message: "Failed to update fees structure" });
       return null;
     }
   }, []);
@@ -109,7 +105,7 @@ export const useFeesStructures = () => {
       await fetchFeesStructures();
       return true;
     } catch {
-      showError({ message: 'Failed to delete fees structure' });
+      showError({ message: "Failed to delete fees structure" });
       return false;
     }
   }, []);
@@ -118,7 +114,14 @@ export const useFeesStructures = () => {
     fetchFeesStructures();
   }, []);
 
-  return { feesStructures, loading, refetch: fetchFeesStructures, addFeesStructure, updateFeesStructureById, deleteFeesStructureById };
+  return {
+    feesStructures,
+    loading,
+    refetch: fetchFeesStructures,
+    addFeesStructure,
+    updateFeesStructureById,
+    deleteFeesStructureById,
+  };
 };
 
 export const useAcademicYearsFromFeesStructures = () => {
@@ -132,7 +135,7 @@ export const useAcademicYearsFromFeesStructures = () => {
       const data = await getAcademicYearsFromFeesStructures();
       setAcademicYears(data);
     } catch {
-      showError({ message: 'Failed to fetch academic years from fees structures' });
+      showError({ message: "Failed to fetch academic years from fees structures" });
     } finally {
       setLoading(false);
     }
@@ -161,7 +164,7 @@ export const useCoursesFromFeesStructures = (academicYearId: number | null) => {
         const data = await getCoursesFromFeesStructures(academicYearId);
         setCourses(data);
       } catch {
-        showError({ message: 'Failed to fetch courses from fees structures' });
+        showError({ message: "Failed to fetch courses from fees structures" });
       } finally {
         setLoading(false);
       }
@@ -189,7 +192,7 @@ export const useFeesStructuresByAcademicYearAndCourse = (academicYearId: number 
         const data = await getFeesStructuresByAcademicYearAndCourse(academicYearId, courseId);
         setFeesStructures(data);
       } catch {
-        showError({ message: 'Failed to fetch fees structures by academic year and course' });
+        showError({ message: "Failed to fetch fees structures by academic year and course" });
       } finally {
         setLoading(false);
       }
@@ -215,44 +218,53 @@ export const useFeesHeads = () => {
       console.log("Fees Heads API response:", response);
       setFeesHeads(response || []);
     } catch {
-      showError({ message: 'Failed to fetch fees heads' });
+      showError({ message: "Failed to fetch fees heads" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addFeesHead = useCallback(async (newFeesHead: FeesHead) => {
-    try {
-      const response = await createFeesHead(newFeesHead);
-      await fetchFeesHeads();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to create fees head' });
-      return null;
-    }
-  }, [fetchFeesHeads, showError]);
+  const addFeesHead = useCallback(
+    async (newFeesHead: FeesHead) => {
+      try {
+        const response = await createFeesHead(newFeesHead);
+        await fetchFeesHeads();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create fees head" });
+        return null;
+      }
+    },
+    [fetchFeesHeads, showError],
+  );
 
-  const updateFeesHeadById = useCallback(async (id: number, feesHead: Partial<FeesHead>) => {
-    try {
-      const response = await updateFeesHead(id, feesHead);
-      await fetchFeesHeads();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to update fees head' });
-      return null;
-    }
-  }, [fetchFeesHeads, showError]);
+  const updateFeesHeadById = useCallback(
+    async (id: number, feesHead: Partial<FeesHead>) => {
+      try {
+        const response = await updateFeesHead(id, feesHead);
+        await fetchFeesHeads();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update fees head" });
+        return null;
+      }
+    },
+    [fetchFeesHeads, showError],
+  );
 
-  const deleteFeesHeadById = useCallback(async (id: number) => {
-    try {
-      await deleteFeesHead(id);
-      await fetchFeesHeads();
-      return true;
-    } catch {
-      showError({ message: 'Failed to delete fees head' });
-      return false;
-    }
-  }, [fetchFeesHeads, showError]);
+  const deleteFeesHeadById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeesHead(id);
+        await fetchFeesHeads();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete fees head" });
+        return false;
+      }
+    },
+    [fetchFeesHeads, showError],
+  );
 
   useEffect(() => {
     fetchFeesHeads();
@@ -283,44 +295,53 @@ export const useFeesSlabs = () => {
       const response = await getAllFeesSlabs();
       setFeesSlabs(response || []);
     } catch {
-      showError({ message: 'Failed to fetch fees slabs' });
+      showError({ message: "Failed to fetch fees slabs" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addFeesSlab = useCallback(async (newFeesSlab: FeesSlab) => {
-    try {
-      const response = await createFeesSlab(newFeesSlab);
-      await fetchFeesSlabs();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to create fees slab' });
-      return null;
-    }
-  }, [fetchFeesSlabs, showError]);
+  const addFeesSlab = useCallback(
+    async (newFeesSlab: FeesSlab) => {
+      try {
+        const response = await createFeesSlab(newFeesSlab);
+        await fetchFeesSlabs();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create fees slab" });
+        return null;
+      }
+    },
+    [fetchFeesSlabs, showError],
+  );
 
-  const updateFeesSlabById = useCallback(async (id: number, feesSlab: Partial<FeesSlab>) => {
-    try {
-      const response = await updateFeesSlab(id, feesSlab);
-      await fetchFeesSlabs();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to update fees slab' });
-      return null;
-    }
-  }, [fetchFeesSlabs, showError]);
+  const updateFeesSlabById = useCallback(
+    async (id: number, feesSlab: Partial<FeesSlab>) => {
+      try {
+        const response = await updateFeesSlab(id, feesSlab);
+        await fetchFeesSlabs();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update fees slab" });
+        return null;
+      }
+    },
+    [fetchFeesSlabs, showError],
+  );
 
-  const deleteFeesSlabById = useCallback(async (id: number) => {
-    try {
-      await deleteFeesSlab(id);
-      await fetchFeesSlabs();
-      return true;
-    } catch {
-      showError({ message: 'Failed to delete fees slab' });
-      return false;
-    }
-  }, [fetchFeesSlabs, showError]);
+  const deleteFeesSlabById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeesSlab(id);
+        await fetchFeesSlabs();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete fees slab" });
+        return false;
+      }
+    },
+    [fetchFeesSlabs, showError],
+  );
 
   useEffect(() => {
     fetchFeesSlabs();
@@ -349,44 +370,53 @@ export const useFeesReceiptTypes = () => {
       const response = await getAllFeesReceiptTypes();
       setFeesReceiptTypes(response || []);
     } catch {
-      showError({ message: 'Failed to fetch fees receipt types' });
+      showError({ message: "Failed to fetch fees receipt types" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addFeesReceiptType = useCallback(async (newFeesReceiptType: FeesReceiptType) => {
-    try {
-      const response = await createFeesReceiptType(newFeesReceiptType);
-      await fetchFeesReceiptTypes();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to create fees receipt type' });
-      return null;
-    }
-  }, [fetchFeesReceiptTypes, showError]);
+  const addFeesReceiptType = useCallback(
+    async (newFeesReceiptType: FeesReceiptType) => {
+      try {
+        const response = await createFeesReceiptType(newFeesReceiptType);
+        await fetchFeesReceiptTypes();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create fees receipt type" });
+        return null;
+      }
+    },
+    [fetchFeesReceiptTypes, showError],
+  );
 
-  const updateFeesReceiptTypeById = useCallback(async (id: number, feesReceiptType: Partial<FeesReceiptType>) => {
-    try {
-      const response = await updateFeesReceiptType(id, feesReceiptType);
-      await fetchFeesReceiptTypes();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to update fees receipt type' });
-      return null;
-    }
-  }, [fetchFeesReceiptTypes, showError]);
+  const updateFeesReceiptTypeById = useCallback(
+    async (id: number, feesReceiptType: Partial<FeesReceiptType>) => {
+      try {
+        const response = await updateFeesReceiptType(id, feesReceiptType);
+        await fetchFeesReceiptTypes();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update fees receipt type" });
+        return null;
+      }
+    },
+    [fetchFeesReceiptTypes, showError],
+  );
 
-  const deleteFeesReceiptTypeById = useCallback(async (id: number) => {
-    try {
-      await deleteFeesReceiptType(id);
-      await fetchFeesReceiptTypes();
-      return true;
-    } catch {
-      showError({ message: 'Failed to delete fees receipt type' });
-      return false;
-    }
-  }, [fetchFeesReceiptTypes, showError]);
+  const deleteFeesReceiptTypeById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteFeesReceiptType(id);
+        await fetchFeesReceiptTypes();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete fees receipt type" });
+        return false;
+      }
+    },
+    [fetchFeesReceiptTypes, showError],
+  );
 
   useEffect(() => {
     fetchFeesReceiptTypes();
@@ -415,44 +445,53 @@ export const useAddons = () => {
       const response = await getAllAddons();
       setAddons(response.payload || []);
     } catch {
-      showError({ message: 'Failed to fetch addons' });
+      showError({ message: "Failed to fetch addons" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addAddon = useCallback(async (newAddon: AddOn) => {
-    try {
-      const response = await createAddon(newAddon);
-      await fetchAddons();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to create addon' });
-      return null;
-    }
-  }, [fetchAddons, showError]);
+  const addAddon = useCallback(
+    async (newAddon: AddOn) => {
+      try {
+        const response = await createAddon(newAddon);
+        await fetchAddons();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create addon" });
+        return null;
+      }
+    },
+    [fetchAddons, showError],
+  );
 
-  const updateAddonById = useCallback(async (id: number, addon: Partial<AddOn>) => {
-    try {
-      const response = await updateAddon(id, addon);
-      await fetchAddons();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to update addon' });
-      return null;
-    }
-  }, [fetchAddons, showError]);
+  const updateAddonById = useCallback(
+    async (id: number, addon: Partial<AddOn>) => {
+      try {
+        const response = await updateAddon(id, addon);
+        await fetchAddons();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update addon" });
+        return null;
+      }
+    },
+    [fetchAddons, showError],
+  );
 
-  const deleteAddonById = useCallback(async (id: number) => {
-    try {
-      await deleteAddon(id);
-      await fetchAddons();
-      return true;
-    } catch {
-      showError({ message: 'Failed to delete addon' });
-      return false;
-    }
-  }, [fetchAddons, showError]);
+  const deleteAddonById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteAddon(id);
+        await fetchAddons();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete addon" });
+        return false;
+      }
+    },
+    [fetchAddons, showError],
+  );
 
   useEffect(() => {
     fetchAddons();
@@ -481,44 +520,53 @@ export const useStudentFeesMappings = () => {
       const response = await getAllStudentFeesMappings();
       setStudentFeesMappings(response.payload || []);
     } catch {
-      showError({ message: 'Failed to fetch student fees mappings' });
+      showError({ message: "Failed to fetch student fees mappings" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addStudentFeesMapping = useCallback(async (newStudentFeesMapping: StudentFeesMapping) => {
-    try {
-      const response = await createStudentFeesMapping(newStudentFeesMapping);
-      await fetchStudentFeesMappings();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to create student fees mapping' });
-      return null;
-    }
-  }, [fetchStudentFeesMappings, showError]);
+  const addStudentFeesMapping = useCallback(
+    async (newStudentFeesMapping: StudentFeesMapping) => {
+      try {
+        const response = await createStudentFeesMapping(newStudentFeesMapping);
+        await fetchStudentFeesMappings();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to create student fees mapping" });
+        return null;
+      }
+    },
+    [fetchStudentFeesMappings, showError],
+  );
 
-  const updateStudentFeesMappingById = useCallback(async (id: number, studentFeesMapping: Partial<StudentFeesMapping>) => {
-    try {
-      const response = await updateStudentFeesMapping(id, studentFeesMapping);
-      await fetchStudentFeesMappings();
-      return response.payload;
-    } catch {
-      showError({ message: 'Failed to update student fees mapping' });
-      return null;
-    }
-  }, [fetchStudentFeesMappings, showError]);
+  const updateStudentFeesMappingById = useCallback(
+    async (id: number, studentFeesMapping: Partial<StudentFeesMapping>) => {
+      try {
+        const response = await updateStudentFeesMapping(id, studentFeesMapping);
+        await fetchStudentFeesMappings();
+        return response.payload;
+      } catch {
+        showError({ message: "Failed to update student fees mapping" });
+        return null;
+      }
+    },
+    [fetchStudentFeesMappings, showError],
+  );
 
-  const deleteStudentFeesMappingById = useCallback(async (id: number) => {
-    try {
-      await deleteStudentFeesMapping(id);
-      await fetchStudentFeesMappings();
-      return true;
-    } catch {
-      showError({ message: 'Failed to delete student fees mapping' });
-      return false;
-    }
-  }, [fetchStudentFeesMappings, showError]);
+  const deleteStudentFeesMappingById = useCallback(
+    async (id: number) => {
+      try {
+        await deleteStudentFeesMapping(id);
+        await fetchStudentFeesMappings();
+        return true;
+      } catch {
+        showError({ message: "Failed to delete student fees mapping" });
+        return false;
+      }
+    },
+    [fetchStudentFeesMappings, showError],
+  );
 
   useEffect(() => {
     fetchStudentFeesMappings();
@@ -545,24 +593,25 @@ export const useFeesSlabMappings = () => {
       const response = await getAllFeesSlabYears();
       setFeesSlabMappings(response.payload || []);
     } catch {
-      showError({ message: 'Failed to fetch fees slab years' });
+      showError({ message: "Failed to fetch fees slab years" });
     } finally {
       setLoading(false);
     }
   }, [showError]);
 
-  const addFeesSlabMappings = useCallback(async (newFeesSlabMappings: FeesSlabMapping[]) => {
-    try {
-      const createdSlabYears = await Promise.all(
-        newFeesSlabMappings.map(slabYear => createFeesSlabYear(slabYear))
-      );
-      await fetchFeesSlabMappings();
-      return createdSlabYears.map(res => res.payload);
-    } catch {
-      showError({ message: 'Failed to create fees slab years' });
-      return null;
-    }
-  }, [fetchFeesSlabMappings, showError]);
+  const addFeesSlabMappings = useCallback(
+    async (newFeesSlabMappings: FeesSlabMapping[]) => {
+      try {
+        const createdSlabYears = await Promise.all(newFeesSlabMappings.map((slabYear) => createFeesSlabYear(slabYear)));
+        await fetchFeesSlabMappings();
+        return createdSlabYears.map((res) => res.payload);
+      } catch {
+        showError({ message: "Failed to create fees slab years" });
+        return null;
+      }
+    },
+    [fetchFeesSlabMappings, showError],
+  );
 
   useEffect(() => {
     fetchFeesSlabMappings();
@@ -574,4 +623,4 @@ export const useFeesSlabMappings = () => {
     fetchFeesSlabMappings,
     addFeesSlabMappings,
   };
-}; 
+};

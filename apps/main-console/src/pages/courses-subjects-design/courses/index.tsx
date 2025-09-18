@@ -167,7 +167,7 @@ const CoursesPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getCourses();
-      const data = res.map((course) => ({
+      const data = res.map((course: any) => ({
         ID: course.id,
         Name: course.name,
         "Short Name": course.shortName,

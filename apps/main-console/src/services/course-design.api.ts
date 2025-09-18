@@ -16,7 +16,7 @@ import type {
   Stream,
   PaperDto,
 } from "@repo/db";
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 // import { Stream } from '@/pages/courses-subjects-design/streams/columns';
 import { AcademicYear } from "@/types/academics/academic-year";
 
@@ -61,7 +61,7 @@ export interface PaginatedResponse<T> {
 
 // Papers
 export const getPapers = async () => {
-  const res = await axiosInstance.get<ApiResonse<Paper[]>>(`${BASE}/papers`);
+  const res = await axiosInstance.get<ApiResponse<Paper[]>>(`${BASE}/papers`);
   return res.data.payload;
 };
 export const getPapersPaginated = async (
@@ -90,17 +90,17 @@ export const getPapersPaginated = async (
   if (filters?.isOptional !== null && filters?.isOptional !== undefined) params.isOptional = filters.isOptional;
   if (filters?.searchText) params.searchText = filters.searchText;
 
-  const res = await axiosInstance.get<ApiResonse<PaginatedResponse<PaperDto>>>(`${BASE}/papers`, { params });
+  const res = await axiosInstance.get<ApiResponse<PaginatedResponse<PaperDto>>>(`${BASE}/papers`, { params });
   return res.data.payload;
 };
 export const getPaper = (id: number) => axiosInstance.get<Paper>(`${BASE}/papers/${id}`);
 export const getPaperById = (id: number) =>
-  axiosInstance.get<ApiResonse<Paper | null>>(`${BASE}/papers/query?id=${id}`);
+  axiosInstance.get<ApiResponse<Paper | null>>(`${BASE}/papers/query?id=${id}`);
 export const createPaper = (data: Omit<Paper, "id" | "createdAt" | "updatedAt">[]) =>
-  axiosInstance.post<ApiResonse<Paper[] | null>>(`${BASE}/papers`, { arr: data });
+  axiosInstance.post<ApiResponse<Paper[] | null>>(`${BASE}/papers`, { arr: data });
 export const updatePaper = (id: number, data: Partial<Paper>) => axiosInstance.put<Paper>(`${BASE}/papers/${id}`, data);
 export const deletePaper = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/papers/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/papers/${id}`);
   return res.data.payload;
 };
 
@@ -112,13 +112,13 @@ export const createPaperComponent = (data: Omit<PaperComponent, "id" | "createdA
 export const updatePaperComponent = (id: number, data: Partial<PaperComponent>) =>
   axiosInstance.put<PaperComponent>(`${BASE}/paper-components/${id}`, data);
 export const deletePaperComponent = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/paper-components/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/paper-components/${id}`);
   return res.data.payload;
 };
 
 // Subjects
 export const getSubjects = async () => {
-  const res = await axiosInstance.get<ApiResonse<Subject[]>>(`${BASE}/subjects`);
+  const res = await axiosInstance.get<ApiResponse<Subject[]>>(`${BASE}/subjects`);
   return res.data.payload;
 };
 export const getSubject = (id: number) => axiosInstance.get<Subject>(`${BASE}/subjects/${id}`);
@@ -127,13 +127,13 @@ export const createSubject = (data: Omit<Subject, "id" | "createdAt" | "updatedA
 export const updateSubject = (id: number, data: Partial<Subject>) =>
   axiosInstance.put<Subject>(`${BASE}/subjects/${id}`, data);
 export const deleteSubject = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/subjects/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/subjects/${id}`);
   return res.data.payload;
 };
 
 // Courses
 export const getCourses = async () => {
-  const res = await axiosInstance.get<ApiResonse<Course[]>>(`${BASE}/courses`);
+  const res = await axiosInstance.get<ApiResponse<Course[]>>(`${BASE}/courses`);
   console.log("in get courses in api, res:", res);
   return res.data.payload;
 };
@@ -143,7 +143,7 @@ export const createCourse = (data: Omit<Course, "id" | "createdAt" | "updatedAt"
 export const updateCourse = (id: number, data: Partial<Course>) =>
   axiosInstance.put<Course>(`${BASE}/courses/${id}`, data);
 export const deleteCourse = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/courses/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/courses/${id}`);
   return res.data.payload;
 };
 
@@ -155,7 +155,7 @@ export const bulkUploadCourses = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/courses/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/courses/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -171,7 +171,7 @@ export const bulkUploadCourses = async (
 
 // Course Types
 export const getCourseTypes = async () => {
-  const res = await axiosInstance.get<ApiResonse<CourseType[]>>(`${BASE}/course-types`);
+  const res = await axiosInstance.get<ApiResponse<CourseType[]>>(`${BASE}/course-types`);
   return res.data.payload;
 };
 export const getCourseType = (id: number) => axiosInstance.get<CourseType>(`${BASE}/course-types/${id}`);
@@ -180,7 +180,7 @@ export const createCourseType = (data: Omit<CourseType, "id" | "createdAt" | "up
 export const updateCourseType = (id: number, data: Partial<Omit<CourseType, "id" | "createdAt" | "updatedAt">>) =>
   axiosInstance.put<CourseType>(`${BASE}/course-types/${id}`, data);
 export const deleteCourseType = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/course-types/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/course-types/${id}`);
   return res.data.payload;
 };
 
@@ -192,7 +192,7 @@ export const bulkUploadCourseTypes = async (
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/course-types/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/course-types/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -208,7 +208,7 @@ export const bulkUploadCourseTypes = async (
 
 // Subject Types
 export const getSubjectTypes = async () => {
-  const res = await axiosInstance.get<ApiResonse<SubjectType[]>>(`${BASE}/subject-types`);
+  const res = await axiosInstance.get<ApiResponse<SubjectType[]>>(`${BASE}/subject-types`);
   return res.data.payload;
 };
 export const getSubjectType = (id: number) => axiosInstance.get<SubjectType>(`${BASE}/subject-types/${id}`);
@@ -217,7 +217,7 @@ export const createSubjectType = (data: Omit<SubjectType, "id" | "createdAt" | "
 export const updateSubjectType = (id: number, data: Partial<SubjectType>) =>
   axiosInstance.put<SubjectType>(`${BASE}/subject-types/${id}`, data);
 export const deleteSubjectType = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/subject-types/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/subject-types/${id}`);
   return res.data.payload;
 };
 
@@ -225,7 +225,7 @@ export const deleteSubjectType = async (id: number) => {
 export const bulkUploadSubjectTypes = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/subject-types/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/subject-types/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -235,7 +235,7 @@ export const bulkUploadSubjectTypes = async (file: File): Promise<BulkUploadResu
 
 // Affiliations
 export const getAffiliations = async () => {
-  const res = await axiosInstance.get<ApiResonse<Affiliation[]>>(`${BASE}/affiliations`);
+  const res = await axiosInstance.get<ApiResponse<Affiliation[]>>(`${BASE}/affiliations`);
   return res.data.payload;
 };
 export const getAffiliation = (id: number) => axiosInstance.get<Affiliation>(`${BASE}/affiliations/${id}`);
@@ -244,7 +244,7 @@ export const createAffiliation = (data: Omit<Affiliation, "id" | "createdAt" | "
 export const updateAffiliation = (id: number, data: Partial<Affiliation>) =>
   axiosInstance.put<Affiliation>(`${BASE}/affiliations/${id}`, data);
 export const deleteAffiliation = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/affiliations/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/affiliations/${id}`);
   return res.data.payload;
 };
 
@@ -255,7 +255,7 @@ export const bulkUploadAffiliations = async (
 ): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/affiliations/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/affiliations/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -279,7 +279,7 @@ export const bulkUploadAffiliationTypes = async (
 ): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
     `${BASE}/affiliation-types/bulk-upload`,
     formData,
     {
@@ -299,7 +299,7 @@ export const bulkUploadAffiliationTypes = async (
 
 // Regulation Types
 export const getRegulationTypes = async () => {
-  const res = await axiosInstance.get<ApiResonse<RegulationType[]>>(`${BASE}/regulation-types`);
+  const res = await axiosInstance.get<ApiResponse<RegulationType[]>>(`${BASE}/regulation-types`);
   return res.data.payload;
 };
 export const getRegulationType = (id: number) => axiosInstance.get<RegulationType>(`${BASE}/regulation-types/${id}`);
@@ -308,7 +308,7 @@ export const createRegulationType = (data: Omit<RegulationType, "id" | "createdA
 export const updateRegulationType = (id: number, data: Partial<RegulationType>) =>
   axiosInstance.put<RegulationType>(`${BASE}/regulation-types/${id}`, data);
 export const deleteRegulationType = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/regulation-types/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/regulation-types/${id}`);
   return res.data.payload;
 };
 
@@ -316,31 +316,35 @@ export const deleteRegulationType = async (id: number) => {
 export const bulkUploadRegulationTypes = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/regulation-types/bulk-upload`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(
+    `${BASE}/regulation-types/bulk-upload`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     },
-  });
+  );
   return res.data.payload;
 };
 
 // Program Courses
 export const getProgramCourses = async () => {
-  const res = await axiosInstance.get<ApiResonse<ProgramCourse[]>>(`${BASE}/program-courses`);
+  const res = await axiosInstance.get<ApiResponse<ProgramCourse[]>>(`${BASE}/program-courses`);
   return res.data.payload;
 };
 export const getProgramCourse = (id: number) => axiosInstance.get<ProgramCourse>(`${BASE}/program-courses/${id}`);
 export const createProgramCourse = async (data: Omit<ProgramCourse, "id" | "createdAt" | "updatedAt">) => {
-  const res = await axiosInstance.post<ApiResonse<ProgramCourse | null>>(`${BASE}/program-courses`, data);
+  const res = await axiosInstance.post<ApiResponse<ProgramCourse | null>>(`${BASE}/program-courses`, data);
   console.log("in createProgramCourse()", res.data);
   return res.data; // may be null on duplicate
 };
 export const updateProgramCourse = async (id: number, data: Partial<ProgramCourse>) => {
-  const res = await axiosInstance.put<ApiResonse<ProgramCourse | null>>(`${BASE}/program-courses/${id}`, data);
+  const res = await axiosInstance.put<ApiResponse<ProgramCourse | null>>(`${BASE}/program-courses/${id}`, data);
   return res.data.payload; // may be null on duplicate
 };
 export const deleteProgramCourse = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/program-courses/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/program-courses/${id}`);
   return res.data.payload;
 };
 
@@ -348,7 +352,7 @@ export const deleteProgramCourse = async (id: number) => {
 export const bulkUploadProgramCourses = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/program-courses/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/program-courses/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -358,7 +362,7 @@ export const bulkUploadProgramCourses = async (file: File): Promise<BulkUploadRe
 
 // Streams
 export const getStreams = async () => {
-  const res = await axiosInstance.get<ApiResonse<Stream[]>>(`${BASE}/streams`);
+  const res = await axiosInstance.get<ApiResponse<Stream[]>>(`${BASE}/streams`);
   return res.data.payload;
 };
 export const getStream = (id: number) => axiosInstance.get<Stream>(`${BASE}/streams/${id}`);
@@ -367,13 +371,13 @@ export const createStream = (data: Omit<Stream, "id" | "createdAt" | "updatedAt"
 export const updateStream = (id: number, data: Partial<Stream>) =>
   axiosInstance.put<Stream>(`${BASE}/streams/${id}`, data);
 export const deleteStream = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/streams/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/streams/${id}`);
   return res.data.payload;
 };
 
 // Course Levels
 export const getCourseLevels = async () => {
-  const res = await axiosInstance.get<ApiResonse<CourseLevel[]>>(`${BASE}/course-levels`);
+  const res = await axiosInstance.get<ApiResponse<CourseLevel[]>>(`${BASE}/course-levels`);
   return res.data.payload;
 };
 export const getCourseLevel = (id: number) => axiosInstance.get<CourseLevel>(`${BASE}/course-levels/${id}`);
@@ -382,7 +386,7 @@ export const createCourseLevel = (data: Omit<CourseLevel, "id" | "createdAt" | "
 export const updateCourseLevel = (id: number, data: Partial<CourseLevel>) =>
   axiosInstance.put<CourseLevel>(`${BASE}/course-levels/${id}`, data);
 export const deleteCourseLevel = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/course-levels/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/course-levels/${id}`);
   return res.data.payload;
 };
 
@@ -424,7 +428,7 @@ export const downloadPapers = async (filters?: {
 export const bulkUploadSubjectPapers = async (file: File): Promise<BulkUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/subject-papers/bulk-upload`, formData, {
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/subject-papers/bulk-upload`, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -434,7 +438,7 @@ export const bulkUploadSubjectPapers = async (file: File): Promise<BulkUploadRes
 
 // Exam Components
 export const getExamComponents = async () => {
-  const res = await axiosInstance.get<ApiResonse<ExamComponent[]>>(`${BASE}/exam-components`);
+  const res = await axiosInstance.get<ApiResponse<ExamComponent[]>>(`${BASE}/exam-components`);
   return res.data.payload;
 };
 export const getExamComponent = (id: number) => axiosInstance.get<ExamComponent>(`${BASE}/exam-components/${id}`);
@@ -443,13 +447,13 @@ export const createExamComponent = (data: Omit<ExamComponent, "id" | "createdAt"
 export const updateExamComponent = (id: number, data: Partial<ExamComponent>) =>
   axiosInstance.put<ExamComponent>(`${BASE}/exam-components/${id}`, data);
 export const deleteExamComponent = async (id: number) => {
-  const res = await axiosInstance.delete<ApiResonse<DeleteResult>>(`${BASE}/exam-components/${id}`);
+  const res = await axiosInstance.delete<ApiResponse<DeleteResult>>(`${BASE}/exam-components/${id}`);
   return res.data.payload;
 };
 
 // Academic Years
 export const getAcademicYears = async () => {
-  const res = await axiosInstance.get<ApiResonse<AcademicYear[]>>("/api/v1/academics/all");
+  const res = await axiosInstance.get<ApiResponse<AcademicYear[]>>("/api/v1/academics/all");
   console.log("in getAcademicYears()", res.data);
   return res.data.payload;
 };

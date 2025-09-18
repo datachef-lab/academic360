@@ -1,15 +1,9 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { BookOpen, Users, Award, Settings, BarChart3, FileText, Shield, Database, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AcademicYearSelector } from "@/components/academic-year";
 
-// Mock data
-const academicYears = [
-  { value: "2024-25", label: "2024-25", isActive: true },
-  { value: "2023-24", label: "2023-24", isActive: false },
-  { value: "2022-23", label: "2022-23", isActive: false },
-  { value: "2021-22", label: "2021-22", isActive: false },
-];
+// Remove hardcoded academic years - now using Redux state
 
 const statsData = [
   { title: "Total Program-Courses", value: "12", icon: BookOpen, color: "bg-blue-500" },
@@ -104,26 +98,13 @@ export default function AcademicYearSetupPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Academic Year:</span>
-                <Select defaultValue="2024-25">
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {academicYears.map((year) => (
-                      <SelectItem key={year.value} value={year.value}>
-                        <div className="flex items-center gap-2">
-                          <span>{year.label}</span>
-                          {year.isActive && (
-                            <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Active</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <AcademicYearSelector
+                className="w-64"
+                showLabel={false}
+                onAcademicYearChange={(year) => {
+                  console.log("Academic year changed to:", year?.year);
+                }}
+              />
             </div>
           </div>
         </div>

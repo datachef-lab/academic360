@@ -5,22 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  GraduationCap, 
-  CreditCard, 
-  Hash, 
-  User, 
-  BookOpen, 
-  FileText, 
-  CheckCircle2,
-  RefreshCw
-} from "lucide-react";
+import { GraduationCap, CreditCard, Hash, User, BookOpen, FileText, CheckCircle2, RefreshCw } from "lucide-react";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import { Course } from "@/types/course-design/index";
 import { Framework, Shift } from "@/types/enums";
 import { getAllCourses } from "@/services/course-api";
-import { ApiResonse } from "@/types/api-response";
-import { getAcademicIdentifierByStudentId, createAcademicIdentifier, updateAcademicIdentifier } from "@/services/academic-identifiers.service";
+import { ApiResponse } from "@/types/api-response";
+import {
+  getAcademicIdentifierByStudentId,
+  createAcademicIdentifier,
+  updateAcademicIdentifier,
+} from "@/services/academic-identifiers.service";
 import { toast } from "sonner";
 
 interface AcademicIdentifierFormProps {
@@ -29,10 +24,7 @@ interface AcademicIdentifierFormProps {
   studentId: number;
 }
 
-export default function AcademicIdentifierForm({  
-  initialData = {}, 
-  studentId 
-}: AcademicIdentifierFormProps) {
+export default function AcademicIdentifierForm({ initialData = {}, studentId }: AcademicIdentifierFormProps) {
   const [formData, setFormData] = useState<Partial<AcademicIdentifier>>({
     studentId,
     framework: null,
@@ -50,7 +42,7 @@ export default function AcademicIdentifierForm({
     apprid: null,
     checkRepeat: false,
     shift: null,
-    ...initialData
+    ...initialData,
   });
 
   const [courses, setCourses] = useState<Course[]>([]);
@@ -61,7 +53,7 @@ export default function AcademicIdentifierForm({
     const fetchData = async () => {
       try {
         // Fetch courses
-        const coursesResponse: ApiResonse<Course[]> = await getAllCourses();
+        const coursesResponse: ApiResponse<Course[]> = await getAllCourses();
         const coursesList = coursesResponse.payload || [];
         setCourses(coursesList);
 
@@ -103,7 +95,7 @@ export default function AcademicIdentifierForm({
 
   const frameworkOptions: { value: Framework; label: string }[] = [
     { value: "CCF", label: "CCF" },
-    { value: "CBCS", label: "CBCS" }
+    { value: "CBCS", label: "CBCS" },
   ];
 
   const shiftOptions: { value: Shift; label: string }[] = [
@@ -132,9 +124,7 @@ export default function AcademicIdentifierForm({
                 </Label>
                 <Select
                   value={formData.framework || ""}
-                  onValueChange={(value: string) => 
-                    setFormData({ ...formData, framework: value as Framework })
-                  }
+                  onValueChange={(value: string) => setFormData({ ...formData, framework: value as Framework })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select framework type" />
@@ -157,7 +147,7 @@ export default function AcademicIdentifierForm({
                 <Select
                   value={formData.course?.id?.toString() || ""}
                   onValueChange={(value) => {
-                    const selectedCourse = courses.find(course => course.id?.toString() === value);
+                    const selectedCourse = courses.find((course) => course.id?.toString() === value);
                     setFormData({ ...formData, course: selectedCourse || null });
                   }}
                 >
@@ -408,18 +398,14 @@ export default function AcademicIdentifierForm({
                 <Checkbox
                   id="checkRepeat"
                   checked={formData.checkRepeat}
-                  onCheckedChange={(checked) => 
-                    setFormData({ ...formData, checkRepeat: checked as boolean })
-                  }
+                  onCheckedChange={(checked) => setFormData({ ...formData, checkRepeat: checked as boolean })}
                 />
                 <Label htmlFor="checkRepeat" className="flex items-center gap-2 text-gray-700">
                   <RefreshCw className="w-4 h-4" />
                   Check Repeat
                 </Label>
               </div>
-              <p className="text-sm text-gray-500 ml-6">
-                Check this if the student is repeating the course
-              </p>
+              <p className="text-sm text-gray-500 ml-6">Check this if the student is repeating the course</p>
             </div>
 
             {/* Submit Button */}

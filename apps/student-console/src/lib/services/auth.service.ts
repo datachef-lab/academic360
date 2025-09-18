@@ -1,4 +1,3 @@
-
 // import jwt from 'jsonwebtoken';
 // import bcrypt from 'bcryptjs';
 // import { NextResponse } from 'next/server';
@@ -6,10 +5,9 @@
 // import { findStudentByEmail, findStudentByUid } from './student.service';
 // import { ApplicationFormDto } from '@/types/admissions';
 // import { axiosInstance } from '../utils';
-import { UserDto } from '@repo/db/dtos/user';
-import { ApiResponse } from '@repo/utils/ApiResonse';
-import { axiosInstance } from '@/lib/utils';
-
+import { UserDto } from "@repo/db/dtos/user";
+import { ApiResponse } from "@/types/api-response";
+import { axiosInstance } from "@/lib/utils";
 
 // // JWT Secret should be in environment variables
 // const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
@@ -61,7 +59,6 @@ import { axiosInstance } from '@/lib/utils';
 //     return { accessToken, refreshToken };
 // }
 
-
 // // Verify JWT access token
 // export function verifyAccessToken(token: string): TokenPayload | null {
 //     try {
@@ -83,7 +80,6 @@ import { axiosInstance } from '@/lib/utils';
 //         return null;
 //     }
 // }
-
 
 // export function setAuthCookies(tokens: AuthTokens) {
 //     const response = new NextResponse(JSON.stringify({ success: true }), {
@@ -302,8 +298,10 @@ import { axiosInstance } from '@/lib/utils';
 //     return accessToken;
 // }
 
-export async function doLogin(email: string, password: string): Promise<ApiResponse> {
-    const response = await axiosInstance.post("/auth/login", { email, password });
-    return response.data;
+export async function doLogin(
+  email: string,
+  password: string,
+): Promise<ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>> {
+  const response = await axiosInstance.post("/auth/login", { email, password });
+  return response.data;
 }
-

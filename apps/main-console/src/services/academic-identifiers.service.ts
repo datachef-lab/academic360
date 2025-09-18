@@ -1,10 +1,10 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { AcademicIdentifier } from "@/types/user/academic-identifier";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/academic-identifiers";
 
-export async function getAllAcademicIdentifiers(): Promise<ApiResonse<AcademicIdentifier[]>> {
+export async function getAllAcademicIdentifiers(): Promise<ApiResponse<AcademicIdentifier[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data.payload;
@@ -13,7 +13,7 @@ export async function getAllAcademicIdentifiers(): Promise<ApiResonse<AcademicId
   }
 }
 
-export async function getAcademicIdentifierById(id: number): Promise<ApiResonse<AcademicIdentifier | null>> {
+export async function getAcademicIdentifierById(id: number): Promise<ApiResponse<AcademicIdentifier | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data.payload;
@@ -31,7 +31,9 @@ export async function getAcademicIdentifierByStudentId(studentId: number): Promi
   }
 }
 
-export async function createAcademicIdentifier(payload: Partial<AcademicIdentifier>): Promise<ApiResonse<AcademicIdentifier>> {
+export async function createAcademicIdentifier(
+  payload: Partial<AcademicIdentifier>,
+): Promise<ApiResponse<AcademicIdentifier>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data.payload;
@@ -40,7 +42,10 @@ export async function createAcademicIdentifier(payload: Partial<AcademicIdentifi
   }
 }
 
-export async function updateAcademicIdentifier(id: number, payload: Partial<AcademicIdentifier>): Promise<ApiResonse<AcademicIdentifier>> {
+export async function updateAcademicIdentifier(
+  id: number,
+  payload: Partial<AcademicIdentifier>,
+): Promise<ApiResponse<AcademicIdentifier>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data.payload;
@@ -49,7 +54,7 @@ export async function updateAcademicIdentifier(id: number, payload: Partial<Acad
   }
 }
 
-export async function deleteAcademicIdentifier(id: number): Promise<ApiResonse<null>> {
+export async function deleteAcademicIdentifier(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data.payload;
@@ -58,7 +63,7 @@ export async function deleteAcademicIdentifier(id: number): Promise<ApiResonse<n
   }
 }
 
-export async function deleteAcademicIdentifierByStudentId(studentId: number): Promise<ApiResonse<null>> {
+export async function deleteAcademicIdentifierByStudentId(studentId: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data.payload;

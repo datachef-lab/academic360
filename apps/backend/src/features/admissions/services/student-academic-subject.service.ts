@@ -15,6 +15,7 @@ import {
   studentAcademicSubjectModel,
   StudentAcademicSubjects,
 } from "@repo/db/schemas/models/admissions";
+import { boardModel } from "@repo/db/schemas";
 import { and, eq } from "drizzle-orm";
 import * as relatedSubjectService from "../../subject-selection/services/related-subject-main.service";
 
@@ -101,18 +102,49 @@ async function mapStudentAcademicSubjectToDto(
     .from(boardSubjectModel)
     .where(eq(boardSubjectModel.id, boardSubjectId));
 
-  const [boardSubjectName] = await db
-    .select()
-    .from(boardSubjectNameModel)
-    .where(eq(boardSubjectNameModel.id, boardSubject?.boardSubjectNameId));
+  const [boardSubjectName, board] = await Promise.all([
+    db
+      .select()
+      .from(boardSubjectNameModel)
+      .where(eq(boardSubjectNameModel.id, boardSubject?.boardSubjectNameId))
+      .then((r) => r[0]),
+    boardSubject?.boardId
+      ? db
+          .select()
+          .from(boardModel)
+          .where(eq(boardModel.id, boardSubject.boardId))
+          .then((r) => r[0])
+      : null,
+  ]);
 
   return {
     ...rest,
     boardSubject: {
       ...boardSubject!,
       boardSubjectName: boardSubjectName!,
+      board: board
+        ? {
+            ...board,
+            degree: null,
+            address: null,
+          }
+        : {
+            id: 0,
+            legacyBoardId: null,
+            name: "",
+            degreeId: null,
+            passingMarks: null,
+            code: null,
+            addressId: null,
+            sequence: null,
+            isActive: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            degree: null,
+            address: null,
+          },
     },
-  };
+  } as StudentAcademicSubjectsDto;
 }
 
 // UPDATE

@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 import type { SubjectDto } from "@repo/db/dtos/course-design";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { useAcademicYear } from "@/hooks/useAcademicYear";
 // Class DTO is not used directly here
 
 // Use only DTOs from packages/db. Define minimal local types for UI needs.
@@ -46,6 +47,7 @@ interface UIRestrictedGrouping {
 }
 
 export default function RestrictedGroupingPage() {
+  const { currentAcademicYear } = useAcademicYear();
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -578,7 +580,11 @@ export default function RestrictedGroupingPage() {
               <Table className="table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300">
                 <TableBody>
                   {filteredRelations.map((relation, index) => (
-                    <TableRow key={relation.id} className="hover:bg-gray-50 border-b border-slate-500">
+                    <TableRow
+                      key={relation.id}
+                      className="hover:bg-gray-50 border-b-2 border-gray-300"
+                      style={{ borderBottom: "2px solid #d1d5db" }}
+                    >
                       <TableCell className="border-r border-gray-300 w-16">{startIndex + index + 1}</TableCell>
                       <TableCell className="font-medium border-r border-gray-300 w-32">
                         <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
@@ -688,6 +694,14 @@ export default function RestrictedGroupingPage() {
                 <DialogTitle>Subject Relations</DialogTitle>
                 <DialogDescription>
                   Configure relations, restrictions, and applicability rules for the selected subject.
+                  {currentAcademicYear && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
+                      <strong>Note:</strong> These mappings will be created for the academic year{" "}
+                      <span className="font-semibold text-blue-700">{currentAcademicYear.year}</span>
+                      {currentAcademicYear.isCurrentYear === true && <span className="text-green-600"> (Current)</span>}
+                      .
+                    </div>
+                  )}
                 </DialogDescription>
               </div>
               <div className="flex justify-end rounded-md pr-7">
@@ -773,7 +787,11 @@ export default function RestrictedGroupingPage() {
                             </TableRow>
                           ) : (
                             categoryProgramRules.map((rule, index) => (
-                              <TableRow key={rule.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableRow
+                                key={rule.id}
+                                className="border-b-2 border-gray-300 hover:bg-gray-50"
+                                style={{ borderBottom: "2px solid #d1d5db" }}
+                              >
                                 <TableCell className="border-r border-gray-300 w-16">{index + 1}</TableCell>
 
                                 {/* Subject Category Dropdown */}
@@ -1056,7 +1074,11 @@ export default function RestrictedGroupingPage() {
                             </TableRow>
                           ) : (
                             subjectRules.map((rule, index) => (
-                              <TableRow key={rule.id} className="border-b border-gray-200 hover:bg-gray-50">
+                              <TableRow
+                                key={rule.id}
+                                className="border-b-2 border-gray-300 hover:bg-gray-50"
+                                style={{ borderBottom: "2px solid #d1d5db" }}
+                              >
                                 <TableCell className="border-r border-gray-300 w-16">{index + 1}</TableCell>
 
                                 {/* Studied in 12th? Checkbox */}

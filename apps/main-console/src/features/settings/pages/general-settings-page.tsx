@@ -21,7 +21,7 @@ export default function GeneralSettingsPage() {
       setSettings(payload);
 
       const filePreviews: Record<number, string> = {};
-      payload.forEach((setting) => {
+      payload.forEach((setting: any) => {
         if (setting.type === "FILE") {
           filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
         }
@@ -54,7 +54,7 @@ export default function GeneralSettingsPage() {
         setSettings(payload);
 
         const filePreviews: Record<number, string> = {};
-        payload.forEach((setting) => {
+        payload.forEach((setting: any) => {
           if (setting.type === "FILE") {
             filePreviews[setting.id!] = `${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${setting.id}`;
           }

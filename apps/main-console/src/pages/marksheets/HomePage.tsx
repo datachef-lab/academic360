@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Marksheet } from "@/types/academics/marksheet";
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 // import { DegreeLevel } from "@/types/resources/degree.types";
 // import { Subject } from "@/types/academics/subject";
@@ -13,41 +13,71 @@ import { PaginatedResponse } from "@/types/pagination";
 
 function downloadCSV(rows: Record<string, unknown>[]) {
   const columns = [
-    "ID", "Registration No.", "Name", "Subject", "Paper Code", "Semester", "Degree", "Course", "Academic Year", "Year 1", "Year 2", "Roll No.", "UID", "Framework", "Specialization", "Shift", "Section", "SGPA", "CGPA", "Classification", "Status", "Grade", "Remarks", "Internal (Obtained/Full)", "Practical (Obtained/Full)", "Theory (Obtained/Full)", "Viva (Obtained/Full)", "Project (Obtained/Full)", "Total (Obtained/Full)"
+    "ID",
+    "Registration No.",
+    "Name",
+    "Subject",
+    "Paper Code",
+    "Semester",
+    "Degree",
+    "Course",
+    "Academic Year",
+    "Year 1",
+    "Year 2",
+    "Roll No.",
+    "UID",
+    "Framework",
+    "Specialization",
+    "Shift",
+    "Section",
+    "SGPA",
+    "CGPA",
+    "Classification",
+    "Status",
+    "Grade",
+    "Remarks",
+    "Internal (Obtained/Full)",
+    "Practical (Obtained/Full)",
+    "Theory (Obtained/Full)",
+    "Viva (Obtained/Full)",
+    "Project (Obtained/Full)",
+    "Total (Obtained/Full)",
   ];
   const csvRows = [
     columns.join(","),
-    ...rows.map((row) => [
-      row.id,
-      row.registration_no,
-      row.name,
-      row.subject,
-      row.paperCode,
-      row.semester,
-      row.degree,
-      row.course,
-      row.academic_year,
-      row.year1,
-      row.year2,
-      row.roll_no,
-      row.uid,
-      row.framework,
-      row.specialization,
-      row.shift,
-      row.section,
-      row.sgpa,
-      row.cgpa,
-      row.classification,
-      row.status,
-      row.grade,
-      row.remarks,
-      row.internal,
-      row.practical,
-      row.theory,
-      row.viva,
-      row.project,
-      row.total,
-    ].join(","))
+    ...rows.map((row) =>
+      [
+        row.id,
+        row.registration_no,
+        row.name,
+        row.subject,
+        row.paperCode,
+        row.semester,
+        row.degree,
+        row.course,
+        row.academic_year,
+        row.year1,
+        row.year2,
+        row.roll_no,
+        row.uid,
+        row.framework,
+        row.specialization,
+        row.shift,
+        row.section,
+        row.sgpa,
+        row.cgpa,
+        row.classification,
+        row.status,
+        row.grade,
+        row.remarks,
+        row.internal,
+        row.practical,
+        row.theory,
+        row.viva,
+        row.project,
+        row.total,
+      ].join(","),
+    ),
   ];
   const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
@@ -59,132 +89,132 @@ function downloadCSV(rows: Record<string, unknown>[]) {
 }
 
 // Dummy API response for demonstration
-const dummyApiResponse: ApiResonse<PaginatedResponse<Marksheet>> = {
+const dummyApiResponse: ApiResponse<PaginatedResponse<Marksheet>> = {
   httpStatusCode: 200,
   httpStatus: "OK",
   message: "Success",
   payload: {
     content: [
-    //   {
-    //     id: 1,
-    //     studentId: 1,
-    //     semester: 1,
-    //     academicYear: {
-    //       id: 1,
-    //       year: "2023-2024",
-    //       isCurrentYear: true,
-    //       createdAt: new Date(),
-    //       updatedAt: new Date(),
-    //     },
-    //     sgpa: 8.5,
-    //     cgpa: 8.2,
-    //     classification: "First Class",
-    //     remarks: "Excellent",
-    //     createdAt: new Date(),
-    //     updatedAt: new Date(),
-    //     source: "ADDED",
-    //     file: null,
-    //     createdByUser: {
-    //       id: 1,
-    //       name: "Admin",
-    //       email: "admin@example.com",
-    //       phone: "1234567890",
-    //       whatsappNumber: undefined,
-    //       image: undefined,
-    //       type: "ADMIN",
-    //       disabled: false,
-    //       createdAt: new Date(),
-    //       updatedAt: new Date(),
-    //     },
-    //     updatedByUser: {
-    //       id: 1,
-    //       name: "Admin",
-    //       email: "admin@example.com",
-    //       phone: "1234567890",
-    //       whatsappNumber: undefined,
-    //       image: undefined,
-    //       type: "ADMIN",
-    //       disabled: false,
-    //       createdAt: new Date(),
-    //       updatedAt: new Date(),
-    //     },
-    //     name: "Amit Kumar",
-    //     academicIdentifier: {
-    //       id: 1,
-    //       studentId: 1,
-    //       framework: "CCF",
-    //       shift: null,
-    //       rfid: null,
-    //       course: null,
-    //       cuFormNumber: null,
-    //       uid: "UID2023001",
-    //       oldUid: null,
-    //       registrationNumber: "REG2023001",
-    //       rollNumber: "R2023001",
-    //       section: null,
-    //       classRollNumber: null,
-    //       apaarId: null,
-    //       abcId: null,
-    //       apprid: null,
-    //       checkRepeat: false,
-    //       createdAt: new Date(),
-    //       updatedAt: new Date(),
-    //     },
-    //     subjects: [
-    //       {
-    //         id: 1,
-    //         marksheetId: 1,
-    //         subjectMetadata: {
-    //           id: 1,
-    //           name: "Physics",
-    //           marksheetCode: "PHY101",
-    //           degree: {
-    //             id: 1,
-    //             name: "BSc Physics",
-    //             level: DegreeLevel.UNDER_GRADUATE,
-    //             sequence: 1,
-    //             disabled: false,
-    //           },
-    //           programmeType: "HONOURS",
-    //           framework: "CCF",
-    //           class: null,
-    //           specialization: null,
-    //           category: "HONOURS",
-    //           subjectType: null,
-    //           irpName: null,
-    //           irpCode: null,
-    //           isOptional: false,
-    //           credit: 4,
-    //           theoryCredit: 4,
-    //           fullMarksTheory: 50,
-    //           practicalCredit: 4,
-    //           fullMarksPractical: 30,
-    //           internalCredit: 4,
-    //           fullMarksInternal: 20,
-    //           projectCredit: 2,
-    //           fullMarksProject: 20,
-    //           vivalCredit: 2,
-    //           fullMarksViva: 10,
-    //           fullMarks: 100,
-    //           createdAt: new Date(),
-    //           updatedAt: new Date(),
-    //         },
-    //         year1: 2023,
-    //         year2: 2024,
-    //         internalMarks: "18",
-    //         practicalMarks: "28",
-    //         tutorialMarks: null,
-    //         theoryMarks: "45",
-    //         totalMarks: 91,
-    //         status: "PASS",
-    //         ngp: 8,
-    //         tgp: 8,
-    //         letterGrade: "A",
-    //         createdAt: new Date(),
-    //         updatedAt: new Date(),
-    //       },
-    //     ],
-    //   },
+      //   {
+      //     id: 1,
+      //     studentId: 1,
+      //     semester: 1,
+      //     academicYear: {
+      //       id: 1,
+      //       year: "2023-2024",
+      //       isCurrentYear: true,
+      //       createdAt: new Date(),
+      //       updatedAt: new Date(),
+      //     },
+      //     sgpa: 8.5,
+      //     cgpa: 8.2,
+      //     classification: "First Class",
+      //     remarks: "Excellent",
+      //     createdAt: new Date(),
+      //     updatedAt: new Date(),
+      //     source: "ADDED",
+      //     file: null,
+      //     createdByUser: {
+      //       id: 1,
+      //       name: "Admin",
+      //       email: "admin@example.com",
+      //       phone: "1234567890",
+      //       whatsappNumber: undefined,
+      //       image: undefined,
+      //       type: "ADMIN",
+      //       disabled: false,
+      //       createdAt: new Date(),
+      //       updatedAt: new Date(),
+      //     },
+      //     updatedByUser: {
+      //       id: 1,
+      //       name: "Admin",
+      //       email: "admin@example.com",
+      //       phone: "1234567890",
+      //       whatsappNumber: undefined,
+      //       image: undefined,
+      //       type: "ADMIN",
+      //       disabled: false,
+      //       createdAt: new Date(),
+      //       updatedAt: new Date(),
+      //     },
+      //     name: "Amit Kumar",
+      //     academicIdentifier: {
+      //       id: 1,
+      //       studentId: 1,
+      //       framework: "CCF",
+      //       shift: null,
+      //       rfid: null,
+      //       course: null,
+      //       cuFormNumber: null,
+      //       uid: "UID2023001",
+      //       oldUid: null,
+      //       registrationNumber: "REG2023001",
+      //       rollNumber: "R2023001",
+      //       section: null,
+      //       classRollNumber: null,
+      //       apaarId: null,
+      //       abcId: null,
+      //       apprid: null,
+      //       checkRepeat: false,
+      //       createdAt: new Date(),
+      //       updatedAt: new Date(),
+      //     },
+      //     subjects: [
+      //       {
+      //         id: 1,
+      //         marksheetId: 1,
+      //         subjectMetadata: {
+      //           id: 1,
+      //           name: "Physics",
+      //           marksheetCode: "PHY101",
+      //           degree: {
+      //             id: 1,
+      //             name: "BSc Physics",
+      //             level: DegreeLevel.UNDER_GRADUATE,
+      //             sequence: 1,
+      //             disabled: false,
+      //           },
+      //           programmeType: "HONOURS",
+      //           framework: "CCF",
+      //           class: null,
+      //           specialization: null,
+      //           category: "HONOURS",
+      //           subjectType: null,
+      //           irpName: null,
+      //           irpCode: null,
+      //           isOptional: false,
+      //           credit: 4,
+      //           theoryCredit: 4,
+      //           fullMarksTheory: 50,
+      //           practicalCredit: 4,
+      //           fullMarksPractical: 30,
+      //           internalCredit: 4,
+      //           fullMarksInternal: 20,
+      //           projectCredit: 2,
+      //           fullMarksProject: 20,
+      //           vivalCredit: 2,
+      //           fullMarksViva: 10,
+      //           fullMarks: 100,
+      //           createdAt: new Date(),
+      //           updatedAt: new Date(),
+      //         },
+      //         year1: 2023,
+      //         year2: 2024,
+      //         internalMarks: "18",
+      //         practicalMarks: "28",
+      //         tutorialMarks: null,
+      //         theoryMarks: "45",
+      //         totalMarks: 91,
+      //         status: "PASS",
+      //         ngp: 8,
+      //         tgp: 8,
+      //         letterGrade: "A",
+      //         createdAt: new Date(),
+      //         updatedAt: new Date(),
+      //       },
+      //     ],
+      //   },
       // Add more Marksheet objects as needed for demo
     ],
     page: 1,
@@ -201,7 +231,7 @@ const getUnique = (arr: Record<string, unknown>[], key: string) => {
 
 export default function HomePage() {
   // Simulate API state
-  const [apiData, setApiData] = useState<ApiResonse<PaginatedResponse<Marksheet>> | null>(null);
+  const [apiData, setApiData] = useState<ApiResponse<PaginatedResponse<Marksheet>> | null>(null);
   const [page, setPage] = useState(1);
   const [filterYear, setFilterYear] = useState<string>("all");
   const [filterCourse, setFilterCourse] = useState<string>("all");
@@ -244,7 +274,7 @@ export default function HomePage() {
       viva: `-/-`,
       project: `-/-`,
       total: `${s.totalMarks ?? "-"}/${s.subjectMetadata.fullMarks ?? "-"}`,
-    }))
+    })),
   );
 
   // Filtering logic for dropdowns
@@ -257,7 +287,7 @@ export default function HomePage() {
   });
 
   const totalPages = apiData?.payload.totalPages ?? 1;
-//   const currentPage = apiData?.payload.page ?? 1;
+  //   const currentPage = apiData?.payload.page ?? 1;
 
   // Grouped columns
   const columns = [
@@ -298,43 +328,67 @@ export default function HomePage() {
   const academicYears = getUnique(marksheetRows, "academic_year");
   const courses = getUnique(marksheetRows, "course");
   const programmeTypes = ["CCF", "CBCS"];
-    
+
   return (
     <div className="p-6">
       {/* Heading and Filters Row */}
       <div className="flex flex-wrap items-center gap-4 mb-4">
         <h2 className="text-2xl font-bold text-gray-800 mr-4">Marksheet List</h2>
         <div className="flex flex-wrap gap-2 items-center">
-          <Select value={filterYear} onValueChange={v => { setFilterYear(v); setPage(1); }}>
+          <Select
+            value={filterYear}
+            onValueChange={(v) => {
+              setFilterYear(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Academic Year" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Years</SelectItem>
               {academicYears.map((year) => (
-                <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                <SelectItem key={year} value={String(year)}>
+                  {year}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterCourse} onValueChange={v => { setFilterCourse(v); setPage(1); }}>
+          <Select
+            value={filterCourse}
+            onValueChange={(v) => {
+              setFilterCourse(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Course" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Courses</SelectItem>
               {courses.map((course) => (
-                <SelectItem key={course} value={String(course)}>{course}</SelectItem>
+                <SelectItem key={course} value={String(course)}>
+                  {course}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Select value={filterProgramme} onValueChange={v => { setFilterProgramme(v); setPage(1); }}>
+          <Select
+            value={filterProgramme}
+            onValueChange={(v) => {
+              setFilterProgramme(v);
+              setPage(1);
+            }}
+          >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Programme Type" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               {programmeTypes.map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -380,10 +434,12 @@ export default function HomePage() {
           <tbody className="">
             {filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="text-center py-8 text-gray-400">No marksheets found.</td>
+                <td colSpan={columns.length} className="text-center py-8 text-gray-400">
+                  No marksheets found.
+                </td>
               </tr>
             ) : (
-              filteredRows.map((row, idx) => (
+              filteredRows.map((row, idx: number) => (
                 <tr
                   key={idx}
                   className={`border-b ${idx % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-purple-50 transition`}
@@ -408,48 +464,76 @@ export default function HomePage() {
                     }
                     if (col.key === "internal") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.internal ?? "-"}
                         </td>
                       );
                     }
                     if (col.key === "practical") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.practical ?? "-"}
                         </td>
                       );
                     }
                     if (col.key === "theory") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.theory ?? "-"}
                         </td>
                       );
                     }
                     if (col.key === "viva") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.viva ?? "-"}
                         </td>
                       );
                     }
                     if (col.key === "project") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.project ?? "-"}
                         </td>
                       );
                     }
                     if (col.key === "total") {
                       return (
-                        <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                        <td
+                          key={col.key}
+                          className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                          style={stickyStyle}
+                        >
                           {row.total ?? "-"}
                         </td>
                       );
                     }
                     return (
-                      <td key={col.key} className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate" style={stickyStyle}>
+                      <td
+                        key={col.key}
+                        className="px-4 py-2 border border-gray-200 whitespace-nowrap min-w-[150px] truncate"
+                        style={stickyStyle}
+                      >
                         {(row as Record<string, string | number>)[col.key] ?? "-"}
                       </td>
                     );

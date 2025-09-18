@@ -1,10 +1,10 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { EmergencyContact } from "@/types/user/emergency-contact";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/emergency-contact";
 
-export async function getAllEmergencyContacts(): Promise<ApiResonse<EmergencyContact[]>> {
+export async function getAllEmergencyContacts(): Promise<ApiResponse<EmergencyContact[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -13,7 +13,7 @@ export async function getAllEmergencyContacts(): Promise<ApiResonse<EmergencyCon
   }
 }
 
-export async function getEmergencyContactById(id: number): Promise<ApiResonse<EmergencyContact | null>> {
+export async function getEmergencyContactById(id: number): Promise<ApiResponse<EmergencyContact | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,7 +22,7 @@ export async function getEmergencyContactById(id: number): Promise<ApiResonse<Em
   }
 }
 
-export async function getEmergencyContactByStudentId(studentId: number): Promise<ApiResonse<EmergencyContact | null>> {
+export async function getEmergencyContactByStudentId(studentId: number): Promise<ApiResponse<EmergencyContact | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
@@ -31,7 +31,9 @@ export async function getEmergencyContactByStudentId(studentId: number): Promise
   }
 }
 
-export async function createEmergencyContact(payload: Partial<EmergencyContact>): Promise<ApiResonse<EmergencyContact>> {
+export async function createEmergencyContact(
+  payload: Partial<EmergencyContact>,
+): Promise<ApiResponse<EmergencyContact>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -40,7 +42,10 @@ export async function createEmergencyContact(payload: Partial<EmergencyContact>)
   }
 }
 
-export async function updateEmergencyContact(id: number, payload: Partial<EmergencyContact>): Promise<ApiResonse<EmergencyContact>> {
+export async function updateEmergencyContact(
+  id: number,
+  payload: Partial<EmergencyContact>,
+): Promise<ApiResponse<EmergencyContact>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;
@@ -49,7 +54,7 @@ export async function updateEmergencyContact(id: number, payload: Partial<Emerge
   }
 }
 
-export async function deleteEmergencyContact(id: number): Promise<ApiResonse<null>> {
+export async function deleteEmergencyContact(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -58,7 +63,7 @@ export async function deleteEmergencyContact(id: number): Promise<ApiResonse<nul
   }
 }
 
-export async function deleteEmergencyContactByStudentId(studentId: number): Promise<ApiResonse<null>> {
+export async function deleteEmergencyContactByStudentId(studentId: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

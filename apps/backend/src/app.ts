@@ -322,8 +322,7 @@ app.use("/api/v1/fees/addons", addonRouter);
 app.use("/api/v1/fees/heads", feesHeadRouter);
 app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
 
-// Admissions routes
-app.use("/api/admissions", admissionRouter);
+// Admissions routes - Mount specific routes before generic routes to avoid conflicts
 app.use("/api/admissions/application-forms", applicationFormRouter);
 app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
 app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
@@ -343,6 +342,8 @@ app.use("/api/admissions/academic-subject", academicSubjectRouter);
 app.use("/api/admissions/boards", boardRouter);
 app.use("/api/admissions/board-subject-names", boardSubjectNameRouter);
 app.use("/api/admissions/board-subjects", boardSubjectRouter);
+// Mount the generic admission router last to avoid conflicts with specific routes
+app.use("/api/admissions", admissionRouter);
 
 // app.use("/api/study-materials", studyMaterialRouter);
 

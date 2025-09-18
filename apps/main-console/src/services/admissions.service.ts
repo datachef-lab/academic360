@@ -1,7 +1,7 @@
 // import { AcademicYear } from "@/types/academics/academic-year";
 import { Course } from "@/types/course-design";
 import { Admission } from "@/types/admissions";
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import axiosInstance from "@/utils/api";
 import { AdmissionSummary } from "@/pages/admissions-fees/admissions/types";
 // import {Admission} from "@/types/admissions"
@@ -12,8 +12,8 @@ export interface AdmissionUpdatePayload {
 }
 
 // API helpers using axios
-export async function fetchAdmissions(): Promise<ApiResonse<AdmissionSummary[]>> {
-  const res = await axiosInstance.get<ApiResonse<AdmissionSummary[]>>("/api/admissions");
+export async function fetchAdmissions(): Promise<ApiResponse<AdmissionSummary[]>> {
+  const res = await axiosInstance.get<ApiResponse<AdmissionSummary[]>>("/api/admissions");
   console.log("fetchAdmissions response:", res.data);
 
   return res.data;
@@ -45,7 +45,7 @@ export async function updateAdmission(id: number, admission: Admission) {
   return res.data;
 }
 
-export async function findAdmissionById(id: number): Promise<ApiResonse<Admission>> {
+export async function findAdmissionById(id: number): Promise<ApiResponse<Admission>> {
   const res = await axiosInstance.get(`/api/admissions/${id}`);
   return res.data;
 }
@@ -69,6 +69,6 @@ export interface BoardSubjectName {
 }
 
 export async function getActiveBoardSubjectNames(): Promise<BoardSubjectName[]> {
-  const res = await axiosInstance.get<ApiResonse<BoardSubjectName[]>>("/api/admissions/board-subject-names/active");
+  const res = await axiosInstance.get<ApiResponse<BoardSubjectName[]>>("/api/admissions/board-subject-names/active");
   return res.data.payload;
 }

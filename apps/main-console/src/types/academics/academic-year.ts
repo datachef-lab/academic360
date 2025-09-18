@@ -1,7 +1,8 @@
 export interface AcademicYear {
-    readonly id?: number;
-    year: string;
-    isCurrentYear: boolean;
-    createdAt?: Date;
-    updatedAt?: Date;
+  readonly id?: number;
+  legacyAcademicYearId?: number | null;
+  year: string;
+  isCurrentYear?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

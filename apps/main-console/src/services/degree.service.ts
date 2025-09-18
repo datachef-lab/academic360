@@ -1,3 +1,10 @@
+export interface DegreeDto {
+  id: number;
+  name: string;
+  sequence: number | null;
+  isActive: boolean;
+}
+
 import axiosInstance from "@/utils/api";
 import {
   Degree,
@@ -13,12 +20,12 @@ import {
 
 /**
  * Degree Service
- * 
+ *
  * This service handles all CRUD operations for the Degree module.
  * It provides type-safe API communication with the backend.
  */
 
-const BASE_URL = '/api/degree';
+const BASE_URL = "/api/degree";
 
 // ============================================================================
 // GET OPERATIONS
@@ -33,7 +40,7 @@ export async function findAllDegrees(): Promise<Degree[]> {
     const response = await axiosInstance.get<MultipleDegreeResponse>(BASE_URL);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching degrees:', error);
+    console.error("Error fetching degrees:", error);
     throw error;
   }
 }
@@ -46,7 +53,7 @@ export async function findAllDegrees(): Promise<Degree[]> {
 export async function getDegreeById(id: number): Promise<Degree> {
   try {
     if (!id) {
-      throw new Error('Degree ID is required');
+      throw new Error("Degree ID is required");
     }
 
     const response = await axiosInstance.get<SingleDegreeResponse>(`${BASE_URL}/${id}`);
@@ -66,7 +73,7 @@ export async function getActiveDegrees(): Promise<Degree[]> {
     const response = await axiosInstance.get<MultipleDegreeResponse>(`${BASE_URL}?disabled=false`);
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error fetching active degrees:', error);
+    console.error("Error fetching active degrees:", error);
     throw error;
   }
 }
@@ -79,7 +86,7 @@ export async function getActiveDegrees(): Promise<Degree[]> {
 export async function getDegreesByLevel(level: string): Promise<Degree[]> {
   try {
     if (!level) {
-      throw new Error('Degree level is required');
+      throw new Error("Degree level is required");
     }
 
     const response = await axiosInstance.get<MultipleDegreeResponse>(`${BASE_URL}?level=${encodeURIComponent(level)}`);
@@ -102,13 +109,13 @@ export async function getDegreesByLevel(level: string): Promise<Degree[]> {
 export async function createDegree(payload: CreateDegreePayload): Promise<Degree> {
   try {
     if (!payload.name || payload.name.trim().length === 0) {
-      throw new Error('Degree name is required');
+      throw new Error("Degree name is required");
     }
 
     const response = await axiosInstance.post<SingleDegreeResponse>(BASE_URL, payload);
     return response.data.data;
   } catch (error) {
-    console.error('Error creating degree:', error);
+    console.error("Error creating degree:", error);
     throw error;
   }
 }
@@ -126,11 +133,11 @@ export async function createDegree(payload: CreateDegreePayload): Promise<Degree
 export async function updateDegree(id: number, payload: UpdateDegreePayload): Promise<Degree> {
   try {
     if (!id) {
-      throw new Error('Degree ID is required');
+      throw new Error("Degree ID is required");
     }
 
     if (payload.name !== undefined && payload.name.trim().length === 0) {
-      throw new Error('Degree name cannot be empty');
+      throw new Error("Degree name cannot be empty");
     }
 
     const response = await axiosInstance.put<SingleDegreeResponse>(`${BASE_URL}/${id}`, payload);
@@ -153,7 +160,7 @@ export async function updateDegree(id: number, payload: UpdateDegreePayload): Pr
 export async function deleteDegree(id: number): Promise<void> {
   try {
     if (!id) {
-      throw new Error('Degree ID is required');
+      throw new Error("Degree ID is required");
     }
 
     await axiosInstance.delete(`${BASE_URL}/${id}`);
@@ -179,11 +186,11 @@ export async function searchDegrees(searchTerm: string): Promise<Degree[]> {
     }
 
     const response = await axiosInstance.get<MultipleDegreeResponse>(
-      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`
+      `${BASE_URL}/search?q=${encodeURIComponent(searchTerm.trim())}`,
     );
     return response.data.payload || [];
   } catch (error) {
-    console.error('Error searching degrees:', error);
+    console.error("Error searching degrees:", error);
     throw error;
   }
 }
@@ -204,11 +211,11 @@ export async function checkDegreeExists(name: string): Promise<boolean> {
     }
 
     const response = await axiosInstance.get<MultipleDegreeResponse>(
-      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`
+      `${BASE_URL}?name=${encodeURIComponent(name.trim())}`,
     );
     return (response.data.payload || []).length > 0;
   } catch (error) {
-    console.error('Error checking degree existence:', error);
+    console.error("Error checking degree existence:", error);
     return false;
   }
 }
@@ -223,19 +230,20 @@ export const degreeService = {
   getDegreeById,
   getActiveDegrees,
   getDegreesByLevel,
-  
+  getAll: findAllDegrees, // Alias for compatibility
+
   // Create operations
   createDegree,
-  
+
   // Update operations
   updateDegree,
-  
+
   // Delete operations
   deleteDegree,
-  
+
   // Search and filter operations
   searchDegrees,
-  
+
   // Utility functions
   checkDegreeExists,
 };

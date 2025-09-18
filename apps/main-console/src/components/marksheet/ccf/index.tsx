@@ -121,7 +121,7 @@ const MarksheetCCF = () => {
       });
       setSubjectMetadataArr(response.payload);
 
-      const subjects = response.payload.map((sbj) => {
+      const subjects = response.payload.map((sbj: any) => {
         return {
           subjectId: sbj.id,
           fullMarks: sbj.fullMarks,

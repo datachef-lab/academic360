@@ -1,20 +1,20 @@
-import { ApiResonse } from "@/types/api-response";
+import { ApiResponse } from "@/types/api-response";
 import { AcademicHistory } from "@/types/user/academic-history";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/academic-history";
 
-export async function getAllAcademicHistories(): Promise<ApiResonse<AcademicHistory[]>> {
+export async function getAllAcademicHistories(): Promise<ApiResponse<AcademicHistory[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
   } catch (error) {
-    console.error('Error fetching all academic histories:', error);
+    console.error("Error fetching all academic histories:", error);
     throw new Error("Failed to fetch all academic histories");
   }
 }
 
-export async function getAcademicHistoryById(id: number): Promise<ApiResonse<AcademicHistory | null>> {
+export async function getAcademicHistoryById(id: number): Promise<ApiResponse<AcademicHistory | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -24,27 +24,30 @@ export async function getAcademicHistoryById(id: number): Promise<ApiResonse<Aca
   }
 }
 
-export async function getAcademicHistoryByStudentId(studentId: number): Promise<ApiResonse<AcademicHistory | null>> {
+export async function getAcademicHistoryByStudentId(studentId: number): Promise<ApiResponse<AcademicHistory | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching academic history:', error);
+    console.error("Error fetching academic history:", error);
     throw new Error(`Failed to fetch academic history for studentId ${studentId}`);
   }
 }
 
-export async function createAcademicHistory(payload: Partial<AcademicHistory>): Promise<ApiResonse<AcademicHistory>> {
+export async function createAcademicHistory(payload: Partial<AcademicHistory>): Promise<ApiResponse<AcademicHistory>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
   } catch (error) {
-    console.error('Error creating academic history:', error);
+    console.error("Error creating academic history:", error);
     throw new Error("Failed to create academic history");
   }
 }
 
-export async function updateAcademicHistory(id: number, payload: Partial<AcademicHistory>): Promise<ApiResonse<AcademicHistory>> {
+export async function updateAcademicHistory(
+  id: number,
+  payload: Partial<AcademicHistory>,
+): Promise<ApiResponse<AcademicHistory>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;
@@ -54,7 +57,7 @@ export async function updateAcademicHistory(id: number, payload: Partial<Academi
   }
 }
 
-export async function deleteAcademicHistory(id: number): Promise<ApiResonse<null>> {
+export async function deleteAcademicHistory(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);
     return response.data;
@@ -64,7 +67,7 @@ export async function deleteAcademicHistory(id: number): Promise<ApiResonse<null
   }
 }
 
-export async function deleteAcademicHistoryByStudentId(studentId: number): Promise<ApiResonse<null>> {
+export async function deleteAcademicHistoryByStudentId(studentId: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/student/${studentId}`);
     return response.data;

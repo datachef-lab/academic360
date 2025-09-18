@@ -1,5 +1,5 @@
-import axiosInstance from '@/utils/api';
-import { ApiResonse } from '@/types/api-response';
+import axiosInstance from "@/utils/api";
+import { ApiResponse } from "@/types/api-response";
 
 export interface CourseLevel {
   readonly id?: number;
@@ -27,10 +27,10 @@ export interface BulkUploadResult {
   };
 }
 
-const BASE = '/api/v1/course-design/course-levels';
+const BASE = "/api/v1/course-design/course-levels";
 
 export const getAllCourseLevels = async (): Promise<CourseLevel[]> => {
-  const res = await axiosInstance.get<ApiResonse<CourseLevel[]>>(BASE);
+  const res = await axiosInstance.get<ApiResponse<CourseLevel[]>>(BASE);
   return res.data.payload;
 };
 
@@ -54,13 +54,16 @@ export const deleteCourseLevel = async (id: number): Promise<{ success: boolean 
   return res.data;
 };
 
-export const bulkUploadCourseLevels = async (file: File, onUploadProgress: (progress: number) => void): Promise<BulkUploadResult> => {
+export const bulkUploadCourseLevels = async (
+  file: File,
+  onUploadProgress: (progress: number) => void,
+): Promise<BulkUploadResult> => {
   const formData = new FormData();
-  formData.append('file', file);
-  
-  const res = await axiosInstance.post<ApiResonse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
+  formData.append("file", file);
+
+  const res = await axiosInstance.post<ApiResponse<BulkUploadResult>>(`${BASE}/bulk-upload`, formData, {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      "Content-Type": "multipart/form-data",
     },
     onUploadProgress: (progressEvent) => {
       if (progressEvent.total) {
