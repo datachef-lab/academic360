@@ -74,6 +74,22 @@ export async function getAllBoardSubjectNames(): Promise<
   }));
 }
 
+export async function getActiveBoardSubjectNames(): Promise<
+  Array<{ id: number; name: string; code: string | null }>
+> {
+  const results = await db
+    .select({
+      id: boardSubjectNameModel.id,
+      name: boardSubjectNameModel.name,
+      code: boardSubjectNameModel.code,
+    })
+    .from(boardSubjectNameModel)
+    .where(eq(boardSubjectNameModel.isActive, true))
+    .orderBy(boardSubjectNameModel.name);
+
+  return results;
+}
+
 export async function getBoardSubjectNameById(
   id: number,
 ): Promise<BoardSubjectNameDto | null> {

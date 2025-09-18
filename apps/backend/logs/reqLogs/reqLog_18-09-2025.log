@@ -1,0 +1,24 @@
+18-09-2025	21:08:26	8e7b200b-faad-43d2-bd16-1c450ac1c1cc	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:08:26	f5f05d31-8767-4a3f-973f-37d4991d70ac	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:08:25	77eade26-b7e3-49d9-8063-9176ce259c6e	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+18-09-2025	21:08:24	2ad296c6-c001-4cf7-a6b0-bb7aa0fcb9da	GET	/auth/refresh	http://localhost:3000
+18-09-2025	21:07:06	dfe9d7cb-af1d-4a28-91a7-8de9ab92b62a	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:07:06	9778ac12-e200-4024-8551-d707b5e9d746	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:07:04	26bdec88-b2dc-4cc1-b479-2d4a4574d863	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+18-09-2025	21:07:04	0a32df1f-d210-46a2-a17c-7088c440f1f9	GET	/auth/refresh	http://localhost:3000
+18-09-2025	21:06:44	612a2023-3958-43a4-860d-37938cfdbd09	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:06:44	95e5af3e-4230-46e1-802a-b7a6e75c3921	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	21:06:42	c8fd2986-c725-401e-a908-da4ce58c316c	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+18-09-2025	21:06:42	fe81466d-b11d-4bfb-83dd-86949e9e2a84	GET	/auth/refresh	http://localhost:3000
+18-09-2025	20:55:00	6422d817-9ef1-4b0d-9acd-e6f5aeafaf7f	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	20:55:00	fd1f9384-7de5-409d-b287-423a85f6a8c5	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=10	http://localhost:3000
+18-09-2025	20:54:58	246e314d-1802-4d2e-9b86-595a8b3b78ad	GET	/api/subject-selection/students/1/selections	http://localhost:3000
+18-09-2025	20:54:58	6db061b5-d768-4b2a-a452-07ec499a9e34	GET	/auth/refresh	http://localhost:3000
+18-09-2025	20:17:17	f91091d0-1d92-40b9-bcca-903b5a096044	GET	/api/v1/settings/file/4	undefined
+18-09-2025	20:17:15	73e290b4-dcf7-46f4-aec4-685daeeeea6d	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+18-09-2025	20:17:15	5788301b-6d1e-4ff3-8c26-22c6f999bda2	GET	/api/course-design/program-courses	http://localhost:5173
+18-09-2025	20:17:15	aa2bed03-080e-4f5c-a3fa-6873614ecffc	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+18-09-2025	20:17:15	2a847e20-fb08-4ca7-bae3-6175d7d994b9	OPTIONS	/api/course-design/program-courses	http://localhost:5173
+18-09-2025	20:17:15	fa194f26-8c47-4ad6-91aa-d08fbcb60503	OPTIONS	/api/course-design/subject-types	http://localhost:5173
+18-09-2025	20:17:15	a4467331-4e86-4b81-a5fd-d8d3d6d79860	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+ageSize=10&search=&subjectType=	http://localhost:5173

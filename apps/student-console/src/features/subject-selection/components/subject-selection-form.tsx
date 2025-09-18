@@ -6,6 +6,7 @@ import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { fetchStudentSubjectSelections, StudentSubjectSelectionDto, PaperDto } from "@/services/subject-selection";
+import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 
 export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => void }) {
   const { user } = useAuth();
@@ -43,6 +44,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [availableIdcSem3Subjects, setAvailableIdcSem3Subjects] = useState<string[]>([]);
   const [availableAecSubjects, setAvailableAecSubjects] = useState<string[]>([]);
   const [availableCvacOptions, setAvailableCvacOptions] = useState<string[]>([]);
+
+  // Restricted grouping caches for quick checks
+  // Map by subject name → rule and the category (subject type code) it belongs to
+  const [restrictedBySubject, setRestrictedBySubject] = useState<
+    Record<string, { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }>
+  >({});
+  // Track which categories actually have RG rules defined (e.g., MN, IDC, AEC)
+  const [restrictedCategories, setRestrictedCategories] = useState<Record<string, boolean>>({});
 
   // Removed auto-assign for Minor II; user must select Minor II explicitly
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
@@ -106,8 +115,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         // AEC 3: semester III
         const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
-        setAdmissionMinor1Subjects(dedupe(minorSem1And2.map(getLabel)));
-        setAdmissionMinor2Subjects(dedupe(minorSem3And4.map(getLabel)));
+        const mn1 = dedupe(minorSem1And2.map(getLabel));
+        const mn2 = dedupe(minorSem3And4.map(getLabel));
+        setAdmissionMinor1Subjects(mn1);
+        setAdmissionMinor2Subjects(mn2);
 
         // IDC per semester lists
         setAvailableIdcSem1Subjects(dedupe(idcSem1Papers.map(getLabel)));
@@ -115,6 +126,59 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         setAvailableIdcSem3Subjects(dedupe(idcSem3Papers.map(getLabel)));
         setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
         setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
+
+        // Load restricted groupings and build quick lookup by target subject name
+        const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
+        const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
+        const norm = (s: string) =>
+          String(s || "")
+            .trim()
+            .toUpperCase();
+        const rgMap: Record<string, { semesters: string[]; cannotCombineWith: Set<string>; categoryCode: string }> = {};
+        const rgById: Record<number, { semesters: string[]; cannotCombineIds: Set<number>; categoryCode: string }> = {};
+        const catFlags: Record<string, boolean> = {};
+        for (const rg of rgs) {
+          const target = rg.subject?.name || "";
+          if (!target) continue;
+          // Normalize semester labels from RG to roman numerals (e.g., "I", "II")
+          const semesters = (rg.forClasses || [])
+            .map((c) => extractSemesterRoman(c.class?.shortName || c.class?.name))
+            .filter(Boolean) as string[];
+          const cannot = new Set(
+            (rg.cannotCombineWithSubjects || [])
+              .map((s) => norm(s.cannotCombineWithSubject?.name || ""))
+              .filter(Boolean),
+          );
+          const code = norm(rg.subjectType?.code || rg.subjectType?.name || "");
+          rgMap[norm(target)] = { semesters, cannotCombineWith: cannot, categoryCode: code };
+          const targetId = (rg.subject as any)?.id as number | undefined;
+          const cannotIds = new Set<number>(
+            (rg.cannotCombineWithSubjects || [])
+              .map((s) => (s.cannotCombineWithSubject as any)?.id as number | undefined)
+              .filter((id): id is number => typeof id === "number"),
+          );
+          if (typeof targetId === "number")
+            rgById[targetId] = { semesters, cannotCombineIds: cannotIds, categoryCode: code };
+          if (code) catFlags[code] = true;
+        }
+        setRestrictedBySubject(rgMap);
+        setRestrictedCategories(catFlags);
+        // Log restricted grouping DTOs for verification
+        // eslint-disable-next-line no-console
+        console.log(
+          "[SubjectSelection] RG fetched:",
+          rgs.map((rg) => ({
+            id: rg.id,
+            cat: rg.subjectType?.code || rg.subjectType?.name,
+            subject: rg.subject?.name,
+            subjectId: (rg.subject as any)?.id,
+            semesters: (rg.forClasses || []).map((c) => c.class?.shortName || c.class?.name),
+            cannot: (rg.cannotCombineWithSubjects || []).map((s) => ({
+              name: s.cannotCombineWithSubject?.name,
+              id: (s.cannotCombineWithSubject as any)?.id,
+            })),
+          })),
+        );
 
         // Save semester labels for use in filtering at render time
         setIdcSem1("I");
@@ -236,6 +300,52 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         subject !== minor2 &&
         (subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3)),
     );
+  };
+
+  const getFilteredByCategory = (
+    sourceList: string[],
+    currentValue: string,
+    categoryCode: string,
+    contextSemester?: string | string[],
+  ) => {
+    const norm = (s: string) =>
+      String(s || "")
+        .trim()
+        .toUpperCase();
+    const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
+    return sourceList.filter((subject) => {
+      if (!applyRules) {
+        // No RG defined for this category; allow default dedupe logic by caller
+        return subject === currentValue || true;
+      }
+
+      // Base ensure uniqueness against current selections of same category handled by caller
+      // RG checks only when defined for this category
+      const selected = [minor1, minor2, idc1, idc2, idc3].filter(Boolean);
+      const inContext = (rgSemesters: string[]) => {
+        if (!contextSemester) return true;
+        const set = Array.isArray(contextSemester)
+          ? new Set(contextSemester.map((s) => norm(s)))
+          : new Set([norm(contextSemester)]);
+        return rgSemesters.length === 0 || rgSemesters.some((r) => set.has(norm(r)));
+      };
+      for (const sel of selected) {
+        const rg = restrictedBySubject[norm(sel)];
+        if (!rg) continue;
+        if (rg.categoryCode !== norm(categoryCode)) continue; // rule applies only to its category
+        if (!inContext(rg.semesters)) continue;
+        if (rg.cannotCombineWith.has(norm(subject))) return false;
+      }
+
+      const candidateRg = restrictedBySubject[norm(subject)];
+      if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
+        if (!inContext(candidateRg.semesters)) return true;
+        for (const sel of selected) {
+          if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
+        }
+      }
+      return true;
+    });
   };
 
   const [showTips, setShowTips] = useState(true);
@@ -490,7 +600,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <div className="space-y-2 min-h-[84px]">
                       <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
                       <Combobox
-                        dataArr={convertToComboboxData(admissionMinor1Subjects, [minor2])}
+                        dataArr={convertToComboboxData(
+                          getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                          [minor2],
+                        )}
                         value={minor1}
                         onChange={setMinor1}
                         placeholder="Select Minor I"
@@ -501,7 +614,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <div className="space-y-2 min-h-[84px]">
                       <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
                       <Combobox
-                        dataArr={convertToComboboxData(admissionMinor2Subjects, [minor1])}
+                        dataArr={convertToComboboxData(
+                          getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                          [minor1],
+                        )}
                         value={minor2}
                         onChange={setMinor2}
                         placeholder="Select Minor II"
@@ -540,7 +656,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <div className="space-y-2 min-h-[84px]">
                       <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
                       <Combobox
-                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem1Subjects, idc1))}
+                        dataArr={convertToComboboxData(
+                          getFilteredByCategory(
+                            getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                            idc1,
+                            "IDC",
+                            "I",
+                          ),
+                        )}
                         value={idc1}
                         onChange={setIdc1}
                         placeholder="Select IDC 1"
@@ -551,7 +674,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <div className="space-y-2 min-h-[84px]">
                       <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
                       <Combobox
-                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem2Subjects, idc2))}
+                        dataArr={convertToComboboxData(
+                          getFilteredByCategory(
+                            getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                            idc2,
+                            "IDC",
+                            "II",
+                          ),
+                        )}
                         value={idc2}
                         onChange={setIdc2}
                         placeholder="Select IDC 2"
@@ -562,7 +692,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <div className="space-y-2 min-h-[84px]">
                       <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
                       <Combobox
-                        dataArr={convertToComboboxData(getFilteredIdcOptions(availableIdcSem3Subjects, idc3))}
+                        dataArr={convertToComboboxData(
+                          getFilteredByCategory(
+                            getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                            idc3,
+                            "IDC",
+                            "III",
+                          ),
+                        )}
                         value={idc3}
                         onChange={setIdc3}
                         placeholder="Select IDC 3"

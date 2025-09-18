@@ -1,4 +1,4 @@
-import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardT, ClassT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, TransportDetailsT, UserT } from "@/schemas";
+import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardT, ClassT, DegreeT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
 import { BoardSubjectNameT } from "@/schemas/models/admissions/board-subject-name.model";
@@ -59,4 +59,14 @@ export interface ApplicationFormDto extends Omit<ApplicationFormT, "admissionId"
 export interface AdmissionAdditionalInfoDto extends Omit<AdmissionAdditionalInfoT, "annualIncomeId" | "familyDetailsId"> {
     annualIncome: unknown | null;
     familyDetails: unknown | null;
+}
+
+export interface BoardDto extends Omit<BoardT, "degreeId" | "addressId"> {
+    degree: DegreeT | null;
+    address: AddressDto | null;
+}
+
+export interface BoardSubjectDto extends Omit<BoardSubjectT, "boardSubjectNameId"> {
+    board: BoardDto;
+    boardSubjectName: BoardSubjectNameT;
 }

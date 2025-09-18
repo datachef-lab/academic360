@@ -630,8 +630,16 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     }
   }
 
+  const [foundAdmGeneralInfo] = await db
+    .select()
+    .from(admissionGeneralInfoModel)
+    .where(
+      eq(admissionGeneralInfoModel.applicationFormId, applicationForm?.id!),
+    );
+
   return {
     ...props,
+    personalEmail: foundAdmGeneralInfo?.email ?? null,
     applicationFormAbstract: applicationForm,
     programCourse: programCourse!,
     specialization,

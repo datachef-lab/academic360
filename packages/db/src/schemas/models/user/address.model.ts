@@ -11,7 +11,7 @@ export const addressModel = pgTable("address", {
     id: serial().primaryKey(),
     countryId: integer("country_id_fk").references(() => countryModel.id),
     otherCountry: varchar({ length: 255 }),
-    
+
     stateId: integer("state_id_fk").references(() => stateModel.id),
     otherState: varchar({ length: 255 }),
 
@@ -20,7 +20,7 @@ export const addressModel = pgTable("address", {
 
     districtId: integer("district_id_fk").references(() => districtModel.id),
     otherDistrict: varchar({ length: 255 }),
-    
+
     addressLine: varchar({ length: 1000 }),
     landmark: varchar({ length: 255 }),
     localityType: localityTypeEnum(),
@@ -30,7 +30,7 @@ export const addressModel = pgTable("address", {
 
     policeStationId: integer("police_station_id"),
     otherPoliceStation: varchar({ length: 2000 }),
-    
+
     phone: varchar({ length: 255 }),
     pincode: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
@@ -49,6 +49,10 @@ export const addressRelations = relations(addressModel, ({ one }) => ({
     city: one(cityModel, {
         fields: [addressModel.cityId],
         references: [cityModel.id]
+    }),
+    district: one(districtModel, {
+        fields: [addressModel.districtId],
+        references: [districtModel.id]
     })
 }));
 

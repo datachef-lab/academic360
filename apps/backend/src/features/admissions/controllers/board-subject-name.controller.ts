@@ -4,6 +4,7 @@ import { errorHandler } from "@/middlewares/errorHandler.middleware";
 import {
   createBoardSubjectName,
   getAllBoardSubjectNames,
+  getActiveBoardSubjectNames,
   getBoardSubjectNameById,
   updateBoardSubjectName,
   deleteBoardSubjectName,
@@ -40,6 +41,24 @@ export async function getAllBoardSubjectNamesHandler(
       "OK",
       boardSubjectNames,
       "Board subject names retrieved successfully",
+    );
+    res.status(200).json(response);
+  } catch (error) {
+    errorHandler(error, req, res, () => {});
+  }
+}
+
+export async function getActiveBoardSubjectNamesHandler(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const boardSubjectNames = await getActiveBoardSubjectNames();
+    const response = new ApiResponse(
+      200,
+      "OK",
+      boardSubjectNames,
+      "Active board subject names retrieved successfully",
     );
     res.status(200).json(response);
   } catch (error) {

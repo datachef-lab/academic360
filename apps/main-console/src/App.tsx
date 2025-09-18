@@ -65,10 +65,10 @@ import { NotFoundPage, SettingsPage, UserProfilePage } from "./pages";
 // import NewAcademicSetupPage from "./features/academic-year-setup/pages/NewAcademicSetupPage";
 import AcademicYearSetupPage from "./features/academic-year-setup/pages/academic-year-setup-page";
 import SubjectConfigurationMaster from "./features/academic-year-setup/layouts/subject-configuration-master";
-import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
+// import MandatorySubjectsPage from "./features/academic-year-setup/pages/mandatory-subjects-page";
 
 import WhitelistedCategoriesPage from "./features/academic-year-setup/pages/whitelisted-categories-page";
-import AlternativeSubjectsPage from "./features/academic-year-setup/pages/alternative-subjects-page";
+import AlternativeSubjectsPage from "./features/academic-year-setup/pages/related-subjects-page";
 // import RestrictedGroupingsPage from "./features/academic-year-setup/pages/restricted-grouping-page";
 import SemesterAvailabilityPage from "./features/academic-year-setup/pages/semester-availability-page";
 import RestrictedGroupingPage from "./features/academic-year-setup/pages/restricted-grouping-page";
@@ -77,6 +77,7 @@ import AdmissionBoardMaster from "./features/academic-year-setup/layouts/admissi
 import BoardPage from "./features/academic-year-setup/pages/board-page";
 import BoardSubjectNamePage from "./features/academic-year-setup/pages/board-subject-name-page";
 import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject-page";
+import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -140,13 +141,16 @@ const router = createBrowserRouter(
             },
             {
               path: "subject-configurations",
-              element: <SubjectConfigurationMaster />,
+              element: (
+                <ProtectedRouteWrapper>
+                  <SubjectConfigurationMaster />
+                </ProtectedRouteWrapper>
+              ),
               children: [
-                { path: "", element: <MandatorySubjectsPage /> },
                 // { path: "program-course-relations", element: <RestrictedGroupingPage /> },
-                { path: "alternative-subjects", element: <AlternativeSubjectsPage /> },
-                { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
+                { path: "", element: <AlternativeSubjectsPage /> },
                 { path: "restricted-groupings", element: <RestrictedGroupingPage /> },
+                { path: "whitelisted-categories", element: <WhitelistedCategoriesPage /> },
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
               ],
             },

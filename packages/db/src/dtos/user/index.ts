@@ -1,6 +1,6 @@
 import { UserT, Family, AddressT, CountryT } from "../../schemas";
 import { BloodGroupDto } from "../resources";
-import { AccommodationT, AnnualIncomeT, ApplicationFormT, BoardResultStatusT, CategoryT, CityT, ClassT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, PromotionStatusT, PromotionT, QualificationT, ReligionT, SectionT, SessionT, ShiftT, SpecializationT, StateT, TransportT } from "../../schemas/models";
+import { AccommodationT, AnnualIncomeT, ApplicationFormT, BoardResultStatusT, CategoryT, CityT, ClassT, districtT, FamilyT, HealthT, LanguageMediumT, NationalityT, OccupationT, PersonalDetailsT, PersonT, PickupPointT, PromotionStatusT, PromotionT, QualificationT, ReligionT, SectionT, SessionT, ShiftT, SpecializationT, StateT, TransportT } from "../../schemas/models";
 import { DisabilityCodeT, EmergencyContactT, StaffT, TransportDetailsT, } from "../../schemas/models/user";
 import { StudentT } from "../../schemas/models/user/student.model";
 import { ProgramCourseDto } from "../course-design";
@@ -19,6 +19,7 @@ export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "bo
 
 export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId" | "sectionId" | "shiftId"> {
     applicationFormAbstract: ApplicationFormT | null;
+    personalEmail: string | null;
     programCourse: ProgramCourseDto;
     personalDetails: PersonalDetailsDto | null;
     specialization: SpecializationT | null;
@@ -40,6 +41,7 @@ export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "ci
     country?: CountryT | null;
     state?: StateT | null;
     city?: CityT | null;
+    district: districtT | null;
 }
 
 export interface AccommodationDto extends Omit<AccommodationT, "addressId"> {

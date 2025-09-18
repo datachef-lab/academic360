@@ -5,37 +5,12 @@ import {
   BoardSubjectT,
 } from "@repo/db/schemas/models/admissions/board-subject.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
-import { boardModel } from "@repo/db/schemas/models/resources";
+import { boardModel, degreeModel } from "@repo/db/schemas/models/resources";
+import { addressModel } from "@repo/db/schemas/models/user";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
 import XLSX from "xlsx";
 import fs from "fs";
-
-// Define DTO for board subject
-export interface BoardSubjectDto {
-  id: number;
-  legacyBoardSubjectMappingSubId: number | null;
-  boardId: number;
-  boardSubjectNameId: number;
-  fullMarksTheory: number | null;
-  passingMarksTheory: number | null;
-  fullMarksPractical: number | null;
-  passingMarksPractical: number | null;
-  isActive: boolean | null;
-  createdAt: Date;
-  updatedAt: Date;
-  board: {
-    id: number;
-    name: string;
-    code: string | null;
-    isActive: boolean | null;
-  };
-  boardSubjectName: {
-    id: number;
-    name: string;
-    code: string | null;
-    isActive: boolean | null;
-  };
-}
+import { BoardSubjectDto } from "@repo/db/dtos";
 
 // Bulk upload interface
 export interface BulkUploadResult {
@@ -67,7 +42,6 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
       legacyBoardSubjectMappingSubId:
         boardSubjectModel.legacyBoardSubjectMappingSubId,
       boardId: boardSubjectModel.boardId,
-      boardSubjectNameId: boardSubjectModel.boardSubjectNameId,
       fullMarksTheory: boardSubjectModel.fullMarksTheory,
       passingMarksTheory: boardSubjectModel.passingMarksTheory,
       fullMarksPractical: boardSubjectModel.fullMarksPractical,
@@ -81,6 +55,20 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
         code: boardModel.code,
         isActive: boardModel.isActive,
       },
+      degree: {
+        id: degreeModel.id,
+        name: degreeModel.name,
+        sequence: degreeModel.sequence,
+        isActive: degreeModel.isActive,
+      },
+      address: {
+        id: addressModel.id,
+        addressLine: addressModel.addressLine,
+        landmark: addressModel.landmark,
+        otherCity: addressModel.otherCity,
+        otherState: addressModel.otherState,
+        otherCountry: addressModel.otherCountry,
+      },
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -90,16 +78,17 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
     })
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
+    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
     );
 
   return results.map((result) => ({
-    id: result.id,
+    id: result.id!,
     legacyBoardSubjectMappingSubId: result.legacyBoardSubjectMappingSubId,
-    boardId: result.boardId,
-    boardSubjectNameId: result.boardSubjectNameId,
+    boardId: result.boardId!,
     fullMarksTheory: result.fullMarksTheory,
     passingMarksTheory: result.passingMarksTheory,
     fullMarksPractical: result.fullMarksPractical,
@@ -107,8 +96,20 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
     isActive: result.isActive,
     createdAt: result.createdAt || new Date(),
     updatedAt: result.updatedAt || new Date(),
-    board: result.board!,
-    boardSubjectName: result.boardSubjectName!,
+    board: {
+      id: result.board?.id!,
+      name: result.board?.name!,
+      code: result.board?.code,
+      isActive: result.board?.isActive,
+      degree: result.degree || null,
+      address: result.address ? { ...result.address, district: null } : null,
+    },
+    boardSubjectName: {
+      id: result.boardSubjectName?.id!,
+      name: result.boardSubjectName?.name!,
+      code: result.boardSubjectName?.code,
+      isActive: result.boardSubjectName?.isActive,
+    },
   }));
 }
 
@@ -121,7 +122,6 @@ export async function getBoardSubjectById(
       legacyBoardSubjectMappingSubId:
         boardSubjectModel.legacyBoardSubjectMappingSubId,
       boardId: boardSubjectModel.boardId,
-      boardSubjectNameId: boardSubjectModel.boardSubjectNameId,
       fullMarksTheory: boardSubjectModel.fullMarksTheory,
       passingMarksTheory: boardSubjectModel.passingMarksTheory,
       fullMarksPractical: boardSubjectModel.fullMarksPractical,
@@ -135,6 +135,20 @@ export async function getBoardSubjectById(
         code: boardModel.code,
         isActive: boardModel.isActive,
       },
+      degree: {
+        id: degreeModel.id,
+        name: degreeModel.name,
+        sequence: degreeModel.sequence,
+        isActive: degreeModel.isActive,
+      },
+      address: {
+        id: addressModel.id,
+        addressLine: addressModel.addressLine,
+        landmark: addressModel.landmark,
+        otherCity: addressModel.otherCity,
+        otherState: addressModel.otherState,
+        otherCountry: addressModel.otherCountry,
+      },
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -144,6 +158,8 @@ export async function getBoardSubjectById(
     })
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
+    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -153,10 +169,9 @@ export async function getBoardSubjectById(
   if (!result) return null;
 
   return {
-    id: result.id,
+    id: result.id!,
     legacyBoardSubjectMappingSubId: result.legacyBoardSubjectMappingSubId,
-    boardId: result.boardId,
-    boardSubjectNameId: result.boardSubjectNameId,
+    boardId: result.boardId!,
     fullMarksTheory: result.fullMarksTheory,
     passingMarksTheory: result.passingMarksTheory,
     fullMarksPractical: result.fullMarksPractical,
@@ -164,8 +179,20 @@ export async function getBoardSubjectById(
     isActive: result.isActive,
     createdAt: result.createdAt || new Date(),
     updatedAt: result.updatedAt || new Date(),
-    board: result.board!,
-    boardSubjectName: result.boardSubjectName!,
+    board: {
+      id: result.board?.id!,
+      name: result.board?.name!,
+      code: result.board?.code,
+      isActive: result.board?.isActive,
+      degree: result.degree || null,
+      address: result.address ? { ...result.address, district: null } : null,
+    },
+    boardSubjectName: {
+      id: result.boardSubjectName?.id!,
+      name: result.boardSubjectName?.name!,
+      code: result.boardSubjectName?.code,
+      isActive: result.boardSubjectName?.isActive,
+    },
   };
 }
 
@@ -178,7 +205,6 @@ export async function getBoardSubjectsByBoardId(
       legacyBoardSubjectMappingSubId:
         boardSubjectModel.legacyBoardSubjectMappingSubId,
       boardId: boardSubjectModel.boardId,
-      boardSubjectNameId: boardSubjectModel.boardSubjectNameId,
       fullMarksTheory: boardSubjectModel.fullMarksTheory,
       passingMarksTheory: boardSubjectModel.passingMarksTheory,
       fullMarksPractical: boardSubjectModel.fullMarksPractical,
@@ -192,6 +218,20 @@ export async function getBoardSubjectsByBoardId(
         code: boardModel.code,
         isActive: boardModel.isActive,
       },
+      degree: {
+        id: degreeModel.id,
+        name: degreeModel.name,
+        sequence: degreeModel.sequence,
+        isActive: degreeModel.isActive,
+      },
+      address: {
+        id: addressModel.id,
+        addressLine: addressModel.addressLine,
+        landmark: addressModel.landmark,
+        otherCity: addressModel.otherCity,
+        otherState: addressModel.otherState,
+        otherCountry: addressModel.otherCountry,
+      },
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -201,6 +241,8 @@ export async function getBoardSubjectsByBoardId(
     })
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
+    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -208,10 +250,9 @@ export async function getBoardSubjectsByBoardId(
     .where(eq(boardSubjectModel.boardId, boardId));
 
   return results.map((result) => ({
-    id: result.id,
+    id: result.id!,
     legacyBoardSubjectMappingSubId: result.legacyBoardSubjectMappingSubId,
-    boardId: result.boardId,
-    boardSubjectNameId: result.boardSubjectNameId,
+    boardId: result.boardId!,
     fullMarksTheory: result.fullMarksTheory,
     passingMarksTheory: result.passingMarksTheory,
     fullMarksPractical: result.fullMarksPractical,
@@ -219,8 +260,20 @@ export async function getBoardSubjectsByBoardId(
     isActive: result.isActive,
     createdAt: result.createdAt || new Date(),
     updatedAt: result.updatedAt || new Date(),
-    board: result.board!,
-    boardSubjectName: result.boardSubjectName!,
+    board: {
+      id: result.board?.id!,
+      name: result.board?.name!,
+      code: result.board?.code,
+      isActive: result.board?.isActive,
+      degree: result.degree || null,
+      address: result.address ? { ...result.address, district: null } : null,
+    },
+    boardSubjectName: {
+      id: result.boardSubjectName?.id!,
+      name: result.boardSubjectName?.name!,
+      code: result.boardSubjectName?.code,
+      isActive: result.boardSubjectName?.isActive,
+    },
   }));
 }
 

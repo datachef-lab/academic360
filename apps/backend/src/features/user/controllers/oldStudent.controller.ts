@@ -92,6 +92,31 @@ import { OldClass } from "@/types/old-data/old-class";
 import { OldEligibilityCriteria } from "@repo/db/legacy-system-types/course-design";
 import { userTypeEnum } from "@repo/db/schemas";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model";
+
+// Normalize any date-like value to YYYY-MM-DD (date-only, TZ-safe)
+function toISODateOnly(value: unknown): string | undefined {
+  if (!value) return undefined;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+    if (isoDateOnly.test(trimmed)) return trimmed;
+    const parsed = new Date(trimmed);
+    if (isNaN(parsed.getTime())) return undefined;
+    return new Date(
+      Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()),
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+  if (value instanceof Date) {
+    return new Date(
+      Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()),
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+  return undefined;
+}
 import { OldStaff, OldStudent } from "@repo/db/legacy-system-types/users";
 import {
   addCity,
@@ -1108,15 +1133,36 @@ export async function addPersonalDetails(
           );
       }
 
+      // Helper to normalize any date-like value to YYYY-MM-DD (date-only, TZ-safe)
+      const toISODateOnly = (value: unknown): string | undefined => {
+        if (!value) return undefined;
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+          if (isoDateOnly.test(trimmed)) return trimmed;
+          const parsed = new Date(trimmed);
+          if (isNaN(parsed.getTime())) return undefined;
+          return new Date(
+            Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()),
+          )
+            .toISOString()
+            .slice(0, 10);
+        }
+        if (value instanceof Date) {
+          return new Date(
+            Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()),
+          )
+            .toISOString()
+            .slice(0, 10);
+        }
+        return undefined;
+      };
+
       // Update personal details
       const [updatedPersonalDetails] = await db
         .update(personalDetailsModel)
         .set({
-          dateOfBirth: oldDetails.dateOfBirth
-            ? typeof oldDetails.dateOfBirth === "string"
-              ? oldDetails.dateOfBirth
-              : oldDetails.dateOfBirth.toISOString()
-            : undefined,
+          dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
           gender:
             oldDetails.sexId === 0
               ? undefined
@@ -1287,11 +1333,7 @@ export async function addPersonalDetails(
             : "phone" in oldDetails
               ? oldDetails.phone
               : "") || "", // Required field
-        dateOfBirth: oldDetails.dateOfBirth
-          ? typeof oldDetails.dateOfBirth === "string"
-            ? oldDetails.dateOfBirth
-            : oldDetails.dateOfBirth.toISOString()
-          : undefined,
+        dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
         gender:
           oldDetails.sexId === 0
             ? undefined

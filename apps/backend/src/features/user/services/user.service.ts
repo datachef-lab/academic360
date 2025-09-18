@@ -64,6 +64,7 @@ import { personModel, familyModel } from "@repo/db/schemas/models/user";
 import {
   qualificationModel,
   occupationModel,
+  districtModel,
 } from "@repo/db/schemas/models/resources";
 import { annualIncomeModel } from "@repo/db/schemas/models/resources";
 import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
@@ -763,10 +764,20 @@ async function fetchAddressDto(
           .then((r) => r[0] ?? null)
       : null,
   ]);
-  return {
-    ...addr,
-    country: country ?? undefined,
-    state: state ?? undefined,
-    city: city ?? undefined,
-  };
+  const district = addr.districtId
+    ? await db
+        .select()
+        .from(districtModel)
+        .where(eq(districtModel.id, addr.districtId))
+        .then((r) => r[0] ?? null)
+    : null;
+  const { countryId, stateId, cityId, ...rest } = addr;
+  const shaped = {
+    ...rest,
+    country: country ?? null,
+    state: state ?? null,
+    city: city ?? null,
+    district: district ?? null,
+  } satisfies AddressDto;
+  return shaped;
 }

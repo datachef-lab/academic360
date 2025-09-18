@@ -11,10 +11,14 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
       </CardHeader>
       <CardContent className="px-5 pb-2 pt-0 space-y-0">
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-500 text-sm">ProgramCourse</span>
+          <span className="text-gray-500 text-sm">Program Course</span>
           <span className="font-semibold text-gray-800 text-base">
             {student?.currentPromotion?.programCourse?.name}
           </span>
+        </div>
+        <div className="flex items-center justify-between py-2">
+          <span className="text-gray-500 text-sm">Shift</span>
+          <span className="font-semibold text-gray-800 text-base">{student?.shift?.name || "N/A"}</span>
         </div>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">
@@ -34,6 +38,13 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
         </div>
 
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
+          <span className="text-gray-500 text-sm">Class Roll Number</span>
+          <span className="font-semibold text-gray-800 text-base">
+            {student?.currentPromotion?.classRollNumber || "N/A"}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">CU Registration Number</span>
           <span className="font-semibold text-gray-800 text-base">N/A</span>
         </div>
@@ -41,11 +52,6 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">CU Roll Number</span>
           <span className="font-semibold text-gray-800 text-base">N/A</span>
-        </div>
-
-        <div className="flex items-center justify-between py-2">
-          <span className="text-gray-500 text-sm">Shift</span>
-          <span className="font-semibold text-gray-800 text-base">{student?.shift?.name || "N/A"}</span>
         </div>
       </CardContent>
     </Card>

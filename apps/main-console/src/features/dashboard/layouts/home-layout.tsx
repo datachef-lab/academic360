@@ -43,6 +43,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -123,6 +124,7 @@ const searchData = [
 ];
 
 export default function HomeLayout() {
+  const { accessToken } = useAuth();
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
   const [open, setOpen] = useState(false);
@@ -211,7 +213,7 @@ export default function HomeLayout() {
             </div>
           </header>
           <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
-            <Outlet />
+            {accessToken && <Outlet />}
           </div>
         </SidebarInset>
       </SidebarProvider>
