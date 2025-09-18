@@ -9,8 +9,8 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@repo/db": ["../../packages/db/dist"],
-      "@repo/db/*": ["../../packages/db/dist/*"]
+      "@repo/db": ["../../packages/db/src"],
+      "@repo/db/*": ["../../packages/db/src/*"]
     },
     /* Bundler mode */
     "moduleResolution": "bundler",
