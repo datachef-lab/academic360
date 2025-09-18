@@ -1,7 +1,11 @@
-17-09-2025	03:55:14	ed1d9980-04c1-4b30-afc5-c96bc8e6fcbc	GET	/api/subject-selection/students/1/selections	http://localhost:3000
-17-09-2025	03:55:12	991bbad0-ba58-4f09-bbbb-e374c85c0efe	GET	/api/subject-selection/students/1/selections	http://localhost:3000
-17-09-2025	03:55:11	02e29205-1f1f-4879-9427-995f4a75f360	GET	/api/users/5/profile	http://localhost:3000
-17-09-2025	03:55:11	4566866d-0fb3-4a27-a9e8-a8be9aa2f8da	GET	/api/users/5/profile	http://localhost:3000
-17-09-2025	03:55:11	efb3beaa-b1a3-4bbd-a706-33cf0e417b75	OPTIONS	/api/users/5/profile	http://localhost:3000
-17-09-2025	03:55:04	5e8c9778-dcde-4631-a823-417e65b41041	POST	/auth/login	http://localhost:3000
-17-09-2025	03:51:59	62d13bb1-36b2-4090-8bdf-d86b2dab18b8	POST	/auth/login	http://localhost:3000
+17-09-2025	16:46:06	ea21a9a0-8e47-4e38-9d0f-a16602a9a439	GET	/api/v1/settings/file/4	undefined
+17-09-2025	16:45:57	2ebe3c0e-45ca-46f9-a7b6-2c9e32d47a90	GET	/auth/refresh	http://localhost:5173
+17-09-2025	16:45:55	9428652b-1238-4877-b826-7af77160e0ce	GET	/api/v1/settings	http://localhost:5173
+17-09-2025	16:45:54	d4916dda-e339-4bc6-87dd-f0e65a3110d0	GET	/api/v1/settings	http://localhost:5173
+17-09-2025	16:45:37	8f99a94b-fa75-4bec-b849-b0cac3bf03aa	GET	/api/board-universities	http://localhost:5173
+17-09-2025	16:40:04	2b9e7f8f-e696-4c5a-acd3-b4745aa65a64	GET	/api/v1/settings/file/4	undefined
+17-09-2025	16:40:04	bbff96ad-7640-43fc-87fe-cb16d31a6649	GET	/auth/refresh	http://localhost:5173
+17-09-2025	16:40:03	24c24168-5f2a-48da-a7f6-da72ec57beb0	GET	/api/board-universities	http://localhost:5173
+173
+:5173
+173
