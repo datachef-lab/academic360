@@ -19,8 +19,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
-import { subjectSelectionApi, RelatedSubjectMainDto } from "@/services/subject-selection.api";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { subjectSelectionApi } from "@/services/subject-selection.api";
+import { RelatedSubjectMainDto } from "@repo/db/dtos/subject-selection";
+import { getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
+import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/admissions.service";
+import type { ProgramCourse, SubjectType } from "@repo/db";
+import { toast as sonnerToast } from "sonner";
+// import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs
 type UIGrouping = {
@@ -38,22 +44,105 @@ export default function AlternativeSubjectsPage() {
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
   const [groupings, setGroupings] = useState<UIGrouping[]>([]);
   const [, setLoading] = useState(false);
+  const [, setSaving] = useState(false);
+
+  // Lookup maps (built from backend payload) --------------------------------
+  const [subjectNameToId, setSubjectNameToId] = useState<Record<string, number>>({});
+  const [programCourseNameToId, setProgramCourseNameToId] = useState<Record<string, number>>({});
+  const [subjectCategoryLabelToId, setSubjectCategoryLabelToId] = useState<Record<string, number>>({});
+
+  // Master data arrays for dropdowns
+  const [masterProgramCourses, setMasterProgramCourses] = useState<ProgramCourse[]>([]);
+  const [masterSubjectTypes, setMasterSubjectTypes] = useState<SubjectType[]>([]);
+  const [masterBoardSubjectNames, setMasterBoardSubjectNames] = useState<BoardSubjectName[]>([]);
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       setLoading(true);
       try {
+        // Load masters for dialog selects
+        const pcs = await getProgramCourses();
+        if (!isMounted) return;
+        const validPcs = pcs.filter((p: ProgramCourse) => p.name);
+        setMasterProgramCourses(validPcs);
+        setProgramCourseNameToId((prev) => {
+          const map: Record<string, number> = { ...prev };
+          validPcs.forEach((p: ProgramCourse) => {
+            if (p.name) map[p.name] = p.id;
+          });
+          return map;
+        });
+
+        // Subject Types (categories)
+        const sts = await getSubjectTypes();
+        if (!isMounted) return;
+        const validSts = sts.filter((t: SubjectType) => t.id && (t.code || t.name));
+        setMasterSubjectTypes(validSts);
+        const catMap: Record<string, number> = {};
+        validSts.forEach((t: SubjectType) => {
+          const label = t.code || t.name;
+          if (label && t.id) catMap[label] = t.id;
+        });
+        setSubjectCategoryLabelToId(catMap);
+
+        // Board Subject Names - fetch from master API
+        const boardSubjectNames = await getActiveBoardSubjectNames();
+        if (!isMounted) return;
+        setMasterBoardSubjectNames(boardSubjectNames);
+        // Ensure subject name->id map has all master subjects (even if no mains exist yet)
+        setSubjectNameToId((prev) => {
+          const map: Record<string, number> = { ...prev };
+          for (const bsn of boardSubjectNames) {
+            if (bsn.name && typeof bsn.id === "number") {
+              map[bsn.name] = bsn.id;
+            }
+          }
+          return map;
+        });
+
+        // Load existing related subjects data
         const data = await subjectSelectionApi.listRelatedSubjectMains();
+        // Debug: log backend payload
+        // console.log("[RelatedSubjects] GET mains ->", data);
         if (!isMounted) return;
         const mapped: UIGrouping[] = (data as RelatedSubjectMainDto[]).map((dto) => ({
-          id: dto.id,
-          programCourses: [dto.programCourse.name],
-          subjectCategory: dto.subjectType.code || dto.subjectType.name,
-          subjects: [dto.boardSubjectName.name, ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName.name)],
-          isActive: dto.id ? true : true, // backend has isActive on main; keep true fallback
+          id: dto.id || 0,
+          programCourses: [dto.programCourse?.name || ""],
+          subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+          subjects: [
+            dto.boardSubjectName?.name || "",
+            ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+          ],
+          isActive: dto.isActive ?? true,
         }));
+        // Debug: log mapped UI rows
+        // console.log("[RelatedSubjects] mapped rows ->", mapped.length, mapped);
         setGroupings(mapped);
+
+        // Build additional lookups from payload (merge with existing)
+        setSubjectNameToId((prev) => {
+          const subjMap: Record<string, number> = { ...prev };
+          for (const dto of data) {
+            if (dto.boardSubjectName?.name && dto.boardSubjectName?.id) {
+              subjMap[dto.boardSubjectName.name] = dto.boardSubjectName.id;
+            }
+            for (const sub of dto.relatedSubjectSubs) {
+              if (sub.boardSubjectName?.name && sub.boardSubjectName?.id) {
+                subjMap[sub.boardSubjectName.name] = sub.boardSubjectName.id;
+              }
+            }
+          }
+          return subjMap;
+        });
+
+        const pcMap: Record<string, number> = {};
+        for (const dto of data) {
+          if (dto.programCourse?.name && dto.programCourse?.id) {
+            pcMap[dto.programCourse.name] = dto.programCourse.id;
+          }
+        }
+        setProgramCourseNameToId(pcMap);
       } catch {
         // handled by interceptor toast/UI globally
       } finally {
@@ -93,19 +182,23 @@ export default function AlternativeSubjectsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
 
-  const subjectCategories = ["MAJOR", "MINOR", "AECC", "DSCC", "MDC", "IDC", "VAC", "CVAC"];
-
-  const allSubjects = useMemo(() => {
-    const set = new Set<string>();
-    groupings.forEach((g) => g.subjects.forEach((s) => set.add(s)));
-    return Array.from(set);
-  }, [groupings]);
+  // Removed hardcoded arrays - now using dynamic data from master APIs
 
   const programCourses = useMemo(() => {
-    const set = new Set<string>();
-    groupings.forEach((g) => g.programCourses.forEach((p) => set.add(p)));
-    return Array.from(set);
-  }, [groupings]);
+    return masterProgramCourses.map((pc) => pc.name).filter((name): name is string => name !== null);
+  }, [masterProgramCourses]);
+
+  const subjectCategories = useMemo(() => {
+    return masterSubjectTypes.map((st) => st.code || st.name).filter((name): name is string => name !== null);
+  }, [masterSubjectTypes]);
+
+  const allSubjects = useMemo(() => {
+    const subjects = masterBoardSubjectNames.map((bsn) => bsn.name).filter(Boolean);
+    console.log("[RelatedSubjects] allSubjects count:", subjects.length, "first 5:", subjects.slice(0, 5));
+    return subjects;
+  }, [masterBoardSubjectNames]);
+
+  // (Combobox helpers removed after reverting to Select)
 
   type DialogRow = {
     programCourse: string;
@@ -121,6 +214,8 @@ export default function AlternativeSubjectsPage() {
   const [editCategory, setEditCategory] = useState<string>("");
   const [editTargetSubject, setEditTargetSubject] = useState<string>("");
   const [editSelectedAlternatives, setEditSelectedAlternatives] = useState<string[]>([]);
+  // Keep track of original identifiers to find the correct main even if user edits dropdowns
+  const [editOriginal, setEditOriginal] = useState<{ pc: string; cat: string; subj: string } | null>(null);
 
   const editAvailableAlternatives = useMemo(() => {
     return allSubjects.filter((s) => !editSelectedAlternatives.includes(s) && s !== editTargetSubject);
@@ -154,6 +249,11 @@ export default function AlternativeSubjectsPage() {
     setEditCategory(grouping.subjectCategory ?? "");
     setEditTargetSubject(grouping.subjects[0] ?? "");
     setEditSelectedAlternatives(grouping.subjects.slice(1));
+    setEditOriginal({
+      pc: grouping.programCourses[0] ?? "",
+      cat: grouping.subjectCategory ?? "",
+      subj: grouping.subjects[0] ?? "",
+    });
     setIsDialogOpen(true);
   };
 
@@ -173,7 +273,182 @@ export default function AlternativeSubjectsPage() {
   };
 
   const handleSaveDialog = () => {
-    setIsDialogOpen(false);
+    if (dialogMode === "add") {
+      void saveAddRows();
+    } else {
+      void saveEditRow();
+    }
+  };
+
+  // Persist Add rows ---------------------------------------------------------
+  const saveAddRows = async () => {
+    setSaving(true);
+    try {
+      // Build a fast duplicate-check set from current mains
+      const existingMains = await subjectSelectionApi.listRelatedSubjectMains();
+      const existingKeys = new Set(
+        existingMains.map((m) => {
+          const pcId = m.programCourse?.id;
+          const stId = m.subjectType?.id;
+          const tgtId = m.boardSubjectName?.id;
+          return `${pcId}|${stId}|${tgtId}`;
+        }),
+      );
+      const skipped: string[] = [];
+      const duplicates: string[] = [];
+      let createdCount = 0;
+      for (const row of dialogRows) {
+        const programCourseId = programCourseNameToId[row.programCourse];
+        const subjectTypeId = subjectCategoryLabelToId[row.subjectCategory];
+        const targetId = subjectNameToId[row.targetedSubject];
+        if (!programCourseId || !subjectTypeId || !targetId) {
+          // Collect reason for skipping to inform user
+          const missing: string[] = [];
+          if (!programCourseId) missing.push("program-course");
+          if (!subjectTypeId) missing.push("category");
+          if (!targetId) missing.push("subject");
+          skipped.push(
+            `${row.programCourse || "—"} | ${row.subjectCategory || "—"} | ${row.targetedSubject || "—"} — missing: ${missing.join(", ")}`,
+          );
+          continue; // skip invalid row, but allow others to proceed
+        }
+        // Duplicate guard (client-side)
+        const key = `${programCourseId}|${subjectTypeId}|${targetId}`;
+        if (existingKeys.has(key)) {
+          duplicates.push(`${row.programCourse} | ${row.subjectCategory} | ${row.targetedSubject}`);
+          continue;
+        }
+        await subjectSelectionApi.createRelatedSubjectMain({
+          programCourse: { id: programCourseId },
+          subjectType: { id: subjectTypeId },
+          boardSubjectName: { id: targetId },
+          isActive: true,
+          relatedSubjectSubs: row.alternativeSubjects
+            .map((name) => ({ boardSubjectName: { id: subjectNameToId[name] } }))
+            .filter(
+              (sub): sub is { boardSubjectName: { id: number } } =>
+                !!sub.boardSubjectName.id && sub.boardSubjectName.id !== targetId,
+            ),
+        });
+        createdCount += 1;
+        existingKeys.add(key); // prevent another row in same batch duplicating
+      }
+      // If nothing was created, inform the user why
+      if (createdCount === 0) {
+        if (duplicates.length > 0) {
+          sonnerToast.error("Duplicate mappings detected", { description: duplicates.join("\n") });
+        }
+        if (skipped.length > 0) {
+          sonnerToast.error("Missing required fields", {
+            description:
+              `No rows saved. Please fix missing fields (related subjects are optional):\n\n` + skipped.join("\n"),
+          });
+        }
+        return;
+      }
+      if (duplicates.length > 0) {
+        sonnerToast.info("Some rows were duplicates", { description: duplicates.join("\n") });
+      }
+      sonnerToast.success("Related subject mappings saved");
+      // Reload
+      const refreshed = await subjectSelectionApi.listRelatedSubjectMains();
+      // console.log("[RelatedSubjects] after SAVE ->", refreshed);
+      const mapped: UIGrouping[] = refreshed.map((dto) => ({
+        id: dto.id || 0,
+        programCourses: [dto.programCourse?.name || ""],
+        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+        subjects: [
+          dto.boardSubjectName?.name || "",
+          ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+        ],
+        isActive: dto.isActive ?? true,
+      }));
+      setGroupings(mapped);
+      setIsDialogOpen(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save related subjects";
+      sonnerToast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Persist Edit (single row) -----------------------------------------------
+  const saveEditRow = async () => {
+    if (dialogRows.length === 0) return;
+    setSaving(true);
+    try {
+      // Fetch mains and find the original main regardless of current dropdown edits
+      const mains = await subjectSelectionApi.listRelatedSubjectMains();
+      const dto = mains.find((m) => {
+        const pcName = m.programCourse?.name;
+        const catLabel = m.subjectType?.code || m.subjectType?.name;
+        const subjName = m.boardSubjectName?.name;
+        const orig = editOriginal ?? { pc: editProgramCourse, cat: editCategory, subj: editTargetSubject };
+        return pcName === orig.pc && catLabel === orig.cat && subjName === orig.subj;
+      });
+      if (!dto) {
+        setSaving(false);
+        setIsDialogOpen(false);
+        return;
+      }
+      // Always send a DTO-style update for main first (idempotent on backend)
+      const programCourseId = programCourseNameToId[editProgramCourse];
+      const subjectTypeId = subjectCategoryLabelToId[editCategory];
+      const targetId = subjectNameToId[editTargetSubject];
+      if (!programCourseId || !subjectTypeId || !targetId) {
+        sonnerToast.error("Missing required fields for update", {
+          description: "Program-course, category and subject are required.",
+        });
+        setSaving(false);
+        return;
+      }
+      // Build subs DTO from the current selection and let backend reconcile add/remove
+      const desiredSubsDto = editSelectedAlternatives
+        .map((name) => subjectNameToId[name])
+        .filter((id): id is number => !!id && id !== targetId)
+        .map((id) => ({ boardSubjectName: { id } }));
+
+      // Debug: log outgoing DTO
+      console.log("[RelatedSubjects] PUT dto:", {
+        id: dto.id,
+        programCourseId,
+        subjectTypeId,
+        targetId,
+        editSelectedAlternatives,
+        subjectNameToIdKeys: Object.keys(subjectNameToId),
+        bengaliAId: subjectNameToId["Bengali A"],
+        desiredSubsDto,
+      });
+
+      await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, {
+        programCourse: { id: programCourseId },
+        subjectType: { id: subjectTypeId },
+        boardSubjectName: { id: targetId },
+        relatedSubjectSubs: desiredSubsDto,
+      });
+      // Reload
+      const refreshed = await subjectSelectionApi.listRelatedSubjectMains();
+      // console.log("[RelatedSubjects] after UPDATE ->", refreshed);
+      const mapped: UIGrouping[] = refreshed.map((d) => ({
+        id: d.id || 0,
+        programCourses: [d.programCourse?.name || ""],
+        subjectCategory: d.subjectType?.code || d.subjectType?.name || "",
+        subjects: [
+          d.boardSubjectName?.name || "",
+          ...d.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+        ],
+        isActive: d.isActive ?? true,
+      }));
+      setGroupings(mapped);
+      setIsDialogOpen(false);
+      sonnerToast.success("Related subject mapping updated");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to update related subjects";
+      sonnerToast.error(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -221,7 +496,7 @@ export default function AlternativeSubjectsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Program-Courses</SelectItem>
-                {programCourses.map((programCourse) => (
+                {programCourses.map((programCourse: string) => (
                   <SelectItem key={programCourse} value={programCourse}>
                     {programCourse}
                   </SelectItem>
@@ -351,7 +626,7 @@ export default function AlternativeSubjectsPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-[90rem] w-[98vw] h-[85vh] flex flex-col overflow-hidden">
+        <DialogContent className="max-w-[90rem] w-[98vw] flex flex-col">
           <DialogHeader>
             <DialogTitle>{dialogMode === "add" ? "Add" : "Edit"} Related Subjects</DialogTitle>
             <DialogDescription>Use the table below to add one or more mappings, then save.</DialogDescription>
@@ -415,7 +690,7 @@ export default function AlternativeSubjectsPage() {
                             onValueChange={(v) => updateRowField(idx, "targetedSubject", v)}
                           >
                             <SelectTrigger className="w-48 truncate">
-                              <SelectValue placeholder="Select subject" className="truncate" />
+                              <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                             <SelectContent className="max-h-64 overflow-auto">
                               {allSubjects.map((s) => (
@@ -435,7 +710,7 @@ export default function AlternativeSubjectsPage() {
                                 className="w-full justify-between min-h-10 h-auto"
                               >
                                 {row.alternativeSubjects.length === 0 ? (
-                                  <span className="text-muted-foreground">Select alternatives</span>
+                                  <span className="text-muted-foreground">Select related subjects</span>
                                 ) : (
                                   <div className="flex flex-wrap gap-1 items-center justify-start h-auto">
                                     {row.alternativeSubjects.map((label) => (
@@ -448,30 +723,36 @@ export default function AlternativeSubjectsPage() {
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80 p-0 max-h-64 overflow-auto" align="start">
-                              <Command className="max-h-64 overflow-auto">
+                            <PopoverContent
+                              className="w-[22rem] p-0 z-50 max-h-72 overflow-auto"
+                              align="start"
+                              sideOffset={4}
+                            >
+                              <Command>
                                 <CommandInput placeholder="Search subjects..." className="text-gray-700" />
-                                <CommandEmpty>No subjects found.</CommandEmpty>
-                                <CommandGroup>
-                                  {allSubjects.map((opt) => (
-                                    <CommandItem
-                                      key={opt}
-                                      onSelect={() => {
-                                        const exists = row.alternativeSubjects.includes(opt);
-                                        const next = exists
-                                          ? row.alternativeSubjects.filter((v) => v !== opt)
-                                          : [...row.alternativeSubjects, opt];
-                                        updateRowField(idx, "alternativeSubjects", next);
-                                      }}
-                                      className="text-gray-700"
-                                    >
-                                      <Check
-                                        className={`mr-2 h-4 w-4 ${row.alternativeSubjects.includes(opt) ? "opacity-100" : "opacity-0"}`}
-                                      />
-                                      {opt}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
+                                <CommandList className="max-h-64 overflow-y-auto">
+                                  <CommandEmpty>No subjects found.</CommandEmpty>
+                                  <CommandGroup>
+                                    {allSubjects.map((opt) => (
+                                      <CommandItem
+                                        key={opt}
+                                        onSelect={() => {
+                                          const exists = row.alternativeSubjects.includes(opt);
+                                          const next = exists
+                                            ? row.alternativeSubjects.filter((v) => v !== opt)
+                                            : [...row.alternativeSubjects, opt];
+                                          updateRowField(idx, "alternativeSubjects", next);
+                                        }}
+                                        className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
+                                      >
+                                        <Check
+                                          className={`mr-2 h-4 w-4 ${row.alternativeSubjects.includes(opt) ? "opacity-100" : "opacity-0"}`}
+                                        />
+                                        <span className="block truncate">{opt}</span>
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
                               </Command>
                             </PopoverContent>
                           </Popover>
@@ -566,10 +847,10 @@ export default function AlternativeSubjectsPage() {
               <div className="grid grid-cols-2 gap-4 flex-1 min-h-0">
                 {/* Selected Alternatives */}
                 <div className="border rounded-md flex flex-col h-[52vh]">
-                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">Selected Alternative Subjects</div>
+                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">Selected Related Subjects</div>
                   <div className="p-3 flex-1 min-h-0 overflow-auto">
                     {editSelectedAlternatives.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">No alternatives selected</div>
+                      <div className="text-sm text-muted-foreground">No related subjects selected</div>
                     ) : (
                       <div className="space-y-2">
                         {editSelectedAlternatives.map((s) => (
@@ -603,10 +884,10 @@ export default function AlternativeSubjectsPage() {
 
                 {/* Available Subjects */}
                 <div className="border rounded-md flex flex-col h-[52vh]">
-                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">Available Subjects</div>
+                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">Available Related Subjects</div>
                   <div className="p-3 flex-1 min-h-0 overflow-auto">
                     {editAvailableAlternatives.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">No available subjects</div>
+                      <div className="text-sm text-muted-foreground">No available related subjects</div>
                     ) : (
                       <div className="space-y-2">
                         {editAvailableAlternatives.map((s) => (

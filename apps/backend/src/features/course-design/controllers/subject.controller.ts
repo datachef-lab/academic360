@@ -1,188 +1,286 @@
-import { Request, Response, NextFunction } from "express";
-import { ApiResponse } from "@/utils/ApiResonse.js";
-import { handleError } from "@/utils/handleError.js";
+import { Request, Response } from "express";
 import {
   createSubject,
-  getSubjectById,
   getAllSubjects,
+  getSubjectsPaginated,
+  getSubjectById,
+  getActiveSubjects,
   updateSubject,
-  deleteSubjectSafe,
+  deleteSubject,
   bulkUploadSubjects,
-} from "@/features/course-design/services/subject.service.js";
-import { socketService } from "@/services/socketService.js";
+} from "../services/subject.service.js";
+import { ApiResponse } from "@/utils/ApiResonse.js";
 
-export const createSubjectHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const createSubjectController = async (req: Request, res: Response) => {
   try {
-    const created = await createSubject(req.body);
-    if (!created) {
-      res
+    const { legacySubjectId, name, code, sequence, isActive } = req.body;
+
+    // Validate required fields
+    if (!name) {
+      return res
         .status(400)
-        .json(
-          new ApiResponse(400, "BAD_REQUEST", null, "Subject already exists"),
-        );
-      return;
+        .json(new ApiResponse(400, "ERROR", null, "Subject name is required"));
     }
-    res
+
+    const subjectData = {
+      legacySubjectId: legacySubjectId || null,
+      name,
+      code: code || null,
+      sequence: sequence || null,
+      isActive: isActive !== undefined ? isActive : true,
+    };
+
+    const createdSubject = await createSubject(subjectData);
+
+    return res
       .status(201)
       .json(
         new ApiResponse(
           201,
           "SUCCESS",
-          created,
+          createdSubject,
           "Subject created successfully!",
         ),
       );
   } catch (error) {
-    handleError(error, res, next);
+    console.error("Error creating subject:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
   }
 };
 
-export const bulkUploadSubjectsHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getAllSubjectsController = async (req: Request, res: Response) => {
   try {
-    if (!req.file) {
-      res
-        .status(400)
-        .json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
-      return;
-    }
+    const subjects = await getAllSubjects();
 
-    const uploadSessionId =
-      req.body.uploadSessionId || req.query.uploadSessionId;
-    const io = socketService.getIO();
-
-    const result = await bulkUploadSubjects(req.file.path, io, uploadSessionId);
-
-    const response = {
-      success: result.success,
-      errors: result.errors,
-      summary: {
-        total: result.success.length + result.errors.length,
-        successful: result.success.length,
-        failed: result.errors.length,
-      },
-    };
-
-    res
+    return res
       .status(200)
-      .json(new ApiResponse(200, "SUCCESS", response, "Bulk upload completed"));
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          subjects,
+          "Subjects retrieved successfully!",
+        ),
+      );
   } catch (error) {
-    handleError(error, res, next);
+    console.error("Error retrieving subjects:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
   }
 };
 
-export const getSubjectByIdHandler = async (
+export const getSubjectsPaginatedController = async (
   req: Request,
   res: Response,
-  next: NextFunction,
 ) => {
   try {
-    const id = Number(req.query.id || req.params.id);
-    const subject = await getSubjectById(id);
-    if (!subject) {
-      res
-        .status(404)
-        .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            `Subject with ID ${id} not found`,
-          ),
-        );
-      return;
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const search = req.query.search as string;
+    const isActive = req.query.isActive
+      ? req.query.isActive === "true"
+      : undefined;
+
+    const result = await getSubjectsPaginated({
+      page,
+      pageSize,
+      search,
+      isActive,
+    });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Subjects retrieved successfully!",
+        ),
+      );
+  } catch (error) {
+    console.error("Error retrieving paginated subjects:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
+  }
+};
+
+export const getSubjectByIdController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const subjectId = parseInt(id);
+
+    if (isNaN(subjectId)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid subject ID"));
     }
-    res
+
+    const subject = await getSubjectById(subjectId);
+
+    if (!subject) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, "ERROR", null, "Subject not found"));
+    }
+
+    return res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
           subject,
-          "Subject fetched successfully",
+          "Subject retrieved successfully!",
         ),
       );
   } catch (error) {
-    handleError(error, res, next);
+    console.error("Error retrieving subject:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
   }
 };
 
-export const getAllSubjectsHandler = async (
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  try {
-    const subjects = await getAllSubjects();
-    res
-      .status(200)
-      .json(new ApiResponse(200, "SUCCESS", subjects, "All subjects fetched"));
-  } catch (error) {
-    handleError(error, res, next);
-  }
-};
-
-export const updateSubjectHandler = async (
+export const getActiveSubjectsController = async (
   req: Request,
   res: Response,
-  next: NextFunction,
 ) => {
   try {
-    const id = Number(req.query.id || req.params.id);
-    const updated = await updateSubject(id, req.body);
-    if (!updated) {
-      res
-        .status(404)
-        .json(new ApiResponse(404, "NOT_FOUND", null, "Subject not found"));
-      return;
-    }
-    res
+    const subjects = await getActiveSubjects();
+
+    return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          "UPDATED",
-          updated,
-          "Subject updated successfully",
+          "SUCCESS",
+          subjects,
+          "Active subjects retrieved successfully!",
         ),
       );
   } catch (error) {
-    handleError(error, res, next);
+    console.error("Error retrieving active subjects:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
   }
 };
 
-export const deleteSubjectHandler = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateSubjectController = async (req: Request, res: Response) => {
   try {
-    const id = Number(req.query.id || req.params.id);
-    const result = await deleteSubjectSafe(id);
-    if (!result) {
-      res
-        .status(404)
-        .json(new ApiResponse(404, "NOT_FOUND", null, "Subject not found"));
-      return;
+    const { id } = req.params;
+    const subjectId = parseInt(id);
+
+    if (isNaN(subjectId)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid subject ID"));
     }
-    res
+
+    const { legacySubjectId, name, code, sequence, isActive } = req.body;
+
+    // Check if subject exists
+    const existingSubject = await getSubjectById(subjectId);
+    if (!existingSubject) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, "ERROR", null, "Subject not found"));
+    }
+
+    const updateData: any = {};
+    if (legacySubjectId !== undefined)
+      updateData.legacySubjectId = legacySubjectId;
+    if (name !== undefined) updateData.name = name;
+    if (code !== undefined) updateData.code = code;
+    if (sequence !== undefined) updateData.sequence = sequence;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    const updatedSubject = await updateSubject(subjectId, updateData);
+
+    return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          "DELETED",
-          result as any,
-          (result as any).message ?? "",
+          "SUCCESS",
+          updatedSubject,
+          "Subject updated successfully!",
         ),
       );
   } catch (error) {
-    handleError(error, res, next);
+    console.error("Error updating subject:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
+  }
+};
+
+export const deleteSubjectController = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const subjectId = parseInt(id);
+
+    if (isNaN(subjectId)) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "Invalid subject ID"));
+    }
+
+    // Check if subject exists
+    const existingSubject = await getSubjectById(subjectId);
+    if (!existingSubject) {
+      return res
+        .status(404)
+        .json(new ApiResponse(404, "ERROR", null, "Subject not found"));
+    }
+
+    await deleteSubject(subjectId);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, "SUCCESS", null, "Subject deleted successfully!"),
+      );
+  } catch (error) {
+    console.error("Error deleting subject:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
+  }
+};
+
+export const bulkUploadSubjectsController = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    if (!req.file) {
+      return res
+        .status(400)
+        .json(new ApiResponse(400, "ERROR", null, "No file uploaded"));
+    }
+
+    const result = await bulkUploadSubjects(req.file);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          `Bulk upload completed. ${result.success.length} subjects created successfully.`,
+        ),
+      );
+  } catch (error) {
+    console.error("Error in bulk upload:", error);
+    return res
+      .status(500)
+      .json(new ApiResponse(500, "ERROR", null, "Internal server error"));
   }
 };

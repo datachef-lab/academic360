@@ -1,21 +1,12 @@
 import { useAuth } from "@/features/auth/hooks/use-auth";
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React from "react";
 
 type ProtectedRouteWrapperProps = {
   children: React.ReactNode;
 };
 
 export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrapperProps) {
-  const navigate = useNavigate();
-
   const { accessToken } = useAuth();
 
-  useEffect(() => {
-    if (!accessToken) {
-      navigate("/", { replace: true });
-    }
-  }, [accessToken, navigate]);
-
-  return children;
+  return accessToken && children;
 }

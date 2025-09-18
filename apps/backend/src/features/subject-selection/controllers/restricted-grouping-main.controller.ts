@@ -2,10 +2,11 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
-  createRestrictedGroupingMain,
+  createRestrictedGroupingMainFromDto,
   getRestrictedGroupingMainById,
   getAllRestrictedGroupingMains,
-  updateRestrictedGroupingMain,
+  getRestrictedGroupingMainsPaginated,
+  updateRestrictedGroupingMainFromDto,
   deleteRestrictedGroupingMain,
   bulkUploadRestrictedGroupingMains,
 } from "@/features/subject-selection/services/restricted-grouping-main.service.js";
@@ -17,7 +18,23 @@ export const createRestrictedGroupingMainHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const created = await createRestrictedGroupingMain(req.body);
+    // Enforce DTO-only input
+    const body = req.body as any;
+    const isDtoShape = body && body.subjectType?.id && body.subject?.id;
+    if (!isDtoShape) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Request body must be DTO-shaped: { subjectType: { id }, subject: { id }, ... }",
+          ),
+        );
+      return;
+    }
+    const created = await createRestrictedGroupingMainFromDto(body);
     res
       .status(201)
       .json(
@@ -79,14 +96,27 @@ export const getAllRestrictedGroupingMainsHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const restrictedGroupingMains = await getAllRestrictedGroupingMains();
+    const {
+      page = "1",
+      pageSize = "10",
+      search = "",
+      subjectType = "",
+      programCourseId,
+    } = req.query as Record<string, string>;
+    const paged = await getRestrictedGroupingMainsPaginated({
+      page: parseInt(page, 10) || 1,
+      pageSize: parseInt(pageSize, 10) || 10,
+      search: search || undefined,
+      subjectType: subjectType || undefined,
+      programCourseId: programCourseId ? Number(programCourseId) : undefined,
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          restrictedGroupingMains,
+          paged,
           "Restricted grouping mains retrieved successfully!",
         ),
       );
@@ -103,7 +133,33 @@ export const updateRestrictedGroupingMainHandler = async (
 ) => {
   try {
     const { id } = req.params;
-    const updated = await updateRestrictedGroupingMain(Number(id), req.body);
+    const body = req.body as any;
+    // Enforce DTO-only input (allow partial DTO for update, but still nested keys)
+    const hasAnyDtoKey =
+      body &&
+      (body.subjectType?.id ||
+        body.subject?.id ||
+        Array.isArray(body.forClasses) ||
+        Array.isArray(body.cannotCombineWithSubjects) ||
+        Array.isArray(body.applicableProgramCourses) ||
+        typeof body.isActive === "boolean");
+    if (!hasAnyDtoKey) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Update payload must be DTO-shaped. Use nested keys like subjectType.id, subject.id, forClasses[], cannotCombineWithSubjects[], applicableProgramCourses[]",
+          ),
+        );
+      return;
+    }
+    const updated = await updateRestrictedGroupingMainFromDto(
+      Number(id),
+      body as any,
+    );
     if (!updated) {
       res
         .status(404)

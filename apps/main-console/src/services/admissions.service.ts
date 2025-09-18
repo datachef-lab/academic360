@@ -13,20 +13,20 @@ export interface AdmissionUpdatePayload {
 
 // API helpers using axios
 export async function fetchAdmissions(): Promise<ApiResonse<AdmissionSummary[]>> {
-    const res = await axiosInstance.get<ApiResonse<AdmissionSummary[]>>("/api/admissions");
-    console.log('fetchAdmissions response:', res.data);
-    
-    return res.data;
-  }
+  const res = await axiosInstance.get<ApiResonse<AdmissionSummary[]>>("/api/admissions");
+  console.log("fetchAdmissions response:", res.data);
+
+  return res.data;
+}
 export async function fetchAdmissionStats() {
-    const res = await axiosInstance.get("/api/admissions/stats");
-    console.log('fetchAdmissionStats response:', res.data);
-    return res.data.data;
-  }
+  const res = await axiosInstance.get("/api/admissions/stats");
+  console.log("fetchAdmissionStats response:", res.data);
+  return res.data.data;
+}
 
 export async function fetchStatsSummary() {
   const res = await axiosInstance.get("/api/admissions/stats-summary");
-  console.log('fetchStatsSummary response:', res.data);
+  console.log("fetchStatsSummary response:", res.data);
   return res.data.data;
 }
 
@@ -52,11 +52,23 @@ export async function findAdmissionById(id: number): Promise<ApiResonse<Admissio
 
 export async function fetchAcademicYears() {
   const res = await axiosInstance.get("/api/v1/academics/all");
-  console.log('/api/v1/academics/all: ', res.data)
+  console.log("/api/v1/academics/all: ", res.data);
   return res.data;
 }
 
 export async function fetchApplicationFormsByAdmissionId(admissionId: number) {
   const res = await axiosInstance.get(`/api/admissions/application-forms/admission/${admissionId}`);
   return res.data.data;
+}
+
+// Board Subject Names API
+export interface BoardSubjectName {
+  id: number;
+  name: string;
+  code: string | null;
+}
+
+export async function getActiveBoardSubjectNames(): Promise<BoardSubjectName[]> {
+  const res = await axiosInstance.get<ApiResonse<BoardSubjectName[]>>("/api/admissions/board-subject-names/active");
+  return res.data.payload;
 }

@@ -356,7 +356,12 @@ export default function ProfileContent() {
                           <label htmlFor="personalEmail" className="text-sm font-medium text-gray-700">
                             Personal Email ID
                           </label>
-                          <Input id="personalEmail" value={user?.email || ""} disabled className="bg-gray-50" />
+                          <Input
+                            id="personalEmail"
+                            value={student?.personalEmail || ""}
+                            disabled
+                            className="bg-gray-50"
+                          />
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="institutionalEmail" className="text-sm font-medium text-gray-700">
@@ -442,7 +447,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resDistrict"
-                                  value={personalDetails?.residentialAddress?.otherDistrict || ""}
+                                  value={
+                                    personalDetails?.residentialAddress?.otherDistrict ||
+                                    personalDetails?.residentialAddress?.district?.name ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -542,7 +551,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailDistrict"
-                                  value={personalDetails?.mailingAddress?.otherDistrict || ""}
+                                  value={
+                                    personalDetails?.mailingAddress?.otherDistrict ||
+                                    personalDetails?.mailingAddress?.district?.name ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />

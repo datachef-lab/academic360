@@ -1,16 +1,2 @@
-17-09-2025	16:46:05	4998200d-fd86-42a2-bf57-8b67bb644ddb	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:45:57	732a5c16-684d-4c5a-9bdf-6e472ccc4088	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:45:41	02958181-1a4a-40ad-8b4b-05fc12a8b8e3	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:40:04	7fe4ccd5-ee85-49be-bb9e-8c858468ed9c	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:40:03	3d364f0e-9f79-4830-8aaf-50dd498d10e0	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:39:56	9335aeaf-8ac2-4b32-b10b-1c6f42193211	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:39:56	aafde166-edfb-4b56-9cc4-adc5ec4b7650	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities" order by "board_universities"."sequence"
-params: 	GET	/api/board-universities	http://localhost:5173
-17-09-2025	16:27:11	eeaf42de-f750-4df8-8524-6f0137b7b649	Error: Failed query: select "id", "legacy_board_university_id", "name", "degree_id", "passing_marks", "code", "address_id", "sequence", "disabled", "created_at", "updated_at" from "board_universities"
-params: 	GET	/api/board-universities	http://localhost:5173
+17-09-2025	23:20:29	52493834-b0be-43be-bd73-d44b4add040c	Error: Failed query: select "id", "academic_year_id_fk", "admission_code", "is_closed", "start_date", "last_date", "archived", "created_at", "updated_at", "remarks" from "admissions" where "admissions"."id" = $1
+params: NaN	GET	/api/admissions/board-subject-names	http://localhost:5173

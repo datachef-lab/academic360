@@ -6,35 +6,7 @@ import { degreeModel } from "@repo/db/schemas/models/resources";
 import { addressModel } from "@repo/db/schemas/models/user";
 import XLSX from "xlsx";
 import fs from "fs";
-
-// Define DTO for board
-export interface BoardDto {
-  id: number;
-  legacyBoardId: number | null;
-  name: string;
-  degreeId: number | null;
-  passingMarks: number | null;
-  code: string | null;
-  addressId: number | null;
-  sequence: number | null;
-  isActive: boolean | null;
-  createdAt: Date;
-  updatedAt: Date;
-  degree: {
-    id: number;
-    name: string | null;
-    sequence: number | null;
-    isActive: boolean | null;
-  } | null;
-  address: {
-    id: number;
-    addressLine: string | null;
-    landmark: string | null;
-    otherCity: string | null;
-    otherState: string | null;
-    otherCountry: string | null;
-  } | null;
-}
+import { BoardDto } from "@repo/db/dtos";
 
 // Bulk upload interface
 export interface BulkUploadResult {
@@ -63,10 +35,8 @@ export async function getAllBoards(): Promise<BoardDto[]> {
       id: boardModel.id,
       legacyBoardId: boardModel.legacyBoardId,
       name: boardModel.name,
-      degreeId: boardModel.degreeId,
       passingMarks: boardModel.passingMarks,
       code: boardModel.code,
-      addressId: boardModel.addressId,
       sequence: boardModel.sequence,
       isActive: boardModel.isActive,
       createdAt: boardModel.createdAt,
@@ -91,19 +61,17 @@ export async function getAllBoards(): Promise<BoardDto[]> {
     .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id));
 
   return results.map((result) => ({
-    id: result.id,
+    id: result.id!,
     legacyBoardId: result.legacyBoardId,
-    name: result.name,
-    degreeId: result.degreeId,
+    name: result.name!,
     passingMarks: result.passingMarks,
     code: result.code,
-    addressId: result.addressId,
     sequence: result.sequence,
     isActive: result.isActive,
-    createdAt: result.createdAt,
-    updatedAt: result.updatedAt,
-    degree: result.degree,
-    address: result.address,
+    createdAt: result.createdAt || new Date(),
+    updatedAt: result.updatedAt || new Date(),
+    degree: result.degree || null,
+    address: result.address ? { ...result.address, district: null } : null,
   }));
 }
 
@@ -113,10 +81,8 @@ export async function getBoardById(id: number): Promise<BoardDto | null> {
       id: boardModel.id,
       legacyBoardId: boardModel.legacyBoardId,
       name: boardModel.name,
-      degreeId: boardModel.degreeId,
       passingMarks: boardModel.passingMarks,
       code: boardModel.code,
-      addressId: boardModel.addressId,
       sequence: boardModel.sequence,
       isActive: boardModel.isActive,
       createdAt: boardModel.createdAt,
@@ -144,19 +110,17 @@ export async function getBoardById(id: number): Promise<BoardDto | null> {
   if (!result) return null;
 
   return {
-    id: result.id,
+    id: result.id!,
     legacyBoardId: result.legacyBoardId,
-    name: result.name,
-    degreeId: result.degreeId,
+    name: result.name!,
     passingMarks: result.passingMarks,
     code: result.code,
-    addressId: result.addressId,
     sequence: result.sequence,
     isActive: result.isActive,
-    createdAt: result.createdAt,
-    updatedAt: result.updatedAt,
-    degree: result.degree,
-    address: result.address,
+    createdAt: result.createdAt || new Date(),
+    updatedAt: result.updatedAt || new Date(),
+    degree: result.degree || null,
+    address: result.address ? { ...result.address, district: null } : null,
   };
 }
 

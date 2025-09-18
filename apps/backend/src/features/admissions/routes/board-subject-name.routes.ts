@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createBoardSubjectNameHandler,
   getAllBoardSubjectNamesHandler,
+  getActiveBoardSubjectNamesHandler,
   getBoardSubjectNameByIdHandler,
   updateBoardSubjectNameHandler,
   deleteBoardSubjectNameHandler,
@@ -14,6 +15,7 @@ const router = Router();
 // Board Subject Name routes
 router.post("/", createBoardSubjectNameHandler);
 router.get("/", getAllBoardSubjectNamesHandler);
+router.get("/active", getActiveBoardSubjectNamesHandler);
 router.get("/:id", getBoardSubjectNameByIdHandler);
 router.put("/:id", updateBoardSubjectNameHandler);
 router.delete("/:id", deleteBoardSubjectNameHandler);

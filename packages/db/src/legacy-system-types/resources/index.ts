@@ -29,8 +29,8 @@ export interface OldCitySubtab {
 
 export interface OldDistrict {
     readonly id: number;
-    stateId: string; // References: countrysubtab
-    cityId: string; // References: citysubtab
+    stateid: string; // References: countrysubtab
+    cityid: string; // References: citysubtab
     name: string;
 }
 

@@ -1,14 +1,18 @@
-import { db, mysqlConnection } from "@/db/index.js";
-import { Subject, subjectModel } from "@repo/db/schemas/models/course-design";
-import { and, countDistinct, eq, ilike } from "drizzle-orm";
-import { paperModel } from "@repo/db/schemas/models/course-design";
+import { db } from "@/db/index.js";
+import { subjectModel } from "@repo/db/schemas/models/course-design";
+import {
+  Subject,
+  SubjectT,
+} from "@repo/db/schemas/models/course-design/subject.model";
+import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { SubjectDto } from "@repo/db/dtos/course-design";
 import XLSX from "xlsx";
 import fs from "fs";
-import { OldSubject } from "@repo/db/legacy-system-types/admissions";
+import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 
 // Bulk upload interface
-export interface BulkUploadResult {
-  success: Subject[];
+export interface SubjectBulkUploadResult {
+  success: SubjectDto[];
   errors: Array<{
     row: number;
     data: unknown[];
@@ -16,237 +20,169 @@ export interface BulkUploadResult {
   }>;
 }
 
-// export async function loadOldSubjects() {
-//   const [oldSubjects] = (await mysqlConnection.query(`
-//         SELECT * FROM subject;
-//     `)) as [OldSubject[], any];
+export async function createSubject(data: Subject): Promise<SubjectDto> {
+  const [created] = await db.insert(subjectModel).values(data).returning();
 
-//   for (let i = 0; i < oldSubjects.length; i++) {
-//     const oldSubject = oldSubjects[i];
-//     console.log("loading old subject", oldSubject);
-//     const [foundSubject] = await db
-//       .select()
-//       .from(subjectModel)
-//       .where(
-//         and(
-//           ilike(subjectModel.name, oldSubject.subjectName!.trim()),
-//           eq(subjectModel.legacySubjectId, oldSubject.id!),
-//         ),
-//       );
-//     if (foundSubject) continue;
-//     await db
-//       .insert(subjectModel)
-//       .values({
-//         legacySubjectId: oldSubject.id!,
-//         name: oldSubject.subjectName!.trim(),
-//         code: oldSubject.univcode?.trim(),
-//       })
-//       .returning();
-//   }
-
-//   return oldSubjects;
-// }
-
-export async function createSubject(data: Subject) {
-  const { id, createdAt, updatedAt, ...props } = data;
-
-  // Check if subject with same name and code already exists
-  const [existingSubject] = await db
-    .select()
-    .from(subjectModel)
-    .where(
-      and(
-        eq(subjectModel.name, data.name),
-        data.code ? eq(subjectModel.code, data.code) : undefined,
-      ),
-    );
-
-  if (existingSubject) return null;
-
-  const [created] = await db.insert(subjectModel).values(props).returning();
-  return created;
+  return {
+    id: created.id!,
+    legacySubjectId: created.legacySubjectId,
+    name: created.name,
+    code: created.code,
+    sequence: created.sequence,
+    isActive: created.isActive,
+    createdAt: created.createdAt || new Date(),
+    updatedAt: created.updatedAt || new Date(),
+  };
 }
 
-// Bulk upload subjects
-export const bulkUploadSubjects = async (
-  filePath: string,
-  io?: any,
-  uploadSessionId?: string,
-): Promise<BulkUploadResult> => {
-  const result: BulkUploadResult = {
-    success: [],
-    errors: [],
-  };
+export async function getAllSubjects(): Promise<SubjectDto[]> {
+  const results = await db
+    .select({
+      id: subjectModel.id,
+      legacySubjectId: subjectModel.legacySubjectId,
+      name: subjectModel.name,
+      code: subjectModel.code,
+      sequence: subjectModel.sequence,
+      isActive: subjectModel.isActive,
+      createdAt: subjectModel.createdAt,
+      updatedAt: subjectModel.updatedAt,
+    })
+    .from(subjectModel)
+    .orderBy(subjectModel.name);
 
-  try {
-    // Read the Excel file
-    const workbook = XLSX.readFile(filePath);
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
+  return results.map((result) => ({
+    id: result.id!,
+    legacySubjectId: result.legacySubjectId,
+    name: result.name,
+    code: result.code,
+    sequence: result.sequence,
+    isActive: result.isActive,
+    createdAt: result.createdAt || new Date(),
+    updatedAt: result.updatedAt || new Date(),
+  }));
+}
 
-    // Convert to JSON
-    const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+export async function getSubjectsPaginated(options: {
+  page: number;
+  pageSize: number;
+  search?: string;
+  isActive?: boolean;
+}): Promise<PaginatedResponse<SubjectDto>> {
+  const page = Math.max(1, options.page || 1);
+  const pageSize = Math.max(1, Math.min(100, options.pageSize || 10));
+  const offset = (page - 1) * pageSize;
 
-    // Skip header row and process data
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i] as any[];
-      const rowNumber = i + 1;
-
-      try {
-        // Map Excel columns to our model
-        const subjectData = {
-          name: row[0]?.toString()?.trim(),
-          code: row[1]?.toString()?.trim() || null,
-          sequence: row[2] ? parseInt(row[2].toString()) : null,
-          disabled:
-            row[3]?.toString()?.toLowerCase() === "inactive" ||
-            row[3]?.toString()?.toLowerCase() === "false",
-        };
-
-        // Validate required fields
-        if (!subjectData.name) {
-          result.errors.push({
-            row: rowNumber,
-            data: row,
-            error: "Name is required",
-          });
-          continue;
-        }
-
-        // Check if name + code combination is unique (most important validation)
-        if (subjectData.code) {
-          const existingWithNameAndCode = await db
-            .select()
-            .from(subjectModel)
-            .where(
-              and(
-                eq(subjectModel.name, subjectData.name),
-                eq(subjectModel.code, subjectData.code),
-              ),
-            );
-
-          if (existingWithNameAndCode.length > 0) {
-            result.errors.push({
-              row: rowNumber,
-              data: row,
-              error: `Subject with name "${subjectData.name}" and code "${subjectData.code}" already exists`,
-            });
-            continue;
-          }
-        }
-
-        // Check if code is unique (if provided and no name+code duplicate found)
-        if (subjectData.code) {
-          const existingWithCode = await db
-            .select()
-            .from(subjectModel)
-            .where(eq(subjectModel.code, subjectData.code));
-
-          if (existingWithCode.length > 0) {
-            result.errors.push({
-              row: rowNumber,
-              data: row,
-              error: `Code ${subjectData.code} already exists`,
-            });
-            continue;
-          }
-        }
-
-        // Check if sequence is unique (if provided)
-        if (subjectData.sequence !== null) {
-          const existingWithSequence = await db
-            .select()
-            .from(subjectModel)
-            .where(eq(subjectModel.sequence, subjectData.sequence));
-
-          if (existingWithSequence.length > 0) {
-            result.errors.push({
-              row: rowNumber,
-              data: row,
-              error: `Sequence ${subjectData.sequence} already exists`,
-            });
-            continue;
-          }
-        }
-
-        // Insert the subject
-        const newSubject = await db
-          .insert(subjectModel)
-          .values(subjectData)
-          .returning();
-
-        result.success.push(newSubject[0]);
-      } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
-        result.errors.push({
-          row: rowNumber,
-          data: row,
-          error: errorMessage,
-        });
-      }
-
-      // Emit progress
-      if (io && uploadSessionId) {
-        io.to(uploadSessionId).emit("bulk-upload-progress", {
-          processed: i,
-          total: data.length - 1,
-          percent: Math.round((i / (data.length - 1)) * 100),
-        });
-      }
-    }
-
-    // Emit completion/failure event
-    if (io && uploadSessionId) {
-      if (result.errors.length > 0) {
-        io.to(uploadSessionId).emit("bulk-upload-failed", {
-          errorCount: result.errors.length,
-        });
-      } else {
-        io.to(uploadSessionId).emit("bulk-upload-done", {
-          successCount: result.success.length,
-        });
-      }
-    }
-
-    // Clean up the temporary file
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-
-    return result;
-  } catch (error: unknown) {
-    // Clean up the temporary file
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    throw new Error(`Failed to process Excel file: ${errorMessage}`);
+  const filters = [] as any[];
+  const q = (options.search || "").trim();
+  if (q) {
+    filters.push(ilike(subjectModel.name, `%${q}%`));
   }
-};
+  if (typeof options.isActive === "boolean") {
+    filters.push(eq(subjectModel.isActive, options.isActive));
+  }
 
-export async function getSubjectById(id: number) {
-  const [subject] = await db
-    .select()
+  // Get total count
+  const [{ count }] = await db
+    .select({ count: countDistinct(subjectModel.id) })
+    .from(subjectModel)
+    .where(filters.length ? (and as any)(...filters) : undefined);
+
+  const totalElements = Number(count);
+  const totalPages = Math.max(1, Math.ceil(totalElements / pageSize));
+
+  // Get paginated results
+  const results = await db
+    .select({
+      id: subjectModel.id,
+      legacySubjectId: subjectModel.legacySubjectId,
+      name: subjectModel.name,
+      code: subjectModel.code,
+      sequence: subjectModel.sequence,
+      isActive: subjectModel.isActive,
+      createdAt: subjectModel.createdAt,
+      updatedAt: subjectModel.updatedAt,
+    })
+    .from(subjectModel)
+    .where(filters.length ? (and as any)(...filters) : undefined)
+    .orderBy(subjectModel.name)
+    .limit(pageSize)
+    .offset(offset);
+
+  const content = results.map((result) => ({
+    id: result.id!,
+    legacySubjectId: result.legacySubjectId,
+    name: result.name,
+    code: result.code,
+    sequence: result.sequence,
+    isActive: result.isActive,
+    createdAt: result.createdAt || new Date(),
+    updatedAt: result.updatedAt || new Date(),
+  }));
+
+  return { content, page, pageSize, totalPages, totalElements };
+}
+
+export async function getSubjectById(id: number): Promise<SubjectDto | null> {
+  const [result] = await db
+    .select({
+      id: subjectModel.id,
+      legacySubjectId: subjectModel.legacySubjectId,
+      name: subjectModel.name,
+      code: subjectModel.code,
+      sequence: subjectModel.sequence,
+      isActive: subjectModel.isActive,
+      createdAt: subjectModel.createdAt,
+      updatedAt: subjectModel.updatedAt,
+    })
     .from(subjectModel)
     .where(eq(subjectModel.id, id));
-  return subject;
+
+  if (!result) return null;
+
+  return {
+    id: result.id!,
+    legacySubjectId: result.legacySubjectId,
+    name: result.name,
+    code: result.code,
+    sequence: result.sequence,
+    isActive: result.isActive,
+    createdAt: result.createdAt || new Date(),
+    updatedAt: result.updatedAt || new Date(),
+  };
 }
 
-export async function getAllSubjects() {
-  return db.select().from(subjectModel);
+export async function getActiveSubjects(): Promise<
+  Array<{ id: number; name: string; code: string | null }>
+> {
+  const results = await db
+    .select({
+      id: subjectModel.id,
+      name: subjectModel.name,
+      code: subjectModel.code,
+    })
+    .from(subjectModel)
+    .where(eq(subjectModel.isActive, true))
+    .orderBy(subjectModel.name);
+
+  return results;
 }
 
-export async function updateSubject(id: number, data: Partial<Subject>) {
-  const { id: idObj, createdAt, updatedAt, ...props } = data;
-  // TODO: Check if name and code are unique
+export async function updateSubject(
+  id: number,
+  data: Partial<Subject>,
+): Promise<SubjectDto> {
   const [updated] = await db
     .update(subjectModel)
-    .set(props)
+    .set({ ...data, updatedAt: new Date() })
     .where(eq(subjectModel.id, id))
     .returning();
-  return updated;
+
+  // Get related data for the updated record
+  const result = await getSubjectById(updated.id);
+  if (!result) {
+    throw new Error("Failed to retrieve updated subject");
+  }
+  return result;
 }
 
 export async function deleteSubject(id: number) {
@@ -257,42 +193,41 @@ export async function deleteSubject(id: number) {
   return deleted;
 }
 
-export async function deleteSubjectSafe(id: number) {
-  const [found] = await db
-    .select()
-    .from(subjectModel)
-    .where(eq(subjectModel.id, id));
-  if (!found) {
-    return null;
+export async function bulkUploadSubjects(
+  file: Express.Multer.File,
+): Promise<SubjectBulkUploadResult> {
+  const workbook = XLSX.readFile(file.path);
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet);
+
+  const success: SubjectDto[] = [];
+  const errors: Array<{ row: number; data: unknown[]; error: string }> = [];
+
+  for (let i = 0; i < data.length; i++) {
+    try {
+      const row = data[i] as any;
+      const subjectData: Subject = {
+        legacySubjectId: row.legacySubjectId || null,
+        name: row.name,
+        code: row.code || null,
+        sequence: row.sequence || null,
+        isActive: row.isActive !== undefined ? row.isActive : true,
+      };
+
+      const created = await createSubject(subjectData);
+      success.push(created);
+    } catch (error) {
+      errors.push({
+        row: i + 2, // +2 because Excel is 1-indexed and we skip header
+        data: Object.values(data[i] as any),
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   }
 
-  const [{ paperCount }] = await db
-    .select({ paperCount: countDistinct(paperModel.id) })
-    .from(paperModel)
-    .where(eq(paperModel.subjectId, id));
+  // Clean up file
+  fs.unlinkSync(file.path);
 
-  if (paperCount > 0) {
-    return {
-      success: false,
-      message: "Cannot delete subject. It is associated with other records.",
-      records: [{ count: paperCount, type: "Papers" }],
-    };
-  }
-
-  const [deleted] = await db
-    .delete(subjectModel)
-    .where(eq(subjectModel.id, id))
-    .returning();
-  if (deleted) {
-    return {
-      success: true,
-      message: "Subject deleted successfully.",
-      records: [],
-    };
-  }
-  return {
-    success: false,
-    message: "Failed to delete subject.",
-    records: [],
-  };
+  return { success, errors };
 }

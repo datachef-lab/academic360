@@ -3,9 +3,12 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
   createRelatedSubjectMain,
+  createRelatedSubjectMainFromDto,
   getRelatedSubjectMainById,
   getAllRelatedSubjectMains,
+  getRelatedSubjectMainsPaginated,
   updateRelatedSubjectMain,
+  updateRelatedSubjectMainFromDto,
   deleteRelatedSubjectMain,
   bulkUploadRelatedSubjectMains,
 } from "@/features/subject-selection/services/related-subject-main.service.js";
@@ -17,7 +20,13 @@ export const createRelatedSubjectMainHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const created = await createRelatedSubjectMain(req.body);
+    // Accept both legacy model shape and DTO shape. Prefer DTO.
+    const body = req.body as any;
+    const isDtoShape =
+      body && body.programCourse && body.subjectType && body.boardSubjectName;
+    const created = isDtoShape
+      ? await createRelatedSubjectMainFromDto(body)
+      : await createRelatedSubjectMain(body);
     res
       .status(201)
       .json(
@@ -77,14 +86,27 @@ export const getAllRelatedSubjectMainsHandler = async (
   next: NextFunction,
 ) => {
   try {
-    const relatedSubjectMains = await getAllRelatedSubjectMains();
+    const {
+      page = "1",
+      pageSize = "10",
+      search = "",
+      programCourse = "",
+      subjectType = "",
+    } = req.query as Record<string, string>;
+    const paged = await getRelatedSubjectMainsPaginated({
+      page: parseInt(page, 10) || 1,
+      pageSize: parseInt(pageSize, 10) || 10,
+      search: search || undefined,
+      programCourse: programCourse || undefined,
+      subjectType: subjectType || undefined,
+    });
     res
       .status(200)
       .json(
         new ApiResponse(
           200,
           "SUCCESS",
-          relatedSubjectMains,
+          paged,
           "Related subject mains retrieved successfully!",
         ),
       );
@@ -101,7 +123,9 @@ export const updateRelatedSubjectMainHandler = async (
 ) => {
   try {
     const { id } = req.params;
-    const updated = await updateRelatedSubjectMain(Number(id), req.body);
+    const body = req.body as any;
+    // Accept both legacy model shape and DTO shape. If DTO-like keys present, use DTO update
+    const updated = await updateRelatedSubjectMainFromDto(Number(id), body);
     if (!updated) {
       res
         .status(404)

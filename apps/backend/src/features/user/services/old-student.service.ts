@@ -669,12 +669,12 @@ async function addAdmCourseApps(
       oldCourseDetail,
       applicationForm,
     );
-    console.log(
-      "newAdmissionCourseDetails",
-      newAdmissionCourseDetails,
-      "created newAdmissionCourseDetails?.id:",
-      newAdmissionCourseDetails?.id,
-    );
+    // console.log(
+    //     "newAdmissionCourseDetails",
+    //     newAdmissionCourseDetails,
+    //     "created newAdmissionCourseDetails?.id:",
+    //     newAdmissionCourseDetails?.id,
+    // );
   }
 }
 
@@ -1115,13 +1115,13 @@ export async function processApplicationForm(
     .from(academicYearModel)
     .where(eq(academicYearModel.id, session?.academicYearId as number));
 
-  console.log(
-    "oldStudent",
-    oldStudent,
-    "oldstudent_id:",
-    oldStudent?.id,
-    oldStudent?.name,
-  );
+  // console.log(
+  //     "oldStudent",
+  //     oldStudent,
+  //     "oldstudent_id:",
+  //     oldStudent?.id,
+  //     oldStudent?.name,
+  // );
 
   const user = await addUser(
     oldAdmStudentPersonalDetails,
@@ -2350,11 +2350,19 @@ export async function addDistrict(oldDistrictId: number) {
     `)) as [OldDistrict[], any];
 
   if (!oldDistrict) {
+    console.warn("addDistrict(): No oldDistrict found for id", oldDistrictId);
     return null;
   }
 
-  const city = await addCity(+oldDistrict.cityId);
+  const city = await addCity(+oldDistrict.cityid);
   if (!city) {
+    console.warn(
+      "addDistrict(): addCity returned null for oldDistrict.cityId",
+      oldDistrict.cityid,
+      "(oldDistrictId:",
+      oldDistrictId,
+      ")",
+    );
     return null;
   }
 
@@ -2368,6 +2376,12 @@ export async function addDistrict(oldDistrictId: number) {
       ),
     );
   if (existingDistrict) {
+    console.log(
+      "addDistrict(): existingDistrict found",
+      existingDistrict.id,
+      "for oldDistrictId",
+      oldDistrictId,
+    );
     return existingDistrict;
   }
 
@@ -2380,6 +2394,14 @@ export async function addDistrict(oldDistrictId: number) {
     })
     .returning();
 
+  console.log(
+    "addDistrict(): created new district",
+    newDistrict.id,
+    "for oldDistrictId",
+    oldDistrictId,
+    "cityId",
+    city.id,
+  );
   return newDistrict;
 }
 
@@ -2651,6 +2673,9 @@ async function addPersonalDetails(
         districtId: districtResolved?.id || undefined,
         otherState: mailingOtherState || undefined,
         otherCity: mailingOtherCity || undefined,
+        otherDistrict: isAdmStudent(oldDetails)
+          ? ((oldDetails.othernewDistrict || undefined) as string | undefined)
+          : undefined,
         postofficeId: mailingPostOfficeId || undefined,
         otherPostoffice: mailingOtherPostOffice || undefined,
         policeStationId: mailingPoliceStationId || undefined,
@@ -2687,9 +2712,11 @@ async function addPersonalDetails(
         stateId: stateResolved?.id || undefined,
         cityId: cityResolved?.id || undefined,
         districtId: districtResolved?.id || undefined,
+        otherDistrict: isAdmStudent(oldDetails)
+          ? ((oldDetails.otherresiDistrict || undefined) as string | undefined)
+          : undefined,
         otherState: resiOtherState || undefined,
         otherCity: resiOtherCity || undefined,
-        otherDistrict: resiOtherDistrict || undefined,
         postofficeId: resiPostOfficeId || undefined,
         otherPostoffice: resiOtherPostOffice || undefined,
         policeStationId: resiPoliceStationId || undefined,
@@ -2722,10 +2749,39 @@ async function addPersonalDetails(
       oldDetails.contactNo ||
       "";
 
+  // Normalize a value to a pure YYYY-MM-DD string to avoid timezone shifts
+  const toISODateOnly = (value: unknown): string | undefined => {
+    if (!value) return undefined;
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      // If already in YYYY-MM-DD, keep as-is
+      const isoDateOnly = /^\d{4}-\d{2}-\d{2}$/;
+      if (isoDateOnly.test(trimmed)) return trimmed;
+      const parsed = new Date(trimmed);
+      if (isNaN(parsed.getTime())) return undefined;
+      // Build a UTC date to avoid local-TZ off-by-one
+      const utc = new Date(
+        Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()),
+      )
+        .toISOString()
+        .slice(0, 10);
+      return utc;
+    }
+    if (value instanceof Date) {
+      const utc = new Date(
+        Date.UTC(value.getFullYear(), value.getMonth(), value.getDate()),
+      )
+        .toISOString()
+        .slice(0, 10);
+      return utc;
+    }
+    return undefined;
+  };
+
   const dateOfBirthVal: Date | string | null | undefined = isStaff(oldDetails)
     ? oldDetails.dateOfBirth
     : oldDetails.dateOfBirth;
-  const dateOfBirth = dateOfBirthVal ? new Date(dateOfBirthVal) : undefined;
+  const dateOfBirthISO = toISODateOnly(dateOfBirthVal as any);
   const sexId = isStaff(oldDetails) ? oldDetails.sexId : oldDetails.sexId;
   const gender = sexId === 0 ? undefined : sexId === 1 ? "MALE" : "FEMALE";
   const aadhaar = isStaff(oldDetails)
@@ -2861,9 +2917,8 @@ async function addPersonalDetails(
       mobileNumber: mobileNumber?.toString(),
       whatsappNumber: whatsappNumber as string | undefined,
       emergencyContactNumber: emergencyContactNumber as string | undefined,
-      dateOfBirth: (dateOfBirth
-        ? (dateOfBirth as Date)
-        : undefined) as unknown as string | null | undefined,
+      // Store as YYYY-MM-DD string to prevent off-by-one due to timezone
+      dateOfBirth: dateOfBirthISO as unknown as string | null | undefined,
       placeOfBirth: placeOfBirth as string | undefined,
       gender: gender as any,
       voterId: voterId as string | undefined,
@@ -3020,7 +3075,7 @@ async function processOldCourseDetails(
     .from(programCourseModel)
     .where(and(ilike(programCourseModel.name, oldCourse.courseName!.trim())));
 
-  console.log("programCourse", programCourse);
+  // console.log("programCourse", programCourse);
 
   if (!programCourse) {
     console.log("programCourse not found");
@@ -3338,10 +3393,10 @@ async function getSubjectRelatedFields(
       ),
     );
 
-  console.log(
-    "in getSubjectRelatedFields(), admissionProgramCourse",
-    admissionProgramCourse,
-  );
+  // console.log(
+  //     "in getSubjectRelatedFields(), admissionProgramCourse",
+  //     admissionProgramCourse,
+  // );
   if (!admissionProgramCourse) {
     throw new Error("Admission Program Course not found...!");
   }
@@ -3450,7 +3505,7 @@ async function getSubjectRelatedFields(
       continue;
     }
 
-    console.log("oldCvSubjectSelection", oldCvSubjectSelection.id);
+    // console.log("oldCvSubjectSelection", oldCvSubjectSelection.id);
     await addAdmSubjectPaperSelection(
       oldCvSubjectSelection,
       studentId,
@@ -3469,7 +3524,7 @@ async function findPaper(
   academicYear: AcademicYear,
   oldSubject: OldSubject,
 ) {
-  console.log("in findPaper(), oldSubject", oldSubject);
+  // console.log("in findPaper(), oldSubject", oldSubject);
   const [foundSubject] = await db
     .select()
     .from(subjectModel)

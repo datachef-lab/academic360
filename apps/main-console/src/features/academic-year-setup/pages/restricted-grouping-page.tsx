@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,202 +19,207 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Edit, Trash2, Download, Check, ChevronsUpDown } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
-import { useTablePagination } from "@/hooks/useTablePagination";
+import { restrictedGroupingApi } from "@/services/restricted-grouping.api";
+import { getSubjects, getProgramCourses, getSubjectTypes } from "@/services/course-design.api";
+import { getAllClasses } from "@/services/classes.service";
+import { toast } from "sonner";
+import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
+import type { SubjectDto } from "@repo/db/dtos/course-design";
+import { useAuth } from "@/features/auth/hooks/use-auth";
+// Class DTO is not used directly here
 
-// Mock data - updated with new column structure
-const programCourseRelations = [
-  {
-    id: 1,
-    subjectCategory: "MAJOR",
-    subject: "Financial Accounting",
-    semesters: ["I", "II"],
-    cannotCombineWith: ["Advanced Accounting", "Cost Accounting"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 2,
-    subjectCategory: "MINOR",
-    subject: "Business Mathematics",
-    semesters: ["I", "III"],
-    cannotCombineWith: ["Statistics", "Operations Research"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 3,
-    subjectCategory: "AECC",
-    subject: "Marketing Management",
-    semesters: ["III", "IV"],
-    cannotCombineWith: ["Digital Marketing", "Sales Management"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 4,
-    subjectCategory: "DSCC",
-    subject: "Corporate Finance",
-    semesters: ["I", "II"],
-    cannotCombineWith: ["Basic Accounting", "Financial Management"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: true,
-  },
-  // Additional rows for testing scroll
-  {
-    id: 5,
-    subjectCategory: "MDC",
-    subject: "Microeconomics",
-    semesters: ["I", "II"],
-    cannotCombineWith: ["Macroeconomics", "Economic Theory"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 6,
-    subjectCategory: "IDC",
-    subject: "Business Statistics",
-    semesters: ["II", "III"],
-    cannotCombineWith: ["Applied Statistics", "Data Analysis"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: false,
-  },
-  {
-    id: 7,
-    subjectCategory: "CVAC",
-    subject: "Human Resource Management",
-    semesters: ["III", "IV"],
-    cannotCombineWith: ["Organizational Behavior", "Personnel Management"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 8,
-    subjectCategory: "VAC",
-    subject: "Investment Analysis",
-    semesters: ["IV", "V"],
-    cannotCombineWith: ["Portfolio Management", "Financial Markets"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 9,
-    subjectCategory: "MAJOR",
-    subject: "Operations Management",
-    semesters: ["II", "IV"],
-    cannotCombineWith: ["Supply Chain Management", "Quality Management"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 10,
-    subjectCategory: "MINOR",
-    subject: "Information Systems",
-    semesters: ["III", "V"],
-    cannotCombineWith: ["Database Management", "System Analysis"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: false,
-  },
-  {
-    id: 11,
-    subjectCategory: "AECC",
-    subject: "Business Law",
-    semesters: ["I", "III"],
-    cannotCombineWith: ["Corporate Law", "Commercial Law"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 12,
-    subjectCategory: "DSCC",
-    subject: "Business Communication",
-    semesters: ["I", "II"],
-    cannotCombineWith: ["Technical Writing", "Presentation Skills"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 13,
-    subjectCategory: "MDC",
-    subject: "Business Ethics",
-    semesters: ["IV", "V"],
-    cannotCombineWith: ["Corporate Governance", "Social Responsibility"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 14,
-    subjectCategory: "IDC",
-    subject: "Strategic Management",
-    semesters: ["V", "VI"],
-    cannotCombineWith: ["Business Policy", "Competitive Strategy"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 15,
-    subjectCategory: "CVAC",
-    subject: "Research Methodology",
-    semesters: ["IV", "VI"],
-    cannotCombineWith: ["Data Collection", "Statistical Analysis"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: false,
-  },
-  {
-    id: 16,
-    subjectCategory: "VAC",
-    subject: "International Business",
-    semesters: ["V", "VI"],
-    cannotCombineWith: ["Global Marketing", "Cross-cultural Management"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 17,
-    subjectCategory: "MAJOR",
-    subject: "Entrepreneurship Development",
-    semesters: ["V", "VII"],
-    cannotCombineWith: ["Small Business Management", "Venture Capital"],
-    applicableProgramCoursesFor: ["BBA - Business Administration"],
-    isActive: true,
-  },
-  {
-    id: 18,
-    subjectCategory: "MINOR",
-    subject: "Leadership Skills",
-    semesters: ["VI", "VII"],
-    cannotCombineWith: ["Team Management", "Conflict Resolution"],
-    applicableProgramCoursesFor: ["B.COM (H) - Commerce & Management", "BBA - Business Administration"],
-    isActive: true,
-  },
-];
+// Use only DTOs from packages/db. Define minimal local types for UI needs.
+type SubjectTypeLite = { id: number; name: string | null; code?: string | null };
+type ProgramCourseLite = { id: number; name: string | null };
 
-// Available options for dropdowns
-const availableSubjects = [
-  "Financial Accounting",
-  "Business Mathematics",
-  "Marketing Management",
-  "Corporate Finance",
-  "Operations Management",
-  "Programming Fundamentals",
-  "Data Structures & Algorithms",
-];
-
-const availableSemesters = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"];
-
-const subjectCategories = ["MAJOR", "MINOR", "AECC", "DSCC", "MDC", "IDC", "CVAC", "VAC"];
-
-const programCourses = [
-  "B.COM (H) - Commerce & Management",
-  "BBA - Business Administration",
-  "BCA - Computer Applications",
-  "B.Sc (IT) - Information Technology",
-];
+// UI representation of restricted grouping data
+interface UIRestrictedGrouping {
+  id: number;
+  subjectCategory: string;
+  subject: string;
+  semesters: string[];
+  cannotCombineWith: string[];
+  applicableProgramCoursesFor: string[];
+  isActive: boolean;
+}
 
 export default function RestrictedGroupingPage() {
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  // Loaded data (DTO-based)
+  const [relations, setRelations] = useState<UIRestrictedGrouping[]>([]);
+  const [allSubjects, setAllSubjects] = useState<string[]>([]);
+  const [allSemesters, setAllSemesters] = useState<string[]>([]);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allProgramCourses, setAllProgramCourses] = useState<string[]>([]);
+  const [subjectNameToId, setSubjectNameToId] = useState<Record<string, number>>({});
+  const [subjectTypeLabelToId, setSubjectTypeLabelToId] = useState<Record<string, number>>({});
+  const [classLabelToId, setClassLabelToId] = useState<Record<string, number>>({});
+  const [programCourseNameToId, setProgramCourseNameToId] = useState<Record<string, number>>({});
+
+  // Helpers
+  const toRomanSemester = (label: string): string => {
+    const romanMatch = label.match(/\b(I|II|III|IV|V|VI|VII|VIII)\b/i);
+    if (romanMatch) return romanMatch[0].toUpperCase();
+    const numeric = parseInt(label.replace(/[^0-9]/g, ""), 10);
+    const ROMANS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
+    if (!Number.isNaN(numeric) && numeric >= 1 && numeric <= 8) {
+      const roman = ROMANS[numeric - 1];
+      if (roman) return roman;
+    }
+    return label.toUpperCase();
+  };
+
+  // Edit dialog state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editCategory, setEditCategory] = useState("");
+  const [editSubject, setEditSubject] = useState("");
+  const [editCannotCombine, setEditCannotCombine] = useState<string[]>([]);
+  const [editSemesters, setEditSemesters] = useState<string[]>([]);
+  const [editProgramCourses, setEditProgramCourses] = useState<string[]>([]);
+  const [editIsActive, setEditIsActive] = useState(true);
+
+  const openEdit = (row: UIRestrictedGrouping) => {
+    setEditId(row.id);
+    setEditCategory(row.subjectCategory || "");
+    setEditSubject(row.subject || "");
+    setEditCannotCombine([...(row.cannotCombineWith || [])]);
+    setEditSemesters([...(row.semesters || [])]);
+    setEditProgramCourses([...(row.applicableProgramCoursesFor || [])]);
+    setEditIsActive(row.isActive);
+    setIsEditOpen(true);
+  };
+
+  const toggleEditArray = (value: string, arr: string[], setter: (next: string[]) => void) => {
+    if (arr.includes(value)) setter(arr.filter((v) => v !== value));
+    else setter([...arr, value]);
+  };
+
+  const saveEdit = async () => {
+    if (!editId) return;
+    const subjectId = subjectNameToId[editSubject];
+    const subjectTypeId = subjectTypeLabelToId[editCategory];
+    const forClasses = editSemesters
+      .map((label) => classLabelToId[label])
+      .filter((id): id is number => !!id)
+      .map((id) => ({ class: { id } }));
+    const cannotCombineWithSubjects = editCannotCombine
+      .map((name) => subjectNameToId[name])
+      .filter((id): id is number => !!id && id !== subjectId)
+      .map((id) => ({ cannotCombineWithSubject: { id } }));
+    const applicableProgramCourses = editProgramCourses
+      .map((name) => programCourseNameToId[name])
+      .filter((id): id is number => !!id)
+      .map((id) => ({ programCourse: { id } }));
+    try {
+      await restrictedGroupingApi.updateRestrictedGroupingMain(editId, {
+        subjectType: subjectTypeId ? { id: subjectTypeId } : undefined,
+        subject: subjectId ? { id: subjectId } : undefined,
+        isActive: editIsActive,
+        forClasses,
+        cannotCombineWithSubjects,
+        applicableProgramCourses,
+      });
+      toast.success("Restricted grouping updated");
+      setIsEditOpen(false);
+      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
+      const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
+        id: dto.id || 0,
+        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+        subject: dto.subject?.name || "",
+        semesters: (dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean),
+        cannotCombineWith: (dto.cannotCombineWithSubjects || [])
+          .map((s) => s.cannotCombineWithSubject?.name || "")
+          .filter(Boolean),
+        applicableProgramCoursesFor: (dto.applicableProgramCourses || [])
+          .map((pc) => pc.programCourse?.name || "")
+          .filter(Boolean),
+        isActive: dto.isActive ?? true,
+      }));
+      setRelations(ui);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update restricted grouping";
+      toast.error(message);
+    }
+  };
+
+  const { accessToken } = useAuth();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      try {
+        // Load masters in parallel (resilient to individual failures)
+        const [subjectsRes, subjectTypesRes, classesRes, programCoursesRes] = await Promise.allSettled([
+          getSubjects() as Promise<SubjectDto[]>,
+          getSubjectTypes() as Promise<SubjectTypeLite[]>,
+          getAllClasses(),
+          getProgramCourses() as Promise<ProgramCourseLite[]>,
+        ]);
+
+        const subjects = subjectsRes.status === "fulfilled" ? subjectsRes.value : [];
+        const subjectTypes = subjectTypesRes.status === "fulfilled" ? subjectTypesRes.value : [];
+        const classes = classesRes.status === "fulfilled" ? classesRes.value : [];
+        const programCourses = programCoursesRes.status === "fulfilled" ? programCoursesRes.value : [];
+
+        if (!isMounted) return;
+        // Initial page load via server pagination loader
+        await loadPage();
+
+        setAllSubjects(subjects.map((s) => s.name).filter(Boolean));
+        setAllCategories(subjectTypes.map((st) => st.code || st.name || "").filter((v): v is string => !!v));
+        if (classes.length === 0 && classesRes.status === "rejected") {
+          toast.warning("Couldn't load classes. Some fields may be empty.");
+        }
+        setAllSemesters(classes.map((c) => c.shortName || c.name || "").filter((v): v is string => !!v));
+        setAllProgramCourses(programCourses.map((pc) => pc.name || "").filter((v): v is string => !!v));
+
+        // Build lookup maps
+        const subjMap: Record<string, number> = {};
+        for (const s of subjects) {
+          const id = (s as unknown as { id?: number }).id;
+          if (s.name && typeof id === "number") subjMap[s.name] = id;
+        }
+        setSubjectNameToId(subjMap);
+
+        const stMap: Record<string, number> = {};
+        for (const st of subjectTypes) {
+          const label = st.code || st.name || "";
+          const stId = (st as unknown as { id?: number }).id;
+          if (label && typeof stId === "number") stMap[label] = stId;
+        }
+        setSubjectTypeLabelToId(stMap);
+
+        const classMap: Record<string, number> = {};
+        for (const c of classes) {
+          const label = c.shortName || c.name || "";
+          const cId = (c as unknown as { id?: number }).id;
+          if (label && typeof cId === "number") classMap[label] = cId;
+        }
+        setClassLabelToId(classMap);
+
+        const pcMap: Record<string, number> = {};
+        for (const pc of programCourses) {
+          const id = (pc as unknown as { id?: number }).id;
+          if (pc.name && typeof id === "number") pcMap[pc.name] = id;
+        }
+        setProgramCourseNameToId(pcMap);
+      } catch {
+        toast.error("Failed to load restricted grouping data");
+      }
+    }
+    if (accessToken) {
+      load();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken]);
 
   // New dialog state
   const [selectedSubject, setSelectedSubject] = useState("");
@@ -264,25 +269,53 @@ export default function RestrictedGroupingPage() {
     },
   ]);
 
-  const {
-    searchTerm,
-    setSearchTerm,
-    currentPage,
-    setCurrentPage,
-    itemsPerPage,
-    setItemsPerPage,
-    paginatedData: paginatedRelations,
-    totalPages,
-    startIndex,
-    endIndex,
-    totalItems,
-  } = useTablePagination({
-    data: programCourseRelations,
-    searchFields: ["subject", "subjectCategory", "applicableProgramCoursesFor"],
-  });
+  // Server-side pagination state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+  // Load page with filters/search
+  const loadPage = async () => {
+    const paged = await restrictedGroupingApi.listRestrictedGroupingMainsPaginated({
+      page: currentPage,
+      pageSize: itemsPerPage,
+      search: searchTerm || "",
+      subjectType: selectedCategory || "",
+    });
+    const mains = paged.content as RestrictedGroupingMainDto[];
+    const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
+      id: dto.id || 0,
+      subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+      subject: dto.subject?.name || "",
+      semesters: Array.from(
+        new Set((dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean)),
+      ),
+      cannotCombineWith: Array.from(
+        new Set(
+          (dto.cannotCombineWithSubjects || []).map((s) => s.cannotCombineWithSubject?.name || "").filter(Boolean),
+        ),
+      ),
+      applicableProgramCoursesFor: Array.from(
+        new Set((dto.applicableProgramCourses || []).map((pc) => pc.programCourse?.name || "").filter(Boolean)),
+      ),
+      isActive: dto.isActive ?? true,
+    }));
+    setRelations(ui);
+    setTotalPages(paged.totalPages);
+    setTotalItems(paged.totalElements);
+  };
+
+  useEffect(() => {
+    loadPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, itemsPerPage, searchTerm, selectedCategory]);
 
   // Filter the data
-  const filteredRelations = paginatedRelations.filter((item) => {
+  const filteredRelations = relations.filter((item) => {
     const programCourseMatch =
       !selectedProgramCourse ||
       selectedProgramCourse === "all" ||
@@ -357,14 +390,72 @@ export default function RestrictedGroupingPage() {
     ]);
   };
 
-  const handleSaveSubjectRules = () => {
-    // Here you would typically save the rules to your backend
-    console.log("Saving subject rules:", {
-      subject: selectedSubject,
-      rules: subjectRules,
-    });
-    setIsAddDialogOpen(false);
-    resetDialog();
+  const handleSaveSubjectRules = async () => {
+    if (!selectedSubject) {
+      toast.error("Select a subject first");
+      return;
+    }
+    const subjectId = subjectNameToId[selectedSubject];
+    if (!subjectId) {
+      toast.error("Unknown subject selected");
+      return;
+    }
+
+    const payloads = categoryProgramRules
+      .filter((r) => r.category)
+      .map((r) => {
+        const subjectTypeId = subjectTypeLabelToId[r.category]!;
+        const forClasses = (r.semesters || [])
+          .map((label) => classLabelToId[label])
+          .filter((id): id is number => !!id)
+          .map((id) => ({ class: { id } }));
+        const cannotCombineWithSubjects = (r.cannotCombineWith || [])
+          .map((name) => subjectNameToId[name])
+          .filter((id): id is number => !!id && id !== subjectId)
+          .map((id) => ({ cannotCombineWithSubject: { id } }));
+        const applicableProgramCourses = (r.applicableProgramCourses || [])
+          .map((name) => programCourseNameToId[name])
+          .filter((id): id is number => !!id)
+          .map((id) => ({ programCourse: { id } }));
+        return {
+          subjectType: { id: subjectTypeId },
+          subject: { id: subjectId },
+          isActive: true,
+          forClasses,
+          cannotCombineWithSubjects,
+          applicableProgramCourses,
+        };
+      });
+
+    if (payloads.length === 0) {
+      toast.error("Add at least one rule with a category");
+      return;
+    }
+
+    try {
+      const results = await Promise.all(payloads.map((p) => restrictedGroupingApi.createRestrictedGroupingMain(p)));
+      toast.success(`Saved ${results.length} restricted grouping${results.length > 1 ? "s" : ""}`);
+      setIsAddDialogOpen(false);
+      resetDialog();
+      const mains = await restrictedGroupingApi.listRestrictedGroupingMains();
+      const ui: UIRestrictedGrouping[] = mains.map((dto) => ({
+        id: dto.id || 0,
+        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+        subject: dto.subject?.name || "",
+        semesters: (dto.forClasses || []).map((c) => c.class?.shortName || c.class?.name || "").filter(Boolean),
+        cannotCombineWith: (dto.cannotCombineWithSubjects || [])
+          .map((s) => s.cannotCombineWithSubject?.name || "")
+          .filter(Boolean),
+        applicableProgramCoursesFor: (dto.applicableProgramCourses || [])
+          .map((pc) => pc.programCourse?.name || "")
+          .filter(Boolean),
+        isActive: dto.isActive ?? true,
+      }));
+      setRelations(ui);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save restricted groupings";
+      toast.error(message);
+    }
   };
 
   // Helper functions for multi-select
@@ -418,7 +509,7 @@ export default function RestrictedGroupingPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Program-Courses</SelectItem>
-                {programCourses.map((course) => (
+                {allProgramCourses.map((course) => (
                   <SelectItem key={course} value={course}>
                     {course}
                   </SelectItem>
@@ -431,7 +522,7 @@ export default function RestrictedGroupingPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                {subjectCategories.map((category) => (
+                {allCategories.map((category) => (
                   <SelectItem key={category} value={category}>
                     {category}
                   </SelectItem>
@@ -484,10 +575,10 @@ export default function RestrictedGroupingPage() {
 
             {/* Scrollable Body */}
             <div className="flex-1 overflow-auto border-l border-r border-gray-300">
-              <Table className="table-fixed">
+              <Table className="table-fixed border-collapse [&>tbody>tr]:border-b [&>tbody>tr]:border-gray-300">
                 <TableBody>
                   {filteredRelations.map((relation, index) => (
-                    <TableRow key={relation.id} className="border-b border-gray-200 hover:bg-gray-50">
+                    <TableRow key={relation.id} className="hover:bg-gray-50 border-b border-slate-500">
                       <TableCell className="border-r border-gray-300 w-16">{startIndex + index + 1}</TableCell>
                       <TableCell className="font-medium border-r border-gray-300 w-32">
                         <Badge variant="outline" className="border-blue-500 text-blue-700 bg-blue-50">
@@ -497,16 +588,20 @@ export default function RestrictedGroupingPage() {
                       <TableCell className="font-medium border-r border-gray-300 w-48">{relation.subject}</TableCell>
                       <TableCell className="border-r border-gray-300 w-24">
                         <div className="flex flex-wrap gap-1">
-                          {relation.semesters.map((semester, semIndex) => (
-                            <Badge key={semIndex} variant="secondary" className="text-xs">
-                              {semester}
+                          {(relation.semesters || []).map((semester, semIndex) => (
+                            <Badge
+                              key={semIndex}
+                              variant="outline"
+                              className="text-xs bg-blue-50 text-blue-700 border-blue-300"
+                            >
+                              {toRomanSemester(semester)}
                             </Badge>
                           ))}
                         </div>
                       </TableCell>
                       <TableCell className="border-r border-gray-300 w-48">
                         <div className="flex flex-wrap gap-1">
-                          {relation.cannotCombineWith.slice(0, 2).map((subject, subjectIndex) => (
+                          {(relation.cannotCombineWith || []).slice(0, 2).map((subject, subjectIndex) => (
                             <Badge
                               key={subjectIndex}
                               variant="outline"
@@ -515,16 +610,16 @@ export default function RestrictedGroupingPage() {
                               {subject}
                             </Badge>
                           ))}
-                          {relation.cannotCombineWith.length > 2 && (
+                          {(relation.cannotCombineWith || []).length > 2 && (
                             <Badge variant="outline" className="text-xs border-red-500 text-red-700 bg-red-50">
-                              +{relation.cannotCombineWith.length - 2} more
+                              +{(relation.cannotCombineWith || []).length - 2} more
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="border-r border-gray-300 w-40">
                         <div className="flex flex-wrap gap-1">
-                          {relation.applicableProgramCoursesFor.map((course, courseIndex) => (
+                          {(relation.applicableProgramCoursesFor || []).map((course, courseIndex) => (
                             <Badge
                               key={courseIndex}
                               variant="outline"
@@ -545,7 +640,7 @@ export default function RestrictedGroupingPage() {
                       </TableCell>
                       <TableCell className="text-right w-24">
                         <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(relation)}>
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button variant="ghost" size="sm">
@@ -605,7 +700,7 @@ export default function RestrictedGroupingPage() {
                       <SelectValue placeholder="Select subject..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {availableSubjects.map((subject) => (
+                      {allSubjects.map((subject) => (
                         <SelectItem key={subject} value={subject}>
                           {subject}
                         </SelectItem>
@@ -691,7 +786,7 @@ export default function RestrictedGroupingPage() {
                                       <SelectValue placeholder="Select category" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {subjectCategories.map((category) => (
+                                      {allCategories.map((category) => (
                                         <SelectItem key={category} value={category}>
                                           {category}
                                         </SelectItem>
@@ -743,7 +838,7 @@ export default function RestrictedGroupingPage() {
                                         <CommandInput placeholder="Search subjects..." className="text-gray-700" />
                                         <CommandEmpty>No subjects found.</CommandEmpty>
                                         <CommandGroup>
-                                          {availableSubjects
+                                          {allSubjects
                                             .filter((subject) => subject !== selectedSubject)
                                             .map((subject) => (
                                               <CommandItem
@@ -805,7 +900,7 @@ export default function RestrictedGroupingPage() {
                                         <CommandInput placeholder="Search semesters..." className="text-gray-700" />
                                         <CommandEmpty>No semesters found.</CommandEmpty>
                                         <CommandGroup>
-                                          {availableSemesters.map((semester) => (
+                                          {allSemesters.map((semester) => (
                                             <CommandItem
                                               key={semester}
                                               onSelect={() =>
@@ -867,7 +962,7 @@ export default function RestrictedGroupingPage() {
                                         <CommandInput placeholder="Search courses..." className="text-gray-700" />
                                         <CommandEmpty>No courses found.</CommandEmpty>
                                         <CommandGroup>
-                                          {programCourses.map((course) => (
+                                          {allProgramCourses.map((course) => (
                                             <CommandItem
                                               key={course}
                                               onSelect={() =>
@@ -1078,6 +1173,117 @@ export default function RestrictedGroupingPage() {
               }
             >
               Save Subject Rules
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Edit Restricted Grouping</DialogTitle>
+            <DialogDescription>Update subject, category and related settings</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Subject Category</Label>
+              <Select value={editCategory} onValueChange={setEditCategory}>
+                <SelectTrigger className="w-full mt-1 text-gray-700">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allCategories.map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      {cat}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Subject</Label>
+              <Select value={editSubject} onValueChange={setEditSubject}>
+                <SelectTrigger className="w-full mt-1 text-gray-700">
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allSubjects.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mt-4">
+            <div>
+              <Label>Cannot combine with</Label>
+              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                {allSubjects.map((s) => (
+                  <div key={s} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`cc-${s}`}
+                      checked={editCannotCombine.includes(s)}
+                      onCheckedChange={() => toggleEditArray(s, editCannotCombine, setEditCannotCombine)}
+                    />
+                    <Label htmlFor={`cc-${s}`} className="text-sm">
+                      {s}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Applicable program-courses</Label>
+              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                {allProgramCourses.map((pc) => (
+                  <div key={pc} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`pc-${pc}`}
+                      checked={editProgramCourses.includes(pc)}
+                      onCheckedChange={() => toggleEditArray(pc, editProgramCourses, setEditProgramCourses)}
+                    />
+                    <Label htmlFor={`pc-${pc}`} className="text-sm">
+                      {pc}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Semesters</Label>
+              <div className="mt-2 h-56 overflow-auto rounded border p-3">
+                {allSemesters.map((sem) => (
+                  <div key={sem} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`sem-${sem}`}
+                      checked={editSemesters.includes(sem)}
+                      onCheckedChange={() => toggleEditArray(sem, editSemesters, setEditSemesters)}
+                    />
+                    <Label htmlFor={`sem-${sem}`} className="text-sm">
+                      {sem}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 mt-4">
+            <Checkbox id="active" checked={editIsActive} onCheckedChange={(v) => setEditIsActive(Boolean(v))} />
+            <Label htmlFor="active">Active</Label>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} className="bg-purple-600 hover:bg-purple-700">
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>

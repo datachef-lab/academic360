@@ -1,28 +1,28 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
-import { BookOpen, Link, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { Link, XCircle, Calendar } from "lucide-react";
 
 const configurationLinks = [
+  //   {
+  //     title: "Rule 1: - Mandatory Subjects",
+  //     url: "/dashboard/academic-year-setup/subject-configurations",
+  //     icon: BookOpen,
+  //   },
   {
-    title: "Rule 1: - Mandatory Subjects",
+    title: "Rule 1: - Related Subjects",
     url: "/dashboard/academic-year-setup/subject-configurations",
-    icon: BookOpen,
-  },
-  {
-    title: "Rule 2: - Alternative Subjects",
-    url: "/dashboard/academic-year-setup/subject-configurations/alternative-subjects",
     icon: Link,
   },
   {
-    title: "Rule 3: - Related Subjects Grouping",
+    title: "Rule 2: - Restricted Subjects Grouping",
     url: "/dashboard/academic-year-setup/subject-configurations/restricted-groupings",
     icon: XCircle,
   },
-  {
-    title: "Rule 4: - Whitelisted Categories",
-    url: "/dashboard/academic-year-setup/subject-configurations/whitelisted-categories",
-    icon: CheckCircle,
-  },
+  //   {
+  //     title: "Rule 4: - Whitelisted Categories",
+  //     url: "/dashboard/academic-year-setup/subject-configurations/whitelisted-categories",
+  //     icon: CheckCircle,
+  //   },
 
   {
     title: "Semester Availability",

@@ -4,16 +4,16 @@ import {
   addressModel,
   createAddressSchema,
 } from "@repo/db/schemas/models/user";
-import {
-  countryModel,
-  Country,
-} from "@/features/resources/models/country.model.js";
+import { countryModel } from "@/features/resources/models/country.model.js";
 import { eq } from "drizzle-orm";
-import { stateModel, State } from "@/features/resources/models/state.model.js";
-import { cityModel, City } from "@/features/resources/models/city.model.js";
+import { stateModel } from "@/features/resources/models/state.model.js";
+import { cityModel } from "@/features/resources/models/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 import { z } from "zod";
+import { AddressDto } from "@repo/db/index.js";
+import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
+import { districtT } from "@repo/db/schemas/models/resources/district.model.js";
 
 // Validate input using Zod schema for creation
 function validateAddressInput(data: Omit<Address, "id">) {
@@ -62,10 +62,10 @@ export async function findAddressById(id: number): Promise<Address | null> {
   return foundAddress ? await addressResponseFormat(foundAddress) : null;
 }
 
-export async function getAllAddresses(): Promise<Address[]> {
+export async function getAllAddresses(): Promise<AddressDto[]> {
   const addresses = await db.select().from(addressModel);
   const formatted = await Promise.all(addresses.map(addressResponseFormat));
-  return formatted.filter((a): a is Address => !!a);
+  return formatted.filter((a): a is AddressDto => !!a);
 }
 
 export async function saveAddress(
@@ -115,23 +115,27 @@ export async function removeAddress(id: number): Promise<boolean | null> {
   return true; // Success!
 }
 
-export async function addressResponseFormat(address: Address) {
+export async function addressResponseFormat(
+  address: Address,
+): Promise<AddressDto | null> {
   if (!address) {
     return null;
   }
-  const { countryId, stateId, cityId, ...props } = address;
-  const formattedAddress: Address & {
-    country?: Country;
-    state?: State;
-    city?: City;
-  } = { ...props } as Address;
+  const { countryId, stateId, cityId, districtId, ...props } = address;
+  const formattedAddress: AddressDto = {
+    ...(props as any),
+    country: null,
+    state: null,
+    city: null,
+    district: null,
+  } as AddressDto;
   if (countryId) {
     const [country] = await db
       .select()
       .from(countryModel)
       .where(eq(countryModel.id, countryId));
     if (country) {
-      formattedAddress.country = country;
+      formattedAddress.country = country as any;
     }
   }
   if (stateId) {
@@ -140,7 +144,7 @@ export async function addressResponseFormat(address: Address) {
       .from(stateModel)
       .where(eq(stateModel.id, stateId));
     if (state) {
-      formattedAddress.state = state;
+      formattedAddress.state = state as any;
     }
   }
   if (cityId) {
@@ -149,7 +153,16 @@ export async function addressResponseFormat(address: Address) {
       .from(cityModel)
       .where(eq(cityModel.id, cityId));
     if (city) {
-      formattedAddress.city = city;
+      formattedAddress.city = city as any;
+    }
+  }
+  if (districtId) {
+    const [district] = await db
+      .select()
+      .from(districtModel)
+      .where(eq(districtModel.id, districtId));
+    if (district) {
+      formattedAddress.district = district as any;
     }
   }
   return formattedAddress;
