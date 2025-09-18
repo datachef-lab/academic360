@@ -33,6 +33,10 @@
             "types": "./dist/dtos/resources/index.d.ts",
             "import": "./dist/dtos/resources/index.js"
         },
+        "./dtos/subject-selection": {
+            "types": "./dist/dtos/subject-selection/index.d.ts",
+            "import": "./dist/dtos/subject-selection/index.js"
+        },
         "./enums": {
             "types": "./dist/schemas/enums/index.d.ts",
             "import": "./dist/schemas/enums/index.js"
