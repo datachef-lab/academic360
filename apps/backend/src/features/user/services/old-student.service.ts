@@ -181,7 +181,8 @@ async function fetchData(
                 coursedetails cd
             WHERE 
                 cd.id = s.admissionid
-                AND pd.id = cd.parent_id;
+                AND pd.id = cd.parent_id
+            ORDER BY cd.id;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -193,6 +194,7 @@ async function fetchData(
             WHERE 
                 cd.id = s.admissionid
                 AND pd.id = cd.parent_id
+            ORDER BY cd.id
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -206,7 +208,8 @@ async function fetchData(
                 coursedetails cd
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
-                AND cd.parent_id = pd.id;
+                AND cd.parent_id = pd.id
+            ORDER BY cd.id;
         `);
     const { totalRows } = (personalDetailsResult as { totalRows: number }[])[0];
     const [rows] = (await mysqlConnection.query(`
@@ -217,6 +220,7 @@ async function fetchData(
             WHERE
                 (cd.transferred = false OR cd.transferred IS NULL)
                 AND cd.parent_id = pd.id
+            ORDER BY cd.id;
             LIMIT ${limit}
             OFFSET ${offset};
         `)) as [OldAdmStudentPersonalDetail[], any];
@@ -3060,21 +3064,16 @@ async function processOldCourseDetails(
 
   let programCourseName = oldCourse.courseName!.trim();
   console.log("oldCourse.courseName", oldCourse);
-  if (
-    oldCourse.courseName.trim().toLowerCase().includes("Business Economics")
-  ) {
-    console.log("Business course", oldCourse.courseName);
-  }
 
   const [programCourse] = await db
     .select()
     .from(programCourseModel)
-    .where(and(ilike(programCourseModel.name, oldCourse.courseName!.trim())));
+    .where(ilike(programCourseModel.name, oldCourse.courseName!.trim()));
 
   // console.log("programCourse", programCourse);
 
   if (!programCourse) {
-    console.log("programCourse not found");
+    console.log("programCourse not found for oldCourse", oldCourse.courseName);
     return null;
   }
 
@@ -3574,7 +3573,13 @@ async function findPaper(
 
   if (!foundPaper) {
     console.warn(
-      `Paper not found for subjectid: ${oldCvSubjectSelection.subjectid}`,
+      `Paper not found for old subjectid: ${oldCvSubjectSelection.subjectid}`,
+      `foundClassid: ${foundClass.id}`,
+      `foundRegulationTypeid: ${foundRegulationType.id}`,
+      `foundAcademicYearid: ${academicYear.id}`,
+      `foundSubjectTypeid: ${foundSubjectType.id}`,
+      `programCourseId: ${programCourseId}`,
+      `foundSubjectid: ${foundSubject.id}`,
     );
     return null;
   }

@@ -916,13 +916,27 @@ export async function addHealth(
       }
     }
 
+    const updateData: Partial<Health> = {};
+    if (typeof bloodGroup?.id === "number") {
+      updateData.bloodGroupId = bloodGroup.id;
+    }
+    const left = oldStudent.eyePowerLeft?.trim();
+    if (left) {
+      updateData.eyePowerLeft = left.toUpperCase();
+    }
+    const right = oldStudent.eyePowerRight?.trim();
+    if (right) {
+      updateData.eyePowerRight = right.toUpperCase();
+    }
+
+    // If nothing to update, return the existing row to avoid Drizzle "No values to set" error
+    if (Object.keys(updateData).length === 0) {
+      return existingHealth;
+    }
+
     const [updatedHealth] = await db
       .update(healthModel)
-      .set({
-        bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
-        eyePowerLeft: oldStudent.eyePowerLeft?.trim()?.toUpperCase(),
-        eyePowerRight: oldStudent.eyePowerRight?.trim()?.toUpperCase(),
-      })
+      .set(updateData)
       .where(eq(healthModel.id, healthId))
       .returning();
 
@@ -946,13 +960,27 @@ export async function addHealth(
     }
   }
 
+  const insertData: Partial<Health> = {};
+  if (typeof bloodGroup?.id === "number") {
+    insertData.bloodGroupId = bloodGroup.id;
+  }
+  const left = oldStudent.eyePowerLeft?.trim();
+  if (left) {
+    insertData.eyePowerLeft = left.toUpperCase();
+  }
+  const right = oldStudent.eyePowerRight?.trim();
+  if (right) {
+    insertData.eyePowerRight = right.toUpperCase();
+  }
+
+  if (Object.keys(insertData).length === 0) {
+    // Nothing to insert; skip creating an empty health record
+    return null;
+  }
+
   const [newHealth] = await db
     .insert(healthModel)
-    .values({
-      bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
-      eyePowerLeft: oldStudent.eyePowerLeft?.trim()?.toUpperCase(),
-      eyePowerRight: oldStudent.eyePowerRight?.trim()?.toUpperCase(),
-    } as Health)
+    .values(insertData as Health)
     .returning();
 
   return newHealth;

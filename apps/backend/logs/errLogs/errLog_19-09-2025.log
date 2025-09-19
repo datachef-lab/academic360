@@ -1,3 +1,5 @@
+19-09-2025	12:15:58	bb45193a-87f5-4bca-bd2c-bcb2b310fa28	Error: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'LIMIT 500
+            OFFSET 0' at line 7	GET	/api/students/old-data	undefined
 19-09-2025	01:22:32	841083e3-5de8-4575-afc2-982310c75833	Error: read ECONNRESET	GET	/api/students/old-data	undefined
 19-09-2025	00:31:37	faaf6b03-6c1b-4847-805e-91d388269a10	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 19-09-2025	00:20:38	c5281977-7d3a-47d6-83fb-90fee784282a	Error: Failed query: select "id", "legacy_country_id", "name", "sequence", "disabled", "created_at", "updated_at" from "countries" where "countries"."id" = $1
