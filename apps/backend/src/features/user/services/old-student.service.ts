@@ -260,7 +260,7 @@ export async function loadOldBoards() {
 
 export async function loadData(byIsTransferred: boolean) {
   console.log("loading the boards and subjects");
-  await loadOldBoards();
+  //   await loadOldBoards();
   // Do fetch the data from the old database which are transferred first
   const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
 
@@ -3435,7 +3435,7 @@ async function getSubjectRelatedFields(
     .where(
       eq(
         admissionProgramCourseModel.id,
-        newAdmissionCourseDetails.id as number,
+        newAdmissionCourseDetails.admissionProgramCourseId as number,
       ),
     );
 

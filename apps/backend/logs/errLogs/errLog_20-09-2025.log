@@ -1,3 +1,5 @@
+20-09-2025	20:29:25	91fdcab1-9c5a-405b-8ab8-61db7a4dc7c0	ApiError: Unauthorized	GET	/api/degree	http://localhost:5173
+20-09-2025	20:29:25	5fd062ff-cd2f-4092-b987-88bfb5a2e972	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 20-09-2025	14:09:03	b47ee69d-e456-4d31-b5be-1e0e3a017b6c	ApiError: Unauthorized	GET	/api/degree	http://localhost:5173
 20-09-2025	14:09:03	66f81f89-a6cb-46e5-baf8-fd615d3b0294	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 20-09-2025	13:23:47	f1ef1fe7-a153-40b7-b535-694d61e456b6	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173

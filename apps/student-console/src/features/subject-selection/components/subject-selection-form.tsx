@@ -13,6 +13,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const { student } = useStudent();
   const [step, setStep] = useState<1 | 2>(1);
   const [errors, setErrors] = useState<string[]>([]);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
@@ -198,6 +199,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const earlierMinor1 = subjectNameFromMinor(earlier[0]);
         const earlierMinor2 = subjectNameFromMinor(earlier[1]);
         setEarlierMinorSelections([earlierMinor1, earlierMinor2].filter(Boolean));
+
+        // Don't populate form fields with existing selections - let user make fresh selections
+        // The earlierMinorSelections are still tracked for comparison purposes
+
+        // Populate other existing selections if available
+        // Note: The existing selections are already loaded in the form fields above
+        // Additional selections for IDC, AEC, CVAC would need to be loaded from a different API endpoint
+        // For now, we'll focus on the Minor subjects which are the main concern
       } catch (e: any) {
         setLoadError(e?.message || "Failed to load subject selections");
       } finally {
@@ -223,7 +232,8 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
     const prev = [...earlierMinorSelections].sort();
     const currentSorted = [...current].sort();
-    setMinorMismatch(JSON.stringify(prev) !== JSON.stringify(currentSorted));
+    const isMismatch = JSON.stringify(prev) !== JSON.stringify(currentSorted);
+    setMinorMismatch(isMismatch);
   }, [minor1, minor2, earlierMinorSelections]);
 
   // Highlight document section when field is focused
@@ -242,14 +252,20 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
   };
 
-  // Validation function
-  const validateForm = () => {
+  // Dynamic validation function that updates errors in real-time
+  const updateValidationErrors = (showErrors: boolean = false) => {
     const newErrors: string[] = [];
+
+    // Only show validation errors if explicitly requested (e.g., when clicking Next)
+    if (!showErrors) {
+      setErrors([]);
+      return true;
+    }
 
     const shouldAskForAec = availableAecSubjects.length > 0;
     const shouldAskForCvac = availableCvacOptions.length > 0;
 
-    // Required field validation
+    // Required field validation - create individual error messages
     if (!minor1) newErrors.push("Minor I subject is required");
     if (admissionMinor2Subjects.length > 0 && !minor2) newErrors.push("Minor II subject is required");
     if (!idc1) newErrors.push("IDC 1 subject is required");
@@ -293,11 +309,49 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     return newErrors.length === 0;
   };
 
+  // Validation function - only show errors when explicitly requested
+  const validateForm = () => {
+    return updateValidationErrors(true);
+  };
+
+  // Mark user interaction when they start selecting fields
+  const handleFieldChange = (setter: (value: string) => void, value: string, fieldType: string) => {
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+    }
+    setter(value);
+
+    // Clear only the specific error for this field when user selects it
+    if (errors.length > 0 && value) {
+      const fieldErrorMap: Record<string, string> = {
+        minor1: "Minor I subject is required",
+        minor2: "Minor II subject is required",
+        idc1: "IDC 1 subject is required",
+        idc2: "IDC 2 subject is required",
+        idc3: "IDC 3 subject is required",
+        aec3: "AEC 3 subject is required",
+        cvac4: "CVAC 4 subject is required",
+      };
+
+      const errorToRemove = fieldErrorMap[fieldType];
+      if (errorToRemove) {
+        setErrors((prevErrors) => prevErrors.filter((error) => error !== errorToRemove));
+      }
+    }
+  };
+
   const handleNext = () => {
-    if (validateForm()) {
+    // Mark user interaction when they try to proceed
+    setHasUserInteracted(true);
+
+    // Show validation errors when user tries to proceed
+    const isValid = validateForm();
+
+    if (isValid) {
       // Do not block; mismatch is informational only
       setStep(2);
     }
+    // If not valid, errors will be displayed by validateForm()
   };
   const handleBack = () => setStep(1);
 
@@ -613,7 +667,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           [minor2],
                         )}
                         value={minor1}
-                        onChange={setMinor1}
+                        onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
                         placeholder="Select Minor I"
                         className="w-full"
                       />
@@ -627,7 +681,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           [minor1],
                         )}
                         value={minor2}
-                        onChange={setMinor2}
+                        onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
                         placeholder="Select Minor II"
                         className="w-full"
                       />
@@ -637,14 +691,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </div>
 
               {loading ? (
-                <LoadingDropdown label="AEC 3 (Semester III)" />
+                <LoadingDropdown label="AEC (Semester III & IV)" />
               ) : availableAecSubjects.length > 0 ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                  <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
+                  <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableAecSubjects)}
                     value={aec3}
-                    onChange={setAec3}
+                    onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
                     placeholder="Select AEC 3"
                     className="w-full"
                   />
@@ -673,7 +727,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           ),
                         )}
                         value={idc1}
-                        onChange={setIdc1}
+                        onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
                         placeholder="Select IDC 1"
                         className="w-full"
                       />
@@ -691,7 +745,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           ),
                         )}
                         value={idc2}
-                        onChange={setIdc2}
+                        onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
                         placeholder="Select IDC 2"
                         className="w-full"
                       />
@@ -709,7 +763,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           ),
                         )}
                         value={idc3}
-                        onChange={setIdc3}
+                        onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
                         placeholder="Select IDC 3"
                         className="w-full"
                       />
@@ -728,7 +782,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   <Combobox
                     dataArr={convertToComboboxData(availableCvacOptions)}
                     value={cvac4}
-                    onChange={setCvac4}
+                    onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
                     placeholder="Select CVAC 4"
                     className="w-full"
                   />
@@ -764,34 +818,61 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">Minor I (Semester I & II)</td>
-                        <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">Minor II (Semester III & IV)</td>
-                        <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
-                        <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
-                        <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
-                        <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">AEC 3 (Semester III)</td>
-                        <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50">
-                        <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
-                        <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
-                      </tr>
+                      {/* Minor I - Always show if there are subjects available */}
+                      {admissionMinor1Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">Minor I (Semester I & II)</td>
+                          <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* Minor II - Always show if there are subjects available */}
+                      {admissionMinor2Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">Minor II (Semester III & IV)</td>
+                          <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* IDC 1 - Only show if there are subjects available */}
+                      {availableIdcSem1Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
+                          <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* IDC 2 - Only show if there are subjects available */}
+                      {availableIdcSem2Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
+                          <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* IDC 3 - Only show if there are subjects available */}
+                      {availableIdcSem3Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
+                          <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* AEC 3 - Only show if there are subjects available */}
+                      {availableAecSubjects.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">AEC (Semester III & IV)</td>
+                          <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* CVAC 4 - Only show if there are subjects available */}
+                      {availableCvacOptions.length > 0 && (
+                        <tr className="hover:bg-gray-50">
+                          <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
+                          <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -851,9 +932,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           )}
 
           {/* Non-blocking Minor mismatch notice */}
-          {step === 1 && minorMismatch && errors.length === 0 && (
+          {step === 1 && minorMismatch && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
-              <div>Your current Minor I & II combination differs from the previously saved selection.</div>
+              <div>
+                Your current Minor I and II subject combination is different from the one you had selected at the time
+                of admission.
+              </div>
               <div className="mt-1 text-sm">
                 Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
                 <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>

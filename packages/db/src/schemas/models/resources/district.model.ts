@@ -9,7 +9,7 @@ export const districtModel = pgTable("districts", {
     id: serial().primaryKey(),
     legacyDistrictId: integer(),
     cityId: integer().notNull().references(() => cityModel.id),
-    name: varchar({ length: 255 }).notNull().unique(),
+    name: varchar({ length: 255 }).notNull(),
     sequence: integer().unique(),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),

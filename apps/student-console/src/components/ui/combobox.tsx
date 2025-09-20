@@ -48,7 +48,8 @@ export function Combobox({
             <span>{selectedLabel || placeholder}</span>
             {!selectedLabel && dataArr.length > 0 && (
               <span className="text-xs text-muted-foreground">
-                ({dataArr.length} option{dataArr.length !== 1 ? "s" : ""})
+                ({dataArr.filter((item) => item.value !== "").length} option
+                {dataArr.filter((item) => item.value !== "").length !== 1 ? "s" : ""})
               </span>
             )}
           </div>
@@ -66,7 +67,8 @@ export function Combobox({
             <CommandEmpty>No options found.</CommandEmpty>
             {filtered.length > 0 && (
               <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
-                {filtered.length} option{filtered.length !== 1 ? "s" : ""} available
+                {filtered.filter((item) => item.value !== "").length} option
+                {filtered.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available
               </div>
             )}
             <CommandGroup>

@@ -2367,8 +2367,8 @@ export const createOldStudent = async (
     // await loadStudentsV2();
 
     // await loadPaperSubjects();
-    await loadOldBoards();
-    // await loadData(true);
+    // await loadOldBoards();
+    await loadData(true);
     // await loadData(false);
 
     res

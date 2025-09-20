@@ -57,6 +57,13 @@
       "when": 1758345382075,
       "tag": "0007_simple_pixie",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1758389448003,
+      "tag": "0008_equal_warbird",
+      "breakpoints": true
     }
   ]
 }

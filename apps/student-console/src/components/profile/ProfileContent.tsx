@@ -173,7 +173,7 @@ export default function ProfileContent() {
           {/* Right Content Area */}
           <div className="lg:col-span-2">
             {/* Navigation Tabs */}
-            <Card className="mb-6">
+            {/* <Card className="mb-6">
               <CardContent className="p-0 overflow-x-auto">
                 <div className="flex border-b whitespace-nowrap">
                   {[{ id: "personal", label: "Personal", icon: User }].map((tab) => (
@@ -192,7 +192,7 @@ export default function ProfileContent() {
                   ))}
                 </div>
               </CardContent>
-            </Card>
+            </Card> */}
 
             {/* Tab Content */}
             <Card>
