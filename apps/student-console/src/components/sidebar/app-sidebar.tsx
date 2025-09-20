@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { BookOpen, House, IndianRupee, Library, NotebookPen, ScrollText, Settings2, ListChecks } from "lucide-react";
+import {
+  BookOpen,
+  House,
+  IndianRupee,
+  Library,
+  NotebookPen,
+  ScrollText,
+  Settings2,
+  ListChecks,
+  UserPlus,
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { NavMain } from "@/components/sidebar/nav-main";
@@ -47,6 +57,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard/subject-selection",
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
+    },
+    {
+      title: "CU Registration",
+      url: "/dashboard/cu-registration",
+      icon: UserPlus,
+      isActive: pathname === "/dashboard/CU-registration",
     },
     // accessControl?.access_exams && {
     //   title: "Exams",
