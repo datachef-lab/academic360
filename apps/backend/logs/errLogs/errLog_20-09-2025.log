@@ -1,3 +1,5 @@
+20-09-2025	14:09:03	b47ee69d-e456-4d31-b5be-1e0e3a017b6c	ApiError: Unauthorized	GET	/api/degree	http://localhost:5173
+20-09-2025	14:09:03	66f81f89-a6cb-46e5-baf8-fd615d3b0294	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 20-09-2025	13:23:47	f1ef1fe7-a153-40b7-b535-694d61e456b6	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
 20-09-2025	13:12:26	1a751e6c-ac43-45e6-a987-7ae315f07f9e	Error: read ECONNRESET	GET	/api/students/old-data	undefined
 20-09-2025	13:11:50	1d93da74-89d9-45d9-8ddf-c9ace240745d	ApiError: Unauthorized	GET	/api/degree	http://localhost:5173

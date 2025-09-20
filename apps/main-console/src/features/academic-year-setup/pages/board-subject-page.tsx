@@ -56,6 +56,31 @@ const BoardSubjectForm = ({
     isActive: initialData?.isActive ?? true,
   });
 
+  // Update form data when initialData changes
+  React.useEffect(() => {
+    if (initialData) {
+      setFormData({
+        boardId: initialData.boardId,
+        boardSubjectNameId: initialData.boardSubjectNameId,
+        fullMarksTheory: initialData.fullMarksTheory ?? "",
+        passingMarksTheory: initialData.passingMarksTheory ?? "",
+        fullMarksPractical: initialData.fullMarksPractical ?? "",
+        passingMarksPractical: initialData.passingMarksPractical ?? "",
+        isActive: initialData.isActive,
+      });
+    } else {
+      setFormData({
+        boardId: 0,
+        boardSubjectNameId: 0,
+        fullMarksTheory: "",
+        passingMarksTheory: "",
+        fullMarksPractical: "",
+        passingMarksPractical: "",
+        isActive: true,
+      });
+    }
+  }, [initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
@@ -75,7 +100,7 @@ const BoardSubjectForm = ({
         <div className="space-y-2">
           <Label htmlFor="boardId">Board *</Label>
           <Select
-            value={formData.boardId.toString()}
+            value={formData.boardId > 0 ? formData.boardId.toString() : ""}
             onValueChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
           >
             <SelectTrigger>
@@ -93,7 +118,7 @@ const BoardSubjectForm = ({
         <div className="space-y-2">
           <Label htmlFor="boardSubjectNameId">Subject Name *</Label>
           <Select
-            value={formData.boardSubjectNameId.toString()}
+            value={formData.boardSubjectNameId > 0 ? formData.boardSubjectNameId.toString() : ""}
             onValueChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
           >
             <SelectTrigger>
