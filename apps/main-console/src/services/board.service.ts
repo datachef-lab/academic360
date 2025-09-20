@@ -41,7 +41,7 @@ export interface BoardDto {
   } | null;
 }
 
-const API_BASE_URL = "http://localhost:8080/api/admissions/boards";
+const API_BASE_URL = `${import.meta.env.VITE_APP_BACKEND_URL}/api/admissions/board-subject-names`;
 
 export interface PaginatedResponse<T> {
   data: T[];
