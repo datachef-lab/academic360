@@ -123,7 +123,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
   // const [selectedAcademicYear, setSelectedAcademicYear] = React.useState("2024-25");
-  
+
   const { selectedAcademicYear, selectedAcademicYearId, setSelectedById } = useAcademicYearStore();
   const { data: academicYearsResponse, list: academicYears, options } = useAcademicYearOptions();
 
@@ -136,10 +136,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     console.log("[Dropdown Options] options", options);
   }, [academicYears, options]);
 
-
   React.useEffect(() => {}, [settings]);
 
-  
   // Helper to check if sidebar item is active
   function isSidebarActive(currentPath: string, itemUrl: string) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
@@ -166,7 +164,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       }
     }
   }, [academicYears, selectedAcademicYear, setSelectedById]);
-
 
   if (!displayFlag || !user || !accessToken) {
     return null;
@@ -195,9 +192,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     <h1 className="text-base font-bold text-white leading-tight truncate">
                       {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console Panel
                     </h1>
-                    <p className="text-xs text-purple-200 truncate">
-                      {selectedAcademicYear?.year || "Select Year"}
-                    </p>
+                    <p className="text-xs text-purple-200 truncate">{selectedAcademicYear?.year || "Select Year"}</p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
                 </button>
@@ -432,28 +427,27 @@ export function NavItem({ href, icon, children, isActive }: NavItemProps) {
           ? "bg-white text-purple-700 shadow-xl rounded-l-full  shadow-purple-900/20 ml-3 font-semibold border-purple-200/30"
           : "text-white hover:text-white rounded-lg ",
         // Transform effects for modern feel
-        
       )}
     >
       <div className="flex items-center gap-3 w-full">
-        <span 
+        <span
           className={cn(
             "h-5 w-5 transition-all duration-300 ease-in-out",
-            isActive 
-              ? "text-purple-600 scale-110" 
-              : "text-white/80 group-hover:text-white group-hover:scale-105"
+            isActive ? "text-purple-600 scale-110" : "text-white/80 group-hover:text-white group-hover:scale-105",
           )}
         >
           {icon}
         </span>
-        <span className={cn(
-          "transition-all duration-300 ease-in-out truncate",
-          isActive ? "text-purple-700" : "text-white/90 group-hover:text-white"
-        )}>
+        <span
+          className={cn(
+            "transition-all duration-300 ease-in-out truncate",
+            isActive ? "text-purple-700" : "text-white/90 group-hover:text-white",
+          )}
+        >
           {children}
         </span>
       </div>
-      
+
       {/* Modern accent line for active state */}
       {/* {isActive && (
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b  from-purple-500 to-purple-700 rounded-r-full" />

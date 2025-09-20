@@ -40,4 +40,3 @@ export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrappe
 
   return <>{children}</>;
 }
-

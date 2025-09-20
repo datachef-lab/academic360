@@ -136,18 +136,18 @@ function RecentActivity({
 export default function Dashboard() {
   const [tab, setTab] = useState("overview");
   const { list: academicYears, isLoading } = useAcademicYearOptions();
-  
+
   // Get the current academic year or first available year
-  const currentAcademicYear = academicYears?.find(year => year.isCurrentYear)?.year || academicYears?.[0]?.year;
+  const currentAcademicYear = academicYears?.find((year) => year.isCurrentYear)?.year || academicYears?.[0]?.year;
   const [year, setYear] = useState(currentAcademicYear);
-  
+
   // Update year when academic years data loads
   useEffect(() => {
     if (currentAcademicYear && !year) {
       setYear(currentAcademicYear);
     }
   }, [currentAcademicYear, year]);
-  
+
   // In real app, fetch summary data for selected year
   const summary = mockSummary;
 
@@ -169,44 +169,44 @@ export default function Dashboard() {
               <TabButton value="events" label="Events" tab={tab} />
             </TabsList>
             <div className="flex items-center gap-3">
-  <div className="flex items-center gap-2">
-    <span className="text-sm font-medium text-gray-700">Academic Year:</span>
-    <Select defaultValue={currentAcademicYear}>
-      <SelectTrigger className="w-40">
-        <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
-      </SelectTrigger>
-      <SelectContent>
-        {isLoading ? (
-          <SelectItem value="loading" disabled>
-            <AcademicYearSkeleton />
-          </SelectItem>
-        ) : academicYears?.length > 0 ? (
-          academicYears.map((year) => (
-            <SelectItem key={year.id} value={year.year}>
-              <div className="flex items-center justify-between w-full min-w-0">
-                <span className="truncate">{year.year}</span>
-                {year.isCurrentYear && (
-                  <Badge 
-                    variant="outline" 
-                    className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
-                  >
-                    Active
-                  </Badge>
-                )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Academic Year:</span>
+                <Select defaultValue={currentAcademicYear}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <AcademicYearSkeleton />
+                      </SelectItem>
+                    ) : academicYears?.length > 0 ? (
+                      academicYears.map((year) => (
+                        <SelectItem key={year.id} value={year.year}>
+                          <div className="flex items-center justify-between w-full min-w-0">
+                            <span className="truncate">{year.year}</span>
+                            {year.isCurrentYear && (
+                              <Badge
+                                variant="outline"
+                                className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
+                              >
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-data" disabled>
+                        <div className="flex items-center gap-2">
+                          <span>No academic years found</span>
+                        </div>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-            </SelectItem>
-          ))
-        ) : (
-          <SelectItem value="no-data" disabled>
-            <div className="flex items-center gap-2">
-              <span>No academic years found</span>
             </div>
-          </SelectItem>
-        )}
-      </SelectContent>
-    </Select>
-  </div>
-</div>
           </div>
           {/* Overview Tab */}
           <TabsContent value="overview">

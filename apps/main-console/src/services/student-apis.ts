@@ -46,78 +46,66 @@ export const updateBoardUniversities = async (formData: BoardUniversity, id: num
 };
 
 export const createBoardUniversities = async (formData: BoardUniversity) => {
-  const res = await axiosInstance.post(`/api/board-universities`, formData, {
-  });
+  const res = await axiosInstance.post(`/api/board-universities`, formData, {});
   return res.data;
 };
 
 export const updateInstitution = async (formData: Institution, id: number) => {
-  const res = await axiosInstance.put(`/api/institutions/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/institutions/${id}`, formData, {});
   return res.data;
 };
 
 export const createInstitution = async (formData: Institution) => {
-  const res = await axiosInstance.post(`/api/institutions`, formData, {
-  });
+  const res = await axiosInstance.post(`/api/institutions`, formData, {});
   return res.data;
 };
 
 export const updateBoardResultStatus = async (formData: ResultStatus, id: number) => {
-  const res = await axiosInstance.put(`/api/resultstatus/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/resultstatus/${id}`, formData, {});
   return res.data;
 };
 
 export const createBoardResultStatus = async (formData: ResultStatus) => {
-  const res = await axiosInstance.post(`/api/resultstatus`, formData, {
-  });
+  const res = await axiosInstance.post(`/api/resultstatus`, formData, {});
   return res.data;
 };
 
 export const updatedAcademicIdentifier = async (formData: AcademicIdentifier, id: number) => {
-  const res = await axiosInstance.put(`/api/academicIdentifiers/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/academicIdentifiers/${id}`, formData, {});
   return res.data;
 };
 
 export const createAcademicIdentifier = async (formData: AcademicIdentifier) => {
-  const res = await axiosInstance.post(`/api/academicIdentifiers/`, formData, {
-  });
+  const res = await axiosInstance.post(`/api/academicIdentifiers/`, formData, {});
   return res.data;
 };
 
 export const updateAcademicHistory = async (id: number, formData: AcademicHistory) => {
-  const res = await axiosInstance.put(`/api/academicHistories/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/academicHistories/${id}`, formData, {});
   return res.data;
 };
 
 export const createAcademicHistory = async (formData: AcademicHistory) => {
-  const res = await axiosInstance.post(`/api/academicHistories`, formData, {
-  });
+  const res = await axiosInstance.post(`/api/academicHistories`, formData, {});
   return res.data;
 };
 
 export const UpdateDegree = async (formData: Degree, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
-  const res = await axiosInstance.put(`/api/degree/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/degree/${id}`, formData, {});
   return res.data;
 };
 export const UpdateCategory = async (formData: Category, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
-  const res = await axiosInstance.put(`/api/categories/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/categories/${id}`, formData, {});
   return res.data;
 };
 export const UpdateAnnualIncome = async (formData: AnnualIncome, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
-  const res = await axiosInstance.put(`/api/annual-incomes/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/annual-incomes/${id}`, formData, {});
   return res.data;
 };
 
@@ -131,8 +119,7 @@ export const UpdateReligion = async (formData: Religion, id: number) => {
 export const UpdateUser = async (formData: User, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
-  const res = await axiosInstance.put(`/api/users/${id}`, formData, {
-  });
+  const res = await axiosInstance.put(`/api/users/${id}`, formData, {});
   return res.data;
 };
 
@@ -150,7 +137,7 @@ type ReportFilters = {
 export const getAllReports = async (filters: ReportFilters = {}) => {
   try {
     const { export: isExport, ...rest } = filters;
-    
+
     // Build query string from rest filters
     let query = Object.entries(rest)
       .filter(([, value]) => value !== undefined && value !== null && value !== "")
@@ -165,17 +152,15 @@ export const getAllReports = async (filters: ReportFilters = {}) => {
     const url = `/api/reports/query${query ? "?" + query : ""}`;
     console.log("URL:", url);
     const response = await axiosInstance.get(url, {
-      headers: {
-      },
+      headers: {},
     });
-    
+
     return response.data;
   } catch (error) {
     console.error("Error fetching reports:", error);
     throw error;
   }
 };
-
 
 type marksheetFilters = {
   page?: number;
@@ -188,46 +173,41 @@ type marksheetFilters = {
   export?: boolean;
 };
 export const getAllMarksheet = async (filters: marksheetFilters = {}) => {
-  const {export:isExport, ...rest} = filters;
+  const { export: isExport, ...rest } = filters;
   // console.log("Filters in getAllReports:", filters);
   let query = Object.entries(rest)
     .filter(([, value]) => value !== undefined && value !== null && value !== "")
     .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
     .join("&");
-    if(isExport){
-      query += "isExport=true";
-    }
+  if (isExport) {
+    query += "isExport=true";
+  }
   // console.log("Query string:", query);
   const url = `/api/marksheets/query${query ? "?" + query : ""}`;
   // console.log("URL:", url);
 
-  const response = await axiosInstance.get(url, {
-  });
+  const response = await axiosInstance.get(url, {});
   // console.log("response****/", response.data);
 
   return response.data.payload;
 };
 
 export const createFamilyDetails = async (formData: Family) => {
-  const response = await axiosInstance.post(`/api/parents`, formData, {
-  });
+  const response = await axiosInstance.post(`/api/parents`, formData, {});
   return response.data;
 };
 
 export const createHealthDetails = async (formData: Health) => {
-  const response = await axiosInstance.post(`/api/health`, formData, {
-  });
+  const response = await axiosInstance.post(`/api/health`, formData, {});
   return response.data;
 };
 
 export const createPersonalDetails = async (formData: PersonalDetails) => {
-  const response = await axiosInstance.post(`/api/personal-details`, formData, {
-  });
+  const response = await axiosInstance.post(`/api/personal-details`, formData, {});
   return response.data;
 };
 
 export const createAddressDetails = async (formData: Address) => {
-  const response = await axiosInstance.post(`/api/address`, formData, {
-  });
+  const response = await axiosInstance.post(`/api/address`, formData, {});
   return response.data;
 };

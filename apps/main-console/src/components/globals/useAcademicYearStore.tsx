@@ -16,14 +16,11 @@ export const useAcademicYearStore = create<AcademicYearState>()(
       selectedAcademicYear: null,
       setSelectedById: (id, list) =>
         set(() => {
-          const selected =
-            id != null && Array.isArray(list)
-              ? list.find((ay) => ay.id === id) ?? null
-              : null;
+          const selected = id != null && Array.isArray(list) ? (list.find((ay) => ay.id === id) ?? null) : null;
           return { selectedAcademicYearId: id, selectedAcademicYear: selected };
         }),
       reset: () => set({ selectedAcademicYearId: null, selectedAcademicYear: null }),
     }),
-    { name: "academic-year-store" }
-  )
+    { name: "academic-year-store" },
+  ),
 );

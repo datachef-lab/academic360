@@ -141,7 +141,7 @@
 //     document.addEventListener("keydown", down);
 //     return () => document.removeEventListener("keydown", down);
 //   }, []);
- 
+
 //   return (
 //     <ThemeProvider defaultTheme="light">
 //       <SidebarProvider className="w-screen overflow-x-hidden">
@@ -266,7 +266,6 @@
 //     </ThemeProvider>
 //   );
 // }
-
 
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -409,7 +408,7 @@ export default function HomeLayout() {
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
- 
+
   return (
     <ThemeProvider defaultTheme="light">
       <SidebarProvider className="w-screen overflow-x-hidden">
@@ -417,12 +416,10 @@ export default function HomeLayout() {
         <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
           <header className="flex items-center justify-between border-b bg-white h-16 px-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              {isMobile && (
-                <SidebarTrigger className="h-8 w-8 p-0" />
-              )}
-              
+              {isMobile && <SidebarTrigger className="h-8 w-8 p-0" />}
+
               <Separator orientation="vertical" className="h-4" />
-              
+
               {/* Mobile breadcrumb - show current page only */}
               {isMobile ? (
                 <div className="flex items-center gap-2 min-w-0">
@@ -449,9 +446,7 @@ export default function HomeLayout() {
                 <Breadcrumb>
                   <BreadcrumbList>
                     <BreadcrumbItem>
-                      <BreadcrumbLink className="text-sm text-gray-600">
-                        Academics
-                      </BreadcrumbLink>
+                      <BreadcrumbLink className="text-sm text-gray-600">Academics</BreadcrumbLink>
                       <BreadcrumbSeparator />
                     </BreadcrumbItem>
 
@@ -478,16 +473,11 @@ export default function HomeLayout() {
                 </Breadcrumb>
               )}
             </div>
-            
+
             <div className="flex items-center gap-3">
               {/* Search Button - Icon only for mobile, with text for desktop */}
               {isMobile ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0"
-                  onClick={() => setOpen(true)}
-                >
+                <Button variant="ghost" size="sm" className="h-9 w-9 p-0" onClick={() => setOpen(true)}>
                   <Search className="h-4 w-4" />
                 </Button>
               ) : (
@@ -503,11 +493,11 @@ export default function HomeLayout() {
                   </kbd>
                 </Button>
               )}
-              
+
               <NavUser />
             </div>
           </header>
-          
+
           <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
             <Outlet />
           </div>

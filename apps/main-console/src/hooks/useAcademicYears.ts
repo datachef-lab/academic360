@@ -1,102 +1,107 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { AcademicYear } from '@/types/academics/academic-year';
-import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import { Shift } from '@/types/academics/shift';
-import { createAcademicYear, deleteAcademicYearById, getAllAcademicYears, updateAcademicYearById } from '@/services/academic-year-api';
-import { getAllShifts } from '@/services/academic';
-import { useAuth } from '@/features/auth/providers/auth-provider';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { AcademicYear } from "@/types/academics/academic-year";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { Shift } from "@/types/academics/shift";
+import {
+  createAcademicYear,
+  deleteAcademicYearById,
+  getAllAcademicYears,
+  updateAcademicYearById,
+} from "@/services/academic-year-api";
+import { getAllShifts } from "@/services/academic";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 
 // Hook for fetching all academic years
 export const useAcademicYears = () => {
-    const { isInitialized, accessToken } = useAuth();
-    
-    return useQuery({
-        queryKey: ['academic-years'],
-        queryFn: async () => {
-            const response = await getAllAcademicYears();
-            return response.payload || [];
-        },
-        enabled: isInitialized && !!accessToken, // Only run when auth is initialized and token exists
-    });
+  const { isInitialized, accessToken } = useAuth();
+
+  return useQuery({
+    queryKey: ["academic-years"],
+    queryFn: async () => {
+      const response = await getAllAcademicYears();
+      return response.payload || [];
+    },
+    enabled: isInitialized && !!accessToken, // Only run when auth is initialized and token exists
+  });
 };
 
 // Hook for creating academic year
 export const useCreateAcademicYear = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({ academicYear }: { academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>; }) => {
-            const response = await createAcademicYear(academicYear);
-            return response.payload;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-            toast.success('Academic year created successfully');
-        },
-        onError: (error: unknown) => {
-            console.error('Error creating academic year:', error);
-            toast.error('Failed to create academic year');
-        },
-    });
+  return useMutation({
+    mutationFn: async ({ academicYear }: { academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt"> }) => {
+      const response = await createAcademicYear(academicYear);
+      return response.payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+      toast.success("Academic year created successfully");
+    },
+    onError: (error: unknown) => {
+      console.error("Error creating academic year:", error);
+      toast.error("Failed to create academic year");
+    },
+  });
 };
 
 // Hook for updating academic year
 export const useUpdateAcademicYear = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({ id, academicYear }: { id: number; academicYear: Partial<AcademicYear> }) => {
-            const response = await updateAcademicYearById(id, academicYear);
-            return response.payload;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-            toast.success('Academic year updated successfully');
-        },
-        onError: (error) => {
-            console.error('Error updating academic year:', error);
-            toast.error('Failed to update academic year');
-        },
-    });
+  return useMutation({
+    mutationFn: async ({ id, academicYear }: { id: number; academicYear: Partial<AcademicYear> }) => {
+      const response = await updateAcademicYearById(id, academicYear);
+      return response.payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+      toast.success("Academic year updated successfully");
+    },
+    onError: (error) => {
+      console.error("Error updating academic year:", error);
+      toast.error("Failed to update academic year");
+    },
+  });
 };
 
 // Hook for deleting academic year
 export const useDeleteAcademicYear = () => {
-    const queryClient = useQueryClient();
+  const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async (id: number) => {
-            const response = await deleteAcademicYearById(id);
-            return response.payload;
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['academic-years'] });
-            toast.success('Academic year deleted successfully');
-        },
-        onError: (error) => {
-            console.error('Error deleting academic year:', error);
-            toast.error('Failed to delete academic year');
-        },
-    });
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await deleteAcademicYearById(id);
+      return response.payload;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["academic-years"] });
+      toast.success("Academic year deleted successfully");
+    },
+    onError: (error) => {
+      console.error("Error deleting academic year:", error);
+      toast.error("Failed to delete academic year");
+    },
+  });
 };
 
 export function useShifts() {
-    const [shifts, setShifts] = useState<Shift[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        getAllShifts()
-            .then(data => {
-                setShifts(data as Shift[]);
-                setLoading(false);
-            })
-            .catch(err => {
-                setError(err);
-                setLoading(false);
-            });
-    }, []);
+  useEffect(() => {
+    getAllShifts()
+      .then((data) => {
+        setShifts(data as Shift[]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err);
+        setLoading(false);
+      });
+  }, []);
 
-    return { shifts, loading, error };
-} 
+  return { shifts, loading, error };
+}

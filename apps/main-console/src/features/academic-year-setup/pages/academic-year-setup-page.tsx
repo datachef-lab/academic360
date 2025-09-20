@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 
 // Mock data
 
-
 const statsData = [
   { title: "Total Program-Courses", value: "12", icon: BookOpen, color: "bg-blue-500" },
   { title: "Total Subjects", value: "48", icon: FileText, color: "bg-green-500" },
@@ -90,7 +89,7 @@ export default function AcademicYearSetupPage() {
   const { list: academicYears, isLoading } = useAcademicYearOptions();
 
   // Get the current academic year or first available year
-  const currentAcademicYear = academicYears?.find(year => year.isCurrentYear)?.year || academicYears?.[0]?.year;
+  const currentAcademicYear = academicYears?.find((year) => year.isCurrentYear)?.year || academicYears?.[0]?.year;
 
   return (
     <div className=" bg-gradient-to-br from-gray-50 to-gray-100">
@@ -104,47 +103,47 @@ export default function AcademicYearSetupPage() {
                 Configure and manage your academic year settings, courses, and admission processes
               </p>
             </div>
-           <div className="flex items-center gap-3">
-  <div className="flex items-center gap-2">
-    <span className="text-sm font-medium text-gray-700">Academic Year:</span>
-    <Select defaultValue={currentAcademicYear}>
-      <SelectTrigger className="w-40">
-        <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
-      </SelectTrigger>
-      <SelectContent>
-        {isLoading ? (
-          <SelectItem value="loading" disabled>
-            <div className="flex items-center gap-2">
-              <span>Loading...</span>
-            </div>
-          </SelectItem>
-        ) : academicYears?.length > 0 ? (
-          academicYears.map((year) => (
-            <SelectItem key={year.id} value={year.year}>
-              <div className="flex items-center justify-between w-full min-w-0">
-                <span className="truncate">{year.year}</span>
-                {year.isCurrentYear && (
-                  <Badge 
-                    variant="outline" 
-                    className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
-                  >
-                    Active
-                  </Badge>
-                )}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Academic Year:</span>
+                <Select defaultValue={currentAcademicYear}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoading ? (
+                      <SelectItem value="loading" disabled>
+                        <div className="flex items-center gap-2">
+                          <span>Loading...</span>
+                        </div>
+                      </SelectItem>
+                    ) : academicYears?.length > 0 ? (
+                      academicYears.map((year) => (
+                        <SelectItem key={year.id} value={year.year}>
+                          <div className="flex items-center justify-between w-full min-w-0">
+                            <span className="truncate">{year.year}</span>
+                            {year.isCurrentYear && (
+                              <Badge
+                                variant="outline"
+                                className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
+                              >
+                                Active
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-data" disabled>
+                        <div className="flex items-center gap-2">
+                          <span>No academic years found</span>
+                        </div>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-            </SelectItem>
-          ))
-        ) : (
-          <SelectItem value="no-data" disabled>
-            <div className="flex items-center gap-2">
-              <span>No academic years found</span>
             </div>
-          </SelectItem>
-        )}
-      </SelectContent>
-    </Select>
-  </div>
-</div>
           </div>
         </div>
 

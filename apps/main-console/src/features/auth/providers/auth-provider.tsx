@@ -119,7 +119,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
           const newAccessToken = await generateNewToken();
-          if (newAccessToken) {          
+          if (newAccessToken) {
             originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
             return axiosInstance(originalRequest);
           }

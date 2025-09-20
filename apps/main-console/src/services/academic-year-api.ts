@@ -5,7 +5,7 @@ import { ApiResonse } from "@/types/api-response";
 // Get all academic years
 export async function getAllAcademicYears(): Promise<ApiResonse<AcademicYear[]>> {
   const response = await axiosInstance.get(`/api/v1/academics/all`);
- 
+
   console.log(response.data);
 
   return response.data;
@@ -18,13 +18,18 @@ export async function getAcademicYearById(id: number): Promise<ApiResonse<Academ
 }
 
 // Create new academic year
-export async function createAcademicYear(academicYear: Omit<AcademicYear, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResonse<AcademicYear>> {
-  const response = await axiosInstance.post(`/api/v1/academics`, {academicYear});
+export async function createAcademicYear(
+  academicYear: Omit<AcademicYear, "id" | "createdAt" | "updatedAt">,
+): Promise<ApiResonse<AcademicYear>> {
+  const response = await axiosInstance.post(`/api/v1/academics`, { academicYear });
   return response.data;
 }
 
 // Update academic year
-export async function updateAcademicYearById(id: number, academicYear: Partial<AcademicYear>): Promise<ApiResonse<AcademicYear>> {
+export async function updateAcademicYearById(
+  id: number,
+  academicYear: Partial<AcademicYear>,
+): Promise<ApiResonse<AcademicYear>> {
   const response = await axiosInstance.put(`/api/v1/academics/${id}`, academicYear);
   return response.data;
 }
@@ -33,4 +38,4 @@ export async function updateAcademicYearById(id: number, academicYear: Partial<A
 export async function deleteAcademicYearById(id: number): Promise<ApiResonse<null>> {
   const response = await axiosInstance.delete(`/api/v1/academics/academic-years/${id}`);
   return response.data;
-} 
+}

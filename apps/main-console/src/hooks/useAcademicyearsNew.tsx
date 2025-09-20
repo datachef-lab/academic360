@@ -7,7 +7,7 @@ import { useAuth } from "@/features/auth/providers/auth-provider";
 
 export function useAcademicYears() {
   const { isInitialized, accessToken } = useAuth();
-  
+
   return useQuery({
     queryKey: ["academicYears"],
     queryFn: getAllAcademicYears,
