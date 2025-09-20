@@ -5,15 +5,19 @@ import { useState, useEffect } from 'react';
 import { Shift } from '@/types/academics/shift';
 import { createAcademicYear, deleteAcademicYearById, getAllAcademicYears, updateAcademicYearById } from '@/services/academic-year-api';
 import { getAllShifts } from '@/services/academic';
+import { useAuth } from '@/features/auth/providers/auth-provider';
 
 // Hook for fetching all academic years
 export const useAcademicYears = () => {
+    const { isInitialized, accessToken } = useAuth();
+    
     return useQuery({
         queryKey: ['academic-years'],
         queryFn: async () => {
             const response = await getAllAcademicYears();
             return response.payload || [];
         },
+        enabled: isInitialized && !!accessToken, // Only run when auth is initialized and token exists
     });
 };
 

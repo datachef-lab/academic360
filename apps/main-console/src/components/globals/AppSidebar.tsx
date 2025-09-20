@@ -34,15 +34,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAcademicYearOptions } from "@/hooks/useAcademicyearsNew";
+import { useAcademicYearStore } from "./useAcademicYearStore";
 // import { useSettings } from "@/features/settings/providers/settings-provider";
 
 // Academic year data
-const academicYears = [
-  { value: "2024-25", label: "2024-25" },
-  { value: "2023-24", label: "2023-24" },
-  { value: "2022-23", label: "2022-23" },
-  { value: "2021-22", label: "2021-22" },
-];
+// const academicYears = [
+//   { value: "2024-25", label: "2024-25" },
+//   { value: "2023-24", label: "2023-24" },
+//   { value: "2022-23", label: "2022-23" },
+//   { value: "2021-22", label: "2021-22" },
+// ];
 
 // Navigation data
 const data = {
@@ -120,10 +122,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //   const setIsLoggingOut = React.useState(false)[1];
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
-  const [selectedAcademicYear, setSelectedAcademicYear] = React.useState("2024-25");
+  // const [selectedAcademicYear, setSelectedAcademicYear] = React.useState("2024-25");
+  
+  const { selectedAcademicYear, selectedAcademicYearId, setSelectedById } = useAcademicYearStore();
+  const { data: academicYearsResponse, list: academicYears, options } = useAcademicYearOptions();
+
+  React.useEffect(() => {
+    console.log("[AcademicYears API Response]", academicYearsResponse);
+  }, [academicYearsResponse]);
+
+  React.useEffect(() => {
+    console.log("[Dropdown List Data] academicYears", academicYears);
+    console.log("[Dropdown Options] options", options);
+  }, [academicYears, options]);
+
 
   React.useEffect(() => {}, [settings]);
 
+  
   // Helper to check if sidebar item is active
   function isSidebarActive(currentPath: string, itemUrl: string) {
     return currentPath === itemUrl || currentPath.startsWith(itemUrl + "/");
@@ -141,6 +157,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //       setIsLoggingOut(false);
   //     }
   //   };
+  React.useEffect(() => {
+    // Auto-select current year if not already selected
+    if (!selectedAcademicYear && academicYears.length > 0) {
+      const currentYear = academicYears.find((y) => y.isCurrentYear);
+      if (currentYear?.id != null) {
+        setSelectedById(currentYear.id, academicYears);
+      }
+    }
+  }, [academicYears, selectedAcademicYear, setSelectedById]);
+
 
   if (!displayFlag || !user || !accessToken) {
     return null;
@@ -170,13 +196,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       {settings.find((ele) => ele.name === "College Abbreviation")?.value} Console Panel
                     </h1>
                     <p className="text-xs text-purple-200 truncate">
-                      {academicYears.find((year) => year.value === selectedAcademicYear)?.label || "Select Year"}
+                      {selectedAcademicYear?.year || "Select Year"}
                     </p>
                   </div>
                   <ChevronDown className="h-4 w-4 text-purple-200 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuContent align="end" className="w-64">
                 <div className="p-2">
                   <div className="flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-gray-900">
                     <Calendar className="h-4 w-4" />
@@ -185,13 +211,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <div className="border-t border-gray-100 mt-2 pt-2">
                     {academicYears.map((year) => (
                       <DropdownMenuItem
-                        key={year.value}
-                        onClick={() => setSelectedAcademicYear(year.value)}
+                        key={year.id}
+                        onClick={() => {
+                          console.log("[Dropdown Select] selected year", year);
+                          setSelectedById(year.id ?? null, academicYears);
+                        }}
                         className="flex items-center gap-2 cursor-pointer px-2 py-1.5"
                       >
                         <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">{year.label}</span>
-                        {selectedAcademicYear === year.value && (
+                        <span className="text-sm">{year.year}</span>
+                        {selectedAcademicYearId === year.id && (
                           <div className="ml-auto h-2 w-2 bg-purple-600 rounded-full" />
                         )}
                       </DropdownMenuItem>
@@ -208,18 +237,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <div className="">
               <div className="flex flex-col h-full justify-between">
                 {/* Academic Year Setup */}
-                <div className="my-4 mb-6 border mx-2 rounded-l-md">
+                <div className="my-4 mb-5 text-sm mx-2 border border-white/50 rounded-lg ">
                   <NavItem
                     key={"Academic Year Setup"}
                     icon={<Plus className="h-5 w-5" />}
                     href={"/dashboard/academic-year-setup"}
                   >
-                    <span className="text">New Academic Setup</span>
+                    <span className="text-sm">New Academic Setup</span>
                   </NavItem>
                 </div>
 
                 {/* Dashboard Link */}
-                <div className="mb-4">
+                <div className="mb-3">
                   {data.navDash.map((item) => (
                     <NavItem
                       key={item.title}
@@ -232,7 +261,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           : isSidebarActive(currentPath, item.url))
                       }
                     >
-                      <span className="text-lg">{item.title}</span>
+                      <span className="text-base">{item.title}</span>
                     </NavItem>
                   ))}
                 </div>
@@ -369,23 +398,66 @@ interface NavItemProps {
   isActive?: boolean;
 }
 
+// export function NavItem({ href, icon, children, isActive }: NavItemProps) {
+//   return (
+//     <Link
+//       to={href}
+//       className={cn(
+//         " border border-transparent group flex items-center transition-all duration-200 px-4 py-2 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
+//         isActive
+//           ? "bg-white hover:text-purple-600 ml-5 rounded-l-full font-semibold text-purple-600 shadow-lg"
+//           : "text-white hover:bg-purple-700/80 hover:text-white",
+//       )}
+//     >
+//       <div className="flex items-center gap-3 w-full">
+//         <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white group-hover:text-white")}>
+//           {icon}
+//         </span>
+//         <span className="text-inherit truncate">{children}</span>
+//       </div>
+//     </Link>
+//   );
+// }
 export function NavItem({ href, icon, children, isActive }: NavItemProps) {
   return (
     <Link
       to={href}
       className={cn(
-        " border border-transparent group flex items-center transition-all duration-150 px-6 py-1 hover:border-slate-50 text-sm font-medium relative rounded-l-md",
+        // Base styles with improved spacing and transitions
+        "group flex items-center transition-all duration-300 ease-in-out px-5 py-2.5 mb-1 text-xs font-medium relative",
+        // Border and backdrop effects
+        "border border-transparent backdrop-blur-sm",
+        // Active state styles
         isActive
-          ? "bg-white hover:text-purple-600 font-semibold text-purple-600 shadow-lg"
-          : "text-white hover:bg-purple-700/80 hover:text-white",
+          ? "bg-white text-purple-700 shadow-xl rounded-l-full  shadow-purple-900/20 ml-3 font-semibold border-purple-200/30"
+          : "text-white hover:text-white rounded-lg ",
+        // Transform effects for modern feel
+        
       )}
     >
       <div className="flex items-center gap-3 w-full">
-        <span className={cn("h-5 w-5", isActive ? "text-purple-600" : "text-white group-hover:text-white")}>
+        <span 
+          className={cn(
+            "h-5 w-5 transition-all duration-300 ease-in-out",
+            isActive 
+              ? "text-purple-600 scale-110" 
+              : "text-white/80 group-hover:text-white group-hover:scale-105"
+          )}
+        >
           {icon}
         </span>
-        <span className="text-inherit truncate">{children}</span>
+        <span className={cn(
+          "transition-all duration-300 ease-in-out truncate",
+          isActive ? "text-purple-700" : "text-white/90 group-hover:text-white"
+        )}>
+          {children}
+        </span>
       </div>
+      
+      {/* Modern accent line for active state */}
+      {/* {isActive && (
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b  from-purple-500 to-purple-700 rounded-r-full" />
+      )} */}
     </Link>
   );
 }

@@ -4,6 +4,7 @@ import HomeLayout from "@/features/dashboard/layouts/home-layout";
 // import StudentViewPage from "./pages/StudentViewPage";
 import { AuthProvider } from "./features/auth/providers/auth-provider";
 import { NotificationProvider } from "./providers/NotificationProvider";
+import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 // import StudentPage from "./pages/students/StudentPage";
 import BookCatalog from "./components/LibManagement/BookCatalog";
 import IssueRetun from "./components/LibManagement/IssueRetun";
@@ -84,20 +85,16 @@ const router = createBrowserRouter(
   [
     {
       path: "/",
-      element: (
-        <AuthProvider>
-          <LoginPage />
-        </AuthProvider>
-      ),
+      element: <LoginPage />,
     },
     {
       path: "/dashboard",
       element: (
-        <AuthProvider>
+        <ProtectedRouteWrapper>
           <NotificationProvider>
             <HomeLayout />
           </NotificationProvider>
-        </AuthProvider>
+        </ProtectedRouteWrapper>
       ),
       children: [
         { path: "", element: <Dashboard /> },
@@ -440,9 +437,9 @@ const router = createBrowserRouter(
 
 const App = () => {
   return (
-    <>
+    <AuthProvider>
       <RouterProvider router={router} />
-    </>
+    </AuthProvider>
   );
 };
 

@@ -21,124 +21,80 @@ export const updateEmergencyContact = async (formData: EmergencyContact, id: num
   const response = await axiosInstance.put(`/api/emergency-contact/${id}`, formData, {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
     },
   });
   return response.data;
 };
 
 export const createEmergencyContact = async (formData: EmergencyContact) => {
-  const response = await axiosInstance.post(`/api/emergency-contact`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+  const response = await axiosInstance.post(`/api/emergency-contact`, formData);
   return response.data;
 };
 
 export const updateAccommodation = async (formData: Accommodation, id: number) => {
-  const res = await axiosInstance.put(`/api/accommodations/query?id=${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+  const res = await axiosInstance.put(`/api/accommodations/query?id=${id}`, formData);
   return res.data;
 };
 export const createAccommodation = async (formData: Accommodation) => {
-  const response = await axiosInstance.post(`/api/accommodations`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+  const response = await axiosInstance.post(`/api/accommodations`, formData);
   return response.data;
 };
 
 export const updateBoardUniversities = async (formData: BoardUniversity, id: number) => {
-  const res = await axiosInstance.put(`/api/board-universities/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+  const res = await axiosInstance.put(`/api/board-universities/${id}`, formData);
   return res.data;
 };
 
 export const createBoardUniversities = async (formData: BoardUniversity) => {
   const res = await axiosInstance.post(`/api/board-universities`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const updateInstitution = async (formData: Institution, id: number) => {
   const res = await axiosInstance.put(`/api/institutions/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const createInstitution = async (formData: Institution) => {
   const res = await axiosInstance.post(`/api/institutions`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const updateBoardResultStatus = async (formData: ResultStatus, id: number) => {
   const res = await axiosInstance.put(`/api/resultstatus/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const createBoardResultStatus = async (formData: ResultStatus) => {
   const res = await axiosInstance.post(`/api/resultstatus`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const updatedAcademicIdentifier = async (formData: AcademicIdentifier, id: number) => {
   const res = await axiosInstance.put(`/api/academicIdentifiers/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const createAcademicIdentifier = async (formData: AcademicIdentifier) => {
   const res = await axiosInstance.post(`/api/academicIdentifiers/`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const updateAcademicHistory = async (id: number, formData: AcademicHistory) => {
   const res = await axiosInstance.put(`/api/academicHistories/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
 
 export const createAcademicHistory = async (formData: AcademicHistory) => {
   const res = await axiosInstance.post(`/api/academicHistories`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
@@ -147,9 +103,6 @@ export const UpdateDegree = async (formData: Degree, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
   const res = await axiosInstance.put(`/api/degree/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
@@ -157,9 +110,6 @@ export const UpdateCategory = async (formData: Category, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
   const res = await axiosInstance.put(`/api/categories/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
@@ -167,9 +117,6 @@ export const UpdateAnnualIncome = async (formData: AnnualIncome, id: number) => 
   console.log("formdata", formData);
   console.log("id", id);
   const res = await axiosInstance.put(`/api/annual-incomes/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
@@ -185,9 +132,6 @@ export const UpdateUser = async (formData: User, id: number) => {
   console.log("formdata", formData);
   console.log("id", id);
   const res = await axiosInstance.put(`/api/users/${id}`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return res.data;
 };
@@ -222,7 +166,6 @@ export const getAllReports = async (filters: ReportFilters = {}) => {
     console.log("URL:", url);
     const response = await axiosInstance.get(url, {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
     });
     
@@ -259,9 +202,6 @@ export const getAllMarksheet = async (filters: marksheetFilters = {}) => {
   // console.log("URL:", url);
 
   const response = await axiosInstance.get(url, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   // console.log("response****/", response.data);
 
@@ -270,36 +210,24 @@ export const getAllMarksheet = async (filters: marksheetFilters = {}) => {
 
 export const createFamilyDetails = async (formData: Family) => {
   const response = await axiosInstance.post(`/api/parents`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return response.data;
 };
 
 export const createHealthDetails = async (formData: Health) => {
   const response = await axiosInstance.post(`/api/health`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return response.data;
 };
 
 export const createPersonalDetails = async (formData: PersonalDetails) => {
   const response = await axiosInstance.post(`/api/personal-details`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return response.data;
 };
 
 export const createAddressDetails = async (formData: Address) => {
   const response = await axiosInstance.post(`/api/address`, formData, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
   });
   return response.data;
 };

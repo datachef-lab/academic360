@@ -66,11 +66,7 @@ export const getFilteredStudents = async (filters: studentFilters = {}) => {
   console.log("url", url);
   console.log("filters", filters);
 
-  const response = await axiosInstance.get(url, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
-  });
+  const response = await axiosInstance.get(url);
 
   // Ensure a valid return value
 

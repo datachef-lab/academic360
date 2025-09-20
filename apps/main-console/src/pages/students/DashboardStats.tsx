@@ -18,7 +18,7 @@ export default function DashboardStats() {
   // For now, just pass the year to children as a prop if needed
 
   return (
-    <div className="flex flex-col gap-8 p-8">
+    <div className="flex flex-col gap-8 p-8 ">
       {/* Academic Year Dropdown */}
       <div className="flex items-center gap-4">
         <span className="font-semibold">Academic Year:</span>

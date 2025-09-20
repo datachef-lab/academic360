@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAcademicYearOptions } from "@/hooks/useAcademicyearsNew";
 import {
   Users,
   FileText,
@@ -15,6 +17,7 @@ import {
   CheckCircle,
   Boxes,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import {
   AdmissionsAreaChart,
   LibraryGenreBarChart,
@@ -25,8 +28,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import { FaRupeeSign } from "react-icons/fa";
 // import { ChartBarStacked } from './ChartBarStacked';
 
-// Mock academic years and summary data for UI demo
-const academicYears: number[] = [];
+// Summary data for UI demo
 const mockSummary = {
   admissions: { total: 0, approved: 0, rejected: 0 },
   students: { total: 0, new: 0, active: 0, suspended: 0, graduated: 0 },
@@ -97,6 +99,15 @@ function QuickActions({ actions }: { actions: { label: string; icon: React.React
   );
 }
 
+function AcademicYearSkeleton() {
+  return (
+    <div className="flex items-center gap-2 w-full">
+      <Skeleton className="h-4 w-20 rounded-md" />
+      <Skeleton className="h-4 w-4 rounded-full" />
+    </div>
+  );
+}
+
 function RecentActivity({
   items,
   icon,
@@ -124,7 +135,19 @@ function RecentActivity({
 
 export default function Dashboard() {
   const [tab, setTab] = useState("overview");
-  const [year, setYear] = useState(academicYears[0]);
+  const { list: academicYears, isLoading } = useAcademicYearOptions();
+  
+  // Get the current academic year or first available year
+  const currentAcademicYear = academicYears?.find(year => year.isCurrentYear)?.year || academicYears?.[0]?.year;
+  const [year, setYear] = useState(currentAcademicYear);
+  
+  // Update year when academic years data loads
+  useEffect(() => {
+    if (currentAcademicYear && !year) {
+      setYear(currentAcademicYear);
+    }
+  }, [currentAcademicYear, year]);
+  
   // In real app, fetch summary data for selected year
   const summary = mockSummary;
 
@@ -145,21 +168,45 @@ export default function Dashboard() {
               <TabButton value="library" label="Library" tab={tab} />
               <TabButton value="events" label="Events" tab={tab} />
             </TabsList>
+            <div className="flex items-center gap-3">
+  <div className="flex items-center gap-2">
+    <span className="text-sm font-medium text-gray-700">Academic Year:</span>
+    <Select defaultValue={currentAcademicYear}>
+      <SelectTrigger className="w-40">
+        <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
+      </SelectTrigger>
+      <SelectContent>
+        {isLoading ? (
+          <SelectItem value="loading" disabled>
+            <AcademicYearSkeleton />
+          </SelectItem>
+        ) : academicYears?.length > 0 ? (
+          academicYears.map((year) => (
+            <SelectItem key={year.id} value={year.year}>
+              <div className="flex items-center justify-between w-full min-w-0">
+                <span className="truncate">{year.year}</span>
+                {year.isCurrentYear && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
+                  >
+                    Active
+                  </Badge>
+                )}
+              </div>
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="no-data" disabled>
             <div className="flex items-center gap-2">
-              <span className="text-gray-700 font-medium">Academic Year:</span>
-              <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-                <SelectTrigger className="w-36">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}-{y + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <span>No academic years found</span>
             </div>
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
           </div>
           {/* Overview Tab */}
           <TabsContent value="overview">

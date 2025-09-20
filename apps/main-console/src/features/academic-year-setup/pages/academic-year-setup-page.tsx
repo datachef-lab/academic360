@@ -2,14 +2,11 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { BookOpen, Users, Award, Settings, BarChart3, FileText, Shield, Database, Star } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAcademicYearOptions } from "@/hooks/useAcademicyearsNew";
+import { Badge } from "@/components/ui/badge";
 
 // Mock data
-const academicYears = [
-  { value: "2024-25", label: "2024-25", isActive: true },
-  { value: "2023-24", label: "2023-24", isActive: false },
-  { value: "2022-23", label: "2022-23", isActive: false },
-  { value: "2021-22", label: "2021-22", isActive: false },
-];
+
 
 const statsData = [
   { title: "Total Program-Courses", value: "12", icon: BookOpen, color: "bg-blue-500" },
@@ -90,6 +87,10 @@ const featureCards = [
 
 export default function AcademicYearSetupPage() {
   const navigate = useNavigate();
+  const { list: academicYears, isLoading } = useAcademicYearOptions();
+
+  // Get the current academic year or first available year
+  const currentAcademicYear = academicYears?.find(year => year.isCurrentYear)?.year || academicYears?.[0]?.year;
 
   return (
     <div className=" bg-gradient-to-br from-gray-50 to-gray-100">
@@ -103,28 +104,47 @@ export default function AcademicYearSetupPage() {
                 Configure and manage your academic year settings, courses, and admission processes
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Academic Year:</span>
-                <Select defaultValue="2024-25">
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {academicYears.map((year) => (
-                      <SelectItem key={year.value} value={year.value}>
-                        <div className="flex items-center gap-2">
-                          <span>{year.label}</span>
-                          {year.isActive && (
-                            <span className="px-2 py-1 text-xs bg-green-100 text-green-700 rounded-full">Active</span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+           <div className="flex items-center gap-3">
+  <div className="flex items-center gap-2">
+    <span className="text-sm font-medium text-gray-700">Academic Year:</span>
+    <Select defaultValue={currentAcademicYear}>
+      <SelectTrigger className="w-40">
+        <SelectValue placeholder={isLoading ? "Loading..." : currentAcademicYear} />
+      </SelectTrigger>
+      <SelectContent>
+        {isLoading ? (
+          <SelectItem value="loading" disabled>
+            <div className="flex items-center gap-2">
+              <span>Loading...</span>
             </div>
+          </SelectItem>
+        ) : academicYears?.length > 0 ? (
+          academicYears.map((year) => (
+            <SelectItem key={year.id} value={year.year}>
+              <div className="flex items-center justify-between w-full min-w-0">
+                <span className="truncate">{year.year}</span>
+                {year.isCurrentYear && (
+                  <Badge 
+                    variant="outline" 
+                    className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-50 text-indigo-700 border-indigo-200 rounded-full shrink-0"
+                  >
+                    Active
+                  </Badge>
+                )}
+              </div>
+            </SelectItem>
+          ))
+        ) : (
+          <SelectItem value="no-data" disabled>
+            <div className="flex items-center gap-2">
+              <span>No academic years found</span>
+            </div>
+          </SelectItem>
+        )}
+      </SelectContent>
+    </Select>
+  </div>
+</div>
           </div>
         </div>
 

@@ -53,21 +53,13 @@ export async function uploadFile(body: FormData): Promise<ApiResonse<boolean> | 
 
 export async function findMarksheetsByStudentId(studentId: number, semester?: number): Promise<ApiResonse<Marksheet>> {
     console.log(semester);
-    const response = await axiosInstance.get(`/api/marksheets/query?studentId=${studentId}&semester=${semester}`, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-    });
+    const response = await axiosInstance.get(`/api/marksheets/query?studentId=${studentId}&semester=${semester}`);
     console.log("response", response.data);
     return response.data;
 }
 
 export const updateMarksheetMarks = async (marksheetId: number, marksheetData: Marksheet) => {
-    const response = await axiosInstance.put(`/api/marksheets/${marksheetId}`, marksheetData, {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-    });
+    const response = await axiosInstance.put(`/api/marksheets/${marksheetId}`, marksheetData);
     console.log("response", response.data);
     return response.data;
 };

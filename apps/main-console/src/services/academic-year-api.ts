@@ -5,6 +5,9 @@ import { ApiResonse } from "@/types/api-response";
 // Get all academic years
 export async function getAllAcademicYears(): Promise<ApiResonse<AcademicYear[]>> {
   const response = await axiosInstance.get(`/api/v1/academics/all`);
+ 
+  console.log(response.data);
+
   return response.data;
 }
 

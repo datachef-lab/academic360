@@ -9,13 +9,35 @@ type ProtectedRouteWrapperProps = {
 export default function ProtectedRouteWrapper({ children }: ProtectedRouteWrapperProps) {
   const navigate = useNavigate();
 
-  const { accessToken } = useAuth();
+  const { accessToken, isInitialized, shouldLogout } = useAuth();
 
   useEffect(() => {
-    if (!accessToken) {
+    // Handle logout
+    if (shouldLogout) {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    // Wait for initialization to complete before checking auth
+    if (isInitialized && !accessToken) {
       navigate("/", { replace: true });
     }
-  }, [accessToken, navigate]);
+  }, [accessToken, isInitialized, shouldLogout, navigate]);
 
-  return children;
+  // Show loading while initializing
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Initializing...</div>
+      </div>
+    );
+  }
+
+  // Don't render children if not authenticated
+  if (!accessToken) {
+    return null;
+  }
+
+  return <>{children}</>;
 }
+
