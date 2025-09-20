@@ -1158,8 +1158,7 @@ export async function processApplicationForm(
   const user = await addUser(
     oldAdmStudentPersonalDetails,
     "STUDENT",
-    oldStudent?.codeNumber ??
-      `STD-${oldAdmStudentPersonalDetails.id}-${applicationForm.id}`,
+    oldStudent?.codeNumber,
   );
 
   if (!user) {
@@ -1700,15 +1699,8 @@ export async function addUser(
     throw new Error("UID is required for student");
   }
 
-  const isStaff = (
-    type: (typeof userTypeEnum.enumValues)[number],
-  ): type is "STAFF" => type === "STAFF";
-  const isAdmStudent = (
-    type: (typeof userTypeEnum.enumValues)[number],
-  ): type is "STUDENT" => type === "STUDENT";
-
   // console.log("oldData in addUser() ----->", oldData);
-  if (!isStaff(type) && !isAdmStudent(type)) {
+  if (type !== "STAFF" && type !== "STUDENT") {
     throw new Error("Invalid old details type");
   }
 
@@ -1729,16 +1721,17 @@ export async function addUser(
 
   // Check if user already exists by legacyId OR email
   let existingUser;
-  if (oldData?.email?.trim()) {
+  const email =
+    type === "STUDENT"
+      ? `${cleanString(uid)}@thebges.edu.in`
+      : oldData.email?.trim();
+  if (email) {
     // Check by both legacyId and email
     [existingUser] = await db
       .select()
       .from(userModel)
       .where(
-        or(
-          eq(userModel.legacyId, oldData.id!),
-          eq(userModel.email, oldData.email.trim()),
-        ),
+        or(eq(userModel.legacyId, oldData.id!), eq(userModel.email, email)),
       );
   } else {
     // Check only by legacyId
@@ -1776,10 +1769,7 @@ export async function addUser(
       .values({
         name: nameToUse,
         legacyId: oldData.id!,
-        email:
-          type === "STUDENT"
-            ? `${cleanString(uid)}@thebges.edu.in`
-            : (oldData.email?.trim() ?? ""),
+        email: email ?? "",
         password: hashedPassword,
         phone: phone,
         type,
