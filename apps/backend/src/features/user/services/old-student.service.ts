@@ -3132,8 +3132,12 @@ async function processOldCourseDetails(
     .from(admissionProgramCourseModel)
     .where(
       and(
-        eq(admissionProgramCourseModel.id, programCourse.id! as number),
+        eq(
+          admissionProgramCourseModel.programCourseId,
+          programCourse.id! as number,
+        ),
         eq(admissionProgramCourseModel.admissionId, admission?.id as number),
+        eq(admissionProgramCourseModel.classId, classData?.id as number),
       ),
     );
 
