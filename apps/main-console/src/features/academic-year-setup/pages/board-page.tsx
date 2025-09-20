@@ -190,6 +190,28 @@ export default function BoardPage() {
   const [degreeOptions, setDegreeOptions] = React.useState<DegreeDto[]>([]);
   const [addressOptions, setAddressOptions] = React.useState<AddressDto[]>([]);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize] = React.useState(10);
+  const [totalItems, setTotalItems] = React.useState(0);
+  const [selectedDegreeId, setSelectedDegreeId] = React.useState<number | undefined>(undefined);
+
+  const loadBoards = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await boardService.getAllBoards(currentPage, pageSize, searchText, selectedDegreeId);
+      console.log("data", result);
+      setBoards(result.data);
+      setTotalItems(result.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load boards");
+      toast.error("Failed to load boards");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, pageSize, searchText, selectedDegreeId]);
+
   // Load boards on component mount
   React.useEffect(() => {
     loadBoards();
@@ -211,22 +233,12 @@ export default function BoardPage() {
         console.warn("Failed loading degree/address options", e);
       }
     })();
-  }, []);
+  }, [loadBoards]);
 
-  const loadBoards = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await boardService.getAllBoards();
-      console.log("data", data);
-      setBoards(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load boards");
-      toast.error("Failed to load boards");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Reload when filters change (except search which has its own debounced effect)
+  React.useEffect(() => {
+    loadBoards();
+  }, [loadBoards]);
 
   const handleEdit = (board: BoardDto) => {
     setSelectedBoard(board);
@@ -274,9 +286,11 @@ export default function BoardPage() {
 
   // Delete disabled per requirements
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
     try {
-      const data = boards.map((b, index) => ({
+      // Get all data with current filters but without pagination
+      const result = await boardService.getAllBoards(1, 10000, searchText, selectedDegreeId);
+      const data = result.data.map((b, index) => ({
         "S.No": index + 1,
         Name: b.name,
         Code: b.code || "-",
@@ -292,13 +306,14 @@ export default function BoardPage() {
     }
   };
 
-  const filtered = boards.filter(
-    (b) =>
-      b.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (b.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
-      (b.sequence?.toString() ?? "").includes(searchText.toLowerCase()) ||
-      (b.degree?.name ?? "").toLowerCase().includes(searchText.toLowerCase()),
-  );
+  // Search with debounce
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page when searching
+      loadBoards();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchText, loadBoards]);
 
   return (
     <div className="p-4">
@@ -339,13 +354,34 @@ export default function BoardPage() {
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input
-              placeholder="Search by board name, code, or degree..."
-              className="w-64"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-4 mb-0 justify-between">
+            <div className="flex items-center gap-4">
+              <Input
+                placeholder="Search by board name, code, or degree..."
+                className="w-64"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Select
+                value={selectedDegreeId?.toString() || "all"}
+                onValueChange={(value) => setSelectedDegreeId(value === "all" ? undefined : parseInt(value))}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by Degree" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Degrees</SelectItem>
+                  {degreeOptions.map((degree) => (
+                    <SelectItem key={degree.id} value={degree.id.toString()}>
+                      {degree.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              Showing {boards.length} of {totalItems} results
+            </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
@@ -361,8 +397,9 @@ export default function BoardPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -370,12 +407,13 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 180,
+                        width: 200,
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -387,8 +425,9 @@ export default function BoardPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -396,25 +435,13 @@ export default function BoardPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 100,
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Sequence
-                    </TableHead>
-                    <TableHead
-                      style={{
                         width: 120,
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -426,8 +453,9 @@ export default function BoardPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -439,8 +467,9 @@ export default function BoardPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
@@ -452,8 +481,9 @@ export default function BoardPage() {
                         background: "#f3f4f6",
                         color: "#374151",
                         whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        padding: "12px 8px",
                       }}
                     >
                       Actions
@@ -463,36 +493,33 @@ export default function BoardPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-red-500">
+                      <TableCell colSpan={6} className="text-center text-red-500">
                         {error}
                       </TableCell>
                     </TableRow>
-                  ) : filtered.length === 0 ? (
+                  ) : boards.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={6} className="text-center">
                         No boards found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((b, index) => (
+                    boards.map((b, index) => (
                       <TableRow key={b.id} className="group">
                         <TableCell style={{ width: 60, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
                           {index + 1}
                         </TableCell>
-                        <TableCell style={{ width: 180, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ width: 200, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
                           {b.name ? <Badge variant="secondary">{b.name}</Badge> : "-"}
                         </TableCell>
                         <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
                           {b.code ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {b.sequence ?? "-"}
                         </TableCell>
                         <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
                           {b.passingMarks ?? "-"}
@@ -521,6 +548,51 @@ export default function BoardPage() {
               </Table>
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && !error && totalItems > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
+                {totalItems} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
+                    if (pageNum > Math.ceil(totalItems / pageSize)) return null;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
+                  disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

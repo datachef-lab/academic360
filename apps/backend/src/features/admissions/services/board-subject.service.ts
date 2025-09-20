@@ -35,7 +35,45 @@ export async function createBoardSubject(
   return result;
 }
 
-export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
+export async function getAllBoardSubjects(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  degreeId?: number,
+): Promise<{
+  data: BoardSubjectDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const offset = (page - 1) * pageSize;
+
+  // Build where conditions
+  const whereConditions = [];
+
+  if (search) {
+    whereConditions.push(ilike(boardModel.name, `%${search}%`));
+    whereConditions.push(ilike(boardSubjectNameModel.name, `%${search}%`));
+  }
+
+  if (degreeId) {
+    whereConditions.push(eq(degreeModel.id, degreeId));
+  }
+
+  // Get total count
+  const [{ total }] = await db
+    .select({ total: countDistinct(boardSubjectModel.id) })
+    .from(boardSubjectModel)
+    .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
+    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
+    .leftJoin(
+      boardSubjectNameModel,
+      eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
+    )
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+  // Get paginated results
   const results = await db
     .select({
       id: boardSubjectModel.id,
@@ -83,9 +121,12 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
-    );
+    )
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+    .limit(pageSize)
+    .offset(offset);
 
-  return results.map((result) => ({
+  const data = results.map((result) => ({
     id: result.id!,
     legacyBoardSubjectMappingSubId: result.legacyBoardSubjectMappingSubId,
     boardId: result.boardId!,
@@ -111,6 +152,13 @@ export async function getAllBoardSubjects(): Promise<BoardSubjectDto[]> {
       isActive: result.boardSubjectName?.isActive,
     },
   }));
+
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+  };
 }
 
 export async function getBoardSubjectById(

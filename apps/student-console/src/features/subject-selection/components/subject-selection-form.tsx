@@ -213,9 +213,17 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       setMinorMismatch(false);
       return;
     }
-    const prev = [...earlierMinorSelections].sort().join("||");
-    const current = [minor1, minor2].filter(Boolean).sort().join("||");
-    setMinorMismatch(Boolean(current) && Boolean(prev) && current !== prev);
+
+    // Only show mismatch if both current selections are made and they differ from saved
+    const current = [minor1, minor2].filter(Boolean);
+    if (current.length < 2) {
+      setMinorMismatch(false);
+      return;
+    }
+
+    const prev = [...earlierMinorSelections].sort();
+    const currentSorted = [...current].sort();
+    setMinorMismatch(JSON.stringify(prev) !== JSON.stringify(currentSorted));
   }, [minor1, minor2, earlierMinorSelections]);
 
   // Highlight document section when field is focused
@@ -243,6 +251,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
     // Required field validation
     if (!minor1) newErrors.push("Minor I subject is required");
+    if (admissionMinor2Subjects.length > 0 && !minor2) newErrors.push("Minor II subject is required");
     if (!idc1) newErrors.push("IDC 1 subject is required");
     if (!idc2) newErrors.push("IDC 2 subject is required");
     if (!idc3) newErrors.push("IDC 3 subject is required");
@@ -316,12 +325,13 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     return sourceList.filter((subject) => {
       if (!applyRules) {
         // No RG defined for this category; allow default dedupe logic by caller
-        return subject === currentValue || true;
+        return true;
       }
 
       // Base ensure uniqueness against current selections of same category handled by caller
       // RG checks only when defined for this category
-      const selected = [minor1, minor2, idc1, idc2, idc3].filter(Boolean);
+      // IMPORTANT: exclude the current field's own value so user can swap
+      const selected = [minor1, minor2, idc1, idc2, idc3].filter(Boolean).filter((s) => s !== currentValue);
       const inContext = (rgSemesters: string[]) => {
         if (!contextSemester) return true;
         const set = Array.isArray(contextSemester)
@@ -362,14 +372,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     </div>
   );
 
-  // Helper function to convert subject arrays to combobox format
-  const convertToComboboxData = (subjects: string[], excludeValues: string[] = []) => {
-    return subjects
+  // Helper function to convert subject arrays to combobox format with a reset placeholder
+  const convertToComboboxData = (subjects: string[], excludeValues: string[] = [], selectLabel: string = "Select") => {
+    const options = subjects
       .filter((subject) => !excludeValues.includes(subject))
-      .map((subject) => ({
-        value: subject,
-        label: subject,
-      }));
+      .map((subject) => ({ value: subject, label: subject }));
+    return [{ value: "", label: selectLabel }, ...options];
   };
 
   return (
@@ -597,7 +605,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2 min-h-[84px]">
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
                       <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
                       <Combobox
                         dataArr={convertToComboboxData(
@@ -611,7 +619,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       />
                     </div>
 
-                    <div className="space-y-2 min-h-[84px]">
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
                       <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
                       <Combobox
                         dataArr={convertToComboboxData(
@@ -631,7 +639,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               {loading ? (
                 <LoadingDropdown label="AEC 3 (Semester III)" />
               ) : availableAecSubjects.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
                   <label className="text-sm font-semibold text-gray-700">AEC 3 (Semester III)</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableAecSubjects)}
@@ -653,7 +661,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2 min-h-[84px]">
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
                       <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
                       <Combobox
                         dataArr={convertToComboboxData(
@@ -671,7 +679,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       />
                     </div>
 
-                    <div className="space-y-2 min-h-[84px]">
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
                       <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
                       <Combobox
                         dataArr={convertToComboboxData(
@@ -689,7 +697,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       />
                     </div>
 
-                    <div className="space-y-2 min-h-[84px]">
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
                       <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
                       <Combobox
                         dataArr={convertToComboboxData(

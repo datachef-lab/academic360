@@ -228,7 +228,39 @@ async function fetchData(
   }
 }
 
+export async function loadOldBoards() {
+  const [oldBoards] = (await mysqlConnection.query(`
+        SELECT * FROM board;
+    `)) as [OldBoard[], any];
+
+  for (let i = 0; i < oldBoards.length; i++) {
+    console.log("oldBoards[i].id", oldBoards[i].boardName);
+    const board = await addBoard(oldBoards[i].id!);
+    // Add the board subjects
+    const [oldBoardSubjectMappingMains] = (await mysqlConnection.query(`
+            SELECT * FROM boardsubjectmappingmain WHERE boardid = ${oldBoards[i].id};
+        `)) as [OldBoardSubjectMapping[], any];
+
+    for (let j = 0; j < oldBoardSubjectMappingMains.length; j++) {
+      const oldBoardSubjectMappingMain = oldBoardSubjectMappingMains[j];
+      const [oldBoardSubjects] = (await mysqlConnection.query(`
+                SELECT * FROM boardsubjectmappingsub WHERE parent_id = ${oldBoardSubjectMappingMain.id};
+            `)) as [OldBoardSubjectMappingSub[], any];
+
+      console.log("oldBoardSubjects.length", oldBoardSubjects.length);
+      for (let k = 0; k < oldBoardSubjects.length; k++) {
+        await addBoardSubject(oldBoardSubjects[k].subjectid, oldBoards[i].id!);
+        console.log(
+          `Done adding board subject ${k + 1} of ${oldBoardSubjects.length}`,
+        );
+      }
+    }
+  }
+}
+
 export async function loadData(byIsTransferred: boolean) {
+  console.log("loading the boards and subjects");
+  await loadOldBoards();
   // Do fetch the data from the old database which are transferred first
   const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
 
@@ -1604,7 +1636,12 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   const [existingBoard] = await db
     .select()
     .from(boardModel)
-    .where(ilike(boardModel.name, oldBoard.boardName.trim()));
+    .where(
+      and(
+        ilike(boardModel.name, oldBoard.boardName.trim()),
+        eq(boardModel.legacyBoardId, oldBoard.id!),
+      ),
+    );
 
   if (existingBoard) {
     return existingBoard;
@@ -1615,17 +1652,22 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
   )) as [OldDegree[], any];
   const [oldDegree] = degreeRows;
+
   if (oldDegree) {
     const [existingDegree] = await db
       .select()
       .from(degreeModel)
       .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
+
     if (existingDegree) {
       degree = existingDegree;
     } else {
       const [newDegree] = await db
         .insert(degreeModel)
-        .values({ name: oldDegree.degreeName.trim() })
+        .values({
+          name: oldDegree.degreeName.trim(),
+          legacyDegreeId: oldDegree.id,
+        })
         .returning();
       degree = newDegree;
     }
@@ -1634,10 +1676,11 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   const [newBoard] = await db
     .insert(boardModel)
     .values({
+      legacyBoardId: oldBoard.id,
       name: oldBoard.boardName.trim(),
       degreeId: degree ? degree.id : undefined,
-      passingMarks: oldBoard.passmrks,
-      code: oldBoard.code,
+      passingMarks: oldBoard.passmrks ? Number(oldBoard.passmrks) : undefined,
+      code: oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
     })
     .returning();
 
@@ -3392,7 +3435,7 @@ async function getSubjectRelatedFields(
     .where(
       eq(
         admissionProgramCourseModel.id,
-        newAdmissionCourseDetails.admissionProgramCourseId as number,
+        newAdmissionCourseDetails.id as number,
       ),
     );
 

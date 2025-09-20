@@ -29,11 +29,18 @@ export async function createBoardSubjectHandler(req: Request, res: Response) {
 
 export async function getAllBoardSubjectsHandler(req: Request, res: Response) {
   try {
-    const boardSubjects = await getAllBoardSubjects();
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 10;
+    const search = req.query.search as string;
+    const degreeId = req.query.degreeId
+      ? parseInt(req.query.degreeId as string)
+      : undefined;
+
+    const result = await getAllBoardSubjects(page, pageSize, search, degreeId);
     const response = new ApiResponse(
       200,
       "OK",
-      boardSubjects,
+      result,
       "Board subjects retrieved successfully",
     );
     res.status(200).json(response);

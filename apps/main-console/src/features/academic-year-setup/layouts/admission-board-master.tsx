@@ -5,7 +5,7 @@ import { GraduationCap, ListChecks, BookText } from "lucide-react";
 const nestedHomeLinks = [
   {
     title: "Board Subject Mappings",
-    url: "/dashboard/academic-year-setup/board-subjects",
+    url: "/dashboard/academic-year-setup/board-subjects/",
     icon: GraduationCap,
   },
 ];
@@ -13,12 +13,12 @@ const nestedHomeLinks = [
 const masterLinks = [
   {
     title: "Board",
-    url: "/dashboard/academic-year-setup/board-subjects/board-subjects",
+    url: "/dashboard/academic-year-setup/board-subjects/boards",
     icon: ListChecks,
   },
   {
     title: "Subjects",
-    url: "/dashboard/academic-year-setup/board-subjects/board-subject-names",
+    url: "/dashboard/academic-year-setup/board-subjects/subjects",
     icon: BookText,
   },
 ];

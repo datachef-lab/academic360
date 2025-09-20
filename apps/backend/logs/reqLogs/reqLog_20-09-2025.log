@@ -1,0 +1,8 @@
+20-09-2025	13:41:00	05b44fd4-9cff-435d-845d-05f2acd6d297	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+20-09-2025	13:41:00	54ea1223-3fcf-46f7-bb04-0973610b5992	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+20-09-2025	13:41:00	498704f0-f1ec-4e1d-8ece-76eedca11855	GET	/api/degree	http://localhost:5173
+20-09-2025	13:41:00	61587955-6872-4e25-9315-36744b367145	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+20-09-2025	13:41:00	906252f1-f56c-4b00-b59f-d01598161350	GET	/api/degree	http://localhost:5173
+s	http://localhost:5173
+ost:5173
+s	http://localhost:5173

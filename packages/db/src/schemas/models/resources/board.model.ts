@@ -9,7 +9,7 @@ import { degreeModel } from "@/schemas/models/resources";
 export const boardModel = pgTable("boards", {
     id: serial().primaryKey(),
     legacyBoardId: integer(),
-    name: varchar({ length: 700 }).notNull().unique(),
+    name: varchar({ length: 700 }).notNull(),
     degreeId: integer().references(() => degreeModel.id),
     passingMarks: integer(),
     code: varchar({ length: 255 }),

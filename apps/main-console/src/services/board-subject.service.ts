@@ -61,10 +61,35 @@ export interface BoardSubjectDto {
 
 const API_BASE_URL = "http://localhost:8080/api/admissions/board-subjects";
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export const boardSubjectService = {
-  async getAll(): Promise<BoardSubjectDto[]> {
+  async getAll(
+    page: number = 1,
+    pageSize: number = 10,
+    search?: string,
+    degreeId?: number,
+  ): Promise<PaginatedResponse<BoardSubjectDto>> {
     try {
-      const response = await fetch(API_BASE_URL, {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+      });
+
+      if (search) {
+        params.append("search", search);
+      }
+
+      if (degreeId) {
+        params.append("degreeId", degreeId.toString());
+      }
+
+      const response = await fetch(`${API_BASE_URL}?${params}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -75,8 +100,8 @@ export const boardSubjectService = {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const result: ApiResponse<BoardSubjectDto[]> = await response.json();
-      return result.payload || [];
+      const result: ApiResponse<PaginatedResponse<BoardSubjectDto>> = await response.json();
+      return result.payload || { data: [], total: 0, page: 1, pageSize: 10 };
     } catch (error) {
       console.error("Error fetching board subjects:", error);
       throw error;
