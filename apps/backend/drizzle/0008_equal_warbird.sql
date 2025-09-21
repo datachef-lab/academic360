@@ -1,0 +1,1 @@
+ALTER TABLE "districts" DROP CONSTRAINT "districts_name_unique";

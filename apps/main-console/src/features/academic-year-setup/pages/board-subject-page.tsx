@@ -1,7 +1,7 @@
 import React from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { PlusCircle, Download, Edit, GraduationCap } from "lucide-react";
+import { PlusCircle, Download, Edit, GraduationCap, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import {
@@ -16,9 +16,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { boardSubjectService, type BoardSubjectDto } from "@/services/board-subject.service";
 import { boardService, type BoardDto } from "@/services/board.service";
 import { boardSubjectNameService, type BoardSubjectNameDto } from "@/services/board-subject-name.service";
+import { degreeService, type DegreeDto } from "@/services/degree.service";
 
 // ----------------- Board Subject Form -------------------
 const BoardSubjectForm = ({
@@ -54,6 +56,31 @@ const BoardSubjectForm = ({
     isActive: initialData?.isActive ?? true,
   });
 
+  // Update form data when initialData changes
+  React.useEffect(() => {
+    if (initialData) {
+      setFormData({
+        boardId: initialData.boardId,
+        boardSubjectNameId: initialData.boardSubjectNameId,
+        fullMarksTheory: initialData.fullMarksTheory ?? "",
+        passingMarksTheory: initialData.passingMarksTheory ?? "",
+        fullMarksPractical: initialData.fullMarksPractical ?? "",
+        passingMarksPractical: initialData.passingMarksPractical ?? "",
+        isActive: initialData.isActive,
+      });
+    } else {
+      setFormData({
+        boardId: 0,
+        boardSubjectNameId: 0,
+        fullMarksTheory: "",
+        passingMarksTheory: "",
+        fullMarksPractical: "",
+        passingMarksPractical: "",
+        isActive: true,
+      });
+    }
+  }, [initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
@@ -73,7 +100,7 @@ const BoardSubjectForm = ({
         <div className="space-y-2">
           <Label htmlFor="boardId">Board *</Label>
           <Select
-            value={formData.boardId.toString()}
+            value={formData.boardId > 0 ? formData.boardId.toString() : ""}
             onValueChange={(v) => setFormData({ ...formData, boardId: parseInt(v) })}
           >
             <SelectTrigger>
@@ -91,7 +118,7 @@ const BoardSubjectForm = ({
         <div className="space-y-2">
           <Label htmlFor="boardSubjectNameId">Subject Name *</Label>
           <Select
-            value={formData.boardSubjectNameId.toString()}
+            value={formData.boardSubjectNameId > 0 ? formData.boardSubjectNameId.toString() : ""}
             onValueChange={(v) => setFormData({ ...formData, boardSubjectNameId: parseInt(v) })}
           >
             <SelectTrigger>
@@ -185,6 +212,18 @@ export default function BoardSubjectPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [boardOptions, setBoardOptions] = React.useState<BoardDto[]>([]);
   const [boardSubjectNameOptions, setBoardSubjectNameOptions] = React.useState<BoardSubjectNameDto[]>([]);
+  const [degreeOptions, setDegreeOptions] = React.useState<DegreeDto[]>([]);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [pageSize] = React.useState(10);
+  const [totalItems, setTotalItems] = React.useState(0);
+  const [selectedDegreeId, setSelectedDegreeId] = React.useState<number | undefined>(undefined);
+  const [selectedBoardId, setSelectedBoardId] = React.useState<number | undefined>(undefined);
+
+  // Download state
+  const [isDownloading, setIsDownloading] = React.useState(false);
+  const [downloadProgress, setDownloadProgress] = React.useState(0);
 
   // Load data on component mount
   React.useEffect(() => {
@@ -196,8 +235,16 @@ export default function BoardSubjectPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await boardSubjectService.getAll();
-      setBoardSubjects(data);
+      const result = await boardSubjectService.getAll(currentPage, pageSize, searchText, selectedDegreeId);
+
+      // Filter by board on the frontend if board is selected
+      let filteredData = result.data;
+      if (selectedBoardId) {
+        filteredData = result.data.filter((bs) => bs.boardId === selectedBoardId);
+      }
+
+      setBoardSubjects(filteredData);
+      setTotalItems(selectedBoardId ? filteredData.length : result.total);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load board subjects");
       toast.error("Failed to load board subjects");
@@ -208,13 +255,30 @@ export default function BoardSubjectPage() {
 
   const loadDropdownOptions = async () => {
     try {
-      const [boards, subjectNames] = await Promise.all([boardService.getAllBoards(), boardSubjectNameService.getAll()]);
-      setBoardOptions(boards);
+      const [boardsResult, subjectNames, degrees] = await Promise.all([
+        boardService.getAllBoards(1, 10000), // Get all boards for dropdown
+        boardSubjectNameService.getAll(),
+        degreeService.getAll(),
+      ]);
+      setBoardOptions(boardsResult.data);
       setBoardSubjectNameOptions(subjectNames);
+      // Map Degree[] to DegreeDto[] by converting disabled to isActive
+      const degreeDtos: DegreeDto[] = degrees.map((degree) => ({
+        id: degree.id!,
+        name: degree.name,
+        sequence: degree.sequence ?? null, // Convert undefined to null
+        isActive: !degree.disabled, // Convert disabled to isActive
+      }));
+      setDegreeOptions(degreeDtos);
     } catch (e) {
       console.warn("Failed loading dropdown options", e);
     }
   };
+
+  // Reload when filters change (except search which has its own debounced effect)
+  React.useEffect(() => {
+    loadBoardSubjects();
+  }, [currentPage, pageSize, selectedDegreeId, selectedBoardId]);
 
   const handleEdit = (boardSubject: BoardSubjectDto) => {
     setSelectedBoardSubject(boardSubject);
@@ -261,13 +325,41 @@ export default function BoardSubjectPage() {
     setIsFormOpen(true);
   };
 
-  const handleDownloadAll = () => {
+  const handleDownloadAll = async () => {
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    toast.info("Preparing download...");
+
     try {
-      const data = boardSubjects.map((bs, index) => ({
+      // First, get total count to calculate progress
+      console.log("Getting total count for download with filters:", { searchText, selectedDegreeId, selectedBoardId });
+      setDownloadProgress(5);
+      toast.info("Calculating total records...");
+
+      // Get all data with current filters but without pagination
+      const result = await boardSubjectService.getAll(1, 10000, searchText, selectedDegreeId);
+
+      // Filter by board on the frontend if board is selected
+      let filteredData = result.data;
+      if (selectedBoardId) {
+        filteredData = result.data.filter((bs) => bs.boardId === selectedBoardId);
+      }
+      const totalRecords = filteredData.length;
+
+      console.log(`Total records to download: ${totalRecords}`);
+      toast.info(`Found ${totalRecords} records. Preparing Excel...`);
+
+      setDownloadProgress(30);
+
+      // Prepare Excel data
+      const data = filteredData.map((bs, index) => ({
         "S.No": index + 1,
-        "Board Name": bs.board.name,
         "Board Code": bs.board.code || "-",
-        "Subject Name": bs.boardSubjectName.name,
+        "Board Name": bs.board.name || "-",
+        Subject:
+          bs.boardSubjectName.code && bs.boardSubjectName.code !== "-"
+            ? `${bs.boardSubjectName.name} (${bs.boardSubjectName.code})`
+            : bs.boardSubjectName.name,
         "Subject Code": bs.boardSubjectName.code || "-",
         "Full Marks Theory": bs.fullMarksTheory ?? "-",
         "Passing Marks Theory": bs.passingMarksTheory ?? "-",
@@ -276,21 +368,61 @@ export default function BoardSubjectPage() {
         Degree: bs.board.degree?.name || "-",
         Status: bs.isActive ? "Active" : "Inactive",
       }));
-      console.log("Download data:", data);
-      toast.success("Download functionality would be implemented here");
-    } catch {
+
+      setDownloadProgress(60);
+      toast.info("Generating Excel file...");
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(data);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 8 }, // S.No
+        { wch: 15 }, // Board Code
+        { wch: 30 }, // Board Name
+        { wch: 25 }, // Subject
+        { wch: 15 }, // Subject Code
+        { wch: 12 }, // Full Marks Theory
+        { wch: 15 }, // Passing Marks Theory
+        { wch: 12 }, // Full Marks Practical
+        { wch: 15 }, // Passing Marks Practical
+        { wch: 15 }, // Degree
+        { wch: 10 }, // Status
+      ];
+      ws["!cols"] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, "Board Subject Mappings");
+
+      setDownloadProgress(85);
+      toast.info("Finalizing download...");
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().split("T")[0];
+      const filename = `board-subject-mappings-${timestamp}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+
+      setDownloadProgress(100);
+      toast.success(`Downloaded ${totalRecords} board subject mappings successfully!`);
+    } catch (error) {
+      console.error("Download failed:", error);
       toast.error("Failed to download board subjects");
+    } finally {
+      setIsDownloading(false);
+      setDownloadProgress(0);
     }
   };
 
-  const filtered = boardSubjects.filter(
-    (bs) =>
-      bs.board.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (bs.board.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
-      bs.boardSubjectName.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (bs.boardSubjectName.code ?? "").toLowerCase().includes(searchText.toLowerCase()) ||
-      (bs.board.degree?.name ?? "").toLowerCase().includes(searchText.toLowerCase()),
-  );
+  // Search with debounce
+  React.useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setCurrentPage(1); // Reset to first page when searching
+      loadBoardSubjects();
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchText]);
 
   return (
     <div className="p-4">
@@ -327,23 +459,82 @@ export default function BoardSubjectPage() {
                 />
               </AlertDialogContent>
             </AlertDialog>
-            <Button variant="outline" className="flex items-center gap-2" onClick={handleDownloadAll}>
-              <Download className="h-4 w-4" /> Download
-            </Button>
+            <div className="relative">
+              <Button
+                variant="outline"
+                className="flex items-center gap-2"
+                onClick={handleDownloadAll}
+                disabled={isDownloading}
+              >
+                {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                {isDownloading ? `Downloading... ${Math.round(downloadProgress)}%` : "Download"}
+              </Button>
+              {isDownloading && (
+                <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500 transition-all duration-300 ease-out"
+                    style={{ width: `${downloadProgress}%` }}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-2 mb-0 justify-between">
-            <Input
-              placeholder="Search by board name, subject name, or degree..."
-              className="w-64"
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+          <div className="sticky top-[72px] z-20 bg-background p-4 border-b flex items-center gap-4 mb-0 justify-between">
+            <div className="flex items-center gap-4">
+              <Input
+                placeholder="Search by board name, subject name, or degree..."
+                className="w-64"
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+              />
+              <Select
+                value={selectedDegreeId?.toString() || "all"}
+                onValueChange={(value) => {
+                  setSelectedDegreeId(value === "all" ? undefined : parseInt(value));
+                  setCurrentPage(1); // Reset to first page when filter changes
+                }}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by Degree" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Degrees</SelectItem>
+                  {degreeOptions.map((degree) => (
+                    <SelectItem key={degree.id} value={degree.id.toString()}>
+                      {degree.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={selectedBoardId?.toString() || "all"}
+                onValueChange={(value) => {
+                  setSelectedBoardId(value === "all" ? undefined : parseInt(value));
+                  setCurrentPage(1); // Reset to first page when filter changes
+                }}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filter by Board" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Boards</SelectItem>
+                  {boardOptions.map((board) => (
+                    <SelectItem key={board.id} value={board.id.toString()}>
+                      {board.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              Showing {boardSubjects.length} of {totalItems} results
+            </div>
           </div>
           <div className="relative" style={{ height: "600px" }}>
             <div className="overflow-y-auto overflow-x-auto h-full">
-              <Table className="border rounded-md min-w-[1400px]" style={{ tableLayout: "fixed" }}>
+              <Table className="border rounded-md w-full" style={{ tableLayout: "fixed" }}>
                 <TableHeader
                   className="sticky top-0 z-10"
                   style={{ background: "#f3f4f6", borderRight: "1px solid #e5e7eb" }}
@@ -351,11 +542,12 @@ export default function BoardSubjectPage() {
                   <TableRow>
                     <TableHead
                       style={{
-                        width: 60,
+                        width: "5%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -364,24 +556,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 200,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Board Name
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: 120,
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -390,37 +570,26 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 150,
+                        width: "20%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
                     >
-                      Subject Name
+                      Subject
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 100,
+                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
-                        padding: "8px 4px",
-                        borderRight: "1px solid #e5e7eb",
-                      }}
-                    >
-                      Subject Code
-                    </TableHead>
-                    <TableHead
-                      style={{
-                        width: 100,
-                        background: "#f3f4f6",
-                        color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -429,11 +598,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 120,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -442,11 +612,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 100,
+                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -455,11 +626,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 120,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -468,11 +640,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 120,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -481,11 +654,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 100,
+                        width: "8%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                         borderRight: "1px solid #e5e7eb",
                       }}
@@ -494,11 +668,12 @@ export default function BoardSubjectPage() {
                     </TableHead>
                     <TableHead
                       style={{
-                        width: 130,
+                        width: "10%",
                         background: "#f3f4f6",
                         color: "#374151",
-                        whiteSpace: "nowrap",
-                        fontSize: "12px",
+                        whiteSpace: "normal",
+                        fontSize: "14px",
+                        fontWeight: "600",
                         padding: "8px 4px",
                       }}
                     >
@@ -509,63 +684,91 @@ export default function BoardSubjectPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         Loading...
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center text-red-500">
+                      <TableCell colSpan={9} className="text-center text-red-500">
                         {error}
                       </TableCell>
                     </TableRow>
-                  ) : filtered.length === 0 ? (
+                  ) : boardSubjects.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={12} className="text-center">
+                      <TableCell colSpan={9} className="text-center">
                         No board subject mappings found.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((bs, index) => (
+                    boardSubjects.map((bs, index) => (
                       <TableRow key={bs.id} className="group">
-                        <TableCell style={{ width: 60, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                        <TableCell style={{ width: "5%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
                           {index + 1}
                         </TableCell>
-                        <TableCell style={{ width: 200, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.board.name ? <Badge variant="secondary">{bs.board.name}</Badge> : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.board.code ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 150, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.boardSubjectName.name ? <Badge variant="outline">{bs.boardSubjectName.name}</Badge> : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.boardSubjectName.code ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.fullMarksTheory ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.passingMarksTheory ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.fullMarksPractical ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.passingMarksPractical ?? "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 120, padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
-                          {bs.board.degree?.name ? <Badge variant="outline">{bs.board.degree.name}</Badge> : "-"}
-                        </TableCell>
-                        <TableCell style={{ width: 100, borderRight: "1px solid #e5e7eb" }}>
-                          {bs.isActive ? (
-                            <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
+                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          {bs.board.code ? (
+                            <Badge
+                              variant="outline"
+                              className="border-blue-500 text-blue-700 bg-blue-50 hover:bg-blue-100 text-xs"
+                            >
+                              {bs.board.code}
+                            </Badge>
                           ) : (
-                            <Badge variant="secondary">Inactive</Badge>
+                            "-"
                           )}
                         </TableCell>
-                        <TableCell style={{ width: 130, padding: "8px 4px" }}>
+                        <TableCell style={{ width: "20%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          <div
+                            className="truncate"
+                            title={`${bs.boardSubjectName.name}${bs.boardSubjectName.code && bs.boardSubjectName.code !== "-" ? ` (${bs.boardSubjectName.code})` : ""}`}
+                          >
+                            {bs.boardSubjectName.name ? (
+                              <span className="text-sm">
+                                {bs.boardSubjectName.name}
+                                {bs.boardSubjectName.code && bs.boardSubjectName.code !== "-" && (
+                                  <span className="text-muted-foreground ml-1">({bs.boardSubjectName.code})</span>
+                                )}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          <span className="text-sm">{bs.fullMarksTheory ?? "-"}</span>
+                        </TableCell>
+                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          <span className="text-sm">{bs.passingMarksTheory ?? "-"}</span>
+                        </TableCell>
+                        <TableCell style={{ width: "8%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          <span className="text-sm">{bs.fullMarksPractical ?? "-"}</span>
+                        </TableCell>
+                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          <span className="text-sm">{bs.passingMarksPractical ?? "-"}</span>
+                        </TableCell>
+                        <TableCell style={{ width: "10%", padding: "8px 4px", borderRight: "1px solid #e5e7eb" }}>
+                          {bs.board.degree?.name ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-red-500 text-red-700 bg-red-50 hover:bg-red-100"
+                            >
+                              {bs.board.degree.name}
+                            </Badge>
+                          ) : (
+                            "-"
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: "7%", borderRight: "1px solid #e5e7eb" }}>
+                          {bs.isActive ? (
+                            <Badge className="bg-green-500 text-white hover:bg-green-600 text-xs">Active</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              Inactive
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell style={{ width: "10%", padding: "8px 4px" }}>
                           <div className="flex space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(bs)} className="h-5 w-5 p-0">
                               <Edit className="h-4 w-4" />
@@ -579,6 +782,51 @@ export default function BoardSubjectPage() {
               </Table>
             </div>
           </div>
+
+          {/* Pagination Controls */}
+          {!loading && !error && totalItems > 0 && (
+            <div className="mt-4 flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalItems)} of{" "}
+                {totalItems} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, Math.ceil(totalItems / pageSize)) }, (_, i) => {
+                    const pageNum = Math.max(1, Math.min(Math.ceil(totalItems / pageSize) - 4, currentPage - 2)) + i;
+                    if (pageNum > Math.ceil(totalItems / pageSize)) return null;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((prev) => Math.min(Math.ceil(totalItems / pageSize), prev + 1))}
+                  disabled={currentPage === Math.ceil(totalItems / pageSize)}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

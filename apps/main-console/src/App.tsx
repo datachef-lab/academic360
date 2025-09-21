@@ -114,9 +114,9 @@ const router = createBrowserRouter(
               path: "board-subjects",
               element: <AdmissionBoardMaster />,
               children: [
-                { path: "", element: <BoardPage /> },
-                { path: "board-subject-names", element: <BoardSubjectNamePage /> },
-                { path: "board-subject-mappings", element: <BoardSubjectPage /> },
+                { path: "", element: <BoardSubjectPage /> },
+                { path: "boards", element: <BoardPage /> },
+                { path: "subjects", element: <BoardSubjectNamePage /> },
               ],
             },
             {

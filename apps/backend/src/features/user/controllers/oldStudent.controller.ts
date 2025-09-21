@@ -124,6 +124,7 @@ import {
   addDistrict,
   addState,
   loadData,
+  loadOldBoards,
 } from "../services/old-student.service";
 
 const BATCH_SIZE = 500; // Number of rows per batch
@@ -2366,7 +2367,7 @@ export const createOldStudent = async (
     // await loadStudentsV2();
 
     // await loadPaperSubjects();
-
+    // await loadOldBoards();
     await loadData(true);
     // await loadData(false);
 

@@ -1,31 +1,7 @@
-20-09-2025	14:18:25	d1015800-d1b1-41e2-bfac-70ac806f2fb0	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	14:18:24	fc4636b0-5915-474a-b625-a9a5d8711804	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	13:49:49	a329b0e1-36ec-4f09-8168-89ca45868f08	GET	/auth/refresh	http://localhost:3000
-20-09-2025	13:44:26	ade66b58-063d-4cc4-a464-ccc0359b24ca	GET	/auth/refresh	http://localhost:3000
-20-09-2025	13:44:09	0c5315a5-fbf7-431d-aafc-25e37f28e586	GET	/auth/refresh	http://localhost:3000
-20-09-2025	13:41:25	4a87771b-7930-4d70-9bd8-0707eb63c0ee	GET	/auth/refresh	http://localhost:3000
-20-09-2025	13:17:59	c4fc140f-4ea2-45dd-b763-42e8ac9b3e92	GET	/auth/refresh	http://localhost:3000
-20-09-2025	13:12:02	c6a6cd99-a882-4a87-a768-b420e2ba59a7	POST	/auth/login	http://localhost:3000
-20-09-2025	12:52:47	23ffe955-c244-4a44-94f5-086cd03e1429	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:52:45	3756cf1d-b2a2-46b2-ab59-38f707291bc9	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:52:32	c2d0e3aa-c0aa-4827-9d5f-e9150b4721a5	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=15	http://localhost:3000
-20-09-2025	12:52:28	78e7c7ea-b9b9-4a47-bf36-c4c9703ff8b9	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=15	http://localhost:3000
-20-09-2025	12:52:28	a7bc74a8-800c-43c7-835f-13de13834f50	GET	/api/subject-selection/students/1/selections	http://localhost:3000
-20-09-2025	12:52:19	9804a291-f041-45e5-933d-92a8f5a68021	GET	/api/subject-selection/students/1/selections	http://localhost:3000
-20-09-2025	12:51:39	50544f72-26c8-4351-a453-9670be83d853	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:51:39	6b5d0944-fb83-4a4f-acec-6e152d2e5263	OPTIONS	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:51:38	c536fcba-b4ed-4a26-9427-54aaa95c372b	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:51:33	b9db657d-71d0-4276-9f91-74aaa2e8e7a9	GET	/auth/refresh	http://localhost:3000
-20-09-2025	12:47:07	3137c177-2b77-4da8-9005-9e0ff64f0c62	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:47:06	7cbc1fe3-13ec-496f-93c9-fa2f683514d3	OPTIONS	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:47:06	732c36bc-3d1d-4c45-8b15-1362622ad295	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:47:04	ee3d61e8-4033-4557-b2fa-a72e0a91df50	GET	/auth/refresh	http://localhost:3000
-20-09-2025	12:41:55	493735ba-f9d3-4ab1-9443-46b5167729a5	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:41:54	ca345ddf-f3bc-4c56-9687-c1658696ebd0	GET	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:41:54	55f35d24-1f87-4131-b61c-7b61513d689d	OPTIONS	/api/users/13/profile	http://localhost:3000
-20-09-2025	12:41:38	828f500e-1eda-4e9f-8dff-68c857792de9	POST	/auth/login	http://localhost:3000
-20-09-2025	12:41:38	065317a5-ff2b-41dd-8ed0-fd2e381b7027	OPTIONS	/auth/login	http://localhost:3000
-7027	OPTIONS	/auth/login	http://localhost:3000
-00
-
-00
+20-09-2025	21:45:54	25bb7315-f59a-417d-ac5d-152bde87f643	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
+20-09-2025	21:45:53	5cd2f5d0-d4bc-40cc-b8f8-91da290aa803	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
+20-09-2025	21:45:53	ef126ee5-368b-475d-94fd-5de591559f6e	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
+20-09-2025	21:45:53	704155f6-f106-4c01-90a4-6fce5f3f843b	GET	/api/subject-selection/students/30/selections	http://localhost:3000
+20-09-2025	21:45:51	d5fbd006-b4af-4802-aaa6-600474aba0e0	GET	/api/subject-selection/students/30/selections	http://localhost:3000
+20-09-2025	21:45:36	1db6c57c-4e4f-4e8e-b903-72ac94bbd116	GET	/api/users/48/profile	http://localhost:3000
+20-09-2025	21:45:35	398ee003-f176-4fda-92df-ad9c302c7983	GET	/api/users/48/profile	http://localhost:3000

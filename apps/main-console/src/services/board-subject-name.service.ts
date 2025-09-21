@@ -1,4 +1,4 @@
-import { ApiResponse } from "@/types/api-response";
+import axiosInstance from "@/utils/api";
 
 export interface BoardSubjectNameDto {
   id: number;
@@ -11,24 +11,13 @@ export interface BoardSubjectNameDto {
   legacyBoardSubjectNameId: number | null;
 }
 
-const API_BASE_URL = "http://localhost:8080/api/admissions/board-subject-names";
+const API_BASE_URL = "/api/admissions/board-subject-names";
 
 export const boardSubjectNameService = {
   async getAll(): Promise<BoardSubjectNameDto[]> {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectNameDto[]> = await response.json();
-      return result.payload || [];
+      const response = await axiosInstance.get(API_BASE_URL);
+      return response.data.payload || [];
     } catch (error) {
       console.error("Error fetching board subject names:", error);
       throw error;
@@ -37,24 +26,15 @@ export const boardSubjectNameService = {
 
   async getById(id: number): Promise<BoardSubjectNameDto | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.status === 404) {
-        return null;
+      const response = await axiosInstance.get(`${API_BASE_URL}/${id}`);
+      return response.data.payload || null;
+    } catch (error: unknown) {
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) {
+          return null;
+        }
       }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectNameDto> = await response.json();
-      return result.payload || null;
-    } catch (error) {
       console.error("Error fetching board subject name:", error);
       throw error;
     }
@@ -67,20 +47,8 @@ export const boardSubjectNameService = {
     isActive?: boolean;
   }): Promise<BoardSubjectNameDto> {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectNameDto> = await response.json();
-      return result.payload!;
+      const response = await axiosInstance.post(API_BASE_URL, data);
+      return response.data.payload!;
     } catch (error) {
       console.error("Error creating board subject name:", error);
       throw error;
@@ -97,20 +65,8 @@ export const boardSubjectNameService = {
     },
   ): Promise<BoardSubjectNameDto> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectNameDto> = await response.json();
-      return result.payload!;
+      const response = await axiosInstance.put(`${API_BASE_URL}/${id}`, data);
+      return response.data.payload!;
     } catch (error) {
       console.error("Error updating board subject name:", error);
       throw error;
@@ -119,16 +75,7 @@ export const boardSubjectNameService = {
 
   async delete(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      await axiosInstance.delete(`${API_BASE_URL}/${id}`);
     } catch (error) {
       console.error("Error deleting board subject name:", error);
       throw error;

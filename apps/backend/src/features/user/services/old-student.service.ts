@@ -228,7 +228,39 @@ async function fetchData(
   }
 }
 
+export async function loadOldBoards() {
+  const [oldBoards] = (await mysqlConnection.query(`
+        SELECT * FROM board;
+    `)) as [OldBoard[], any];
+
+  for (let i = 0; i < oldBoards.length; i++) {
+    console.log("oldBoards[i].id", oldBoards[i].boardName);
+    const board = await addBoard(oldBoards[i].id!);
+    // Add the board subjects
+    const [oldBoardSubjectMappingMains] = (await mysqlConnection.query(`
+            SELECT * FROM boardsubjectmappingmain WHERE boardid = ${oldBoards[i].id};
+        `)) as [OldBoardSubjectMapping[], any];
+
+    for (let j = 0; j < oldBoardSubjectMappingMains.length; j++) {
+      const oldBoardSubjectMappingMain = oldBoardSubjectMappingMains[j];
+      const [oldBoardSubjects] = (await mysqlConnection.query(`
+                SELECT * FROM boardsubjectmappingsub WHERE parent_id = ${oldBoardSubjectMappingMain.id};
+            `)) as [OldBoardSubjectMappingSub[], any];
+
+      console.log("oldBoardSubjects.length", oldBoardSubjects.length);
+      for (let k = 0; k < oldBoardSubjects.length; k++) {
+        await addBoardSubject(oldBoardSubjects[k].subjectid, oldBoards[i].id!);
+        console.log(
+          `Done adding board subject ${k + 1} of ${oldBoardSubjects.length}`,
+        );
+      }
+    }
+  }
+}
+
 export async function loadData(byIsTransferred: boolean) {
+  console.log("loading the boards and subjects");
+  await loadOldBoards();
   // Do fetch the data from the old database which are transferred first
   const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
 
@@ -1126,8 +1158,7 @@ export async function processApplicationForm(
   const user = await addUser(
     oldAdmStudentPersonalDetails,
     "STUDENT",
-    oldStudent?.codeNumber ??
-      `STD-${oldAdmStudentPersonalDetails.id}-${applicationForm.id}`,
+    oldStudent?.codeNumber,
   );
 
   if (!user) {
@@ -1604,7 +1635,12 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   const [existingBoard] = await db
     .select()
     .from(boardModel)
-    .where(ilike(boardModel.name, oldBoard.boardName.trim()));
+    .where(
+      and(
+        ilike(boardModel.name, oldBoard.boardName.trim()),
+        eq(boardModel.legacyBoardId, oldBoard.id!),
+      ),
+    );
 
   if (existingBoard) {
     return existingBoard;
@@ -1615,17 +1651,22 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
     `SELECT * FROM degree WHERE id = ${oldBoard.degreeid}`,
   )) as [OldDegree[], any];
   const [oldDegree] = degreeRows;
+
   if (oldDegree) {
     const [existingDegree] = await db
       .select()
       .from(degreeModel)
       .where(eq(degreeModel.name, oldDegree.degreeName.trim()));
+
     if (existingDegree) {
       degree = existingDegree;
     } else {
       const [newDegree] = await db
         .insert(degreeModel)
-        .values({ name: oldDegree.degreeName.trim() })
+        .values({
+          name: oldDegree.degreeName.trim(),
+          legacyDegreeId: oldDegree.id,
+        })
         .returning();
       degree = newDegree;
     }
@@ -1634,10 +1675,11 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   const [newBoard] = await db
     .insert(boardModel)
     .values({
+      legacyBoardId: oldBoard.id,
       name: oldBoard.boardName.trim(),
       degreeId: degree ? degree.id : undefined,
-      passingMarks: oldBoard.passmrks,
-      code: oldBoard.code,
+      passingMarks: oldBoard.passmrks ? Number(oldBoard.passmrks) : undefined,
+      code: oldBoard.code && oldBoard.code !== "" ? oldBoard.code : undefined,
     })
     .returning();
 
@@ -1657,15 +1699,8 @@ export async function addUser(
     throw new Error("UID is required for student");
   }
 
-  const isStaff = (
-    type: (typeof userTypeEnum.enumValues)[number],
-  ): type is "STAFF" => type === "STAFF";
-  const isAdmStudent = (
-    type: (typeof userTypeEnum.enumValues)[number],
-  ): type is "STUDENT" => type === "STUDENT";
-
   // console.log("oldData in addUser() ----->", oldData);
-  if (!isStaff(type) && !isAdmStudent(type)) {
+  if (type !== "STAFF" && type !== "STUDENT") {
     throw new Error("Invalid old details type");
   }
 
@@ -1686,16 +1721,17 @@ export async function addUser(
 
   // Check if user already exists by legacyId OR email
   let existingUser;
-  if (oldData?.email?.trim()) {
+  const email =
+    type === "STUDENT"
+      ? `${cleanString(uid)}@thebges.edu.in`
+      : oldData.email?.trim();
+  if (email) {
     // Check by both legacyId and email
     [existingUser] = await db
       .select()
       .from(userModel)
       .where(
-        or(
-          eq(userModel.legacyId, oldData.id!),
-          eq(userModel.email, oldData.email.trim()),
-        ),
+        or(eq(userModel.legacyId, oldData.id!), eq(userModel.email, email)),
       );
   } else {
     // Check only by legacyId
@@ -1733,10 +1769,7 @@ export async function addUser(
       .values({
         name: nameToUse,
         legacyId: oldData.id!,
-        email:
-          type === "STUDENT"
-            ? `${cleanString(uid)}@thebges.edu.in`
-            : (oldData.email?.trim() ?? ""),
+        email: email ?? "",
         password: hashedPassword,
         phone: phone,
         type,
@@ -3089,8 +3122,12 @@ async function processOldCourseDetails(
     .from(admissionProgramCourseModel)
     .where(
       and(
-        eq(admissionProgramCourseModel.id, programCourse.id! as number),
+        eq(
+          admissionProgramCourseModel.programCourseId,
+          programCourse.id! as number,
+        ),
         eq(admissionProgramCourseModel.admissionId, admission?.id as number),
+        eq(admissionProgramCourseModel.classId, classData?.id as number),
       ),
     );
 

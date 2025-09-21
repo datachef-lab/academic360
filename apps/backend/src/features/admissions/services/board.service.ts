@@ -29,7 +29,39 @@ export async function createBoard(data: Board): Promise<BoardDto> {
   return result;
 }
 
-export async function getAllBoards(): Promise<BoardDto[]> {
+export async function getAllBoards(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  degreeId?: number,
+): Promise<{
+  data: BoardDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}> {
+  const offset = (page - 1) * pageSize;
+
+  // Build where conditions
+  const whereConditions = [];
+
+  if (search) {
+    whereConditions.push(ilike(boardModel.name, `%${search}%`));
+  }
+
+  if (degreeId) {
+    whereConditions.push(eq(degreeModel.id, degreeId));
+  }
+
+  // Get total count
+  const [{ total }] = await db
+    .select({ total: countDistinct(boardModel.id) })
+    .from(boardModel)
+    .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
+
+  // Get paginated results
   const results = await db
     .select({
       id: boardModel.id,
@@ -58,9 +90,12 @@ export async function getAllBoards(): Promise<BoardDto[]> {
     })
     .from(boardModel)
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id));
+    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+    .limit(pageSize)
+    .offset(offset);
 
-  return results.map((result) => ({
+  const data = results.map((result) => ({
     id: result.id!,
     legacyBoardId: result.legacyBoardId,
     name: result.name!,
@@ -73,6 +108,13 @@ export async function getAllBoards(): Promise<BoardDto[]> {
     degree: result.degree || null,
     address: result.address ? { ...result.address, district: null } : null,
   }));
+
+  return {
+    data,
+    total,
+    page,
+    pageSize,
+  };
 }
 
 export async function getBoardById(id: number): Promise<BoardDto | null> {

@@ -1,4 +1,4 @@
-import { ApiResponse } from "@/types/api-response";
+import axiosInstance from "@/utils/api";
 import { City, State, Country } from "@repo/db/schemas";
 
 export interface BoardSubjectDto {
@@ -59,24 +59,38 @@ export interface BoardSubjectDto {
   };
 }
 
-const API_BASE_URL = "http://localhost:8080/api/admissions/board-subjects";
+const API_BASE_URL = "/api/admissions/board-subjects";
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
 
 export const boardSubjectService = {
-  async getAll(): Promise<BoardSubjectDto[]> {
+  async getAll(
+    page: number = 1,
+    pageSize: number = 10,
+    search?: string,
+    degreeId?: number,
+  ): Promise<PaginatedResponse<BoardSubjectDto>> {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const params: Record<string, string> = {
+        page: page.toString(),
+        pageSize: pageSize.toString(),
+      };
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (search) {
+        params.search = search;
       }
 
-      const result: ApiResponse<BoardSubjectDto[]> = await response.json();
-      return result.payload || [];
+      if (degreeId) {
+        params.degreeId = degreeId.toString();
+      }
+
+      const response = await axiosInstance.get(API_BASE_URL, { params });
+      return response.data.payload || { data: [], total: 0, page: 1, pageSize: 10 };
     } catch (error) {
       console.error("Error fetching board subjects:", error);
       throw error;
@@ -85,24 +99,15 @@ export const boardSubjectService = {
 
   async getById(id: number): Promise<BoardSubjectDto | null> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.status === 404) {
-        return null;
+      const response = await axiosInstance.get(`${API_BASE_URL}/${id}`);
+      return response.data.payload || null;
+    } catch (error: unknown) {
+      if (error && typeof error === "object" && "response" in error) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404) {
+          return null;
+        }
       }
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectDto> = await response.json();
-      return result.payload || null;
-    } catch (error) {
       console.error("Error fetching board subject:", error);
       throw error;
     }
@@ -110,19 +115,8 @@ export const boardSubjectService = {
 
   async getByBoardId(boardId: number): Promise<BoardSubjectDto[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/board/${boardId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectDto[]> = await response.json();
-      return result.payload || [];
+      const response = await axiosInstance.get(`${API_BASE_URL}/board/${boardId}`);
+      return response.data.payload || [];
     } catch (error) {
       console.error("Error fetching board subjects by board ID:", error);
       throw error;
@@ -139,20 +133,8 @@ export const boardSubjectService = {
     isActive?: boolean;
   }): Promise<BoardSubjectDto> {
     try {
-      const response = await fetch(API_BASE_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectDto> = await response.json();
-      return result.payload!;
+      const response = await axiosInstance.post(API_BASE_URL, data);
+      return response.data.payload!;
     } catch (error) {
       console.error("Error creating board subject:", error);
       throw error;
@@ -172,20 +154,8 @@ export const boardSubjectService = {
     },
   ): Promise<BoardSubjectDto> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: ApiResponse<BoardSubjectDto> = await response.json();
-      return result.payload!;
+      const response = await axiosInstance.put(`${API_BASE_URL}/${id}`, data);
+      return response.data.payload!;
     } catch (error) {
       console.error("Error updating board subject:", error);
       throw error;
@@ -194,16 +164,7 @@ export const boardSubjectService = {
 
   async delete(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      await axiosInstance.delete(`${API_BASE_URL}/${id}`);
     } catch (error) {
       console.error("Error deleting board subject:", error);
       throw error;
