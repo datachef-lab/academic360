@@ -11,6 +11,7 @@ import {
   Settings2,
   ListChecks,
   UserPlus,
+  FileText,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -61,8 +62,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     {
       title: "CU Registration",
       url: "/dashboard/cu-registration",
-      icon: UserPlus,
-      isActive: pathname === "/dashboard/CU-registration",
+      icon: FileText,
+      isActive: pathname === "/dashboard/cu-registration",
     },
     // accessControl?.access_exams && {
     //   title: "Exams",

@@ -1,78 +1,47 @@
-import { ApiResponse } from "@/types/api-response";
-import { PaginatedResponse } from "@/types/pagination";
-import { Student } from "@/types/user/student";
+import { StudentDto } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
-type studentFilters = {
-  page?: number;
-  pageSize?: number;
-  stream?: string;
-  year?: string;
-  semester?: number;
-  framework?: string;
-  export?: boolean;
-};
-
-export async function getAllStudents(page: number, pageSize: number): Promise<ApiResponse<PaginatedResponse<Student>>> {
-  const response = await axiosInstance.get(`/api/students/query?page=${page}&pageSize=${pageSize}`);
-  console.log(response.data);
-  return response.data;
-}
-
-export async function getStudentById(id: number): Promise<ApiResponse<Student>> {
-  const response = await axiosInstance.get(`/api/students/query?id=${id}`);
-  console.log(response.data);
-  return response.data;
+export async function fetchStudentByUid(uid: string): Promise<StudentDto> {
+  const res = await axiosInstance.get(`/api/students/uid/${uid}`);
+  return res.data.payload as StudentDto;
 }
 
 export async function getSearchedStudents(
-  page: number,
-  pageSize: number,
-  searchText: string,
-): Promise<ApiResponse<PaginatedResponse<Student>>> {
-  const response = await axiosInstance.get(
-    `/api/students/search?page=${page}&pageSize=${pageSize}&searchText=${searchText}`,
-  );
-  console.log(response.data);
-  return response.data;
-}
-
-export async function getSearchedStudentsByRollNumber(
-  page: number,
-  pageSize: number,
-  searchText: string,
-): Promise<ApiResponse<PaginatedResponse<Student>>> {
-  const response = await axiosInstance.get(
-    `/api/students/search-rollno?page=${page}&pageSize=${pageSize}&searchText=${searchText}`,
-  );
-
-  return response.data;
-}
-
-export const getFilteredStudents = async (filters: studentFilters = {}) => {
-  const { export: isExport, ...rest } = filters;
-
-  let query = Object.entries(rest)
-    .filter(([, value]) => value !== undefined && value !== null && value !== "")
-    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
-    .join("&");
-
-  if (isExport) {
-    query += (query ? "&" : "") + "export=true";
-  }
-
-  const url = `/api/students/filtered${query ? "?" + query : ""}`;
-  console.log("url", url);
-  console.log("filters", filters);
-
-  const response = await axiosInstance.get(url, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("token")}`,
-    },
+  searchQuery: string,
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<{ content: StudentDto[]; totalElements: number; totalPages: number }> {
+  const res = await axiosInstance.get(`/api/students/search`, {
+    params: { searchText: searchQuery, page, pageSize },
   });
+  return res.data.payload;
+}
 
-  // Ensure a valid return value
+export async function getAllStudents(
+  page: number = 1,
+  pageSize: number = 10,
+): Promise<{ content: StudentDto[]; totalElements: number; totalPages: number }> {
+  const res = await axiosInstance.get(`/api/students`, {
+    params: { page, pageSize },
+  });
+  return res.data.payload;
+}
 
-  console.log("response", response.data.data);
-  return response.data.data;
-};
+export async function getStudentById(id: number): Promise<StudentDto> {
+  const res = await axiosInstance.get(`/api/students/${id}`);
+  return res.data.payload as StudentDto;
+}
+
+export async function getFilteredStudents(
+  filters: Record<string, string>,
+): Promise<{ content: StudentDto[]; totalElements: number; totalPages: number }> {
+  const res = await axiosInstance.get(`/api/students/filter`, {
+    params: filters,
+  });
+  return res.data.payload;
+}
+
+export async function getSearchedStudentsByRollNumber(rollNumber: string): Promise<StudentDto> {
+  const res = await axiosInstance.get(`/api/students/roll/${rollNumber}`);
+  return res.data.payload as StudentDto;
+}

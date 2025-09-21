@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { CheckIcon, ChevronsUpDownIcon, Search } from "lucide-react";
+import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ComboboxProps = {
@@ -47,59 +48,47 @@ export function Combobox({
             <span>{selectedLabel || placeholder}</span>
             {!selectedLabel && dataArr.length > 0 && (
               <span className="text-xs text-muted-foreground">
-                ({dataArr.length} option{dataArr.length !== 1 ? "s" : ""})
+                ({dataArr.filter((item) => item.value !== "").length} option
+                {dataArr.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available)
               </span>
             )}
           </div>
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        className="w-[var(--radix-popover-trigger-width,240px)] p-0 z-50 max-h-72 overflow-auto"
-        side="bottom"
-        align="start"
-        sideOffset={4}
-      >
-        <div className="flex flex-col bg-white border border-gray-200 rounded-md shadow-lg">
-          {/* search */}
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={placeholder ? `Search ${placeholder.toLowerCase()}` : "Search..."}
-              className="flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-
-          {filtered.length > 0 && (
-            <div className="px-2 py-1.5 text-xs text-muted-foreground border-b bg-background">
-              {filtered.length} option{filtered.length !== 1 ? "s" : ""} available
-            </div>
-          )}
-
-          {/* Items - PopoverContent handles scroll; avoid nested scrollers */}
-          <div className="py-1">
-            {filtered.length === 0 ? (
-              <div className="py-6 text-center text-sm">No options found.</div>
-            ) : (
-              filtered.map((item) => (
-                <div
+      <PopoverContent className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-96 overflow-y-auto">
+        <Command>
+          <CommandInput
+            value={search}
+            onValueChange={setSearch}
+            placeholder={placeholder ? `Search ${placeholder.toLowerCase()}` : "Search..."}
+          />
+          <CommandList>
+            <CommandEmpty>No options found.</CommandEmpty>
+            {filtered.length > 0 && (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">
+                {filtered.filter((item) => item.value !== "").length} option
+                {filtered.filter((item) => item.value !== "").length !== 1 ? "s" : ""} available
+              </div>
+            )}
+            <CommandGroup>
+              {filtered.map((item) => (
+                <CommandItem
                   key={item.value}
-                  className="relative flex cursor-pointer gap-2 select-none items-center rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground whitespace-nowrap overflow-hidden text-ellipsis"
-                  onClick={() => {
+                  value={item.label}
+                  onSelect={(currentValue) => {
                     onChange(item.value);
                     setOpen(false);
                     setSearch("");
                   }}
                 >
                   <CheckIcon className={cn("mr-2 h-4 w-4", value === item.value ? "opacity-100" : "opacity-0")} />
-                  <span className="block truncate">{item.label}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+                  {item.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   );

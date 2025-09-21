@@ -1,16 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { AlertCircle, Info, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
-import { useStudent } from "@/providers/student-provider";
-import { useAuth } from "@/hooks/use-auth";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { fetchStudentSubjectSelections, StudentSubjectSelectionDto, PaperDto } from "@/services/subject-selection";
+import { fetchStudentSubjectSelections, PaperDto } from "@/services/subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
+import { fetchStudentByUid } from "@/services/student";
+import { StudentDto } from "@repo/db/dtos/user";
 
-export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => void }) {
-  const { user } = useAuth();
-  const { student } = useStudent();
+interface SubjectSelectionFormProps {
+  uid: string;
+}
+
+export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [errors, setErrors] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -18,7 +19,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
 
-  const [selections, setSelections] = useState<StudentSubjectSelectionDto[] | null>(null);
+  const [student, setStudent] = useState<StudentDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -28,12 +29,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [idc1, setIdc1] = useState(""); // IDC 1 (Semester I)
   const [idc2, setIdc2] = useState(""); // IDC 2 (Semester II)
   const [idc3, setIdc3] = useState(""); // IDC 3 (Semester III)
-  // Dynamic per-category selections
-  const [idcSem1, setIdcSem1] = useState<string>("");
-  const [idcSem2, setIdcSem2] = useState<string>("");
-  const [idcSem3, setIdcSem3] = useState<string>("");
-  const [minorSem12, setMinorSem12] = useState<string>("");
-  const [minorSem34, setMinorSem34] = useState<string>("");
   const [aec3, setAec3] = useState(""); // AEC 3 (Semester III)
   const [cvac4, setCvac4] = useState(""); // CVAC 4 (Semester II)
 
@@ -58,18 +53,30 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
   const [minorMismatch, setMinorMismatch] = useState(false);
 
-  // Load paper options from backend
+  // Load student data first, then subject selections
   useEffect(() => {
     const run = async () => {
-      if (!student?.id) return;
+      if (!uid) {
+        console.log("No UID provided");
+        return;
+      }
+      console.log("Loading student data for UID:", uid);
       setLoading(true);
       setLoadError(null);
       try {
-        const resp = await fetchStudentSubjectSelections(student.id);
+        // First, fetch student data by UID
+        const studentData = await fetchStudentByUid(uid);
+        console.log("Student data loaded:", studentData);
+        setStudent(studentData);
+
+        // Then, fetch subject selections using student ID
+        if (!studentData.id) {
+          throw new Error("Student ID not found");
+        }
+        const resp = await fetchStudentSubjectSelections(studentData.id);
         console.log("subject-selection-form data", resp);
 
         const groups = resp.studentSubjectsSelection ?? [];
-        setSelections(groups);
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
@@ -78,9 +85,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           if (!name) return "";
           const upper = String(name).toUpperCase();
           const romanMatch = upper.match(/\b(I|II|III|IV|V|VI)\b/);
-          if (romanMatch) return romanMatch[1];
+          if (romanMatch && romanMatch[1]) return romanMatch[1];
           const digitMatch = upper.match(/\b([1-6])\b/);
-          if (digitMatch) return romanMap[digitMatch[1]] || "";
+          if (digitMatch && digitMatch[1]) return romanMap[digitMatch[1]] || "";
           return "";
         };
         const getSemesterRoman = (p: PaperDto) => extractSemesterRoman(p?.class?.name);
@@ -96,10 +103,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const isCVAC = (n: string, c?: string | null) =>
           (n ?? "").toUpperCase().includes("COMMON VALUE ADDED") || (c ?? "").toUpperCase() === "CVAC";
 
-        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code!));
-        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code!));
-        const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code!));
-        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code!));
+        const minorGroup = groups.find((g) => isMinor(g.subjectType?.name || "", g.subjectType?.code || ""));
+        const idcGroup = groups.find((g) => isIDC(g.subjectType?.name || "", g.subjectType?.code || ""));
+        const aecGroup = groups.find((g) => isAEC(g.subjectType?.name || "", g.subjectType?.code || ""));
+        const cvacGroup = groups.find((g) => isCVAC(g.subjectType?.name || "", g.subjectType?.code || ""));
 
         const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)));
 
@@ -129,8 +136,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
 
         // Load restricted groupings and build quick lookup by target subject name
-        const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
-        const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
+        const programCourseId = studentData.currentPromotion?.programCourse?.id;
+        const rgs = await fetchRestrictedGroupings({
+          page: 1,
+          pageSize: 200,
+          programCourseId: programCourseId || undefined,
+        });
         const norm = (s: string) =>
           String(s || "")
             .trim()
@@ -152,10 +163,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           );
           const code = norm(rg.subjectType?.code || rg.subjectType?.name || "");
           rgMap[norm(target)] = { semesters, cannotCombineWith: cannot, categoryCode: code };
-          const targetId = (rg.subject as any)?.id as number | undefined;
+          const targetId = (rg.subject as { id?: number })?.id;
           const cannotIds = new Set<number>(
             (rg.cannotCombineWithSubjects || [])
-              .map((s) => (s.cannotCombineWithSubject as any)?.id as number | undefined)
+              .map((s) => (s.cannotCombineWithSubject as { id?: number })?.id)
               .filter((id): id is number => typeof id === "number"),
           );
           if (typeof targetId === "number")
@@ -164,29 +175,8 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         }
         setRestrictedBySubject(rgMap);
         setRestrictedCategories(catFlags);
-        // Log restricted grouping DTOs for verification
-        // eslint-disable-next-line no-console
-        console.log(
-          "[SubjectSelection] RG fetched:",
-          rgs.map((rg) => ({
-            id: rg.id,
-            cat: rg.subjectType?.code || rg.subjectType?.name,
-            subject: rg.subject?.name,
-            subjectId: (rg.subject as any)?.id,
-            semesters: (rg.forClasses || []).map((c) => c.class?.shortName || c.class?.name),
-            cannot: (rg.cannotCombineWithSubjects || []).map((s) => ({
-              name: s.cannotCombineWithSubject?.name,
-              id: (s.cannotCombineWithSubject as any)?.id,
-            })),
-          })),
-        );
 
-        // Save semester labels for use in filtering at render time
-        setIdcSem1("I");
-        setIdcSem2("II");
-        setIdcSem3("III");
-        setMinorSem12("I,II");
-        setMinorSem34("III,IV");
+        // Semester labels are now handled dynamically in the component
 
         // Capture earlier Minor selections strictly by subject name
         const earlier = resp.selectedMinorSubjects ?? [];
@@ -199,22 +189,20 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const earlierMinor1 = subjectNameFromMinor(earlier[0]);
         const earlierMinor2 = subjectNameFromMinor(earlier[1]);
         setEarlierMinorSelections([earlierMinor1, earlierMinor2].filter(Boolean));
-
-        // Don't populate form fields with existing selections - let user make fresh selections
-        // The earlierMinorSelections are still tracked for comparison purposes
-
-        // Populate other existing selections if available
-        // Note: The existing selections are already loaded in the form fields above
-        // Additional selections for IDC, AEC, CVAC would need to be loaded from a different API endpoint
-        // For now, we'll focus on the Minor subjects which are the main concern
-      } catch (e: any) {
-        setLoadError(e?.message || "Failed to load subject selections");
+      } catch (e: unknown) {
+        const errorMessage = e instanceof Error ? e.message : "Unknown error";
+        console.log("API call failed:", errorMessage);
+        if (errorMessage.includes("404") || errorMessage.includes("not found")) {
+          setLoadError("Student not found with UID: " + uid);
+        } else {
+          setLoadError(errorMessage || "Failed to load student data");
+        }
       } finally {
         setLoading(false);
       }
     };
     run();
-  }, [student?.id]);
+  }, [uid]);
 
   // Show non-blocking alert whenever current Minor pair differs from earlier saved pair
   useEffect(() => {
@@ -412,9 +400,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     });
   };
 
-  const [showTips, setShowTips] = useState(true);
-  const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
-
   // Loading skeleton component for dropdowns
   const LoadingDropdown = ({ label }: { label: string }) => (
     <div className="space-y-2 min-h-[84px]">
@@ -473,169 +458,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden ">
-      {/* Student Information Section - Fixed */}
-      {/* <div className="bg-blue-800 shadow-2xl rounded-2xl border-0 p-8 mb-6 flex-shrink-0">
-        <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-sm">
-            <svg className="w-7 h-7 text-w hite" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-              />
-            </svg>
-          </div>
-          <div>
-            <div className="text-white">Student Information</div>
-            <div className="text-blue-100 text-sm font-normal">Academic Year 2024-25</div>
-          </div>
-        </h3>
-        <div className="grid grid-cols-5 gap-8">
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Name</label>
-            <p className="text-base font-bold text-white">Dipanwita Sarkar</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">0101255656</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                />
-              </svg>
-            </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">251000</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-            </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
-            <p className="text-base font-bold text-white">B.A. English (H)</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
-            <p className="text-base font-bold text-white">Day</p>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Mobile toggle */}
-      {/* <div className="lg:hidden mt-2 mb-2 ">
-        <button
-          type="button"
-          onClick={() => setShowStudentInfoMobile((v) => !v)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 bg-white"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-            <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
-          </svg>
-          {showStudentInfoMobile ? "Hide" : "Show"} Student Info
-        </button>
-      </div> */}
-
-      {/* <div
-        className={`bg-blue-600 mt-2 mb-4 text-white font-bold p-2 rounded-lg ${showStudentInfoMobile ? "block" : "hidden"} lg:block`}
-      >
-        <div className="flex items-center gap-2 justify-between py-2 mb-3 text-xl border-b">
-          <div className="text-white">Student Information</div>
-          
-        </div>
-        <div className="grid grid-cols-5 gap-8">
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Name</label>
-            <p className="text-base font-bold text-white">{user?.name}</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">{student?.uid}</p>
-          </div>
-          
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">{student?.currentPromotion?.rollNumber}</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
-            <p className="text-base font-bold text-white">{student?.currentPromotion?.programCourse?.name}</p>
-          </div>
-          <div className="space-y-3 text-center">
-            <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
-            <p className="text-base font-bold text-white">{student?.shift?.name}</p>
-          </div>
-        </div>
-      </div> */}
-
+    <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Form Section - No Scrolling */}
       <div className="flex-1 overflow-hidden">
-        <div className="shadow-lg rounded-xl bg-white mt-6 md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
-          {/* Mobile notes banner */}
-          <div className="lg:hidden">
-            {showTips && (
-              <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
-                <AlertCircle className="w-4 h-4 mt-0.5" />
-                <div className="text-sm">
-                  Before selecting subjects, please review the guidelines. Tap the info button to view notes.
-                </div>
-                <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
-                  Dismiss
-                </button>
-              </div>
-            )}
-            {/* <button
-              type="button"
-              onClick={() => openNotes?.()}
-              className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 hover:bg-gray-50"
-            >
-              <Info className="w-4 h-4" /> View Notes
-            </button> */}
-          </div>
+        <div className="shadow-lg rounded-xl bg-white p-6 border border-gray-100 h-full overflow-y-auto">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-8">
               {step === 1
@@ -651,19 +477,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       Before selecting your subjects, please read the following notes carefully to ensure clarity on the
                       selection process. These notes are provided here for your reference and guidance.
                     </div>
-                    {/* <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
-                      Dismiss
-                    </button> */}
                   </div>
-                  {/* <div className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400">
-                    <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
-                      Before You Begin
-                    </h4>
-                    <p className="text-blue-700 text-sm leading-relaxed">
-                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
-                      selection process. These notes are provided here for your reference and guidance.
-                    </p>
-                  </div> */}
                 </>
               ) : (
                 "Review and confirm declarations before saving"
@@ -687,7 +501,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
           {step === 1 && (
             <div className="grid grid-cols-1 gap-4">
-              {/* Removed: Available Paper Options preview */}
               {/* Minor Subjects */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {loading ? (
@@ -709,7 +522,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           )}
                           value={minor1}
                           onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
-                          placeholder="Select Minor I"
+                          placeholder={getPlaceholder("minor1", "Select Minor I")}
                           className="w-full"
                         />
                       </div>
@@ -825,7 +638,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </div>
 
               {/* CVAC Subjects */}
-
               {loading ? (
                 <LoadingDropdown label="CVAC 4 (Semester II)" />
               ) : hasActualOptions(availableCvacOptions) ? (
@@ -1032,8 +844,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           </div>
         </div>
       </div>
-
-      {/* Removed modal preview - now handled inline in Step 2 */}
     </div>
   );
 }

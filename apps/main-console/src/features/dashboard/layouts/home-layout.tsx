@@ -31,6 +31,7 @@ import {
   Settings,
   Search,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { NavUser } from "../../../components/globals/NavUser";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,7 @@ const pathIconMap: Record<string, React.ElementType> = {
   "notice-management": Megaphone,
   "faculty-staff": UserCog,
   settings: Settings,
+  "cu-registration": FileText,
 };
 
 // Search data

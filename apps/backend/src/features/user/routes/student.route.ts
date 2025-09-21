@@ -8,6 +8,7 @@ import {
   getSearchedStudents,
   getSearchedStudentsByRollNumber,
   getStudentById,
+  getStudentByUid,
   updateStudent,
 } from "../controllers/student.controller.js";
 
@@ -21,6 +22,7 @@ router.get("/search", getSearchedStudents);
 
 router.get("/search-rollno", getSearchedStudentsByRollNumber);
 router.get("/filtered", getFilteredStudents);
+router.get("/uid/:uid", getStudentByUid);
 router.get("/query", (req: Request, res: Response, next: NextFunction) => {
   const { id, page, pageSize } = req.query;
 

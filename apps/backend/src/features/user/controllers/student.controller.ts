@@ -133,6 +133,31 @@ export const getStudentById = async (
   }
 };
 
+export const getStudentByUid = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { uid } = req.params;
+
+    const foundStudent = await studentService.findByUid(uid);
+
+    if (!foundStudent) {
+      res
+        .status(404)
+        .json(new ApiError(404, `No student exist for UID: ${uid}`));
+      return;
+    }
+
+    res
+      .status(200)
+      .json(new ApiResponse(201, "SUCCESS", foundStudent, "Student fetched!"));
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
 export const updateStudent = async (
   req: Request,
   res: Response,
