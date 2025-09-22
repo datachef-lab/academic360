@@ -1,8 +1,5 @@
 import { db } from "@/db/index.js";
-import {
-  Occupation,
-  occupationModel,
-} from "@/features/resources/models/occupation.model.js";
+import { Occupation, occupationModel } from "@repo/db/schemas";
 import { eq, ilike } from "drizzle-orm";
 
 export const loadOccupations = async () => {

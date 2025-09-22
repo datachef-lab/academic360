@@ -2,7 +2,7 @@ import { db } from "@/db/index.js";
 import {
   admissionAcademicInfoModel,
   AdmissionAcademicInfo,
-} from "../models/admission-academic-info.model.js";
+} from "@repo/db/schemas/models/admissions";
 import { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
 type AcademicInfoInsert = typeof admissionAcademicInfoModel.$inferInsert;
 import { and, eq, ilike } from "drizzle-orm";
@@ -12,6 +12,7 @@ import {
   createSubject,
   deleteSubject,
   findSubjectsByAcademicInfoId,
+  updateSubject,
 } from "./student-academic-subject.service.js";
 
 // CREATE
@@ -20,25 +21,43 @@ export async function createAcademicInfo(givenDto: AdmissionAcademicInfoDto) {
 
   const insertValue: AcademicInfoInsert = {
     applicationFormId: Number(rest.applicationFormId),
-    boardUniversityId: Number(rest.boardUniversityId),
+    boardId: Number(rest.boardId ?? rest.boardUniversityId),
     boardResultStatus: rest.boardResultStatus,
+    percentageOfMarks:
+      rest.percentageOfMarks == null || rest.percentageOfMarks === ""
+        ? undefined
+        : Number(rest.percentageOfMarks),
+    lastSchoolName:
+      typeof rest.lastSchoolName === "string" ? rest.lastSchoolName : undefined,
     rollNumber: rest.rollNumber ?? undefined,
     schoolNumber: rest.schoolNumber ?? undefined,
     centerNumber: rest.centerNumber ?? undefined,
     admitCardId: rest.admitCardId ?? undefined,
-    instituteId: rest.instituteId ?? undefined,
-    otherInstitute: rest.otherInstitute ?? undefined,
-    languageMediumId: Number(rest.languageMediumId),
+    languageMediumId:
+      rest.languageMediumId == null || rest.languageMediumId === ""
+        ? undefined
+        : Number(rest.languageMediumId),
     yearOfPassing: Number(rest.yearOfPassing),
-    streamType: rest.streamType,
+    specializationId:
+      rest.specializationId != null ? Number(rest.specializationId) : undefined,
     isRegisteredForUGInCU: !!rest.isRegisteredForUGInCU,
     cuRegistrationNumber: rest.cuRegistrationNumber ?? undefined,
-    previouslyRegisteredCourseId:
-      rest.previouslyRegisteredCourseId ?? undefined,
-    otherPreviouslyRegisteredCourse:
-      rest.otherPreviouslyRegisteredCourse ?? undefined,
-    previousCollegeId: rest.previousCollegeId ?? undefined,
-    otherCollege: rest.otherCollege ?? undefined,
+    previouslyRegisteredProgramCourseId:
+      rest.previouslyRegisteredProgramCourseId != null
+        ? Number(rest.previouslyRegisteredProgramCourseId)
+        : undefined,
+    otherPreviouslyRegisteredProgramCourse:
+      typeof rest.otherPreviouslyRegisteredProgramCourse === "string"
+        ? rest.otherPreviouslyRegisteredProgramCourse
+        : undefined,
+    previousInstituteId:
+      rest.previousInstituteId != null
+        ? Number(rest.previousInstituteId)
+        : undefined,
+    otherPreviousInstitute:
+      typeof rest.otherPreviousInstitute === "string"
+        ? rest.otherPreviousInstitute
+        : undefined,
   };
 
   let existingEntry = await checkExistingEntry(givenDto);
@@ -53,9 +72,14 @@ export async function createAcademicInfo(givenDto: AdmissionAcademicInfoDto) {
   for (const subject of subjects) {
     const subjectBase = {
       admissionAcademicInfoId: Number(existingEntry.id!),
-      academicSubjectId: Number((subject as any).academicSubjectId),
-      fullMarks: String((subject as any).fullMarks ?? ""),
-      totalMarks: String((subject as any).totalMarks ?? ""),
+      boardSubjectId: Number(
+        (subject as any).boardSubjectId ??
+          (subject as any).boardSubject?.id ??
+          0,
+      ),
+      theoryMarks: Number((subject as any).theoryMarks ?? 0),
+      practicalMarks: Number((subject as any).practicalMarks ?? 0),
+      totalMarks: Number((subject as any).totalMarks ?? 0),
       resultStatus: (subject as any).resultStatus ?? undefined,
     };
     await createSubject(subjectBase as any);
@@ -97,54 +121,132 @@ export async function findAcademicInfoByApplicationFormId(
 export async function updateAcademicInfo(
   givenDto: Omit<AdmissionAcademicInfoDto, "createdAt" | "updatedAt">,
 ) {
-  const foundAcademicInfo = await findAcademicInfoById(givenDto.id!);
-  if (!foundAcademicInfo) return null;
-
   const { subjects, id, ...rest } = givenDto as any;
-  const base = {
-    applicationFormId: Number(rest.applicationFormId),
-    boardUniversityId: Number(rest.boardUniversityId),
-    boardResultStatus: rest.boardResultStatus,
-    rollNumber: rest.rollNumber ?? undefined,
-    schoolNumber: rest.schoolNumber ?? undefined,
-    centerNumber: rest.centerNumber ?? undefined,
-    admitCardId: rest.admitCardId ?? undefined,
-    instituteId: rest.instituteId ?? undefined,
-    otherInstitute: rest.otherInstitute ?? undefined,
-    languageMediumId: Number(rest.languageMediumId),
-    yearOfPassing: Number(rest.yearOfPassing),
-    streamType: rest.streamType,
-    isRegisteredForUGInCU: !!rest.isRegisteredForUGInCU,
-    cuRegistrationNumber: rest.cuRegistrationNumber ?? undefined,
-    previouslyRegisteredCourseId:
-      rest.previouslyRegisteredCourseId ?? undefined,
-    otherPreviouslyRegisteredCourse:
-      rest.otherPreviouslyRegisteredCourse ?? undefined,
-    previousCollegeId: rest.previousCollegeId ?? undefined,
-    otherCollege: rest.otherCollege ?? undefined,
+
+  const safeEnum = (
+    v: unknown,
+  ): "PASS" | "FAIL" | "COMPARTMENTAL" | undefined => {
+    const s = typeof v === "string" ? v.trim().toUpperCase() : undefined;
+    return s === "PASS" || s === "FAIL" || s === "COMPARTMENTAL"
+      ? (s as any)
+      : undefined;
   };
+  const toNum = (v: unknown): number | undefined =>
+    v == null ? undefined : Number.isFinite(Number(v)) ? Number(v) : undefined;
 
-  const [updatedAcademicInfo] = await db
-    .update(admissionAcademicInfoModel)
-    .set(base)
-    .where(eq(admissionAcademicInfoModel.id, givenDto.id!))
-    .returning();
+  const base: Record<string, unknown> = {};
+  const brs = safeEnum(rest.boardResultStatus);
+  if (brs) base.boardResultStatus = brs;
+  const yop = toNum(rest.yearOfPassing);
+  if (yop != null) base.yearOfPassing = yop;
+  if (typeof rest.isRegisteredForUGInCU === "boolean")
+    base.isRegisteredForUGInCU = rest.isRegisteredForUGInCU;
+  const bId = toNum((rest as any).boardId ?? (rest as any).boardUniversityId);
+  if (bId != null) base.boardId = bId;
+  if (typeof (rest as any).lastSchoolName === "string")
+    base.lastSchoolName = (rest as any).lastSchoolName;
+  if (typeof rest.rollNumber === "string") base.rollNumber = rest.rollNumber;
+  if (typeof rest.schoolNumber === "string")
+    base.schoolNumber = rest.schoolNumber;
+  if (typeof rest.centerNumber === "string")
+    base.centerNumber = rest.centerNumber;
+  if (typeof rest.admitCardId === "string") base.admitCardId = rest.admitCardId;
+  if (typeof rest.cuRegistrationNumber === "string")
+    base.cuRegistrationNumber = rest.cuRegistrationNumber;
+  const pom = toNum((rest as any).percentageOfMarks);
+  if (pom != null) base.percentageOfMarks = pom;
+  const lmId = toNum(rest.languageMediumId);
+  if (lmId != null && lmId > 0) base.languageMediumId = lmId;
+  const specId = toNum((rest as any).specializationId);
+  if (specId != null) base.specializationId = specId;
+  const prgId = toNum((rest as any).previouslyRegisteredProgramCourseId);
+  if (prgId != null) base.previouslyRegisteredProgramCourseId = prgId;
+  if (typeof (rest as any).otherPreviouslyRegisteredProgramCourse === "string")
+    base.otherPreviouslyRegisteredProgramCourse = (
+      rest as any
+    ).otherPreviouslyRegisteredProgramCourse;
+  const prevInstId = toNum((rest as any).previousInstituteId);
+  if (prevInstId != null) base.previousInstituteId = prevInstId;
+  if (typeof (rest as any).otherPreviousInstitute === "string")
+    base.otherPreviousInstitute = (rest as any).otherPreviousInstitute;
+  // Intentionally avoid updating applicationFormId and boardId to prevent FK/constraint issues
 
-  // Delete existing subjects and create new ones
-  if (foundAcademicInfo.subjects) {
-    for (const subject of foundAcademicInfo.subjects) {
-      await deleteSubject(Number(subject.id));
-    }
+  // Hydrate missing required fields from existing row to satisfy DB constraints
+  const [existingRow] = await db
+    .select()
+    .from(admissionAcademicInfoModel)
+    .where(eq(admissionAcademicInfoModel.id, Number(givenDto.id)));
+  if (!existingRow) return null;
+  if (base.boardResultStatus == null)
+    base.boardResultStatus = existingRow.boardResultStatus as unknown as string;
+  if (base.yearOfPassing == null)
+    base.yearOfPassing = existingRow.yearOfPassing as unknown as number;
+  if (base.isRegisteredForUGInCU == null)
+    base.isRegisteredForUGInCU =
+      existingRow.isRegisteredForUGInCU as unknown as boolean;
+  if (base.languageMediumId == null)
+    base.languageMediumId = existingRow.languageMediumId as unknown as number;
+  if (
+    base.specializationId == null &&
+    (existingRow as any).specializationId != null
+  )
+    base.specializationId = (existingRow as any)
+      .specializationId as unknown as number;
+  if (
+    base.previousInstituteId == null &&
+    (existingRow as any).previousInstituteId != null
+  )
+    base.previousInstituteId = (existingRow as any)
+      .previousInstituteId as unknown as number;
+  if (
+    base.previouslyRegisteredProgramCourseId == null &&
+    (existingRow as any).previouslyRegisteredProgramCourseId != null
+  )
+    base.previouslyRegisteredProgramCourseId = (existingRow as any)
+      .previouslyRegisteredProgramCourseId as unknown as number;
+
+  let updatedAcademicInfo;
+  try {
+    [updatedAcademicInfo] = await db
+      .update(admissionAcademicInfoModel)
+      .set(base)
+      .where(eq(admissionAcademicInfoModel.id, givenDto.id!))
+      .returning();
+  } catch (error) {
+    console.error("AcademicInfo update failed with payload:", base);
+    console.error("PG error:", {
+      message: (error as any)?.message,
+      detail: (error as any)?.detail,
+      code: (error as any)?.code,
+    });
+    throw error;
   }
-  for (const subject of subjects) {
-    const subjectBase = {
+
+  if (!updatedAcademicInfo) {
+    return null; // nothing updated => not found
+  }
+
+  // Upsert subjects: update existing (by id) or insert if new. Do not delete any.
+  for (const subject of subjects as any[]) {
+    const resolvedBoardSubjectId = Number(
+      subject.boardSubjectId ??
+        subject.boardSubject?.id ??
+        subject.academicSubjectId ??
+        0,
+    );
+    const base = {
       admissionAcademicInfoId: Number(updatedAcademicInfo.id!),
-      academicSubjectId: Number((subject as any).academicSubjectId),
-      fullMarks: String((subject as any).fullMarks ?? ""),
-      totalMarks: String((subject as any).totalMarks ?? ""),
-      resultStatus: (subject as any).resultStatus ?? undefined,
-    };
-    await createSubject(subjectBase as any);
+      boardSubjectId: resolvedBoardSubjectId,
+      theoryMarks: Number(subject.theoryMarks ?? 0),
+      practicalMarks: Number(subject.practicalMarks ?? 0),
+      totalMarks: Number(subject.totalMarks ?? 0),
+      resultStatus: subject.resultStatus ?? undefined,
+    } as any;
+    if (subject.id) {
+      await updateSubject({ id: Number(subject.id), ...base });
+    } else {
+      await createSubject(base);
+    }
   }
 
   return await formatAcademicInfo(updatedAcademicInfo);
@@ -180,7 +282,7 @@ export async function formatAcademicInfo(
   );
 
   // Load related entities
-  const { boardUniversityId, ...rest } = academicInfo;
+  const { ...rest } = academicInfo as any;
 
   // For now, return null for related entities as they would require additional queries
   // This is a simplified version to fix the immediate type error
@@ -201,8 +303,8 @@ export async function checkExistingEntry(givenDto: AdmissionAcademicInfoDto) {
       Number((givenDto as any).applicationFormId),
     ),
     eq(
-      admissionAcademicInfoModel.boardUniversityId,
-      Number((givenDto as any).boardUniversityId),
+      admissionAcademicInfoModel.boardId,
+      Number((givenDto as any).boardId ?? (givenDto as any).boardUniversityId),
     ),
     eq(
       admissionAcademicInfoModel.boardResultStatus,

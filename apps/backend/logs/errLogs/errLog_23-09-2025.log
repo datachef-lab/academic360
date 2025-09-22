@@ -1,0 +1,31 @@
+23-09-2025	02:02:19	96185b35-d4eb-417c-9935-df51393ed1f9	Error: Failed query: select "id", "legacy_country_id", "name", "sequence", "undefined", "created_at", "updated_at" from "countries" where "countries"."id" = $1
+params: 1	PUT	/api/personal-details/50	http://localhost:5173
+23-09-2025	01:56:27	6b6cdbba-14cd-4e05-ab81-fe195f89e229	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:56:17	458a6727-4407-4bb1-90ff-21d369ca157a	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:55:54	5871d29f-b3c7-4603-9f2a-235a56e05a6a	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:54:46	8a9ee1c1-a58d-4d9e-819c-ab633ba37329	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:54:25	19dd261f-005e-4cdf-a60a-66d9e7b7835b	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:53:51	309d9e10-ba8e-491c-8d8d-ed67b191b03a	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:53:18	23fc6492-b48b-42a1-abf9-75baed37ed45	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:39:51	ec0cb205-7434-426a-82f3-ad8611bbf490	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:37:03	6dc9ca0d-b6d2-4cf5-8802-48609a66e9c5	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:36:56	c3e5b0fc-5a90-42fb-8d9f-304873aa38cb	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:27:28	e9aae859-01f8-4787-97f2-68b2adffbce4	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:27:28	d30e7d27-bbeb-4f29-bd8a-d21ccef8ef8f	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:16:40	e878569c-099f-457c-898e-01674cc36735	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:13:15	7f51d4b3-7a6c-4384-9b65-cfced6d77cc3	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	01:04:09	f3d7b0f6-8e2c-4f20-b5d4-43160f5be5aa	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:19:59	01b0b135-4de9-4d76-8418-827ac62e3bb0	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:19:50	058afde5-a5ed-41e9-b398-1d8e533ea191	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:19:31	b1112062-f363-4eab-a620-6646aa0d6e6a	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:19:12	ff37ef5e-7a6a-475b-9dc3-c197cd56d21b	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:11:58	c0d71fdf-07b5-4780-81aa-ba9eeb4f4b2d	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:09:19	238c6e84-e628-4c5d-a2f8-0b7bd6d7fa4c	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	00:05:16	5b0bab7f-df4e-4c79-8cf2-9a1f8a29a29c	Error: Failed query: select "id", "application_form_id_fk", "board_university_id_fk", "board_result_status", "roll_number", "school_number", "center_number", "admit_card_id", "institute_id_fk", "other_institute", "language_medium_id_fk", "year_of_passing", "stream_type", "is_registered_for_ug_in_cu", "cu_registration_number", "previously_registered_course_id_fk", "other_previously_registered_course", "previous_college_id_fk", "other_college", "created_at", "updated_at" from "admission_academic_info" where "admission_academic_info"."id" = $1
+params: 32	PUT	/api/admissions/academic-info/32	http://localhost:5173
+23-09-2025	00:03:16	4bad71fe-ccac-4722-8bb7-033662367abd	Error: Failed query: select "id", "application_form_id_fk", "board_university_id_fk", "board_result_status", "roll_number", "school_number", "center_number", "admit_card_id", "institute_id_fk", "other_institute", "language_medium_id_fk", "year_of_passing", "stream_type", "is_registered_for_ug_in_cu", "cu_registration_number", "previously_registered_course_id_fk", "other_previously_registered_course", "previous_college_id_fk", "other_college", "created_at", "updated_at" from "admission_academic_info" where "admission_academic_info"."id" = $1
+params: 32	PUT	/api/admissions/academic-info/32	http://localhost:5173
+23-09-2025	00:01:55	5fc484c2-c9fb-440b-8c38-0ed47331a72c	Error: Failed query: update "admission_academic_info" set "board_result_status" = $1, "year_of_passing" = $2, "is_registered_for_ug_in_cu" = $3, "updated_at" = $4 where "admission_academic_info"."id" = $5 returning "id", "application_form_id_fk", "board_university_id_fk", "board_result_status", "roll_number", "school_number", "center_number", "admit_card_id", "institute_id_fk", "other_institute", "language_medium_id_fk", "year_of_passing", "stream_type", "is_registered_for_ug_in_cu", "cu_registration_number", "previously_registered_course_id_fk", "other_previously_registered_course", "previous_college_id_fk", "other_college", "created_at", "updated_at"
+params: FAIL,2025,false,2025-09-22T18:31:55.416Z,32	PUT	/api/admissions/academic-info/32	http://localhost:5173
+23-09-2025	00:01:45	a240ddb7-ddec-4af6-9656-3fe5dbf2858d	Error: Failed query: update "admission_academic_info" set "board_result_status" = $1, "year_of_passing" = $2, "is_registered_for_ug_in_cu" = $3, "updated_at" = $4 where "admission_academic_info"."id" = $5 returning "id", "application_form_id_fk", "board_university_id_fk", "board_result_status", "roll_number", "school_number", "center_number", "admit_card_id", "institute_id_fk", "other_institute", "language_medium_id_fk", "year_of_passing", "stream_type", "is_registered_for_ug_in_cu", "cu_registration_number", "previously_registered_course_id_fk", "other_previously_registered_course", "previous_college_id_fk", "other_college", "created_at", "updated_at"
+params: FAIL,2025,false,2025-09-22T18:31:45.784Z,32	PUT	/api/admissions/academic-info/32	http://localhost:5173

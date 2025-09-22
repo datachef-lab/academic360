@@ -1,10 +1,10 @@
 import { ApiResponse } from "@/types/api-response";
-import { Accommodation } from "@/types/user/accommodation";
+import { AccommodationDto } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/accommodations";
 
-export async function getAllAccommodations(): Promise<ApiResponse<Accommodation[]>> {
+export async function getAllAccommodations(): Promise<ApiResponse<AccommodationDto[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -13,7 +13,7 @@ export async function getAllAccommodations(): Promise<ApiResponse<Accommodation[
   }
 }
 
-export async function getAccommodationById(id: number): Promise<ApiResponse<Accommodation | null>> {
+export async function getAccommodationById(id: number): Promise<ApiResponse<AccommodationDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,16 +22,19 @@ export async function getAccommodationById(id: number): Promise<ApiResponse<Acco
   }
 }
 
-export async function getAccommodationByStudentId(studentId: number): Promise<ApiResponse<Accommodation | null>> {
+export async function getAccommodationByStudentId(studentId: number): Promise<ApiResponse<AccommodationDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
-  } catch {
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return { payload: null } as ApiResponse<AccommodationDto | null>;
+    }
     throw new Error(`Failed to fetch accommodation for studentId ${studentId}`);
   }
 }
 
-export async function createAccommodation(payload: Partial<Accommodation>): Promise<ApiResponse<Accommodation>> {
+export async function createAccommodation(payload: Partial<AccommodationDto>): Promise<ApiResponse<AccommodationDto>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -42,8 +45,8 @@ export async function createAccommodation(payload: Partial<Accommodation>): Prom
 
 export async function updateAccommodation(
   id: number,
-  payload: Partial<Accommodation>,
-): Promise<ApiResponse<Accommodation>> {
+  payload: Partial<AccommodationDto>,
+): Promise<ApiResponse<AccommodationDto>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

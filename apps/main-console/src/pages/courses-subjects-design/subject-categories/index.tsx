@@ -365,7 +365,7 @@ const SubjectCategoriesPage = () => {
                         <TableCell style={{ width: 220 }}>{category.name}</TableCell>
                         <TableCell style={{ width: 120 }}>{category.code}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {category.isActive ? (
+                          {!category.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

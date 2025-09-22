@@ -124,13 +124,14 @@ export const getHealthByStudentId = async (
         message: "Health record retrieved successfully",
         payload: health,
       });
-    } else {
-      res.status(404).json({
-        success: false,
-        message: "Health record not found for this student",
-        payload: null,
-      });
+      return;
     }
+    // Return 200 with null payload if not found to avoid noisy 404s on empty profiles
+    res.status(200).json({
+      success: true,
+      message: "No health record found for this student",
+      payload: null,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,

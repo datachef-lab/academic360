@@ -401,7 +401,7 @@ const SubjectsPage = () => {
                         <TableCell style={{ width: 120 }}>{subject.code || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>{subject.sequence || "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {subject.isActive ? (
+                          {!subject.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

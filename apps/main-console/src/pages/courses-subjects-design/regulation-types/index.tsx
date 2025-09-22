@@ -387,7 +387,7 @@ const RegulationTypesPage = () => {
                         <TableCell style={{ width: 220 }}>{type.name}</TableCell>
                         <TableCell style={{ width: 220 }}>{type.shortName ?? "-"}</TableCell>
                         <TableCell style={{ width: 120 }}>
-                          {!type.isActive ? (
+                          {type.isActive ? (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>
                           ) : (
                             <Badge variant="secondary">Inactive</Badge>

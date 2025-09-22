@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, ilike } from "drizzle-orm";
 import { db } from "@/db/index.js";
 import {
   personalDetailsModel,
@@ -229,75 +229,22 @@ export async function searchStudent(
   page: number = 1,
   pageSize: number = 10,
 ) {
-  searchText = searchText.trim().toLowerCase();
-
-  // const studentsQuery = db
-  //     .select({
-  //         id: studentModel.id,
-  //         userId: studentModel.userId,
-  //         specializationId: studentModel.specializationId,
-  //         name: userModel.name,
-  //         applicationId: studentModel.applicationId,
-  //         registrationNumber: academicIdentifierModel.registrationNumber,
-  //         rollNumber: academicIdentifierModel.rollNumber,
-  //         uid: academicIdentifierModel.uid,
-  //     })
-  //     .from(studentModel)
-  //     .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-  //     .leftJoin(
-  //         academicIdentifierModel,
-  //         eq(academicIdentifierModel.studentId, studentModel.id),
-  //     )
-  //     .where(
-  //         or(
-  //             ilike(userModel.name, `%${searchText}%`),
-  //             ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`),
-  //             ilike(academicIdentifierModel.rollNumber, `%${searchText}%`),
-  //             ilike(academicIdentifierModel.uid, `%${searchText}%`),
-  //         ),
-  //     )
-  //     .orderBy(userModel.name)
-  //     .limit(pageSize)
-  //     .offset((page - 1) * pageSize);
-
-  // const [students, [{ count: countRows }]] = await Promise.all([
-  //     studentsQuery,
-  //     db
-  //         .select({ count: count() })
-  //         .from(studentModel)
-  //         .leftJoin(userModel, eq(studentModel.userId, userModel.id))
-  //         .leftJoin(
-  //             academicIdentifierModel,
-  //             eq(academicIdentifierModel.studentId, studentModel.id),
-  //         )
-  //         .where(
-  //             or(
-  //                 ilike(userModel.name, `%${searchText}%`),
-  //                 ilike(academicIdentifierModel.registrationNumber, `%${searchText}%`),
-  //                 ilike(academicIdentifierModel.rollNumber, `%${searchText}%`),
-  //                 ilike(academicIdentifierModel.uid, `%${searchText}%`),
-  //             ),
-  //         ),
-  // ]);
-
-  // const content = await Promise.all(
-  //     students.map(async (student) => {
-  //         const formattedStudent = await studentResponseFormat({
-  //             id: student.id,
-  //             userId: student.userId,
-  //             specializationId: student.specializationId,
-  //             applicationId: student.applicationId, // Add this line
-  //         });
-  //         return formattedStudent;
-  //     }),
-  // );
+  const query = searchText.trim();
+  const pattern = `%${query}%`;
+  const rows = await db
+    .select({ id: studentModel.id, uid: studentModel.uid })
+    .from(studentModel)
+    .where(ilike(studentModel.uid, pattern))
+    .orderBy(desc(studentModel.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   return {
-    content: [],
+    content: rows as unknown as StudentType[],
     page,
     pageSize,
-    totalElements: Number(0),
-    totalPages: Math.ceil(Number(0) / pageSize),
+    totalElements: rows.length,
+    totalPages: Math.ceil(rows.length / pageSize) || 1,
   };
 }
 
@@ -637,28 +584,50 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         const [country, state, city, district] = await Promise.all([
           rawMailingAddress.countryId
             ? db
-                .select()
+                .select({
+                  id: countryModel.id,
+                  legacyCountryId: countryModel.legacyCountryId,
+                  name: countryModel.name,
+                  sequence: countryModel.sequence,
+                  createdAt: countryModel.createdAt,
+                  updatedAt: countryModel.updatedAt,
+                })
                 .from(countryModel)
                 .where(eq(countryModel.id, rawMailingAddress.countryId))
                 .then((r) => r[0] ?? null)
             : null,
           rawMailingAddress.stateId
             ? db
-                .select()
+                .select({
+                  id: stateModel.id,
+                  name: stateModel.name,
+                  createdAt: stateModel.createdAt,
+                  updatedAt: stateModel.updatedAt,
+                })
                 .from(stateModel)
                 .where(eq(stateModel.id, rawMailingAddress.stateId))
                 .then((r) => r[0] ?? null)
             : null,
           rawMailingAddress.cityId
             ? db
-                .select()
+                .select({
+                  id: cityModel.id,
+                  name: cityModel.name,
+                  createdAt: cityModel.createdAt,
+                  updatedAt: cityModel.updatedAt,
+                })
                 .from(cityModel)
                 .where(eq(cityModel.id, rawMailingAddress.cityId))
                 .then((r) => r[0] ?? null)
             : null,
           rawMailingAddress.districtId
             ? db
-                .select()
+                .select({
+                  id: districtModel.id,
+                  name: districtModel.name,
+                  createdAt: districtModel.createdAt,
+                  updatedAt: districtModel.updatedAt,
+                })
                 .from(districtModel)
                 .where(eq(districtModel.id, rawMailingAddress.districtId))
                 .then((r) => r[0] ?? null)
@@ -675,31 +644,53 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
       }
 
       if (rawResidentialAddress) {
-        const [country, state, city, district] = await Promise.all([
+        const [resCountry, resState, resCity, resDistrict] = await Promise.all([
           rawResidentialAddress.countryId
             ? db
-                .select()
+                .select({
+                  id: countryModel.id,
+                  legacyCountryId: countryModel.legacyCountryId,
+                  name: countryModel.name,
+                  sequence: countryModel.sequence,
+                  createdAt: countryModel.createdAt,
+                  updatedAt: countryModel.updatedAt,
+                })
                 .from(countryModel)
                 .where(eq(countryModel.id, rawResidentialAddress.countryId))
                 .then((r) => r[0] ?? null)
             : null,
           rawResidentialAddress.stateId
             ? db
-                .select()
+                .select({
+                  id: stateModel.id,
+                  name: stateModel.name,
+                  createdAt: stateModel.createdAt,
+                  updatedAt: stateModel.updatedAt,
+                })
                 .from(stateModel)
                 .where(eq(stateModel.id, rawResidentialAddress.stateId))
                 .then((r) => r[0] ?? null)
             : null,
           rawResidentialAddress.cityId
             ? db
-                .select()
+                .select({
+                  id: cityModel.id,
+                  name: cityModel.name,
+                  createdAt: cityModel.createdAt,
+                  updatedAt: cityModel.updatedAt,
+                })
                 .from(cityModel)
                 .where(eq(cityModel.id, rawResidentialAddress.cityId))
                 .then((r) => r[0] ?? null)
             : null,
           rawResidentialAddress.districtId
             ? db
-                .select()
+                .select({
+                  id: districtModel.id,
+                  name: districtModel.name,
+                  createdAt: districtModel.createdAt,
+                  updatedAt: districtModel.updatedAt,
+                })
                 .from(districtModel)
                 .where(eq(districtModel.id, rawResidentialAddress.districtId))
                 .then((r) => r[0] ?? null)
@@ -708,10 +699,10 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
 
         residentialAddress = {
           ...rawResidentialAddress,
-          country,
-          state,
-          city,
-          district,
+          country: resCountry,
+          state: resState,
+          city: resCity,
+          district: resDistrict,
         };
       }
 
@@ -724,7 +715,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
         mailingAddress,
         residentialAddress,
         disabilityCode,
-      };
+      } as unknown as any;
     }
   }
 

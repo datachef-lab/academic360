@@ -1,6 +1,5 @@
-
-import AcademicHistory from "./AcademicHistoryForm";
-import AcademicIdentifier from "./AcademicIdentifierForm";
+// import AcademicHistory from "./AcademicHistoryForm";
+// import AcademicIdentifier from "./AcademicIdentifierForm";
 import Accommodation from "./AccommodationForm";
 import EmergencyContact from "./EmergencyContactForm";
 import HealthDetails from "./HealthDetails";
@@ -8,11 +7,16 @@ import OverviewTab from "./OverviewTab";
 import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
 import Marksheet from "../GradeMarks/Marksheet";
-import PersonalDetails from "./PersonalDetails";
+import AcademicDetails from "./AcademicDetails";
+import PersonalDetailsReadOnly from "./PersonalDetails";
+import { useQuery } from "@tanstack/react-query";
+import { fetchUserProfile } from "@/services/student";
 import { TabsContent } from "../ui/tabs";
 
 type StudentContentProps = {
   studentId: number;
+  userId?: number;
+  personalEmail?: string | null;
   activeTab: {
     label: string;
     icon: JSX.Element;
@@ -20,27 +24,57 @@ type StudentContentProps = {
   };
 };
 
-export default function StudentContent({ activeTab, studentId }: StudentContentProps) {
+export default function StudentContent({ activeTab, studentId, userId, personalEmail }: StudentContentProps) {
+  const { data: profile } = useQuery({
+    queryKey: ["user-profile", userId || studentId],
+    queryFn: async () => {
+      const idToUse = userId || studentId;
+      if (!idToUse) return undefined;
+      return fetchUserProfile(idToUse);
+    },
+    enabled: (userId || studentId) > 0,
+  });
   const handleContent = () => {
     switch (activeTab.label) {
       case "Overview":
         return <OverviewTab />;
       case "Personal":
-        return <PersonalDetails studentId={studentId}/>;  
+        // Prefer profile API payload when available; it contains personalDetails
+        return (
+          <PersonalDetailsReadOnly
+            studentId={studentId}
+            initialData={profile?.personalDetails ?? null}
+            personalEmail={personalEmail ?? null}
+          />
+        );
       case "Family":
-        return <FamilyDetails studentId={studentId} />;
+        return <FamilyDetails studentId={studentId} initialData={profile?.familyDetails ?? null} />;
       case "Health":
-        return <HealthDetails studentId={studentId} />;
+        return (
+          <HealthDetails
+            healthId={profile?.healthDetails?.id ?? undefined}
+            initialData={profile?.healthDetails ?? null}
+          />
+        );
       case "Emergency":
-        return <EmergencyContact studentId={studentId} />;
-      case "History":
-        return <AcademicHistory studentId={studentId} />;
-      case "Identifiers":
-        return <AcademicIdentifier studentId={studentId} onSubmit={() => {}} />;
+        return (
+          <EmergencyContact
+            emergencyId={profile?.emergencyContactDetails?.id ?? undefined}
+            initialData={profile?.emergencyContactDetails ?? null}
+          />
+        );
+
       case "Accommodation":
-        return <Accommodation studentId={studentId} />;
+        return (
+          <Accommodation
+            accommodationId={profile?.accommodationDetails?.id ?? undefined}
+            initialData={profile?.accommodationDetails ?? null}
+          />
+        );
       case "Transport":
         return <TransportDetails />;
+      case "Academic":
+        return <AcademicDetails applicationAcademicInfo={profile?.applicationFormDto?.academicInfo ?? null} />;
       case "Marksheet":
         return <Marksheet />;
       default:
@@ -49,8 +83,8 @@ export default function StudentContent({ activeTab, studentId }: StudentContentP
   };
 
   return (
-      <TabsContent value={activeTab.label}>
-        <div className="my-5">{handleContent()}</div>
-      </TabsContent>
-  )
+    <TabsContent value={activeTab.label}>
+      <div className="my-5 h-full overflow-auto pb-10">{handleContent()}</div>
+    </TabsContent>
+  );
 }

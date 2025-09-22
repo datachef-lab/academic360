@@ -27,6 +27,7 @@ import * as relatedSubjectService from "@/features/subject-selection/services/re
 import * as studentAcademicSubjectService from "@/features/admissions/services/student-academic-subject.service";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
 import * as stringSimilarity from "string-similarity";
+import { PaperDetailedDto } from "@/features/course-design/services/paper.service";
 
 // Helper function for fuzzy string matching
 function isSubjectMatch(
@@ -235,9 +236,16 @@ export async function findSubjectsSelections(studentId: number) {
     });
   }
 
+  const arr: PaperDetailedDto[] = [];
+  for (const subject of formatedSelectedMinorSubjects) {
+    if (arr.find((s) => s.id === subject.id)) {
+      arr.push(subject);
+    }
+  }
+
   return {
     studentSubjectsSelection,
-    selectedMinorSubjects: formatedSelectedMinorSubjects,
+    selectedMinorSubjects: arr, // Give distinct list of selected minor subjects based on legacy id
   };
 }
 

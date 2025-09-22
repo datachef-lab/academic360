@@ -6,7 +6,7 @@ import {
   createPersonalDetailsSchema,
 } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
-import { PersonalDetailsType } from "@/types/user/personal-details.js";
+import { PersonalDetailsDto } from "@repo/db/index.js";
 import { addAddress, findAddressById, saveAddress } from "./address.service.js";
 import { findDisabilityCodeById } from "@/features/resources/services/disabilityCode.service.js";
 import { findNationalityById } from "@/features/resources/services/nationality.service.js";
@@ -29,8 +29,8 @@ function validatePersonalDetailsInput(data: any) {
 }
 
 export async function addPersonalDetails(
-  personalDetails: PersonalDetailsType,
-): Promise<PersonalDetailsType | null> {
+  personalDetails: PersonalDetailsDto,
+): Promise<PersonalDetailsDto | null> {
   // let {
   //     category,
   //     disabilityCode,
@@ -72,7 +72,7 @@ export async function addPersonalDetails(
 
 export async function findPersonalDetailsById(
   id: number,
-): Promise<PersonalDetailsType | null> {
+): Promise<PersonalDetailsDto | null> {
   const [foundPersonalDetail] = await db
     .select()
     .from(personalDetailsModel)
@@ -85,7 +85,7 @@ export async function findPersonalDetailsById(
 
 export async function findPersonalDetailsByStudentId(
   stdentId: number,
-): Promise<PersonalDetailsType | null> {
+): Promise<PersonalDetailsDto | null> {
   // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, stdentId));
   return null;
   // const formattedPersonalDetails = await personalDetailsResponseFormat(foundPersonalDetail);
@@ -94,8 +94,8 @@ export async function findPersonalDetailsByStudentId(
 
 export async function savePersonalDetails(
   id: number,
-  personalDetails: PersonalDetailsType,
-): Promise<PersonalDetailsType | null> {
+  personalDetails: PersonalDetailsDto,
+): Promise<PersonalDetailsDto | null> {
   let {
     category,
     disabilityCode,
@@ -148,8 +148,8 @@ export async function savePersonalDetails(
 
 export async function savePersonalDetailsByStudentId(
   studentId: number,
-  personalDetails: PersonalDetailsType,
-): Promise<PersonalDetailsType | null> {
+  personalDetails: PersonalDetailsDto,
+): Promise<PersonalDetailsDto | null> {
   // let {
   //     category,
   //     disabilityCode,
@@ -266,7 +266,7 @@ export async function getAllPersonalDetails(): Promise<PersonalDetails[]> {
 
 export async function personalDetailsResponseFormat(
   personalDetails: PersonalDetails,
-): Promise<PersonalDetailsType | null> {
+): Promise<PersonalDetailsDto | null> {
   if (!personalDetails) {
     return null;
   }
@@ -280,7 +280,7 @@ export async function personalDetailsResponseFormat(
     religionId,
     ...props
   } = personalDetails;
-  const formattedPersonalDetails: PersonalDetailsType = { ...props };
+  const formattedPersonalDetails: PersonalDetailsDto = { ...props } as any;
   if (categoryId) {
     formattedPersonalDetails.category = await findCategoryById(categoryId);
   }
@@ -289,12 +289,12 @@ export async function personalDetailsResponseFormat(
       await findDisabilityCodeById(disabilityCodeId);
   }
   if (mailingAddressId) {
-    formattedPersonalDetails.mailingAddress =
-      await findAddressById(mailingAddressId);
+    const addr = await findAddressById(mailingAddressId);
+    formattedPersonalDetails.mailingAddress = (addr ?? null) as any;
   }
   if (residentialAddressId) {
-    formattedPersonalDetails.residentialAddress =
-      await findAddressById(residentialAddressId);
+    const addr = await findAddressById(residentialAddressId);
+    formattedPersonalDetails.residentialAddress = (addr ?? null) as any;
   }
   if (motherTongueId) {
     formattedPersonalDetails.motherTongue =

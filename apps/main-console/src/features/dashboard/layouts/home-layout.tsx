@@ -1,4 +1,4 @@
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -45,6 +45,8 @@ import {
 } from "@/components/ui/command";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSearchedStudents, StudentSearchItem } from "@/services/student";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -130,6 +132,47 @@ export default function HomeLayout() {
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
   const [open, setOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ uid: string; name?: string | null }>>([]);
+  const navigate = useNavigate();
+  const [inputValue, setInputValue] = useState("");
+
+  async function fetchSuggestions(q: string) {
+    try {
+      const query = q.trim();
+      // Prefer direct UID hit if looks like a UID
+      if (/^\d{6,}$/.test(query)) {
+        try {
+          const token = accessToken
+            ? accessToken.startsWith("Bearer ")
+              ? accessToken
+              : `Bearer ${accessToken}`
+            : undefined;
+          const resp = await fetch(`/api/students/uid/${encodeURIComponent(query)}`, {
+            headers: token ? { Authorization: token } : undefined,
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const one = data?.payload;
+            if (one?.uid) {
+              return [{ uid: String(one.uid), name: one?.personalDetails?.firstName ?? null }];
+            }
+          }
+        } catch {
+          // swallow
+        }
+      }
+
+      const resp = await getSearchedStudents(query, 1, 5);
+      const fromList = (resp?.content ?? [])
+        .map((s: StudentSearchItem) => ({ uid: String(s.uid ?? s.id ?? ""), name: s.name ?? null }))
+        .filter((s) => s.uid);
+      if (fromList.length > 0) return fromList;
+      // Final fallback already attempted if UID-like
+      return [] as Array<{ uid: string; name?: string | null }>;
+    } catch {
+      return [] as Array<{ uid: string; name?: string | null }>;
+    }
+  }
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -223,42 +266,76 @@ export default function HomeLayout() {
 
         {/* Command Dialog for Spotlight Search */}
         <CommandDialog open={open} onOpenChange={setOpen}>
-          <CommandInput placeholder="Type a command or search..." />
-          <CommandList>
+          <CommandInput
+            placeholder="Search commands or type a student UID..."
+            onValueChange={async (v) => {
+              setInputValue(v);
+              setSuggestions(v.length >= 2 ? await fetchSuggestions(v) : []);
+            }}
+          />
+          <CommandList className="min-h-[160px] max-h-80 overflow-auto">
             <CommandEmpty>No results found.</CommandEmpty>
-            {Object.entries(
-              searchData.reduce(
-                (acc, item) => {
-                  const category = item.category;
-                  if (!acc[category]) {
-                    acc[category] = [];
-                  }
-                  acc[category].push(item);
-                  return acc;
-                },
-                {} as Record<string, typeof searchData>,
-              ),
-            ).map(([category, items]) => (
-              <CommandGroup key={category} heading={category}>
-                {items.map((item) => (
+            {/\d{6,}/.test(inputValue.trim()) && (
+              <CommandGroup heading="Quick action">
+                <CommandItem
+                  value={`open-${inputValue.trim()}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    navigate(`/dashboard/students/${inputValue.trim()}`);
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium">Open student UID</span>
+                    <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {suggestions.length > 0 && (
+              <CommandGroup heading="Students">
+                {suggestions.map((s) => (
                   <CommandItem
-                    key={item.href}
-                    value={item.title}
+                    key={s.uid}
+                    value={s.uid}
                     onSelect={() => {
                       setOpen(false);
-                      window.location.href = item.href;
+                      navigate(`/dashboard/students/${s.uid}`);
                     }}
-                    className="flex items-center gap-2"
                   >
-                    <item.icon className="h-4 w-4" />
-                    <div className="flex flex-col">
-                      <span className="font-medium">{item.title}</span>
-                      <span className="text-xs text-muted-foreground">{item.description}</span>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`} />
+                        <AvatarFallback className="text-[10px]">
+                          {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{s.uid}</span>
+                      <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
                     </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
-            ))}
+            )}
+            <CommandGroup heading="Navigation">
+              {searchData.map((item) => (
+                <CommandItem
+                  key={item.href}
+                  value={item.title}
+                  onSelect={() => {
+                    setOpen(false);
+                    navigate(item.href);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <item.icon className="h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span className="font-medium">{item.title}</span>
+                    <span className="text-xs text-muted-foreground">{item.description}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
           </CommandList>
         </CommandDialog>
       </ThemeProvider>

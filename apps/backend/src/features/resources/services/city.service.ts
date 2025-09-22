@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { City, cityModel } from "@/features/resources/models/city.model.js";
+import { City, cityModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function findCityById(id: number): Promise<City | null> {

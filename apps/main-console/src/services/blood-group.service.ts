@@ -1,6 +1,7 @@
 import axiosInstance from "@/utils/api";
 import { ApiResponse } from "@/types/api-response";
 import { BloodGroup, CreateBloodGroupPayload, UpdateBloodGroupPayload } from "@/types/resources/blood-group.types";
+import { BloodGroupDto } from "@repo/db/dtos/resources";
 
 // ============================================================================
 // BLOOD GROUP SERVICE
@@ -21,7 +22,7 @@ import { BloodGroup, CreateBloodGroupPayload, UpdateBloodGroupPayload } from "@/
  * Get all blood groups
  * @returns Promise<BloodGroup[]> - Array of all blood groups
  */
-export async function getAllBloodGroups(): Promise<BloodGroup[]> {
+export async function getAllBloodGroups(): Promise<BloodGroupDto[]> {
   try {
     const response = await axiosInstance.get("/api/blood-groups");
     return response.data.payload;

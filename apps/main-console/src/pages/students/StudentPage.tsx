@@ -1,7 +1,7 @@
-import { User, Book, Home, Bus, Heart, Phone, GraduationCap, IdCard, Users, FilePenIcon } from "lucide-react";
+import { User, Home, Bus, Heart, Phone, IdCard, Users, FilePenIcon, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
-import { getStudentById } from "@/services/student";
+import { getStudentById, fetchStudentByUid } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import StudentContent from "@/components/student/StudentContent";
 import StudentPanel from "@/components/student/StudentPanel";
@@ -16,15 +16,16 @@ const studentTabs = [
   { label: "Family", icon: <Users size={16} />, endpoint: "/family-details" },
   { label: "Health", icon: <Heart size={16} />, endpoint: "/health" },
   { label: "Emergency", icon: <Phone size={16} />, endpoint: "/emergency-contact" },
-  { label: "History", icon: <Book size={16} />, endpoint: "/academic-history" },
-  { label: "Identifiers", icon: <GraduationCap size={16} />, endpoint: "/academic-identifier" },
+  //   { label: "History", icon: <Book size={16} />, endpoint: "/academic-history" },
+  //   { label: "Identifiers", icon: <GraduationCap size={16} />, endpoint: "/academic-identifier" },
   { label: "Accommodation", icon: <Home size={16} />, endpoint: "/accommodation" },
   { label: "Transport", icon: <Bus size={16} />, endpoint: "transport-details" },
+  { label: "Academic", icon: <BookOpen size={16} />, endpoint: "/academic-details" },
   { label: "Marksheet", icon: <FilePenIcon size={16} />, endpoint: "/marksheet" },
 ];
 
 export default function StudentPage() {
-  const { studentId } = useParams();
+  const { studentId: studentIdOrUid } = useParams();
   const location = useLocation();
   type StudentTab = (typeof studentTabs)[number];
   const [activeTab, setActiveTab] = useState<StudentTab>(() => {
@@ -36,10 +37,17 @@ export default function StudentPage() {
   });
 
   const { data } = useQuery({
-    queryKey: ["student", studentId],
+    queryKey: ["student", studentIdOrUid],
     queryFn: async () => {
-      const response = await getStudentById(Number(studentId));
-      return response.payload;
+      if (!studentIdOrUid) return undefined;
+      // If the param looks like a UID (typically long numeric string), fetch by UID first
+      const isProbablyUid = String(studentIdOrUid).length >= 8;
+      if (isProbablyUid) {
+        const student = await fetchStudentByUid(String(studentIdOrUid));
+        return student;
+      }
+      const student = await getStudentById(Number(studentIdOrUid));
+      return student;
     },
   });
 
@@ -201,7 +209,12 @@ export default function StudentPage() {
             </motion.div> */}
 
               <div className="bg-white/10 rounded-2xl">
-                <StudentContent activeTab={activeTab!} studentId={Number(studentId)} />
+                <StudentContent
+                  activeTab={activeTab!}
+                  studentId={Number(data?.id ?? 0)}
+                  userId={Number(data?.userId ?? 0)}
+                  personalEmail={data?.personalEmail ?? null}
+                />
               </div>
             </div>
           </div>
@@ -213,14 +226,33 @@ export default function StudentPage() {
             <Avatar className="w-20 h-20 border-4 border-white shadow mb-2">
               <AvatarImage
                 className="object-cover"
-                src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${data?.academicIdentifier?.uid}.jpg`}
-                alt={data?.name}
+                src={`https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${data?.uid}.jpg`}
+                alt={(() => {
+                  const parts = [
+                    data?.personalDetails?.firstName,
+                    data?.personalDetails?.middleName,
+                    data?.personalDetails?.lastName,
+                  ].filter(Boolean);
+                  return parts.length ? parts.join(" ") : "Student";
+                })()}
               />
               <AvatarFallback className="text-2xl font-bold bg-purple-100 text-purple-600">
-                {data?.name?.charAt(0)}
+                {(() => {
+                  const first = data?.personalDetails?.firstName || "?";
+                  return first.charAt(0);
+                })()}
               </AvatarFallback>
             </Avatar>
-            <div className="text-lg font-bold text-white mb-1 text-center w-full truncate">{data?.name}</div>
+            <div className="text-lg font-bold text-white mb-1 text-center w-full truncate">
+              {(() => {
+                const parts = [
+                  data?.personalDetails?.firstName,
+                  data?.personalDetails?.middleName,
+                  data?.personalDetails?.lastName,
+                ].filter(Boolean);
+                return parts.length ? parts.join(" ") : "Student";
+              })()}
+            </div>
             <div className="flex flex-wrap gap-2 mt-1 mb-2">
               <Badge
                 className={`px-2 py-1 text-xs font-medium rounded-full ${
@@ -235,25 +267,27 @@ export default function StudentPage() {
                 variant="outline"
                 className="bg-white/20 rounded-full text-white border-white/40 font-medium text-xs"
               >
-                UID: {data?.academicIdentifier?.uid}
+                UID: {data?.uid}
               </Badge>
             </div>
           </div>
           <div className="w-full bg-white rounded-b-2xl shadow p-4 flex flex-col items-center">
             {/* Details grid */}
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 w-full text-xs text-gray-700">
+              <div className="font-semibold text-gray-500">UID:</div>
+              <div>{data?.uid ?? "-"}</div>
               <div className="font-semibold text-gray-500">Roll No.:</div>
-              <div>{data?.academicIdentifier?.rollNumber || "-"}</div>
+              <div>{"-"}</div>
               <div className="font-semibold text-gray-500">Reg. No.:</div>
-              <div>{data?.academicIdentifier?.registrationNumber}</div>
-              <div className="font-semibold text-gray-500">Course:</div>
-              <div>{data?.academicIdentifier?.course?.name || "-"}</div>
+              <div>{"-"}</div>
+              <div className="font-semibold text-gray-500">Program Course:</div>
+              <div>{data?.programCourse?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Section:</div>
-              <div>{data?.academicIdentifier?.section || "-"}</div>
+              <div>{data?.section?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Shift:</div>
-              <div>{data?.shift || "-"}</div>
+              <div>{data?.shift?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Email:</div>
-              <div>{data?.personalDetails?.email || "-"}</div>
+              <div>{data?.personalEmail || "-"}</div>
             </div>
           </div>
         </div>

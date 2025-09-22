@@ -64,6 +64,17 @@ export async function updateAddress(id: number, payload: Partial<Address>): Prom
   }
 }
 
+// District API
+export interface DistrictOption {
+  id: number;
+  name: string;
+}
+export async function getDistrictsByState(stateId: number): Promise<DistrictOption[]> {
+  const res = await axiosInstance.get(`/api/districts`, { params: { stateId } });
+  const data = res.data?.payload ?? res.data?.data ?? [];
+  return data as DistrictOption[];
+}
+
 export async function deleteAddress(id: number): Promise<ApiResponse<null>> {
   try {
     const response = await axiosInstance.delete(`${BASE_URL}/${id}`);

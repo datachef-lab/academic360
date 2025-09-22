@@ -1,0 +1,13 @@
+22-09-2025	23:59:36	6e42e550-b3e4-4b16-811d-5ed301f793fe	PUT	/api/admissions/academic-info/32	http://localhost:5173
+22-09-2025	23:59:36	426bad34-c6de-4491-afde-f11764537a62	OPTIONS	/api/admissions/academic-info/32	http://localhost:5173
+22-09-2025	23:59:20	4507d70f-2d0e-47ae-b2a3-f46e400096b9	GET	/api/countries	http://localhost:5173
+22-09-2025	23:59:20	570ffc61-6fe4-4578-b0dd-40fba8a50d3a	OPTIONS	/api/countries	http://localhost:5173
+22-09-2025	23:59:20	1d760fb7-c6fa-456e-a2d1-5736c51d6fe0	GET	/api/institutions	http://localhost:5173
+22-09-2025	23:59:20	efbd3fa3-14a3-40f8-bde9-825ecf332744	OPTIONS	/api/institutions	http://localhost:5173
+22-09-2025	23:59:20	cad9fbd7-79f6-494c-89d7-ab383a54b0e4	GET	/api/course-design/program-courses	http://localhost:5173
+22-09-2025	23:59:20	580959c7-5561-45b4-bbc0-2eeaad5332a5	OPTIONS	/api/course-design/program-courses	http://localhost:5173
+22-09-2025	23:59:20	76ab24de-5606-49db-9fee-62fa85d94304	GET	/api/specializations	http://localhost:5173
+22-09-2025	23:59:20	dcb80490-e65a-4169-9402-6111ba25f557	OPTIONS	/api/specializations	http://localhost:5173
+22-09-2025	23:59:20	fb0c0167-80a3-40df-b96d-c07b259589a6	GET	/api/languages	http://localhost:5173
+22-09-2025	23:59:20	b3cdb41d-be50-4ad8-8859-e30abd78c79f	OPTIONS	/api/languages	http://localhost:5173
+22-09-2025	23:59:19	fa3236bb-711b-41d5-8cc6-12b460d0fcdb	GET	/api/admissions/board-subjects/board/6	http://localhost:5173

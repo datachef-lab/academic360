@@ -167,7 +167,7 @@ const CoursesPage = () => {
   const handleDownloadAll = async () => {
     try {
       const res = await getCourses();
-      const data = res.map((course: any) => ({
+      const data = res.map((course) => ({
         ID: course.id,
         Name: course.name,
         "Short Name": course.shortName,
@@ -372,7 +372,7 @@ const CoursesPage = () => {
                         <TableCell style={{ width: 140 }}>{course.shortName}</TableCell>
                         {/* <TableCell style={{ width: 120 }}>{course.degree?.name ?? "-"}</TableCell> */}
                         <TableCell style={{ width: 100 }}>
-                          {course.isActive === true ? (
+                          {!course.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

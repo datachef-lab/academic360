@@ -47,8 +47,8 @@ export async function findEmergencyContactById(
 export async function findEmergencyContactByStudentId(
   studentId: number,
 ): Promise<EmergencyContact | null> {
-  // const [foundEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.studentId, studentId));
-  // return foundEmergencyContact;
+  // Current schema has no studentId on emergency_contacts.
+  // Leave as placeholder until association is defined.
   return null;
 }
 
@@ -56,12 +56,19 @@ export async function updateEmergencyContact(
   id: number,
   emergencyContact: EmergencyContact,
 ): Promise<EmergencyContact | null> {
-  // Validate input (excluding id)
-  // const { id: _id, studentId, ...props } = emergencyContact;
-  // validateEmergencyContactInput({ ...props, studentId });
-  // const [updatedEmergencyContact] = await db.update(emergencyContactModel).set({ ...props, studentId }).where(eq(emergencyContactModel.id, id)).returning();
-  // return updatedEmergencyContact || null;
-  return null;
+  const { id: _id, createdAt, updatedAt, ...props } = emergencyContact as any;
+  const [existing] = await db
+    .select()
+    .from(emergencyContactModel)
+    .where(eq(emergencyContactModel.id, id));
+  if (!existing) return null;
+
+  const [updated] = await db
+    .update(emergencyContactModel)
+    .set({ ...props })
+    .where(eq(emergencyContactModel.id, id))
+    .returning();
+  return updated ?? null;
 }
 
 export async function removeEmergencyContact(
@@ -87,14 +94,7 @@ export async function removeEmergencyContact(
 export async function removeEmergencyContactByStudentId(
   studentId: number,
 ): Promise<boolean | null> {
-  // const [foundEmergencyContact] = await db.select().from(emergencyContactModel).where(eq(emergencyContactModel.studentId, studentId));
-  // if (!foundEmergencyContact) {
-  //     return null; // No Content
-  // }
-  // const [deletedEmergencyContact] = await db.delete(emergencyContactModel).where(eq(emergencyContactModel.studentId, studentId)).returning();
-  // if (!deletedEmergencyContact) {
-  //     return false; // Failure!
-  // }
+  // Not supported without an association in the schema
   return false; // Success!
 }
 

@@ -16,6 +16,8 @@ import { corsOptions } from "@/config/corsOptions.js";
 import { socketService } from "./services/socketService.js";
 import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
+import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
+import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
 
 import { generateToken } from "./utils/index.js";
 import {
@@ -406,6 +408,37 @@ app.use(
 app.use("/api/subject-selection", studentSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
+
+// Lightweight districts endpoint to support frontend dropdowns
+app.get("/api/districts", async (req: Request, res: Response) => {
+  try {
+    const stateIdParam = req.query.stateId as string | undefined;
+    const cityIdParam = req.query.cityId as string | undefined;
+
+    const baseSelect = db
+      .select({ id: districtModel.id, name: districtModel.name })
+      .from(districtModel);
+
+    let rows;
+    if (stateIdParam) {
+      rows = await db
+        .select({ id: districtModel.id, name: districtModel.name })
+        .from(districtModel)
+        .innerJoin(cityModel, eq(districtModel.cityId, cityModel.id))
+        .where(eq(cityModel.stateId, Number(stateIdParam)));
+    } else if (cityIdParam) {
+      rows = await baseSelect.where(
+        eq(districtModel.cityId, Number(cityIdParam)),
+      );
+    } else {
+      rows = await baseSelect;
+    }
+    res.json({ payload: rows });
+  } catch (e) {
+    console.error("Failed to fetch districts:", e);
+    res.status(500).json({ message: "Failed to fetch districts" });
+  }
+});
 
 app.all("*", (req: Request, res: Response) => {
   res.status(404);

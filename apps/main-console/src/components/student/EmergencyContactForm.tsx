@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getEmergencyContactByStudentId,
+  getEmergencyContactById,
   createEmergencyContact,
   updateEmergencyContact,
 } from "@/services/emergency-contact.service";
-import { EmergencyContact } from "@/types/user/emergency-contact";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { EmergencyContactT as EmergencyContact } from "@repo/db/schemas/models";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,13 +14,13 @@ import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 
 interface EmergencyContactFormProps {
-  studentId: number;
+  emergencyId?: number;
+  initialData?: EmergencyContact | null;
 }
 
 const defaultEmergencyContact: Partial<EmergencyContact> = {
-  studentId: 0,
   personName: null,
-  relationToStudent: null,
+  havingRelationAs: null,
   email: null,
   phone: null,
   officePhone: null,
@@ -43,40 +37,39 @@ function stripDates<T>(obj: T): T {
     for (const key in obj) {
       if (key === "createdAt" || key === "updatedAt") continue;
       const value = obj[key];
-      result[key] = (typeof value === "object" && value !== null)
-        ? stripDates(value)
-        : value;
+      result[key] = typeof value === "object" && value !== null ? stripDates(value) : value;
     }
     return result as T;
   }
   return obj;
 }
 
-export default function EmergencyContactForm({ studentId }: EmergencyContactFormProps) {
+export default function EmergencyContactForm({ emergencyId, initialData = null }: EmergencyContactFormProps) {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<EmergencyContact>>({
     ...defaultEmergencyContact,
-    studentId,
   });
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Fetch emergency contact details
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["emergencyContact", studentId],
+    queryKey: ["emergencyContact", emergencyId],
     queryFn: async () => {
-      const res = await getEmergencyContactByStudentId(studentId);
+      if (!emergencyId) return null;
+      const res = await getEmergencyContactById(emergencyId);
       return res.payload;
     },
-    enabled: !!studentId,
+    enabled: !!emergencyId,
   });
 
   // When emergency contact data is loaded
   useEffect(() => {
-    if (data) {
+    if (data || initialData) {
       setFormData({
-        ...data,
+        ...(data ?? initialData ?? {}),
       });
     }
-  }, [data]);
+  }, [data, initialData]);
 
   // Save handler
   const mutation = useMutation({
@@ -92,6 +85,7 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
     onSuccess: () => {
       toast.success("Emergency contact updated!");
       refetch();
+      queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
     },
     onError: () => {
       toast.error("Failed to update emergency contact.");
@@ -118,19 +112,18 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
 
   return (
     <Card className="max-w-8xl mx-auto my-8">
-      <CardHeader>
-        <CardTitle>Emergency Contact Details</CardTitle>
+      <CardHeader className="relative pb-0">
+        <div className="absolute left-6 top-0 h-1 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full" />
+        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">Emergency Contact Details</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 [&_label]:text-xs [&_label]:text-gray-600">
           {/* Person Name */}
           <div>
             <Label>Person Name</Label>
             <Input
               value={formData.personName || ""}
-              onChange={(e) =>
-                handleChange("personName", e.target.value)
-              }
+              onChange={(e) => handleChange("personName", e.target.value)}
               placeholder="Enter person name"
             />
           </div>
@@ -139,10 +132,8 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
           <div>
             <Label>Relation to Student</Label>
             <Input
-              value={formData.relationToStudent || ""}
-              onChange={(e) =>
-                handleChange("relationToStudent", e.target.value)
-              }
+              value={formData.havingRelationAs || ""}
+              onChange={(e) => handleChange("havingRelationAs", e.target.value)}
               placeholder="e.g., Father, Mother, Guardian, Brother, Sister"
             />
           </div>
@@ -153,9 +144,7 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
             <Input
               type="email"
               value={formData.email || ""}
-              onChange={(e) =>
-                handleChange("email", e.target.value)
-              }
+              onChange={(e) => handleChange("email", e.target.value)}
               placeholder="Enter email address"
             />
           </div>
@@ -163,15 +152,13 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
           {/* Phone Numbers Section */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="text-lg font-semibold">Contact Numbers</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Primary Phone</Label>
                 <Input
                   value={formData.phone || ""}
-                  onChange={(e) =>
-                    handleChange("phone", e.target.value)
-                  }
+                  onChange={(e) => handleChange("phone", e.target.value)}
                   placeholder="Primary phone number"
                 />
               </div>
@@ -180,9 +167,7 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
                 <Label>Office Phone</Label>
                 <Input
                   value={formData.officePhone || ""}
-                  onChange={(e) =>
-                    handleChange("officePhone", e.target.value)
-                  }
+                  onChange={(e) => handleChange("officePhone", e.target.value)}
                   placeholder="Office phone number"
                 />
               </div>
@@ -192,9 +177,7 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
               <Label>Residential Phone</Label>
               <Input
                 value={formData.residentialPhone || ""}
-                onChange={(e) =>
-                  handleChange("residentialPhone", e.target.value)
-                }
+                onChange={(e) => handleChange("residentialPhone", e.target.value)}
                 placeholder="Residential phone number"
               />
             </div>
@@ -215,14 +198,7 @@ export default function EmergencyContactForm({ studentId }: EmergencyContactForm
                   fill="none"
                   viewBox="0 0 24 24"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path
                     className="opacity-75"
                     fill="currentColor"
