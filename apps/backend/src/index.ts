@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { app, httpServer } from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
+import { brainstormOldMigration } from "./features/user/services/brainstorm-old-migration.service";
 
 const PORT = process.env.PORT || 8080;
 
@@ -50,12 +51,13 @@ function checkRequiredEnvs() {
   try {
     await connectToDatabase();
     await connectToMySQL();
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, async () => {
       console.log(
         `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,
       );
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");
+      await brainstormOldMigration();
     });
   } catch (error) {
     console.error("[backend] - Failed to start the application: ⚠️\n", error);
