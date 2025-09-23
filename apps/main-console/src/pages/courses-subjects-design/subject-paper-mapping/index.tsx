@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, RefreshCw } from "lucide-react";
+import { PlusCircle, FileText, Download, Upload, Edit, X, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 // import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -91,6 +91,7 @@ const SubjectPaperMappingPage = () => {
     programCourseId: null as number | null,
     subjectTypeId: null as number | null,
     isOptional: null as boolean | null,
+    autoAssign: null as boolean | null,
     searchText: "",
     page: 1,
     limit: 10,
@@ -143,6 +144,7 @@ const SubjectPaperMappingPage = () => {
         programCourseId: filtersObj.programCourseId,
         classId: filtersObj.classId,
         isOptional: filtersObj.isOptional,
+        autoAssign: filtersObj.autoAssign,
         searchText: searchText || null,
       });
       if (!paged) {
@@ -271,6 +273,7 @@ const SubjectPaperMappingPage = () => {
         programCourseId: null,
         subjectTypeId: null,
         isOptional: null,
+        autoAssign: null,
         searchText: "",
         page: 1,
         limit: 10,
@@ -351,6 +354,7 @@ const SubjectPaperMappingPage = () => {
         code: data.code,
         topics: data.topics,
         isOptional: data.isOptional,
+        autoAssign: (data as unknown as { autoAssign?: boolean }).autoAssign ?? false,
         isActive: data.isActive,
         components:
           data.components
@@ -1345,6 +1349,27 @@ const SubjectPaperMappingPage = () => {
                         </SelectContent>
                       </Select>
                     </div>
+                    <div>
+                      <div className="mb-1 text-sm text-muted-foreground">Auto Assigned</div>
+                      <Select
+                        value={filtersObj.autoAssign === null ? "all" : filtersObj.autoAssign ? "true" : "false"}
+                        onValueChange={(value) =>
+                          setFiltersObj((prev) => ({
+                            ...prev,
+                            autoAssign: value === "all" ? null : value === "true",
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All</SelectItem>
+                          <SelectItem value="true">Auto Assigned</SelectItem>
+                          <SelectItem value="false">Manually Assigned</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-2">
                     <Button
@@ -1527,6 +1552,24 @@ const SubjectPaperMappingPage = () => {
                     </button>
                   </Badge>
                 )}
+                {filtersObj.autoAssign !== null && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 flex items-center gap-1"
+                  >
+                    {filtersObj.autoAssign ? "Auto Assigned" : "Manual"}
+                    <button
+                      aria-label="Clear auto-assigned filter"
+                      className="ml-1 hover:text-blue-900"
+                      onClick={() => {
+                        setFiltersObj((prev) => ({ ...prev, autoAssign: null }));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             </div>
             <Input
@@ -1645,6 +1688,12 @@ const SubjectPaperMappingPage = () => {
                         <p>
                           {sp.name ?? "-"}
                           {!sp.isOptional && <span className="text-red-500 ml-1">*</span>}
+                          {sp.autoAssign && (
+                            <span className="ml-1 inline-flex items-center" title="Auto assigned">
+                              <Sparkles className="h-3.5 w-3.5 text-blue-600" />
+                              <span className="sr-only">Auto assigned</span>
+                            </span>
+                          )}
                         </p>
                         <div className="mt-1 flex flex-wrap gap-1">
                           <Badge variant="outline" className="text-xs border-indigo-300 text-indigo-700 bg-indigo-50">

@@ -412,7 +412,7 @@ export default function AddPaperModal({
                   className: "w-32 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {
-                  label: "Is Optional",
+                  label: "Is Elective",
                   className: "w-20 p-2 border-r border-black font-medium flex items-center justify-center text-sm",
                 },
                 {

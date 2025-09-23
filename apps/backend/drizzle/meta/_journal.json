@@ -85,6 +85,13 @@
       "when": 1758634779314,
       "tag": "0011_familiar_abomination",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1758653507926,
+      "tag": "0012_lucky_black_knight",
+      "breakpoints": true
     }
   ]
 }

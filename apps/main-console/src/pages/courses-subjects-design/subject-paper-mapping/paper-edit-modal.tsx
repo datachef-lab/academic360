@@ -59,6 +59,7 @@ type EditablePaper = {
   subjectTypeId?: number;
   isOptional?: boolean;
   isActive?: boolean;
+  autoAssign?: boolean;
   topics?: unknown[];
 };
 
@@ -148,6 +149,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           subjectTypeId?: number;
           isOptional?: boolean;
           isActive?: boolean;
+          autoAssign?: boolean;
           topics?: unknown[];
           components?: PaperComponentDto[];
         };
@@ -164,6 +166,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           subjectTypeId: gp.subjectTypeId,
           isOptional: gp.isOptional,
           isActive: gp.isActive,
+          autoAssign: gp.autoAssign,
           topics: gp.topics,
         });
         const comps = gp.components ?? [];
@@ -182,6 +185,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
           code: "",
           isOptional: false,
           isActive: true,
+          autoAssign: false,
         });
         setComponents(
           examComponents.map((component) => ({
@@ -239,6 +243,7 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
       const data: PaperDto = {
         ...(form as unknown as PaperDto),
         name: form.name || "",
+        autoAssign: !!form.autoAssign,
         components,
         topics: Array.isArray(form.topics) ? (form.topics as unknown[]) : [],
       } as PaperDto;
@@ -276,7 +281,18 @@ export const PaperEditModal: React.FC<PaperEditModalProps> = ({
                 disabled={isLoadingPaper}
               />
               <Label htmlFor="isOptional" className="text-sm">
-                Optional Paper
+                Elective Paper
+              </Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="autoAssign"
+                checked={!!form.autoAssign}
+                onCheckedChange={(checked) => handleChange("autoAssign", checked as boolean)}
+                disabled={isLoadingPaper}
+              />
+              <Label htmlFor="autoAssign" className="text-sm">
+                Auto Assigned
               </Label>
             </div>
             <div className="flex items-center gap-2">
