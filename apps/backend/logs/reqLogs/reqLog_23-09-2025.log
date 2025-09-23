@@ -1,3 +1,16 @@
+23-09-2025	11:22:44	5d921137-34ca-4a48-9cbc-094e24e91eaa	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	11:22:44	81a3904f-9d42-48ef-bba5-50cce4d23336	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	11:22:44	bb8d2a73-9a71-4c40-af1b-67942923ade9	GET	/api/v1/settings/file/4	undefined
+23-09-2025	11:22:42	87283b9a-8da3-4294-bcff-14d6cf9ed731	POST	/auth/login	http://localhost:5173
+23-09-2025	11:22:42	0bf611ef-c1f7-400c-866e-eb34285c481e	OPTIONS	/auth/login	http://localhost:5173
+23-09-2025	11:22:12	051a725f-84f5-4d0c-ae2b-349f7dfa10d6	GET	/api/v1/settings/file/5	undefined
+23-09-2025	11:22:12	50b79f3c-eaa4-42f2-a9d4-4e52ee8f1371	GET	/api/v1/settings	http://localhost:5173
+23-09-2025	11:22:11	a5ed7897-3737-40af-ab36-7496f3c3e65e	GET	/api/v1/settings	http://localhost:5173
+23-09-2025	11:16:36	4f6dfa79-7818-40bd-9600-f2df315492b6	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	11:16:36	fc952bdc-80a1-4b4b-8f55-10a88a4a0420	GET	/api/v1/academics/all	http://localhost:5173
+23-09-2025	11:16:36	dc681743-c467-4224-abf9-2299b194b74e	OPTIONS	/api/v1/academics/all	http://localhost:5173
+23-09-2025	11:16:36	caa5c87a-3931-435a-b143-4a2199e59f78	GET	/auth/refresh	http://localhost:5173
+23-09-2025	11:16:35	67d29d13-0b07-49c4-ab57-3cbf206df007	GET	/api/v1/settings/file/4	undefined
 23-09-2025	10:34:02	51225f2a-9cc5-4b18-aae7-133f1feca3f4	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
 23-09-2025	10:34:02	1b191aa3-04fa-4469-8955-4d7bee53f528	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
 23-09-2025	10:34:02	a9226516-0a61-414b-b2f3-ecd7fcd3d0ea	GET	/api/course-design/program-courses	http://localhost:5173
@@ -34,3 +47,4 @@ lection/related-subject-mains	http://localhost:5173
 t:5173
 173
 173
+
