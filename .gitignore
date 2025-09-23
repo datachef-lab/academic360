@@ -35,6 +35,7 @@ dist
 /academic360-docs
 /settings
 logs
+apps/backend/logs/
 
 # Debug
 npm-debug.log*

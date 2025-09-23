@@ -1,6 +1,0 @@
-17-09-2025	23:25:16	d0026132-6968-43fb-bd57-77e10d9bf65c	GET	/api/v1/settings/file/4	undefined
-17-09-2025	23:25:13	c648c902-bcaa-4b92-9e2a-75d194e2ea2b	GET	/api/subject-selection/related-subject-mains	http://localhost:5173
-17-09-2025	23:25:13	942d17fb-69c3-49a3-bdc7-2461d49280dd	GET	/api/course-design/subject-types	http://localhost:5173
-17-09-2025	23:25:13	6c7427fc-0e80-49d5-9d02-8c951b9a7eac	GET	/auth/refresh	http://localhost:5173
-17-09-2025	23:25:13	58bd510a-226b-4989-a55d-d36c5d75f888	GET	/api/course-design/program-courses	http://localhost:5173
-17-09-2025	23:25:13	3afa6e6f-c57f-47a6-adbe-af7c7cc0f43d	GET	/auth/refresh	http://localhost:5173

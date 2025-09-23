@@ -1,2 +1,0 @@
-09-09-2025	10:13:25	d033b5c8-774f-4823-8f8b-eb91931c0f1e	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
-09-09-2025	10:13:25	40c0aebf-fb11-41c9-ba3d-24add612e549	ApiError: Unauthorized	GET	/api/classes	http://localhost:5173
