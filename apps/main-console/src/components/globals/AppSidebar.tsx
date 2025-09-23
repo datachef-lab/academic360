@@ -102,7 +102,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const { settings } = useSettings();
   const currentPath = location.pathname;
-  const { user, accessToken, displayFlag } = useAuth();
+  const { accessToken } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
@@ -143,9 +143,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //     }
   //   };
 
-  if (!displayFlag || !user || !accessToken) {
-    return null;
-  }
+  // Always show the sidebar, even if user/token is not available yet
+  // This prevents the sidebar from disappearing and reappearing
 
   return (
     <div className="relative">
@@ -356,12 +355,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </DropdownMenuContent>
           </DropdownMenu> */}
           <div className="font-bold">
-            <p className="text-xs text-center text-purple-100 space-x-1">
+            <div className="text-xs text-center text-purple-100 space-x-1">
               <Badge variant="secondary" className="">
                 academic360
               </Badge>
               <Badge variant="secondary">v1.0.0</Badge>
-            </p>
+            </div>
           </div>
         </SidebarFooter>
       </Sidebar>

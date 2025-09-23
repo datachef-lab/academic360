@@ -39,10 +39,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    setTimeout(() => {
-      setDisplayFlag(true);
-    }, 2000);
-  });
+    setDisplayFlag(true);
+  }, []); // Empty dependency array to run only once
 
   const logout = useCallback(() => {
     setAccessToken(null);

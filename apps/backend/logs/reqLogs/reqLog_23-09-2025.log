@@ -1,0 +1,36 @@
+23-09-2025	10:34:02	51225f2a-9cc5-4b18-aae7-133f1feca3f4	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+23-09-2025	10:34:02	1b191aa3-04fa-4469-8955-4d7bee53f528	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+23-09-2025	10:34:02	a9226516-0a61-414b-b2f3-ecd7fcd3d0ea	GET	/api/course-design/program-courses	http://localhost:5173
+23-09-2025	10:34:02	e6c7e91e-e7dd-4f75-97b6-94599ed6801d	GET	/api/course-design/subjects	http://localhost:5173
+23-09-2025	10:34:01	050dd26c-341d-4b69-8c9d-b8eea36e1454	GET	/api/course-design/subject-types	http://localhost:5173
+23-09-2025	10:34:01	6cfadbf0-3df6-4948-ac32-72697c9c7b04	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=10&search=&subjectType=	http://localhost:5173
+lection/related-subject-mains	http://localhost:5173
+23-09-2025	10:33:58	f15d8c8e-2b95-494d-9bd8-58bb3e867538	GET	/api/admissions/board-subject-names/active	http://localhost:5173
+23-09-2025	10:33:58	7f364f9c-59f0-44a9-86e0-011296d84bb5	OPTIONS	/api/admissions/board-subject-names/active	http://localhost:5173
+23-09-2025	10:33:58	b3f010c9-27fe-4d45-845b-4fe592d049b9	GET	/api/course-design/subject-types	http://localhost:5173
+23-09-2025	10:33:58	edbe9ff7-a690-4ef3-9a62-9c1d16ad6e38	OPTIONS	/api/course-design/subject-types	http://localhost:5173
+23-09-2025	10:33:58	0831c540-3aa1-4c27-9981-cf708feb1907	GET	/api/course-design/program-courses	http://localhost:5173
+23-09-2025	10:33:58	c0a66f82-68c3-4466-b7b5-3c519f3a31e7	GET	/api/course-design/program-courses	http://localhost:5173
+23-09-2025	10:33:07	7a606f12-6cb6-46a5-89d5-91237b7a5338	GET	/api/admissions/board-subject-names	http://localhost:5173
+23-09-2025	10:33:03	7afa7e7f-c773-464a-9722-43e8d579a8f3	GET	/api/admissions/boards?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:33:03	da687cfa-3203-42d8-b35c-c1ca3db850a1	GET	/api/admissions/boards?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:54	1afb2065-4e32-4e5f-b386-0f6eae65e147	GET	/api/admissions/boards?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:51	4ea14272-ebf6-48cb-96a4-9447e6c20082	GET	/api/admissions/board-subject-names	http://localhost:5173
+23-09-2025	10:32:44	80e0b40e-eba9-4a03-afde-0bea44732efc	GET	/api/address	http://localhost:5173
+23-09-2025	10:32:43	11bc5ce5-18ca-459d-8df2-95146d7ed301	GET	/api/degree	http://localhost:5173
+23-09-2025	10:32:43	f4be44a8-3e69-4b98-b802-95b5b2c93165	OPTIONS	/api/address	http://localhost:5173
+23-09-2025	10:32:37	970490ba-c9d8-401f-a1ab-b6491a879cb9	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:37	0b7b2b89-5a93-4402-bcf5-5f931f391dc7	GET	/api/degree	http://localhost:5173
+23-09-2025	10:32:36	bbcfdb4c-4240-4157-a360-aa3544e7acf7	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:36	bdd2d890-790b-4c24-9086-91f6e0037160	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:36	404ebf65-35e2-4e5d-85c7-5057d96991c2	GET	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:36	d08853b9-522b-44dd-af18-3ef77015c07c	GET	/api/degree	http://localhost:5173
+23-09-2025	10:32:36	1cf22960-b7b8-4e00-80e2-f073462fca46	OPTIONS	/api/admissions/board-subjects?page=1&pageSize=10	http://localhost:5173
+23-09-2025	10:32:25	475482ee-5a72-4c7c-9e6a-2e40e2d7d998	GET	/api/course-design/affiliations	http://localhost:5173
+23-09-2025	10:32:25	013419b7-8284-4b77-acab-9f6cb7b8cfd4	GET	/api/course-design/streams	http://localhost:5173
+23-09-2025	10:32:25	7134d1b2-21d7-4b86-8daf-73d1e363a813	GET	/api/course-design/regulation-types	http://localhost:5173
+173
+173
+t:5173
+173
+173
