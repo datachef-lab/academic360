@@ -27,6 +27,7 @@ import { getActiveBoardSubjectNames, type BoardSubjectName } from "@/services/ad
 import type { ProgramCourse, SubjectType } from "@repo/db";
 import { toast as sonnerToast } from "sonner";
 import { useAcademicYear } from "@/hooks/useAcademicYear";
+import { useAuth } from "@/features/auth/hooks/use-auth";
 // import axiosInstance from "@/utils/api";
 
 // UI shape derived from backend DTOs
@@ -43,6 +44,7 @@ const altBadgeColor = "bg-indigo-50 text-indigo-700 border-indigo-300";
 
 export default function AlternativeSubjectsPage() {
   const { currentAcademicYear } = useAcademicYear();
+  const { isReady, accessToken } = useAuth();
   const [selectedProgramCourse, setSelectedProgramCourse] = useState("");
   const [groupings, setGroupings] = useState<UIGrouping[]>([]);
   const [, setLoading] = useState(false);
@@ -59,6 +61,7 @@ export default function AlternativeSubjectsPage() {
   const [masterBoardSubjectNames, setMasterBoardSubjectNames] = useState<BoardSubjectName[]>([]);
 
   useEffect(() => {
+    if (!isReady || !accessToken) return; // wait for auth
     let isMounted = true;
     const load = async () => {
       setLoading(true);
@@ -144,7 +147,8 @@ export default function AlternativeSubjectsPage() {
             pcMap[dto.programCourse.name] = dto.programCourse.id;
           }
         }
-        setProgramCourseNameToId(pcMap);
+        // Merge with existing map to avoid losing entries not present in mains
+        setProgramCourseNameToId((prev) => ({ ...prev, ...pcMap }));
       } catch {
         // handled by interceptor toast/UI globally
       } finally {
@@ -155,7 +159,7 @@ export default function AlternativeSubjectsPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isReady, accessToken]);
 
   // Use table pagination hook
   const tableData = useTablePagination<UIGrouping>({

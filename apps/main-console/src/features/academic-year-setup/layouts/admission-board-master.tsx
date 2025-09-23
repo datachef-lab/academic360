@@ -1,6 +1,7 @@
 import MasterLayout, { NavItem } from "@/components/layouts/MasterLayout";
 import { Outlet, useLocation } from "react-router-dom";
 import { GraduationCap, ListChecks, BookText } from "lucide-react";
+import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 
 const nestedHomeLinks = [
   {
@@ -50,8 +51,10 @@ export default function AdmissionBoardMaster() {
   );
 
   return (
-    <MasterLayout subLinks={[]} rightBarContent={rightBarContent}>
-      <Outlet />
-    </MasterLayout>
+    <ProtectedRouteWrapper>
+      <MasterLayout subLinks={[]} rightBarContent={rightBarContent}>
+        <Outlet />
+      </MasterLayout>
+    </ProtectedRouteWrapper>
   );
 }
