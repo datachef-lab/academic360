@@ -1,7 +1,15 @@
 import { db } from "@/db/index.js";
 import { eq, and, or, ilike, countDistinct, desc, SQL } from "drizzle-orm";
-import { Paper, paperModel } from "@repo/db/schemas/models/course-design";
-import { PaperDto } from "@repo/db/dtos/course-design";
+import {
+  Affiliation,
+  Paper,
+  paperModel,
+  RegulationType,
+  Subject,
+  SubjectType,
+} from "@repo/db/schemas/models/course-design";
+import { PaperDto, ProgramCourseDto } from "@repo/db/dtos/course-design";
+import { ProgramCourse } from "@repo/db/schemas/models/course-design";
 import {
   createPaperComponent,
   // updatePaperComponent,
@@ -17,7 +25,11 @@ import {
 } from "./topic.service.js";
 import { paperComponentModel } from "@repo/db/schemas/models/course-design";
 import { examComponentModel } from "@repo/db/schemas/models/course-design";
-import { classModel } from "@repo/db/schemas/models/academics";
+import {
+  AcademicYear,
+  Class,
+  classModel,
+} from "@repo/db/schemas/models/academics";
 import { topicModel } from "@repo/db/schemas/models/course-design";
 import { marksheetPaperMappingModel } from "@repo/db/schemas/models/academics";
 import { batchStudentPaperModel } from "@repo/db/schemas/models/course-design";
@@ -49,13 +61,13 @@ export interface PaperDetailedDto
     | "programCourseId"
     | "classId"
   > {
-  subject: unknown;
-  affiliation: unknown;
-  regulationType: unknown;
-  academicYear: unknown;
-  subjectType: unknown;
-  programCourse: unknown;
-  class: unknown;
+  subject: Subject;
+  affiliation: Affiliation;
+  regulationType: RegulationType;
+  academicYear: AcademicYear;
+  subjectType: SubjectType;
+  programCourse: ProgramCourseDto;
+  class: Class;
 }
 
 export interface BulkUploadResult {

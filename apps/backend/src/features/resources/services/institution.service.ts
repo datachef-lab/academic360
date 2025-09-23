@@ -104,7 +104,7 @@ export async function instituionResponseFormat(
   }
 
   if (addressId) {
-    formattedInstitution.address = await findAddressById(addressId);
+    formattedInstitution.address = (await findAddressById(addressId)) as any;
   }
 
   return formattedInstitution;

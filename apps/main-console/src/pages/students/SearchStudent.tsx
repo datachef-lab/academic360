@@ -6,10 +6,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { studentSearchColumns, StudentSearchType } from "@/components/tables/users/student-search-column";
 import { formattedStudent } from "@/components/StudentSearch/helper";
 import { useReportStore } from "@/components/globals/useReportStore";
+import { Student } from "@/types/user/student";
 
 export default function SearchStudentPage() {
   const [searchText, setSearchText] = useState("");
-  const {setStudentData,StudentData}=useReportStore();
+  const { setStudentData, StudentData } = useReportStore();
 
   const [data, setData] = useState<StudentSearchType[]>([]);
   const [dataLength, setDataLength] = useState<number>(0);
@@ -32,36 +33,41 @@ export default function SearchStudentPage() {
     queryKey: ["search-student", { pageIndex: pagination.pageIndex, pageSize: pagination.pageSize }],
     queryFn: async () => {
       const data = await getAllStudents(pagination.pageIndex + 1, pagination.pageSize);
-      console.log("fetched data",JSON.stringify(data.payload.content[0],null,2));
-      
+      console.log("fetched data", JSON.stringify(data.content[0], null, 2));
 
-      const { content, page, pageSize, totalElements, totalPages } = data.payload;
-      console.log("content/***",content);
-      setStudentData(content);
+      const { content, totalElements, totalPages } = data;
+      console.log("content/***", content);
+      setStudentData(content as unknown as Student[]);
 
-      console.log({ pageIndex: page - 1, pageSize, totalElements, totalPages });
-      
+      console.log({ pageIndex: pagination.pageIndex, pageSize: pagination.pageSize, totalElements, totalPages });
+
       setPagination((prev) => ({ ...prev, totalElements, totalPages }));
 
       const formattedData = formattedStudent(content);
-      
+
       // Debug formatted data to check avatar URLs
-      console.log("First few formatted students:", formattedData.slice(0, 3).map(student => ({
-        id: student.id,
-        name: student.name,
-        uid: student.uid,
-        avatar: student.avatar
-      })));
+      console.log(
+        "First few formatted students:",
+        formattedData.slice(0, 3).map((student) => ({
+          id: student.id,
+          name: student.name,
+          uid: student.uid,
+          avatar: student.avatar,
+        })),
+      );
 
       setData(formattedData);
       setDataLength(formattedData.length);
-      console.log("studentData/*****",StudentData);
-      console.log("First few formatted students:", formattedData.slice(0, 3).map(student => ({
-        id: student.id,
-        name: student.name,
-        uid: student.uid,
-        avatar: student.avatar
-      })));
+      console.log("studentData/*****", StudentData);
+      console.log(
+        "First few formatted students:",
+        formattedData.slice(0, 3).map((student) => ({
+          id: student.id,
+          name: student.name,
+          uid: student.uid,
+          avatar: student.avatar,
+        })),
+      );
 
       return formattedData;
     },
@@ -74,15 +80,15 @@ export default function SearchStudentPage() {
     queryFn: async () => {
       if (searchText.trim() !== "") {
         const data = await getSearchedStudents(
+          searchText.trim().toLowerCase(),
           pagination.pageIndex + 1,
           pagination.pageSize,
-          searchText.trim().toLowerCase(),
         );
 
         console.log("while searching:", data);
-        const { content, page, totalElements, totalPages } = data.payload;
-        
-        setPagination((prev) => ({ ...prev, pageIndex: page - 1, totalElements, totalPages }));
+        const { content, totalElements, totalPages } = data;
+
+        setPagination((prev) => ({ ...prev, totalElements, totalPages }));
 
         const formattedData = formattedStudent(content);
 
@@ -94,9 +100,14 @@ export default function SearchStudentPage() {
       }
     },
     enabled: false,
-  }) as { isFetching: boolean; refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> };
+  }) as {
+    isFetching: boolean;
+    refetch: (options?: RefetchOptions) => Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>>;
+  };
 
-  function refetchWrapper(options?: RefetchOptions | undefined): Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> {
+  function refetchWrapper(
+    options?: RefetchOptions | undefined,
+  ): Promise<QueryObserverResult<StudentSearchType[] | undefined, Error>> {
     if (searchText.trim() === "") {
       return refetch(options); // Refetch default query when no search text
     } else {
@@ -106,8 +117,6 @@ export default function SearchStudentPage() {
 
   return (
     <div className="overflow-x-auto  w-full h-full   bg-transparent ">
-      
-      
       <DataTable
         isLoading={isFetchingDefault || isFetchingSearch}
         data={data || []}

@@ -34,7 +34,7 @@ build
 dist
 /academic360-docs
 /settings
-
+logs
 
 # Debug
 npm-debug.log*

@@ -58,7 +58,15 @@ export async function getBloodGroupById(id: number): Promise<BloodGroup> {
 export async function getActiveBloodGroups(): Promise<BloodGroup[]> {
   try {
     const response = await axiosInstance.get("/api/blood-groups?disabled=false");
-    return response.data.payload;
+    const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
+    return bloodGroupDtos.map((dto) => ({
+      id: dto.id,
+      type: dto.type,
+      sequence: dto.sequence,
+      disabled: !dto.isActive,
+      createdAt: dto.createdAt?.toISOString(),
+      updatedAt: dto.updatedAt?.toISOString(),
+    }));
   } catch (error) {
     console.error("Error fetching active blood groups:", error);
     throw error;
@@ -170,7 +178,15 @@ export async function createMultipleBloodGroups(payloads: CreateBloodGroupPayloa
     }
 
     const response = await axiosInstance.post("/api/blood-groups/bulk", payloads);
-    return response.data.payload;
+    const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
+    return bloodGroupDtos.map((dto) => ({
+      id: dto.id,
+      type: dto.type,
+      sequence: dto.sequence,
+      disabled: !dto.isActive,
+      createdAt: dto.createdAt?.toISOString(),
+      updatedAt: dto.updatedAt?.toISOString(),
+    }));
   } catch (error) {
     console.error("Error creating multiple blood groups:", error);
     throw error;
@@ -191,7 +207,15 @@ export async function updateMultipleBloodGroups(
     }
 
     const response = await axiosInstance.put("/api/blood-groups/bulk", updates);
-    return response.data.payload;
+    const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
+    return bloodGroupDtos.map((dto) => ({
+      id: dto.id,
+      type: dto.type,
+      sequence: dto.sequence,
+      disabled: !dto.isActive,
+      createdAt: dto.createdAt?.toISOString(),
+      updatedAt: dto.updatedAt?.toISOString(),
+    }));
   } catch (error) {
     console.error("Error updating multiple blood groups:", error);
     throw error;
@@ -210,11 +234,27 @@ export async function updateMultipleBloodGroups(
 export async function searchBloodGroups(searchTerm: string): Promise<BloodGroup[]> {
   try {
     if (!searchTerm || searchTerm.trim().length === 0) {
-      return getAllBloodGroups();
+      const bloodGroupDtos = await getAllBloodGroups();
+      return bloodGroupDtos.map((dto) => ({
+        id: dto.id,
+        type: dto.type,
+        sequence: dto.sequence,
+        disabled: !dto.isActive,
+        createdAt: dto.createdAt?.toISOString(),
+        updatedAt: dto.updatedAt?.toISOString(),
+      }));
     }
 
     const response = await axiosInstance.get(`/api/blood-groups/search?q=${encodeURIComponent(searchTerm.trim())}`);
-    return response.data.payload;
+    const bloodGroupDtos: BloodGroupDto[] = response.data.payload;
+    return bloodGroupDtos.map((dto) => ({
+      id: dto.id,
+      type: dto.type,
+      sequence: dto.sequence,
+      disabled: !dto.isActive,
+      createdAt: dto.createdAt?.toISOString(),
+      updatedAt: dto.updatedAt?.toISOString(),
+    }));
   } catch (error) {
     console.error("Error searching blood groups:", error);
     throw error;

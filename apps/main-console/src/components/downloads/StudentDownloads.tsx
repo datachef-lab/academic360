@@ -1,46 +1,71 @@
-import React, { useRef, useState, useEffect } from 'react';
-import useDebounce from '../Hooks/useDebounce';
+import React, { useRef, useState, useEffect } from "react";
+import useDebounce from "../Hooks/useDebounce";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from 'framer-motion';
-import { DataTable } from '../reports/DataTable';
-import { useStudentDownloadStore } from '../globals/useStudentDownloadStore';
-import { getFilteredStudents } from '@/services/student';
-import StudentDownloadFilterAndExport from './StudentDownloadFilterAndExport';
-import { Student } from '@/types/user/student';
-import { studentDownloadColumns } from './StudentDownloadColumn';
-
+import { motion } from "framer-motion";
+import { DataTable } from "../reports/DataTable";
+import { useStudentDownloadStore } from "../globals/useStudentDownloadStore";
+import { getFilteredStudents } from "@/services/student";
+import StudentDownloadFilterAndExport from "./StudentDownloadFilterAndExport";
+import { StudentDto } from "@repo/db/dtos/user";
+import { Student } from "@/types/user/student";
+import { studentDownloadColumns } from "./StudentDownloadColumn";
 
 const StudentDownloads: React.FC = () => {
-  const {filters,filteredData,setFilteredData}=useStudentDownloadStore()
+  const { filters, filteredData, setFilteredData } = useStudentDownloadStore();
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 10,
   });
   const debouncePagination = useDebounce(pagination, 400);
   const lastPageCountRef = useRef(0);
-  
-  const { data, isLoading } = useQuery({
-    queryKey: ["studentDownload", filters, debouncePagination],
-    queryFn: () => 
+
+  const { data, isLoading } = useQuery(
+    ["studentDownload", filters, debouncePagination],
+    () =>
       getFilteredStudents({
-        stream: filters.stream ?? undefined,
-        year: filters.year?? undefined,
-        framework: filters.framework ?? undefined,
-        semester: filters.semester ?? undefined,
-        page: debouncePagination.pageIndex + 1,
-        pageSize: debouncePagination.pageSize,
+        stream: filters.stream ?? "",
+        year: filters.year?.toString() ?? "",
+        framework: filters.framework ?? "",
+        semester: filters.semester?.toString() ?? "",
+        page: (debouncePagination.pageIndex + 1).toString(),
+        pageSize: debouncePagination.pageSize.toString(),
       }),
-    placeholderData: (prevData: Student) => prevData,
-    staleTime: 10000,
-   
-  });
+    {
+      staleTime: 10000,
+    },
+  );
 
   useEffect(() => {
     if (data) {
       console.log("data", data.totalPages);
-    
-      setFilteredData(data.content);
-     
+
+      // Transform StudentDto[] to Student[] format
+      const transformedData: Student[] = data.content.map((studentDto: StudentDto) => ({
+        id: studentDto.id,
+        name: studentDto.personalDetails?.firstName || "",
+        userId: 0, // Not available in StudentDto
+        applicationId: studentDto.applicationFormAbstract?.id || null,
+        community: null, // Not available in StudentDto
+        handicapped: studentDto.handicapped || false,
+        level: null, // Not available in StudentDto
+        framework: null, // Not available in StudentDto
+        specializationId: studentDto.specialization?.id || 0,
+        shift: null, // Simplified - not mapping the complex shift object
+        lastPassedYear: 0, // Not available in StudentDto
+        notes: "",
+        active: true, // Default value
+        alumni: false, // Default value
+        leavingDate: new Date(), // Default to current date
+        leavingReason: "",
+        specialization: null, // Simplified - not mapping the complex specialization object
+        academicIdentifier: null, // Not available in StudentDto
+        personalDetails: null, // Simplified - not mapping the complex personalDetails object
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      setFilteredData(transformedData);
+
       lastPageCountRef.current = data.totalPages;
     }
   }, [data, setFilteredData]);
@@ -60,7 +85,6 @@ const StudentDownloads: React.FC = () => {
           className="w-full"
         >
           <StudentDownloadFilterAndExport></StudentDownloadFilterAndExport>
-          
         </motion.div>
 
         <motion.div
@@ -72,7 +96,7 @@ const StudentDownloads: React.FC = () => {
           <DataTable
             isLoading={isLoading}
             columns={studentDownloadColumns}
-            data={filteredData|| []}
+            data={filteredData || []}
             pageCount={lastPageCountRef.current}
             pagination={pagination}
             onPaginationChange={setPagination}

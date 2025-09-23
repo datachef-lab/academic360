@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import { AccommodationDto } from "@repo/db/dtos/user";
+import { AccommodationDto, AddressDto } from "@repo/db/dtos/user";
 import { PlaceOfStay } from "@/types/enums";
-import {
-  getAccommodationByStudentId,
-  createAccommodation,
-  updateAccommodation,
-} from "@/services/accommodation.service";
+import { getAccommodationById, createAccommodation, updateAccommodation } from "@/services/accommodation.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +86,7 @@ function normalizeAccommodationData(data: Partial<AccommodationDto>): Partial<Ac
 
   // Handle address normalization
   if (normalized.address) {
-    const address = { ...normalized.address };
+    const address = { ...normalized.address } as AddressDto & { countryId?: number; stateId?: number; cityId?: number };
 
     // Extract IDs from nested objects if they exist
     if (address.country && typeof address.country === "object") {
@@ -203,9 +199,9 @@ export default function AccommodationForm({ accommodationId, initialData = null 
   };
 
   // Get current country, state, and city IDs for filtering
-  const currentCountryId = formData.address?.countryId;
-  const currentStateId = formData.address?.stateId;
-  const currentCityId = formData.address?.cityId;
+  const currentCountryId = formData.address?.country?.id;
+  const currentStateId = formData.address?.state?.id;
+  const currentCityId = formData.address?.city?.id;
 
   // Filter states and cities based on selection
   const filteredStates = states.filter((state) => !currentCountryId || state.countryId === currentCountryId);

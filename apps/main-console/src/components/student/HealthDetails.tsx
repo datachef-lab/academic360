@@ -55,7 +55,7 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Fetch health details
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["healthDetails", healthId],
     queryFn: async () => {
       if (!healthId) return null;
