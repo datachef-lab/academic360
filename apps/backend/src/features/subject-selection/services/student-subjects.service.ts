@@ -188,11 +188,7 @@ export async function findSubjectsSelections(studentId: number) {
       const relatedSubjectMainDto = relatedSubjects.find(
         (rsbj) =>
           rsbj.subjectType.id === subjectTypeId &&
-          isSubjectMatch(
-            rsbj.boardSubjectUnivSubjectMapping.boardSubjects[0]
-              ?.boardSubjectName?.name || "",
-            subject?.name || "",
-          ),
+          isSubjectMatch(rsbj.boardSubjectName.name, subject?.name || ""),
       );
 
       // Check the condition
@@ -201,8 +197,7 @@ export async function findSubjectsSelections(studentId: number) {
           // If studied in 12th class, then check the result status
           if (
             stdSubject.boardSubject.boardSubjectName.id ===
-            (relatedSubjectMainDto.boardSubjectUnivSubjectMapping
-              .boardSubjects[0]?.boardSubjectName?.id as number)
+            relatedSubjectMainDto.boardSubjectName.id
           ) {
             if (stdSubject.resultStatus === "PASS") {
               // If the subject is pass, then add the paper to the paper options
@@ -215,8 +210,7 @@ export async function findSubjectsSelections(studentId: number) {
               relatedSubjectMainDto.relatedSubjectSubs.some(
                 (sub) =>
                   isSubjectMatch(
-                    sub.boardSubjectUnivSubjectMapping.boardSubjects[0]
-                      ?.boardSubjectName?.name || "",
+                    sub.boardSubjectName.name,
                     stdSubject.boardSubject.boardSubjectName.name,
                   ) && stdSubject.resultStatus === "PASS",
               );
@@ -244,7 +238,7 @@ export async function findSubjectsSelections(studentId: number) {
 
   const arr: PaperDetailedDto[] = [];
   for (const subject of formatedSelectedMinorSubjects) {
-    if (!arr.find((s) => s.id === subject.id)) {
+    if (arr.find((s) => s.id === subject.id)) {
       arr.push(subject);
     }
   }

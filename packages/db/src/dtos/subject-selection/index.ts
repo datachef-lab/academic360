@@ -1,23 +1,23 @@
 import { RelatedSubjectMainT } from "@/schemas/models/subject-selection/related-subject-main.model";
 import { ProgramCourseDto } from "../course-design";
 import {
-    //  BoardSubjectNameT, BoardSubjectUnivSubjectMappingT, 
+    BoardSubjectNameT,
+    //  BoardSubjectUnivSubjectMappingT, 
     ClassT, ProgramCourseT, SubjectT, SubjectTypeT } from "@/schemas";
 import { RelatedSubjectSubT } from "@/schemas/models/subject-selection/related-subject-sub.model";
 import { RestrictedGroupingMainT } from "@/schemas/models/subject-selection/restricted-grouping-main.model";
 import { RestrictedGroupingClassT } from "@/schemas/models/subject-selection/restricted-grouping-class.model";
 import { RestrictedGroupingSubjectT } from "@/schemas/models/subject-selection/restricted-grouping-subject.model";
 import { RestrictedGroupingProgramCourseT } from "@/schemas/models/subject-selection/restricted-grouping-program-course.model";
-import { BoardSubjectUnivSubjectMappingDto } from "../admissions";
 
-export interface RelatedSubjectSubDto extends Omit<RelatedSubjectSubT, "relatedSubjectMainId"> {
-    boardSubjectUnivSubjectMapping: BoardSubjectUnivSubjectMappingDto;
+export interface RelatedSubjectSubDto extends Omit<RelatedSubjectSubT, "boardSubjectNameId"> {
+    boardSubjectName: BoardSubjectNameT;
 }
 
 export interface RelatedSubjectMainDto extends Omit<RelatedSubjectMainT, "programCourseId" | "boardSubjectUnivSubjectMappingId" | "subjectTypeId"> {
     programCourse: ProgramCourseDto;
     subjectType: SubjectTypeT;
-    boardSubjectUnivSubjectMapping: BoardSubjectUnivSubjectMappingDto;
+    boardSubjectName: BoardSubjectNameT;
     relatedSubjectSubs: RelatedSubjectSubDto[];
 }
 

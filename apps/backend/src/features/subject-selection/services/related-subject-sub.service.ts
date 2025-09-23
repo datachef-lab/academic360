@@ -6,8 +6,7 @@ import {
 } from "@repo/db/schemas/models/subject-selection/related-subject-sub.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import { RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
-import { getMappingById } from "@/features/admissions/services/board-subject-univ-subject-mapping.service.js";
-import type { BoardSubjectUnivSubjectMappingDto } from "@repo/db/dtos/admissions";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -44,20 +43,28 @@ export async function getAllRelatedSubjectSubs(): Promise<
     .select({
       id: relatedSubjectSubModel.id,
       relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-      boardSubjectUnivSubjectMappingId:
-        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
       createdAt: relatedSubjectSubModel.createdAt,
       updatedAt: relatedSubjectSubModel.updatedAt,
     })
     .from(relatedSubjectSubModel);
 
   const dtos: RelatedSubjectSubDto[] = await Promise.all(
-    results.map(async (r) => ({
-      id: r.id,
-      boardSubjectUnivSubjectMapping: (await getMappingById(
-        r.boardSubjectUnivSubjectMappingId!,
-      )) as BoardSubjectUnivSubjectMappingDto,
-    })),
+    results.map(async (r) => {
+      const [bsn] = await db
+        .select({
+          id: boardSubjectNameModel.id,
+          name: boardSubjectNameModel.name,
+          code: boardSubjectNameModel.code,
+          isActive: boardSubjectNameModel.isActive,
+        })
+        .from(boardSubjectNameModel)
+        .where(eq(boardSubjectNameModel.id, r.boardSubjectNameId!));
+      return {
+        id: r.id,
+        boardSubjectName: bsn!,
+      } as RelatedSubjectSubDto;
+    }),
   );
   return dtos;
 }
@@ -68,20 +75,27 @@ export async function getRelatedSubjectSubById(
   const [result] = await db
     .select({
       id: relatedSubjectSubModel.id,
-      boardSubjectUnivSubjectMappingId:
-        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
     })
     .from(relatedSubjectSubModel)
     .where(eq(relatedSubjectSubModel.id, id));
 
   if (!result) return null;
 
+  const [bsn] = await db
+    .select({
+      id: boardSubjectNameModel.id,
+      name: boardSubjectNameModel.name,
+      code: boardSubjectNameModel.code,
+      isActive: boardSubjectNameModel.isActive,
+    })
+    .from(boardSubjectNameModel)
+    .where(eq(boardSubjectNameModel.id, result.boardSubjectNameId!));
+
   return {
     id: result.id,
-    boardSubjectUnivSubjectMapping: (await getMappingById(
-      result.boardSubjectUnivSubjectMappingId!,
-    )) as BoardSubjectUnivSubjectMappingDto,
-  };
+    boardSubjectName: bsn!,
+  } as RelatedSubjectSubDto;
 }
 
 export async function getRelatedSubjectSubsByMainId(
@@ -90,19 +104,27 @@ export async function getRelatedSubjectSubsByMainId(
   const results = await db
     .select({
       id: relatedSubjectSubModel.id,
-      boardSubjectUnivSubjectMappingId:
-        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
     })
     .from(relatedSubjectSubModel)
     .where(eq(relatedSubjectSubModel.relatedSubjectMainId, mainId));
 
   const dtos: RelatedSubjectSubDto[] = await Promise.all(
-    results.map(async (r) => ({
-      id: r.id,
-      boardSubjectUnivSubjectMapping: (await getMappingById(
-        r.boardSubjectUnivSubjectMappingId!,
-      )) as BoardSubjectUnivSubjectMappingDto,
-    })),
+    results.map(async (r) => {
+      const [bsn] = await db
+        .select({
+          id: boardSubjectNameModel.id,
+          name: boardSubjectNameModel.name,
+          code: boardSubjectNameModel.code,
+          isActive: boardSubjectNameModel.isActive,
+        })
+        .from(boardSubjectNameModel)
+        .where(eq(boardSubjectNameModel.id, r.boardSubjectNameId!));
+      return {
+        id: r.id,
+        boardSubjectName: bsn!,
+      } as RelatedSubjectSubDto;
+    }),
   );
   return dtos;
 }
@@ -149,7 +171,7 @@ export async function bulkUploadRelatedSubjectSubs(
       const row = data[i] as any;
       const relatedSubjectSubData: RelatedSubjectSub = {
         relatedSubjectMainId: row.relatedSubjectMainId,
-        boardSubjectUnivSubjectMappingId: row.boardSubjectUnivSubjectMappingId,
+        boardSubjectNameId: row.boardSubjectNameId,
       };
 
       const created = await createRelatedSubjectSub(relatedSubjectSubData);

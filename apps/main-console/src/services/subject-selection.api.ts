@@ -6,19 +6,19 @@ import { RelatedSubjectMainDto, RelatedSubjectSubDto } from "@repo/db/dtos/subje
 export type CreateRelatedSubjectMainInput = {
   programCourse: { id: number };
   subjectType: { id: number };
-  boardSubjectUnivSubjectMapping: { id: number };
+  boardSubjectName: { id: number };
   isActive?: boolean;
-  relatedSubjectSubs?: { boardSubjectUnivSubjectMapping: { id: number } }[];
+  relatedSubjectSubs?: { boardSubjectName: { id: number } }[];
 };
 
 // Allow sending full DTO-like payloads (including relatedSubjectSubs) for update
 export type UpdateRelatedSubjectMainInput = Partial<CreateRelatedSubjectMainInput> & {
-  relatedSubjectSubs?: { boardSubjectUnivSubjectMapping: { id: number } }[];
+  relatedSubjectSubs?: { boardSubjectName: { id: number } }[];
 };
 
 export type CreateRelatedSubjectSubInput = {
   relatedSubjectMainId: number;
-  boardSubjectUnivSubjectMappingId: number;
+  boardSubjectNameId: number;
 };
 
 const BASE_MAIN = "/api/subject-selection/related-subject-mains";
