@@ -1,12 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import bhawanipurImg from "@/assets/bhawanipurImg.jpg";
 import { useNavigate } from "react-router-dom";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, UserRoundSearch, Users } from "lucide-react";
@@ -36,7 +31,6 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
   const lastPageCountRef = useRef(0);
   const isNavigatingRef = useRef(false);
 
-  
   const resetState = useCallback(() => {
     setSearchQuery("");
     setSearchResults(undefined);
@@ -51,12 +45,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
 
   const { refetch: getSearchStudent, isLoading } = useQuery({
     queryKey: ["SearchStudent", debouncePagination],
-    queryFn: () =>
-      getSearchedStudents(
-        debouncePagination.pageIndex + 1,
-        debouncePagination.pageSize,
-        searchQuery
-      ),
+    queryFn: () => getSearchedStudents(searchQuery, debouncePagination.pageIndex + 1, debouncePagination.pageSize),
     enabled: false,
   });
 
@@ -65,7 +54,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
     try {
       setIsSearching(true);
       const { data } = await getSearchStudent();
-      setSearchResults(data?.payload.content);
+      setSearchResults(data?.content as unknown as Student[]);
     } catch (error) {
       console.warn(error);
     } finally {
@@ -73,35 +62,36 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
     }
   };
 
-  const handleViewStudent = useCallback((studentId: number) => {
-    isNavigatingRef.current = true;
-    onOpenChange(false);
-    setTimeout(() => {
-      navigate(`/dashboard/students/${studentId}`);
-      isNavigatingRef.current = false;
-    }, 100); 
-  }, [navigate, onOpenChange]);
+  const handleViewStudent = useCallback(
+    (studentId: number) => {
+      isNavigatingRef.current = true;
+      onOpenChange(false);
+      setTimeout(() => {
+        navigate(`/dashboard/students/${studentId}`);
+        isNavigatingRef.current = false;
+      }, 100);
+    },
+    [navigate, onOpenChange],
+  );
 
-  
-  const handleModalClose = useCallback((open: boolean) => {
-    if (!open && !isNavigatingRef.current) {
-      resetState();
-    }
-    onOpenChange(open);
-  }, [onOpenChange, resetState]);
+  const handleModalClose = useCallback(
+    (open: boolean) => {
+      if (!open && !isNavigatingRef.current) {
+        resetState();
+      }
+      onOpenChange(open);
+    },
+    [onOpenChange, resetState],
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-[900px] md:max-w-[1000px] h-[90vh] overflow-hidden flex flex-col p-0 gap-0 rounded-2xl border-0 shadow-2xl">
         <div className="fixed inset-0 w-full h-full ">
-          <img 
-            src={bhawanipurImg}
-            alt="Background" 
-            className="w-full h-full object-cover opacity-90  blur-[3px]"
-          />
+          <img src={bhawanipurImg} alt="Background" className="w-full h-full object-cover opacity-90  blur-[3px]" />
           <div className="absolute inset-0 bg-purple-900/75 backdrop-blur-[1px]"></div>
         </div>
-        
+
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -121,7 +111,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
 
         <div className="relative flex-1 overflow-hidden">
           <div className="h-full flex flex-col p-8 gap-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
@@ -137,14 +127,11 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
               </div>
-              <Button 
-                onClick={handleSearch} 
+              <Button
+                onClick={handleSearch}
                 className="h-12 bg-purple-600 hover:bg-purple-600  text-white transition-all duration-200 shadow-lg hover:shadow-purple-500/25 rounded-xl text-lg font-medium"
               >
-                {isSearching ? 
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> : 
-                  <Search className="h-5 w-5 mr-2" />
-                }
+                {isSearching ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Search className="h-5 w-5 mr-2" />}
                 Search
               </Button>
             </motion.div>
@@ -160,7 +147,7 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
               <div className="flex-1 overflow-auto custom-scrollbar">
                 <AnimatePresence mode="wait">
                   {isSearching ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -170,10 +157,12 @@ export function SearchStudentModal({ open, onOpenChange }: SearchStudentModalPro
                         <div className="absolute inset-0 bg-purple-500/30 rounded-full blur-2xl animate-pulse"></div>
                         <Loader2 className="h-14 w-14 animate-spin text-purple-300 relative z-10" />
                       </div>
-                      <p className="text-center text-base text-purple-100 mt-6 font-medium">Searching for students...</p>
+                      <p className="text-center text-base text-purple-100 mt-6 font-medium">
+                        Searching for students...
+                      </p>
                     </motion.div>
                   ) : (searchResults ?? []).length === 0 ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}

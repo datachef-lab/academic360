@@ -31,7 +31,7 @@ export async function getFamilyDetailByStudentId(studentId: number): Promise<Api
   }
 }
 
-export async function createFamilyDetail(payload: Partial<Family>): Promise<ApiResponse<Family>> {
+export async function createFamilyDetail(payload: unknown): Promise<ApiResponse<Family>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -40,7 +40,7 @@ export async function createFamilyDetail(payload: Partial<Family>): Promise<ApiR
   }
 }
 
-export async function updateFamilyDetail(id: number, payload: Partial<Family>): Promise<ApiResponse<Family>> {
+export async function updateFamilyDetail(id: number, payload: unknown): Promise<ApiResponse<Family>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

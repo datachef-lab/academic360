@@ -1,4 +1,0 @@
-18-09-2025	23:58:59	b081eb69-3048-4345-85d8-ee2d1277fb18	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
-18-09-2025	23:58:59	61296199-e70d-49a2-bced-a7709b70cdf3	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
-18-09-2025	23:57:01	dbefa777-35be-4e5e-bf5a-0049a295ae71	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173
-18-09-2025	23:56:53	78b9a44d-9ba2-48dd-848f-51b9291b944e	ApiError: Unauthorized	GET	/api/v1/academics/all	http://localhost:5173

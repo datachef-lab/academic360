@@ -41,19 +41,20 @@ const MarksheetCCF = () => {
   useQuery({
     queryKey: ["rollNumber"],
     queryFn: async () => {
-      const response = await getSearchedStudentsByRollNumber(1, 1, rollNumber as string);
-      if (response.payload.content.length === 0) {
+      const response = await getSearchedStudentsByRollNumber(rollNumber as string);
+      if (response) {
+        setStudent(response as unknown as Student);
+        setMarksheet((prev) => {
+          if (prev) {
+            return { ...prev, name: response.personalDetails?.firstName as string };
+          }
+          return prev;
+        });
+      } else {
         setStudent(null);
       }
-      setStudent(response.payload.content[0]);
-      setMarksheet((prev) => {
-        if (prev) {
-          return { ...prev, name: student?.name as string };
-        }
-        return prev;
-      });
 
-      return response.payload;
+      return response;
     },
   });
 
@@ -121,7 +122,7 @@ const MarksheetCCF = () => {
       });
       setSubjectMetadataArr(response.payload);
 
-      const subjects = response.payload.map((sbj: any) => {
+      const subjects = response.payload.map((sbj: SubjectMetadata) => {
         return {
           subjectId: sbj.id,
           fullMarks: sbj.fullMarks,

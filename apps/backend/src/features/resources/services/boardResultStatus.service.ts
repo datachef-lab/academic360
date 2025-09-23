@@ -1,8 +1,5 @@
 import { db } from "@/db/index.js";
-import {
-  BoardResultStatus,
-  boardResultStatusModel,
-} from "@/features/resources/models/boardResultStatus.model.js";
+import { BoardResultStatus, boardResultStatusModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 
 export async function findBoardResultStatusById(

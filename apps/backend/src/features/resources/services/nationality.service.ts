@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import {
-  Nationality,
   nationalityModel,
-} from "@/features/resources/models/nationality.model.js";
+  type Nationality,
+} from "@repo/db/schemas/models/resources/nationality.model";
 import { eq, ilike } from "drizzle-orm";
 
 export const loadNationalities = async () => {
@@ -35,6 +35,7 @@ export const loadNationalities = async () => {
         name: nationality.name,
         sequence: nationality.sequence,
         code: nationality.code,
+        isActive: true,
       });
     }
   }

@@ -1,8 +1,5 @@
 import { db } from "@/db/index.js";
-import {
-  LanguageMedium,
-  languageMediumModel,
-} from "@/features/resources/models/languageMedium.model.js";
+import { LanguageMedium, languageMediumModel } from "@repo/db/schemas";
 import { eq, ilike } from "drizzle-orm";
 
 export const loadLanguages = async () => {
@@ -46,17 +43,32 @@ export async function findLanguageMediumById(
   id: number,
 ): Promise<LanguageMedium | null> {
   const [foundLanguageMedium] = await db
-    .select()
+    .select({
+      id: languageMediumModel.id,
+      legacyLanguageMediumId: languageMediumModel.legacyLanguageMediumId,
+      name: languageMediumModel.name,
+      sequence: languageMediumModel.sequence,
+      createdAt: languageMediumModel.createdAt,
+      updatedAt: languageMediumModel.updatedAt,
+    })
     .from(languageMediumModel)
     .where(eq(languageMediumModel.id, id));
-  return foundLanguageMedium;
+  return (foundLanguageMedium as unknown as LanguageMedium) ?? null;
 }
 
 export async function findAllLanguageMediums(): Promise<LanguageMedium[]> {
-  return await db
-    .select()
+  const rows = await db
+    .select({
+      id: languageMediumModel.id,
+      legacyLanguageMediumId: languageMediumModel.legacyLanguageMediumId,
+      name: languageMediumModel.name,
+      sequence: languageMediumModel.sequence,
+      createdAt: languageMediumModel.createdAt,
+      updatedAt: languageMediumModel.updatedAt,
+    })
     .from(languageMediumModel)
     .orderBy(languageMediumModel.sequence);
+  return rows as unknown as LanguageMedium[];
 }
 
 export async function createLanguageMedium(
@@ -105,8 +117,15 @@ export async function findLanguageMediumByName(
   name: string,
 ): Promise<LanguageMedium | null> {
   const [foundLanguageMedium] = await db
-    .select()
+    .select({
+      id: languageMediumModel.id,
+      legacyLanguageMediumId: languageMediumModel.legacyLanguageMediumId,
+      name: languageMediumModel.name,
+      sequence: languageMediumModel.sequence,
+      createdAt: languageMediumModel.createdAt,
+      updatedAt: languageMediumModel.updatedAt,
+    })
     .from(languageMediumModel)
     .where(eq(languageMediumModel.name, name.toUpperCase().trim()));
-  return foundLanguageMedium;
+  return (foundLanguageMedium as unknown as LanguageMedium) ?? null;
 }

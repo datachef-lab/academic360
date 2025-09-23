@@ -1,5 +1,4 @@
-import React from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -32,6 +31,7 @@ import {
   Settings,
   Search,
   BookOpen,
+  FileText,
 } from "lucide-react";
 import { NavUser } from "../../../components/globals/NavUser";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ import {
 } from "@/components/ui/command";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
+import { getSearchedStudents, StudentSearchItem } from "@/services/student";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -62,6 +64,7 @@ const pathIconMap: Record<string, React.ElementType> = {
   "notice-management": Megaphone,
   "faculty-staff": UserCog,
   settings: Settings,
+  "cu-registration": FileText,
 };
 
 // Search data
@@ -129,6 +132,47 @@ export default function HomeLayout() {
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
   const [open, setOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ uid: string; name?: string | null }>>([]);
+  const navigate = useNavigate();
+  const [inputValue, setInputValue] = useState("");
+
+  async function fetchSuggestions(q: string) {
+    try {
+      const query = q.trim();
+      // Prefer direct UID hit if looks like a UID
+      if (/^\d{6,}$/.test(query)) {
+        try {
+          const token = accessToken
+            ? accessToken.startsWith("Bearer ")
+              ? accessToken
+              : `Bearer ${accessToken}`
+            : undefined;
+          const resp = await fetch(`/api/students/uid/${encodeURIComponent(query)}`, {
+            headers: token ? { Authorization: token } : undefined,
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            const one = data?.payload;
+            if (one?.uid) {
+              return [{ uid: String(one.uid), name: one?.personalDetails?.firstName ?? null }];
+            }
+          }
+        } catch {
+          // swallow
+        }
+      }
+
+      const resp = await getSearchedStudents(query, 1, 5);
+      const fromList = (resp?.content ?? [])
+        .map((s: StudentSearchItem) => ({ uid: String(s.uid ?? s.id ?? ""), name: s.name ?? null }))
+        .filter((s) => s.uid);
+      if (fromList.length > 0) return fromList;
+      // Final fallback already attempted if UID-like
+      return [] as Array<{ uid: string; name?: string | null }>;
+    } catch {
+      return [] as Array<{ uid: string; name?: string | null }>;
+    }
+  }
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -144,22 +188,23 @@ export default function HomeLayout() {
   }, []);
 
   return (
-    <ThemeProvider defaultTheme="light">
-      <SidebarProvider className="w-screen overflow-x-hidden">
-        <AppSidebar />
-        <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
-          <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-            <div className="flex items-center gap-2 px-4">
-              {/* <SidebarTrigger className="-ml-1" /> */}
-              <Separator orientation="vertical" className="mr-2 h-4" />
-              <Breadcrumb>
-                <BreadcrumbList>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
+    accessToken && (
+      <ThemeProvider defaultTheme="light">
+        <SidebarProvider className="w-screen overflow-x-hidden">
+          <AppSidebar />
+          <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
+            <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+              <div className="flex items-center gap-2 px-4">
+                {/* <SidebarTrigger className="-ml-1" /> */}
+                <Separator orientation="vertical" className="mr-2 h-4" />
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem>
+                      <BreadcrumbLink asChild>Academics</BreadcrumbLink>
+                      <BreadcrumbSeparator />
+                    </BreadcrumbItem>
 
-                  {/* {pathSegments.map((segment, index) => {
+                    {/* {pathSegments.map((segment, index) => {
                     const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
 
                     return (
@@ -172,13 +217,12 @@ export default function HomeLayout() {
                     );
                   })} */}
 
-                  {pathSegments.map((segment, index) => {
-                    const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
-                    const Icon = pathIconMap[segment];
+                    {pathSegments.map((segment, index) => {
+                      const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+                      const Icon = pathIconMap[segment];
 
-                    return (
-                      <React.Fragment key={index}>
-                        <BreadcrumbItem>
+                      return (
+                        <BreadcrumbItem key={index}>
                           <BreadcrumbLink asChild>
                             <Link
                               to={path}
@@ -188,65 +232,99 @@ export default function HomeLayout() {
                               <span className="capitalize">{segment.replace(/-/g, " ")}</span>
                             </Link>
                           </BreadcrumbLink>
+                          <BreadcrumbSeparator />
                         </BreadcrumbItem>
-                        {index < pathSegments.length - 1 && <BreadcrumbSeparator />}
-                      </React.Fragment>
-                    );
-                  })}
-                </BreadcrumbList>
-              </Breadcrumb>
+                      );
+                    })}
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+              <div className="flex items-center mr-2 gap-2">
+                {/* Search Button */}
+                <Button
+                  variant="outline"
+                  className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+                  onClick={() => setOpen(true)}
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  <span className="hidden lg:inline-flex">Search...</span>
+                  <span className="inline-flex lg:hidden">Search</span>
+                  <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                    <span className="text-xs">⌘</span>K
+                  </kbd>
+                </Button>
+                <NavUser />
+                {/* <NotifcationPanel /> */}
+                {/* <ModeToggle /> */}
+              </div>
+            </header>
+            <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
+              {accessToken && <Outlet />}
             </div>
-            <div className="flex items-center mr-2 gap-2">
-              {/* Search Button */}
-              <Button
-                variant="outline"
-                className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
-                onClick={() => setOpen(true)}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                <span className="hidden lg:inline-flex">Search...</span>
-                <span className="inline-flex lg:hidden">Search</span>
-                <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                  <span className="text-xs">⌘</span>K
-                </kbd>
-              </Button>
-              <NavUser />
-              {/* <NotifcationPanel /> */}
-              {/* <ModeToggle /> */}
-            </div>
-          </header>
-          <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
-            {accessToken && <Outlet />}
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+          </SidebarInset>
+        </SidebarProvider>
 
-      {/* Command Dialog for Spotlight Search */}
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
-        <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
-          {Object.entries(
-            searchData.reduce(
-              (acc, item) => {
-                const category = item.category;
-                if (!acc[category]) {
-                  acc[category] = [];
-                }
-                acc[category].push(item);
-                return acc;
-              },
-              {} as Record<string, typeof searchData>,
-            ),
-          ).map(([category, items]) => (
-            <CommandGroup key={category} heading={category}>
-              {items.map((item) => (
+        {/* Command Dialog for Spotlight Search */}
+        <CommandDialog open={open} onOpenChange={setOpen}>
+          <CommandInput
+            placeholder="Search commands or type a student UID..."
+            onValueChange={async (v) => {
+              setInputValue(v);
+              setSuggestions(v.length >= 2 ? await fetchSuggestions(v) : []);
+            }}
+          />
+          <CommandList className="min-h-[160px] max-h-80 overflow-auto">
+            <CommandEmpty>No results found.</CommandEmpty>
+            {/\d{6,}/.test(inputValue.trim()) && (
+              <CommandGroup heading="Quick action">
+                <CommandItem
+                  value={`open-${inputValue.trim()}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    navigate(`/dashboard/students/${inputValue.trim()}`);
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium">Open student UID</span>
+                    <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
+                  </div>
+                </CommandItem>
+              </CommandGroup>
+            )}
+            {suggestions.length > 0 && (
+              <CommandGroup heading="Students">
+                {suggestions.map((s) => (
+                  <CommandItem
+                    key={s.uid}
+                    value={s.uid}
+                    onSelect={() => {
+                      setOpen(false);
+                      navigate(`/dashboard/students/${s.uid}`);
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`} />
+                        <AvatarFallback className="text-[10px]">
+                          {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="font-medium">{s.uid}</span>
+                      <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            <CommandGroup heading="Navigation">
+              {searchData.map((item) => (
                 <CommandItem
                   key={item.href}
                   value={item.title}
                   onSelect={() => {
                     setOpen(false);
-                    window.location.href = item.href;
+                    navigate(item.href);
                   }}
                   className="flex items-center gap-2"
                 >
@@ -258,9 +336,9 @@ export default function HomeLayout() {
                 </CommandItem>
               ))}
             </CommandGroup>
-          ))}
-        </CommandList>
-      </CommandDialog>
-    </ThemeProvider>
+          </CommandList>
+        </CommandDialog>
+      </ThemeProvider>
+    )
   );
 }

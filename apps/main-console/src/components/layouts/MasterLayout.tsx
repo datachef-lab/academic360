@@ -5,16 +5,16 @@ import { cn } from "@/lib/utils";
 import { SearchStudentModal } from "../globals/SearchStudentModal";
 import styles from "./MaterLayout.module.css";
 
-export type LinkType =  {
+export type LinkType = {
   title: string;
   url: string;
   icon: React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
   isModal?: boolean;
-  
+
   nestedLinks?: LinkType[];
   status?: "completed" | "in_progress" | "not_started";
   completedAt?: string;
-}
+};
 
 type MasterLayoutProps = {
   children: React.ReactNode;
@@ -25,8 +25,14 @@ type MasterLayoutProps = {
   rightBarContent?: React.ReactNode;
 };
 
-export default function MasterLayout({ children, content, subLinks, rightBarHeader, rightBarFooter, rightBarContent }: MasterLayoutProps) {
-
+export default function MasterLayout({
+  children,
+  content,
+  subLinks,
+  rightBarHeader,
+  rightBarFooter,
+  rightBarContent,
+}: MasterLayoutProps) {
   const location = useLocation();
   const currentPath = location.pathname;
   const [isSearchActive, setIsSearchActive] = React.useState(false);
@@ -51,7 +57,7 @@ export default function MasterLayout({ children, content, subLinks, rightBarHead
             )}
           </div>
           {/* Sidebar Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-hidden">
             {rightBarContent !== undefined ? (
               rightBarContent
             ) : (
@@ -99,12 +105,14 @@ export default function MasterLayout({ children, content, subLinks, rightBarHead
                               href={nested.url}
                               isActive={currentPath.endsWith(nested.url)}
                             >
-                              <span className={cn(
-                                "pl-2 block rounded transition-colors",
-                                currentPath.endsWith(nested.url)
-                                  ? "bg-purple-100 text-purple-700 font-semibold"
-                                  : "text-gray-700 hover:bg-purple-50"
-                              )}>
+                              <span
+                                className={cn(
+                                  "pl-2 block rounded transition-colors",
+                                  currentPath.endsWith(nested.url)
+                                    ? "bg-purple-100 text-purple-700 font-semibold"
+                                    : "text-gray-700 hover:bg-purple-50",
+                                )}
+                              >
                                 {nested.title}
                               </span>
                             </NavItem>
@@ -119,7 +127,7 @@ export default function MasterLayout({ children, content, subLinks, rightBarHead
 
             {content}
           </div>
-          
+
           {/* Sidebar Footer */}
           <div className="border-t px-4 py-2 text-xs text-gray-500 text-center bg-white shadow-sm">
             {rightBarFooter !== undefined ? (

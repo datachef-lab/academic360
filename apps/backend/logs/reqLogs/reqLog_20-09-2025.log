@@ -1,7 +1,0 @@
-20-09-2025	21:45:54	25bb7315-f59a-417d-ac5d-152bde87f643	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
-20-09-2025	21:45:53	5cd2f5d0-d4bc-40cc-b8f8-91da290aa803	GET	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
-20-09-2025	21:45:53	ef126ee5-368b-475d-94fd-5de591559f6e	OPTIONS	/api/subject-selection/restricted-grouping-mains?page=1&pageSize=200&programCourseId=19	http://localhost:3000
-20-09-2025	21:45:53	704155f6-f106-4c01-90a4-6fce5f3f843b	GET	/api/subject-selection/students/30/selections	http://localhost:3000
-20-09-2025	21:45:51	d5fbd006-b4af-4802-aaa6-600474aba0e0	GET	/api/subject-selection/students/30/selections	http://localhost:3000
-20-09-2025	21:45:36	1db6c57c-4e4f-4e8e-b903-72ac94bbd116	GET	/api/users/48/profile	http://localhost:3000
-20-09-2025	21:45:35	398ee003-f176-4fda-92df-ad9c302c7983	GET	/api/users/48/profile	http://localhost:3000

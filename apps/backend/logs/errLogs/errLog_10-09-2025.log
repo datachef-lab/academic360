@@ -1,8 +1,0 @@
-10-09-2025	16:42:05	f5ad9a9d-5d58-44a4-a128-0ed90cd00099	Error: Can't add new command when connection is in closed state	GET	/api/students/old-data	undefined
-10-09-2025	16:32:42	952b2152-2d2c-441f-bbcc-e2d8bed0fd75	Error: Failed query: select "id", "legacy_degree_id", "name", "undefined", "sequence", "undefined", "created_at", "updated_at" from "degree" order by "degree"."sequence"
-params: 	GET	/api/degree	http://localhost:5173
-10-09-2025	16:32:42	9f177b93-e707-4f77-aa53-271604afd1c1	Error: Failed query: select "id", "legacy_degree_id", "name", "undefined", "sequence", "undefined", "created_at", "updated_at" from "degree" order by "degree"."sequence"
-params: 	GET	/api/degree	http://localhost:5173
-10-09-2025	16:31:00	c4440c58-b312-4b2c-b9f4-633c2575f33e	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
-10-09-2025	16:31:00	eca54408-ddfc-4c09-b0bb-8613677cf469	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173
-10-09-2025	16:31:00	539d8911-14af-49bb-b9e2-117504762b87	TokenExpiredError: jwt expired	GET	/api/v1/academics/all	http://localhost:5173

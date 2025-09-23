@@ -95,7 +95,6 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
           id: bloodGroupModel.id,
           type: bloodGroupModel.type,
           sequence: bloodGroupModel.sequence,
-          disabled: bloodGroupModel.disabled,
           createdAt: bloodGroupModel.createdAt,
           updatedAt: bloodGroupModel.updatedAt,
         },
@@ -120,7 +119,6 @@ export async function findHealthById(id: number): Promise<HealthType | null> {
         id: sanitized.id as number,
         type: sanitized.type as string,
         sequence: sanitized.sequence as number | null,
-        disabled: sanitized.disabled as boolean,
         createdAt: sanitized.createdAt as Date,
         updatedAt: sanitized.updatedAt as Date,
       };
@@ -151,7 +149,6 @@ export async function findHealthByStudentId(
           id: bloodGroupModel.id,
           type: bloodGroupModel.type,
           sequence: bloodGroupModel.sequence,
-          disabled: bloodGroupModel.disabled,
           createdAt: bloodGroupModel.createdAt,
           updatedAt: bloodGroupModel.updatedAt,
         },
@@ -176,7 +173,6 @@ export async function findHealthByStudentId(
         id: sanitized.id as number,
         type: sanitized.type as string,
         sequence: sanitized.sequence as number | null,
-        disabled: sanitized.disabled as boolean,
         createdAt: sanitized.createdAt as Date,
         updatedAt: sanitized.updatedAt as Date,
       };

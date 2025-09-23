@@ -1,10 +1,10 @@
 import { ApiResponse } from "@/types/api-response";
-import { Health } from "@/types/user/health";
+import { HealthDto } from "@repo/db/dtos/user";
 import axiosInstance from "@/utils/api";
 
 const BASE_URL = "/api/health";
 
-export async function getAllHealthDetails(): Promise<ApiResponse<Health[]>> {
+export async function getAllHealthDetails(): Promise<ApiResponse<HealthDto[]>> {
   try {
     const response = await axiosInstance.get(BASE_URL);
     return response.data;
@@ -13,7 +13,7 @@ export async function getAllHealthDetails(): Promise<ApiResponse<Health[]>> {
   }
 }
 
-export async function getHealthDetailById(id: number): Promise<ApiResponse<Health | null>> {
+export async function getHealthDetailById(id: number): Promise<ApiResponse<HealthDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/${id}`);
     return response.data;
@@ -22,16 +22,19 @@ export async function getHealthDetailById(id: number): Promise<ApiResponse<Healt
   }
 }
 
-export async function getHealthDetailByStudentId(studentId: number): Promise<ApiResponse<Health | null>> {
+export async function getHealthDetailByStudentId(studentId: number): Promise<ApiResponse<HealthDto | null>> {
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
-  } catch {
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return { payload: null } as ApiResponse<HealthDto | null>;
+    }
     throw new Error(`Failed to fetch health detail for studentId ${studentId}`);
   }
 }
 
-export async function createHealthDetail(payload: Partial<Health>): Promise<ApiResponse<Health>> {
+export async function createHealthDetail(payload: Partial<HealthDto>): Promise<ApiResponse<HealthDto>> {
   try {
     const response = await axiosInstance.post(BASE_URL, payload);
     return response.data;
@@ -40,7 +43,7 @@ export async function createHealthDetail(payload: Partial<Health>): Promise<ApiR
   }
 }
 
-export async function updateHealthDetail(id: number, payload: Partial<Health>): Promise<ApiResponse<Health>> {
+export async function updateHealthDetail(id: number, payload: Partial<HealthDto>): Promise<ApiResponse<HealthDto>> {
   try {
     const response = await axiosInstance.put(`${BASE_URL}/${id}`, payload);
     return response.data;

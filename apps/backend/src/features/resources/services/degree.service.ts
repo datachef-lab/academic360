@@ -1,8 +1,5 @@
 import { db } from "@/db/index.js";
-import {
-  Degree,
-  degreeModel,
-} from "@/features/resources/models/degree.model.js";
+import { Degree, degreeModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 
 const degrees: Degree[] = [

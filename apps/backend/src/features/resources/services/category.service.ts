@@ -1,8 +1,8 @@
 import { db } from "@/db/index.js";
 import {
-  Category,
   categoryModel,
-} from "@/features/resources/models/category.model.js";
+  type Category,
+} from "@repo/db/schemas/models/resources/category.model";
 import { eq } from "drizzle-orm";
 
 const categories: Omit<Category, "id" | "createdAt" | "updatedAt">[] = [
@@ -11,35 +11,35 @@ const categories: Omit<Category, "id" | "createdAt" | "updatedAt">[] = [
     code: "GEN",
     documentRequired: null,
     sequence: 5,
-    disabled: false,
+    isActive: true,
   },
   {
     name: "SC",
     code: "SC",
     documentRequired: null,
     sequence: 1,
-    disabled: false,
+    isActive: true,
   },
   {
     name: "ST",
     code: "ST",
     documentRequired: null,
     sequence: 2,
-    disabled: false,
+    isActive: true,
   },
   {
     name: "OBC-A",
     code: "OBC-A",
     documentRequired: null,
     sequence: 3,
-    disabled: false,
+    isActive: true,
   },
   {
     name: "OBC-B",
     code: "OBC-B",
     documentRequired: null,
     sequence: 4,
-    disabled: false,
+    isActive: true,
   },
 ];
 

@@ -262,15 +262,15 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       return true;
     }
 
-    const shouldAskForAec = availableAecSubjects.length > 0;
-    const shouldAskForCvac = availableCvacOptions.length > 0;
+    const shouldAskForAec = hasActualOptions(availableAecSubjects);
+    const shouldAskForCvac = hasActualOptions(availableCvacOptions);
 
     // Required field validation - create individual error messages
-    if (!minor1) newErrors.push("Minor I subject is required");
-    if (admissionMinor2Subjects.length > 0 && !minor2) newErrors.push("Minor II subject is required");
-    if (!idc1) newErrors.push("IDC 1 subject is required");
-    if (!idc2) newErrors.push("IDC 2 subject is required");
-    if (!idc3) newErrors.push("IDC 3 subject is required");
+    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
+    if (hasActualOptions(admissionMinor2Subjects) && !minor2) newErrors.push("Minor II subject is required");
+    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
+    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
+    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
     if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
     if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
 
@@ -432,6 +432,44 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       .filter((subject) => !excludeValues.includes(subject))
       .map((subject) => ({ value: subject, label: subject }));
     return [{ value: "", label: selectLabel }, ...options];
+  };
+
+  // Helper function to check if there are actual subject options (excluding placeholder)
+  const hasActualOptions = (subjects: string[]) => {
+    return subjects.filter((subject) => subject && subject.trim() !== "").length > 0;
+  };
+
+  // Dynamic semester labeling function
+  const getSemesterLabel = (subjectType: "minor1" | "minor2", baseLabel: string) => {
+    // Try multiple paths to get program course name
+    const programCourseName =
+      student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+
+    // Check for BCOM programs - handle both "B.Com" and "BCOM" variations
+    const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+    const isBcomProgram = normalizedName.includes("bcom");
+
+    if (subjectType === "minor2" && isBcomProgram) {
+      const newLabel = baseLabel.replace("Minor II (Semester III & IV)", "Minor III (Semester III)");
+      return newLabel;
+    }
+
+    return baseLabel;
+  };
+
+  // Dynamic placeholder function
+  const getPlaceholder = (subjectType: "minor1" | "minor2", basePlaceholder: string) => {
+    const programCourseName =
+      student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+
+    const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+    const isBcomProgram = normalizedName.includes("bcom");
+
+    if (subjectType === "minor2" && isBcomProgram) {
+      return basePlaceholder.replace("Minor II", "Minor III");
+    }
+
+    return basePlaceholder;
   };
 
   return (
@@ -654,45 +692,53 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {loading ? (
                   <>
-                    <LoadingDropdown label="Minor I (Semester I & II)" />
-                    <LoadingDropdown label="Minor II (Semester III & IV)" />
+                    <LoadingDropdown label={getSemesterLabel("minor1", "Minor I (Semester I & II)")} />
+                    <LoadingDropdown label={getSemesterLabel("minor2", "Minor II (Semester III & IV)")} />
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-sm font-semibold text-gray-700">Minor I (Semester I & II)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
-                          [minor2],
-                        )}
-                        value={minor1}
-                        onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
-                        placeholder="Select Minor I"
-                        className="w-full"
-                      />
-                    </div>
+                    {hasActualOptions(admissionMinor1Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
+                        <label className="text-sm font-semibold text-gray-700">
+                          {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
+                        </label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            [minor2],
+                          )}
+                          value={minor1}
+                          onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
+                          placeholder="Select Minor I"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
 
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-sm font-semibold text-gray-700">Minor II (Semester III & IV)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                          [minor1],
-                        )}
-                        value={minor2}
-                        onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
-                        placeholder="Select Minor II"
-                        className="w-full"
-                      />
-                    </div>
+                    {hasActualOptions(admissionMinor2Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
+                        <label className="text-sm font-semibold text-gray-700">
+                          {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
+                        </label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                            [minor1],
+                          )}
+                          value={minor2}
+                          onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
+                          placeholder={getPlaceholder("minor2", "Select Minor II")}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </div>
 
               {loading ? (
                 <LoadingDropdown label="AEC (Semester III & IV)" />
-              ) : availableAecSubjects.length > 0 ? (
+              ) : hasActualOptions(availableAecSubjects) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
                   <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
                   <Combobox
@@ -715,59 +761,65 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   </>
                 ) : (
                   <>
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          getFilteredByCategory(
-                            getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
-                            idc1,
-                            "IDC",
-                            "I",
-                          ),
-                        )}
-                        value={idc1}
-                        onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
-                        placeholder="Select IDC 1"
-                        className="w-full"
-                      />
-                    </div>
+                    {hasActualOptions(availableIdcSem1Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                        <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                              idc1,
+                              "IDC",
+                              "I",
+                            ),
+                          )}
+                          value={idc1}
+                          onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
+                          placeholder="Select IDC 1"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
 
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          getFilteredByCategory(
-                            getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
-                            idc2,
-                            "IDC",
-                            "II",
-                          ),
-                        )}
-                        value={idc2}
-                        onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
-                        placeholder="Select IDC 2"
-                        className="w-full"
-                      />
-                    </div>
+                    {hasActualOptions(availableIdcSem2Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                        <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                              idc2,
+                              "IDC",
+                              "II",
+                            ),
+                          )}
+                          value={idc2}
+                          onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
+                          placeholder="Select IDC 2"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
 
-                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                      <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
-                      <Combobox
-                        dataArr={convertToComboboxData(
-                          getFilteredByCategory(
-                            getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
-                            idc3,
-                            "IDC",
-                            "III",
-                          ),
-                        )}
-                        value={idc3}
-                        onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
-                        placeholder="Select IDC 3"
-                        className="w-full"
-                      />
-                    </div>
+                    {hasActualOptions(availableIdcSem3Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                        <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                              idc3,
+                              "IDC",
+                              "III",
+                            ),
+                          )}
+                          value={idc3}
+                          onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
+                          placeholder="Select IDC 3"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -776,7 +828,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
               {loading ? (
                 <LoadingDropdown label="CVAC 4 (Semester II)" />
-              ) : availableCvacOptions.length > 0 ? (
+              ) : hasActualOptions(availableCvacOptions) ? (
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
                   <Combobox
@@ -821,7 +873,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* Minor I - Always show if there are subjects available */}
                       {admissionMinor1Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">Minor I (Semester I & II)</td>
+                          <td className="border p-2 font-medium text-gray-700">
+                            {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
+                          </td>
                           <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
                         </tr>
                       )}
@@ -829,7 +883,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* Minor II - Always show if there are subjects available */}
                       {admissionMinor2Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">Minor II (Semester III & IV)</td>
+                          <td className="border p-2 font-medium text-gray-700">
+                            {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
+                          </td>
                           <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
                         </tr>
                       )}

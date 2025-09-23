@@ -259,7 +259,7 @@ const ExamComponentesPage = () => {
                         <TableCell style={{ width: 320 }}>{comp.code}</TableCell>
                         <TableCell style={{ width: 140 }}>{comp.shortName}</TableCell>
                         <TableCell style={{ width: 100 }}>
-                          {comp.isActive ? (
+                          {!comp.isActive ? (
                             <Badge variant="secondary">Inactive</Badge>
                           ) : (
                             <Badge className="bg-green-500 text-white hover:bg-green-600">Active</Badge>

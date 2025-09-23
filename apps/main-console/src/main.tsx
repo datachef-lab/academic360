@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App";
 import { ErrorProvider } from "./providers/ErrorProvider";
 import { Toaster } from "sonner";
+import { Toaster as AppToaster } from "@/components/ui/toaster";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SettingsProvider } from "./features/settings/providers/settings-provider";
@@ -31,6 +32,7 @@ root.render(
         <ErrorProvider>
           <SettingsProvider>
             <App />
+            <AppToaster />
           </SettingsProvider>
         </ErrorProvider>
         <Toaster />

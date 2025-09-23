@@ -114,13 +114,13 @@ export const getEmergencyContactByStudentId = async (
       await findEmergencyContactByStudentId(studentId);
     if (!foundEmergencyContact) {
       res
-        .status(404)
+        .status(200)
         .json(
           new ApiResponse(
-            404,
-            "NOT_FOUND",
+            200,
+            "SUCCESS",
             null,
-            `Emergency Contact for student ID ${studentId} not found`,
+            `No Emergency Contact for student ID ${studentId}`,
           ),
         );
       return;

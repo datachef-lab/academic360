@@ -1,2 +1,0 @@
-17-09-2025	23:20:29	52493834-b0be-43be-bd73-d44b4add040c	Error: Failed query: select "id", "academic_year_id_fk", "admission_code", "is_closed", "start_date", "last_date", "archived", "created_at", "updated_at", "remarks" from "admissions" where "admissions"."id" = $1
-params: NaN	GET	/api/admissions/board-subject-names	http://localhost:5173

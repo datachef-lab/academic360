@@ -26,7 +26,10 @@ export async function getEmergencyContactByStudentId(studentId: number): Promise
   try {
     const response = await axiosInstance.get(`${BASE_URL}/student/${studentId}`);
     return response.data;
-  } catch {
+  } catch (err: any) {
+    if (err?.response?.status === 404) {
+      return { payload: null } as ApiResponse<EmergencyContact | null>;
+    }
     throw new Error(`Failed to fetch emergency contact for studentId ${studentId}`);
   }
 }

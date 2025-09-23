@@ -78,6 +78,9 @@ import BoardPage from "./features/academic-year-setup/pages/board-page";
 import BoardSubjectNamePage from "./features/academic-year-setup/pages/board-subject-name-page";
 import BoardSubjectPage from "./features/academic-year-setup/pages/board-subject-page";
 import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
+import CURegistrationMasterLayout from "./features/cu-registration/layouts/CURegistrationMasterLayout";
+import CuRegistrationHomePage from "./features/cu-registration/pages/CuRegistrationHomePage";
+import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -154,6 +157,14 @@ const router = createBrowserRouter(
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
               ],
             },
+          ],
+        },
+        {
+          path: "cu-registration",
+          element: <CURegistrationMasterLayout />,
+          children: [
+            { path: "", element: <CuRegistrationHomePage /> },
+            { path: ":uid", element: <CuRegStudentPage /> },
           ],
         },
         // {
@@ -435,6 +446,14 @@ const router = createBrowserRouter(
 
         { path: "profile", element: <UserProfilePage /> },
         { path: "bulk-upload", element: <BulkUploadPage /> },
+        {
+          path: "cu-registration",
+          element: <CURegistrationMasterLayout />,
+          children: [
+            { path: "", element: <CuRegistrationHomePage /> },
+            { path: ":uid", element: <CuRegStudentPage /> },
+          ],
+        },
       ],
     },
     { path: "*", element: <NotFoundPage /> },

@@ -4,10 +4,11 @@ import {
   addressModel,
   createAddressSchema,
 } from "@repo/db/schemas/models/user";
-import { countryModel } from "@/features/resources/models/country.model.js";
+// Use shared resource models from @repo/db to ensure column names match DB schema
+import { countryModel } from "@repo/db/schemas/models/resources/country.model.js";
 import { eq } from "drizzle-orm";
-import { stateModel } from "@/features/resources/models/state.model.js";
-import { cityModel } from "@/features/resources/models/city.model.js";
+import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
+import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
 import { removePersonByAddressId } from "./person.service.js";
 import { removePersonalDetailsByAddressId } from "./personalDetails.service.js";
 import { z } from "zod";
@@ -45,7 +46,7 @@ function validateAddressUpdateInput(data: Address) {
 
 export async function addAddress(
   address: Omit<Address, "id">,
-): Promise<Address | null> {
+): Promise<AddressDto | null> {
   validateAddressInput(address);
   const [newAddress] = await db
     .insert(addressModel)
@@ -54,7 +55,7 @@ export async function addAddress(
   return newAddress ? await addressResponseFormat(newAddress) : null;
 }
 
-export async function findAddressById(id: number): Promise<Address | null> {
+export async function findAddressById(id: number): Promise<AddressDto | null> {
   const [foundAddress] = await db
     .select()
     .from(addressModel)
@@ -71,7 +72,7 @@ export async function getAllAddresses(): Promise<AddressDto[]> {
 export async function saveAddress(
   id: number,
   address: Address,
-): Promise<Address | null> {
+): Promise<AddressDto | null> {
   const [foundAddress] = await db
     .select()
     .from(addressModel)

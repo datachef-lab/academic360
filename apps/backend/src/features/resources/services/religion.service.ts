@@ -1,9 +1,9 @@
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
 import {
-  Religion,
   religionModel,
-} from "@/features/resources/models/religion.model.js";
+  type Religion,
+} from "@repo/db/schemas/models/resources/religion.model";
 const religions = [
   "Hindu",
   "Muslim",
@@ -29,6 +29,7 @@ export async function loadReligions() {
       await db.insert(religionModel).values({
         name,
         sequence: i + 1,
+        isActive: true,
       });
     }
   }

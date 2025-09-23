@@ -52,11 +52,11 @@ export default function AddMarksheetButton() {
 
       setIsLoading(true);
       try {
-        const response = await getSearchedStudentsByRollNumber(1, 1, debouncedRollNumber);
-        if (response.payload.content.length > 0) {
+        const response = await getSearchedStudentsByRollNumber(debouncedRollNumber);
+        if (response) {
           setStudentData({
             exists: true,
-            student: response.payload.content[0],
+            student: response as unknown as Student,
           });
         } else {
           setStudentData({ exists: false });

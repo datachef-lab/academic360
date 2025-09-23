@@ -1,8 +1,6 @@
 import { db } from "@/db/index.js";
-import {
-  AnnualIncome,
-  annualIncomeModel,
-} from "@/features/resources/models/annualIncome.model.js";
+import { AnnualIncome, annualIncomeModel } from "@repo/db/schemas";
+
 import { eq } from "drizzle-orm";
 
 export async function findAnnualIncomeById(

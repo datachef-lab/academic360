@@ -1,6 +1,6 @@
 import { db } from "@/db/index.js";
 import { eq } from "drizzle-orm";
-import { State, stateModel } from "@/features/resources/models/state.model.js";
+import { State, stateModel } from "@repo/db/schemas";
 
 export async function findAllStates(): Promise<State[]> {
   return await db.select().from(stateModel).orderBy(stateModel.sequence);

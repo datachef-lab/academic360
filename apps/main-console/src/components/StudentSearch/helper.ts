@@ -44,21 +44,69 @@
 
 import { Student } from "@/types/user/student";
 import { StudentSearchType } from "../tables/users/student-search-column";
+import { StudentDto } from "@repo/db/dtos/user";
+import { StudentSearchItem } from "@/services/student";
 // import { Religion } from "@/types/resources/religion.types";
 // import { Category } from "@/types/resources/category.types";
 // import { Specialization } from "@/types/resources/specialization";
 
-export function formattedStudent(content: Student[]) {
+type StudentInput = Student | StudentDto | StudentSearchItem;
+
+export function formattedStudent(content: StudentInput[]) {
   const formattedArr: StudentSearchType[] = [];
   const profileBaseUrl = import.meta.env.VITE_STUDENT_PROFILE_URL || "https://74.207.233.48:8443/hrclIRP/studentimages";
 
   //console.log("Profile base URL being used:", profileBaseUrl);
 
   for (let i = 0; i < content.length; i++) {
-    const { ...props } = content[i];
+    const item = content[i];
+    if (!item) continue;
+
+    const { ...props } = item;
+
+    // Extract name from different input types
+    let name = "";
+    if ("name" in item && item.name) {
+      name = item.name;
+    } else if ("personalDetails" in item && item.personalDetails) {
+      const personalDetails = item.personalDetails as unknown as Record<string, unknown>; // Type assertion for database schema properties
+      if (personalDetails.firstName) {
+        name = String(personalDetails.firstName);
+        if (personalDetails.lastName) {
+          name += ` ${String(personalDetails.lastName)}`;
+        }
+      } else if (personalDetails.lastName) {
+        name = String(personalDetails.lastName);
+      }
+    }
+
+    // Extract handicapped status from different input types
+    let handicapped = false;
+    if ("handicapped" in item) {
+      handicapped = Boolean(item.handicapped);
+    }
+
+    // Extract active status from different input types
+    let active = true;
+    if ("active" in item) {
+      active = Boolean(item.active);
+    }
+
+    // Extract alumni status from different input types
+    let alumni = false;
+    if ("alumni" in item) {
+      alumni = Boolean(item.alumni);
+    }
+
+    // Extract leavingDate from different input types
+    let leavingDate: Date | null = null;
+    if ("leavingDate" in item) {
+      leavingDate = item.leavingDate || null;
+    }
 
     const obj: StudentSearchType = {
       ...props,
+      name,
       registrationNumber: null,
       rollNumber: null,
       uid: null,
@@ -69,6 +117,10 @@ export function formattedStudent(content: Student[]) {
       // stream: null,
       specialization: null,
       avatar: undefined,
+      handicapped,
+      active,
+      alumni,
+      leavingDate,
     };
 
     // if (academicIdentifier) {
