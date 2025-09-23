@@ -9,6 +9,11 @@ const nestedHomeLinks = [
     url: "/dashboard/academic-year-setup/board-subjects/",
     icon: GraduationCap,
   },
+  {
+    title: "Board Subject Mapping Papers",
+    url: "/dashboard/academic-year-setup/board-subjects/mapping-subjects",
+    icon: BookText,
+  },
 ];
 
 const masterLinks = [

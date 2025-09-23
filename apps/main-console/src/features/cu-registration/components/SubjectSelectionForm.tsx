@@ -393,6 +393,8 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
       if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
         if (!inContext(candidateRg.semesters)) return true;
         for (const sel of selected) {
+          const selRg = restrictedBySubject[norm(sel)];
+          if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
           if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
         }
       }

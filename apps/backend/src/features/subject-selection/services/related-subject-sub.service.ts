@@ -6,7 +6,8 @@ import {
 } from "@repo/db/schemas/models/subject-selection/related-subject-sub.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import { RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { getMappingById } from "@/features/admissions/services/board-subject-univ-subject-mapping.service.js";
+import type { BoardSubjectUnivSubjectMappingDto } from "@repo/db/dtos/admissions";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -43,30 +44,22 @@ export async function getAllRelatedSubjectSubs(): Promise<
     .select({
       id: relatedSubjectSubModel.id,
       relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
       createdAt: relatedSubjectSubModel.createdAt,
       updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
     })
-    .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    );
+    .from(relatedSubjectSubModel);
 
-  return results.map((result) => ({
-    id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
-  }));
+  const dtos: RelatedSubjectSubDto[] = await Promise.all(
+    results.map(async (r) => ({
+      id: r.id,
+      boardSubjectUnivSubjectMapping: (await getMappingById(
+        r.boardSubjectUnivSubjectMappingId!,
+      )) as BoardSubjectUnivSubjectMappingDto,
+    })),
+  );
+  return dtos;
 }
 
 export async function getRelatedSubjectSubById(
@@ -75,33 +68,19 @@ export async function getRelatedSubjectSubById(
   const [result] = await db
     .select({
       id: relatedSubjectSubModel.id,
-      relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
-      createdAt: relatedSubjectSubModel.createdAt,
-      updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
     })
     .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    )
     .where(eq(relatedSubjectSubModel.id, id));
 
   if (!result) return null;
 
   return {
     id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
+    boardSubjectUnivSubjectMapping: (await getMappingById(
+      result.boardSubjectUnivSubjectMappingId!,
+    )) as BoardSubjectUnivSubjectMappingDto,
   };
 }
 
@@ -111,32 +90,21 @@ export async function getRelatedSubjectSubsByMainId(
   const results = await db
     .select({
       id: relatedSubjectSubModel.id,
-      relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
-      createdAt: relatedSubjectSubModel.createdAt,
-      updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
     })
     .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    )
     .where(eq(relatedSubjectSubModel.relatedSubjectMainId, mainId));
 
-  return results.map((result) => ({
-    id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
-  }));
+  const dtos: RelatedSubjectSubDto[] = await Promise.all(
+    results.map(async (r) => ({
+      id: r.id,
+      boardSubjectUnivSubjectMapping: (await getMappingById(
+        r.boardSubjectUnivSubjectMappingId!,
+      )) as BoardSubjectUnivSubjectMappingDto,
+    })),
+  );
+  return dtos;
 }
 
 export async function updateRelatedSubjectSub(
@@ -181,7 +149,7 @@ export async function bulkUploadRelatedSubjectSubs(
       const row = data[i] as any;
       const relatedSubjectSubData: RelatedSubjectSub = {
         relatedSubjectMainId: row.relatedSubjectMainId,
-        boardSubjectNameId: row.boardSubjectNameId,
+        boardSubjectUnivSubjectMappingId: row.boardSubjectUnivSubjectMappingId,
       };
 
       const created = await createRelatedSubjectSub(relatedSubjectSubData);

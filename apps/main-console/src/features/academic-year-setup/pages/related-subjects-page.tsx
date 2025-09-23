@@ -116,8 +116,10 @@ export default function AlternativeSubjectsPage() {
           programCourses: [dto.programCourse?.name || ""],
           subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
           subjects: [
-            dto.boardSubjectName?.name || "",
-            ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+            dto.boardSubjectUnivSubjectMapping?.boardSubjects?.[0]?.boardSubjectName?.name || "",
+            ...dto.relatedSubjectSubs
+              .map((s) => s.boardSubjectUnivSubjectMapping?.boardSubjects?.[0]?.boardSubjectName?.name || "")
+              .filter(Boolean),
           ],
           isActive: dto.isActive ?? true,
         }));
@@ -129,12 +131,16 @@ export default function AlternativeSubjectsPage() {
         setSubjectNameToId((prev) => {
           const subjMap: Record<string, number> = { ...prev };
           for (const dto of data) {
-            if (dto.boardSubjectName?.name && dto.boardSubjectName?.id) {
-              subjMap[dto.boardSubjectName.name] = dto.boardSubjectName.id;
+            const mainLabel = dto.boardSubjectUnivSubjectMapping?.boardSubjects?.[0]?.boardSubjectName?.name;
+            const mainId = dto.boardSubjectUnivSubjectMapping?.id;
+            if (mainLabel && typeof mainId === "number") {
+              subjMap[mainLabel] = mainId;
             }
             for (const sub of dto.relatedSubjectSubs) {
-              if (sub.boardSubjectName?.name && sub.boardSubjectName?.id) {
-                subjMap[sub.boardSubjectName.name] = sub.boardSubjectName.id;
+              const subLabel = sub.boardSubjectUnivSubjectMapping?.boardSubjects?.[0]?.boardSubjectName?.name;
+              const subId = sub.boardSubjectUnivSubjectMapping?.id;
+              if (subLabel && typeof subId === "number") {
+                subjMap[subLabel] = subId;
               }
             }
           }
@@ -296,7 +302,7 @@ export default function AlternativeSubjectsPage() {
         existingMains.map((m) => {
           const pcId = m.programCourse?.id;
           const stId = m.subjectType?.id;
-          const tgtId = m.boardSubjectName?.id;
+          const tgtId = m.boardSubjectUnivSubjectMapping?.id;
           return `${pcId}|${stId}|${tgtId}`;
         }),
       );
@@ -324,18 +330,19 @@ export default function AlternativeSubjectsPage() {
           duplicates.push(`${row.programCourse} | ${row.subjectCategory} | ${row.targetedSubject}`);
           continue;
         }
-        await subjectSelectionApi.createRelatedSubjectMain({
+        const payload = {
           programCourse: { id: programCourseId },
           subjectType: { id: subjectTypeId },
-          boardSubjectName: { id: targetId },
+          boardSubjectUnivSubjectMapping: { id: targetId },
           isActive: true,
           relatedSubjectSubs: row.alternativeSubjects
-            .map((name) => ({ boardSubjectName: { id: subjectNameToId[name] } }))
+            .map((name) => ({ boardSubjectUnivSubjectMapping: { id: subjectNameToId[name] } }))
             .filter(
-              (sub): sub is { boardSubjectName: { id: number } } =>
-                !!sub.boardSubjectName.id && sub.boardSubjectName.id !== targetId,
+              (sub): sub is { boardSubjectUnivSubjectMapping: { id: number } } =>
+                !!sub.boardSubjectUnivSubjectMapping.id && sub.boardSubjectUnivSubjectMapping.id !== targetId,
             ),
-        });
+        } satisfies Parameters<typeof subjectSelectionApi.createRelatedSubjectMain>[0];
+        await subjectSelectionApi.createRelatedSubjectMain(payload);
         createdCount += 1;
         existingKeys.add(key); // prevent another row in same batch duplicating
       }
@@ -364,8 +371,8 @@ export default function AlternativeSubjectsPage() {
         programCourses: [dto.programCourse?.name || ""],
         subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
         subjects: [
-          dto.boardSubjectName?.name || "",
-          ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+          dto.boardSubjectUnivSubjectMapping?.subject?.name || "",
+          ...dto.relatedSubjectSubs.map((s) => s.boardSubjectUnivSubjectMapping?.subject?.name || "").filter(Boolean),
         ],
         isActive: dto.isActive ?? true,
       }));
@@ -389,7 +396,7 @@ export default function AlternativeSubjectsPage() {
       const dto = mains.find((m) => {
         const pcName = m.programCourse?.name;
         const catLabel = m.subjectType?.code || m.subjectType?.name;
-        const subjName = m.boardSubjectName?.name;
+        const subjName = m.boardSubjectUnivSubjectMapping?.subject?.name;
         const orig = editOriginal ?? { pc: editProgramCourse, cat: editCategory, subj: editTargetSubject };
         return pcName === orig.pc && catLabel === orig.cat && subjName === orig.subj;
       });
@@ -413,7 +420,7 @@ export default function AlternativeSubjectsPage() {
       const desiredSubsDto = editSelectedAlternatives
         .map((name) => subjectNameToId[name])
         .filter((id): id is number => !!id && id !== targetId)
-        .map((id) => ({ boardSubjectName: { id } }));
+        .map((id) => ({ boardSubjectUnivSubjectMapping: { id } }));
 
       // Debug: log outgoing DTO
       console.log("[RelatedSubjects] PUT dto:", {
@@ -427,12 +434,13 @@ export default function AlternativeSubjectsPage() {
         desiredSubsDto,
       });
 
-      await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, {
+      const updatePayload = {
         programCourse: { id: programCourseId },
         subjectType: { id: subjectTypeId },
-        boardSubjectName: { id: targetId },
+        boardSubjectUnivSubjectMapping: { id: targetId },
         relatedSubjectSubs: desiredSubsDto,
-      });
+      } satisfies Parameters<typeof subjectSelectionApi.updateRelatedSubjectMain>[1];
+      await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, updatePayload);
       // Reload
       const refreshed = await subjectSelectionApi.listRelatedSubjectMains();
       // console.log("[RelatedSubjects] after UPDATE ->", refreshed);
@@ -441,8 +449,8 @@ export default function AlternativeSubjectsPage() {
         programCourses: [d.programCourse?.name || ""],
         subjectCategory: d.subjectType?.code || d.subjectType?.name || "",
         subjects: [
-          d.boardSubjectName?.name || "",
-          ...d.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+          d.boardSubjectUnivSubjectMapping?.subject?.name || "",
+          ...d.relatedSubjectSubs.map((s) => s.boardSubjectUnivSubjectMapping?.subject?.name || "").filter(Boolean),
         ],
         isActive: d.isActive ?? true,
       }));

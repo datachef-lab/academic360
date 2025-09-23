@@ -81,6 +81,7 @@ import ProtectedRouteWrapper from "./components/globals/ProtectedRouteWrapper";
 import CURegistrationMasterLayout from "./features/cu-registration/layouts/CURegistrationMasterLayout";
 import CuRegistrationHomePage from "./features/cu-registration/pages/CuRegistrationHomePage";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
+import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -120,6 +121,7 @@ const router = createBrowserRouter(
                 { path: "", element: <BoardSubjectPage /> },
                 { path: "boards", element: <BoardPage /> },
                 { path: "subjects", element: <BoardSubjectNamePage /> },
+                { path: "mapping-subjects", element: <BoardSubjectUnivSubjectMappingPaper /> },
               ],
             },
             {

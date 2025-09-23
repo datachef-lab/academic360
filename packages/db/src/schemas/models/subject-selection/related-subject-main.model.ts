@@ -1,6 +1,8 @@
 import { pgTable, integer, serial, timestamp, boolean } from "drizzle-orm/pg-core";
 import { programCourseModel, subjectTypeModel } from "../course-design";
-import { boardSubjectNameModel } from "../admissions";
+import {
+    // boardSubjectNameModel,
+     boardSubjectUnivSubjectMappingModel } from "../admissions";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { academicYearModel } from "../academics";
@@ -13,8 +15,8 @@ export const relatedSubjectMainModel = pgTable("related_subjects_main", {
         .references(() => programCourseModel.id),
     subjectTypeId: integer("subject_type_id_fk")
         .references(() => subjectTypeModel.id),
-    boardSubjectNameId: integer("board_subject_name_id_fk")
-        .references(() => boardSubjectNameModel.id),
+    boardSubjectUnivSubjectMappingId: integer("board_subject_univ_subject_mapping_id_fk")
+        .references(() => boardSubjectUnivSubjectMappingModel.id),
     isActive: boolean().default(true),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),

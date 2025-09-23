@@ -405,6 +405,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
         if (!inContext(candidateRg.semesters)) return true;
         for (const sel of selected) {
+          const selRg = restrictedBySubject[norm(sel)];
+          // Only apply cannot-combine when the other selection has RG in the same category
+          if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
           if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
         }
       }

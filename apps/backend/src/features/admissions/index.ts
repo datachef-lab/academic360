@@ -13,3 +13,4 @@ export { default as academicSubjectRouter } from "./routes/academic-subject.rout
 export { default as boardRouter } from "./routes/board.routes.js";
 export { default as boardSubjectNameRouter } from "./routes/board-subject-name.routes.js";
 export { default as boardSubjectRouter } from "./routes/board-subject.routes.js";
+export { default as boardSubjectUnivSubjectMappingRouter } from "./routes/board-subject-univ-subject-mapping.routes.js";

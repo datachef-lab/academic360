@@ -12,7 +12,11 @@ import {
 } from "@repo/db/dtos/subject-selection";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { subjectTypeModel } from "@repo/db/schemas/models/course-design";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { boardSubjectUnivSubjectMappingModel } from "@repo/db/schemas/models/admissions";
+import { subjectModel } from "@repo/db/schemas/models/course-design/subject.model";
+import { boardSubjectModel } from "@repo/db/schemas/models/admissions/board-subject.model";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
+import type { BoardSubjectDto } from "@repo/db/dtos/admissions";
 import { relatedSubjectSubModel } from "@repo/db/schemas/models/subject-selection";
 import { academicYearModel } from "@repo/db/schemas/models/academics";
 import XLSX from "xlsx";
@@ -32,9 +36,9 @@ export interface RelatedSubjectMainBulkUploadResult {
 export type CreateRelatedSubjectMainDtoInput = {
   programCourse: { id: number };
   subjectType: { id: number };
-  boardSubjectName: { id: number };
+  boardSubjectUnivSubjectMapping: { id: number };
   isActive?: boolean;
-  relatedSubjectSubs?: { boardSubjectName: { id: number } }[];
+  relatedSubjectSubs?: { boardSubjectUnivSubjectMapping: { id: number } }[];
 };
 
 export type UpdateRelatedSubjectMainDtoInput =
@@ -74,7 +78,7 @@ export async function createRelatedSubjectMainFromDto(
         .then((rows) => rows.slice(-1));
 
   // 1) Validate foreign keys exist
-  const [[foundPc], [foundSt], [foundBsn]] = await Promise.all([
+  const [[foundPc], [foundSt], [foundMapping]] = await Promise.all([
     db
       .select()
       .from(programCourseModel)
@@ -85,8 +89,13 @@ export async function createRelatedSubjectMainFromDto(
       .where(eq(subjectTypeModel.id, input.subjectType.id)),
     db
       .select()
-      .from(boardSubjectNameModel)
-      .where(eq(boardSubjectNameModel.id, input.boardSubjectName.id)),
+      .from(boardSubjectUnivSubjectMappingModel)
+      .where(
+        eq(
+          boardSubjectUnivSubjectMappingModel.id,
+          input.boardSubjectUnivSubjectMapping.id,
+        ),
+      ),
   ]);
   if (!foundPc) {
     throw new Error(`ProgramCourse not found for id=${input.programCourse.id}`);
@@ -94,9 +103,9 @@ export async function createRelatedSubjectMainFromDto(
   if (!foundSt) {
     throw new Error(`SubjectType not found for id=${input.subjectType.id}`);
   }
-  if (!foundBsn) {
+  if (!foundMapping) {
     throw new Error(
-      `BoardSubjectName not found for id=${input.boardSubjectName.id}`,
+      `BoardSubjectUnivSubjectMapping not found for id=${input.boardSubjectUnivSubjectMapping.id}`,
     );
   }
 
@@ -109,8 +118,8 @@ export async function createRelatedSubjectMainFromDto(
         eq(relatedSubjectMainModel.programCourseId, input.programCourse.id),
         eq(relatedSubjectMainModel.subjectTypeId, input.subjectType.id),
         eq(
-          relatedSubjectMainModel.boardSubjectNameId,
-          input.boardSubjectName.id,
+          relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+          input.boardSubjectUnivSubjectMapping.id,
         ),
         latestAy?.id
           ? eq(relatedSubjectMainModel.academicYearId, latestAy.id)
@@ -121,7 +130,7 @@ export async function createRelatedSubjectMainFromDto(
   const base: RelatedSubjectMain = {
     programCourseId: input.programCourse.id,
     subjectTypeId: input.subjectType.id,
-    boardSubjectNameId: input.boardSubjectName.id,
+    boardSubjectUnivSubjectMappingId: input.boardSubjectUnivSubjectMapping.id,
     isActive: input.isActive ?? true,
     academicYearId: latestAy?.id as any,
   } as RelatedSubjectMain;
@@ -134,32 +143,35 @@ export async function createRelatedSubjectMainFromDto(
   if (input.relatedSubjectSubs && input.relatedSubjectSubs.length > 0) {
     // Validate and upsert-only-missing subs
     for (const sub of input.relatedSubjectSubs) {
-      const subId = sub?.boardSubjectName?.id;
+      const subId = sub?.boardSubjectUnivSubjectMapping?.id;
       if (!subId) continue;
-      if (subId === created.boardSubjectName.id) continue; // skip target == alt
+      if (subId === created.boardSubjectUnivSubjectMapping.id) continue; // skip target == alt
 
-      const [[existsBsn], [existingSub]] = await Promise.all([
+      const [[existsMapping], [existingSub]] = await Promise.all([
         db
           .select()
-          .from(boardSubjectNameModel)
-          .where(eq(boardSubjectNameModel.id, subId)),
+          .from(boardSubjectUnivSubjectMappingModel)
+          .where(eq(boardSubjectUnivSubjectMappingModel.id, subId)),
         db
           .select()
           .from(relatedSubjectSubModel)
           .where(
             and(
               eq(relatedSubjectSubModel.relatedSubjectMainId, created.id!),
-              eq(relatedSubjectSubModel.boardSubjectNameId, subId),
+              eq(
+                relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+                subId,
+              ),
             ),
           ),
       ]);
-      if (!existsBsn) continue; // invalid FK -> skip
+      if (!existsMapping) continue; // invalid FK -> skip
       if (existingSub) continue; // already present -> skip
       await db
         .insert(relatedSubjectSubModel)
         .values({
           relatedSubjectMainId: created.id!,
-          boardSubjectNameId: subId,
+          boardSubjectUnivSubjectMappingId: subId,
         })
         .returning();
     }
@@ -178,7 +190,8 @@ export async function getAllRelatedSubjectMains(): Promise<
       id: relatedSubjectMainModel.id,
       programCourseId: relatedSubjectMainModel.programCourseId,
       subjectTypeId: relatedSubjectMainModel.subjectTypeId,
-      boardSubjectNameId: relatedSubjectMainModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
       isActive: relatedSubjectMainModel.isActive,
       createdAt: relatedSubjectMainModel.createdAt,
       updatedAt: relatedSubjectMainModel.updatedAt,
@@ -194,10 +207,12 @@ export async function getAllRelatedSubjectMains(): Promise<
         code: subjectTypeModel.code,
         isActive: subjectTypeModel.isActive,
       },
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
+      mapping: {
+        id: boardSubjectUnivSubjectMappingModel.id,
+        subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+        boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+        createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+        updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
       },
     })
     .from(relatedSubjectMainModel)
@@ -210,8 +225,11 @@ export async function getAllRelatedSubjectMains(): Promise<
       eq(relatedSubjectMainModel.subjectTypeId, subjectTypeModel.id),
     )
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectMainModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     );
 
   // Get related subject subs for each main
@@ -221,21 +239,24 @@ export async function getAllRelatedSubjectMains(): Promise<
         .select({
           id: relatedSubjectSubModel.id,
           relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-          boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
+          boardSubjectUnivSubjectMappingId:
+            relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
           createdAt: relatedSubjectSubModel.createdAt,
           updatedAt: relatedSubjectSubModel.updatedAt,
-          boardSubjectName: {
-            id: boardSubjectNameModel.id,
-            name: boardSubjectNameModel.name,
-            code: boardSubjectNameModel.code,
+          mapping: {
+            id: boardSubjectUnivSubjectMappingModel.id,
+            subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+            boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+            createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+            updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
           },
         })
         .from(relatedSubjectSubModel)
         .leftJoin(
-          boardSubjectNameModel,
+          boardSubjectUnivSubjectMappingModel,
           eq(
-            relatedSubjectSubModel.boardSubjectNameId,
-            boardSubjectNameModel.id,
+            relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+            boardSubjectUnivSubjectMappingModel.id,
           ),
         )
         .where(eq(relatedSubjectSubModel.relatedSubjectMainId, main.id));
@@ -255,13 +276,110 @@ export async function getAllRelatedSubjectMains(): Promise<
           regulationType: null,
         } as any,
         subjectType: main.subjectType!,
-        boardSubjectName: main.boardSubjectName!,
-        relatedSubjectSubs: subs.map((sub) => ({
-          id: sub.id,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-          boardSubjectName: sub.boardSubjectName!,
-        })),
+        boardSubjectUnivSubjectMapping: {
+          id: main.mapping!.id,
+          createdAt: main.mapping!.createdAt as Date,
+          updatedAt: main.mapping!.updatedAt as Date,
+          subject: (
+            await db
+              .select()
+              .from(subjectModel)
+              .where(eq(subjectModel.id, main.mapping!.subjectId as number))
+          )[0] as any,
+          boardSubjects: await (async () => {
+            const bid = (main as any).mapping?.boardSubjectId as number | null;
+            if (!bid) return [] as BoardSubjectDto[];
+            const [bs] = await db
+              .select({
+                id: boardSubjectModel.id,
+                boardId: boardSubjectModel.boardId,
+                legacyBoardSubjectMappingSubId:
+                  boardSubjectModel.legacyBoardSubjectMappingSubId,
+                fullMarksTheory: boardSubjectModel.fullMarksTheory,
+                passingMarksTheory: boardSubjectModel.passingMarksTheory,
+                fullMarksPractical: boardSubjectModel.fullMarksPractical,
+                passingMarksPractical: boardSubjectModel.passingMarksPractical,
+                isActive: boardSubjectModel.isActive,
+                createdAt: boardSubjectModel.createdAt,
+                updatedAt: boardSubjectModel.updatedAt,
+                boardSubjectName: {
+                  id: boardSubjectNameModel.id,
+                  name: boardSubjectNameModel.name,
+                  code: boardSubjectNameModel.code,
+                  isActive: boardSubjectNameModel.isActive,
+                },
+              })
+              .from(boardSubjectModel)
+              .leftJoin(
+                boardSubjectNameModel,
+                eq(
+                  boardSubjectModel.boardSubjectNameId,
+                  boardSubjectNameModel.id,
+                ),
+              )
+              .where(eq(boardSubjectModel.id, bid));
+            return bs
+              ? ([bs] as unknown as BoardSubjectDto[])
+              : ([] as BoardSubjectDto[]);
+          })(),
+        } as any,
+        relatedSubjectSubs: await Promise.all(
+          subs.map(async (sub) => ({
+            id: sub.id,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+            boardSubjectUnivSubjectMapping: {
+              id: sub.mapping!.id,
+              createdAt: sub.mapping!.createdAt as Date,
+              updatedAt: sub.mapping!.updatedAt as Date,
+              subject: (
+                await db
+                  .select()
+                  .from(subjectModel)
+                  .where(eq(subjectModel.id, sub.mapping!.subjectId as number))
+              )[0] as any,
+              boardSubjects: await (async () => {
+                const bid = (sub as any).mapping?.boardSubjectId as
+                  | number
+                  | null;
+                if (!bid) return [] as BoardSubjectDto[];
+                const [bs] = await db
+                  .select({
+                    id: boardSubjectModel.id,
+                    boardId: boardSubjectModel.boardId,
+                    legacyBoardSubjectMappingSubId:
+                      boardSubjectModel.legacyBoardSubjectMappingSubId,
+                    fullMarksTheory: boardSubjectModel.fullMarksTheory,
+                    passingMarksTheory: boardSubjectModel.passingMarksTheory,
+                    fullMarksPractical: boardSubjectModel.fullMarksPractical,
+                    passingMarksPractical:
+                      boardSubjectModel.passingMarksPractical,
+                    isActive: boardSubjectModel.isActive,
+                    createdAt: boardSubjectModel.createdAt,
+                    updatedAt: boardSubjectModel.updatedAt,
+                    boardSubjectName: {
+                      id: boardSubjectNameModel.id,
+                      name: boardSubjectNameModel.name,
+                      code: boardSubjectNameModel.code,
+                      isActive: boardSubjectNameModel.isActive,
+                    },
+                  })
+                  .from(boardSubjectModel)
+                  .leftJoin(
+                    boardSubjectNameModel,
+                    eq(
+                      boardSubjectModel.boardSubjectNameId,
+                      boardSubjectNameModel.id,
+                    ),
+                  )
+                  .where(eq(boardSubjectModel.id, bid));
+                return bs
+                  ? ([bs] as unknown as BoardSubjectDto[])
+                  : ([] as BoardSubjectDto[]);
+              })(),
+            } as any,
+          })),
+        ),
       };
     }),
   );
@@ -285,14 +403,14 @@ export async function getRelatedSubjectMainsPaginated(options: {
       id: relatedSubjectMainModel.id,
       programCourseId: relatedSubjectMainModel.programCourseId,
       subjectTypeId: relatedSubjectMainModel.subjectTypeId,
-      boardSubjectNameId: relatedSubjectMainModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
       isActive: relatedSubjectMainModel.isActive,
       createdAt: relatedSubjectMainModel.createdAt,
       updatedAt: relatedSubjectMainModel.updatedAt,
       pcName: programCourseModel.name,
       stCode: subjectTypeModel.code,
       stName: subjectTypeModel.name,
-      bsnName: boardSubjectNameModel.name,
     })
     .from(relatedSubjectMainModel)
     .leftJoin(
@@ -304,14 +422,17 @@ export async function getRelatedSubjectMainsPaginated(options: {
       eq(relatedSubjectMainModel.subjectTypeId, subjectTypeModel.id),
     )
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectMainModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     );
 
   const filters: any[] = [];
   const q = (options.search || "").trim();
   if (q) {
-    filters.push(ilike(boardSubjectNameModel.name, `%${q}%`));
+    // optional: implement subject name search by joining subjects
   }
   if (options.programCourse) {
     filters.push(ilike(programCourseModel.name, `%${options.programCourse}%`));
@@ -337,15 +458,22 @@ export async function getRelatedSubjectMainsPaginated(options: {
       eq(relatedSubjectMainModel.subjectTypeId, subjectTypeModel.id),
     )
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectMainModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     )
     .where(filters.length ? and(...filters) : (undefined as any));
 
   const full = await Promise.all(
     rows.map((r) => getRelatedSubjectMainById(r.id as number)),
   );
-  const content = full.filter(Boolean) as RelatedSubjectMainDto[];
+  const content = (full.filter(Boolean) as RelatedSubjectMainDto[]).filter(
+    (dto) =>
+      dto.boardSubjectUnivSubjectMapping &&
+      dto.boardSubjectUnivSubjectMapping.subject,
+  );
   const totalElements = Number(count || 0);
   const totalPages = Math.ceil(totalElements / pageSize) || 1;
   return { content, page, pageSize, totalPages, totalElements };
@@ -360,7 +488,8 @@ export async function findByAcademicYearIdAndProgramCourseId(
       id: relatedSubjectMainModel.id,
       programCourseId: relatedSubjectMainModel.programCourseId,
       subjectTypeId: relatedSubjectMainModel.subjectTypeId,
-      boardSubjectNameId: relatedSubjectMainModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
       isActive: relatedSubjectMainModel.isActive,
       createdAt: relatedSubjectMainModel.createdAt,
       updatedAt: relatedSubjectMainModel.updatedAt,
@@ -376,10 +505,12 @@ export async function findByAcademicYearIdAndProgramCourseId(
         code: subjectTypeModel.code,
         isActive: subjectTypeModel.isActive,
       },
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
+      mapping: {
+        id: boardSubjectUnivSubjectMappingModel.id,
+        subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+        boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+        createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+        updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
       },
     })
     .from(relatedSubjectMainModel)
@@ -392,8 +523,11 @@ export async function findByAcademicYearIdAndProgramCourseId(
       eq(relatedSubjectMainModel.subjectTypeId, subjectTypeModel.id),
     )
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectMainModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     )
     .where(
       and(
@@ -409,21 +543,24 @@ export async function findByAcademicYearIdAndProgramCourseId(
         .select({
           id: relatedSubjectSubModel.id,
           relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-          boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
+          boardSubjectUnivSubjectMappingId:
+            relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
           createdAt: relatedSubjectSubModel.createdAt,
           updatedAt: relatedSubjectSubModel.updatedAt,
-          boardSubjectName: {
-            id: boardSubjectNameModel.id,
-            name: boardSubjectNameModel.name,
-            code: boardSubjectNameModel.code,
+          mapping: {
+            id: boardSubjectUnivSubjectMappingModel.id,
+            subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+            boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+            createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+            updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
           },
         })
         .from(relatedSubjectSubModel)
         .leftJoin(
-          boardSubjectNameModel,
+          boardSubjectUnivSubjectMappingModel,
           eq(
-            relatedSubjectSubModel.boardSubjectNameId,
-            boardSubjectNameModel.id,
+            relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+            boardSubjectUnivSubjectMappingModel.id,
           ),
         )
         .where(eq(relatedSubjectSubModel.relatedSubjectMainId, main.id));
@@ -443,13 +580,108 @@ export async function findByAcademicYearIdAndProgramCourseId(
           regulationType: null,
         } as any,
         subjectType: main.subjectType!,
-        boardSubjectName: main.boardSubjectName!,
-        relatedSubjectSubs: subs.map((sub) => ({
-          id: sub.id,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-          boardSubjectName: sub.boardSubjectName!,
-        })),
+        boardSubjectUnivSubjectMapping: {
+          id: main.mapping!.id,
+          createdAt: main.mapping!.createdAt as Date,
+          updatedAt: main.mapping!.updatedAt as Date,
+          subject: (
+            await db
+              .select()
+              .from(subjectModel)
+              .where(eq(subjectModel.id, main.mapping!.subjectId as number))
+          )[0] as any,
+          boardSubjects: await (async () => {
+            const bid = main.mapping!.boardSubjectId as number | null;
+            if (!bid) return [] as BoardSubjectDto[];
+            const [bs] = await db
+              .select({
+                id: boardSubjectModel.id,
+                boardId: boardSubjectModel.boardId,
+                legacyBoardSubjectMappingSubId:
+                  boardSubjectModel.legacyBoardSubjectMappingSubId,
+                fullMarksTheory: boardSubjectModel.fullMarksTheory,
+                passingMarksTheory: boardSubjectModel.passingMarksTheory,
+                fullMarksPractical: boardSubjectModel.fullMarksPractical,
+                passingMarksPractical: boardSubjectModel.passingMarksPractical,
+                isActive: boardSubjectModel.isActive,
+                createdAt: boardSubjectModel.createdAt,
+                updatedAt: boardSubjectModel.updatedAt,
+                boardSubjectName: {
+                  id: boardSubjectNameModel.id,
+                  name: boardSubjectNameModel.name,
+                  code: boardSubjectNameModel.code,
+                  isActive: boardSubjectNameModel.isActive,
+                },
+              })
+              .from(boardSubjectModel)
+              .leftJoin(
+                boardSubjectNameModel,
+                eq(
+                  boardSubjectModel.boardSubjectNameId,
+                  boardSubjectNameModel.id,
+                ),
+              )
+              .where(eq(boardSubjectModel.id, bid));
+            return bs
+              ? ([bs] as unknown as BoardSubjectDto[])
+              : ([] as BoardSubjectDto[]);
+          })(),
+        } as any,
+        relatedSubjectSubs: await Promise.all(
+          subs.map(async (sub) => ({
+            id: sub.id,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+            boardSubjectUnivSubjectMapping: {
+              id: sub.mapping!.id,
+              createdAt: sub.mapping!.createdAt as Date,
+              updatedAt: sub.mapping!.updatedAt as Date,
+              subject: (
+                await db
+                  .select()
+                  .from(subjectModel)
+                  .where(eq(subjectModel.id, sub.mapping!.subjectId as number))
+              )[0] as any,
+              boardSubjects: await (async () => {
+                const bid = sub.mapping!.boardSubjectId as number | null;
+                if (!bid) return [] as BoardSubjectDto[];
+                const [bs] = await db
+                  .select({
+                    id: boardSubjectModel.id,
+                    boardId: boardSubjectModel.boardId,
+                    legacyBoardSubjectMappingSubId:
+                      boardSubjectModel.legacyBoardSubjectMappingSubId,
+                    fullMarksTheory: boardSubjectModel.fullMarksTheory,
+                    passingMarksTheory: boardSubjectModel.passingMarksTheory,
+                    fullMarksPractical: boardSubjectModel.fullMarksPractical,
+                    passingMarksPractical:
+                      boardSubjectModel.passingMarksPractical,
+                    isActive: boardSubjectModel.isActive,
+                    createdAt: boardSubjectModel.createdAt,
+                    updatedAt: boardSubjectModel.updatedAt,
+                    boardSubjectName: {
+                      id: boardSubjectNameModel.id,
+                      name: boardSubjectNameModel.name,
+                      code: boardSubjectNameModel.code,
+                      isActive: boardSubjectNameModel.isActive,
+                    },
+                  })
+                  .from(boardSubjectModel)
+                  .leftJoin(
+                    boardSubjectNameModel,
+                    eq(
+                      boardSubjectModel.boardSubjectNameId,
+                      boardSubjectNameModel.id,
+                    ),
+                  )
+                  .where(eq(boardSubjectModel.id, bid));
+                return bs
+                  ? ([bs] as unknown as BoardSubjectDto[])
+                  : ([] as BoardSubjectDto[]);
+              })(),
+            } as any,
+          })),
+        ),
       };
     }),
   );
@@ -464,7 +696,8 @@ export async function getRelatedSubjectMainById(
       id: relatedSubjectMainModel.id,
       programCourseId: relatedSubjectMainModel.programCourseId,
       subjectTypeId: relatedSubjectMainModel.subjectTypeId,
-      boardSubjectNameId: relatedSubjectMainModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
       isActive: relatedSubjectMainModel.isActive,
       createdAt: relatedSubjectMainModel.createdAt,
       updatedAt: relatedSubjectMainModel.updatedAt,
@@ -480,10 +713,12 @@ export async function getRelatedSubjectMainById(
         code: subjectTypeModel.code,
         isActive: subjectTypeModel.isActive,
       },
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
+      mapping: {
+        id: boardSubjectUnivSubjectMappingModel.id,
+        subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+        boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+        createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+        updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
       },
     })
     .from(relatedSubjectMainModel)
@@ -496,31 +731,44 @@ export async function getRelatedSubjectMainById(
       eq(relatedSubjectMainModel.subjectTypeId, subjectTypeModel.id),
     )
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectMainModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectMainModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     )
     .where(eq(relatedSubjectMainModel.id, id));
 
   if (!result) return null;
+  // If this main does not have a boardSubjectUnivSubjectMapping associated, skip (avoid null access)
+  if (!result.mapping || !result.mapping.id || !result.mapping.subjectId) {
+    return null;
+  }
 
   // Get related subject subs
   const subs = await db
     .select({
       id: relatedSubjectSubModel.id,
       relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
-      boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
+      boardSubjectUnivSubjectMappingId:
+        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
       createdAt: relatedSubjectSubModel.createdAt,
       updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
+      mapping: {
+        id: boardSubjectUnivSubjectMappingModel.id,
+        subjectId: boardSubjectUnivSubjectMappingModel.subjectId,
+        boardSubjectId: boardSubjectUnivSubjectMappingModel.boardSubjectId,
+        createdAt: boardSubjectUnivSubjectMappingModel.createdAt,
+        updatedAt: boardSubjectUnivSubjectMappingModel.updatedAt,
       },
     })
     .from(relatedSubjectSubModel)
     .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
+      boardSubjectUnivSubjectMappingModel,
+      eq(
+        relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
+        boardSubjectUnivSubjectMappingModel.id,
+      ),
     )
     .where(eq(relatedSubjectSubModel.relatedSubjectMainId, result.id));
 
@@ -539,13 +787,104 @@ export async function getRelatedSubjectMainById(
       regulationType: null,
     } as any,
     subjectType: result.subjectType!,
-    boardSubjectName: result.boardSubjectName!,
-    relatedSubjectSubs: subs.map((sub) => ({
-      id: sub.id,
-      createdAt: sub.createdAt,
-      updatedAt: sub.updatedAt,
-      boardSubjectName: sub.boardSubjectName!,
-    })),
+    boardSubjectUnivSubjectMapping: {
+      id: result.mapping.id,
+      createdAt: result.mapping.createdAt as Date,
+      updatedAt: result.mapping.updatedAt as Date,
+      subject: (
+        await db
+          .select()
+          .from(subjectModel)
+          .where(eq(subjectModel.id, result.mapping.subjectId as number))
+      )[0] as any,
+      boardSubjects: await (async () => {
+        const bid = (result as any).mapping?.boardSubjectId as number | null;
+        if (!bid) return [] as BoardSubjectDto[];
+        const [bs] = await db
+          .select({
+            id: boardSubjectModel.id,
+            boardId: boardSubjectModel.boardId,
+            legacyBoardSubjectMappingSubId:
+              boardSubjectModel.legacyBoardSubjectMappingSubId,
+            fullMarksTheory: boardSubjectModel.fullMarksTheory,
+            passingMarksTheory: boardSubjectModel.passingMarksTheory,
+            fullMarksPractical: boardSubjectModel.fullMarksPractical,
+            passingMarksPractical: boardSubjectModel.passingMarksPractical,
+            isActive: boardSubjectModel.isActive,
+            createdAt: boardSubjectModel.createdAt,
+            updatedAt: boardSubjectModel.updatedAt,
+            boardSubjectName: {
+              id: boardSubjectNameModel.id,
+              name: boardSubjectNameModel.name,
+              code: boardSubjectNameModel.code,
+              isActive: boardSubjectNameModel.isActive,
+            },
+          })
+          .from(boardSubjectModel)
+          .leftJoin(
+            boardSubjectNameModel,
+            eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
+          )
+          .where(eq(boardSubjectModel.id, bid));
+        return bs
+          ? ([bs] as unknown as BoardSubjectDto[])
+          : ([] as BoardSubjectDto[]);
+      })(),
+    } as any,
+    relatedSubjectSubs: await Promise.all(
+      subs.map(async (sub) => ({
+        id: sub.id,
+        createdAt: sub.createdAt,
+        updatedAt: sub.updatedAt,
+        boardSubjectUnivSubjectMapping: {
+          id: sub.mapping!.id,
+          createdAt: sub.mapping!.createdAt as Date,
+          updatedAt: sub.mapping!.updatedAt as Date,
+          subject: (
+            await db
+              .select()
+              .from(subjectModel)
+              .where(eq(subjectModel.id, sub.mapping!.subjectId as number))
+          )[0] as any,
+          boardSubjects: await (async () => {
+            const bid = sub.mapping!.boardSubjectId as number | null;
+            if (!bid) return [] as BoardSubjectDto[];
+            const [bs] = await db
+              .select({
+                id: boardSubjectModel.id,
+                boardId: boardSubjectModel.boardId,
+                legacyBoardSubjectMappingSubId:
+                  boardSubjectModel.legacyBoardSubjectMappingSubId,
+                fullMarksTheory: boardSubjectModel.fullMarksTheory,
+                passingMarksTheory: boardSubjectModel.passingMarksTheory,
+                fullMarksPractical: boardSubjectModel.fullMarksPractical,
+                passingMarksPractical: boardSubjectModel.passingMarksPractical,
+                isActive: boardSubjectModel.isActive,
+                createdAt: boardSubjectModel.createdAt,
+                updatedAt: boardSubjectModel.updatedAt,
+                boardSubjectName: {
+                  id: boardSubjectNameModel.id,
+                  name: boardSubjectNameModel.name,
+                  code: boardSubjectNameModel.code,
+                  isActive: boardSubjectNameModel.isActive,
+                },
+              })
+              .from(boardSubjectModel)
+              .leftJoin(
+                boardSubjectNameModel,
+                eq(
+                  boardSubjectModel.boardSubjectNameId,
+                  boardSubjectNameModel.id,
+                ),
+              )
+              .where(eq(boardSubjectModel.id, bid));
+            return bs
+              ? ([bs] as unknown as BoardSubjectDto[])
+              : ([] as BoardSubjectDto[]);
+          })(),
+        } as any,
+      })),
+    ),
   };
 }
 
@@ -578,17 +917,20 @@ export async function updateRelatedSubjectMainFromDto(
   console.log("[updateRelatedSubjectMainFromDto] id=", id, {
     pcId: input.programCourse?.id,
     stId: input.subjectType?.id,
-    bsnId: input.boardSubjectName?.id,
+    mappingId: input.boardSubjectUnivSubjectMapping?.id,
     subs: Array.isArray(input.relatedSubjectSubs)
-      ? input.relatedSubjectSubs.map((s) => s.boardSubjectName?.id)
+      ? input.relatedSubjectSubs.map(
+          (s) => s.boardSubjectUnivSubjectMapping?.id,
+        )
       : null,
   });
   // 1) Update main fields if provided
   const partial: Partial<RelatedSubjectMain> = {};
   if (input.programCourse?.id) partial.programCourseId = input.programCourse.id;
   if (input.subjectType?.id) partial.subjectTypeId = input.subjectType.id;
-  if (input.boardSubjectName?.id)
-    partial.boardSubjectNameId = input.boardSubjectName.id;
+  if (input.boardSubjectUnivSubjectMapping?.id)
+    (partial as any).boardSubjectUnivSubjectMappingId = input
+      .boardSubjectUnivSubjectMapping.id as number;
   if (typeof input.isActive === "boolean") partial.isActive = input.isActive;
   if (Object.keys(partial).length > 0) {
     await updateRelatedSubjectMain(id, partial);
@@ -600,33 +942,37 @@ export async function updateRelatedSubjectMainFromDto(
     const currentSubs = await db
       .select({
         id: relatedSubjectSubModel.id,
-        boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
+        boardSubjectUnivSubjectMappingId:
+          relatedSubjectSubModel.boardSubjectUnivSubjectMappingId,
       })
       .from(relatedSubjectSubModel)
       .where(eq(relatedSubjectSubModel.relatedSubjectMainId, id));
 
-    const currentIds = new Set(currentSubs.map((s) => s.boardSubjectNameId));
+    const currentIds = new Set(
+      currentSubs.map((s) => s.boardSubjectUnivSubjectMappingId),
+    );
     const desiredIds = new Set(
       input.relatedSubjectSubs
-        .map((s) => s.boardSubjectName?.id)
+        .map((s) => s.boardSubjectUnivSubjectMapping?.id)
         .filter((v): v is number => !!v),
     );
 
     // Add any desired that are missing (skip when equals target id)
     const targetId: number | undefined =
-      input.boardSubjectName?.id ?? undefined;
+      input.boardSubjectUnivSubjectMapping?.id ?? undefined;
     for (const desiredId of desiredIds) {
       if (desiredId === targetId) continue;
       if (!currentIds.has(desiredId)) {
-        await db
-          .insert(relatedSubjectSubModel)
-          .values({ relatedSubjectMainId: id, boardSubjectNameId: desiredId });
+        await db.insert(relatedSubjectSubModel).values({
+          relatedSubjectMainId: id,
+          boardSubjectUnivSubjectMappingId: desiredId,
+        });
       }
     }
 
     // Delete any current that are no longer desired
     for (const s of currentSubs) {
-      const sBsnId = s.boardSubjectNameId;
+      const sBsnId = s.boardSubjectUnivSubjectMappingId as number;
       if (
         typeof s.id === "number" &&
         typeof sBsnId === "number" &&
@@ -677,7 +1023,7 @@ export async function bulkUploadRelatedSubjectMains(
       const relatedSubjectMainData: RelatedSubjectMain = {
         programCourseId: row.programCourseId,
         subjectTypeId: row.subjectTypeId,
-        boardSubjectNameId: row.boardSubjectNameId,
+        boardSubjectUnivSubjectMappingId: row.boardSubjectUnivSubjectMappingId,
         isActive: row.isActive !== undefined ? row.isActive : true,
       };
 

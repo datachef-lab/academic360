@@ -17,3 +17,5 @@ export * from "./sports-category.model";
 export * from "./sports-info.model";
 export * from "./student-academic-subject.model";
 export * from "./board-subject-name.model";
+
+export * from "./board-subject-univ-subject-mapping.model";
