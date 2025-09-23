@@ -4,7 +4,7 @@ import {
   RelatedSubjectMain,
   RelatedSubjectMainT,
 } from "@repo/db/schemas/models/subject-selection/related-subject-main.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, or, countDistinct, eq, ilike, ne, desc } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import {
   RelatedSubjectMainDto,
@@ -314,7 +314,14 @@ export async function getRelatedSubjectMainsPaginated(options: {
   const filters: any[] = [];
   const q = (options.search || "").trim();
   if (q) {
-    // optional: implement subject name search by joining subjects
+    filters.push(
+      or(
+        ilike(programCourseModel.name, `%${q}%`),
+        ilike(subjectTypeModel.code, `%${q}%`),
+        ilike(subjectTypeModel.name, `%${q}%`),
+        ilike(boardSubjectNameModel.name, `%${q}%`),
+      ),
+    );
   }
   if (options.programCourse) {
     filters.push(ilike(programCourseModel.name, `%${options.programCourse}%`));
@@ -325,6 +332,10 @@ export async function getRelatedSubjectMainsPaginated(options: {
 
   const rows = await base
     .where(filters.length ? and(...filters) : (undefined as any))
+    .orderBy(
+      desc(relatedSubjectMainModel.createdAt),
+      desc(relatedSubjectMainModel.id as any),
+    )
     .limit(pageSize)
     .offset(offset);
 
