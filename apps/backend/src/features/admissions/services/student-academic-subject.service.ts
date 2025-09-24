@@ -16,7 +16,7 @@ import {
   StudentAcademicSubjects,
 } from "@repo/db/schemas/models/admissions";
 import { boardModel } from "@repo/db/schemas";
-import { and, eq } from "drizzle-orm";
+import { and, eq, asc } from "drizzle-orm";
 import * as relatedSubjectService from "../../subject-selection/services/related-subject-main.service";
 
 type StudentAcademicSubjectInsert =
@@ -85,11 +85,14 @@ export async function findSubjectsByAcademicInfoId(
         studentAcademicSubjectModel.admissionAcademicInfoId,
         admissionAcademicInfoId,
       ),
-    );
+    )
+    .orderBy(asc(studentAcademicSubjectModel.id));
 
-  return await Promise.all(
+  const mapped = await Promise.all(
     subjects.map((subject) => mapStudentAcademicSubjectToDto(subject)),
   );
+  // Return in DB id order (student-academic-subject id) exactly as stored
+  return mapped;
 }
 
 async function mapStudentAcademicSubjectToDto(
@@ -148,15 +151,20 @@ async function mapStudentAcademicSubjectToDto(
 }
 
 // UPDATE
-export async function updateSubject(
-  subject: Omit<StudentAcademicSubjectInsert, "createdAt" | "updatedAt">,
-) {
-  if (!subject.id) throw new Error("Subject ID is required for update.");
+type UpdateSubjectInput = Omit<
+  StudentAcademicSubjectInsert,
+  "createdAt" | "updatedAt"
+> & { id: number };
 
+export async function updateSubject(subject: UpdateSubjectInput) {
+  if (!subject.id) throw new Error("Subject ID is required for update.");
+  console.log("subject", subject);
+  // Allow boardSubjectId change by updating with partial fields
+  const { id, ...rest } = subject;
   const [updated] = await db
     .update(studentAcademicSubjectModel)
-    .set(subject)
-    .where(eq(studentAcademicSubjectModel.id, subject.id))
+    .set(rest)
+    .where(eq(studentAcademicSubjectModel.id, id))
     .returning();
 
   return updated;

@@ -254,23 +254,20 @@ export async function findSubjectsSelections(studentId: number) {
         // No condition found
         // console.log("// No condition found", s.boardSubject.boardSubjectName.name, subject?.name);
         const detailed = await paperService.modelToDetailedDto(paper);
-        const studentSubject = studentSubjects.find((s) =>
-          isSubjectMatch(
-            s.boardSubject.boardSubjectName.name,
-            subject?.name || "",
-          ),
-        );
-        console.log("studentSubject:", studentSubject);
+        // Use fuzzy name matching instead of strict equality
+        const studentSubject = detailed
+          ? studentSubjects.find((el) =>
+              isSubjectMatch(
+                el?.boardSubject?.boardSubjectName?.name ?? "",
+                detailed?.subject?.name ?? "",
+              ),
+            )
+          : undefined;
         if (studentSubject) {
           if (studentSubject.resultStatus === "PASS") {
             if (detailed) paperOptions.push(detailed);
-          } else {
-            paperOptions = paperOptions.filter(
-              (p) => p.subject.id !== paper.subjectId,
-            );
           }
         } else {
-          // console.log("// No student subject found", subject?.name);
           if (detailed) paperOptions.push(detailed);
         }
       }

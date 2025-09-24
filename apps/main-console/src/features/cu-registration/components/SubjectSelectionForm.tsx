@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import { fetchStudentSubjectSelections, PaperDto } from "@/services/subject-selection";
@@ -40,6 +40,15 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
   const [availableIdcSem3Subjects, setAvailableIdcSem3Subjects] = useState<string[]>([]);
   const [availableAecSubjects, setAvailableAecSubjects] = useState<string[]>([]);
   const [availableCvacOptions, setAvailableCvacOptions] = useState<string[]>([]);
+
+  // Auto-assign subjects per category/semester (from API flag)
+  const [autoMinor1, setAutoMinor1] = useState<string>("");
+
+  // Helper: safely check autoAssign flag without using 'any'
+  const isAutoAssigned = (p: unknown): boolean => {
+    const obj = p as { autoAssign?: boolean } | null | undefined;
+    return Boolean(obj && obj.autoAssign === true);
+  };
 
   // Restricted grouping caches for quick checks
   // Map by subject name → rule and the category (subject type code) it belongs to
@@ -135,6 +144,16 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
         setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
         setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
 
+        // Capture first auto-assign subject for Minors (if any)
+        const firstOrEmpty = (arr: string[]) => (arr.length > 0 ? arr[0] : "");
+        const autoMinor1List = dedupe(
+          (minorGroup?.paperOptions || [])
+            .filter((p) => isAutoAssigned(p) && (isSem(p, "I") || isSem(p, "II")))
+            .map(getLabel),
+        );
+        // No separate auto-assign for Minor II; enforce single mandatory subject presence
+        setAutoMinor1(firstOrEmpty(autoMinor1List) || "");
+
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = studentData.currentPromotion?.programCourse?.id;
         const rgs = await fetchRestrictedGroupings({
@@ -162,7 +181,21 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
               .filter(Boolean),
           );
           const code = norm(rg.subjectType?.code || rg.subjectType?.name || "");
-          rgMap[norm(target)] = { semesters, cannotCombineWith: cannot, categoryCode: code };
+          const targetKey = norm(target);
+          // Merge multiple RGs per target/category and enforce symmetry
+          if (!rgMap[targetKey]) {
+            rgMap[targetKey] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+          }
+          for (const c of cannot) rgMap[targetKey].cannotCombineWith.add(c);
+
+          for (const c of cannot) {
+            if (!c) continue;
+            if (!rgMap[c]) {
+              rgMap[c] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+            }
+            rgMap[c].cannotCombineWith.add(targetKey);
+          }
+
           const targetId = (rg.subject as { id?: number })?.id;
           const cannotIds = new Set<number>(
             (rg.cannotCombineWithSubjects || [])
@@ -293,6 +326,11 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
       newErrors.push("IDC 2 and IDC 3 cannot be the same");
     }
 
+    // Auto-assigned subject must be present in one of the minors
+    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
+      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+    }
+
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -307,6 +345,17 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     if (!hasUserInteracted) {
       setHasUserInteracted(true);
     }
+
+    // Move auto-assigned subject (e.g., Mathematics) to the other Minor when it is replaced
+    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2")) {
+      if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
+        if (minor2 !== autoMinor1) setMinor2(autoMinor1);
+      }
+      if (fieldType === "minor2" && minor2 === autoMinor1 && value !== autoMinor1) {
+        if (minor1 !== autoMinor1) setMinor1(autoMinor1);
+      }
+    }
+
     setter(value);
 
     // Clear only the specific error for this field when user selects it
@@ -345,62 +394,111 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
 
   // Filter out Minor subjects from IDC options (per list)
   const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
-    return sourceList.filter(
-      (subject) =>
-        subject !== minor1 &&
-        subject !== minor2 &&
-        (subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3)),
-    );
-  };
-
-  const getFilteredByCategory = (
-    sourceList: string[],
-    currentValue: string,
-    categoryCode: string,
-    contextSemester?: string | string[],
-  ) => {
-    const norm = (s: string) =>
-      String(s || "")
-        .trim()
-        .toUpperCase();
-    const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
     return sourceList.filter((subject) => {
-      if (!applyRules) {
-        // No RG defined for this category; allow default dedupe logic by caller
-        return true;
-      }
-
-      // Base ensure uniqueness against current selections of same category handled by caller
-      // RG checks only when defined for this category
-      // IMPORTANT: exclude the current field's own value so user can swap
-      const selected = [minor1, minor2, idc1, idc2, idc3].filter(Boolean).filter((s) => s !== currentValue);
-      const inContext = (rgSemesters: string[]) => {
-        if (!contextSemester) return true;
-        const set = Array.isArray(contextSemester)
-          ? new Set(contextSemester.map((s) => norm(s)))
-          : new Set([norm(contextSemester)]);
-        return rgSemesters.length === 0 || rgSemesters.some((r) => set.has(norm(r)));
-      };
-      for (const sel of selected) {
-        const rg = restrictedBySubject[norm(sel)];
-        if (!rg) continue;
-        if (rg.categoryCode !== norm(categoryCode)) continue; // rule applies only to its category
-        if (!inContext(rg.semesters)) continue;
-        if (rg.cannotCombineWith.has(norm(subject))) return false;
-      }
-
-      const candidateRg = restrictedBySubject[norm(subject)];
-      if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
-        if (!inContext(candidateRg.semesters)) return true;
-        for (const sel of selected) {
-          const selRg = restrictedBySubject[norm(sel)];
-          if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
-          if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
-        }
-      }
-      return true;
+      const uniqueWithinIdc = subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
+      const notSameAsMinor = subject !== minor1 && subject !== minor2;
+      return uniqueWithinIdc && notSameAsMinor;
     });
   };
+
+  const getFilteredByCategory = useCallback(
+    (sourceList: string[], currentValue: string, categoryCode: string, contextSemester?: string | string[]) => {
+      const norm = (s: string) =>
+        String(s || "")
+          .trim()
+          .toUpperCase();
+      const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
+      return sourceList.filter((subject) => {
+        // Base ensure uniqueness against current selections of same category handled by caller
+        // RG checks only when defined for this category
+        // IMPORTANT: exclude the current field's own value so user can swap
+        // Only consider selections from the SAME category as the dropdown being filtered
+        const sameCategorySelected =
+          norm(categoryCode) === "MN"
+            ? [minor1, minor2]
+            : norm(categoryCode) === "IDC"
+              ? [idc1, idc2, idc3]
+              : norm(categoryCode) === "AEC"
+                ? [aec3]
+                : norm(categoryCode) === "CVAC"
+                  ? [cvac4]
+                  : [];
+        const selected = sameCategorySelected.filter(Boolean).filter((s) => s !== currentValue);
+
+        // Enforce uniqueness within same category: hide already-picked peer subject
+        if (selected.map(norm).includes(norm(subject))) return false;
+
+        if (!applyRules) {
+          // No RG defined for this category; allow default dedupe logic by caller
+          return true;
+        }
+        const inContext = (rgSemesters: string[]) => {
+          if (!contextSemester) return true;
+          const set = Array.isArray(contextSemester)
+            ? new Set(contextSemester.map((s) => norm(s)))
+            : new Set([norm(contextSemester)]);
+          return rgSemesters.length === 0 || rgSemesters.some((r) => set.has(norm(r)));
+        };
+        for (const sel of selected) {
+          const rg = restrictedBySubject[norm(sel)];
+          if (!rg) continue;
+          if (rg.categoryCode !== norm(categoryCode)) continue; // rule applies only to its category
+          if (!inContext(rg.semesters)) continue;
+          if (rg.cannotCombineWith.has(norm(subject))) return false;
+        }
+
+        const candidateRg = restrictedBySubject[norm(subject)];
+        if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
+          if (!inContext(candidateRg.semesters)) return true;
+          for (const sel of selected) {
+            const selRg = restrictedBySubject[norm(sel)];
+            if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
+            if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
+          }
+        }
+        return true;
+      });
+    },
+    [restrictedCategories, restrictedBySubject, minor1, minor2, idc1, idc2, idc3, aec3, cvac4],
+  );
+
+  // Auto-assign the other Minor with the mandatory auto-assigned subject when one is selected
+  useEffect(() => {
+    if (minor1 && !minor2 && autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      if (options.includes(autoMinor1) && autoMinor1 !== minor1) {
+        setMinor2(autoMinor1);
+      }
+    }
+  }, [minor1, minor2, autoMinor1, admissionMinor2Subjects, getFilteredByCategory]);
+
+  useEffect(() => {
+    if (minor2 && !minor1 && autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
+      if (options.includes(autoMinor1) && autoMinor1 !== minor2) {
+        setMinor1(autoMinor1);
+      }
+    }
+  }, [minor2, minor1, autoMinor1, admissionMinor1Subjects, getFilteredByCategory]);
+
+  // Enforce that auto-assigned subject is always present by moving it to the other Minor when replaced
+  useEffect(() => {
+    if (autoMinor1 && minor1 && minor1 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      if (options.includes(autoMinor1)) {
+        setMinor2(autoMinor1);
+      }
+    }
+  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects, getFilteredByCategory]);
+
+  useEffect(() => {
+    if (autoMinor1 && minor2 && minor2 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
+      if (options.includes(autoMinor1)) {
+        setMinor1(autoMinor1);
+      }
+    }
+  }, [minor2, autoMinor1, minor1, admissionMinor1Subjects, getFilteredByCategory]);
 
   // Loading skeleton component for dropdowns
   const LoadingDropdown = ({ label }: { label: string }) => (
@@ -419,6 +517,11 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
       .filter((subject) => !excludeValues.includes(subject))
       .map((subject) => ({ value: subject, label: subject }));
     return [{ value: "", label: selectLabel }, ...options];
+  };
+
+  // Build a global exclusion list so the same subject cannot be selected in any other category
+  const getGlobalExcludes = (currentValue: string) => {
+    return [minor1, minor2, idc1, idc2, idc3, aec3, cvac4].filter(Boolean).filter((s) => s !== currentValue);
   };
 
   // Helper function to check if there are actual subject options (excluding placeholder)
@@ -520,7 +623,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         <Combobox
                           dataArr={convertToComboboxData(
                             getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
-                            [minor2],
+                            getGlobalExcludes(minor1),
                           )}
                           value={minor1}
                           onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
@@ -538,7 +641,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         <Combobox
                           dataArr={convertToComboboxData(
                             getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                            [minor1],
+                            getGlobalExcludes(minor2),
                           )}
                           value={minor2}
                           onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
@@ -557,7 +660,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
                   <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableAecSubjects)}
+                    dataArr={convertToComboboxData(availableAecSubjects, getGlobalExcludes(aec3))}
                     value={aec3}
                     onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
                     placeholder="Select AEC 3"
@@ -587,6 +690,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                               "IDC",
                               "I",
                             ),
+                            getGlobalExcludes(idc1),
                           )}
                           value={idc1}
                           onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
@@ -607,6 +711,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                               "IDC",
                               "II",
                             ),
+                            getGlobalExcludes(idc2),
                           )}
                           value={idc2}
                           onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
@@ -627,6 +732,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                               "IDC",
                               "III",
                             ),
+                            getGlobalExcludes(idc3),
                           )}
                           value={idc3}
                           onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
@@ -646,7 +752,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableCvacOptions)}
+                    dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
                     value={cvac4}
                     onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
                     placeholder="Select CVAC 4"

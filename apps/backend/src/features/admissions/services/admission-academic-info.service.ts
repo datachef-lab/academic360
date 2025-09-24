@@ -2,7 +2,10 @@ import { db } from "@/db/index.js";
 import {
   admissionAcademicInfoModel,
   AdmissionAcademicInfo,
+  studentAcademicSubjectModel,
+  boardSubjectModel,
 } from "@repo/db/schemas/models/admissions";
+import { boardModel } from "@repo/db/schemas";
 import { AdmissionAcademicInfoDto } from "@repo/db/dtos/admissions";
 type AcademicInfoInsert = typeof admissionAcademicInfoModel.$inferInsert;
 import { and, eq, ilike } from "drizzle-orm";
@@ -14,6 +17,10 @@ import {
   findSubjectsByAcademicInfoId,
   updateSubject,
 } from "./student-academic-subject.service.js";
+import {
+  addAddress,
+  saveAddress,
+} from "../../user/services/address.service.js";
 
 // CREATE
 export async function createAcademicInfo(givenDto: AdmissionAcademicInfoDto) {
@@ -145,9 +152,30 @@ export async function updateAcademicInfo(
   if (bId != null) base.boardId = bId;
   if (typeof (rest as any).lastSchoolName === "string")
     base.lastSchoolName = (rest as any).lastSchoolName;
+  // New: allow updating optional textual fields
+  if (typeof (rest as any).otherBoard === "string")
+    base.otherBoard = (rest as any).otherBoard;
+  if (typeof (rest as any).division === "string")
+    base.division = (rest as any).division;
+  const rankVal = toNum((rest as any).rank);
+  if (rankVal != null) base.rank = rankVal;
+  if (typeof (rest as any).subjectStudied === "string")
+    base.subjectStudied = (rest as any).subjectStudied;
+  if (typeof (rest as any).indexNumber1 === "string")
+    base.indexNumber1 = (rest as any).indexNumber1;
+  if (typeof (rest as any).indexNumber2 === "string")
+    base.indexNumber2 = (rest as any).indexNumber2;
+  const studiedUpTo = toNum((rest as any).studiedUpToClass);
+  if (studiedUpTo != null) base.studiedUpToClass = studiedUpTo;
+  const bestOfFour = toNum((rest as any).bestOfFour);
+  if (bestOfFour != null) base.bestOfFour = bestOfFour;
+  const oldBestOfFour = toNum((rest as any).oldBestOfFour);
+  if (oldBestOfFour != null) base.oldBestOfFour = oldBestOfFour;
   if (typeof rest.rollNumber === "string") base.rollNumber = rest.rollNumber;
   if (typeof rest.schoolNumber === "string")
     base.schoolNumber = rest.schoolNumber;
+  if (typeof (rest as any).registrationNumber === "string")
+    base.registrationNumber = (rest as any).registrationNumber;
   if (typeof rest.centerNumber === "string")
     base.centerNumber = rest.centerNumber;
   if (typeof rest.admitCardId === "string") base.admitCardId = rest.admitCardId;
@@ -205,6 +233,51 @@ export async function updateAcademicInfo(
     base.previouslyRegisteredProgramCourseId = (existingRow as any)
       .previouslyRegisteredProgramCourseId as unknown as number;
 
+  // Handle lastSchoolAddress creation/update
+  if (rest.lastSchoolAddress) {
+    const addressData = rest.lastSchoolAddress as any;
+    let addressId: number | null = null;
+
+    if (existingRow.lastSchoolAddress) {
+      // Update existing address
+      const updatedAddress = await saveAddress(existingRow.lastSchoolAddress, {
+        id: existingRow.lastSchoolAddress,
+        countryId: addressData.country?.id || null,
+        stateId: addressData.state?.id || null,
+        cityId: addressData.city?.id || null,
+        districtId: addressData.district?.id || null,
+        addressLine: addressData.addressLine || null,
+        landmark: addressData.landmark || null,
+        localityType: addressData.localityType || null,
+        pincode: addressData.pincode || null,
+        phone: addressData.phone || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      addressId = updatedAddress?.id || null;
+    } else {
+      // Create new address
+      const newAddress = await addAddress({
+        countryId: addressData.country?.id || null,
+        stateId: addressData.state?.id || null,
+        cityId: addressData.city?.id || null,
+        districtId: addressData.district?.id || null,
+        addressLine: addressData.addressLine || null,
+        landmark: addressData.landmark || null,
+        localityType: addressData.localityType || null,
+        pincode: addressData.pincode || null,
+        phone: addressData.phone || null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      addressId = newAddress?.id || null;
+    }
+
+    if (addressId) {
+      base.lastSchoolAddress = addressId;
+    }
+  }
+
   let updatedAcademicInfo;
   try {
     [updatedAcademicInfo] = await db
@@ -234,14 +307,58 @@ export async function updateAcademicInfo(
         subject.academicSubjectId ??
         0,
     );
+    if (
+      !Number.isFinite(resolvedBoardSubjectId) ||
+      resolvedBoardSubjectId <= 0
+    ) {
+      // Skip invalid subject rows
+      continue;
+    }
+
+    const theory = Number(subject.theoryMarks ?? 0);
+    const practical = Number(subject.practicalMarks ?? 0);
+    const total = Number.isFinite(Number(subject.totalMarks))
+      ? Number(subject.totalMarks)
+      : theory + practical;
+
+    // Determine result status. If not provided, auto-calc from board subject's passing marks (if available)
+    let rs: "PASS" | "FAIL" | "ABSENT" | "COMPARTMENTAL" | undefined;
+    const rsRaw =
+      typeof subject.resultStatus === "string"
+        ? subject.resultStatus.trim().toUpperCase()
+        : undefined;
+    const allowedResults = new Set(["PASS", "FAIL", "ABSENT", "COMPARTMENTAL"]);
+    if (rsRaw && allowedResults.has(rsRaw)) {
+      rs = rsRaw as any;
+    } else {
+      // Auto evaluate: fetch board subject's passing marks and compare with total
+      const [bs] = await db
+        .select()
+        .from(boardSubjectModel)
+        .where(eq(boardSubjectModel.id, resolvedBoardSubjectId));
+      // Use total passing marks as sum of theory and practical pass marks (if provided)
+      const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory));
+      const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical));
+      if (hasTheoryRule || hasPracRule) {
+        const theoryPass = Number(bs?.passingMarksTheory ?? 0);
+        const pracPass = Number(bs?.passingMarksPractical ?? 0);
+        const pass =
+          hasTheoryRule && hasPracRule
+            ? theory >= theoryPass && practical >= pracPass
+            : total >= theoryPass + pracPass;
+        rs = pass ? "PASS" : "FAIL";
+      }
+    }
+
     const base = {
       admissionAcademicInfoId: Number(updatedAcademicInfo.id!),
       boardSubjectId: resolvedBoardSubjectId,
-      theoryMarks: Number(subject.theoryMarks ?? 0),
-      practicalMarks: Number(subject.practicalMarks ?? 0),
-      totalMarks: Number(subject.totalMarks ?? 0),
-      resultStatus: subject.resultStatus ?? undefined,
+      theoryMarks: Number.isFinite(theory) ? theory : 0,
+      practicalMarks: Number.isFinite(practical) ? practical : 0,
+      totalMarks: Number.isFinite(total) ? total : 0,
+      resultStatus: rs,
     } as any;
+
     if (subject.id) {
       await updateSubject({ id: Number(subject.id), ...base });
     } else {

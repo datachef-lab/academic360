@@ -1,4 +1,4 @@
-import { User, Home, Bus, Heart, Phone, IdCard, Users, FilePenIcon, BookOpen } from "lucide-react";
+import { User, Home, Heart, Phone, IdCard, Users, FilePenIcon, BookOpen } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "react-router-dom";
 import { getStudentById, fetchStudentByUid } from "@/services/student";
@@ -19,7 +19,6 @@ const studentTabs = [
   //   { label: "History", icon: <Book size={16} />, endpoint: "/academic-history" },
   //   { label: "Identifiers", icon: <GraduationCap size={16} />, endpoint: "/academic-identifier" },
   { label: "Accommodation", icon: <Home size={16} />, endpoint: "/accommodation" },
-  { label: "Transport", icon: <Bus size={16} />, endpoint: "transport-details" },
   { label: "Academic", icon: <BookOpen size={16} />, endpoint: "/academic-details" },
   { label: "Marksheet", icon: <FilePenIcon size={16} />, endpoint: "/marksheet" },
 ];

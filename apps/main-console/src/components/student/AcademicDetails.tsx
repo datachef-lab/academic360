@@ -3,7 +3,8 @@ import { Label } from "@/components/ui/label";
 import { AdmissionAcademicInfoDto, StudentAcademicSubjectsDto } from "@repo/db/dtos/admissions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { boardService } from "@/services/board.service";
 import { getAllLanguageMediums } from "@/services/language-medium.service";
 import { getAllSpecializations } from "@/services/specialization.service";
@@ -21,6 +22,8 @@ import { toast } from "@/hooks/useToast";
 
 type AcademicDetailsProps = {
   applicationAcademicInfo?: AdmissionAcademicInfoDto | null;
+  studentId?: number;
+  userId?: number;
 };
 
 type NamedRef = { id?: number; name?: string | null };
@@ -109,14 +112,27 @@ function Field({
   );
 }
 
-export default function AcademicDetails({ applicationAcademicInfo }: AcademicDetailsProps) {
+export default function AcademicDetails({ applicationAcademicInfo, studentId, userId }: AcademicDetailsProps) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<AdmissionAcademicInfoDto | null>(applicationAcademicInfo ?? null);
-  const subjects: StudentAcademicSubjectsDto[] = form?.subjects ?? [];
+  const subjects: StudentAcademicSubjectsDto[] = useMemo(() => {
+    const list = (form?.subjects ?? []) as StudentAcademicSubjectsDto[];
+    return [...list].sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0));
+  }, [form?.subjects]);
   const [boards, setBoards] = useState<Array<{ id: number; name: string }>>([]);
   const [languageMediums, setLanguageMediums] = useState<Array<{ id: number; name: string }>>([]);
   const [specializations, setSpecializations] = useState<Array<{ id: number; name: string }>>([]);
   const [programCourses, setProgramCourses] = useState<Array<{ id: number; name: string }>>([]);
-  const [boardSubjects, setBoardSubjects] = useState<Array<{ id: number; name: string }>>([]);
+  const [boardSubjects, setBoardSubjects] = useState<
+    Array<{
+      id: number;
+      name: string;
+      passingMarksTheory: number;
+      passingMarksPractical: number;
+      fullMarksTheory: number;
+      fullMarksPractical: number;
+    }>
+  >([]);
   const boardResultOptions: BoardResultStatusType[] = ["PASS", "FAIL", "COMPARTMENTAL"];
   const [institutions, setInstitutions] = useState<Array<{ id: number; name: string }>>([]);
   const [countries, setCountries] = useState<Array<{ id: number; name: string }>>([]);
@@ -206,7 +222,16 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
       try {
         if (form?.board?.id) {
           const list = await boardSubjectService.getByBoardId(form.board.id);
-          setBoardSubjects((list ?? []).map((bs) => ({ id: bs.id, name: bs.boardSubjectName?.name ?? "" })));
+          setBoardSubjects(
+            (list ?? []).map((bs) => ({
+              id: bs.id,
+              name: bs.boardSubjectName?.name ?? "",
+              passingMarksTheory: Number(bs.passingMarksTheory ?? 0),
+              passingMarksPractical: Number(bs.passingMarksPractical ?? 0),
+              fullMarksTheory: Number(bs.fullMarksTheory ?? 0),
+              fullMarksPractical: Number(bs.fullMarksPractical ?? 0),
+            })),
+          );
         } else {
           setBoardSubjects([]);
         }
@@ -303,11 +328,15 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
     setForm((prev) => (prev ? ({ ...(prev as object), [key]: value } as unknown as AdmissionAcademicInfoDto) : prev));
   };
 
-  const handleSubjectChange = (index: number, field: string, value: string | number | boolean) => {
+  const handleSubjectChangeById = (subjectId: number | undefined, field: string, value: string | number | boolean) => {
     setForm((prev) => {
       if (!prev) return prev;
       const nextSubjects = [...(prev.subjects ?? [])];
-      const current = { ...(nextSubjects[index] ?? {}) } as Record<string, unknown>;
+      const idx = nextSubjects.findIndex(
+        (s) => Number((s as unknown as { id?: number })?.id ?? 0) === Number(subjectId),
+      );
+      const targetIndex = idx >= 0 ? idx : 0;
+      const current = { ...(nextSubjects[targetIndex] ?? {}) } as Record<string, unknown>;
       if (field === "boardSubjectId") {
         const currBs =
           (current as unknown as { boardSubject?: { id?: number; name?: string | null } }).boardSubject ?? {};
@@ -315,12 +344,36 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
           ...currBs,
           id: Number(value),
         };
+        (current as unknown as { boardSubjectId?: number }).boardSubjectId = Number(value) as number;
       } else if (field === "gradeName") {
         (current as unknown as { grade: { name?: string } }).grade = { name: String(value) };
       } else {
         (current as unknown as Record<string, unknown>)[field] = value as unknown;
       }
-      nextSubjects[index] = current as unknown as StudentAcademicSubjectsDto;
+
+      // Auto-calc total and result (PASS/FAIL) based on board subject passing marks
+      const bsId = Number(
+        (current as unknown as { boardSubjectId?: number }).boardSubjectId ??
+          (current as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+          0,
+      );
+      const bs = boardSubjects.find((b) => Number(b.id) === bsId);
+      const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
+      const practical = Number((current as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+      // If the subject has practical passing marks, student must meet both components;
+      // else fall back to total >= (theory pass + practical pass)
+      const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory ?? NaN));
+      const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical ?? NaN));
+      const requiredTotal = Number(bs?.passingMarksTheory ?? 0) + Number(bs?.passingMarksPractical ?? 0);
+      (current as unknown as { totalMarks?: number }).totalMarks = theory + practical;
+      if (hasTheoryRule || hasPracRule) {
+        const pass =
+          hasTheoryRule && hasPracRule
+            ? theory >= Number(bs?.passingMarksTheory ?? 0) && practical >= Number(bs?.passingMarksPractical ?? 0)
+            : theory + practical >= requiredTotal;
+        (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
+      }
+      nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
       return { ...prev, subjects: nextSubjects } as AdmissionAcademicInfoDto;
     });
   };
@@ -438,6 +491,10 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                   (original as unknown as { otherCollege?: string }).otherCollege ??
                   null) as string | null,
                 rollNumber: (f as unknown as { rollNumber?: string }).rollNumber ?? original.rollNumber ?? null,
+                registrationNumber:
+                  (f as unknown as { registrationNumber?: string }).registrationNumber ??
+                  (original as unknown as { registrationNumber?: string }).registrationNumber ??
+                  null,
                 schoolNumber: (f as unknown as { schoolNumber?: string }).schoolNumber ?? original.schoolNumber ?? null,
                 centerNumber: (f as unknown as { centerNumber?: string }).centerNumber ?? original.centerNumber ?? null,
                 admitCardId: (f as unknown as { admitCardId?: string }).admitCardId ?? original.admitCardId ?? null,
@@ -445,10 +502,42 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                   (f as unknown as { lastSchoolName?: string }).lastSchoolName ??
                   (original as unknown as { lastSchoolName?: string }).lastSchoolName ??
                   null,
+                // New optional academics fields
+                otherBoard: ((f as unknown as { otherBoard?: string }).otherBoard ??
+                  (original as unknown as { otherBoard?: string }).otherBoard ??
+                  null) as string | null,
+                division: ((f as unknown as { division?: string }).division ??
+                  (original as unknown as { division?: string }).division ??
+                  null) as string | null,
+                rank: ((f as unknown as { rank?: number }).rank ??
+                  (original as unknown as { rank?: number }).rank ??
+                  null) as number | null,
+                subjectStudied: ((f as unknown as { subjectStudied?: string }).subjectStudied ??
+                  (original as unknown as { subjectStudied?: string }).subjectStudied ??
+                  null) as string | null,
+                indexNumber1: ((f as unknown as { indexNumber1?: string }).indexNumber1 ??
+                  (original as unknown as { indexNumber1?: string }).indexNumber1 ??
+                  null) as string | null,
+                indexNumber2: ((f as unknown as { indexNumber2?: string }).indexNumber2 ??
+                  (original as unknown as { indexNumber2?: string }).indexNumber2 ??
+                  null) as string | null,
                 specializationId:
                   (f as unknown as { specializationId?: number }).specializationId ??
                   (original as unknown as { specializationId?: number }).specializationId ??
                   null,
+                // Add missing fields
+                percentageOfMarks: ((f as unknown as { percentageOfMarks?: number }).percentageOfMarks ??
+                  original.percentageOfMarks) as number | null,
+                lastSchoolAddress: f.lastSchoolAddress ?? original.lastSchoolAddress ?? null,
+                studiedUpToClass: ((f as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
+                  (original as unknown as { studiedUpToClass?: number }).studiedUpToClass ??
+                  null) as number | null,
+                bestOfFour: ((f as unknown as { bestOfFour?: number }).bestOfFour ??
+                  (original as unknown as { bestOfFour?: number }).bestOfFour ??
+                  null) as number | null,
+                oldBestOfFour: ((f as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
+                  (original as unknown as { oldBestOfFour?: number }).oldBestOfFour ??
+                  null) as number | null,
               };
 
               if (Array.isArray((form as AdmissionAcademicInfoDto).subjects)) {
@@ -464,7 +553,13 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
               }
 
               try {
-                await updateAcademicInfo(Number(payload.id), payload as AdmissionAcademicInfoDto);
+                const res = await updateAcademicInfo(Number(payload.id), payload as AdmissionAcademicInfoDto);
+                // Update local form state with server response (prevents manual refresh)
+                const updated = (res as unknown as { payload?: AdmissionAcademicInfoDto })?.payload;
+                if (updated) setForm(updated);
+                // Revalidate relevant caches so StudentPage and other tabs reflect latest
+                queryClient.invalidateQueries({ queryKey: ["user-profile", userId || studentId] });
+                queryClient.invalidateQueries({ queryKey: ["student", String(studentId || userId || "")] });
                 toast({
                   title: "Academic details updated",
                   description: "Academic info and subjects saved successfully.",
@@ -520,11 +615,71 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
             </Select>
           </div>
           <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Other Board</Label>
+            <Input
+              value={(info as unknown as { otherBoard?: string } | null)?.otherBoard ?? ""}
+              onChange={(e) => handleInputChange("otherBoard", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Percentage Of Marks</Label>
             <Input
               value={info?.percentageOfMarks ?? ""}
               type="number"
               onChange={(e) => handleInputChange("percentageOfMarks", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Registration Number</Label>
+            <Input
+              value={(info as unknown as { registrationNumber?: string } | null)?.registrationNumber ?? ""}
+              onChange={(e) => handleInputChange("registrationNumber", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Division</Label>
+            <Input
+              value={(info as unknown as { division?: string } | null)?.division ?? ""}
+              onChange={(e) => handleInputChange("division", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Rank</Label>
+            <Input
+              value={(info as unknown as { rank?: number } | null)?.rank ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("rank", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Studied Up To Class</Label>
+            <Input
+              value={(info as unknown as { studiedUpToClass?: number } | null)?.studiedUpToClass ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("studiedUpToClass", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Best Of Four</Label>
+            <Input
+              value={(info as unknown as { bestOfFour?: number } | null)?.bestOfFour ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("bestOfFour", Number(e.target.value))}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Old Best Of Four</Label>
+            <Input
+              value={(info as unknown as { oldBestOfFour?: number } | null)?.oldBestOfFour ?? ""}
+              type="number"
+              onChange={(e) => handleInputChange("oldBestOfFour", Number(e.target.value))}
               className="h-10"
             />
           </div>
@@ -551,8 +706,8 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Last School Name</Label>
             <Input
-              value={(info as unknown as { schoolName?: string } | null)?.schoolName ?? ""}
-              onChange={(e) => handleInputChange("schoolName", e.target.value)}
+              value={(info as unknown as { lastSchoolName?: string } | null)?.lastSchoolName ?? ""}
+              onChange={(e) => handleInputChange("lastSchoolName", e.target.value)}
               className="h-10"
             />
           </div>
@@ -584,6 +739,31 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
           </div>
 
           <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Subject Studied</Label>
+            <Input
+              value={(info as unknown as { subjectStudied?: string } | null)?.subjectStudied ?? ""}
+              onChange={(e) => handleInputChange("subjectStudied", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Index Number 1</Label>
+            <Input
+              value={(info as unknown as { indexNumber1?: string } | null)?.indexNumber1 ?? ""}
+              onChange={(e) => handleInputChange("indexNumber1", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Index Number 2</Label>
+            <Input
+              value={(info as unknown as { indexNumber2?: string } | null)?.indexNumber2 ?? ""}
+              onChange={(e) => handleInputChange("indexNumber2", e.target.value)}
+              className="h-10"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Language Medium</Label>
             <Select
               value={String(info?.languageMedium?.id ?? "")}
@@ -608,11 +788,32 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
               </SelectContent>
             </Select>
           </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">Roll Number</Label>
+            <Input
+              value={(info as unknown as { rollNumber?: string } | null)?.rollNumber ?? ""}
+              onChange={(e) => handleInputChange("rollNumber", e.target.value)}
+              className="h-10"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Label className="text-xs text-gray-600">School Number</Label>
+            <Input
+              value={(info as unknown as { schoolNumber?: string } | null)?.schoolNumber ?? ""}
+              onChange={(e) => handleInputChange("schoolNumber", e.target.value)}
+              className="h-10"
+            />
+          </div>
 
           <div className="flex flex-col gap-1">
             <Label className="text-xs text-gray-600">Previously Registered Program Course</Label>
             <Select
-              value={String(info?.previouslyRegisteredProgramCourse?.id ?? "")}
+              value={String(
+                info?.previouslyRegisteredProgramCourse?.id ??
+                  (info as unknown as { previouslyRegisteredProgramCourseId?: number } | null)
+                    ?.previouslyRegisteredProgramCourseId ??
+                  "",
+              )}
               onValueChange={(val) => {
                 const selected = programCourses.find((p) => String(p.id) === val);
                 handleSelectChange("previouslyRegisteredProgramCourse", Number(val), selected?.name);
@@ -887,6 +1088,7 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                   <th className="text-left font-medium px-3 py-2">Subject</th>
                   <th className="text-left font-medium px-3 py-2">Theory</th>
                   <th className="text-left font-medium px-3 py-2">Practical</th>
+                  <th className="text-left font-medium px-3 py-2">Full</th>
                   <th className="text-left font-medium px-3 py-2">Total</th>
                   <th className="text-left font-medium px-3 py-2">Grade</th>
                   <th className="text-left font-medium px-3 py-2">Result</th>
@@ -906,7 +1108,13 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                       <td className="px-3 py-2 text-gray-800">
                         <Select
                           value={s.boardSubject?.id ? String(s.boardSubject.id) : ""}
-                          onValueChange={(val) => handleSubjectChange(idx, "boardSubjectId", Number(val))}
+                          onValueChange={(val) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "boardSubjectId",
+                              Number(val),
+                            )
+                          }
                         >
                           <SelectTrigger className="h-8 text-sm">
                             <SelectValue placeholder={s.boardSubject?.boardSubjectName?.name ?? "Select subject"} />
@@ -927,7 +1135,13 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                           min={0}
                           max={100}
                           className="h-8"
-                          onChange={(e) => handleSubjectChange(idx, "theoryMarks", Number(e.target.value))}
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "theoryMarks",
+                              Number(e.target.value),
+                            )
+                          }
                         />
                       </td>
                       <td className="px-3 py-2 text-gray-700">
@@ -937,16 +1151,40 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                           min={0}
                           max={100}
                           className="h-8"
-                          onChange={(e) => handleSubjectChange(idx, "practicalMarks", Number(e.target.value))}
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "practicalMarks",
+                              Number(e.target.value),
+                            )
+                          }
                         />
                       </td>
                       <td className="px-3 py-2 text-gray-700">
-                        {(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? "-"}
+                        {(() => {
+                          const bsId = Number(
+                            (s as unknown as { boardSubjectId?: number }).boardSubjectId ??
+                              (s as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
+                              0,
+                          );
+                          const bs = boardSubjects.find((b) => Number(b.id) === bsId);
+                          const fullMarks = Number(bs?.fullMarksTheory ?? 0) + Number(bs?.fullMarksPractical ?? 0);
+                          return Number.isFinite(fullMarks) && fullMarks > 0 ? fullMarks : "-";
+                        })()}
+                      </td>
+                      <td className="px-3 py-2 text-gray-700">
+                        {(() => {
+                          const t = Number((s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? 0);
+                          const p = Number((s as unknown as { practicalMarks?: number } | null)?.practicalMarks ?? 0);
+                          return t + p;
+                        })()}
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Select
                           value={(s as unknown as { grade?: { name?: string } } | null)?.grade?.name ?? ""}
-                          onValueChange={(val) => handleSubjectChange(idx, "gradeName", val)}
+                          onValueChange={(val) =>
+                            handleSubjectChangeById((s as unknown as { id?: number })?.id, "gradeName", val)
+                          }
                         >
                           <SelectTrigger className="h-8 text-sm">
                             <SelectValue placeholder="Grade" />
@@ -963,7 +1201,9 @@ export default function AcademicDetails({ applicationAcademicInfo }: AcademicDet
                       <td className="px-3 py-2 text-gray-700">
                         <Select
                           value={(s as unknown as { resultStatus?: string } | null)?.resultStatus ?? ""}
-                          onValueChange={(val) => handleSubjectChange(idx, "resultStatus", val)}
+                          onValueChange={(val) =>
+                            handleSubjectChangeById((s as unknown as { id?: number })?.id, "resultStatus", val)
+                          }
                         >
                           <SelectTrigger className="h-8 text-sm">
                             <SelectValue placeholder="Result" />

@@ -76,6 +76,7 @@ export const getPapersPaginated = async (
     programCourseId?: number | null;
     classId?: number | null;
     isOptional?: boolean | null;
+    autoAssign?: boolean | null;
     searchText?: string | null;
   },
 ) => {
@@ -88,6 +89,7 @@ export const getPapersPaginated = async (
   if (filters?.programCourseId) params.programCourseId = filters.programCourseId;
   if (filters?.classId) params.classId = filters.classId;
   if (filters?.isOptional !== null && filters?.isOptional !== undefined) params.isOptional = filters.isOptional;
+  if (filters?.autoAssign !== null && filters?.autoAssign !== undefined) params.autoAssign = filters.autoAssign;
   if (filters?.searchText) params.searchText = filters.searchText;
 
   const res = await axiosInstance.get<ApiResponse<PaginatedResponse<PaperDto>>>(`${BASE}/papers`, { params });

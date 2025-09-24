@@ -568,7 +568,7 @@ export default function CURegistrationPage() {
                             onChange={(e) => handlePersonalInfoChange("apaarId", e.target.value)}
                             placeholder="Enter APAAR ID"
                             className={`w-full border-gray-300 ${correctionFlags.apaarId ? "bg-white" : "bg-gray-50 text-gray-600"}`}
-                            readOnly={!correctionFlags.apaarId && personalInfo.apaarId !== ""}
+                            readOnly={!correctionFlags.apaarId}
                           />
                           <div className="flex items-center space-x-2">
                             <span className="text-sm text-gray-600">1.7 Request correction</span>

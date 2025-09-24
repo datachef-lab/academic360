@@ -4,7 +4,6 @@ import Accommodation from "./AccommodationForm";
 import EmergencyContact from "./EmergencyContactForm";
 import HealthDetails from "./HealthDetails";
 import OverviewTab from "./OverviewTab";
-import TransportDetails from "./TransportDetails";
 import FamilyDetails from "./FamilyDetails";
 import Marksheet from "../GradeMarks/Marksheet";
 import AcademicDetails from "./AcademicDetails";
@@ -71,10 +70,14 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
             initialData={profile?.accommodationDetails ?? null}
           />
         );
-      case "Transport":
-        return <TransportDetails />;
       case "Academic":
-        return <AcademicDetails applicationAcademicInfo={profile?.applicationFormDto?.academicInfo ?? null} />;
+        return (
+          <AcademicDetails
+            applicationAcademicInfo={profile?.applicationFormDto?.academicInfo ?? null}
+            studentId={studentId}
+            userId={userId}
+          />
+        );
       case "Marksheet":
         return <Marksheet />;
       default:

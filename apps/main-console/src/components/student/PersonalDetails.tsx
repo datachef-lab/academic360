@@ -19,20 +19,12 @@ import type { LanguageMedium } from "@/types/resources/language-medium.types";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { updatePersonalDetail, updatePersonalDetailByStudentId } from "@/services/personal-details.service";
+import { updateAddress } from "@/services/address.service";
 
 function stripDates<T>(obj: T): T {
-  if (Array.isArray(obj)) return obj.map(stripDates) as T;
-  if (obj && typeof obj === "object") {
-    const input = obj as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
-    for (const k in input) {
-      if (k === "createdAt" || k === "updatedAt") continue;
-      const v = input[k];
-      result[k] = typeof v === "object" && v !== null ? stripDates(v) : v;
-    }
-    return result as T;
-  }
-  return obj;
+  return JSON.parse(
+    JSON.stringify(obj, (key, value) => (key === "createdAt" || key === "updatedAt" ? undefined : value)),
+  ) as T;
 }
 
 type IdName = { id: number; name: string };
@@ -57,7 +49,7 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// Typed helpers to safely update address without using any or {}
+// Typed helpers to safely update address without unsafe casts
 type AddressRel = NonNullable<PersonalDetailsDto["residentialAddress"]>;
 function ensureAddress(address: PersonalDetailsDto["residentialAddress"]): AddressRel {
   return (
@@ -73,11 +65,27 @@ function ensureAddress(address: PersonalDetailsDto["residentialAddress"]): Addre
       state: null,
       city: null,
       district: null,
-    } as unknown as AddressRel)
+    } as AddressRel)
   );
 }
 
 type UpdatePayload = Partial<PersonalDetailsDto>;
+
+type AddressExtras = {
+  otherPostoffice?: string | null;
+  otherPoliceStation?: string | null;
+};
+
+type AddressUpdate = {
+  id?: number;
+  addressLine?: string | null;
+  pincode?: string | null;
+  phone?: string | null;
+  countryId?: number | null;
+  stateId?: number | null;
+  cityId?: number | null;
+  districtId?: number | null;
+} & AddressExtras;
 
 export default function PersonalDetailsReadOnly({ studentId, initialData, personalEmail }: PersonalDetailProps) {
   const queryClient = useQueryClient();
@@ -87,9 +95,40 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const [residentialPoliceStation, setResidentialPoliceStation] = useState<string>("");
   const [mailingPostOffice, setMailingPostOffice] = useState<string>("");
   const [mailingPoliceStation, setMailingPoliceStation] = useState<string>("");
+  // Local selection state to avoid assigning partial objects to DTO relations
+  const [resCountryIdSel, setResCountryIdSel] = useState<number | null>(
+    initialData?.residentialAddress?.country?.id ?? null,
+  );
+  const [resStateIdSel, setResStateIdSel] = useState<number | null>(initialData?.residentialAddress?.state?.id ?? null);
+  const [resCityIdSel, setResCityIdSel] = useState<number | null>(initialData?.residentialAddress?.city?.id ?? null);
+  const [resDistrictId, setResDistrictId] = useState<number | null>(
+    initialData?.residentialAddress?.district?.id ?? null,
+  );
+  const [mailCountryIdSel, setMailCountryIdSel] = useState<number | null>(
+    initialData?.mailingAddress?.country?.id ?? null,
+  );
+  const [mailStateIdSel, setMailStateIdSel] = useState<number | null>(initialData?.mailingAddress?.state?.id ?? null);
+  const [mailCityIdSel, setMailCityIdSel] = useState<number | null>(initialData?.mailingAddress?.city?.id ?? null);
+  const [mailDistrictId, setMailDistrictId] = useState<number | null>(
+    initialData?.mailingAddress?.district?.id ?? null,
+  );
 
   useEffect(() => {
     setPd(initialData ?? null);
+    const resAddr = initialData?.residentialAddress as (AddressRel & AddressExtras) | null | undefined;
+    const mailAddr = initialData?.mailingAddress as (AddressRel & AddressExtras) | null | undefined;
+    setResidentialPostOffice(resAddr?.otherPostoffice ?? "");
+    setResidentialPoliceStation(resAddr?.otherPoliceStation ?? "");
+    setMailingPostOffice(mailAddr?.otherPostoffice ?? "");
+    setMailingPoliceStation(mailAddr?.otherPoliceStation ?? "");
+    setResCountryIdSel(initialData?.residentialAddress?.country?.id ?? null);
+    setResStateIdSel(initialData?.residentialAddress?.state?.id ?? null);
+    setResCityIdSel(initialData?.residentialAddress?.city?.id ?? null);
+    setResDistrictId(initialData?.residentialAddress?.district?.id ?? null);
+    setMailCountryIdSel(initialData?.mailingAddress?.country?.id ?? null);
+    setMailStateIdSel(initialData?.mailingAddress?.state?.id ?? null);
+    setMailCityIdSel(initialData?.mailingAddress?.city?.id ?? null);
+    setMailDistrictId(initialData?.mailingAddress?.district?.id ?? null);
   }, [initialData]);
 
   // Master dropdowns
@@ -106,14 +145,11 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const nationalityOptions: UiNationality[] = (nationalities as UiNationality[] | undefined) ?? [];
   const languageOptions: LanguageMedium[] = (languages as LanguageMedium[] | undefined) ?? [];
 
-  // Derived selected IDs for addresses
-  const resCountryId = useMemo(
-    () => pd?.residentialAddress?.country?.id ?? null,
-    [pd?.residentialAddress?.country?.id],
-  );
-  const resStateId = useMemo(() => pd?.residentialAddress?.state?.id ?? null, [pd?.residentialAddress?.state?.id]);
-  const mailCountryId = useMemo(() => pd?.mailingAddress?.country?.id ?? null, [pd?.mailingAddress?.country?.id]);
-  const mailStateId = useMemo(() => pd?.mailingAddress?.state?.id ?? null, [pd?.mailingAddress?.state?.id]);
+  // Selected IDs for addresses (from local state)
+  const resCountryId = resCountryIdSel;
+  const resStateId = resStateIdSel;
+  const mailCountryId = mailCountryIdSel;
+  const mailStateId = mailStateIdSel;
 
   // Dependent dropdowns: states by country
   const { data: resStates } = useQuery({
@@ -160,6 +196,21 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const resDistrictOptions: IdName[] = (resDistricts as IdName[] | undefined) ?? [];
   const mailDistrictOptions: IdName[] = (mailDistricts as IdName[] | undefined) ?? [];
 
+  // Ensure currently selected residential district is visible even if it doesn't belong to the loaded state options
+  type DistrictLike = { id: number; name?: string } | null | undefined;
+  const resSelectedDistrict = pd?.residentialAddress?.district as DistrictLike;
+  const resDistrictOptionsWithSelected = useMemo(() => {
+    const list = [...resDistrictOptions];
+    if (resSelectedDistrict?.id != null && !list.some((d) => String(d.id) === String(resSelectedDistrict.id))) {
+      const name =
+        resSelectedDistrict && typeof (resSelectedDistrict as { name?: string }).name === "string"
+          ? (resSelectedDistrict as { name?: string }).name!
+          : `#${resSelectedDistrict?.id}`;
+      list.unshift({ id: Number(resSelectedDistrict.id), name });
+    }
+    return list;
+  }, [resDistrictOptions, resSelectedDistrict?.id]);
+
   const genderOptions: { value: "MALE" | "FEMALE" | "OTHER"; label: string }[] = [
     { value: "MALE", label: "Male" },
     { value: "FEMALE", label: "Female" },
@@ -178,30 +229,32 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
       ...(pd ?? {}),
       personalEmail: email ?? null,
     } as Partial<PersonalDetailsDto>;
-    const cleaned = stripDates(payload) as any;
+    const cleaned = stripDates(payload) as Partial<PersonalDetailsDto>;
     // Flatten address relations to basic ids for backend API compatibility
     if (cleaned?.residentialAddress) {
-      cleaned.residentialAddress = {
-        id: cleaned.residentialAddress.id,
-        addressLine: cleaned.residentialAddress.addressLine ?? null,
-        pincode: cleaned.residentialAddress.pincode ?? null,
-        phone: cleaned.residentialAddress.phone ?? null,
-        countryId: cleaned.residentialAddress.country?.id ?? cleaned.residentialAddress.countryId ?? null,
-        stateId: cleaned.residentialAddress.state?.id ?? cleaned.residentialAddress.stateId ?? null,
-        cityId: cleaned.residentialAddress.city?.id ?? cleaned.residentialAddress.cityId ?? null,
-        districtId: cleaned.residentialAddress.district?.id ?? cleaned.residentialAddress.districtId ?? null,
+      const ra = cleaned.residentialAddress;
+      (cleaned as Partial<{ residentialAddress: AddressUpdate }>).residentialAddress = {
+        id: ra.id,
+        addressLine: ra.addressLine ?? null,
+        pincode: ra.pincode ?? null,
+        phone: ra.phone ?? null,
+        countryId: resCountryIdSel ?? ra.country?.id ?? null,
+        stateId: resStateIdSel ?? ra.state?.id ?? null,
+        cityId: resCityIdSel ?? ra.city?.id ?? null,
+        districtId: resDistrictId ?? ra.district?.id ?? null,
       };
     }
     if (cleaned?.mailingAddress) {
-      cleaned.mailingAddress = {
-        id: cleaned.mailingAddress.id,
-        addressLine: cleaned.mailingAddress.addressLine ?? null,
-        pincode: cleaned.mailingAddress.pincode ?? null,
-        phone: cleaned.mailingAddress.phone ?? null,
-        countryId: cleaned.mailingAddress.country?.id ?? cleaned.mailingAddress.countryId ?? null,
-        stateId: cleaned.mailingAddress.state?.id ?? cleaned.mailingAddress.stateId ?? null,
-        cityId: cleaned.mailingAddress.city?.id ?? cleaned.mailingAddress.cityId ?? null,
-        districtId: cleaned.mailingAddress.district?.id ?? cleaned.mailingAddress.districtId ?? null,
+      const ma = cleaned.mailingAddress;
+      (cleaned as Partial<{ mailingAddress: AddressUpdate }>).mailingAddress = {
+        id: ma.id,
+        addressLine: ma.addressLine ?? null,
+        pincode: ma.pincode ?? null,
+        phone: ma.phone ?? null,
+        countryId: mailCountryIdSel ?? ma.country?.id ?? null,
+        stateId: mailStateIdSel ?? ma.state?.id ?? null,
+        cityId: mailCityIdSel ?? ma.city?.id ?? null,
+        districtId: mailDistrictId ?? ma.district?.id ?? null,
       };
     }
     return cleaned as Partial<PersonalDetailsDto>;
@@ -210,12 +263,52 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   const mutation = useMutation({
     mutationFn: async () => {
       const payload = buildPayload() as UpdatePayload;
+
+      // Persist address changes first so personal details can reference updated address ids
+      const residential = (payload as Partial<{ residentialAddress: AddressUpdate }>).residentialAddress;
+      if (residential && residential.id) {
+        try {
+          const resUpdate: AddressUpdate = {
+            addressLine: residential.addressLine ?? null,
+            pincode: residential.pincode ?? null,
+            phone: residential.phone ?? null,
+            countryId: residential.countryId ?? null,
+            stateId: residential.stateId ?? null,
+            cityId: residential.cityId ?? null,
+            districtId: residential.districtId ?? null,
+            otherPostoffice: residentialPostOffice || null,
+            otherPoliceStation: residentialPoliceStation || null,
+          };
+          await updateAddress(residential.id, resUpdate);
+        } catch {}
+      }
+
+      const mailing = (payload as Partial<{ mailingAddress: AddressUpdate }>).mailingAddress;
+      if (mailing && mailing.id) {
+        try {
+          const mailUpdate: AddressUpdate = {
+            addressLine: mailing.addressLine ?? null,
+            pincode: mailing.pincode ?? null,
+            phone: mailing.phone ?? null,
+            countryId: mailing.countryId ?? null,
+            stateId: mailing.stateId ?? null,
+            cityId: mailing.cityId ?? null,
+            districtId: mailing.districtId ?? null,
+            otherPostoffice: mailingPostOffice || null,
+            otherPoliceStation: mailingPoliceStation || null,
+          };
+          await updateAddress(mailing.id, mailUpdate);
+        } catch {}
+      }
       if (pd?.id) {
         return updatePersonalDetail(String(pd.id), payload);
       }
       return updatePersonalDetailByStudentId(String(studentId), payload);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Debug: inspect API response after saving
+      // eslint-disable-next-line no-console
+      console.log("Personal details save response:", data);
       toast.success("Personal details saved");
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
     },
@@ -225,6 +318,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   return (
     <Card className="max-w-5xl mx-auto my-6 shadow border bg-white py-3">
       <CardContent>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">Personal Details Form</h2>
+        </div>
         <div className="pr-2">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="flex flex-col gap-1 md:col-span-2">
@@ -347,10 +443,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <Select
                 value={pd?.motherTongue?.id ? String(pd.motherTongue.id) : ""}
                 onValueChange={(v) => {
-                  const selected = languageOptions.find((lm) => String(lm.id) === v) ?? null;
-                  setPd((prev) =>
-                    prev ? { ...prev, motherTongue: selected as unknown as PersonalDetailsDto["motherTongue"] } : prev,
-                  );
+                  const lm = languageOptions.find((l) => String(l.id) === v) ?? null;
+                  const mt = lm ? ({ id: lm.id, name: lm.name } as { id: number; name: string }) : null;
+                  setPd((prev) => (prev ? { ...prev, motherTongue: mt as PersonalDetailsDto["motherTongue"] } : prev));
                 }}
               >
                 <SelectTrigger>
@@ -432,23 +527,13 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>Country</FieldLabel>
                 <Select
-                  value={pd?.residentialAddress?.country?.id ? String(pd.residentialAddress.country.id) : ""}
+                  value={resCountryIdSel != null ? String(resCountryIdSel) : ""}
                   onValueChange={(v) => {
-                    const selected = countryOptions.find((c) => String(c.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              country: selected as unknown as AddressRel["country"],
-                              state: null,
-                              city: null,
-                              district: null,
-                            },
-                          }
-                        : prev,
-                    );
+                    const id = Number(v);
+                    setResCountryIdSel(id);
+                    setResStateIdSel(null);
+                    setResCityIdSel(null);
+                    setResDistrictId(null);
                   }}
                 >
                   <SelectTrigger>
@@ -466,22 +551,12 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>State</FieldLabel>
                 <Select
-                  value={pd?.residentialAddress?.state?.id ? String(pd.residentialAddress.state.id) : ""}
+                  value={resStateIdSel != null ? String(resStateIdSel) : ""}
                   onValueChange={(v) => {
-                    const selected = resStateOptions.find((s) => String(s.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              state: selected as unknown as AddressRel["state"],
-                              city: null,
-                              district: null,
-                            },
-                          }
-                        : prev,
-                    );
+                    const id = Number(v);
+                    setResStateIdSel(id);
+                    setResCityIdSel(null);
+                    setResDistrictId(null);
                   }}
                 >
                   <SelectTrigger>
@@ -499,21 +574,8 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>City</FieldLabel>
                 <Select
-                  value={pd?.residentialAddress?.city?.id ? String(pd.residentialAddress.city.id) : ""}
-                  onValueChange={(v) => {
-                    const selected = resCityOptions.find((c) => String(c.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              city: selected as unknown as AddressRel["city"],
-                            },
-                          }
-                        : prev,
-                    );
-                  }}
+                  value={resCityIdSel != null ? String(resCityIdSel) : ""}
+                  onValueChange={(v) => setResCityIdSel(Number(v))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select city" />
@@ -530,31 +592,14 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>District</FieldLabel>
                 <Select
-                  value={
-                    pd?.residentialAddress?.district?.id
-                      ? String((pd.residentialAddress.district as unknown as IdName).id)
-                      : ""
-                  }
-                  onValueChange={(v) => {
-                    const selected = resDistrictOptions.find((d) => String(d.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            residentialAddress: {
-                              ...ensureAddress(prev.residentialAddress),
-                              district: selected as unknown as AddressRel["district"],
-                            },
-                          }
-                        : prev,
-                    );
-                  }}
+                  value={resDistrictId != null ? String(resDistrictId) : ""}
+                  onValueChange={(v) => setResDistrictId(Number(v))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select district" />
                   </SelectTrigger>
                   <SelectContent>
-                    {resDistrictOptions.map((d) => (
+                    {resDistrictOptionsWithSelected.map((d) => (
                       <SelectItem key={d.id} value={String(d.id)}>
                         {d.name}
                       </SelectItem>
@@ -637,23 +682,13 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>Country</FieldLabel>
                 <Select
-                  value={pd?.mailingAddress?.country?.id ? String(pd.mailingAddress.country.id) : ""}
+                  value={mailCountryIdSel != null ? String(mailCountryIdSel) : ""}
                   onValueChange={(v) => {
-                    const selected = countryOptions.find((c) => String(c.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              country: selected as unknown as AddressRel["country"],
-                              state: null,
-                              city: null,
-                              district: null,
-                            },
-                          }
-                        : prev,
-                    );
+                    const id = Number(v);
+                    setMailCountryIdSel(id);
+                    setMailStateIdSel(null);
+                    setMailCityIdSel(null);
+                    setMailDistrictId(null);
                   }}
                 >
                   <SelectTrigger>
@@ -671,22 +706,12 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>State</FieldLabel>
                 <Select
-                  value={pd?.mailingAddress?.state?.id ? String(pd.mailingAddress.state.id) : ""}
+                  value={mailStateIdSel != null ? String(mailStateIdSel) : ""}
                   onValueChange={(v) => {
-                    const selected = mailStateOptions.find((s) => String(s.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              state: selected as unknown as AddressRel["state"],
-                              city: null,
-                              district: null,
-                            },
-                          }
-                        : prev,
-                    );
+                    const id = Number(v);
+                    setMailStateIdSel(id);
+                    setMailCityIdSel(null);
+                    setMailDistrictId(null);
                   }}
                 >
                   <SelectTrigger>
@@ -704,21 +729,8 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>City</FieldLabel>
                 <Select
-                  value={pd?.mailingAddress?.city?.id ? String(pd.mailingAddress.city.id) : ""}
-                  onValueChange={(v) => {
-                    const selected = mailCityOptions.find((c) => String(c.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              city: selected as unknown as AddressRel["city"],
-                            },
-                          }
-                        : prev,
-                    );
-                  }}
+                  value={mailCityIdSel != null ? String(mailCityIdSel) : ""}
+                  onValueChange={(v) => setMailCityIdSel(Number(v))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select city" />
@@ -735,23 +747,8 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
               <div className="flex flex-col gap-1">
                 <FieldLabel>District</FieldLabel>
                 <Select
-                  value={
-                    pd?.mailingAddress?.district?.id ? String((pd.mailingAddress.district as unknown as IdName).id) : ""
-                  }
-                  onValueChange={(v) => {
-                    const selected = mailDistrictOptions.find((d) => String(d.id) === v) ?? null;
-                    setPd((prev) =>
-                      prev
-                        ? {
-                            ...prev,
-                            mailingAddress: {
-                              ...ensureAddress(prev.mailingAddress),
-                              district: selected as unknown as AddressRel["district"],
-                            },
-                          }
-                        : prev,
-                    );
-                  }}
+                  value={mailDistrictId != null ? String(mailDistrictId) : ""}
+                  onValueChange={(v) => setMailDistrictId(Number(v))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select district" />
@@ -834,13 +831,13 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end mt-4">
+      <CardFooter className="flex justify-center items-center mt-4">
         <Button
           onClick={() => mutation.mutate()}
           disabled={mutation.isLoading}
           className="bg-blue-600 hover:bg-blue-700 text-white"
         >
-          {mutation.isLoading ? "Saving..." : "Save"}
+          {mutation.isLoading ? "Saving..." : "Save Personal Details"}
         </Button>
       </CardFooter>
     </Card>

@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { XCircle, Plus, Edit, Trash2, Download, Check, ChevronsUpDown } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
-import { useTablePagination } from "@/hooks/useTablePagination";
 import {
   Dialog,
   DialogContent,
@@ -64,6 +63,13 @@ export default function AlternativeSubjectsPage() {
   const [masterSubjectTypes, setMasterSubjectTypes] = useState<SubjectType[]>([]);
   const [masterBoardSubjectNames, setMasterBoardSubjectNames] = useState<BoardSubjectName[]>([]);
 
+  // Server-side pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
     if (!isReady || !accessToken) return; // wait for auth
     let isMounted = true;
@@ -109,13 +115,16 @@ export default function AlternativeSubjectsPage() {
           }
           return map;
         });
-
-        // Load existing related subjects data
-        const data = await subjectSelectionApi.listRelatedSubjectMains();
-        // Debug: log backend payload
-        // console.log("[RelatedSubjects] GET mains ->", data);
+        // Load existing related subjects data (server-paginated)
+        const paged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+          page: currentPage,
+          pageSize: itemsPerPage,
+          search: searchTerm || undefined,
+          programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+        });
         if (!isMounted) return;
-        const mapped: UIGrouping[] = (data as RelatedSubjectMainDto[]).map((dto) => ({
+        const data = paged.content as RelatedSubjectMainDto[];
+        const mapped: UIGrouping[] = data.map((dto) => ({
           id: dto.id || 0,
           programCourses: [dto.programCourse?.name || ""],
           subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
@@ -125,9 +134,9 @@ export default function AlternativeSubjectsPage() {
           ],
           isActive: dto.isActive ?? true,
         }));
-        // Debug: log mapped UI rows
-        // console.log("[RelatedSubjects] mapped rows ->", mapped.length, mapped);
         setGroupings(mapped);
+        setTotalItems(paged.totalElements ?? 0);
+        setTotalPages(paged.totalPages ?? 1);
 
         // Build additional lookups from payload (merge with existing)
         setSubjectNameToId((prev) => {
@@ -167,30 +176,14 @@ export default function AlternativeSubjectsPage() {
     return () => {
       isMounted = false;
     };
-  }, [isReady, accessToken]);
+  }, [isReady, accessToken, currentPage, itemsPerPage, searchTerm, selectedProgramCourse]);
 
-  // Use table pagination hook
-  const tableData = useTablePagination<UIGrouping>({
-    data: groupings,
-    searchFields: ["subjectCategory", "subjects"],
-    initialItemsPerPage: 10,
-  });
+  // Server-side pagination state (moved above)
 
-  // Additional filtering for dropdowns
-  const filteredGroupings = tableData.filteredData.filter((grouping) => {
-    const matchesProgramCourse =
-      !selectedProgramCourse ||
-      selectedProgramCourse === "all" ||
-      grouping.programCourses.includes(selectedProgramCourse);
-    return matchesProgramCourse;
-  });
-
-  // Update pagination data with additional filters
-  const totalItems = filteredGroupings.length;
-  const totalPages = Math.ceil(totalItems / tableData.itemsPerPage);
-  const startIndex = (tableData.currentPage - 1) * tableData.itemsPerPage;
-  const endIndex = startIndex + tableData.itemsPerPage;
-  const paginatedGroupings = filteredGroupings.slice(startIndex, endIndex);
+  // Derived for UI indices
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+  const paginatedGroupings = groupings; // already paginated from server
 
   // ---------- Add/Edit Dialog State ----------
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -299,7 +292,13 @@ export default function AlternativeSubjectsPage() {
     setSaving(true);
     try {
       // Build a fast duplicate-check set from current mains
-      const existingMains = (await subjectSelectionApi.listRelatedSubjectMains()) as RelatedSubjectMainDto[];
+      const pagedExisting = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+        page: 1,
+        pageSize: 1000,
+        search: searchTerm || undefined,
+        programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+      });
+      const existingMains = pagedExisting.content as RelatedSubjectMainDto[];
       const existingKeys = new Set(
         existingMains.map((m: RelatedSubjectMainDto) => {
           const pcId = m.programCourse?.id;
@@ -365,8 +364,15 @@ export default function AlternativeSubjectsPage() {
         sonnerToast.info("Some rows were duplicates", { description: duplicates.join("\n") });
       }
       sonnerToast.success("Related subject mappings saved");
-      // Reload
-      const refreshed = await subjectSelectionApi.listRelatedSubjectMains();
+      // Reload newest-first on first page so newly added are visible immediately
+      setCurrentPage(1);
+      const refreshedPaged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+        page: 1,
+        pageSize: itemsPerPage,
+        search: searchTerm || undefined,
+        programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+      });
+      const refreshed = refreshedPaged.content as RelatedSubjectMainDto[];
       // console.log("[RelatedSubjects] after SAVE ->", refreshed);
       const mapped: UIGrouping[] = refreshed.map((dto) => ({
         id: dto.id || 0,
@@ -394,7 +400,13 @@ export default function AlternativeSubjectsPage() {
     setSaving(true);
     try {
       // Fetch mains and find the original main regardless of current dropdown edits
-      const mains = await subjectSelectionApi.listRelatedSubjectMains();
+      const mainsPaged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+        page: 1,
+        pageSize: 1000,
+        search: searchTerm || undefined,
+        programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+      });
+      const mains = mainsPaged.content as RelatedSubjectMainDto[];
       const dto = mains.find((m: RelatedSubjectMainDto) => {
         const pcName = m.programCourse?.name;
         const catLabel = m.subjectType?.code || m.subjectType?.name;
@@ -444,7 +456,13 @@ export default function AlternativeSubjectsPage() {
       };
       await subjectSelectionApi.updateRelatedSubjectMain(dto.id || 0, updatePayload);
       // Reload
-      const refreshed = await subjectSelectionApi.listRelatedSubjectMains();
+      const refreshedPaged2 = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        search: searchTerm || undefined,
+        programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+      });
+      const refreshed = refreshedPaged2.content as RelatedSubjectMainDto[];
       // console.log("[RelatedSubjects] after UPDATE ->", refreshed);
       const mapped: UIGrouping[] = refreshed.map((d) => ({
         id: d.id || 0,
@@ -497,14 +515,17 @@ export default function AlternativeSubjectsPage() {
             <Input
               placeholder="Search major or related subjects..."
               className="w-64"
-              value={tableData.searchTerm}
-              onChange={(e) => tableData.setSearchTerm(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
             />
             <Select
               value={selectedProgramCourse}
               onValueChange={(value) => {
                 setSelectedProgramCourse(value);
-                tableData.resetToFirstPage();
+                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="w-48">
@@ -632,14 +653,17 @@ export default function AlternativeSubjectsPage() {
       {/* Fixed Pagination at Bottom */}
       <div className="flex-shrink-0 p-4 pt-0">
         <Pagination
-          currentPage={tableData.currentPage}
+          currentPage={currentPage}
           totalPages={totalPages}
           totalItems={totalItems}
-          itemsPerPage={tableData.itemsPerPage}
+          itemsPerPage={itemsPerPage}
           startIndex={startIndex}
           endIndex={endIndex}
-          onPageChange={tableData.setCurrentPage}
-          onItemsPerPageChange={tableData.setItemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(n) => {
+            setItemsPerPage(n);
+            setCurrentPage(1);
+          }}
           sticky={false}
         />
       </div>
