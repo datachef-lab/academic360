@@ -47,6 +47,7 @@ export const paperModel = pgTable("papers", {
     isOptional: boolean().default(false),
     sequence: integer(),
     isActive: boolean().default(true),
+    autoAssign: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp()
         .notNull()

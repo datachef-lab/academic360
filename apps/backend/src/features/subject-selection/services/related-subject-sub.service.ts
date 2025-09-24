@@ -6,7 +6,7 @@ import {
 } from "@repo/db/schemas/models/subject-selection/related-subject-sub.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import { RelatedSubjectSubDto } from "@repo/db/dtos/subject-selection";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
 import XLSX from "xlsx";
 import fs from "fs";
 
@@ -46,27 +46,27 @@ export async function getAllRelatedSubjectSubs(): Promise<
       boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
       createdAt: relatedSubjectSubModel.createdAt,
       updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
     })
-    .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    );
+    .from(relatedSubjectSubModel);
 
-  return results.map((result) => ({
-    id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
-  }));
+  const dtos: RelatedSubjectSubDto[] = await Promise.all(
+    results.map(async (r) => {
+      const [bsn] = await db
+        .select({
+          id: boardSubjectNameModel.id,
+          name: boardSubjectNameModel.name,
+          code: boardSubjectNameModel.code,
+          isActive: boardSubjectNameModel.isActive,
+        })
+        .from(boardSubjectNameModel)
+        .where(eq(boardSubjectNameModel.id, r.boardSubjectNameId!));
+      return {
+        id: r.id,
+        boardSubjectName: bsn!,
+      } as RelatedSubjectSubDto;
+    }),
+  );
+  return dtos;
 }
 
 export async function getRelatedSubjectSubById(
@@ -75,34 +75,27 @@ export async function getRelatedSubjectSubById(
   const [result] = await db
     .select({
       id: relatedSubjectSubModel.id,
-      relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
       boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
-      createdAt: relatedSubjectSubModel.createdAt,
-      updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
     })
     .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    )
     .where(eq(relatedSubjectSubModel.id, id));
 
   if (!result) return null;
 
+  const [bsn] = await db
+    .select({
+      id: boardSubjectNameModel.id,
+      name: boardSubjectNameModel.name,
+      code: boardSubjectNameModel.code,
+      isActive: boardSubjectNameModel.isActive,
+    })
+    .from(boardSubjectNameModel)
+    .where(eq(boardSubjectNameModel.id, result.boardSubjectNameId!));
+
   return {
     id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
-  };
+    boardSubjectName: bsn!,
+  } as RelatedSubjectSubDto;
 }
 
 export async function getRelatedSubjectSubsByMainId(
@@ -111,32 +104,29 @@ export async function getRelatedSubjectSubsByMainId(
   const results = await db
     .select({
       id: relatedSubjectSubModel.id,
-      relatedSubjectMainId: relatedSubjectSubModel.relatedSubjectMainId,
       boardSubjectNameId: relatedSubjectSubModel.boardSubjectNameId,
-      createdAt: relatedSubjectSubModel.createdAt,
-      updatedAt: relatedSubjectSubModel.updatedAt,
-      boardSubjectName: {
-        id: boardSubjectNameModel.id,
-        name: boardSubjectNameModel.name,
-        code: boardSubjectNameModel.code,
-      },
     })
     .from(relatedSubjectSubModel)
-    .leftJoin(
-      boardSubjectNameModel,
-      eq(relatedSubjectSubModel.boardSubjectNameId, boardSubjectNameModel.id),
-    )
     .where(eq(relatedSubjectSubModel.relatedSubjectMainId, mainId));
 
-  return results.map((result) => ({
-    id: result.id,
-    boardSubjectNameId: result.boardSubjectNameId,
-    boardSubjectName: result.boardSubjectName || {
-      id: 0,
-      name: "Unknown Board Subject Name",
-      code: null,
-    },
-  }));
+  const dtos: RelatedSubjectSubDto[] = await Promise.all(
+    results.map(async (r) => {
+      const [bsn] = await db
+        .select({
+          id: boardSubjectNameModel.id,
+          name: boardSubjectNameModel.name,
+          code: boardSubjectNameModel.code,
+          isActive: boardSubjectNameModel.isActive,
+        })
+        .from(boardSubjectNameModel)
+        .where(eq(boardSubjectNameModel.id, r.boardSubjectNameId!));
+      return {
+        id: r.id,
+        boardSubjectName: bsn!,
+      } as RelatedSubjectSubDto;
+    }),
+  );
+  return dtos;
 }
 
 export async function updateRelatedSubjectSub(

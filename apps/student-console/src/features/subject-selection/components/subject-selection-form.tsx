@@ -46,6 +46,13 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [availableAecSubjects, setAvailableAecSubjects] = useState<string[]>([]);
   const [availableCvacOptions, setAvailableCvacOptions] = useState<string[]>([]);
 
+  // Auto-assign subjects per category/semester (from API flag)
+  const [autoMinor1, setAutoMinor1] = useState<string>("");
+  const [autoMinor2, setAutoMinor2] = useState<string>("");
+  const [autoIdc1, setAutoIdc1] = useState<string>("");
+  const [autoIdc2, setAutoIdc2] = useState<string>("");
+  const [autoIdc3, setAutoIdc3] = useState<string>("");
+
   // Restricted grouping caches for quick checks
   // Map by subject name → rule and the category (subject type code) it belongs to
   const [restrictedBySubject, setRestrictedBySubject] = useState<
@@ -128,6 +135,35 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
         setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
 
+        // Capture first auto-assign subject per category/semester (if any)
+        const firstOrEmpty = (arr: string[]) => (arr.length > 0 ? arr[0] : "");
+        const autoMinor1List = dedupe(
+          (minorGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "I") || isSem(p, "II")))
+            .map(getLabel),
+        );
+        const autoMinor2List = dedupe(
+          (minorGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")))
+            .map(getLabel),
+        );
+        const autoIdc1List = dedupe(
+          (idcGroup?.paperOptions || []).filter((p) => (p as any)?.autoAssign === true && isSem(p, "I")).map(getLabel),
+        );
+        const autoIdc2List = dedupe(
+          (idcGroup?.paperOptions || []).filter((p) => (p as any)?.autoAssign === true && isSem(p, "II")).map(getLabel),
+        );
+        const autoIdc3List = dedupe(
+          (idcGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && isSem(p, "III"))
+            .map(getLabel),
+        );
+        setAutoMinor1(firstOrEmpty(autoMinor1List));
+        setAutoMinor2(firstOrEmpty(autoMinor2List));
+        setAutoIdc1(firstOrEmpty(autoIdc1List));
+        setAutoIdc2(firstOrEmpty(autoIdc2List));
+        setAutoIdc3(firstOrEmpty(autoIdc3List));
+
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
         const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
@@ -151,7 +187,22 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               .filter(Boolean),
           );
           const code = norm(rg.subjectType?.code || rg.subjectType?.name || "");
-          rgMap[norm(target)] = { semesters, cannotCombineWith: cannot, categoryCode: code };
+          const targetKey = norm(target);
+          // Merge with any existing rule for target
+          if (!rgMap[targetKey]) {
+            rgMap[targetKey] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+          }
+          for (const c of cannot) rgMap[targetKey].cannotCombineWith.add(c);
+
+          // Ensure symmetric restriction: if A cannot combine with B for a category/semester context,
+          // then B should not combine with A as well in the same category context.
+          for (const c of cannot) {
+            if (!c) continue;
+            if (!rgMap[c]) {
+              rgMap[c] = { semesters, cannotCombineWith: new Set<string>(), categoryCode: code };
+            }
+            rgMap[c].cannotCombineWith.add(targetKey);
+          }
           const targetId = (rg.subject as any)?.id as number | undefined;
           const cannotIds = new Set<number>(
             (rg.cannotCombineWithSubjects || [])
@@ -344,25 +395,62 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Mark user interaction when they try to proceed
     setHasUserInteracted(true);
 
-    // Show validation errors when user tries to proceed
-    const isValid = validateForm();
+    // Auto-assign pass: if required auto subject exists and not selected yet, set it now
+    // Only auto-assign if the subject is available in the current filtered options
+    let changed = false;
 
-    if (isValid) {
-      // Do not block; mismatch is informational only
-      setStep(2);
+    // Get current filtered options for each dropdown
+    const filteredMinor1Options = getFilteredByCategory(admissionMinor1Subjects, "MN", "I", minor1);
+    const filteredMinor2Options = getFilteredByCategory(admissionMinor2Subjects, "MN", "III", minor2);
+    const filteredIdc1Options = getFilteredByCategory(availableIdcSem1Subjects, "IDC", "I", idc1);
+    const filteredIdc2Options = getFilteredByCategory(availableIdcSem2Subjects, "IDC", "II", idc2);
+    const filteredIdc3Options = getFilteredByCategory(availableIdcSem3Subjects, "IDC", "III", idc3);
+
+    if (autoMinor1 && minor1 !== autoMinor1 && filteredMinor1Options.includes(autoMinor1)) {
+      setMinor1(autoMinor1);
+      changed = true;
     }
-    // If not valid, errors will be displayed by validateForm()
+    if (autoMinor2 && minor2 !== autoMinor2 && filteredMinor2Options.includes(autoMinor2)) {
+      setMinor2(autoMinor2);
+      changed = true;
+    }
+    if (autoIdc1 && idc1 !== autoIdc1 && filteredIdc1Options.includes(autoIdc1)) {
+      setIdc1(autoIdc1);
+      changed = true;
+    }
+    if (autoIdc2 && idc2 !== autoIdc2 && filteredIdc2Options.includes(autoIdc2)) {
+      setIdc2(autoIdc2);
+      changed = true;
+    }
+    if (autoIdc3 && idc3 !== autoIdc3 && filteredIdc3Options.includes(autoIdc3)) {
+      setIdc3(autoIdc3);
+      changed = true;
+    }
+
+    // After auto-assign state updates, validate and proceed
+    setTimeout(
+      () => {
+        const isValid = validateForm();
+        if (isValid) {
+          setStep(2);
+        }
+      },
+      changed ? 0 : 0,
+    );
   };
   const handleBack = () => setStep(1);
 
   // Filter out Minor subjects from IDC options (per list)
+  // NOTE: This enforces the business rule "IDC subjects cannot be same as your Minor subjects"
+  // but does NOT apply restricted-grouping cross-category eliminations.
   const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
-    return sourceList.filter(
-      (subject) =>
-        subject !== minor1 &&
-        subject !== minor2 &&
-        (subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3)),
-    );
+    return sourceList.filter((subject) => {
+      // Enforce IDC uniqueness within IDC selections
+      const uniqueWithinIdc = subject === currentIdcValue || (subject !== idc1 && subject !== idc2 && subject !== idc3);
+      // Enforce IDC ≠ Minor rule only (not RG). Do not hide because of RG defined for Minor.
+      const notSameAsMinor = subject !== minor1 && subject !== minor2;
+      return uniqueWithinIdc && notSameAsMinor;
+    });
   };
 
   const getFilteredByCategory = (
@@ -385,7 +473,23 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       // Base ensure uniqueness against current selections of same category handled by caller
       // RG checks only when defined for this category
       // IMPORTANT: exclude the current field's own value so user can swap
-      const selected = [minor1, minor2, idc1, idc2, idc3].filter(Boolean).filter((s) => s !== currentValue);
+      // Only consider selections from the SAME category as the dropdown being filtered
+      const sameCategorySelected =
+        norm(categoryCode) === "MN"
+          ? [minor1, minor2]
+          : norm(categoryCode) === "IDC"
+            ? [idc1, idc2, idc3]
+            : norm(categoryCode) === "AEC"
+              ? [aec3]
+              : norm(categoryCode) === "CVAC"
+                ? [cvac4]
+                : [];
+      const selected = sameCategorySelected.filter(Boolean).filter((s) => s !== currentValue);
+
+      // Enforce uniqueness within the same category (e.g., Minor I vs Minor II)
+      // If the same subject is already selected in the peer field of the same category,
+      // do not show it again in options for this field.
+      if (selected.map(norm).includes(norm(subject))) return false;
       const inContext = (rgSemesters: string[]) => {
         if (!contextSemester) return true;
         const set = Array.isArray(contextSemester)
@@ -405,12 +509,38 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
         if (!inContext(candidateRg.semesters)) return true;
         for (const sel of selected) {
+          const selRg = restrictedBySubject[norm(sel)];
+          // Only apply cannot-combine when the other selection has RG in the same category
+          if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
           if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
         }
       }
       return true;
     });
   };
+
+  // Instant auto-assign for Minors: when one Minor is chosen, auto-fill the other if required
+  useEffect(() => {
+    // When Minor I is selected, try setting Minor II if there is an applicable autoAssign
+    if (minor1 && !minor2 && autoMinor2) {
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      // Avoid duplicating the same subject across Minor I and II
+      if (options.includes(autoMinor2) && autoMinor2 !== minor1) {
+        setMinor2(autoMinor2);
+      }
+    }
+  }, [minor1, minor2, autoMinor2, admissionMinor2Subjects]);
+
+  useEffect(() => {
+    // When Minor II is selected, try setting Minor I if there is an applicable autoAssign
+    if (minor2 && !minor1 && autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
+      // Avoid duplicating the same subject across Minor I and II
+      if (options.includes(autoMinor1) && autoMinor1 !== minor2) {
+        setMinor1(autoMinor1);
+      }
+    }
+  }, [minor2, minor1, autoMinor1, admissionMinor1Subjects]);
 
   const [showTips, setShowTips] = useState(true);
   const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
@@ -432,6 +562,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       .filter((subject) => !excludeValues.includes(subject))
       .map((subject) => ({ value: subject, label: subject }));
     return [{ value: "", label: selectLabel }, ...options];
+  };
+
+  // Prevent selecting the same subject across different categories (global uniqueness)
+  const getGlobalExcludes = (currentValue: string) => {
+    return [minor1, minor2, idc1, idc2, idc3, aec3, cvac4].filter(Boolean).filter((s) => s !== currentValue);
   };
 
   // Helper function to check if there are actual subject options (excluding placeholder)
@@ -705,7 +840,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         <Combobox
                           dataArr={convertToComboboxData(
                             getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
-                            [minor2],
+                            getGlobalExcludes(minor1),
                           )}
                           value={minor1}
                           onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
@@ -723,7 +858,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         <Combobox
                           dataArr={convertToComboboxData(
                             getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                            [minor1],
+                            getGlobalExcludes(minor2),
                           )}
                           value={minor2}
                           onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
@@ -742,7 +877,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
                   <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableAecSubjects)}
+                    dataArr={convertToComboboxData(availableAecSubjects, getGlobalExcludes(aec3))}
                     value={aec3}
                     onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
                     placeholder="Select AEC 3"
@@ -772,6 +907,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                               "IDC",
                               "I",
                             ),
+                            getGlobalExcludes(idc1),
                           )}
                           value={idc1}
                           onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
@@ -792,6 +928,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                               "IDC",
                               "II",
                             ),
+                            getGlobalExcludes(idc2),
                           )}
                           value={idc2}
                           onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
@@ -812,6 +949,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                               "IDC",
                               "III",
                             ),
+                            getGlobalExcludes(idc3),
                           )}
                           value={idc3}
                           onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
@@ -832,7 +970,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableCvacOptions)}
+                    dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
                     value={cvac4}
                     onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
                     placeholder="Select CVAC 4"

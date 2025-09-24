@@ -10,6 +10,7 @@ export interface AuthContextType {
   logout: () => void;
   accessToken: string | null;
   displayFlag: boolean;
+  isReady: boolean;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +32,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<UserDto | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [interceptorsReady, setInterceptorsReady] = useState(false);
   const navigate = useNavigate();
 
   const login = (accessToken: string, userData: UserDto) => {
@@ -76,13 +79,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [logout]);
 
   useEffect(() => {
-    if (accessToken === null && window.location.pathname !== "/") {
-      console.log("generating accessToken...!");
-      generateNewToken();
-    }
+    let cancelled = false;
+    const waitForAuthReady = (): Promise<void> =>
+      new Promise((resolve) => {
+        if (isReady) return resolve();
+        const startedAt = Date.now();
+        const timer = setInterval(() => {
+          if (isReady || Date.now() - startedAt > 5000) {
+            clearInterval(timer);
+            resolve();
+          }
+        }, 25);
+      });
+    const bootstrap = async () => {
+      try {
+        if (accessToken === null && window.location.pathname !== "/") {
+          console.log("generating accessToken...!");
+          await generateNewToken();
+        }
+      } finally {
+        if (!cancelled) setIsReady(true);
+      }
+    };
+    void bootstrap();
 
     const requestInterceptor = axiosInstance.interceptors.request.use(
-      (config) => {
+      async (config) => {
+        // If auth not ready yet on initial mount, wait briefly to avoid 401s
+        if (!isReady && window.location.pathname !== "/") {
+          await waitForAuthReady();
+        }
+        if (!accessToken && window.location.pathname !== "/") {
+          // As a fallback, try to refresh once here if still no token
+          const newToken = await generateNewToken();
+          if (newToken) {
+            config.headers["Authorization"] = `Bearer ${newToken}`;
+            return config;
+          }
+        }
         if (accessToken) {
           config.headers["Authorization"] = `Bearer ${accessToken}`;
         }
@@ -107,9 +141,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       },
     );
 
+    setInterceptorsReady(true);
+
     return () => {
       axiosInstance.interceptors.request.eject(requestInterceptor);
       axiosInstance.interceptors.response.eject(responseInterceptor);
+      cancelled = true;
     };
   }, [accessToken, generateNewToken, logout, user]);
 
@@ -119,7 +156,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     logout,
     accessToken,
     displayFlag,
+    isReady,
   };
+
+  const protectedPath = /dashboard|home|console/i.test(window.location.pathname);
+  // If on a protected path, defer rendering children until token is present
+  if (protectedPath && (!accessToken || !interceptorsReady)) {
+    return null;
+  }
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 };

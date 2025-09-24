@@ -259,6 +259,7 @@ export async function createPaper(data: PaperDto) {
         name: data.name,
         code: data.code,
         isOptional: props.isOptional ?? false,
+        autoAssign: data.autoAssign ?? false,
         sequence: props.sequence ?? undefined,
         isActive: props.isActive ?? true,
         subjectId: data.subjectId!,
@@ -405,6 +406,7 @@ interface PaperFilters {
   programCourseId?: number;
   classId?: number;
   isOptional?: boolean;
+  autoAssign?: boolean;
   searchText?: string;
 }
 
@@ -430,6 +432,8 @@ export async function getPapersFilteredPaginated(
   if (filters.classId) conditions.push(eq(paperModel.classId, filters.classId));
   if (filters.isOptional !== undefined)
     conditions.push(eq(paperModel.isOptional, filters.isOptional));
+  if (filters.autoAssign !== undefined)
+    conditions.push(eq(paperModel.autoAssign, filters.autoAssign));
 
   // Import models only when needed
   const { subjectModel } = await import(
@@ -592,6 +596,7 @@ export async function updatePaper(id: number, data: PaperDto) {
       name: data.name,
       code: data.code,
       isOptional: data.isOptional,
+      autoAssign: (data as any).autoAssign ?? false,
       subjectId: data.subjectId,
       subjectTypeId: data.subjectTypeId,
       affiliationId: data.affiliationId,
@@ -635,6 +640,7 @@ export async function updatePaperWithComponents(
       name: data.name,
       code: data.code,
       isOptional: data.isOptional,
+      autoAssign: (data as any).autoAssign ?? false,
       subjectId: data.subjectId,
       affiliationId: data.affiliationId,
       regulationTypeId: data.regulationTypeId,

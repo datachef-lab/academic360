@@ -56,14 +56,14 @@ export function Combobox({
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-96 overflow-y-auto">
+      <PopoverContent className="z-50 w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-[60vh] overflow-y-auto">
         <Command>
           <CommandInput
             value={search}
             onValueChange={setSearch}
             placeholder={placeholder ? `Search ${placeholder.toLowerCase()}` : "Search..."}
           />
-          <CommandList>
+          <CommandList className="max-h-[60vh] overflow-y-auto">
             <CommandEmpty>No options found.</CommandEmpty>
             {filtered.length > 0 && (
               <div className="px-2 py-1.5 text-xs text-muted-foreground border-b">

@@ -4,7 +4,7 @@ import {
   RelatedSubjectMain,
   RelatedSubjectMainT,
 } from "@repo/db/schemas/models/subject-selection/related-subject-main.model";
-import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
+import { and, or, countDistinct, eq, ilike, ne, desc } from "drizzle-orm";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import {
   RelatedSubjectMainDto,
@@ -12,7 +12,7 @@ import {
 } from "@repo/db/dtos/subject-selection";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 import { subjectTypeModel } from "@repo/db/schemas/models/course-design";
-import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
+import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions/board-subject-name.model";
 import { relatedSubjectSubModel } from "@repo/db/schemas/models/subject-selection";
 import { academicYearModel } from "@repo/db/schemas/models/academics";
 import XLSX from "xlsx";
@@ -74,7 +74,7 @@ export async function createRelatedSubjectMainFromDto(
         .then((rows) => rows.slice(-1));
 
   // 1) Validate foreign keys exist
-  const [[foundPc], [foundSt], [foundBsn]] = await Promise.all([
+  const [[foundPc], [foundSt], [foundBoardSubjectName]] = await Promise.all([
     db
       .select()
       .from(programCourseModel)
@@ -94,7 +94,7 @@ export async function createRelatedSubjectMainFromDto(
   if (!foundSt) {
     throw new Error(`SubjectType not found for id=${input.subjectType.id}`);
   }
-  if (!foundBsn) {
+  if (!foundBoardSubjectName) {
     throw new Error(
       `BoardSubjectName not found for id=${input.boardSubjectName.id}`,
     );
@@ -138,7 +138,7 @@ export async function createRelatedSubjectMainFromDto(
       if (!subId) continue;
       if (subId === created.boardSubjectName.id) continue; // skip target == alt
 
-      const [[existsBsn], [existingSub]] = await Promise.all([
+      const [[existsBoardSubjectName], [existingSub]] = await Promise.all([
         db
           .select()
           .from(boardSubjectNameModel)
@@ -153,7 +153,7 @@ export async function createRelatedSubjectMainFromDto(
             ),
           ),
       ]);
-      if (!existsBsn) continue; // invalid FK -> skip
+      if (!existsBoardSubjectName) continue; // invalid FK -> skip
       if (existingSub) continue; // already present -> skip
       await db
         .insert(relatedSubjectSubModel)
@@ -198,6 +198,7 @@ export async function getAllRelatedSubjectMains(): Promise<
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
         code: boardSubjectNameModel.code,
+        isActive: boardSubjectNameModel.isActive,
       },
     })
     .from(relatedSubjectMainModel)
@@ -228,6 +229,7 @@ export async function getAllRelatedSubjectMains(): Promise<
             id: boardSubjectNameModel.id,
             name: boardSubjectNameModel.name,
             code: boardSubjectNameModel.code,
+            isActive: boardSubjectNameModel.isActive,
           },
         })
         .from(relatedSubjectSubModel)
@@ -256,12 +258,14 @@ export async function getAllRelatedSubjectMains(): Promise<
         } as any,
         subjectType: main.subjectType!,
         boardSubjectName: main.boardSubjectName!,
-        relatedSubjectSubs: subs.map((sub) => ({
-          id: sub.id,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-          boardSubjectName: sub.boardSubjectName!,
-        })),
+        relatedSubjectSubs: await Promise.all(
+          subs.map(async (sub) => ({
+            id: sub.id,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+            boardSubjectName: sub.boardSubjectName!,
+          })),
+        ),
       };
     }),
   );
@@ -292,7 +296,6 @@ export async function getRelatedSubjectMainsPaginated(options: {
       pcName: programCourseModel.name,
       stCode: subjectTypeModel.code,
       stName: subjectTypeModel.name,
-      bsnName: boardSubjectNameModel.name,
     })
     .from(relatedSubjectMainModel)
     .leftJoin(
@@ -311,7 +314,14 @@ export async function getRelatedSubjectMainsPaginated(options: {
   const filters: any[] = [];
   const q = (options.search || "").trim();
   if (q) {
-    filters.push(ilike(boardSubjectNameModel.name, `%${q}%`));
+    filters.push(
+      or(
+        ilike(programCourseModel.name, `%${q}%`),
+        ilike(subjectTypeModel.code, `%${q}%`),
+        ilike(subjectTypeModel.name, `%${q}%`),
+        ilike(boardSubjectNameModel.name, `%${q}%`),
+      ),
+    );
   }
   if (options.programCourse) {
     filters.push(ilike(programCourseModel.name, `%${options.programCourse}%`));
@@ -322,6 +332,10 @@ export async function getRelatedSubjectMainsPaginated(options: {
 
   const rows = await base
     .where(filters.length ? and(...filters) : (undefined as any))
+    .orderBy(
+      desc(relatedSubjectMainModel.createdAt),
+      desc(relatedSubjectMainModel.id as any),
+    )
     .limit(pageSize)
     .offset(offset);
 
@@ -345,7 +359,9 @@ export async function getRelatedSubjectMainsPaginated(options: {
   const full = await Promise.all(
     rows.map((r) => getRelatedSubjectMainById(r.id as number)),
   );
-  const content = full.filter(Boolean) as RelatedSubjectMainDto[];
+  const content = (full.filter(Boolean) as RelatedSubjectMainDto[]).filter(
+    (dto) => !!dto.boardSubjectName,
+  );
   const totalElements = Number(count || 0);
   const totalPages = Math.ceil(totalElements / pageSize) || 1;
   return { content, page, pageSize, totalPages, totalElements };
@@ -380,6 +396,7 @@ export async function findByAcademicYearIdAndProgramCourseId(
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
         code: boardSubjectNameModel.code,
+        isActive: boardSubjectNameModel.isActive,
       },
     })
     .from(relatedSubjectMainModel)
@@ -416,6 +433,7 @@ export async function findByAcademicYearIdAndProgramCourseId(
             id: boardSubjectNameModel.id,
             name: boardSubjectNameModel.name,
             code: boardSubjectNameModel.code,
+            isActive: boardSubjectNameModel.isActive,
           },
         })
         .from(relatedSubjectSubModel)
@@ -444,12 +462,14 @@ export async function findByAcademicYearIdAndProgramCourseId(
         } as any,
         subjectType: main.subjectType!,
         boardSubjectName: main.boardSubjectName!,
-        relatedSubjectSubs: subs.map((sub) => ({
-          id: sub.id,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-          boardSubjectName: sub.boardSubjectName!,
-        })),
+        relatedSubjectSubs: await Promise.all(
+          subs.map(async (sub) => ({
+            id: sub.id,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+            boardSubjectName: sub.boardSubjectName!,
+          })),
+        ),
       };
     }),
   );
@@ -484,6 +504,7 @@ export async function getRelatedSubjectMainById(
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
         code: boardSubjectNameModel.code,
+        isActive: boardSubjectNameModel.isActive,
       },
     })
     .from(relatedSubjectMainModel)
@@ -515,6 +536,7 @@ export async function getRelatedSubjectMainById(
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
         code: boardSubjectNameModel.code,
+        isActive: boardSubjectNameModel.isActive,
       },
     })
     .from(relatedSubjectSubModel)
@@ -540,12 +562,14 @@ export async function getRelatedSubjectMainById(
     } as any,
     subjectType: result.subjectType!,
     boardSubjectName: result.boardSubjectName!,
-    relatedSubjectSubs: subs.map((sub) => ({
-      id: sub.id,
-      createdAt: sub.createdAt,
-      updatedAt: sub.updatedAt,
-      boardSubjectName: sub.boardSubjectName!,
-    })),
+    relatedSubjectSubs: await Promise.all(
+      subs.map(async (sub) => ({
+        id: sub.id,
+        createdAt: sub.createdAt,
+        updatedAt: sub.updatedAt,
+        boardSubjectName: sub.boardSubjectName!,
+      })),
+    ),
   };
 }
 
@@ -578,17 +602,18 @@ export async function updateRelatedSubjectMainFromDto(
   console.log("[updateRelatedSubjectMainFromDto] id=", id, {
     pcId: input.programCourse?.id,
     stId: input.subjectType?.id,
-    bsnId: input.boardSubjectName?.id,
+    boardSubjectNameId: (input as any).boardSubjectName?.id,
     subs: Array.isArray(input.relatedSubjectSubs)
-      ? input.relatedSubjectSubs.map((s) => s.boardSubjectName?.id)
+      ? input.relatedSubjectSubs.map((s) => (s as any).boardSubjectName?.id)
       : null,
   });
   // 1) Update main fields if provided
   const partial: Partial<RelatedSubjectMain> = {};
   if (input.programCourse?.id) partial.programCourseId = input.programCourse.id;
   if (input.subjectType?.id) partial.subjectTypeId = input.subjectType.id;
-  if (input.boardSubjectName?.id)
-    partial.boardSubjectNameId = input.boardSubjectName.id;
+  if ((input as any).boardSubjectName?.id)
+    (partial as any).boardSubjectNameId = (input as any).boardSubjectName
+      .id as number;
   if (typeof input.isActive === "boolean") partial.isActive = input.isActive;
   if (Object.keys(partial).length > 0) {
     await updateRelatedSubjectMain(id, partial);
@@ -608,25 +633,26 @@ export async function updateRelatedSubjectMainFromDto(
     const currentIds = new Set(currentSubs.map((s) => s.boardSubjectNameId));
     const desiredIds = new Set(
       input.relatedSubjectSubs
-        .map((s) => s.boardSubjectName?.id)
+        .map((s) => (s as any).boardSubjectName?.id)
         .filter((v): v is number => !!v),
     );
 
     // Add any desired that are missing (skip when equals target id)
     const targetId: number | undefined =
-      input.boardSubjectName?.id ?? undefined;
+      (input as any).boardSubjectName?.id ?? undefined;
     for (const desiredId of desiredIds) {
       if (desiredId === targetId) continue;
       if (!currentIds.has(desiredId)) {
-        await db
-          .insert(relatedSubjectSubModel)
-          .values({ relatedSubjectMainId: id, boardSubjectNameId: desiredId });
+        await db.insert(relatedSubjectSubModel).values({
+          relatedSubjectMainId: id,
+          boardSubjectNameId: desiredId,
+        });
       }
     }
 
     // Delete any current that are no longer desired
     for (const s of currentSubs) {
-      const sBsnId = s.boardSubjectNameId;
+      const sBsnId = s.boardSubjectNameId as number;
       if (
         typeof s.id === "number" &&
         typeof sBsnId === "number" &&
