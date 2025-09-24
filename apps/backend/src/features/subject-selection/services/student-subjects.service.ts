@@ -238,7 +238,7 @@ export async function findSubjectsSelections(studentId: number) {
 
   const arr: PaperDetailedDto[] = [];
   for (const subject of formatedSelectedMinorSubjects) {
-    if (!arr.find((s) => s.id === subject.id)) {
+    if (arr.find((s) => s.id === subject.id)) {
       arr.push(subject);
     }
   }

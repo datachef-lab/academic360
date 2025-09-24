@@ -104,7 +104,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const { settings } = useSettings();
   const currentPath = location.pathname;
-  const { user, accessToken, displayFlag } = useAuth();
+  const { user, accessToken, isReady } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
@@ -145,9 +145,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //     }
   //   };
 
-  if (!displayFlag || !user || !accessToken) {
-    return null;
+  // Show a lightweight skeleton while auth is bootstrapping
+  if (!isReady) {
+    return <div className="h-16 w-56 animate-pulse bg-muted/40 rounded-md m-2" />;
   }
+  // Always render the sidebar container promptly; show skeleton while auth/user hydrate
+  const showSkeleton = !accessToken || !user;
 
   return (
     <div className="relative">
@@ -224,108 +227,117 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarHeader>
 
         <SidebarContent className="p-0 border-none bg-purple-800/95">
-          <div className="h-full flex flex-col justify-between ">
-            <div className="">
-              <div className="flex flex-col h-full justify-between">
-                {/* Academic Year Setup */}
-                <div className="my-4 mb-6 border mx-2 rounded-l-md">
-                  <NavItem
-                    key={"Academic Year Setup"}
-                    icon={<Plus className="h-5 w-5" />}
-                    href={"/dashboard/academic-year-setup"}
-                  >
-                    <span className="text">New Academic Setup</span>
-                  </NavItem>
-                </div>
-
-                {/* Dashboard Link */}
-                <div className="mb-4">
-                  {data.navDash.map((item) => (
+          {showSkeleton ? (
+            <div className="p-3 space-y-3">
+              <div className="h-8 w-3/4 bg-purple-700/40 rounded animate-pulse" />
+              <div className="h-8 w-2/3 bg-purple-700/40 rounded animate-pulse" />
+              <div className="h-8 w-1/2 bg-purple-700/40 rounded animate-pulse" />
+              <div className="h-8 w-1/3 bg-purple-700/40 rounded animate-pulse" />
+            </div>
+          ) : (
+            <div className="h-full flex flex-col justify-between ">
+              <div className="">
+                <div className="flex flex-col h-full justify-between">
+                  {/* Academic Year Setup */}
+                  <div className="my-4 mb-6 border mx-2 rounded-l-md">
                     <NavItem
-                      key={item.title}
-                      icon={item.icon && <item.icon className="h-5 w-5" />}
-                      href={item.url}
-                      isActive={
-                        !isSearchActive &&
-                        (item.url === "/dashboard"
-                          ? currentPath === "/dashboard"
-                          : isSidebarActive(currentPath, item.url))
-                      }
+                      key={"Academic Year Setup"}
+                      icon={<Plus className="h-5 w-5" />}
+                      href={"/dashboard/academic-year-setup"}
                     >
-                      <span className="text-lg">{item.title}</span>
+                      <span className="text">New Academic Setup</span>
                     </NavItem>
-                  ))}
-                </div>
-                {/* Masters Section */}
-                <div className="mb-4 ">
-                  <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                    Masters
-                  </h3>
-                  <div>
-                    {data.navMain.map((item) => (
+                  </div>
+
+                  {/* Dashboard Link */}
+                  <div className="mb-4">
+                    {data.navDash.map((item) => (
                       <NavItem
                         key={item.title}
                         icon={item.icon && <item.icon className="h-5 w-5" />}
                         href={item.url}
-                        isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                        isActive={
+                          !isSearchActive &&
+                          (item.url === "/dashboard"
+                            ? currentPath === "/dashboard"
+                            : isSidebarActive(currentPath, item.url))
+                        }
                       >
-                        <span className="text-[14px]">{item.title}</span>
+                        <span className="text-lg">{item.title}</span>
                       </NavItem>
                     ))}
                   </div>
+                  {/* Masters Section */}
+                  <div className="mb-4 ">
+                    <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                      Masters
+                    </h3>
+                    <div>
+                      {data.navMain.map((item) => (
+                        <NavItem
+                          key={item.title}
+                          icon={item.icon && <item.icon className="h-5 w-5" />}
+                          href={item.url}
+                          isActive={!isSearchActive && isSidebarActive(currentPath, item.url)}
+                        >
+                          <span className="text-[14px]">{item.title}</span>
+                        </NavItem>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Administration */}
+              <div className="my-14">
+                <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
+                  Administration
+                </h3>
+                <div className="p">
+                  {data.navAdministration.map((item) => {
+                    const url = item.url ?? "";
+                    const isActive = !isSearchActive && isSidebarActive(currentPath, url);
+
+                    //   if (item.isModal) {
+                    //     return (
+                    //       <div
+                    //         key={item.title}
+                    //         onClick={() => {
+                    //           setIsSearchModalOpen(true);
+                    //           setIsSearchActive(true);
+                    //         }}
+                    //         className={cn(
+                    //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
+                    //           isSearchActive
+                    //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
+                    //             : "text-white hover:text-white",
+                    //         )}
+                    //       >
+                    //         <div className="flex items-center gap-3">
+                    //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
+                    //             {item.icon && <item.icon className="h-5 w-5" />}
+                    //           </span>
+                    //           <span className="text-base">{item.title}</span>
+                    //         </div>
+                    //       </div>
+                    //     );
+                    //   }
+
+                    return (
+                      <NavItem
+                        key={item.title}
+                        icon={item.icon && <item.icon className="h-5 w-5" />}
+                        href={url}
+                        isActive={isActive}
+                      >
+                        <span className="text-base">{item.title}</span>
+                      </NavItem>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-
-            {/* Administration */}
-            <div className="my-14">
-              <h3 className="mb-2 px-3 pt-3 text-xs font-medium text-purple-200 uppercase tracking-wider">
-                Administration
-              </h3>
-              <div className="p">
-                {data.navAdministration.map((item) => {
-                  const url = item.url ?? "";
-                  const isActive = !isSearchActive && isSidebarActive(currentPath, url);
-
-                  //   if (item.isModal) {
-                  //     return (
-                  //       <div
-                  //         key={item.title}
-                  //         onClick={() => {
-                  //           setIsSearchModalOpen(true);
-                  //           setIsSearchActive(true);
-                  //         }}
-                  //         className={cn(
-                  //           "group flex items-center transition-all duration-100 px-6 py-3 text-sm font-medium relative cursor-pointer",
-                  //           isSearchActive
-                  //             ? "bg-white hover:text-purple-600 font-semibold text-purple-600 rounded-l-full shadow-lg"
-                  //             : "text-white hover:text-white",
-                  //         )}
-                  //       >
-                  //         <div className="flex items-center gap-3">
-                  //           <span className={cn("h-5 w-5", isSearchActive ? "text-purple-600" : "text-white")}>
-                  //             {item.icon && <item.icon className="h-5 w-5" />}
-                  //           </span>
-                  //           <span className="text-base">{item.title}</span>
-                  //         </div>
-                  //       </div>
-                  //     );
-                  //   }
-
-                  return (
-                    <NavItem
-                      key={item.title}
-                      icon={item.icon && <item.icon className="h-5 w-5" />}
-                      href={url}
-                      isActive={isActive}
-                    >
-                      <span className="text-base">{item.title}</span>
-                    </NavItem>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          )}
         </SidebarContent>
 
         <SidebarFooter className="mt-auto border-t border-purple-500 bg-purple-800/95">

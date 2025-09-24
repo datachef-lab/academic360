@@ -47,6 +47,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/features/auth/hooks/use-auth";
 import { getSearchedStudents, StudentSearchItem } from "@/services/student";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ProtectedRouteWrapper from "@/components/globals/ProtectedRouteWrapper";
 
 // Match sidebar route paths (without "/dashboard") to icons
 const pathIconMap: Record<string, React.ElementType> = {
@@ -128,7 +129,7 @@ const searchData = [
 ];
 
 export default function HomeLayout() {
-  const { accessToken } = useAuth();
+  const { accessToken, isReady } = useAuth();
   const location = useLocation(); // Get current route location
   const pathSegments = location.pathname.split("/").filter(Boolean); // Split the path into segments
   const [open, setOpen] = useState(false);
@@ -188,23 +189,25 @@ export default function HomeLayout() {
   }, []);
 
   return (
+    isReady &&
     accessToken && (
-      <ThemeProvider defaultTheme="light">
-        <SidebarProvider className="w-screen overflow-x-hidden">
-          <AppSidebar />
-          <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
-            <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-              <div className="flex items-center gap-2 px-4">
-                {/* <SidebarTrigger className="-ml-1" /> */}
-                <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem>
-                      <BreadcrumbLink asChild>Academics</BreadcrumbLink>
-                      <BreadcrumbSeparator />
-                    </BreadcrumbItem>
+      <ProtectedRouteWrapper>
+        <ThemeProvider defaultTheme="light">
+          <SidebarProvider className="w-screen overflow-x-hidden">
+            <AppSidebar />
+            <SidebarInset className="w-[100%] overflow-hidden max-h-screen">
+              <header className="flex justify-between border-b py-2 h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                <div className="flex items-center gap-2 px-4">
+                  {/* <SidebarTrigger className="-ml-1" /> */}
+                  <Separator orientation="vertical" className="mr-2 h-4" />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem>
+                        <BreadcrumbLink asChild>Academics</BreadcrumbLink>
+                        <BreadcrumbSeparator />
+                      </BreadcrumbItem>
 
-                    {/* {pathSegments.map((segment, index) => {
+                      {/* {pathSegments.map((segment, index) => {
                     const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
 
                     return (
@@ -217,128 +220,129 @@ export default function HomeLayout() {
                     );
                   })} */}
 
-                    {pathSegments.map((segment, index) => {
-                      const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
-                      const Icon = pathIconMap[segment];
+                      {pathSegments.map((segment, index) => {
+                        const path = `/${pathSegments.slice(0, index + 1).join("/")}`;
+                        const Icon = pathIconMap[segment];
 
-                      return (
-                        <BreadcrumbItem key={index}>
-                          <BreadcrumbLink asChild>
-                            <Link
-                              to={path}
-                              className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors"
-                            >
-                              {Icon && <Icon className="w-4 h-4 text-gray-500" />}
-                              <span className="capitalize">{segment.replace(/-/g, " ")}</span>
-                            </Link>
-                          </BreadcrumbLink>
-                          <BreadcrumbSeparator />
-                        </BreadcrumbItem>
-                      );
-                    })}
-                  </BreadcrumbList>
-                </Breadcrumb>
+                        return (
+                          <BreadcrumbItem key={index}>
+                            <BreadcrumbLink asChild>
+                              <Link
+                                to={path}
+                                className="flex items-center gap-1 text-gray-700 hover:text-purple-600 transition-colors"
+                              >
+                                {Icon && <Icon className="w-4 h-4 text-gray-500" />}
+                                <span className="capitalize">{segment.replace(/-/g, " ")}</span>
+                              </Link>
+                            </BreadcrumbLink>
+                            <BreadcrumbSeparator />
+                          </BreadcrumbItem>
+                        );
+                      })}
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+                <div className="flex items-center mr-2 gap-2">
+                  {/* Search Button */}
+                  <Button
+                    variant="outline"
+                    className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
+                    onClick={() => setOpen(true)}
+                  >
+                    <Search className="mr-2 h-4 w-4" />
+                    <span className="hidden lg:inline-flex">Search...</span>
+                    <span className="inline-flex lg:hidden">Search</span>
+                    <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  </Button>
+                  <NavUser />
+                  {/* <NotifcationPanel /> */}
+                  {/* <ModeToggle /> */}
+                </div>
+              </header>
+              <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
+                {accessToken && <Outlet />}
               </div>
-              <div className="flex items-center mr-2 gap-2">
-                {/* Search Button */}
-                <Button
-                  variant="outline"
-                  className="relative h-9 w-full justify-start rounded-[0.5rem] bg-muted/50 text-sm font-normal text-muted-foreground shadow-none sm:pr-12 md:w-40 lg:w-64"
-                  onClick={() => setOpen(true)}
-                >
-                  <Search className="mr-2 h-4 w-4" />
-                  <span className="hidden lg:inline-flex">Search...</span>
-                  <span className="inline-flex lg:hidden">Search</span>
-                  <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
-                  </kbd>
-                </Button>
-                <NavUser />
-                {/* <NotifcationPanel /> */}
-                {/* <ModeToggle /> */}
-              </div>
-            </header>
-            <div id={styles["shared-area"]} className="flex flex-1 flex-col gap-4 pt-0 overflow-x-hidden">
-              {accessToken && <Outlet />}
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
+            </SidebarInset>
+          </SidebarProvider>
 
-        {/* Command Dialog for Spotlight Search */}
-        <CommandDialog open={open} onOpenChange={setOpen}>
-          <CommandInput
-            placeholder="Search commands or type a student UID..."
-            onValueChange={async (v) => {
-              setInputValue(v);
-              setSuggestions(v.length >= 2 ? await fetchSuggestions(v) : []);
-            }}
-          />
-          <CommandList className="min-h-[160px] max-h-80 overflow-auto">
-            <CommandEmpty>No results found.</CommandEmpty>
-            {/\d{6,}/.test(inputValue.trim()) && (
-              <CommandGroup heading="Quick action">
-                <CommandItem
-                  value={`open-${inputValue.trim()}`}
-                  onSelect={() => {
-                    setOpen(false);
-                    navigate(`/dashboard/students/${inputValue.trim()}`);
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span className="font-medium">Open student UID</span>
-                    <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
-                  </div>
-                </CommandItem>
-              </CommandGroup>
-            )}
-            {suggestions.length > 0 && (
-              <CommandGroup heading="Students">
-                {suggestions.map((s) => (
+          {/* Command Dialog for Spotlight Search */}
+          <CommandDialog open={open} onOpenChange={setOpen}>
+            <CommandInput
+              placeholder="Search commands or type a student UID..."
+              onValueChange={async (v) => {
+                setInputValue(v);
+                setSuggestions(v.length >= 2 ? await fetchSuggestions(v) : []);
+              }}
+            />
+            <CommandList className="min-h-[160px] max-h-80 overflow-auto">
+              <CommandEmpty>No results found.</CommandEmpty>
+              {/\d{6,}/.test(inputValue.trim()) && (
+                <CommandGroup heading="Quick action">
                   <CommandItem
-                    key={s.uid}
-                    value={s.uid}
+                    value={`open-${inputValue.trim()}`}
                     onSelect={() => {
                       setOpen(false);
-                      navigate(`/dashboard/students/${s.uid}`);
+                      navigate(`/dashboard/students/${inputValue.trim()}`);
                     }}
                   >
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-5 w-5">
-                        <AvatarImage src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`} />
-                        <AvatarFallback className="text-[10px]">
-                          {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="font-medium">{s.uid}</span>
-                      <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
+                      <Users className="h-4 w-4" />
+                      <span className="font-medium">Open student UID</span>
+                      <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
+                    </div>
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {suggestions.length > 0 && (
+                <CommandGroup heading="Students">
+                  {suggestions.map((s) => (
+                    <CommandItem
+                      key={s.uid}
+                      value={s.uid}
+                      onSelect={() => {
+                        setOpen(false);
+                        navigate(`/dashboard/students/${s.uid}`);
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`} />
+                          <AvatarFallback className="text-[10px]">
+                            {(s.name ?? s.uid ?? "?")?.toString().charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium">{s.uid}</span>
+                        <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+              <CommandGroup heading="Navigation">
+                {searchData.map((item) => (
+                  <CommandItem
+                    key={item.href}
+                    value={item.title}
+                    onSelect={() => {
+                      setOpen(false);
+                      navigate(item.href);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.title}</span>
+                      <span className="text-xs text-muted-foreground">{item.description}</span>
                     </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
-            )}
-            <CommandGroup heading="Navigation">
-              {searchData.map((item) => (
-                <CommandItem
-                  key={item.href}
-                  value={item.title}
-                  onSelect={() => {
-                    setOpen(false);
-                    navigate(item.href);
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <item.icon className="h-4 w-4" />
-                  <div className="flex flex-col">
-                    <span className="font-medium">{item.title}</span>
-                    <span className="text-xs text-muted-foreground">{item.description}</span>
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </CommandDialog>
-      </ThemeProvider>
+            </CommandList>
+          </CommandDialog>
+        </ThemeProvider>
+      </ProtectedRouteWrapper>
     )
   );
 }

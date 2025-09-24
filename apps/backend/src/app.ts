@@ -90,6 +90,7 @@ import {
   boardRouter,
   boardSubjectNameRouter,
   boardSubjectRouter,
+  boardSubjectUnivSubjectMappingRouter,
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
@@ -344,6 +345,10 @@ app.use("/api/admissions/academic-subject", academicSubjectRouter);
 app.use("/api/admissions/boards", boardRouter);
 app.use("/api/admissions/board-subject-names", boardSubjectNameRouter);
 app.use("/api/admissions/board-subjects", boardSubjectRouter);
+app.use(
+  "/api/admissions/board-subject-univ-subject-mappings",
+  boardSubjectUnivSubjectMappingRouter,
+);
 // Mount the generic admission router last to avoid conflicts with specific routes
 app.use("/api/admissions", admissionRouter);
 

@@ -1,4 +1,4 @@
-import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardT, ClassT, DegreeT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, TransportDetailsT, UserT } from "@/schemas";
+import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardSubjectUnivSubjectMappingT, BoardT, ClassT, DegreeT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
 import { BoardSubjectNameT } from "@/schemas/models/admissions/board-subject-name.model";
@@ -69,4 +69,9 @@ export interface BoardDto extends Omit<BoardT, "degreeId" | "addressId"> {
 export interface BoardSubjectDto extends Omit<BoardSubjectT, "boardSubjectNameId"> {
     board: BoardDto;
     boardSubjectName: BoardSubjectNameT;
+}
+
+export interface BoardSubjectUnivSubjectMappingDto extends Omit<BoardSubjectUnivSubjectMappingT, "boardSubjectId" | "subjectId"> {
+    subject: SubjectT;
+    boardSubjects: BoardSubjectDto[];
 }
