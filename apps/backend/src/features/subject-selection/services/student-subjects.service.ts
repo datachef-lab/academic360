@@ -225,7 +225,22 @@ export async function findSubjectsSelections(studentId: number) {
       } else {
         // No condition found
         const detailed = await paperService.modelToDetailedDto(paper);
-        if (detailed) paperOptions.push(detailed);
+        // Use fuzzy name matching instead of strict equality
+        const studentSubject = detailed
+          ? studentSubjects.find((el) =>
+              isSubjectMatch(
+                el?.boardSubject?.boardSubjectName?.name ?? "",
+                detailed?.subject?.name ?? "",
+              ),
+            )
+          : undefined;
+        if (studentSubject) {
+          if (studentSubject.resultStatus === "PASS") {
+            if (detailed) paperOptions.push(detailed);
+          }
+        } else {
+          if (detailed) paperOptions.push(detailed);
+        }
       }
     }
 
