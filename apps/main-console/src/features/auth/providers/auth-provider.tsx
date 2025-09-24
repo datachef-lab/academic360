@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, ReactNode, createContext, useContext } from "react";
-import axiosInstance from "@/utils/api";
+import axiosInstance, { setAccessTokenForApi } from "@/utils/api";
 import { useNavigate } from "react-router-dom";
 
 import { ApiResponse } from "@/types/api-response";
@@ -38,6 +38,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = (accessToken: string, userData: UserDto) => {
     setAccessToken(accessToken);
+    setAccessTokenForApi(accessToken);
     setUser(userData);
   };
 
@@ -49,6 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = useCallback(() => {
     setAccessToken(null);
+    setAccessTokenForApi(null);
     setUser(null);
     navigate("/");
   }, [navigate]);
@@ -66,6 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
       console.log("response:", response);
       setAccessToken(response.data.payload.accessToken);
+      setAccessTokenForApi(response.data.payload.accessToken);
       setUser(response.data.payload.user);
 
       return response.data.payload.accessToken;
