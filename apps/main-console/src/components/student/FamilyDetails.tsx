@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createFamilyDetail, updateFamilyDetail } from "@/services/family-details.service";
+import { createPerson, updatePerson } from "@/services/person.service";
 import type { FamilyDetailDto } from "@repo/db/dtos/user";
 import type { AnnualIncome } from "@/types/resources/annual-income.types";
 import { ParentType } from "@/types/enums";
@@ -12,21 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Save, CheckCircle } from "lucide-react";
 import { getAllAnnualIncomes } from "@/services/annual-income.service";
-
-function stripDates<T>(obj: T): T {
-  if (Array.isArray(obj)) return obj.map(stripDates) as T;
-  if (obj && typeof obj === "object") {
-    const input = obj as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
-    for (const k in input) {
-      if (k === "createdAt" || k === "updatedAt") continue;
-      const v = input[k];
-      result[k] = typeof v === "object" && v !== null ? stripDates(v) : v;
-    }
-    return result as T;
-  }
-  return obj;
-}
+import { getAllOccupations } from "@/services/occupation.service";
 
 interface FamilyDetailsProps {
   studentId: number;
@@ -73,7 +60,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
     return {
       id: initialData?.id ?? undefined,
       studentId,
-      parentType: null,
+      parentType: initialData?.parentType ?? null,
       fatherDetails: initialData?.father
         ? {
             name: initialData.father.name ?? null,
@@ -110,6 +97,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
     };
   });
   const [annualIncomes, setAnnualIncomes] = useState<AnnualIncome[]>([]);
+  const [occupations, setOccupations] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     getAllAnnualIncomes()
@@ -119,27 +107,59 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
       .catch(() => {
         setAnnualIncomes([]);
       });
+    // Fetch occupations for person fields
+    getAllOccupations()
+      .then((occ) => setOccupations(occ ?? []))
+      .catch(() => setOccupations([]));
   }, []);
+
+  // Keep parentType in sync when initialData changes (e.g., after refresh)
+  useEffect(() => {
+    if (initialData?.parentType) {
+      setFormData((p) => ({ ...p, parentType: initialData.parentType ?? null }));
+    }
+  }, [initialData?.id, initialData?.parentType]);
 
   const mutation = useMutation({
     mutationFn: async (payload: FormState) => {
-      const cleaned = stripDates(payload) as Record<string, unknown>;
-      const normalizePerson = (p: Person | null): Record<string, unknown> | null =>
-        p
-          ? {
-              image: null,
-              officePhone: null,
-              createdAt: null,
-              updatedAt: null,
-              ...p,
-            }
-          : null;
-      cleaned.fatherDetails = normalizePerson(payload.fatherDetails) as unknown as Person | null;
-      cleaned.motherDetails = normalizePerson(payload.motherDetails) as unknown as Person | null;
-      cleaned.guardianDetails = normalizePerson(payload.guardianDetails) as unknown as Person | null;
-      const { id, ...rest } = cleaned as { id?: number } & Record<string, unknown>;
-      if (typeof id === "number") return updateFamilyDetail(id, rest);
-      return createFamilyDetail(rest);
+      // Upsert persons first, then update family IDs and scalar fields
+      const upsert = async (p: Person | null): Promise<number | null> => {
+        if (!p) return null;
+        const base = {
+          name: p.name ?? null,
+          email: p.email ?? null,
+          phone: p.phone ?? null,
+          aadhaarCardNumber: p.aadhaarCardNumber ?? null,
+          occupationId: p.occupation?.id ?? null,
+          qualificationId: p.qualification?.id ?? null,
+        };
+        try {
+          const maybeId = (p as { id?: number }).id;
+          if (typeof maybeId === "number") {
+            await updatePerson(maybeId, base);
+            return maybeId;
+          }
+          const created = await createPerson(base);
+          return created?.payload?.id ?? null;
+        } catch {
+          return null;
+        }
+      };
+
+      const fatherId = await upsert(payload.fatherDetails);
+      const motherId = await upsert(payload.motherDetails);
+      const guardianId = await upsert(payload.guardianDetails);
+
+      const { id, parentType, annualIncome, studentId } = payload;
+      const update = {
+        parentType: parentType ?? "BOTH",
+        annualIncomeId: annualIncome?.id ?? null,
+        fatherDetailsId: fatherId ?? undefined,
+        motherDetailsId: motherId ?? undefined,
+        guardianDetailsId: guardianId ?? undefined,
+      } as const;
+      if (typeof id === "number") return updateFamilyDetail(id, update);
+      return createFamilyDetail({ studentId, ...update });
     },
     onSuccess: () => {
       setShowSuccess(true);
@@ -159,6 +179,9 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
         }}
       >
         <CardContent className="[&_label]:text-xs [&_label]:text-gray-600">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-gray-800">Family Details Form</h2>
+          </div>
           {/* Row: Parent Type / Annual Income */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="flex flex-col gap-1">
@@ -240,6 +263,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                 }
               />
             </div>
+            <div className="flex flex-col gap-1">
+              <Label>Occupation</Label>
+              <Select
+                value={formData.fatherDetails?.occupation?.id ? String(formData.fatherDetails.occupation.id) : ""}
+                onValueChange={(v) => {
+                  const sel = occupations.find((o) => String(o.id) === v) ?? null;
+                  setFormData((p) => ({
+                    ...p,
+                    fatherDetails: { ...(p.fatherDetails ?? {}), occupation: sel } as Person,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Occupation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {occupations.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Mother's Details */}
@@ -281,6 +328,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                   }))
                 }
               />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>Occupation</Label>
+              <Select
+                value={formData.motherDetails?.occupation?.id ? String(formData.motherDetails.occupation.id) : ""}
+                onValueChange={(v) => {
+                  const sel = occupations.find((o) => String(o.id) === v) ?? null;
+                  setFormData((p) => ({
+                    ...p,
+                    motherDetails: { ...(p.motherDetails ?? {}), occupation: sel } as Person,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Occupation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {occupations.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -324,6 +395,30 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
                 }
               />
             </div>
+            <div className="flex flex-col gap-1">
+              <Label>Occupation</Label>
+              <Select
+                value={formData.guardianDetails?.occupation?.id ? String(formData.guardianDetails.occupation.id) : ""}
+                onValueChange={(v) => {
+                  const sel = occupations.find((o) => String(o.id) === v) ?? null;
+                  setFormData((p) => ({
+                    ...p,
+                    guardianDetails: { ...(p.guardianDetails ?? {}), occupation: sel } as Person,
+                  }));
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select Occupation" />
+                </SelectTrigger>
+                <SelectContent>
+                  {occupations.map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>
+                      {o.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col items-center gap-2">
@@ -355,7 +450,7 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" /> Save Changes
+                <Save className="w-4 h-4" /> Save Family Details
               </>
             )}
           </Button>

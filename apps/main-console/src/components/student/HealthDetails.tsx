@@ -2,7 +2,7 @@ import { useEffect, useState, type FC } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { HealthDto } from "@repo/db/dtos/user";
 import { BloodGroupDto } from "@repo/db/dtos/resources";
-import { getHealthDetailByStudentId, createHealthDetail, updateHealthDetail } from "@/services/health-details.service";
+import { getHealthDetailById, createHealthDetail, updateHealthDetail } from "@/services/health-details.service";
 import { getAllBloodGroups } from "@/services/blood-group.service";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -27,6 +27,10 @@ const defaultHealth: Partial<HealthDto> = {
   pastMedicalHistory: null,
   pastSurgicalHistory: null,
   drugAllergy: null,
+};
+
+type HealthUpdateRequest = Partial<Omit<HealthDto, "bloodGroup">> & {
+  bloodGroupId?: number | null;
 };
 
 // Utility to remove createdAt and updatedAt from object and nested
@@ -59,7 +63,7 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
     queryKey: ["healthDetails", healthId],
     queryFn: async () => {
       if (!healthId) return null;
-      const res = await getHealthDetailByStudentId(healthId); // backward compat if route still expects /:id
+      const res = await getHealthDetailById(healthId);
       return res.payload;
     },
     enabled: !!healthId,
@@ -90,13 +94,16 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
   // Save handler
   const mutation = useMutation({
     mutationFn: async (payload: Partial<HealthDto>) => {
-      const cleanedPayload = stripDates(payload);
-      const { id, ...rest } = cleanedPayload;
-      if (id) {
-        return await updateHealthDetail(id, rest);
-      } else {
-        return await createHealthDetail(rest);
+      const cleanedPayload = stripDates(payload) as Partial<HealthDto>;
+      const { bloodGroup, ...rest } = cleanedPayload;
+      const request: HealthUpdateRequest = {
+        ...rest,
+        bloodGroupId: bloodGroup ? (bloodGroup.id ?? null) : null,
+      };
+      if (request.id != null) {
+        return await updateHealthDetail(request.id, request);
       }
+      return await createHealthDetail(request);
     },
     onSuccess: () => {
       toast.success("Health details updated!");
@@ -133,8 +140,8 @@ const HealthDetails: FC<HealthDetailsProps> = ({ healthId, initialData = null })
   return (
     <Card className="max-w-8xl mx-auto my-8">
       <CardHeader className="relative pb-0">
-        <div className="absolute left-6 top-0 h-1 w-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full" />
-        <CardTitle className="pl-6 pt-3 text-xl font-semibold text-gray-800">Health Details</CardTitle>
+        <div className="absolute left-6 top-0 h-1 w-20 rounded-full" />
+        <CardTitle className="text-xl font-semibold text-gray-800">Health Details Form</CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-6 [&_label]:text-xs [&_label]:text-gray-600">
