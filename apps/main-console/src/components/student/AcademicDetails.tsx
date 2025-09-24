@@ -9,7 +9,7 @@ import { boardService } from "@/services/board.service";
 import { getAllLanguageMediums } from "@/services/language-medium.service";
 import { getAllSpecializations } from "@/services/specialization.service";
 import { getProgramCourses } from "@/services/course-design.api";
-import { boardSubjectService, type BoardSubjectDto } from "@/services/board-subject.service";
+import { boardSubjectService } from "@/services/board-subject.service";
 import { Button } from "@/components/ui/button";
 import { updateAcademicInfo } from "@/services/admission-academic-info.service";
 import type { BoardResultStatusType } from "@/types/enums";
