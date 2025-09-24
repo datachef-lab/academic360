@@ -181,7 +181,7 @@ export async function findSubjectsSelections(studentId: number) {
   const studentSubjectsSelection = [];
   for (const [subjectTypeId, papers] of papersBySubjectType) {
     const subjectType = papers[0].subjectType;
-    const paperOptions = [];
+    let paperOptions: PaperDetailedDto[] = [];
 
     for (const { paper, subject } of papers) {
       // Fetch the subject which is common name in subject and board subject name
@@ -190,19 +190,43 @@ export async function findSubjectsSelections(studentId: number) {
           rsbj.subjectType.id === subjectTypeId &&
           isSubjectMatch(rsbj.boardSubjectName.name, subject?.name || ""),
       );
-
+      console.log(
+        "relatedSubjectMainDto",
+        relatedSubjectMainDto,
+        "subject?.name:",
+        subject?.name,
+      );
       // Check the condition
       if (relatedSubjectMainDto) {
         for (const stdSubject of studentSubjects) {
           // If studied in 12th class, then check the result status
+          console.log(
+            "// If studied in 12th class, then check the result status:",
+            stdSubject.boardSubject.boardSubjectName.name,
+            relatedSubjectMainDto.boardSubjectName.name,
+          );
           if (
-            stdSubject.boardSubject.boardSubjectName.id ===
-            relatedSubjectMainDto.boardSubjectName.id
+            isSubjectMatch(
+              stdSubject.boardSubject.boardSubjectName.name,
+              relatedSubjectMainDto.boardSubjectName.name,
+            )
           ) {
             if (stdSubject.resultStatus === "PASS") {
               // If the subject is pass, then add the paper to the paper options
               const detailed = await paperService.modelToDetailedDto(paper);
+              console.log(
+                "adding the paper to the paper options",
+                detailed?.subject.name,
+              );
               if (detailed) paperOptions.push(detailed);
+            } else {
+              console.log(
+                "filtering the paper from the paper options",
+                paper.subjectId,
+              );
+              paperOptions = paperOptions.filter(
+                (p) => p.subject.id !== paper.subjectId,
+              );
             }
           } else {
             // Not studied in 12th class, then check the result status for the related subject-subs
@@ -218,14 +242,37 @@ export async function findSubjectsSelections(studentId: number) {
             // If any of the related subject-subs is pass, then add the paper to the paper options
             if (isRelatedSubjectSubPass) {
               const detailed = await paperService.modelToDetailedDto(paper);
+              console.log(
+                "adding the paper to the paper options by related subject subs:",
+                detailed?.subject.name,
+              );
               if (detailed) paperOptions.push(detailed);
             }
           }
         }
       } else {
         // No condition found
+        // console.log("// No condition found", s.boardSubject.boardSubjectName.name, subject?.name);
         const detailed = await paperService.modelToDetailedDto(paper);
-        if (detailed) paperOptions.push(detailed);
+        const studentSubject = studentSubjects.find((s) =>
+          isSubjectMatch(
+            s.boardSubject.boardSubjectName.name,
+            subject?.name || "",
+          ),
+        );
+        console.log("studentSubject:", studentSubject);
+        if (studentSubject) {
+          if (studentSubject.resultStatus === "PASS") {
+            if (detailed) paperOptions.push(detailed);
+          } else {
+            paperOptions = paperOptions.filter(
+              (p) => p.subject.id !== paper.subjectId,
+            );
+          }
+        } else {
+          // console.log("// No student subject found", subject?.name);
+          if (detailed) paperOptions.push(detailed);
+        }
       }
     }
 
