@@ -96,6 +96,10 @@ export const useAcademicYear = () => {
 
     console.log("Academic Year Hook: Loading academic years with token:", accessToken ? "Present" : "Missing");
     setLoadingState(true);
+
+    // Add a small delay to ensure axios interceptors are properly set up
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     try {
       const response = await getAllAcademicYears();
       console.log("Academic Year Hook: API Response:", response);

@@ -104,7 +104,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const { settings } = useSettings();
   const currentPath = location.pathname;
-  const { user, accessToken, isReady } = useAuth();
+  const { accessToken } = useAuth();
   const [isSearchModalOpen, setIsSearchModalOpen] = React.useState(false);
   const [isSearchActive, setIsSearchActive] = React.useState(false);
 
@@ -145,12 +145,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //     }
   //   };
 
-  // Show a lightweight skeleton while auth is bootstrapping
-  if (!isReady) {
-    return <div className="h-16 w-56 animate-pulse bg-muted/40 rounded-md m-2" />;
-  }
-  // Always render the sidebar container promptly; show skeleton while auth/user hydrate
-  const showSkeleton = !accessToken || !user;
+  // Always show the sidebar, even if user/token is not available yet
+  // This prevents the sidebar from disappearing and reappearing
+
+  // Show skeleton while loading academic years or settings (customize as needed)
+  const showSkeleton = academicYearLoading || settings.length === 0;
 
   return (
     <div className="relative">
@@ -370,12 +369,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </DropdownMenuContent>
           </DropdownMenu> */}
           <div className="font-bold">
-            <p className="text-xs text-center text-purple-100 space-x-1">
+            <div className="text-xs text-center text-purple-100 space-x-1">
               <Badge variant="secondary" className="">
                 academic360
               </Badge>
               <Badge variant="secondary">v1.0.0</Badge>
-            </p>
+            </div>
           </div>
         </SidebarFooter>
       </Sidebar>

@@ -562,8 +562,8 @@ const donutData = [
 ];
 function StudentDonutChart() {
   return (
-    <ResponsiveContainer width={140} height={140}>
-      <PieChart>
+    <div className="w-[140px] h-[140px]">
+      <PieChart width={140} height={140}>
         <Pie
           data={donutData}
           dataKey="value"
@@ -597,7 +597,7 @@ function StudentDonutChart() {
           Active
         </text>
       </PieChart>
-    </ResponsiveContainer>
+    </div>
   );
 }
 

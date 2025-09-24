@@ -1,6 +1,6 @@
-import React from "react";
-import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
+import React from "react";
 
 // Match the notification type definition from backend
 export interface Notification {
@@ -70,7 +70,7 @@ class SocketService {
       this.socket.on("notification", this.handleNotification);
       this.socket.on("connect_error", this.handleError);
 
-      console.log(`[SocketService] Connecting to ${serverOrigin} with path ${socketPath}`);
+      // console.log(`[SocketService] Connecting to ${serverOrigin} with path ${socketPath}`);
     } catch (error) {
       console.error("[SocketService] Error initializing socket:", error);
     }
@@ -113,7 +113,7 @@ class SocketService {
 
     const { userName } = this.pendingAuth;
     this.socket.emit("authenticate", { userName });
-    console.log(`[SocketService] Authenticated user: ${userName}`);
+    // console.log(`[SocketService] Authenticated user: ${userName}`);
     this.pendingAuth = null;
   }
 
@@ -132,7 +132,7 @@ class SocketService {
       this.connected = false;
       this.userName = null;
 
-      console.log("[SocketService] Disconnected from server");
+      // console.log('[SocketService] Disconnected from server');
     } catch (error) {
       console.error("[SocketService] Error disconnecting socket:", error);
     }
@@ -152,10 +152,12 @@ class SocketService {
   // Event handlers
   private handleConnect = () => {
     this.connected = true;
-    console.log("[SocketService] Connected to server");
+    // console.log('[SocketService] Connected to server');
 
     // Notify all connect listeners
     this.connectListeners.forEach((listener) => listener());
+
+    // Toast notification removed - no need to show connection messages
 
     // Send pending authentication if any
     this.sendAuthentication();
@@ -163,14 +165,16 @@ class SocketService {
 
   private handleDisconnect = () => {
     this.connected = false;
-    console.log("[SocketService] Disconnected from server");
+    // console.log('[SocketService] Disconnected from server');
 
     // Notify all disconnect listeners
     this.disconnectListeners.forEach((listener) => listener());
+
+    // Toast notification removed - no need to show disconnection messages
   };
 
   private handleNotification = (notification: RawNotification) => {
-    console.log("[SocketService] Received notification:", notification);
+    // console.log('[SocketService] Received notification:', notification);
 
     // Ensure the notification has the correct type structure
     const typedNotification: Notification = {
