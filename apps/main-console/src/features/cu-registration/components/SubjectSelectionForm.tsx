@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
 import { fetchStudentSubjectSelections, PaperDto } from "@/services/subject-selection";
@@ -43,7 +43,6 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
 
   // Auto-assign subjects per category/semester (from API flag)
   const [autoMinor1, setAutoMinor1] = useState<string>("");
-  const [autoMinor2, setAutoMinor2] = useState<string>("");
 
   // Helper: safely check autoAssign flag without using 'any'
   const isAutoAssigned = (p: unknown): boolean => {
@@ -152,13 +151,8 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
             .filter((p) => isAutoAssigned(p) && (isSem(p, "I") || isSem(p, "II")))
             .map(getLabel),
         );
-        const autoMinor2List = dedupe(
-          (minorGroup?.paperOptions || [])
-            .filter((p) => isAutoAssigned(p) && (isSem(p, "III") || isSem(p, "IV")))
-            .map(getLabel),
-        );
+        // No separate auto-assign for Minor II; enforce single mandatory subject presence
         setAutoMinor1(firstOrEmpty(autoMinor1List) || "");
-        setAutoMinor2(firstOrEmpty(autoMinor2List) || "");
 
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = studentData.currentPromotion?.programCourse?.id;
@@ -332,6 +326,11 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
       newErrors.push("IDC 2 and IDC 3 cannot be the same");
     }
 
+    // Auto-assigned subject must be present in one of the minors
+    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
+      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+    }
+
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -346,6 +345,17 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     if (!hasUserInteracted) {
       setHasUserInteracted(true);
     }
+
+    // Move auto-assigned subject (e.g., Mathematics) to the other Minor when it is replaced
+    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2")) {
+      if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
+        if (minor2 !== autoMinor1) setMinor2(autoMinor1);
+      }
+      if (fieldType === "minor2" && minor2 === autoMinor1 && value !== autoMinor1) {
+        if (minor1 !== autoMinor1) setMinor1(autoMinor1);
+      }
+    }
+
     setter(value);
 
     // Clear only the specific error for this field when user selects it
@@ -391,78 +401,76 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     });
   };
 
-  const getFilteredByCategory = (
-    sourceList: string[],
-    currentValue: string,
-    categoryCode: string,
-    contextSemester?: string | string[],
-  ) => {
-    const norm = (s: string) =>
-      String(s || "")
-        .trim()
-        .toUpperCase();
-    const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
-    return sourceList.filter((subject) => {
-      // Base ensure uniqueness against current selections of same category handled by caller
-      // RG checks only when defined for this category
-      // IMPORTANT: exclude the current field's own value so user can swap
-      // Only consider selections from the SAME category as the dropdown being filtered
-      const sameCategorySelected =
-        norm(categoryCode) === "MN"
-          ? [minor1, minor2]
-          : norm(categoryCode) === "IDC"
-            ? [idc1, idc2, idc3]
-            : norm(categoryCode) === "AEC"
-              ? [aec3]
-              : norm(categoryCode) === "CVAC"
-                ? [cvac4]
-                : [];
-      const selected = sameCategorySelected.filter(Boolean).filter((s) => s !== currentValue);
+  const getFilteredByCategory = useCallback(
+    (sourceList: string[], currentValue: string, categoryCode: string, contextSemester?: string | string[]) => {
+      const norm = (s: string) =>
+        String(s || "")
+          .trim()
+          .toUpperCase();
+      const applyRules = Boolean(restrictedCategories[norm(categoryCode)]);
+      return sourceList.filter((subject) => {
+        // Base ensure uniqueness against current selections of same category handled by caller
+        // RG checks only when defined for this category
+        // IMPORTANT: exclude the current field's own value so user can swap
+        // Only consider selections from the SAME category as the dropdown being filtered
+        const sameCategorySelected =
+          norm(categoryCode) === "MN"
+            ? [minor1, minor2]
+            : norm(categoryCode) === "IDC"
+              ? [idc1, idc2, idc3]
+              : norm(categoryCode) === "AEC"
+                ? [aec3]
+                : norm(categoryCode) === "CVAC"
+                  ? [cvac4]
+                  : [];
+        const selected = sameCategorySelected.filter(Boolean).filter((s) => s !== currentValue);
 
-      // Enforce uniqueness within same category: hide already-picked peer subject
-      if (selected.map(norm).includes(norm(subject))) return false;
+        // Enforce uniqueness within same category: hide already-picked peer subject
+        if (selected.map(norm).includes(norm(subject))) return false;
 
-      if (!applyRules) {
-        // No RG defined for this category; allow default dedupe logic by caller
-        return true;
-      }
-      const inContext = (rgSemesters: string[]) => {
-        if (!contextSemester) return true;
-        const set = Array.isArray(contextSemester)
-          ? new Set(contextSemester.map((s) => norm(s)))
-          : new Set([norm(contextSemester)]);
-        return rgSemesters.length === 0 || rgSemesters.some((r) => set.has(norm(r)));
-      };
-      for (const sel of selected) {
-        const rg = restrictedBySubject[norm(sel)];
-        if (!rg) continue;
-        if (rg.categoryCode !== norm(categoryCode)) continue; // rule applies only to its category
-        if (!inContext(rg.semesters)) continue;
-        if (rg.cannotCombineWith.has(norm(subject))) return false;
-      }
-
-      const candidateRg = restrictedBySubject[norm(subject)];
-      if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
-        if (!inContext(candidateRg.semesters)) return true;
-        for (const sel of selected) {
-          const selRg = restrictedBySubject[norm(sel)];
-          if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
-          if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
+        if (!applyRules) {
+          // No RG defined for this category; allow default dedupe logic by caller
+          return true;
         }
-      }
-      return true;
-    });
-  };
+        const inContext = (rgSemesters: string[]) => {
+          if (!contextSemester) return true;
+          const set = Array.isArray(contextSemester)
+            ? new Set(contextSemester.map((s) => norm(s)))
+            : new Set([norm(contextSemester)]);
+          return rgSemesters.length === 0 || rgSemesters.some((r) => set.has(norm(r)));
+        };
+        for (const sel of selected) {
+          const rg = restrictedBySubject[norm(sel)];
+          if (!rg) continue;
+          if (rg.categoryCode !== norm(categoryCode)) continue; // rule applies only to its category
+          if (!inContext(rg.semesters)) continue;
+          if (rg.cannotCombineWith.has(norm(subject))) return false;
+        }
 
-  // Instant auto-assign for Minors: when one Minor is chosen, auto-fill the other if required
+        const candidateRg = restrictedBySubject[norm(subject)];
+        if (candidateRg && candidateRg.categoryCode === norm(categoryCode)) {
+          if (!inContext(candidateRg.semesters)) return true;
+          for (const sel of selected) {
+            const selRg = restrictedBySubject[norm(sel)];
+            if (!selRg || selRg.categoryCode !== norm(categoryCode)) continue;
+            if (candidateRg.cannotCombineWith.has(norm(sel))) return false;
+          }
+        }
+        return true;
+      });
+    },
+    [restrictedCategories, restrictedBySubject, minor1, minor2, idc1, idc2, idc3, aec3, cvac4],
+  );
+
+  // Auto-assign the other Minor with the mandatory auto-assigned subject when one is selected
   useEffect(() => {
-    if (minor1 && !minor2 && autoMinor2) {
+    if (minor1 && !minor2 && autoMinor1) {
       const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
-      if (options.includes(autoMinor2) && autoMinor2 !== minor1) {
-        setMinor2(autoMinor2);
+      if (options.includes(autoMinor1) && autoMinor1 !== minor1) {
+        setMinor2(autoMinor1);
       }
     }
-  }, [minor1, minor2, autoMinor2, admissionMinor2Subjects]);
+  }, [minor1, minor2, autoMinor1, admissionMinor2Subjects, getFilteredByCategory]);
 
   useEffect(() => {
     if (minor2 && !minor1 && autoMinor1) {
@@ -471,7 +479,26 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
         setMinor1(autoMinor1);
       }
     }
-  }, [minor2, minor1, autoMinor1, admissionMinor1Subjects]);
+  }, [minor2, minor1, autoMinor1, admissionMinor1Subjects, getFilteredByCategory]);
+
+  // Enforce that auto-assigned subject is always present by moving it to the other Minor when replaced
+  useEffect(() => {
+    if (autoMinor1 && minor1 && minor1 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      if (options.includes(autoMinor1)) {
+        setMinor2(autoMinor1);
+      }
+    }
+  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects, getFilteredByCategory]);
+
+  useEffect(() => {
+    if (autoMinor1 && minor2 && minor2 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
+      if (options.includes(autoMinor1)) {
+        setMinor1(autoMinor1);
+      }
+    }
+  }, [minor2, autoMinor1, minor1, admissionMinor1Subjects, getFilteredByCategory]);
 
   // Loading skeleton component for dropdowns
   const LoadingDropdown = ({ label }: { label: string }) => (

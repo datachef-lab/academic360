@@ -164,6 +164,15 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         setAutoIdc2(firstOrEmpty(autoIdc2List));
         setAutoIdc3(firstOrEmpty(autoIdc3List));
 
+        // Debug: Log auto-assign values
+        console.log("Auto-assign values:", {
+          autoMinor1: firstOrEmpty(autoMinor1List),
+          autoMinor2: firstOrEmpty(autoMinor2List),
+          autoIdc1: firstOrEmpty(autoIdc1List),
+          autoIdc2: firstOrEmpty(autoIdc2List),
+          autoIdc3: firstOrEmpty(autoIdc3List),
+        });
+
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = student?.currentPromotion?.programCourse?.id as number | undefined;
         const rgs = await fetchRestrictedGroupings({ page: 1, pageSize: 200, programCourseId });
@@ -356,6 +365,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       newErrors.push("IDC 2 and IDC 3 cannot be the same");
     }
 
+    // Auto-assigned subject must be present validation
+    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
+      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+    }
+
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -370,6 +384,17 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     if (!hasUserInteracted) {
       setHasUserInteracted(true);
     }
+
+    // Move auto-assigned subject (Mathematics) to the other Minor when replaced
+    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2")) {
+      if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
+        if (minor2 !== autoMinor1) setMinor2(autoMinor1);
+      }
+      if (fieldType === "minor2" && minor2 === autoMinor1 && value !== autoMinor1) {
+        if (minor1 !== autoMinor1) setMinor1(autoMinor1);
+      }
+    }
+
     setter(value);
 
     // Clear only the specific error for this field when user selects it
@@ -395,48 +420,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Mark user interaction when they try to proceed
     setHasUserInteracted(true);
 
-    // Auto-assign pass: if required auto subject exists and not selected yet, set it now
-    // Only auto-assign if the subject is available in the current filtered options
-    let changed = false;
-
-    // Get current filtered options for each dropdown
-    const filteredMinor1Options = getFilteredByCategory(admissionMinor1Subjects, "MN", "I", minor1);
-    const filteredMinor2Options = getFilteredByCategory(admissionMinor2Subjects, "MN", "III", minor2);
-    const filteredIdc1Options = getFilteredByCategory(availableIdcSem1Subjects, "IDC", "I", idc1);
-    const filteredIdc2Options = getFilteredByCategory(availableIdcSem2Subjects, "IDC", "II", idc2);
-    const filteredIdc3Options = getFilteredByCategory(availableIdcSem3Subjects, "IDC", "III", idc3);
-
-    if (autoMinor1 && minor1 !== autoMinor1 && filteredMinor1Options.includes(autoMinor1)) {
-      setMinor1(autoMinor1);
-      changed = true;
+    // Validate and proceed
+    const isValid = validateForm();
+    if (isValid) {
+      setStep(2);
     }
-    if (autoMinor2 && minor2 !== autoMinor2 && filteredMinor2Options.includes(autoMinor2)) {
-      setMinor2(autoMinor2);
-      changed = true;
-    }
-    if (autoIdc1 && idc1 !== autoIdc1 && filteredIdc1Options.includes(autoIdc1)) {
-      setIdc1(autoIdc1);
-      changed = true;
-    }
-    if (autoIdc2 && idc2 !== autoIdc2 && filteredIdc2Options.includes(autoIdc2)) {
-      setIdc2(autoIdc2);
-      changed = true;
-    }
-    if (autoIdc3 && idc3 !== autoIdc3 && filteredIdc3Options.includes(autoIdc3)) {
-      setIdc3(autoIdc3);
-      changed = true;
-    }
-
-    // After auto-assign state updates, validate and proceed
-    setTimeout(
-      () => {
-        const isValid = validateForm();
-        if (isValid) {
-          setStep(2);
-        }
-      },
-      changed ? 0 : 0,
-    );
   };
   const handleBack = () => setStep(1);
 
@@ -519,28 +507,49 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     });
   };
 
-  // Instant auto-assign for Minors: when one Minor is chosen, auto-fill the other if required
+  // Auto-assign the other Minor when one is selected (if auto-assign subject exists)
   useEffect(() => {
-    // When Minor I is selected, try setting Minor II if there is an applicable autoAssign
-    if (minor1 && !minor2 && autoMinor2) {
+    // When Minor I is selected, auto-assign Minor II if auto-assign subject exists
+    if (minor1 && !minor2 && autoMinor1) {
       const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
-      // Avoid duplicating the same subject across Minor I and II
-      if (options.includes(autoMinor2) && autoMinor2 !== minor1) {
-        setMinor2(autoMinor2);
+      // Only auto-assign if the auto-assign subject is available in Minor II options and different from Minor I
+      if (options.includes(autoMinor1) && autoMinor1 !== minor1) {
+        setMinor2(autoMinor1);
       }
     }
-  }, [minor1, minor2, autoMinor2, admissionMinor2Subjects]);
+  }, [minor1, minor2, autoMinor1, admissionMinor2Subjects]);
 
   useEffect(() => {
-    // When Minor II is selected, try setting Minor I if there is an applicable autoAssign
+    // When Minor II is selected, auto-assign Minor I if auto-assign subject exists
     if (minor2 && !minor1 && autoMinor1) {
       const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
-      // Avoid duplicating the same subject across Minor I and II
+      // Only auto-assign if the auto-assign subject is available in Minor I options and different from Minor II
       if (options.includes(autoMinor1) && autoMinor1 !== minor2) {
         setMinor1(autoMinor1);
       }
     }
   }, [minor2, minor1, autoMinor1, admissionMinor1Subjects]);
+
+  // Handle when user changes a Minor that was auto-assigned - move auto-assign to the other dropdown
+  useEffect(() => {
+    // If Minor I no longer holds the auto-assigned subject, enforce it in Minor II
+    if (minor1 && autoMinor1 && minor1 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      if (options.includes(autoMinor1)) {
+        setMinor2(autoMinor1);
+      }
+    }
+  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects]);
+
+  useEffect(() => {
+    // If Minor II no longer holds the auto-assigned subject, enforce it in Minor I
+    if (minor2 && autoMinor1 && minor2 !== autoMinor1) {
+      const options = getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]);
+      if (options.includes(autoMinor1)) {
+        setMinor1(autoMinor1);
+      }
+    }
+  }, [minor2, autoMinor1, minor1, admissionMinor1Subjects]);
 
   const [showTips, setShowTips] = useState(true);
   const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
@@ -967,7 +976,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               {loading ? (
                 <LoadingDropdown label="CVAC 4 (Semester II)" />
               ) : hasActualOptions(availableCvacOptions) ? (
-                <div className="space-y-2">
+                <div className="space-y-2" onClick={() => handleFieldFocus("cvac")}>
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
