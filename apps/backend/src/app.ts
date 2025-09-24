@@ -95,6 +95,7 @@ import {
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
 import bulkUploadRouter from "@/features/common/routes/bulkUpload.routes.js";
+import academicSetupStatsRouter from "@/features/dashboard/routes/academic-setup-stats.route.js";
 import {
   streamRouter,
   courseTypeRouter,
@@ -287,6 +288,7 @@ app.use("/api/languages", languageMediumRouter);
 // app.use("/api/disability-codes", disabilityRouter);
 
 app.use("/api/board-result-statuses", boardResultStatusRouter);
+app.use("/api/stats", academicSetupStatsRouter);
 
 app.use("/api/board-universities", boardUniversityRouter);
 
