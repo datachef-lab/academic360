@@ -551,6 +551,32 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
   }, [minor2, autoMinor1, minor1, admissionMinor1Subjects]);
 
+  // Debug: Ensure AEC selection never filters out IDC options (cross-category independence)
+  useEffect(() => {
+    if (!aec3) return;
+    const subject = aec3;
+    const inSem1 = availableIdcSem1Subjects.includes(subject);
+    const inSem2 = availableIdcSem2Subjects.includes(subject);
+    const inSem3 = availableIdcSem3Subjects.includes(subject);
+    const inMinor1 = admissionMinor1Subjects.includes(subject);
+    const inMinor2 = admissionMinor2Subjects.includes(subject);
+    // eslint-disable-next-line no-console
+    console.log("[SubjectSelection] AEC selected:", subject, {
+      presentInIDC1List: inSem1,
+      presentInIDC2List: inSem2,
+      presentInIDC3List: inSem3,
+      presentInMinor1List: inMinor1,
+      presentInMinor2List: inMinor2,
+    });
+  }, [
+    aec3,
+    availableIdcSem1Subjects,
+    availableIdcSem2Subjects,
+    availableIdcSem3Subjects,
+    admissionMinor1Subjects,
+    admissionMinor2Subjects,
+  ]);
+
   const [showTips, setShowTips] = useState(true);
   const [showStudentInfoMobile, setShowStudentInfoMobile] = useState(false);
 
@@ -573,9 +599,19 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     return [{ value: "", label: selectLabel }, ...options];
   };
 
+  // Ensure AEC selection does not get filtered out from other categories if it exists in their base lists
+  const preserveAecIfPresent = (baseList: string[], filteredList: string[]) => {
+    if (!aec3) return filteredList;
+    const existsInBase = baseList.includes(aec3);
+    if (!existsInBase) return filteredList;
+    if (filteredList.includes(aec3)) return filteredList;
+    return [...filteredList, aec3];
+  };
+
   // Prevent selecting the same subject across different categories (global uniqueness)
   const getGlobalExcludes = (currentValue: string) => {
-    return [minor1, minor2, idc1, idc2, idc3, aec3, cvac4].filter(Boolean).filter((s) => s !== currentValue);
+    // Do not exclude AEC across categories; allow AEC subjects to appear elsewhere
+    return [minor1, minor2, idc1, idc2, idc3, /* aec3, */ cvac4].filter(Boolean).filter((s) => s !== currentValue);
   };
 
   // Helper function to check if there are actual subject options (excluding placeholder)
@@ -848,7 +884,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         </label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            preserveAecIfPresent(
+                              admissionMinor1Subjects,
+                              getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            ),
                             getGlobalExcludes(minor1),
                           )}
                           value={minor1}
@@ -866,7 +905,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         </label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                            preserveAecIfPresent(
+                              admissionMinor2Subjects,
+                              getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                            ),
                             getGlobalExcludes(minor2),
                           )}
                           value={minor2}
@@ -910,11 +952,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
-                              idc1,
-                              "IDC",
-                              "I",
+                            preserveAecIfPresent(
+                              availableIdcSem1Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                                idc1,
+                                "IDC",
+                                "I",
+                              ),
                             ),
                             getGlobalExcludes(idc1),
                           )}
@@ -931,11 +976,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
-                              idc2,
-                              "IDC",
-                              "II",
+                            preserveAecIfPresent(
+                              availableIdcSem2Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                                idc2,
+                                "IDC",
+                                "II",
+                              ),
                             ),
                             getGlobalExcludes(idc2),
                           )}
@@ -952,11 +1000,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
-                              idc3,
-                              "IDC",
-                              "III",
+                            preserveAecIfPresent(
+                              availableIdcSem3Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                                idc3,
+                                "IDC",
+                                "III",
+                              ),
                             ),
                             getGlobalExcludes(idc3),
                           )}
@@ -979,7 +1030,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <div className="space-y-2" onClick={() => handleFieldFocus("cvac")}>
                   <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
+                    dataArr={convertToComboboxData(availableCvacOptions)}
                     value={cvac4}
                     onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
                     placeholder="Select CVAC 4"

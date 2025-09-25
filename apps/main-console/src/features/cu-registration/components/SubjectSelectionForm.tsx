@@ -519,9 +519,19 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     return [{ value: "", label: selectLabel }, ...options];
   };
 
+  // Ensure AEC selection does not get filtered out from other categories if it exists in their base lists
+  const preserveAecIfPresent = (baseList: string[], filteredList: string[]) => {
+    if (!aec3) return filteredList;
+    const existsInBase = baseList.includes(aec3);
+    if (!existsInBase) return filteredList;
+    if (filteredList.includes(aec3)) return filteredList;
+    return [...filteredList, aec3];
+  };
+
   // Build a global exclusion list so the same subject cannot be selected in any other category
   const getGlobalExcludes = (currentValue: string) => {
-    return [minor1, minor2, idc1, idc2, idc3, aec3, cvac4].filter(Boolean).filter((s) => s !== currentValue);
+    // Do not exclude AEC across categories; allow AEC subjects to appear elsewhere
+    return [minor1, minor2, idc1, idc2, idc3, /* aec3, */ cvac4].filter(Boolean).filter((s) => s !== currentValue);
   };
 
   // Helper function to check if there are actual subject options (excluding placeholder)
@@ -622,7 +632,10 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         </label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            preserveAecIfPresent(
+                              admissionMinor1Subjects,
+                              getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                            ),
                             getGlobalExcludes(minor1),
                           )}
                           value={minor1}
@@ -640,7 +653,10 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         </label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                            preserveAecIfPresent(
+                              admissionMinor2Subjects,
+                              getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                            ),
                             getGlobalExcludes(minor2),
                           )}
                           value={minor2}
@@ -684,11 +700,14 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
-                              idc1,
-                              "IDC",
-                              "I",
+                            preserveAecIfPresent(
+                              availableIdcSem1Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                                idc1,
+                                "IDC",
+                                "I",
+                              ),
                             ),
                             getGlobalExcludes(idc1),
                           )}
@@ -705,11 +724,14 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
-                              idc2,
-                              "IDC",
-                              "II",
+                            preserveAecIfPresent(
+                              availableIdcSem2Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                                idc2,
+                                "IDC",
+                                "II",
+                              ),
                             ),
                             getGlobalExcludes(idc2),
                           )}
@@ -726,11 +748,14 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                         <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
                         <Combobox
                           dataArr={convertToComboboxData(
-                            getFilteredByCategory(
-                              getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
-                              idc3,
-                              "IDC",
-                              "III",
+                            preserveAecIfPresent(
+                              availableIdcSem3Subjects,
+                              getFilteredByCategory(
+                                getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                                idc3,
+                                "IDC",
+                                "III",
+                              ),
                             ),
                             getGlobalExcludes(idc3),
                           )}
