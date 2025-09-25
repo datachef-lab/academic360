@@ -24,10 +24,10 @@ export const studentModel = pgTable("students", {
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
     rollNumber: varchar({ length: 255 }),
-    sectionId: integer("section_id_fk").references(() => sectionModel.id),
-    shiftId: integer("shift_id_fk")
-        .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
-        .notNull(),
+    // sectionId: integer("section_id_fk").references(() => sectionModel.id),
+    // shiftId: integer("shift_id_fk")
+    //     .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
+    //     .notNull(),
     classRollNumber: varchar({ length: 255 }),
     apaarId: varchar({ length: 255 }),
     abcId: varchar({ length: 255 }),

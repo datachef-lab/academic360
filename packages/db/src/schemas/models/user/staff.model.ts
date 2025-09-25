@@ -27,16 +27,16 @@ export const staffModel = pgTable('staffs', {
     shiftId: integer("shift_id_fk").references(() => shiftModel.id),
     gratuityNumber: varchar({ length: 255 }),
 
-    personalDetailsId: integer("personal_details_id_fk")
-        .references(() => personalDetailsModel.id),
+    // personalDetailsId: integer("personal_details_id_fk")
+    //     .references(() => personalDetailsModel.id),
 
-    familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
+    // familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
 
     studentCategoryId: integer("student_category_id_fk")
         .references(() => studentCategoryModel.id),
-    healthId: integer("health_id_fk").references(() => healthModel.id),
+    // healthId: integer("health_id_fk").references(() => healthModel.id),
 
-    emergencyContactId: integer("emergency_contact_id_fk").references(() => emergencyContactModel.id),
+    // emergencyContactId: integer("emergency_contact_id_fk").references(() => emergencyContactModel.id),
 
     computerOperationKnown: boolean("computer_operation_known").default(false),
     lastSchoolAttended: integer("last_school_attended_id_fk").references(() => institutionModel.id),
@@ -49,10 +49,10 @@ export const staffModel = pgTable('staffs', {
     majorChildName: varchar({ length: 255 }),
     majorChildPhone: varchar({ length: 255 }),
     
-    nomineeId: integer("nominee_id_fk").references(() => personModel.id),
+    // nomineeId: integer("nominee_id_fk").references(() => personModel.id),
     previousEmployeeName: varchar({ length: 255 }),
     previousEmployeePhone: varchar({ length: 255 }),
-    previousEmployeeAddressId: integer("previous_employee_address_id_fk").references(() => addressModel.id),
+    // previousEmployeeAddressId: integer("previous_employee_address_id_fk").references(() => addressModel.id),
 
 
     bankAccountNumber: varchar({ length: 255 }),

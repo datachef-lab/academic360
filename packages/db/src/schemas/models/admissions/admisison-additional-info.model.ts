@@ -21,7 +21,7 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
 
     isSingleParent: boolean("is_single_parent").default(false),
 
-    familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
+    // familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
 
     isEitherParentStaff: boolean("is_either_parent_staff").default(false),
 

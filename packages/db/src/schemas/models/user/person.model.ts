@@ -3,12 +3,14 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { addressModel } from "@/schemas/models/user";
+import { addressModel, familyModel } from "@/schemas/models/user";
 import { occupationModel, qualificationModel } from "@/schemas/models/resources";
-import { genderTypeEnum, maritalStatusTypeEnum, personTitleType } from "@/schemas/enums";
+import { genderTypeEnum, maritalStatusTypeEnum, personTitleType, personTypeEnum } from "@/schemas/enums";
 
 export const personModel = pgTable("person", {
     id: serial().primaryKey(),
+    type: personTypeEnum(),
+    familyId: integer("family_id_fk").references(() => familyModel.id),
     title: personTitleType("person_title_type"),
     name: varchar({ length: 255 }),
     email: varchar({ length: 255 }),

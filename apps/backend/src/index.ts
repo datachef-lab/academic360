@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { app, httpServer } from "@/app.js";
 import { connectToDatabase, connectToMySQL } from "@/db/index.js";
-import { brainstormOldMigration } from "./features/user/services/brainstorm-old-migration.service";
+import { brainstormOldMigration } from "./features/user/services/refactor-old-migration.service";
 
 const PORT = process.env.PORT || 8080;
 
