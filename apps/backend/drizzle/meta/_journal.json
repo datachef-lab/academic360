@@ -92,6 +92,13 @@
       "when": 1758653507926,
       "tag": "0012_lucky_black_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1758790639606,
+      "tag": "0013_secret_tattoo",
+      "breakpoints": true
     }
   ]
 }
