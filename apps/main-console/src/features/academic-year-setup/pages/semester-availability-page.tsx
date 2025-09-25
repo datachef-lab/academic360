@@ -247,34 +247,16 @@ export default function SemesterAvailabilityPage() {
     initialItemsPerPage: 10,
   });
 
-  // Additional filtering for dropdowns
-  const filteredAvailability = tableData.filteredData.filter((item) => {
-    const matchesProgramCourse =
-      !selectedProgramCourse || selectedProgramCourse === "all" || item.programCourse === selectedProgramCourse;
-    const matchesSemester =
-      !selectedSemester || selectedSemester === "all" || item.availableSemesters.includes(selectedSemester);
-
-    return matchesProgramCourse && matchesSemester;
-  });
-
-  // Update pagination data with additional filters
-  const totalItems = filteredAvailability.length;
-  const totalPages = Math.ceil(totalItems / tableData.itemsPerPage);
-  const startIndex = (tableData.currentPage - 1) * tableData.itemsPerPage;
-  const endIndex = startIndex + tableData.itemsPerPage;
-  const paginatedAvailability = filteredAvailability.slice(startIndex, endIndex);
-
-  // Compute a display subject category based on program course (for demo)
-  const getSubjectCategory = (programCourse: string) => {
+  // Helpers (declared before use to avoid TDZ errors)
+  function getSubjectCategory(programCourse: string) {
     if (programCourse.includes("Commerce")) return "MAJOR";
     if (programCourse.includes("Business Administration")) return "AECC";
     if (programCourse.includes("Computer Applications")) return "DSCC";
     if (programCourse.includes("Information Technology")) return "VAC";
     return "MAJOR";
-  };
+  }
 
-  // Helpers
-  const toRoman = (s: string) => {
+  function toRoman(s: string) {
     const map: Record<string, string> = {
       "1st": "I",
       "2nd": "II",
@@ -286,7 +268,37 @@ export default function SemesterAvailabilityPage() {
       "8th": "VIII",
     };
     return map[s] || s;
-  };
+  }
+
+  // Additional filtering for dropdowns + enhanced search support
+  // Extend search to include derived subject category and semester labels (e.g., "AECC", "III")
+  const filteredAvailability = semesterAvailability.filter((item) => {
+    const matchesProgramCourse =
+      !selectedProgramCourse || selectedProgramCourse === "all" || item.programCourse === selectedProgramCourse;
+    const matchesSemester =
+      !selectedSemester || selectedSemester === "all" || item.availableSemesters.includes(selectedSemester);
+
+    const s = tableData.searchTerm.trim().toLowerCase();
+    const derivedCategory = getSubjectCategory(item.programCourse).toLowerCase();
+    const semesterTokens = item.availableSemesters.flatMap((sem) => [sem.toLowerCase(), toRoman(sem).toLowerCase()]);
+
+    const matchesSearch =
+      !s ||
+      [item.subject, item.subjectCode, item.programCourse, derivedCategory, ...semesterTokens]
+        .filter(Boolean)
+        .some((v) => v!.toString().toLowerCase().includes(s));
+
+    return matchesProgramCourse && matchesSemester && matchesSearch;
+  });
+
+  // Update pagination data with additional filters
+  const totalItems = filteredAvailability.length;
+  const totalPages = Math.ceil(totalItems / tableData.itemsPerPage);
+  const startIndex = (tableData.currentPage - 1) * tableData.itemsPerPage;
+  const endIndex = startIndex + tableData.itemsPerPage;
+  const paginatedAvailability = filteredAvailability.slice(startIndex, endIndex);
+
+  // Compute a display subject category based on program course (for demo)
 
   // Add dialog state (rows)
   type AddRow = { subjectCategory: string; classes: string[] };
