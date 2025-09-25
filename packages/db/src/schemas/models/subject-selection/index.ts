@@ -5,13 +5,19 @@ import { restrictedGroupingClassModel } from "./restricted-grouping-class.model"
 import { restrictedGroupingSubjectModel } from "./restricted-grouping-subject.model";
 import { restrictedGroupingProgramCourseModel } from "./restricted-grouping-program-course.model";
 import { subjectSpecificPassingModel } from "./subject-specific-passing.model";
+import { studentSubjectSelectionModel } from "./student-subject-selection.model";
+import { subjectSelectionMetaModel } from "./subject-selection-meta.model";
+import { subjectSelectionMetaClassModel } from "./subject-selection-meta-class.model";
 
 export {
     relatedSubjectMainModel,
     relatedSubjectSubModel,
-    subjectSpecificPassingModel,
     restrictedGroupingMainModel,
+    restrictedGroupingProgramCourseModel,
     restrictedGroupingClassModel,
     restrictedGroupingSubjectModel,
-    restrictedGroupingProgramCourseModel,
+    studentSubjectSelectionModel,
+    subjectSelectionMetaClassModel,
+    subjectSelectionMetaModel,
+    subjectSpecificPassingModel,
 };
