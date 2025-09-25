@@ -18,6 +18,7 @@ import { addressModel } from "./address.model";
 
 export const staffModel = pgTable('staffs', {
     id: serial().primaryKey(),
+    legacyStaffId: integer("legacy_staff_id"),
     userId: integer("user_id_fk")
         .references(() => userModel.id).notNull(),
     attendanceCode: varchar("attendance_code", { length: 255 }),

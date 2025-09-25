@@ -14,7 +14,7 @@ export const accommodationModel = pgTable("accommodation", {
     userId: integer("user_id_fk")
         .references(() => userModel.id),
     placeOfStay: placeOfStayTypeEnum(),
-    addressId: integer("address_id_fk").references(() => addressModel.id),
+    // addressId: integer("address_id_fk").references(() => addressModel.id),
     startDate: date(),
     endDate: date(),
     createdAt: timestamp().notNull().defaultNow(),

@@ -5,7 +5,7 @@ import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "dri
 import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
-import { applicationFormModel } from "@/schemas/models/admissions";
+import { admissionCourseDetailsModel, applicationFormModel } from "@/schemas/models/admissions";
 import { sectionModel, shiftModel } from "../academics";
 import z from "zod";
 
@@ -15,6 +15,8 @@ export const studentModel = pgTable("students", {
     userId: integer("user_id_fk").notNull().references(() => userModel.id),
     applicationId: integer("application_form_id_fk")
         .references(() => applicationFormModel.id),
+    admissionCourseDetailsId: integer("admission_course_details_id_fk")
+        .references(() => admissionCourseDetailsModel.id),
     programCourseId: integer("program_course_id_fk")
         .references(() => programCourseModel.id)
         .notNull(),

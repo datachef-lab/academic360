@@ -24,7 +24,7 @@ export const personModel = pgTable("person", {
     qualificationId: integer("qualification_id_fk").references(() => qualificationModel.id),
     occupationId: integer("occupation_id_fk").references(() => occupationModel.id),
 
-    officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
+    // officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
     
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
@@ -39,10 +39,10 @@ export const personRelations = relations(personModel, ({ one }) => ({
         fields: [personModel.occupationId],
         references: [occupationModel.id]
     }),
-    address: one(addressModel, {
-        fields: [personModel.officeAddressId],
-        references: [addressModel.id]
-    })
+    // address: one(addressModel, {
+    //     fields: [personModel.officeAddressId],
+    //     references: [addressModel.id]
+    // })
 }));
 
 export const createPersonSchema = createInsertSchema(personModel);
