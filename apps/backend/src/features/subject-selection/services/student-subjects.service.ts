@@ -211,7 +211,10 @@ export async function findSubjectsSelections(studentId: number) {
               relatedSubjectMainDto.boardSubjectName.name,
             )
           ) {
-            if (stdSubject.resultStatus === "PASS") {
+            if (
+              stdSubject.resultStatus === "PASS" &&
+              !["AEC", "IDC"].includes(subjectType.code || "")
+            ) {
               // If the subject is pass, then add the paper to the paper options
               const detailed = await paperService.modelToDetailedDto(paper);
               console.log(
@@ -263,7 +266,10 @@ export async function findSubjectsSelections(studentId: number) {
               ),
             )
           : undefined;
-        if (studentSubject) {
+        if (
+          studentSubject &&
+          !["AEC", "IDC"].includes(detailed?.subjectType.code || "")
+        ) {
           if (studentSubject.resultStatus === "PASS") {
             if (detailed) paperOptions.push(detailed);
           }
