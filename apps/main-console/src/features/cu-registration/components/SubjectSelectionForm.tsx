@@ -660,7 +660,7 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
                   <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
                   <Combobox
-                    dataArr={convertToComboboxData(availableAecSubjects, getGlobalExcludes(aec3))}
+                    dataArr={convertToComboboxData(availableAecSubjects)}
                     value={aec3}
                     onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
                     placeholder="Select AEC 3"
