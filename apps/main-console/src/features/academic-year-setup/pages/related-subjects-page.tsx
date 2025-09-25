@@ -185,6 +185,24 @@ export default function AlternativeSubjectsPage() {
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
   const paginatedGroupings = groupings; // already paginated from server
 
+  // Client-side refinement so search also matches alternative subjects and category
+  const displayGroupings = useMemo(() => {
+    const s = (searchTerm || "").trim().toLowerCase();
+    const selectedPc = selectedProgramCourse;
+    return paginatedGroupings.filter((g) => {
+      const matchesPc =
+        !selectedPc ||
+        selectedPc === "all" ||
+        g.programCourses.some((pc) => pc.toLowerCase().includes(selectedPc.toLowerCase()));
+      if (!s) return matchesPc;
+      const haystack = [...g.programCourses, g.subjectCategory, ...g.subjects]
+        .filter(Boolean)
+        .map((x) => x.toLowerCase());
+      const matchesSearch = haystack.some((x) => x.includes(s));
+      return matchesPc && matchesSearch;
+    });
+  }, [paginatedGroupings, searchTerm, selectedProgramCourse]);
+
   // ---------- Add/Edit Dialog State ----------
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<"add" | "edit">("add");
@@ -551,7 +569,7 @@ export default function AlternativeSubjectsPage() {
       {/* Table with Fixed Header */}
       <div className="flex-1 px-4 min-h-0">
         <Card className="h-full flex flex-col">
-          <CardContent className="p-0 h-full flex flex-col">
+          <CardContent className="p-0 h-full flex flex-col min-h-0">
             {/* Fixed Header */}
             <div className="flex-shrink-0 border-b-2 border-gray-200">
               <Table className="table-fixed">
@@ -587,7 +605,7 @@ export default function AlternativeSubjectsPage() {
             <div className="flex-1 overflow-auto border border-gray-300 rounded-md">
               <Table className="table-fixed">
                 <TableBody>
-                  {paginatedGroupings.map((grouping, index) => (
+                  {displayGroupings.map((grouping, index) => (
                     <TableRow
                       key={grouping.id}
                       className="border-b-2 border-gray-300 hover:bg-gray-50"
@@ -788,13 +806,20 @@ export default function AlternativeSubjectsPage() {
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent
-                              className="w-[22rem] p-0 z-50 max-h-72 overflow-auto"
+                              className="w-[22rem] p-0 z-50 max-h-80 overflow-hidden"
                               align="start"
                               sideOffset={4}
+                              onWheel={(e) => e.stopPropagation()}
+                              onTouchMove={(e) => e.stopPropagation()}
                             >
-                              <Command>
+                              <Command className="max-h-80 overflow-hidden">
                                 <CommandInput placeholder="Search subjects..." className="text-gray-700" />
-                                <CommandList className="max-h-64 overflow-y-auto">
+                                <CommandList
+                                  className="max-h-72 overflow-y-auto overscroll-contain pr-1"
+                                  onWheel={(e) => e.stopPropagation()}
+                                  onTouchMove={(e) => e.stopPropagation()}
+                                  tabIndex={0}
+                                >
                                   <CommandEmpty>No subjects found.</CommandEmpty>
                                   <CommandGroup>
                                     {allSubjects.map((opt) => (
