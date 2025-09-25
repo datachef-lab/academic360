@@ -6,6 +6,8 @@ import restrictedGroupingSubjectRoutes from "./restricted-grouping-subject.route
 import restrictedGroupingProgramCourseRoutes from "./restricted-grouping-program-course.routes.js";
 import subjectSpecificPassingRoutes from "./subject-specific-passing.routes.js";
 import studentSubjectsRoutes from "./student-subjects.routes.js";
+import subjectSelectionMetaRoutes from "./subject-selection-meta.routes.js";
+import subjectSelectionMetaClassRoutes from "./subject-selection-meta-class.routes.js";
 
 export {
   relatedSubjectMainRoutes,
@@ -16,4 +18,6 @@ export {
   restrictedGroupingProgramCourseRoutes,
   subjectSpecificPassingRoutes,
   studentSubjectsRoutes,
+  subjectSelectionMetaRoutes,
+  subjectSelectionMetaClassRoutes,
 };

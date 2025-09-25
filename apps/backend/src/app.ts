@@ -118,6 +118,8 @@ import {
   restrictedGroupingProgramCourseRoutes,
   subjectSpecificPassingRoutes,
   studentSubjectsRoutes,
+  subjectSelectionMetaRoutes,
+  subjectSelectionMetaClassRoutes,
 } from "@/features/subject-selection/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
@@ -410,6 +412,8 @@ app.use(
   "/api/subject-selection/subject-specific-passings",
   subjectSpecificPassingRoutes,
 );
+app.use("/api/subject-selection/metas", subjectSelectionMetaRoutes);
+app.use("/api/subject-selection/meta-classes", subjectSelectionMetaClassRoutes);
 app.use("/api/subject-selection", studentSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
@@ -457,3 +461,317 @@ app.all("*", (req: Request, res: Response) => {
 });
 
 export { app, httpServer };
+
+app.use("/auth", authRouter);
+
+app.use("/api/batches", batchRouter);
+
+app.use("/api/academics/batch-student-mappings", batchStudentMappingRouter);
+
+app.use("/api/academics/marksheet-paper-mappings", marksheetPaperMappingRouter);
+
+app.use(
+  "/api/academics/marksheet-paper-component-mappings",
+
+  marksheetPaperComponentMappingRouter,
+);
+
+// app.use("/api/batch-papers/old-data", batchPaperRouter);
+
+app.use("/api/users", userRouter);
+
+app.use("/api/sessions", sessionRouter);
+
+app.use("/api/personal-details", personalDetailsRouter);
+
+app.use("/api/persons", personRouter);
+
+app.use("/api/students", studentRouter);
+
+// app.use("/api/subject-metadatas", subjectMetadataRouter);
+
+app.use("/api/marksheets", marksheetRouter);
+
+// app.use("/api/student-papers/", studentPaperRouter);
+
+// app.use("/api/subjects", subjectRouter);
+
+app.use("/api/nationality", nationalityRouter);
+
+app.use("/api/religions", religionRouter);
+
+app.use("/api/state", stateRouter);
+
+app.use("/api/family", familyRouter);
+
+app.use("/api/nationalities", nationalityRouter);
+
+app.use("/api/countries", countryRouter);
+
+app.use("/api/states", stateRouter);
+
+app.use("/api/cities", cityRouter);
+
+app.use("/api/documents", documentRouter);
+
+app.use("/api/blood-groups", bloodGroupRouter);
+
+app.use("/api/categories", categoryRouter);
+
+app.use("/api/specializations", specializationRouter);
+
+app.use("/api/languages", languageMediumRouter);
+
+// app.use("/api/disability-codes", disabilityRouter);
+
+app.use("/api/board-result-statuses", boardResultStatusRouter);
+
+app.use("/api/board-universities", boardUniversityRouter);
+
+app.use("/api/institutions", institutionRouter);
+
+app.use("/api/qualifications", qualificationRouter);
+
+app.use("/api/address", addressRouter);
+
+app.use("/api/transports", transportRouter);
+
+app.use("/api/degree", degreeRouter);
+
+//kjh
+
+app.use("/api/emergency-contact", emergencyContactRouter);
+
+app.use("/api/occupations", occupationRouter);
+
+app.use("/api/annual-incomes", annualIncomeRouter);
+
+app.use("/api/accommodations", accommodationRouter);
+
+app.use("/api/health", healthRouter);
+
+app.use("/api/reports", reportRouter);
+
+app.use("/api/classes", classRouter);
+
+app.use("/api/fees/student-fees-mappings", studentFeesMappingRouter);
+
+app.use("/api/v1/shifts", shiftRouter);
+
+app.use("/api/v1/academics", academicYearRouter);
+
+app.use("/api/v1/fees/structure", feesStructureRouter);
+
+app.use("/api/v1/fees/slab-year-mappings", feesSlabYearMappingRouter);
+
+app.use("/api/v1/fees", feesRouter);
+
+app.use("/api/v1/courses", courseRouter);
+
+app.use("/api/v1/fees/components", feesComponentRouter);
+
+app.use("/api/v1/fees/addons", addonRouter);
+
+app.use("/api/v1/fees/heads", feesHeadRouter);
+
+app.use("/api/v1/fees/receipt-types", feesReceiptTypeRouter);
+
+// Admissions routes - Mount specific routes before generic routes to avoid conflicts
+
+app.use("/api/admissions/application-forms", applicationFormRouter);
+
+app.use("/api/admissions/general-info", admissionGeneralInfoRouter);
+
+app.use("/api/admissions/academic-info", admissionAcademicInfoRouter);
+
+app.use("/api/admissions/additional-info", admissionAdditionalInfoRouter);
+
+app.use("/api/admissions/courses", admissionCourseRouter);
+
+app.use(
+  "/api/admissions/course-applications",
+
+  admissionCourseApplicationRouter,
+);
+
+app.use("/api/admissions/sports-category", sportsCategoryRouter);
+
+app.use("/api/admissions/sports-info", sportsInfoRouter);
+
+app.use(
+  "/api/admissions/student-academic-subject",
+
+  studentAcademicSubjectRouter,
+);
+
+app.use("/api/admissions/academic-subject", academicSubjectRouter);
+
+app.use("/api/admissions/boards", boardRouter);
+
+app.use("/api/admissions/board-subject-names", boardSubjectNameRouter);
+
+app.use("/api/admissions/board-subjects", boardSubjectRouter);
+
+app.use(
+  "/api/admissions/board-subject-univ-subject-mappings",
+
+  boardSubjectUnivSubjectMappingRouter,
+);
+
+// Mount the generic admission router last to avoid conflicts with specific routes
+
+app.use("/api/admissions", admissionRouter);
+
+// app.use("/api/study-materials", studyMaterialRouter);
+
+app.use("/api/v1/sections", sectionRoutes);
+
+app.use("/api/v1/settings", settingsRouter);
+
+// Course Design routes
+
+app.use("/api/v1/course-design/streams", streamRouter);
+
+app.use("/api/v1/course-design/course-types", courseTypeRouter);
+
+app.use("/api/v1/course-design/course-levels", courseLevelRouter);
+
+// app.use("/api/v1/course-design/affiliation-types", affiliationTypeRouter);
+
+app.use("/api/v1/course-design/regulation-types", regulationTypeRouter);
+
+app.use("/api/v1/course-design/program-courses", programCourseRouter);
+
+app.use(errorHandler);
+
+// Register course-design routes
+
+app.use("/api/course-design/courses", courseRouter);
+
+app.use("/api/course-design/subjects", subjectRouter);
+
+// app.use("/api/course-design/subject-papers", subjectPaperRouter);
+
+app.use("/api/course-design/subject-types", subjectTypeRouter);
+
+app.use("/api/course-design/papers", paperRouter);
+
+app.use("/api/course-design/topics", topicRouter);
+
+app.use("/api/course-design/streams", streamRouter);
+
+app.use("/api/course-design/affiliations", affiliationRouter);
+
+app.use("/api/course-design/regulation-types", regulationTypeRouter);
+
+app.use("/api/course-design/program-courses", programCourseRouter);
+
+app.use("/api/course-design/course-types", courseTypeRouter);
+
+app.use("/api/course-design/course-levels", courseLevelRouter);
+
+app.use("/api/course-design/exam-components", examComponentRouter);
+
+app.use("/api/course-design/specializations", specializationRouter);
+
+app.use("/api/course-design/cascading-dropdowns", cascadingDropdownsRouter);
+
+// Subject Selection routes
+
+app.use(
+  "/api/subject-selection/related-subject-mains",
+
+  relatedSubjectMainRoutes,
+);
+
+app.use("/api/subject-selection/related-subject-subs", relatedSubjectSubRoutes);
+
+app.use(
+  "/api/subject-selection/restricted-grouping-mains",
+
+  restrictedGroupingMainRoutes,
+);
+
+app.use(
+  "/api/subject-selection/restricted-grouping-classes",
+
+  restrictedGroupingClassRoutes,
+);
+
+app.use(
+  "/api/subject-selection/restricted-grouping-subjects",
+
+  restrictedGroupingSubjectRoutes,
+);
+
+app.use(
+  "/api/subject-selection/restricted-grouping-program-courses",
+
+  restrictedGroupingProgramCourseRoutes,
+);
+
+app.use(
+  "/api/subject-selection/subject-specific-passings",
+
+  subjectSpecificPassingRoutes,
+);
+
+app.use("/api/subject-selection", studentSubjectsRoutes);
+
+app.use("/api/bulk-upload", bulkUploadRouter);
+
+// Lightweight districts endpoint to support frontend dropdowns
+
+app.get("/api/districts", async (req: Request, res: Response) => {
+  try {
+    const stateIdParam = req.query.stateId as string | undefined;
+
+    const cityIdParam = req.query.cityId as string | undefined;
+
+    const baseSelect = db
+
+      .select({ id: districtModel.id, name: districtModel.name })
+
+      .from(districtModel);
+
+    let rows;
+
+    if (stateIdParam) {
+      rows = await db
+
+        .select({ id: districtModel.id, name: districtModel.name })
+
+        .from(districtModel)
+
+        .innerJoin(cityModel, eq(districtModel.cityId, cityModel.id))
+
+        .where(eq(cityModel.stateId, Number(stateIdParam)));
+    } else if (cityIdParam) {
+      rows = await baseSelect.where(
+        eq(districtModel.cityId, Number(cityIdParam)),
+      );
+    } else {
+      rows = await baseSelect;
+    }
+
+    res.json({ payload: rows });
+  } catch (e) {
+    console.error("Failed to fetch districts:", e);
+
+    res.status(500).json({ message: "Failed to fetch districts" });
+  }
+});
+
+app.all("*", (req: Request, res: Response) => {
+  res.status(404);
+
+  if (req.accepts("html")) {
+    res.sendFile(path.join(__dirname, "..", "views", "404.html"));
+  } else if (req.accepts("json")) {
+    res.json({ message: "404 Not Found" });
+  } else {
+    res.type("txt").send("404 Not Found");
+  }
+});
+
+// duplicate export removed
