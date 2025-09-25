@@ -118,6 +118,7 @@ import {
   restrictedGroupingProgramCourseRoutes,
   subjectSpecificPassingRoutes,
   studentSubjectsRoutes,
+  studentSubjectSelectionRoutes,
 } from "@/features/subject-selection/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
@@ -411,6 +412,7 @@ app.use(
   subjectSpecificPassingRoutes,
 );
 app.use("/api/subject-selection", studentSubjectsRoutes);
+app.use("/api/student-subject-selection", studentSubjectSelectionRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
 
