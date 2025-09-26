@@ -509,23 +509,6 @@ export async function addAdmGeneralInformation(
 
   let health = await addHealth(oldStudent);
 
-  let accommodation: Accommodation | null = null;
-  if (oldStudent && oldStudent.placeofstay) {
-    accommodation = await addAccommodation(
-      oldStudent.placeofstay,
-      oldStudent.placeofstayaddr || "",
-      oldStudent.localitytyp || "",
-      oldStudent.placeofstaycontactno || "",
-    );
-  }
-
-  let emergencyContact: EmergencyContact | null = null;
-  if (oldStudent) {
-    emergencyContact = await upsertEmergencyContact(
-      oldStudent as unknown as EmergencyContact,
-    );
-  }
-
   // let family = await addFamily(oldAdmStudentPersonalDetails, oldStudent); // TO BE ADDED IN Add Student
 
   let spqtaApprovedBy: User | null = null;
@@ -572,14 +555,32 @@ export async function addAdmGeneralInformation(
     eligibilityCriteriaId: eligibilityCriteria?.id,
     studentCategoryId: studentCategory?.id,
     healthId: health?.id,
-    accommodationId: accommodation?.id,
-    emergencyContactId: emergencyContact?.id,
   };
 
   const [admGeneralInformation] = await db
     .insert(admissionGeneralInfoModel)
     .values(values)
     .returning();
+
+  let accommodation: Accommodation | null = null;
+  if (oldStudent && oldStudent.placeofstay) {
+    accommodation = await addAccommodation(
+      oldStudent.placeofstay,
+      oldStudent.placeofstayaddr || "",
+      oldStudent.localitytyp || "",
+      oldStudent.placeofstaycontactno || "",
+      admGeneralInformation.id,
+    );
+  }
+
+  let emergencyContact: EmergencyContact | null = null;
+  if (oldStudent) {
+    emergencyContact = await upsertEmergencyContact(
+      oldStudent as unknown as EmergencyContact,
+      undefined,
+      admGeneralInformation.id,
+    );
+  }
 
   let personalDetails = await upsertPersonalDetails(
     oldAdmStudentPersonalDetails,
@@ -1942,6 +1943,7 @@ export async function addAccommodation(
   placeOfStayAddr: string,
   localityType: string,
   placeOfStayContactNo: string,
+  admissionGeneralInfoId: number,
 ) {
   switch (placeOfStay) {
     case "Own":
@@ -1975,6 +1977,7 @@ export async function addAccommodation(
         | "PAYING_GUEST"
         | "RELATIVES",
       // addressId: address.id
+      admissionGeneralInfoId,
     })
     .returning();
 
