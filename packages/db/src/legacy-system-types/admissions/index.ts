@@ -474,3 +474,12 @@ export interface OldBoardResultStatus {
     pos: number;
     flag: boolean;
 }
+
+export interface OldAdmissionStats {
+    course: string;
+    afternoon: number;
+    day: number;
+    evening: number;
+    morning: number;
+    total: number;
+}

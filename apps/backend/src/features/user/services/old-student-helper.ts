@@ -1768,16 +1768,23 @@ export async function processStudent(oldStudent: OldStudent, user: User) {
         oldStudent,
         student,
       );
-    await db
+    const [updatedStudent] = await db
       .update(studentModel)
       .set({
         applicationId: applicationForm.id,
         admissionCourseDetailsId: transferredAdmCourseDetails.id!,
       })
-      .where(eq(studentModel.id, student.id));
-  }
+      .where(eq(studentModel.id, student.id))
+      .returning();
 
-  // Step 9: Promotion
+    // Step 9: Promotion
+    await addPromotion(
+      updatedStudent.id!,
+      applicationForm,
+      oldStudent.id!,
+      transferredAdmCourseDetails,
+    );
+  }
 
   return student;
 }
