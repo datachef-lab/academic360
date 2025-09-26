@@ -507,7 +507,7 @@ export async function addAdmGeneralInformation(
     );
   }
 
-  let health = await addHealth(oldStudent);
+  let health = await upsertHealth(oldStudent);
 
   // let family = await addFamily(oldAdmStudentPersonalDetails, oldStudent); // TO BE ADDED IN Add Student
 
