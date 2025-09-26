@@ -99,8 +99,7 @@ export async function savePersonalDetails(
   let {
     category,
     disabilityCode,
-    mailingAddress,
-    residentialAddress,
+    address,
     motherTongue,
     nationality,
     religion,
@@ -121,8 +120,7 @@ export async function savePersonalDetails(
       // studentId, // Ensure studentId is included in the update
       categoryId: category?.id,
       disabilityCodeId: disabilityCode?.id,
-      mailingAddressId: mailingAddress?.id,
-      residentialAddressId: residentialAddress?.id,
+      // addresses are managed separately
       motherTongueId: motherTongue?.id,
       nationalityId: nationality?.id,
       religionId: religion?.id,
@@ -132,12 +130,8 @@ export async function savePersonalDetails(
 
   if (!updatedPersonalDetails) return null;
 
-  // if (mailingAddress) {
-  //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
-  // }
-
-  // if (residentialAddress) {
-  //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
+  // if (address && address.length) {
+  //     await Promise.all(address.map((a) => a?.id ? saveAddress(a.id, a) : addAddress(a)));
   // }
 
   const formattedPersonalDetails = await personalDetailsResponseFormat(
@@ -234,29 +228,29 @@ export async function removePersonalDetailsByAddressId(
   addresId: number,
 ): Promise<boolean | null> {
   // Return if the personal-detail doesn't exist
-  let [foundPersonalDetail] = await db
-    .select()
-    .from(personalDetailsModel)
-    .where(eq(personalDetailsModel.mailingAddressId, addresId));
-  if (!foundPersonalDetail) {
-    const tmpPersonalDetails = await db
-      .select()
-      .from(personalDetailsModel)
-      .where(eq(personalDetailsModel.residentialAddressId, addresId));
-    if (tmpPersonalDetails.length == 0) {
-      return null; // No Content
-    }
-    foundPersonalDetail = tmpPersonalDetails[0];
-  }
+  //   let [foundPersonalDetail] = await db
+  //     .select()
+  //     .from(personalDetailsModel)
+  //     .where(eq(personalDetailsModel.mailingAddressId, addresId));
+  //   if (!foundPersonalDetail) {
+  //     const tmpPersonalDetails = await db
+  //       .select()
+  //       .from(personalDetailsModel)
+  //       .where(eq(personalDetailsModel.residentialAddressId, addresId));
+  //     if (tmpPersonalDetails.length == 0) {
+  //       return null; // No Content
+  //     }
+  //     foundPersonalDetail = tmpPersonalDetails[0];
+  //   }
   // Delete the personal-detail
-  const [deletedPersonalDetail] = await db
-    .delete(personalDetailsModel)
-    .where(eq(personalDetailsModel.id, foundPersonalDetail.id))
-    .returning();
-  if (!deletedPersonalDetail) {
-    return false; // Failure!
-  }
-  return true; // Success!
+  //   const [deletedPersonalDetail] = await db
+  //     .delete(personalDetailsModel)
+  //     .where(eq(personalDetailsModel.id, foundPersonalDetail.id))
+  //     .returning();
+  // if (!deletedPersonalDetail) {
+  //     return false; // Failure!
+  // }
+  return false; // Success!
 }
 
 export async function getAllPersonalDetails(): Promise<PersonalDetails[]> {
@@ -273,8 +267,8 @@ export async function personalDetailsResponseFormat(
   const {
     categoryId,
     disabilityCodeId,
-    mailingAddressId,
-    residentialAddressId,
+    // mailingAddressId,
+    // residentialAddressId,
     motherTongueId,
     nationalityId,
     religionId,
@@ -288,14 +282,8 @@ export async function personalDetailsResponseFormat(
     formattedPersonalDetails.disabilityCode =
       await findDisabilityCodeById(disabilityCodeId);
   }
-  if (mailingAddressId) {
-    const addr = await findAddressById(mailingAddressId);
-    formattedPersonalDetails.mailingAddress = (addr ?? null) as any;
-  }
-  if (residentialAddressId) {
-    const addr = await findAddressById(residentialAddressId);
-    formattedPersonalDetails.residentialAddress = (addr ?? null) as any;
-  }
+  // Populate address array if legacy FKs exist in future
+  (formattedPersonalDetails as any).address = [];
   if (motherTongueId) {
     formattedPersonalDetails.motherTongue =
       await findLanguageMediumById(motherTongueId);

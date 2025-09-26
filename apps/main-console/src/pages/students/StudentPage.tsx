@@ -282,9 +282,9 @@ export default function StudentPage() {
               <div className="font-semibold text-gray-500">Program Course:</div>
               <div>{data?.programCourse?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Section:</div>
-              <div>{data?.section?.name || "-"}</div>
+              <div>{data?.currentPromotion?.section?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Shift:</div>
-              <div>{data?.shift?.name || "-"}</div>
+              <div>{data?.currentPromotion?.shift?.name || "-"}</div>
               <div className="font-semibold text-gray-500">Email:</div>
               <div>{data?.personalEmail || "-"}</div>
             </div>

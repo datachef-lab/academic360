@@ -1,5 +1,5 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import { createInsertSchema } from "drizzle-zod";
 import { stateModel } from "../resources";
 import z from "zod";
 

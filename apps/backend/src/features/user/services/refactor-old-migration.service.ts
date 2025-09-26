@@ -48,7 +48,7 @@ let lastRunCompletedAt: Date = new Date(0);
  */
 export async function loadData(sinceDate?: Date) {
   const [oldSessions] = (await mysqlConnection.query(`
-        SELECT * FROM currentsessionmaster;
+        SELECT * FROM currentsessionmaster WHERE id > 17;
     `)) as [OldSession[], any];
 
   for (let i = 0; i < oldSessions.length; i++) {
@@ -65,6 +65,7 @@ export async function loadData(sinceDate?: Date) {
       }
 
       const stat = stats[i];
+      console.log(stat);
       const [foundProgramCourse] = await db
         .select()
         .from(programCourseModel)
@@ -114,13 +115,10 @@ export async function loadData(sinceDate?: Date) {
 export async function startLoadDataScheduler() {
   // Infinite loop with delay between runs
   while (true) {
-    try {
-      const runStartedAt = new Date();
-      await loadData(lastRunCompletedAt);
-      lastRunCompletedAt = runStartedAt;
-    } catch (error) {
-      console.error("loadData run failed", error);
-    }
+    const runStartedAt = new Date();
+    await loadData(lastRunCompletedAt);
+    lastRunCompletedAt = runStartedAt;
+
     console.log(
       `loadData completed. Waiting ${waitingTime / (60 * 60 * 1000)} hours before next run...`,
     );
@@ -321,14 +319,12 @@ export async function processDataFetching(
 export async function getOldAdmissionStatsByOldSessionId(oldSessionId: number) {
   const [stats] = (await mysqlConnection.query(`
         SELECT 
-            crs.courseName AS course,
-            SUSELECT 
-            crs.courseName AS course,
-            SUM(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END) AS afternoon,
-            SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END) AS day,
-            SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END) AS evening,
-            SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END) AS morning,
-            COUNT(sp.id) AS total
+        crs.courseName AS course,
+        SUM(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END) AS afternoon,
+        SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END) AS day,
+        SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END) AS evening,
+        SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END) AS morning,
+        COUNT(sp.id) AS total
         FROM personaldetails pd
         JOIN coursedetails cd ON cd.parent_id = pd.id
         JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
@@ -343,12 +339,12 @@ export async function getOldAdmissionStatsByOldSessionId(oldSessionId: number) {
         UNION ALL
 
         SELECT 
-            'Grand Total' AS course,
-            SUM(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END),
-            COUNT(sp.id)
+        'Grand Total' AS course,
+        SUM(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END),
+        SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END),
+        COUNT(sp.id)
         FROM personaldetails pd
         JOIN coursedetails cd ON cd.parent_id = pd.id
         JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
@@ -360,45 +356,10 @@ export async function getOldAdmissionStatsByOldSessionId(oldSessionId: number) {
         AND sess.id = ${oldSessionId}
 
         ORDER BY 
-            CASE WHEN course = 'Grand Total' THEN 2 ELSE 1 END,
-            course;M(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END) AS afternoon,
-            SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END) AS day,
-            SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END) AS evening,
-            SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END) AS morning,
-            COUNT(sp.id) AS total
-        FROM personaldetails pd
-        JOIN coursedetails cd ON cd.parent_id = pd.id
-        JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
-        JOIN currentsessionmaster sess ON sess.id = pd.sessionId
-        JOIN course crs ON crs.id = cd.courseId
-        JOIN classes c ON c.id = cd.classId
-        JOIN shift sf ON sf.id = cd.shiftId
-        WHERE cd.transferred = true
-        AND sess.id = ${oldSessionId}
-        GROUP BY crs.courseName
+        CASE WHEN course = 'Grand Total' THEN 2 ELSE 1 END,
+        course;
 
-        UNION ALL
 
-        SELECT 
-            'Grand Total' AS course,
-            SUM(CASE WHEN sf.shiftName = 'Afternoon' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Day' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Evening' THEN 1 ELSE 0 END),
-            SUM(CASE WHEN sf.shiftName = 'Morning' THEN 1 ELSE 0 END),
-            COUNT(sp.id)
-        FROM personaldetails pd
-        JOIN coursedetails cd ON cd.parent_id = pd.id
-        JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
-        JOIN currentsessionmaster sess ON sess.id = pd.sessionId
-        JOIN course crs ON crs.id = cd.courseId
-        JOIN classes c ON c.id = cd.classId
-        JOIN shift sf ON sf.id = cd.shiftId
-        WHERE cd.transferred = true
-        AND sess.id = ${oldSessionId}
-
-        ORDER BY 
-            CASE WHEN course = 'Grand Total' THEN 2 ELSE 1 END,
-            course;
     `)) as [OldAdmissionStats[], any];
 
   return stats;
@@ -408,6 +369,10 @@ export async function getMetadata(oldSession: OldSession) {
   const [[oldAcademicYear]] = (await mysqlConnection.query(`
         SELECT * FROM accademicyear WHERE sessionId = ${oldSession.id!};
     `)) as [OldAcademicYear[], any];
+  console.log(`
+        SELECT * FROM accademicyear WHERE sessionId = ${oldSession.id!};
+    `);
+  console.log("oldAcademicYear", oldAcademicYear);
 
   const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
 
@@ -464,6 +429,14 @@ export async function getMetadata(oldSession: OldSession) {
   return { oldAcademicYear, foundAcademicYear, foundSession };
 }
 
+export function bitToBool(v: unknown): boolean {
+  if (Buffer.isBuffer(v)) return v.length > 0 && v[0] === 1;
+  if (typeof v === "number") return v === 1;
+  if (typeof v === "string") return v === "1" || v.toLowerCase() === "true";
+  if (typeof v === "boolean") return v;
+  return false;
+}
+
 export async function upsertUser(
   oldData: OldStudent | OldStaff,
   type: (typeof userTypeEnum.enumValues)[number],
@@ -510,8 +483,10 @@ export async function upsertUser(
       .from(userModel)
       .where(and(eq(userModel.email, email), eq(userModel.type, type)));
   } else {
-    throw Error("Email is required for user");
+    return undefined;
   }
+
+  console.log("active", bitToBool(oldData.active));
 
   if (existingUser) {
     console.log(
@@ -525,6 +500,7 @@ export async function upsertUser(
         phone,
         type,
         whatsappNumber,
+        isActive: bitToBool(oldData.active),
       })
       .where(eq(userModel.id, existingUser.id as number))
       .returning();
@@ -545,6 +521,7 @@ export async function upsertUser(
         phone,
         type,
         whatsappNumber,
+        isActive: bitToBool(oldData.active),
       })
       .returning();
   } catch (error: any) {

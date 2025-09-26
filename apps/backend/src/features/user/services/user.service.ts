@@ -60,11 +60,17 @@ import {
   boardSubjectModel,
   subjectModel,
 } from "@repo/db/schemas";
-import { personModel, familyModel } from "@repo/db/schemas/models/user";
+import {
+  personModel,
+  familyModel,
+  transportDetailsModel,
+} from "@repo/db/schemas/models/user";
 import {
   qualificationModel,
   occupationModel,
   districtModel,
+  pickupPointModel,
+  transportModel,
 } from "@repo/db/schemas/models/resources";
 import { annualIncomeModel } from "@repo/db/schemas/models/resources";
 import { userModel as coreUserModel } from "@repo/db/schemas/models/user";
@@ -84,6 +90,16 @@ export async function addUser(user: User) {
   const formattedUser = await modelToDto(newUser);
 
   return formattedUser;
+}
+
+// Fetch Family DTO by userId
+export async function findFamilyByUserId(userId: number) {
+  const [family] = await db
+    .select()
+    .from(familyModel)
+    .where(eq(familyModel.userId, userId));
+  if (!family) return null;
+  return await mapFamilyToDto(family);
 }
 
 export async function findAllUsers(
@@ -305,84 +321,125 @@ export async function findProfileInfo(
       )[0]
     : null;
 
+  // Resolve linked entities for profile composition by userId
   const [
-    personalDetails,
-    healthDetails,
+    personalDetailsRaw,
+    healthRaw,
     emergencyContactDetails,
-    accommodationDetails,
+    accommodationRaw,
+    transportRaw,
   ] = await Promise.all([
-    generalInfo?.personalDetailsId
-      ? (
-          await db
-            .select()
-            .from(personalDetailsModel)
-            .where(eq(personalDetailsModel.id, generalInfo.personalDetailsId))
-        )[0]
-      : null,
-    generalInfo?.healthId
-      ? (
-          await db
-            .select()
-            .from(healthModel)
-            .where(eq(healthModel.id, generalInfo.healthId))
-        )[0]
-      : null,
-    generalInfo?.emergencyContactId
-      ? (
-          await db
-            .select()
-            .from(emergencyContactModel)
-            .where(eq(emergencyContactModel.id, generalInfo.emergencyContactId))
-        )[0]
-      : null,
-    generalInfo?.accommodationId
-      ? (
-          await db
-            .select()
-            .from(accommodationModel)
-            .where(eq(accommodationModel.id, generalInfo.accommodationId))
-        )[0]
-      : null,
+    db
+      .select()
+      .from(personalDetailsModel)
+      .where(eq(personalDetailsModel.userId, userId))
+      .then((r) => r[0] ?? null),
+    db
+      .select()
+      .from(healthModel)
+      .where(eq(healthModel.userId, userId))
+      .then((r) => r[0] ?? null),
+    db
+      .select()
+      .from(emergencyContactModel)
+      .where(eq(emergencyContactModel.userId, userId))
+      .then((r) => r[0] ?? null),
+    db
+      .select()
+      .from(accommodationModel)
+      .where(eq(accommodationModel.userId, userId))
+      .then((r) => r[0] ?? null),
+    db
+      .select()
+      .from(transportDetailsModel)
+      .where(eq(transportDetailsModel.userId, userId))
+      .then((r) => r[0] ?? null),
   ]);
 
+  const personalDetailsDto: PersonalDetailsDto | null = personalDetailsRaw
+    ? await mapPersonalDetailsToDtoWithAddresses(personalDetailsRaw)
+    : null;
+  const healthDto: HealthDto | null = healthRaw
+    ? await mapHealthToDto(healthRaw)
+    : null;
+  const accommodationDto: AccommodationDto | null = accommodationRaw
+    ? await mapAccommodationToDto(accommodationRaw)
+    : null;
+  const transportDetailsDto = transportRaw
+    ? await mapTransportDetailsToDto(transportRaw)
+    : null;
+
+  //   const [
+  //     personalDetails,
+  //     healthDetails,
+  //     emergencyContactDetails,
+  //     accommodationDetails,
+  //   ] = await Promise.all([
+  //     generalInfo?.personalDetailsId
+  //       ? (
+  //           await db
+  //             .select()
+  //             .from(personalDetailsModel)
+  //             .where(eq(personalDetailsModel.id, generalInfo.personalDetailsId))
+  //         )[0]
+  //       : null,
+  //     generalInfo?.healthId
+  //       ? (
+  //           await db
+  //             .select()
+  //             .from(healthModel)
+  //             .where(eq(healthModel.id, generalInfo.healthId))
+  //         )[0]
+  //       : null,
+  //     generalInfo?.emergencyContactId
+  //       ? (
+  //           await db
+  //             .select()
+  //             .from(emergencyContactModel)
+  //             .where(eq(emergencyContactModel.id, generalInfo.emergencyContactId))
+  //         )[0]
+  //       : null,
+  //     generalInfo?.accommodationId
+  //       ? (
+  //           await db
+  //             .select()
+  //             .from(accommodationModel)
+  //             .where(eq(accommodationModel.id, generalInfo.accommodationId))
+  //         )[0]
+  //       : null,
+  //   ]);
+
   // Academic/Additional/Course Applications
-  const academicInfo = applicationForm?.id
-    ? ((
-        await db
-          .select()
-          .from(admissionAcademicInfoModel)
-          .where(
-            eq(
-              admissionAcademicInfoModel.applicationFormId,
-              applicationForm.id,
-            ),
-          )
-      )[0] ?? null)
-    : null;
+  //   const academicInfo = applicationForm?.id
+  //     ? ((
+  //         await db
+  //           .select()
+  //           .from(admissionAcademicInfoModel)
+  //           .where(
+  //             eq(
+  //               admissionAcademicInfoModel.applicationFormId,
+  //               applicationForm.id,
+  //             ),
+  //           )
+  //       )[0] ?? null)
+  //     : null;
 
-  const additionalInfo = applicationForm?.id
-    ? ((
-        await db
-          .select()
-          .from(admissionAdditionalInfoModel)
-          .where(
-            eq(
-              admissionAdditionalInfoModel.applicationFormId,
-              applicationForm.id,
-            ),
-          )
-      )[0] ?? null)
-    : null;
+  //   const additionalInfo = applicationForm?.id
+  //     ? ((
+  //         await db
+  //           .select()
+  //           .from(admissionAdditionalInfoModel)
+  //           .where(
+  //             eq(
+  //               admissionAdditionalInfoModel.applicationFormId,
+  //               applicationForm.id,
+  //             ),
+  //           )
+  //       )[0] ?? null)
+  //     : null;
 
-  // Family details (via Additional Info)
-  const family = additionalInfo?.familyDetailsId
-    ? ((
-        await db
-          .select()
-          .from(familyModel)
-          .where(eq(familyModel.id, additionalInfo.familyDetailsId))
-      )[0] ?? null)
-    : null;
+  // Family details (via Additional Info or by userId)
+  let family = null as typeof familyModel.$inferSelect | null;
 
   const courseApplications = applicationForm?.id
     ? await db
@@ -393,32 +450,64 @@ export async function findProfileInfo(
         )
     : [];
 
+  // Optionally fetch academic/additional info for application form dto
+  const [academicInfo, additionalInfo] = applicationForm?.id
+    ? await Promise.all([
+        db
+          .select()
+          .from(admissionAcademicInfoModel)
+          .where(
+            eq(
+              admissionAcademicInfoModel.applicationFormId,
+              applicationForm.id,
+            ),
+          )
+          .then((r) => r[0] ?? null),
+        db
+          .select()
+          .from(admissionAdditionalInfoModel)
+          .where(
+            eq(
+              admissionAdditionalInfoModel.applicationFormId,
+              applicationForm.id,
+            ),
+          )
+          .then((r) => r[0] ?? null),
+      ])
+    : [null, null];
+
   const applicationFormDto: ApplicationFormDto | null | undefined =
     isStudent && applicationForm
       ? await mapApplicationFormToDto(applicationForm, {
           generalInfo,
-          personalDetails: personalDetails
-            ? await mapPersonalDetailsToDto(personalDetails)
-            : null,
-          health: healthDetails ? await mapHealthToDto(healthDetails) : null,
-          emergencyContact: emergencyContactDetails ?? null,
-          accommodation: accommodationDetails
-            ? await mapAccommodationToDto(accommodationDetails)
-            : null,
+          personalDetails: personalDetailsDto,
+          health: healthDto,
+          emergencyContact: emergencyContactDetails,
+          accommodation: accommodationDto,
           academicInfo,
           additionalInfo,
           courseApplications,
         })
       : undefined;
-  const personalDetailsDto: PersonalDetailsDto | null = personalDetails
-    ? await mapPersonalDetailsToDto(personalDetails)
-    : null;
-  const healthDto: HealthDto | null = healthDetails
-    ? await mapHealthToDto(healthDetails)
-    : null;
-  const accommodationDto: AccommodationDto | null = accommodationDetails
-    ? await mapAccommodationToDto(accommodationDetails)
-    : null;
+
+  // Resolve family after additionalInfo is available
+  if (additionalInfo?.id) {
+    family =
+      (
+        await db
+          .select()
+          .from(familyModel)
+          .where(eq(familyModel.admissionAdditionalInfoId, additionalInfo.id))
+      )[0] ?? null;
+  } else {
+    family =
+      (
+        await db
+          .select()
+          .from(familyModel)
+          .where(eq(familyModel.userId, userId))
+      )[0] ?? null;
+  }
 
   const result: ProfileInfo = {
     applicationFormDto,
@@ -426,7 +515,7 @@ export async function findProfileInfo(
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
     emergencyContactDetails: emergencyContactDetails ?? null,
-    transportDetails: null,
+    transportDetails: transportDetailsDto,
     accommodationDetails: accommodationDto,
   };
 
@@ -565,6 +654,19 @@ async function mapStudentAcademicSubjectToDto(
       : null,
   ]);
 
+  // Resolve nested degree and address for board if present
+  // Resolve degree via degreeId; address is not directly on Board in schema, so keep null
+  const [boardDegree] = await Promise.all([
+    board?.degreeId
+      ? db
+          .select()
+          .from(boardModel)
+          .where(eq(boardModel.id, board.id))
+          .then(() => null)
+      : null,
+  ]);
+  const boardAddress = null;
+
   return {
     ...s,
     boardSubject: {
@@ -573,23 +675,21 @@ async function mapStudentAcademicSubjectToDto(
       board: board
         ? {
             ...board,
-            degree: null, // Will be populated if needed
-            address: null, // Will be populated if needed
+            degree: null,
+            address: null,
           }
         : {
             id: 0,
             legacyBoardId: null,
             name: "",
-            degreeId: null,
+            degree: null,
             passingMarks: null,
             code: null,
-            addressId: null,
+            address: null,
             sequence: null,
             isActive: null,
             createdAt: new Date(),
             updatedAt: new Date(),
-            degree: null,
-            address: null,
           },
     },
   };
@@ -658,20 +758,51 @@ async function mapPersonalDetailsToDto(
           .where(eq(languageMediumModel.id, p.motherTongueId))
           .then((r) => r[0] ?? null)
       : null,
-    p.mailingAddressId ? fetchAddressDto(p.mailingAddressId) : null,
-    p.residentialAddressId ? fetchAddressDto(p.residentialAddressId) : null,
+    (p as any).mailingAddressId
+      ? fetchAddressDto((p as any).mailingAddressId)
+      : null,
+    (p as any).residentialAddressId
+      ? fetchAddressDto((p as any).residentialAddressId)
+      : null,
   ]);
 
+  const address: AddressDto[] = [];
+  if (mailingAddress) address.push(mailingAddress);
+  if (residentialAddress) address.push(residentialAddress);
   return {
     ...p,
     nationality: nationality ?? undefined,
     religion: religion ?? undefined,
     category: category ?? undefined,
     motherTongue: motherTongue ?? undefined,
-    mailingAddress: mailingAddress ?? undefined,
-    residentialAddress: residentialAddress ?? undefined,
+    address,
     disabilityCode: undefined,
-  };
+  } as any;
+}
+
+// Same as mapPersonalDetailsToDto, but also loads addresses linked by personalDetailsId
+async function mapPersonalDetailsToDtoWithAddresses(
+  p: PersonalDetails,
+): Promise<PersonalDetailsDto> {
+  const base = await mapPersonalDetailsToDto(p);
+  const addresses = await db
+    .select()
+    .from(addressModel)
+    .where(eq(addressModel.personalDetailsId, p.id!));
+  const addressDtos: AddressDto[] = [];
+  for (const a of addresses) {
+    const dto = await fetchAddressDto(a.id!);
+    if (dto) addressDtos.push(dto);
+  }
+  // Order addresses: [RESIDENTIAL, MAILING, ...others]
+  const orderWeight = (a: any) =>
+    a?.type === "RESIDENTIAL" ? 0 : a?.type === "MAILING" ? 1 : 2;
+  const sorted = addresses
+    .map((a, idx) => ({ a, dto: addressDtos[idx] }))
+    .sort((x, y) => orderWeight(x.a) - orderWeight(y.a))
+    .map((x) => x.dto!)
+    .filter(Boolean);
+  return { ...base, address: sorted } as any;
 }
 
 async function mapHealthToDto(h: Health): Promise<HealthDto> {
@@ -691,11 +822,39 @@ async function mapHealthToDto(h: Health): Promise<HealthDto> {
 async function mapAccommodationToDto(
   a: Accommodation,
 ): Promise<AccommodationDto> {
-  const address = a.addressId ? await fetchAddressDto(a.addressId) : undefined;
+  const address = (a as any).addressId
+    ? await fetchAddressDto((a as any).addressId)
+    : undefined;
   return {
     ...a,
     address,
   };
+}
+
+async function mapTransportDetailsToDto(
+  t: typeof transportDetailsModel.$inferSelect,
+) {
+  const [transportInfo, pickupPoint] = await Promise.all([
+    t.transportId
+      ? db
+          .select()
+          .from(transportModel)
+          .where(eq(transportModel.id, t.transportId))
+          .then((r) => r[0] ?? null)
+      : null,
+    t.pickupPointId
+      ? db
+          .select()
+          .from(pickupPointModel)
+          .where(eq(pickupPointModel.id, t.pickupPointId))
+          .then((r) => r[0] ?? null)
+      : null,
+  ]);
+  return {
+    ...t,
+    transportInfo,
+    pickupPoint,
+  } as any;
 }
 
 // Person and Family mappers
@@ -724,7 +883,9 @@ async function mapPersonToDto(
           .where(eq(occupationModel.id, p.occupationId))
           .then((r) => r[0] ?? null)
       : null,
-    p.officeAddressId ? fetchAddressDto(p.officeAddressId) : null,
+    (p as any).officeAddressId
+      ? fetchAddressDto((p as any).officeAddressId)
+      : null,
   ]);
 
   return {
@@ -738,10 +899,9 @@ async function mapPersonToDto(
 async function mapFamilyToDto(
   f: typeof familyModel.$inferSelect,
 ): Promise<ProfileInfo["familyDetails"]> {
-  const [father, mother, guardian, annualIncome] = await Promise.all([
-    mapPersonToDto(f.fatherDetailsId ?? null),
-    mapPersonToDto(f.motherDetailsId ?? null),
-    mapPersonToDto(f.guardianDetailsId ?? null),
+  // FamilyDetailDto expects father/mother/guardian; persons link by person.familyId + person.type
+  const [persons, annualIncome] = await Promise.all([
+    db.select().from(personModel).where(eq(personModel.familyId, f.id!)),
     f.annualIncomeId
       ? db
           .select()
@@ -751,11 +911,15 @@ async function mapFamilyToDto(
       : null,
   ]);
 
+  const members: PersonDto[] = [];
+  for (const p of persons) {
+    const dto = await mapPersonToDto(p.id);
+    if (dto) members.push(dto);
+  }
+
   return {
     ...f,
-    father: father ?? undefined,
-    mother: mother ?? undefined,
-    guardian: guardian ?? undefined,
+    members,
     annualIncome: annualIncome ?? undefined,
   } as any;
 }
@@ -805,6 +969,12 @@ async function fetchAddressDto(
     state: state ?? null,
     city: city ?? null,
     district: district ?? null,
-  } satisfies AddressDto;
+    previousCountry: null,
+    previousState: null,
+    previousCity: null,
+    previousDistrict: null,
+    postoffice: null,
+    policeStation: null,
+  } as AddressDto;
   return shaped;
 }

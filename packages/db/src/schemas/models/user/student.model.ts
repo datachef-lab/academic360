@@ -6,7 +6,7 @@ import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
 import { admissionCourseDetailsModel, applicationFormModel } from "@/schemas/models/admissions";
-import { sectionModel, shiftModel } from "../academics";
+// import { sectionModel, shiftModel } from "../academics";
 import z from "zod";
 
 export const studentModel = pgTable("students", {

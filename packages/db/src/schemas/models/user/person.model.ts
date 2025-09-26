@@ -3,7 +3,7 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { addressModel, familyModel } from "@/schemas/models/user";
+import {  familyModel } from "@/schemas/models/user";
 import { occupationModel, qualificationModel } from "@/schemas/models/resources";
 import { genderTypeEnum, maritalStatusTypeEnum, personTitleType, personTypeEnum } from "@/schemas/enums";
 

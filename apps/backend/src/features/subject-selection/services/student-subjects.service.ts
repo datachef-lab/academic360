@@ -73,7 +73,7 @@ async function findPromotionByStudentId(studentId: number) {
   const [foundSection] = await db
     .select()
     .from(sectionModel)
-    .where(eq(sectionModel.id, foundPromotion?.sectionId));
+    .where(eq(sectionModel.id, foundPromotion?.sectionId!));
 
   const foundClass = await classService.findClassById(foundPromotion?.classId);
 

@@ -4,7 +4,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { date, integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { placeOfStayTypeEnum } from "@/schemas/enums";
-import { addressModel, userModel } from "@/schemas/models/user";
+import {  userModel } from "@/schemas/models/user";
 import { admissionGeneralInfoModel } from "../admissions";
 
 export const accommodationModel = pgTable("accommodation", {

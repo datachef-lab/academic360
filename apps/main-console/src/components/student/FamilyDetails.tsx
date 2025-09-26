@@ -21,6 +21,7 @@ interface FamilyDetailsProps {
 }
 
 type Person = {
+  id?: number;
   name: string | null;
   email: string | null;
   phone: string | null;
@@ -115,9 +116,48 @@ export default function FamilyDetails({ studentId, initialData }: FamilyDetailsP
 
   // Keep parentType in sync when initialData changes (e.g., after refresh)
   useEffect(() => {
-    if (initialData?.parentType) {
-      setFormData((p) => ({ ...p, parentType: initialData.parentType ?? null }));
-    }
+    if (!initialData) return;
+    setFormData((p) => ({
+      ...p,
+      id: initialData.id ?? p.id,
+      parentType: initialData.parentType ?? null,
+      annualIncome: initialData.annualIncome
+        ? { id: initialData.annualIncome.id, range: (initialData.annualIncome as { range?: string } | null)?.range }
+        : null,
+      fatherDetails: initialData.father
+        ? {
+            id: (initialData.father as { id?: number })?.id,
+            name: initialData.father.name ?? null,
+            email: initialData.father.email ?? null,
+            phone: initialData.father.phone ?? null,
+            aadhaarCardNumber: initialData.father.aadhaarCardNumber ?? null,
+            qualification: initialData.father.qualification ?? null,
+            occupation: initialData.father.occupation ?? null,
+          }
+        : null,
+      motherDetails: initialData.mother
+        ? {
+            id: (initialData.mother as { id?: number })?.id,
+            name: initialData.mother.name ?? null,
+            email: initialData.mother.email ?? null,
+            phone: initialData.mother.phone ?? null,
+            aadhaarCardNumber: initialData.mother.aadhaarCardNumber ?? null,
+            qualification: initialData.mother.qualification ?? null,
+            occupation: initialData.mother.occupation ?? null,
+          }
+        : null,
+      guardianDetails: initialData.guardian
+        ? {
+            id: (initialData.guardian as { id?: number })?.id,
+            name: initialData.guardian.name ?? null,
+            email: initialData.guardian.email ?? null,
+            phone: initialData.guardian.phone ?? null,
+            aadhaarCardNumber: initialData.guardian.aadhaarCardNumber ?? null,
+            qualification: initialData.guardian.qualification ?? null,
+            occupation: initialData.guardian.occupation ?? null,
+          }
+        : null,
+    }));
   }, [initialData?.id, initialData?.parentType]);
 
   const mutation = useMutation({

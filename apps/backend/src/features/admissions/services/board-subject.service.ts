@@ -6,7 +6,7 @@ import {
 } from "@repo/db/schemas/models/admissions/board-subject.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import { boardModel, degreeModel } from "@repo/db/schemas/models/resources";
-import { addressModel } from "@repo/db/schemas/models/user";
+// import { addressModel } from "@repo/db/schemas/models/user";
 import { boardSubjectNameModel } from "@repo/db/schemas/models/admissions";
 import XLSX from "xlsx";
 import fs from "fs";
@@ -66,7 +66,6 @@ export async function getAllBoardSubjects(
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -99,14 +98,7 @@ export async function getAllBoardSubjects(
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
-      address: {
-        id: addressModel.id,
-        addressLine: addressModel.addressLine,
-        landmark: addressModel.landmark,
-        otherCity: addressModel.otherCity,
-        otherState: addressModel.otherState,
-        otherCountry: addressModel.otherCountry,
-      },
+      // address removed (no join)
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -117,7 +109,6 @@ export async function getAllBoardSubjects(
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -143,7 +134,7 @@ export async function getAllBoardSubjects(
       code: result.board?.code,
       isActive: result.board?.isActive,
       degree: result.degree || null,
-      address: result.address ? { ...result.address, district: null } : null,
+      address: null,
     },
     boardSubjectName: {
       id: result.boardSubjectName?.id!,
@@ -189,14 +180,7 @@ export async function getBoardSubjectById(
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
-      address: {
-        id: addressModel.id,
-        addressLine: addressModel.addressLine,
-        landmark: addressModel.landmark,
-        otherCity: addressModel.otherCity,
-        otherState: addressModel.otherState,
-        otherCountry: addressModel.otherCountry,
-      },
+      // address removed (no join)
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -207,7 +191,6 @@ export async function getBoardSubjectById(
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -233,7 +216,7 @@ export async function getBoardSubjectById(
       code: result.board?.code,
       isActive: result.board?.isActive,
       degree: result.degree || null,
-      address: result.address ? { ...result.address, district: null } : null,
+      address: null,
     },
     boardSubjectName: {
       id: result.boardSubjectName?.id!,
@@ -272,14 +255,7 @@ export async function getBoardSubjectsByBoardId(
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
-      address: {
-        id: addressModel.id,
-        addressLine: addressModel.addressLine,
-        landmark: addressModel.landmark,
-        otherCity: addressModel.otherCity,
-        otherState: addressModel.otherState,
-        otherCountry: addressModel.otherCountry,
-      },
+      // address removed (no join)
       boardSubjectName: {
         id: boardSubjectNameModel.id,
         name: boardSubjectNameModel.name,
@@ -290,7 +266,6 @@ export async function getBoardSubjectsByBoardId(
     .from(boardSubjectModel)
     .leftJoin(boardModel, eq(boardSubjectModel.boardId, boardModel.id))
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .leftJoin(
       boardSubjectNameModel,
       eq(boardSubjectModel.boardSubjectNameId, boardSubjectNameModel.id),
@@ -314,7 +289,7 @@ export async function getBoardSubjectsByBoardId(
       code: result.board?.code,
       isActive: result.board?.isActive,
       degree: result.degree || null,
-      address: result.address ? { ...result.address, district: null } : null,
+      address: null,
     },
     boardSubjectName: {
       id: result.boardSubjectName?.id!,

@@ -142,6 +142,7 @@ import {
 } from "./old-student.service";
 import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
+import { bitToBool } from "./refactor-old-migration.service";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -575,8 +576,8 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
           : undefined,
         lastPassedYear: oldStudent.lspassedyr ?? undefined,
         notes: oldStudent.notes ?? undefined,
-        active: !!oldStudent.active,
-        alumni: !!oldStudent.alumni,
+        active: bitToBool(oldStudent.active),
+        alumni: bitToBool(oldStudent.alumni),
         leavingDate: oldStudent.leavingdate
           ? new Date(oldStudent.leavingdate)
           : undefined,
@@ -832,6 +833,7 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
   const insertValues: Partial<typeof familyModel.$inferInsert> = {
     annualIncomeId: annualIncome ? annualIncome.id : undefined,
     parentType,
+    userId,
   };
 
   let [existingFamily] = await db
@@ -1216,6 +1218,7 @@ export async function upsertStudentPersonalDetails(
     const [updatedPersonalDetails] = await db
       .update(personalDetailsModel)
       .set({
+        userId: user.id as number,
         dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
         gender:
           oldDetails.sexId === 0
@@ -1245,15 +1248,16 @@ export async function upsertStudentPersonalDetails(
     // Update addresses if they exist
     // Mailing address
     const [[oldCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.mcountryid}`,
+      `SELECT * FROM countrymaintab WHERE id = ${oldDetails.mcountryid}`,
     )) as [OldCountry[], any];
     const [[oldPreviousCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.lscountryid}`,
+      `SELECT * FROM countrymaintab WHERE id = ${oldDetails.lscountryid}`,
     )) as [OldCountry[], any];
 
     await db
       .update(addressModel)
       .set({
+        personalDetailsId: existingPersonalDetails.id,
         address: oldDetails.mailingAddress,
         block: oldDetails.mailblock,
         countryId: oldCountry
@@ -1315,10 +1319,10 @@ export async function upsertStudentPersonalDetails(
     // Residential address (enriched fields similar to mailing)
     const rCountryId = oldDetails.rcountryid ?? null;
     const [[oldRCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.rcountryid}`,
+      `SELECT * FROM countrymaintab WHERE id = ${oldDetails.rcountryid}`,
     )) as [OldCountry[], any];
     const [[oldRPreviousCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.lscountryid}`,
+      `SELECT * FROM countrymaintab WHERE id = ${oldDetails.lscountryid}`,
     )) as [OldCountry[], any];
     const rStateId = oldDetails.rstateid ?? null;
     const rCityId = oldDetails.rcityid ?? null;
@@ -1327,6 +1331,7 @@ export async function upsertStudentPersonalDetails(
     await db
       .update(addressModel)
       .set({
+        personalDetailsId: existingPersonalDetails.id,
         phone:
           oldDetails.resiPhoneMobileNo?.trim()?.toUpperCase() ||
           oldDetails.contactNo ||
@@ -1499,156 +1504,126 @@ export async function upsertStudentPersonalDetails(
     } as PersonalDetails)
     .returning();
 
-  // Insert mailing address with enriched fields
-  if (oldDetails.mailingAddress || oldDetails.mailingPinNo) {
-    const [[insMailCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.mcountryid}`,
-    )) as [OldCountry[], any];
-    const [[insPrevMailCountry]] = (await mysqlConnection.query(
-      `SELECT * FROM country WHERE id = ${oldDetails.lscountryid}`,
-    )) as [OldCountry[], any];
+  const [[insMailCountry]] = (await mysqlConnection.query(
+    `SELECT * FROM countrymaintab WHERE id = ${oldDetails.mcountryid}`,
+  )) as [OldCountry[], any];
+  const [[insPrevMailCountry]] = (await mysqlConnection.query(
+    `SELECT * FROM countrymaintab WHERE id = ${oldDetails.lscountryid}`,
+  )) as [OldCountry[], any];
 
-    await db
-      .insert(addressModel)
-      .values({
-        type: "MAILING",
-        personalDetailsId: newPersonalDetails.id,
-        address: oldDetails.mailingAddress,
-        block: oldDetails.mailblock,
+  await db
+    .insert(addressModel)
+    .values({
+      type: "MAILING",
+      personalDetailsId: newPersonalDetails.id,
+      address: oldDetails.mailingAddress,
+      block: oldDetails.mailblock,
 
-        countryId: insMailCountry
-          ? (await oldAdmPersonalDetailsHelper.addCountry(insMailCountry)).id
-          : null,
-        previousCountryId: insPrevMailCountry
-          ? (await oldAdmPersonalDetailsHelper.addCountry(insPrevMailCountry))
-              .id
-          : null,
+      countryId: insMailCountry
+        ? (await oldAdmPersonalDetailsHelper.addCountry(insMailCountry)).id
+        : null,
+      previousCountryId: insPrevMailCountry
+        ? (await oldAdmPersonalDetailsHelper.addCountry(insPrevMailCountry)).id
+        : null,
 
-        stateId: oldDetails.mstateid
-          ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.mstateid))
-              ?.id
-          : null,
-        otherState: oldDetails.mothstate,
-        previousStateId: oldDetails.lsstateid
-          ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.lsstateid))
-              ?.id
-          : null,
+      stateId: oldDetails.mstateid
+        ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.mstateid))?.id
+        : null,
+      otherState: oldDetails.mothstate,
+      previousStateId: oldDetails.lsstateid
+        ? (await oldAdmPersonalDetailsHelper.addState(oldDetails.lsstateid))?.id
+        : null,
 
-        cityId: oldDetails.mcityid
-          ? (await oldAdmPersonalDetailsHelper.addCity(oldDetails.mcityid))?.id
-          : null,
-        otherCity: oldDetails.mothcity,
-        previousCityId: oldDetails.lscityid
-          ? (await oldAdmPersonalDetailsHelper.addCity(oldDetails.lscityid))?.id
-          : null,
+      cityId: oldDetails.mcityid
+        ? (await oldAdmPersonalDetailsHelper.addCity(oldDetails.mcityid))?.id
+        : null,
+      otherCity: oldDetails.mothcity,
+      previousCityId: oldDetails.lscityid
+        ? (await oldAdmPersonalDetailsHelper.addCity(oldDetails.lscityid))?.id
+        : null,
 
-        districtId: oldDetails.mdistrictid
-          ? (
-              await oldAdmPersonalDetailsHelper.addDistrict(
-                oldDetails.mdistrictid,
-              )
-            )?.id
-          : null,
-        otherDistrict: oldDetails.mothdistrict,
+      districtId: oldDetails.mdistrictid
+        ? (
+            await oldAdmPersonalDetailsHelper.addDistrict(
+              oldDetails.mdistrictid,
+            )
+          )?.id
+        : null,
+      otherDistrict: oldDetails.mothdistrict,
 
-        otherPostoffice: oldDetails.mailpo,
-        otherPoliceStation: oldDetails.mailps,
+      otherPostoffice: oldDetails.mailpo,
+      otherPoliceStation: oldDetails.mailps,
 
-        addressLine: oldDetails.mailingAddress?.trim()?.toUpperCase(),
-        localityType:
-          "localitytyp" in oldDetails &&
-          oldDetails.localitytyp?.toUpperCase() === "URBAN"
-            ? "URBAN"
-            : "localitytyp" in oldDetails &&
-                oldDetails.localitytyp?.toUpperCase() === "RURAL"
-              ? "RURAL"
-              : null,
-        pincode: oldDetails.mailingPinNo?.trim()?.toUpperCase(),
-      })
-      .returning();
-  }
+      addressLine: oldDetails.mailingAddress?.trim()?.toUpperCase(),
+      localityType:
+        "localitytyp" in oldDetails &&
+        oldDetails.localitytyp?.toUpperCase() === "URBAN"
+          ? "URBAN"
+          : "localitytyp" in oldDetails &&
+              oldDetails.localitytyp?.toUpperCase() === "RURAL"
+            ? "RURAL"
+            : null,
+      pincode: oldDetails.mailingPinNo?.trim()?.toUpperCase(),
+    })
+    .returning();
 
   // Insert residential address with enriched fields
-  if (oldDetails.residentialAddress || oldDetails.resiPinNo) {
-    const rCountryIdIns = oldDetails.rcountryid ?? undefined;
-    const rStateIdIns =
-      "resiStateId" in oldDetails ? oldDetails.resiStateId : undefined;
-    const rCityIdIns = "cityId" in oldDetails ? oldDetails.cityId : undefined;
-    const rDistrictIdIns =
-      "resiDistrictId" in oldDetails ? oldDetails.resiDistrictId : undefined;
-    const rPostOfficeIdIns =
-      "resipostofficeid" in oldDetails
-        ? oldDetails.resipostofficeid
-        : undefined;
-    const rPoliceStationIdIns =
-      "resipolicestationid" in oldDetails
-        ? oldDetails.resipolicestationid
-        : undefined;
 
-    await db
-      .insert(addressModel)
-      .values({
-        type: "RESIDENTIAL",
-        personalDetailsId: newPersonalDetails.id,
+  const rCountryIdIns = oldDetails.rcountryid ?? undefined;
+  const [[insRCountry]] = (await mysqlConnection.query(
+    `SELECT * FROM countrymaintab WHERE id = ${oldDetails.rcountryid}`,
+  )) as [OldCountry[], any];
+  const rStateIdIns = oldDetails.rstateid;
+  const rCityIdIns = oldDetails.rcityid;
+  const rDistrictIdIns = oldDetails.rdistrictid;
+  const rPostOfficeIdIns = oldDetails.resipo;
+  const rPoliceStationIdIns = oldDetails.resips;
 
-        phone:
-          oldDetails.resiPhoneMobileNo?.trim()?.toUpperCase() ||
-          oldDetails.contactNo ||
-          undefined,
-        emergencyPhone: oldDetails.emrgnResidentPhNo || undefined,
-        block: oldDetails.resiblock,
-        address: oldDetails.residentialAddress,
+  await db
+    .insert(addressModel)
+    .values({
+      type: "RESIDENTIAL",
+      personalDetailsId: newPersonalDetails.id,
 
-        countryId: rCountryIdIns
-          ? (
-              await oldAdmPersonalDetailsHelper.addCountry({
-                id: rCountryIdIns as number,
-                countryName: "",
-              } as OldCountry)
-            ).id
-          : null,
-        stateId: rStateIdIns
-          ? (await oldAdmPersonalDetailsHelper.addState(rStateIdIns as number))
-              ?.id
-          : null,
-        cityId: rCityIdIns
-          ? (await oldAdmPersonalDetailsHelper.addCity(rCityIdIns as number))
-              ?.id
-          : null,
-        districtId: rDistrictIdIns
-          ? (
-              await oldAdmPersonalDetailsHelper.addDistrict(
-                rDistrictIdIns as number,
-              )
-            )?.id
-          : null,
-        postofficeId: rPostOfficeIdIns
-          ? (
-              await oldAdmPersonalDetailsHelper.addPostOffice(
-                rPostOfficeIdIns as number,
-              )
-            )?.id
-          : null,
-        policeStationId: rPoliceStationIdIns
-          ? (
-              await oldAdmPersonalDetailsHelper.addPoliceStation(
-                rPoliceStationIdIns as number,
-              )
-            )?.id
-          : null,
-        addressLine: oldDetails.residentialAddress?.trim()?.toUpperCase(),
-        localityType:
-          "localitytyp" in oldDetails &&
-          oldDetails.localitytyp?.toUpperCase() === "URBAN"
-            ? "URBAN"
-            : "localitytyp" in oldDetails &&
-                oldDetails.localitytyp?.toUpperCase() === "RURAL"
-              ? "RURAL"
-              : null,
-        pincode: oldDetails.resiPinNo?.trim()?.toUpperCase(),
-      })
-      .returning();
-  }
+      phone:
+        oldDetails.resiPhoneMobileNo?.trim()?.toUpperCase() ||
+        oldDetails.contactNo ||
+        undefined,
+      emergencyPhone: oldDetails.emrgnResidentPhNo || undefined,
+      block: oldDetails.resiblock,
+      address: oldDetails.residentialAddress,
+
+      countryId: insRCountry
+        ? (await oldAdmPersonalDetailsHelper.addCountry(insRCountry)).id
+        : null,
+      stateId: rStateIdIns
+        ? (await oldAdmPersonalDetailsHelper.addState(rStateIdIns as number))
+            ?.id
+        : null,
+      cityId: rCityIdIns
+        ? (await oldAdmPersonalDetailsHelper.addCity(rCityIdIns as number))?.id
+        : null,
+      districtId: rDistrictIdIns
+        ? (
+            await oldAdmPersonalDetailsHelper.addDistrict(
+              rDistrictIdIns as number,
+            )
+          )?.id
+        : null,
+      otherPostoffice: rPostOfficeIdIns,
+      otherPoliceStation: rPoliceStationIdIns,
+      addressLine: oldDetails.residentialAddress?.trim()?.toUpperCase(),
+      localityType:
+        "localitytyp" in oldDetails &&
+        oldDetails.localitytyp?.toUpperCase() === "URBAN"
+          ? "URBAN"
+          : "localitytyp" in oldDetails &&
+              oldDetails.localitytyp?.toUpperCase() === "RURAL"
+            ? "RURAL"
+            : null,
+      pincode: oldDetails.resiPinNo?.trim()?.toUpperCase(),
+    })
+    .returning();
 
   return newPersonalDetails;
 }

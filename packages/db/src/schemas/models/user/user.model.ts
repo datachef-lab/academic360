@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, varchar, boolean, timestamp, integer, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, boolean, timestamp, text } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
 // import { personalDetailsModel } from "./personalDetails.model";

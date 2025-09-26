@@ -3,17 +3,17 @@ import { createInsertSchema } from "drizzle-zod";
 import { pgTable, serial, varchar, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 
 import { bankAccountTypeEnum } from "@/schemas/enums";
-import { personalDetailsModel } from "./personalDetails.model";
+// import { personalDetailsModel } from "./personalDetails.model";
 import { userModel } from "./user.model";
 import { studentCategoryModel } from "../admissions";
-import { healthModel } from "./health.model";
-import { emergencyContactModel } from "./emergencyContact.model";
+// import { healthModel } from "./health.model";
+// import { emergencyContactModel } from "./emergencyContact.model";
 import { bankBranchModel } from "../payments";
 import { boardModel, institutionModel, languageMediumModel } from "../resources";
 import { shiftModel } from "../academics";
-import { familyModel } from "./family.model";
-import { personModel } from "./person.model";
-import { addressModel } from "./address.model";
+// import { familyModel } from "./family.model";
+// import { personModel } from "./person.model";
+// import { addressModel } from "./address.model";
 
 
 export const staffModel = pgTable('staffs', {

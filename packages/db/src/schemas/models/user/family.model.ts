@@ -5,7 +5,7 @@ import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 
 import { parentTypeEnum } from "@/schemas/enums";
 import { annualIncomeModel, occupationModel } from "@/schemas/models/resources";
-import { personModel, userModel } from "@/schemas/models/user";
+import {  userModel } from "@/schemas/models/user";
 import { admissionAdditionalInfoModel } from "../admissions";
 
 export const familyModel = pgTable("family_details", {

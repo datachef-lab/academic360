@@ -140,42 +140,61 @@ export default function CURegistrationPage() {
         ...prev,
         fullName:
           `${personalDetails.firstName || ""} ${personalDetails.middleName || ""} ${personalDetails.lastName || ""}`.trim(),
-        parentName: familyDetails?.father?.name || familyDetails?.mother?.name || "",
+        parentName:
+          (familyDetails as any)?.members?.find((m: any) => m.type === "FATHER")?.name ||
+          (familyDetails as any)?.members?.find((m: any) => m.type === "MOTHER")?.name ||
+          (familyDetails as any)?.father?.name ||
+          (familyDetails as any)?.mother?.name ||
+          "",
         gender: personalDetails.gender || "",
         nationality: personalDetails.nationality?.name || "",
         aadhaarNumber: personalDetails.aadhaarCardNumber || "XXXX XXXX XXXX",
         apaarId: "", // APAAR ID is not in PersonalDetailsT, will be handled separately
       }));
 
-      // Update address data
-      if (personalDetails.residentialAddress) {
+      // Update address data by type
+      const addresses: any[] = (personalDetails as any)?.address || [];
+      const resAddr = addresses.find((a) => a?.type === "RESIDENTIAL") || null;
+      const mailAddr = addresses.find((a) => a?.type === "MAILING") || null;
+
+      if (resAddr || mailAddr) {
         setAddressData((prev) => ({
           ...prev,
           residential: {
-            addressLine: personalDetails.residentialAddress?.addressLine || "",
-            city: personalDetails.residentialAddress?.city?.name || "",
-            district: personalDetails.residentialAddress?.district?.name || "",
-            policeStation: (personalDetails.residentialAddress as any)?.otherPoliceStation || "",
-            postOffice: (personalDetails.residentialAddress as any)?.otherPostoffice || "",
-            state: personalDetails.residentialAddress?.state?.name || "West Bengal",
-            country: personalDetails.residentialAddress?.country?.name || "India",
-            pinCode: (personalDetails.residentialAddress as any)?.pincode || "",
+            addressLine: (resAddr?.addressLine ?? mailAddr?.addressLine) || "",
+            city: (resAddr?.city?.name ?? resAddr?.otherCity ?? mailAddr?.city?.name ?? mailAddr?.otherCity) || "",
+            district:
+              (resAddr?.district?.name ??
+                resAddr?.otherDistrict ??
+                mailAddr?.district?.name ??
+                mailAddr?.otherDistrict) ||
+              "",
+            policeStation: (resAddr?.otherPoliceStation ?? mailAddr?.otherPoliceStation) || "",
+            postOffice: (resAddr?.otherPostoffice ?? mailAddr?.otherPostoffice) || "",
+            state: (resAddr?.state?.name ?? mailAddr?.state?.name) || "West Bengal",
+            country: (resAddr?.country?.name ?? mailAddr?.country?.name) || "India",
+            pinCode: (resAddr?.pincode ?? mailAddr?.pincode) || "",
           },
         }));
       }
 
-      if (personalDetails.mailingAddress) {
+      if (mailAddr || resAddr) {
         setAddressData((prev) => ({
           ...prev,
           mailing: {
-            addressLine: personalDetails.mailingAddress?.addressLine || "",
-            city: personalDetails.mailingAddress?.city?.name || "",
-            district: personalDetails.mailingAddress?.district?.name || "",
-            policeStation: (personalDetails.mailingAddress as any)?.otherPoliceStation || "",
-            postOffice: (personalDetails.mailingAddress as any)?.otherPostoffice || "",
-            state: personalDetails.mailingAddress?.state?.name || "West Bengal",
-            country: personalDetails.mailingAddress?.country?.name || "India",
-            pinCode: (personalDetails.mailingAddress as any)?.pincode || "",
+            addressLine: (mailAddr?.addressLine ?? resAddr?.addressLine) || "",
+            city: (mailAddr?.city?.name ?? mailAddr?.otherCity ?? resAddr?.city?.name ?? resAddr?.otherCity) || "",
+            district:
+              (mailAddr?.district?.name ??
+                mailAddr?.otherDistrict ??
+                resAddr?.district?.name ??
+                resAddr?.otherDistrict) ||
+              "",
+            policeStation: (mailAddr?.otherPoliceStation ?? resAddr?.otherPoliceStation) || "",
+            postOffice: (mailAddr?.otherPostoffice ?? resAddr?.otherPostoffice) || "",
+            state: (mailAddr?.state?.name ?? resAddr?.state?.name) || "West Bengal",
+            country: (mailAddr?.country?.name ?? resAddr?.country?.name) || "India",
+            pinCode: (mailAddr?.pincode ?? resAddr?.pincode) || "",
           },
         }));
       }

@@ -1,6 +1,6 @@
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import express, { Request, Response, NextFunction } from "express";
-import { createOldStudent } from "../controllers/oldStudent.controller.js";
+// import { createOldStudent } from "../controllers/oldStudent.controller.js";
 import {
   deleteStudent,
   getAllStudents,
@@ -16,7 +16,7 @@ const router = express.Router();
 
 // router.use(verifyJWT);
 
-router.get("/old-data", createOldStudent);
+// router.get("/old-data", createOldStudent);
 
 router.get("/search", getSearchedStudents);
 

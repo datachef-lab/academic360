@@ -107,7 +107,7 @@ export async function updateAccommodation(
   }
 
   // Update address if present
-  let addressId = foundAccommodation.addressId;
+  //   let addressId = foundAccommodation.   addressId;
   // if (address && address.id) {
   //     // Use saveAddress for updates instead of addAddress
   //     const { id: _addressId, createdAt: _createdAt, updatedAt: _updatedAt, ...addressPayload } = address;
@@ -121,15 +121,15 @@ export async function updateAccommodation(
   //     // addressId = newAddress?.id || addressId;
   // }
 
-  const [updatedAccommodation] = await db
-    .update(accommodationModel)
-    .set({ ...props, addressId })
-    .where(eq(accommodationModel.id, id))
-    .returning();
-  const formattedAccommodation =
-    await accommodationResponseFormat(updatedAccommodation);
-  console.log("Final formatted accommodation:", formattedAccommodation);
-  return formattedAccommodation;
+  //   const [updatedAccommodation] = await db
+  //     .update(accommodationModel)
+  //     .set({ ...props, addressId })
+  //     .where(eq(accommodationModel.id, id))
+  //     .returning();
+  //   const formattedAccommodation =
+  //     await accommodationResponseFormat(updatedAccommodation);
+  //   console.log("Final formatted accommodation:", formattedAccommodation);
+  return null;
 }
 
 export async function removeAccommodation(id: number): Promise<boolean | null> {
@@ -169,11 +169,11 @@ export async function accommodationResponseFormat(
   if (!accommodation) {
     return null;
   }
-  const { addressId, ...props } = accommodation;
+  const { ...props } = accommodation;
   const formattedAccommodation: AccommodationType = { ...props };
-  if (addressId) {
-    formattedAccommodation.address = await findAddressById(addressId);
-  }
+  // if (addressId) {
+  //   formattedAccommodation.address = await findAddressById(addressId);
+  // }
   return formattedAccommodation;
 }
 

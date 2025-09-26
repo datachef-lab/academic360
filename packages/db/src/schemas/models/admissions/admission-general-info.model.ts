@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { applicationFormModel, eligibilityCriteriaModel, studentCategoryModel } from "@/schemas/models/admissions";
-import { accommodationModel, emergencyContactModel, healthModel, personalDetailsModel, transportDetailsModel, userModel } from "../user";
+import { userModel } from "../user";
 import { bankBranchModel } from "../payments";
 // import { staffModel } from "../user/staff.model";
 

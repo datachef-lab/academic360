@@ -18,7 +18,9 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
         </div>
         <div className="flex items-center justify-between py-2">
           <span className="text-gray-500 text-sm">Shift</span>
-          <span className="font-semibold text-gray-800 text-base">{student?.shift?.name || "N/A"}</span>
+          <span className="font-semibold text-gray-800 text-base">
+            {student?.currentPromotion?.shift?.name || "N/A"}
+          </span>
         </div>
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">

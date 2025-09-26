@@ -27,7 +27,6 @@ import {
   OldPoliceStation,
   OldPostOffice,
 } from "@repo/db/legacy-system-types/resources";
-import * as oldStudentController from "../controllers/oldStudent.controller";
 
 interface OldLanguageMedium {
   readonly id: number;
@@ -510,10 +509,6 @@ export async function addAdmGeneralInformation(
 
   let health = await addHealth(oldStudent);
 
-  let personalDetails = await upsertPersonalDetails(
-    oldAdmStudentPersonalDetails,
-  );
-
   let accommodation: Accommodation | null = null;
   if (oldStudent && oldStudent.placeofstay) {
     accommodation = await addAccommodation(
@@ -576,7 +571,6 @@ export async function addAdmGeneralInformation(
     backDoorFlag: oldAdmStudentPersonalDetails.backdoorflag || undefined,
     eligibilityCriteriaId: eligibilityCriteria?.id,
     studentCategoryId: studentCategory?.id,
-    personalDetailsId: personalDetails?.id,
     healthId: health?.id,
     accommodationId: accommodation?.id,
     emergencyContactId: emergencyContact?.id,
@@ -586,6 +580,12 @@ export async function addAdmGeneralInformation(
     .insert(admissionGeneralInfoModel)
     .values(values)
     .returning();
+
+  let personalDetails = await upsertPersonalDetails(
+    oldAdmStudentPersonalDetails,
+    undefined,
+    admGeneralInformation.id,
+  );
 
   return admGeneralInformation;
 }
@@ -968,8 +968,6 @@ export async function addAdmAdditionalInfo(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
 ) {
-  await upsertFamily2(oldAdmStudentPersonalDetails);
-
   const annualIncome = await categorizeIncome(
     oldAdmStudentPersonalDetails.familyIncome,
   );
@@ -982,6 +980,11 @@ export async function addAdmAdditionalInfo(
     );
 
   if (existingAdmAdditionalInfo) {
+    await upsertFamily2(
+      oldAdmStudentPersonalDetails,
+      undefined,
+      existingAdmAdditionalInfo.id,
+    );
     return existingAdmAdditionalInfo;
   }
 
@@ -1002,6 +1005,11 @@ export async function addAdmAdditionalInfo(
       annualIncomeId: annualIncome?.id || undefined,
     })
     .returning();
+  await upsertFamily2(
+    oldAdmStudentPersonalDetails,
+    undefined,
+    newAdmAdditionalInfo.id,
+  );
   return newAdmAdditionalInfo;
 }
 
@@ -1358,7 +1366,8 @@ export async function addSection(
   const [oldSection] = rows;
 
   if (!oldSection) {
-    throw new Error("Section not found");
+    console.error("Section not found", oldSectionId);
+    return undefined;
   }
 
   const [existingSection] = await db
@@ -2501,13 +2510,15 @@ export async function upsertHealth(
     existingHealth = (
       await db.select().from(healthModel).where(eq(healthModel.userId, userId))
     )[0];
-  } else {
+  } else if (admissionGeneralInfoId) {
     existingHealth = (
       await db
         .select()
         .from(healthModel)
         .where(eq(healthModel.admissionGeneralInfoId, admissionGeneralInfoId!))
     )[0];
+  } else {
+    existingHealth = undefined;
   }
 
   if (existingHealth) {
@@ -3070,6 +3081,7 @@ async function upsertPersonalDetailsAddress(
       const [address] = await db
         .insert(addressModel)
         .values({
+          personalDetailsId,
           countryId: mailingCountryLegacy || undefined,
           stateId: stateResolved?.id || undefined,
           cityId: cityResolved?.id || undefined,

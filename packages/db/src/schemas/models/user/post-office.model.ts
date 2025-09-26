@@ -1,6 +1,7 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { stateModel } from "../resources";
 import { createInsertSchema, createSelectSchema } from "drizzle-zod";
+import z from "zod";
 
 export const postOfficeModel = pgTable("post_office", {
     id: serial().primaryKey(),
@@ -15,3 +16,7 @@ export const postOfficeModel = pgTable("post_office", {
 export const createPostOfficeSchema = createInsertSchema(postOfficeModel);
 
 export const postOfficeSchema = createSelectSchema(postOfficeModel);
+
+export type PostOffice = z.infer<typeof createPostOfficeSchema>;
+
+export type PostOfficeT = typeof postOfficeSchema._type;
