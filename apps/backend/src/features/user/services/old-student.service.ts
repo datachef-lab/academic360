@@ -507,8 +507,6 @@ export async function addAdmGeneralInformation(
     );
   }
 
-  let health = await upsertHealth(oldStudent);
-
   // let family = await addFamily(oldAdmStudentPersonalDetails, oldStudent); // TO BE ADDED IN Add Student
 
   let spqtaApprovedBy: User | null = null;
@@ -554,13 +552,18 @@ export async function addAdmGeneralInformation(
     backDoorFlag: oldAdmStudentPersonalDetails.backdoorflag || undefined,
     eligibilityCriteriaId: eligibilityCriteria?.id,
     studentCategoryId: studentCategory?.id,
-    healthId: health?.id,
   };
 
   const [admGeneralInformation] = await db
     .insert(admissionGeneralInfoModel)
     .values(values)
     .returning();
+
+  let health = await upsertHealth(
+    oldStudent,
+    undefined,
+    admGeneralInformation.id,
+  );
 
   let accommodation: Accommodation | null = null;
   if (oldStudent && oldStudent.placeofstay) {
