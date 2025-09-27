@@ -1,5 +1,5 @@
-import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
-import { studentModel } from "../user";
+import { AnyPgColumn, boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { studentModel, userModel } from "../user";
 import { subjectModel } from "../course-design";
 import { subjectSelectionMetaModel } from "./subject-selection-meta.model";
 import { sessionModel } from "../academics";
@@ -20,6 +20,17 @@ export const studentSubjectSelectionModel = pgTable("student_subject_selections"
     subjectId: integer("subject_id_fk")
         .references(() => subjectModel.id)
         .notNull(),
+    // Versioning fields
+    version: integer("version").default(1).notNull(), // Version number (1, 2, 3, etc.)
+    parentId: integer("parent_id_fk")
+        .references((): AnyPgColumn => studentSubjectSelectionModel.id), // Reference to the original selection (for version chain)
+    isDeprecated: boolean("is_deprecated").default(false), // Mark old versions as deprecated
+    isActive: boolean("is_active").default(true), // Current active version
+    // Audit fields
+    createdBy: integer("created_by_user_id_fk")
+        .references(() => userModel.id)
+        .notNull(), // Who created this version (student/admin)
+    changeReason: text("change_reason"), // Reason for the change (admin notes)
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

@@ -1,103 +1,612 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
+import { handleError } from "@/utils/handleError.js";
 import {
-  createStudentSubjectSelectionFromDto,
-  deleteStudentSubjectSelection,
-  getStudentSubjectSelectionById,
+  createStudentSubjectSelectionsWithValidation,
   getStudentSubjectSelectionsPaginated,
-  updateStudentSubjectSelectionFromDto,
+  getStudentSubjectSelectionById,
+  updateStudentSubjectSelectionsWithValidation,
+  deleteStudentSubjectSelection,
+  getSubjectSelectionMetaForStudent,
+  getStudentSubjectSelectionVersionHistory,
+  getCurrentActiveSelections,
+  getSubjectSelectionAuditTrail,
+  canStudentCreateSelections,
+  getSelectionStatistics,
 } from "../services/student-subject-selection.service.js";
 
-export async function listStudentSubjectSelections(
+// Get subject selection meta data for UI form
+export async function getSubjectSelectionMetaHandler(
   req: Request,
   res: Response,
+  next: NextFunction,
 ) {
   try {
-    const page = Number(req.query.page || 1);
-    const pageSize = Number(req.query.pageSize || 10);
+    const studentId = Number(req.params.studentId);
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    const result = await getSubjectSelectionMetaForStudent(studentId);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Subject selection meta data fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Create multiple subject selections with validation (Student access)
+export async function createStudentSubjectSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const selections = req.body;
+    if (!Array.isArray(selections) || selections.length === 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid selections array provided",
+          ),
+        );
+      return;
+    }
+
+    // Extract user info from request (assuming middleware sets req.user)
+    const userId = (req as any).user?.id;
+    const userRole = (req as any).user?.role;
+
+    // Check if user is student (only students can create initial selections)
+    if (userRole !== "student") {
+      res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            "FORBIDDEN",
+            null,
+            "Only students can create initial subject selections",
+          ),
+        );
+      return;
+    }
+
+    const result = await createStudentSubjectSelectionsWithValidation(
+      selections,
+      userId,
+      "Student initial selection",
+    );
+
+    if (!result.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            { errors: result.errors },
+            "Validation failed for subject selections",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          result.data,
+          "Subject selections created successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Update multiple subject selections with validation (Admin only - creates new version)
+export async function updateStudentSubjectSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+    const sessionId = Number(req.params.sessionId);
+    const selections = req.body;
+    const changeReason = req.body.changeReason || "Admin update";
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    if (!sessionId || isNaN(sessionId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid session ID provided",
+          ),
+        );
+      return;
+    }
+
+    if (!Array.isArray(selections)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid selections array provided",
+          ),
+        );
+      return;
+    }
+
+    // Extract user info from request (assuming middleware sets req.user)
+    const userId = (req as any).user?.id;
+    const userRole = (req as any).user?.role;
+
+    // Check if user is admin or staff (only they can update selections)
+    if (!["admin", "staff"].includes(userRole)) {
+      res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            "FORBIDDEN",
+            null,
+            "Only admin and staff can update student subject selections",
+          ),
+        );
+      return;
+    }
+
+    const result = await updateStudentSubjectSelectionsWithValidation(
+      studentId,
+      sessionId,
+      selections,
+      userId,
+      changeReason,
+    );
+
+    if (!result.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            { errors: result.errors },
+            "Validation failed for subject selections",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result.data,
+          "Subject selections updated successfully (new version created)",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Get paginated student subject selections
+export async function getStudentSubjectSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const page = Number(req.query.page) || 1;
+    const pageSize = Number(req.query.pageSize) || 10;
     const studentId = req.query.studentId
       ? Number(req.query.studentId)
       : undefined;
     const sessionId = req.query.sessionId
       ? Number(req.query.sessionId)
       : undefined;
+
     const result = await getStudentSubjectSelectionsPaginated({
       page,
       pageSize,
       studentId,
       sessionId,
     });
-    return res.status(200).json(new ApiResponse(200, "OK", result, "Fetched"));
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Student subject selections fetched successfully",
+        ),
+      );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed";
-    return res
-      .status(500)
-      .json(new ApiResponse(500, "INTERNAL_SERVER_ERROR", null, message));
+    handleError(error, res, next);
   }
 }
 
-export async function getStudentSubjectSelection(req: Request, res: Response) {
+// Get student subject selection by ID
+export async function getStudentSubjectSelectionByIdHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
   try {
     const id = Number(req.params.id);
-    const item = await getStudentSubjectSelectionById(id);
-    if (!item)
-      return res
+    if (!id || isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid ID provided"));
+      return;
+    }
+
+    const result = await getStudentSubjectSelectionById(id);
+    if (!result) {
+      res
         .status(404)
-        .json(new ApiResponse(404, "NOT_FOUND", null, "Not found"));
-    return res.status(200).json(new ApiResponse(200, "OK", item, "Fetched"));
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Student subject selection not found",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Student subject selection fetched successfully",
+        ),
+      );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed";
-    return res
-      .status(500)
-      .json(new ApiResponse(500, "INTERNAL_SERVER_ERROR", null, message));
+    handleError(error, res, next);
   }
 }
 
-export async function createStudentSubjectSelectionController(
+// Delete student subject selection
+export async function deleteStudentSubjectSelectionHandler(
   req: Request,
   res: Response,
-) {
-  try {
-    const created = await createStudentSubjectSelectionFromDto(req.body);
-    return res
-      .status(201)
-      .json(new ApiResponse(201, "CREATED", created, "Created"));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed";
-    return res
-      .status(500)
-      .json(new ApiResponse(500, "INTERNAL_SERVER_ERROR", null, message));
-  }
-}
-
-export async function updateStudentSubjectSelectionController(
-  req: Request,
-  res: Response,
-) {
-  try {
-    const id = Number(req.params.id);
-    const updated = await updateStudentSubjectSelectionFromDto(id, req.body);
-    return res.status(200).json(new ApiResponse(200, "OK", updated, "Updated"));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed";
-    return res
-      .status(500)
-      .json(new ApiResponse(500, "INTERNAL_SERVER_ERROR", null, message));
-  }
-}
-
-export async function deleteStudentSubjectSelectionController(
-  req: Request,
-  res: Response,
+  next: NextFunction,
 ) {
   try {
     const id = Number(req.params.id);
-    const deleted = await deleteStudentSubjectSelection(id);
-    return res.status(200).json(new ApiResponse(200, "OK", deleted, "Deleted"));
+    if (!id || isNaN(id)) {
+      res
+        .status(400)
+        .json(new ApiResponse(400, "BAD_REQUEST", null, "Invalid ID provided"));
+      return;
+    }
+
+    const result = await deleteStudentSubjectSelection(id);
+    if (!result) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Student subject selection not found",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Student subject selection deleted successfully",
+        ),
+      );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed";
-    return res
-      .status(500)
-      .json(new ApiResponse(500, "INTERNAL_SERVER_ERROR", null, message));
+    handleError(error, res, next);
+  }
+}
+
+// -- Version History and Audit Trail Endpoints --
+
+// Get version history for a student's subject selections
+export async function getVersionHistoryHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+    const sessionId = req.query.sessionId
+      ? Number(req.query.sessionId)
+      : undefined;
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    const result = await getStudentSubjectSelectionVersionHistory(
+      studentId,
+      sessionId,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Version history fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Get current active selections for a student
+export async function getCurrentActiveSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+    const sessionId = req.query.sessionId
+      ? Number(req.query.sessionId)
+      : undefined;
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    const result = await getCurrentActiveSelections(studentId, sessionId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Current active selections fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Get audit trail for a specific subject selection
+export async function getAuditTrailHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const subjectSelectionMetaId = Number(req.params.subjectSelectionMetaId);
+    const studentId = Number(req.params.studentId);
+
+    if (!subjectSelectionMetaId || isNaN(subjectSelectionMetaId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid subject selection meta ID provided",
+          ),
+        );
+      return;
+    }
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    const result = await getSubjectSelectionAuditTrail(
+      subjectSelectionMetaId,
+      studentId,
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Audit trail fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Check if student can create new selections
+export async function canCreateSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+    const sessionId = Number(req.params.sessionId);
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    if (!sessionId || isNaN(sessionId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid session ID provided",
+          ),
+        );
+      return;
+    }
+
+    const canCreate = await canStudentCreateSelections(studentId, sessionId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          { canCreate },
+          "Student creation eligibility checked successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Get selection statistics for reporting
+export async function getSelectionStatisticsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const studentId = Number(req.params.studentId);
+
+    if (!studentId || isNaN(studentId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid student ID provided",
+          ),
+        );
+      return;
+    }
+
+    const result = await getSelectionStatistics(studentId);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "Selection statistics fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
   }
 }

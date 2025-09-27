@@ -28,6 +28,13 @@ import * as studentAcademicSubjectService from "@/features/admissions/services/s
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
 import * as stringSimilarity from "string-similarity";
 import { PaperDetailedDto } from "@/features/course-design/services/paper.service";
+import {
+  subjectSelectionMetaModel,
+  subjectSelectionMetaStreamModel,
+  subjectSelectionMetaClassModel,
+} from "@repo/db/schemas/models/subject-selection";
+import { streamModel } from "@repo/db/schemas/models/course-design";
+import { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
 
 // Helper function for fuzzy string matching
 function isSubjectMatch(
@@ -293,9 +300,29 @@ export async function findSubjectsSelections(studentId: number) {
   //     }
   //   }
 
+  // Extract unique subject type IDs and stream IDs from the paper options
+  const subjectTypeIds = Array.from(
+    new Set(studentSubjectsSelection.map((group) => group.subjectType.id)),
+  );
+
+  // Get stream IDs from the program course
+  const streamIds = foundProgramCourse?.stream?.id
+    ? [foundProgramCourse.stream.id]
+    : [];
+
+  // Fetch subject selection meta data
+  const subjectSelectionMetas = foundAcademicYear?.id
+    ? await fetchSubjectSelectionMetaData(
+        foundAcademicYear.id,
+        subjectTypeIds,
+        streamIds,
+      )
+    : [];
+
   return {
     studentSubjectsSelection,
     selectedMinorSubjects: formatedSelectedMinorSubjects, // Give distinct list of selected minor subjects based on legacy id
+    subjectSelectionMetas, // Include meta data for dynamic labels
   };
 }
 
@@ -357,4 +384,133 @@ async function findHierarchy(studentId: number) {
     foundAcademicYear,
     foundAdmCourseDetail,
   };
+}
+
+// Helper function to fetch subject selection meta data
+async function fetchSubjectSelectionMetaData(
+  academicYearId: number,
+  subjectTypeIds: number[],
+  streamIds: number[],
+): Promise<SubjectSelectionMetaDto[]> {
+  if (subjectTypeIds.length === 0 || streamIds.length === 0) {
+    return [];
+  }
+
+  // Fetch subject selection metas for the given academic year and subject types
+  const subjectSelectionMetas = await db
+    .select({
+      id: subjectSelectionMetaModel.id,
+      label: subjectSelectionMetaModel.label,
+      subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      academicYearId: subjectSelectionMetaModel.academicYearId,
+      createdAt: subjectSelectionMetaModel.createdAt,
+      updatedAt: subjectSelectionMetaModel.updatedAt,
+    })
+    .from(subjectSelectionMetaModel)
+    .where(and(eq(subjectSelectionMetaModel.academicYearId, academicYearId)));
+
+  // Convert to full DTOs with related data
+  const fullDtos = await Promise.all(
+    subjectSelectionMetas.map(async (meta) => {
+      // Fetch related data for each meta
+      const [academicYear, subjectType, streams, forClasses] =
+        await Promise.all([
+          db
+            .select()
+            .from(academicYearModel)
+            .where(eq(academicYearModel.id, meta.academicYearId)),
+          db
+            .select()
+            .from(subjectTypeModel)
+            .where(eq(subjectTypeModel.id, meta.subjectTypeId)),
+          // Fetch streams through the many-to-many relationship
+          db
+            .select({
+              id: subjectSelectionMetaStreamModel.id,
+              createdAt: subjectSelectionMetaStreamModel.createdAt,
+              updatedAt: subjectSelectionMetaStreamModel.updatedAt,
+              stream: {
+                id: streamModel.id,
+                name: streamModel.name,
+                code: streamModel.code,
+                shortName: streamModel.shortName,
+                isActive: streamModel.isActive,
+                createdAt: streamModel.createdAt,
+                updatedAt: streamModel.updatedAt,
+              },
+            })
+            .from(subjectSelectionMetaStreamModel)
+            .leftJoin(
+              streamModel,
+              eq(subjectSelectionMetaStreamModel.streamId, streamModel.id),
+            )
+            .where(
+              eq(
+                subjectSelectionMetaStreamModel.subjectSelectionMetaId,
+                meta.id,
+              ),
+            ),
+          // Fetch classes through the many-to-many relationship
+          db
+            .select({
+              id: subjectSelectionMetaClassModel.id,
+              subjectSelectionMetaId:
+                subjectSelectionMetaClassModel.subjectSelectionMetaId,
+              createdAt: subjectSelectionMetaClassModel.createdAt,
+              updatedAt: subjectSelectionMetaClassModel.updatedAt,
+              class: {
+                id: classModel.id,
+                name: classModel.name,
+                type: classModel.type,
+                isActive: classModel.isActive,
+                createdAt: classModel.createdAt,
+                updatedAt: classModel.updatedAt,
+              },
+            })
+            .from(subjectSelectionMetaClassModel)
+            .leftJoin(
+              classModel,
+              eq(subjectSelectionMetaClassModel.classId, classModel.id),
+            )
+            .where(
+              eq(
+                subjectSelectionMetaClassModel.subjectSelectionMetaId,
+                meta.id,
+              ),
+            ),
+        ]);
+
+      return {
+        id: meta.id!,
+        academicYear: academicYear[0]!,
+        subjectType: subjectType[0]!,
+        streams: streams.map((s) => ({
+          id: s.id!,
+          createdAt: s.createdAt || new Date(),
+          updatedAt: s.updatedAt || new Date(),
+          stream: s.stream!,
+        })),
+        forClasses: forClasses.map((c) => ({
+          id: c.id!,
+          subjectSelectionMetaId: c.subjectSelectionMetaId!,
+          createdAt: c.createdAt || new Date(),
+          updatedAt: c.updatedAt || new Date(),
+          class: c.class!,
+        })),
+        label: meta.label,
+        createdAt: meta.createdAt || new Date(),
+        updatedAt: meta.updatedAt || new Date(),
+      } as unknown as SubjectSelectionMetaDto;
+    }),
+  );
+
+  // Filter metas that have streams matching the available stream IDs and subject types
+  return fullDtos.filter(
+    (meta) =>
+      meta.streams.some(
+        (stream) => stream.stream?.id && streamIds.includes(stream.stream.id),
+      ) &&
+      meta.subjectType?.id &&
+      subjectTypeIds.includes(meta.subjectType.id),
+  );
 }

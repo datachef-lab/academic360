@@ -5,7 +5,14 @@ import { Combobox } from "@/components/ui/combobox";
 import { useStudent } from "@/providers/student-provider";
 import { useAuth } from "@/hooks/use-auth";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { fetchStudentSubjectSelections, StudentSubjectSelectionDto, PaperDto } from "@/services/subject-selection";
+import {
+  fetchStudentSubjectSelections,
+  StudentSubjectSelectionGroupDto,
+  PaperDto,
+  saveStudentSubjectSelections,
+  SubjectSelectionMetaDto,
+  StudentSubjectSelectionForSave,
+} from "@/services/subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 
 export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => void }) {
@@ -18,9 +25,16 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
 
-  const [selections, setSelections] = useState<StudentSubjectSelectionDto[] | null>(null);
+  const [selections, setSelections] = useState<StudentSubjectSelectionGroupDto[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // New state for meta data and saving
+  const [subjectSelectionMetas, setSubjectSelectionMetas] = useState<SubjectSelectionMetaDto[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasExistingSelections, setHasExistingSelections] = useState(false);
 
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
@@ -65,18 +79,26 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [earlierMinorSelections, setEarlierMinorSelections] = useState<string[]>([]);
   const [minorMismatch, setMinorMismatch] = useState(false);
 
-  // Load paper options from backend
+  // Load paper options and meta data from backend
   useEffect(() => {
     const run = async () => {
       if (!student?.id) return;
       setLoading(true);
       setLoadError(null);
       try {
+        // Fetch data including meta data in single API call
         const resp = await fetchStudentSubjectSelections(student.id);
         console.log("subject-selection-form data", resp);
 
+        // Set meta data from the response
+        setSubjectSelectionMetas(resp.subjectSelectionMetas || []);
+
         const groups = resp.studentSubjectsSelection ?? [];
         setSelections(groups);
+
+        // Check if student already has existing selections (from selectedMinorSubjects)
+        const hasExisting = resp.selectedMinorSubjects && resp.selectedMinorSubjects.length > 0;
+        setHasExistingSelections(hasExisting);
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
@@ -427,6 +449,192 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
   };
   const handleBack = () => setStep(1);
+
+  // Helper function to get dynamic label from meta data
+  const getDynamicLabel = (subjectTypeCode: string, semester?: string): string => {
+    const meta = subjectSelectionMetas.find(
+      (m) =>
+        m.subjectType.code === subjectTypeCode &&
+        (!semester || m.forClasses.some((c) => c.class.name.includes(semester))),
+    );
+    return meta?.label || getDefaultLabel(subjectTypeCode, semester);
+  };
+
+  // Helper function to get default label if meta data is not available
+  const getDefaultLabel = (subjectTypeCode: string, semester?: string): string => {
+    switch (subjectTypeCode) {
+      case "MN":
+        if (semester === "I" || semester === "II") return "Minor I (Semester I & II)";
+        if (semester === "III" || semester === "IV") return "Minor II (Semester III & IV)";
+        return "Minor Subject";
+      case "IDC":
+        if (semester === "I") return "IDC 1 (Semester I)";
+        if (semester === "II") return "IDC 2 (Semester II)";
+        if (semester === "III") return "IDC 3 (Semester III)";
+        return "IDC Subject";
+      case "AEC":
+        return "AEC (Semester III & IV)";
+      case "CVAC":
+        return "CVAC 4 (Semester II)";
+      default:
+        return "Subject";
+    }
+  };
+
+  // Create selections array for saving
+  const createSelectionsForSave = (): StudentSubjectSelectionForSave[] => {
+    const selectionsToSave: StudentSubjectSelectionForSave[] = [];
+
+    if (!student?.id || !selections || subjectSelectionMetas.length === 0) {
+      return selectionsToSave;
+    }
+
+    // Helper function to find subject ID by name
+    const findSubjectId = (subjectName: string): number | null => {
+      for (const group of selections) {
+        for (const paper of group.paperOptions || []) {
+          if (paper.subject?.name === subjectName) {
+            return paper.subject.id;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Helper function to find meta ID by label and subject type
+    const findMetaId = (label: string, subjectTypeCode: string): number | null => {
+      const meta = subjectSelectionMetas.find((m) => m.label === label && m.subjectType.code === subjectTypeCode);
+      return meta?.id || null;
+    };
+
+    // Add Minor 1 selection
+    if (minor1) {
+      const subjectId = findSubjectId(minor1);
+      const metaId = findMetaId("Minor 1 (Semester I & II)", "MN");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor1 },
+        });
+      }
+    }
+
+    // Add Minor 2 selection
+    if (minor2) {
+      const subjectId = findSubjectId(minor2);
+      const metaId = findMetaId("Minor 2 (Semester III & IV)", "MN");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor2 },
+        });
+      }
+    }
+
+    // Add IDC selections
+    if (idc1) {
+      const subjectId = findSubjectId(idc1);
+      const metaId = findMetaId("IDC 1 (Semester I)", "IDC");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc1 },
+        });
+      }
+    }
+
+    if (idc2) {
+      const subjectId = findSubjectId(idc2);
+      const metaId = findMetaId("IDC 2 (Semester II)", "IDC");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc2 },
+        });
+      }
+    }
+
+    if (idc3) {
+      const subjectId = findSubjectId(idc3);
+      const metaId = findMetaId("IDC 3 (Semester III)", "IDC");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc3 },
+        });
+      }
+    }
+
+    // Add AEC selection
+    if (aec3) {
+      const subjectId = findSubjectId(aec3);
+      const metaId = findMetaId("AEC (Semester III & IV)", "AEC");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: aec3 },
+        });
+      }
+    }
+
+    // Add CVAC selection
+    if (cvac4) {
+      const subjectId = findSubjectId(cvac4);
+      const metaId = findMetaId("CVAC 4 (Semester II)", "CVAC");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: 1 }, // TODO: Get actual session ID
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: cvac4 },
+        });
+      }
+    }
+
+    return selectionsToSave;
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    if (!agree1 || !agree2 || !agree3) {
+      return;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const selectionsToSave = createSelectionsForSave();
+      console.log("Saving selections:", selectionsToSave);
+
+      const result = await saveStudentSubjectSelections(selectionsToSave);
+
+      if (result.success) {
+        setSaveSuccess(true);
+        // Optionally redirect or show success message
+        console.log("Selections saved successfully:", result.data);
+      } else {
+        setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
+      }
+    } catch (error: any) {
+      setSaveError(error.message || "Failed to save selections");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Filter out Minor subjects from IDC options (per list)
   // NOTE: This enforces the business rule "IDC subjects cannot be same as your Minor subjects"
@@ -872,16 +1080,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {loading ? (
                   <>
-                    <LoadingDropdown label={getSemesterLabel("minor1", "Minor I (Semester I & II)")} />
-                    <LoadingDropdown label={getSemesterLabel("minor2", "Minor II (Semester III & IV)")} />
+                    <LoadingDropdown label={getDynamicLabel("MN", "I")} />
+                    <LoadingDropdown label={getDynamicLabel("MN", "III")} />
                   </>
                 ) : (
                   <>
                     {hasActualOptions(admissionMinor1Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">
-                          {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
-                        </label>
+                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("MN", "I")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -900,9 +1106,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(admissionMinor2Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">
-                          {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
-                        </label>
+                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("MN", "III")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -923,10 +1127,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </div>
 
               {loading ? (
-                <LoadingDropdown label="AEC (Semester III & IV)" />
+                <LoadingDropdown label={getDynamicLabel("AEC")} />
               ) : hasActualOptions(availableAecSubjects) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                  <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
+                  <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("AEC")}</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableAecSubjects)}
                     value={aec3}
@@ -941,15 +1145,15 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {loading ? (
                   <>
-                    <LoadingDropdown label="IDC 1 (Semester I)" />
-                    <LoadingDropdown label="IDC 2 (Semester II)" />
-                    <LoadingDropdown label="IDC 3 (Semester III)" />
+                    <LoadingDropdown label={getDynamicLabel("IDC", "I")} />
+                    <LoadingDropdown label={getDynamicLabel("IDC", "II")} />
+                    <LoadingDropdown label={getDynamicLabel("IDC", "III")} />
                   </>
                 ) : (
                   <>
                     {hasActualOptions(availableIdcSem1Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
+                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "I")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -973,7 +1177,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(availableIdcSem2Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
+                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "II")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -997,7 +1201,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(availableIdcSem3Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
+                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "III")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1025,10 +1229,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               {/* CVAC Subjects */}
 
               {loading ? (
-                <LoadingDropdown label="CVAC 4 (Semester II)" />
+                <LoadingDropdown label={getDynamicLabel("CVAC")} />
               ) : hasActualOptions(availableCvacOptions) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("cvac")}>
-                  <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
+                  <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("CVAC")}</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableCvacOptions)}
                     value={cvac4}
@@ -1071,9 +1275,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* Minor I - Always show if there are subjects available */}
                       {admissionMinor1Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">
-                            {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
-                          </td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("MN", "I")}</td>
                           <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
                         </tr>
                       )}
@@ -1081,9 +1283,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* Minor II - Always show if there are subjects available */}
                       {admissionMinor2Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">
-                            {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
-                          </td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("MN", "III")}</td>
                           <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
                         </tr>
                       )}
@@ -1091,7 +1291,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* IDC 1 - Only show if there are subjects available */}
                       {availableIdcSem1Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</td>
                           <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
                         </tr>
                       )}
@@ -1099,7 +1299,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* IDC 2 - Only show if there are subjects available */}
                       {availableIdcSem2Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</td>
                           <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
                         </tr>
                       )}
@@ -1107,7 +1307,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* IDC 3 - Only show if there are subjects available */}
                       {availableIdcSem3Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</td>
                           <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
                         </tr>
                       )}
@@ -1115,7 +1315,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* AEC 3 - Only show if there are subjects available */}
                       {availableAecSubjects.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">AEC (Semester III & IV)</td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("AEC")}</td>
                           <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
                         </tr>
                       )}
@@ -1123,12 +1323,33 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       {/* CVAC 4 - Only show if there are subjects available */}
                       {availableCvacOptions.length > 0 && (
                         <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
+                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("CVAC")}</td>
                           <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {/* Save Status Messages */}
+              {saveSuccess && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-medium">Subject selections saved successfully!</span>
+                  </div>
+                </div>
+              )}
+
+              {saveError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Error saving selections: {saveError}</span>
+                  </div>
                 </div>
               )}
 
@@ -1199,6 +1420,22 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             </div>
           )}
 
+          {/* Existing Selections Notice */}
+          {hasExistingSelections && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-start gap-3">
+                <Info className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-yellow-800">Subject Selections Already Saved</h4>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    You have already saved your subject selections. If you need to make changes, please contact your
+                    academic advisor or administration staff.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-100">
             {step === 1 && (
@@ -1220,10 +1457,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   Back
                 </button>
                 <button
-                  disabled={!agree1 || !agree2 || !agree3}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm text-sm"
+                  onClick={handleSave}
+                  disabled={!agree1 || !agree2 || !agree3 || saving || hasExistingSelections}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm text-sm flex items-center gap-2"
                 >
-                  Save
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {saving ? "Saving..." : hasExistingSelections ? "Already Saved" : "Save"}
                 </button>
               </>
             )}
