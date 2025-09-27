@@ -33,7 +33,7 @@ export async function createSubjectSelectionMetaStreamHandler(
       .status(201)
       .json(new ApiResponse(201, "SUCCESS", created, "Created meta-stream"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -48,7 +48,7 @@ export async function getAllSubjectSelectionMetaStreamsHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", rows, "Fetched meta-streams"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -77,7 +77,7 @@ export async function getSubjectSelectionMetaStreamByIdHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", row, "Fetched meta-stream"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -106,7 +106,7 @@ export async function updateSubjectSelectionMetaStreamHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta-stream"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -135,6 +135,6 @@ export async function deleteSubjectSelectionMetaStreamHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta-stream"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }

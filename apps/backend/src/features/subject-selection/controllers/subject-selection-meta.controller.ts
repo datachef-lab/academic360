@@ -40,7 +40,7 @@ export async function createSubjectSelectionMetaHandler(
         ),
       );
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -55,7 +55,7 @@ export async function getAllSubjectSelectionMetasHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", rows, "Fetched metas"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -82,7 +82,7 @@ export async function getSubjectSelectionMetaByIdHandler(
     }
     res.status(200).json(new ApiResponse(200, "SUCCESS", row, "Fetched meta"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -111,7 +111,7 @@ export async function updateSubjectSelectionMetaHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -140,6 +140,6 @@ export async function deleteSubjectSelectionMetaHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }

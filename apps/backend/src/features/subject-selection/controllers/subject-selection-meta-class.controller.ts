@@ -33,7 +33,7 @@ export async function createSubjectSelectionMetaClassHandler(
       .status(201)
       .json(new ApiResponse(201, "SUCCESS", created, "Created meta-class"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -48,7 +48,7 @@ export async function getAllSubjectSelectionMetaClassesHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", rows, "Fetched meta-classes"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -77,7 +77,7 @@ export async function getSubjectSelectionMetaClassByIdHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", row, "Fetched meta-class"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -106,7 +106,7 @@ export async function updateSubjectSelectionMetaClassHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta-class"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
 
@@ -135,6 +135,6 @@ export async function deleteSubjectSelectionMetaClassHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta-class"));
   } catch (error) {
-    handleError(error, req, res, next);
+    handleError(error, res, next);
   }
 }
