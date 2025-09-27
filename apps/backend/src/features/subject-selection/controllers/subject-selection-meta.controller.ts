@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
-  createFromDto,
+  createFromInput,
   findAll,
   findById,
   remove,
@@ -15,7 +15,20 @@ export async function createSubjectSelectionMetaHandler(
   next: NextFunction,
 ) {
   try {
-    const created = await createFromDto(req.body);
+    const created = await createFromInput(req.body);
+    if (!created) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Failed to create subject selection meta. Invalid input or missing references.",
+          ),
+        );
+      return;
+    }
     res
       .status(201)
       .json(
@@ -27,7 +40,7 @@ export async function createSubjectSelectionMetaHandler(
         ),
       );
   } catch (error) {
-    handleError(error, res, next);
+    handleError(error, req, res, next);
   }
 }
 
@@ -42,7 +55,7 @@ export async function getAllSubjectSelectionMetasHandler(
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", rows, "Fetched metas"));
   } catch (error) {
-    handleError(error, res, next);
+    handleError(error, req, res, next);
   }
 }
 
@@ -57,12 +70,19 @@ export async function getSubjectSelectionMetaByIdHandler(
     if (!row) {
       res
         .status(404)
-        .json(new ApiResponse(404, "NOT_FOUND", null, "Not found"));
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Subject selection meta not found",
+          ),
+        );
       return;
     }
     res.status(200).json(new ApiResponse(200, "SUCCESS", row, "Fetched meta"));
   } catch (error) {
-    handleError(error, res, next);
+    handleError(error, req, res, next);
   }
 }
 
@@ -74,11 +94,24 @@ export async function updateSubjectSelectionMetaHandler(
   try {
     const id = Number(req.params.id);
     const updated = await updateFromDto(id, req.body);
+    if (!updated) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Subject selection meta not found or update failed",
+          ),
+        );
+      return;
+    }
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta"));
   } catch (error) {
-    handleError(error, res, next);
+    handleError(error, req, res, next);
   }
 }
 
@@ -90,10 +123,23 @@ export async function deleteSubjectSelectionMetaHandler(
   try {
     const id = Number(req.params.id);
     const deleted = await remove(id);
+    if (!deleted) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "Subject selection meta not found",
+          ),
+        );
+      return;
+    }
     res
       .status(200)
       .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta"));
   } catch (error) {
-    handleError(error, res, next);
+    handleError(error, req, res, next);
   }
 }

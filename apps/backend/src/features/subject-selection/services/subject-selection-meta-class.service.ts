@@ -55,7 +55,7 @@ export async function findAll(): Promise<SubjectSelectionMetaClassDto[]> {
 
 export async function createFromDto(
   input: CreateSubjectSelectionMetaClassInput,
-): Promise<SubjectSelectionMetaClassDto> {
+): Promise<SubjectSelectionMetaClassDto | null> {
   const [[meta], [klass]] = await Promise.all([
     db
       .select()
@@ -63,11 +63,9 @@ export async function createFromDto(
       .where(eq(subjectSelectionMetaModel.id, input.subjectSelectionMetaId)),
     db.select().from(classModel).where(eq(classModel.id, input.class.id)),
   ]);
-  if (!meta)
-    throw new Error(
-      `SubjectSelectionMeta not found id=${input.subjectSelectionMetaId}`,
-    );
-  if (!klass) throw new Error(`Class not found id=${input.class.id}`);
+  if (!meta || !klass) {
+    return null;
+  }
 
   const [created] = await db
     .insert(subjectSelectionMetaClassModel)
@@ -78,7 +76,6 @@ export async function createFromDto(
     .returning();
   const createdRow = created as SubjectSelectionMetaClassRow;
   const dto = await findById(createdRow.id as number);
-  if (!dto) throw new Error("Failed to create SubjectSelectionMetaClass");
   return dto;
 }
 
@@ -90,7 +87,7 @@ export interface UpdateSubjectSelectionMetaClassInput {
 export async function updateFromDto(
   id: number,
   input: UpdateSubjectSelectionMetaClassInput,
-): Promise<SubjectSelectionMetaClassDto> {
+): Promise<SubjectSelectionMetaClassDto | null> {
   type SubjectSelectionMetaClassInsert =
     typeof subjectSelectionMetaClassModel.$inferInsert;
   const partial: Partial<SubjectSelectionMetaClassInsert> = {};
@@ -99,10 +96,9 @@ export async function updateFromDto(
       .select()
       .from(subjectSelectionMetaModel)
       .where(eq(subjectSelectionMetaModel.id, input.subjectSelectionMetaId));
-    if (!meta)
-      throw new Error(
-        `SubjectSelectionMeta not found id=${input.subjectSelectionMetaId}`,
-      );
+    if (!meta) {
+      return null;
+    }
     partial.subjectSelectionMetaId = input.subjectSelectionMetaId as number;
   }
   if (typeof input.class?.id === "number") {
@@ -110,7 +106,9 @@ export async function updateFromDto(
       .select()
       .from(classModel)
       .where(eq(classModel.id, input.class.id));
-    if (!klass) throw new Error(`Class not found id=${input.class.id}`);
+    if (!klass) {
+      return null;
+    }
     partial.classId = input.class.id as number;
   }
   if (Object.keys(partial).length > 0) {
@@ -120,17 +118,16 @@ export async function updateFromDto(
       .where(eq(subjectSelectionMetaClassModel.id, id));
   }
   const dto = await findById(id);
-  if (!dto) throw new Error("Failed to update SubjectSelectionMetaClass");
   return dto;
 }
 
 export async function remove(
   id: number,
-): Promise<SubjectSelectionMetaClassDto> {
+): Promise<SubjectSelectionMetaClassDto | null> {
   const [deleted] = await db
     .delete(subjectSelectionMetaClassModel)
     .where(eq(subjectSelectionMetaClassModel.id, id))
     .returning();
-  if (!deleted) throw new Error("SubjectSelectionMetaClass not found");
+  if (!deleted) return null;
   return await toDto(deleted as SubjectSelectionMetaClassRow);
 }

@@ -3,7 +3,8 @@ import { ProgramCourseDto } from "../course-design";
 import {
     BoardSubjectNameT,
     //  BoardSubjectUnivSubjectMappingT, 
-    ClassT, ProgramCourseT, SessionT, StreamT, SubjectT, SubjectTypeT } from "@/schemas";
+    ClassT, ProgramCourseT, SessionT, StreamT, SubjectT, SubjectTypeT, AcademicYearT
+} from "@/schemas";
 import { RelatedSubjectSubT } from "@/schemas/models/subject-selection/related-subject-sub.model";
 import { RestrictedGroupingMainT } from "@/schemas/models/subject-selection/restricted-grouping-main.model";
 import { RestrictedGroupingClassT } from "@/schemas/models/subject-selection/restricted-grouping-class.model";
@@ -12,6 +13,7 @@ import { RestrictedGroupingProgramCourseT } from "@/schemas/models/subject-selec
 import { SubjectSelectionMetaT } from "@/schemas/models/subject-selection/subject-selection-meta.model";
 import { SubjectSelectionMetaClassT } from "@/schemas/models/subject-selection/subject-selection-meta-class.model";
 import { StudentSubjectSelectionT } from "@/schemas/models/subject-selection/student-subject-selection.model";
+import { SubjectSelectionMetaStreamT } from "@/schemas/models/subject-selection/subject-selection-meta-stream.model";
 
 export interface RelatedSubjectSubDto extends Omit<RelatedSubjectSubT, "boardSubjectNameId"> {
     boardSubjectName: BoardSubjectNameT;
@@ -49,9 +51,14 @@ export interface SubjectSelectionMetaClassDto extends Omit<SubjectSelectionMetaC
     class: ClassT;
 }
 
-export interface SubjectSelectionMetaDto extends Omit<SubjectSelectionMetaT, "streamId" | "subjectTypeId"> {
+export interface SubjectSelectionMetaStreamDto extends Omit<SubjectSelectionMetaStreamT, "subjectSelectionMetaId" | "streamId"> {
     stream: StreamT;
+}
+
+export interface SubjectSelectionMetaDto extends Omit<SubjectSelectionMetaT, "subjectTypeId" | "academicYearId"> {
+    streams: SubjectSelectionMetaStreamDto[];
     subjectType: SubjectTypeT;
+    academicYear: AcademicYearT;
     forClasses: SubjectSelectionMetaClassDto[];
 }
 

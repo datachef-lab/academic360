@@ -7,9 +7,9 @@ import {
   findById,
   remove,
   updateFromDto,
-} from "../services/subject-selection-meta-class.service.js";
+} from "../services/subject-selection-meta-stream.service.js";
 
-export async function createSubjectSelectionMetaClassHandler(
+export async function createSubjectSelectionMetaStreamHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -24,20 +24,20 @@ export async function createSubjectSelectionMetaClassHandler(
             400,
             "BAD_REQUEST",
             null,
-            "Failed to create subject selection meta class. Invalid input or missing references.",
+            "Failed to create subject selection meta stream. Invalid input or missing references.",
           ),
         );
       return;
     }
     res
       .status(201)
-      .json(new ApiResponse(201, "SUCCESS", created, "Created meta-class"));
+      .json(new ApiResponse(201, "SUCCESS", created, "Created meta-stream"));
   } catch (error) {
     handleError(error, req, res, next);
   }
 }
 
-export async function getAllSubjectSelectionMetaClassesHandler(
+export async function getAllSubjectSelectionMetaStreamsHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -46,13 +46,13 @@ export async function getAllSubjectSelectionMetaClassesHandler(
     const rows = await findAll();
     res
       .status(200)
-      .json(new ApiResponse(200, "SUCCESS", rows, "Fetched meta-classes"));
+      .json(new ApiResponse(200, "SUCCESS", rows, "Fetched meta-streams"));
   } catch (error) {
     handleError(error, req, res, next);
   }
 }
 
-export async function getSubjectSelectionMetaClassByIdHandler(
+export async function getSubjectSelectionMetaStreamByIdHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -68,20 +68,20 @@ export async function getSubjectSelectionMetaClassByIdHandler(
             404,
             "NOT_FOUND",
             null,
-            "Subject selection meta class not found",
+            "Subject selection meta stream not found",
           ),
         );
       return;
     }
     res
       .status(200)
-      .json(new ApiResponse(200, "SUCCESS", row, "Fetched meta-class"));
+      .json(new ApiResponse(200, "SUCCESS", row, "Fetched meta-stream"));
   } catch (error) {
     handleError(error, req, res, next);
   }
 }
 
-export async function updateSubjectSelectionMetaClassHandler(
+export async function updateSubjectSelectionMetaStreamHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -97,20 +97,20 @@ export async function updateSubjectSelectionMetaClassHandler(
             404,
             "NOT_FOUND",
             null,
-            "Subject selection meta class not found or update failed",
+            "Subject selection meta stream not found or update failed",
           ),
         );
       return;
     }
     res
       .status(200)
-      .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta-class"));
+      .json(new ApiResponse(200, "SUCCESS", updated, "Updated meta-stream"));
   } catch (error) {
     handleError(error, req, res, next);
   }
 }
 
-export async function deleteSubjectSelectionMetaClassHandler(
+export async function deleteSubjectSelectionMetaStreamHandler(
   req: Request,
   res: Response,
   next: NextFunction,
@@ -126,14 +126,14 @@ export async function deleteSubjectSelectionMetaClassHandler(
             404,
             "NOT_FOUND",
             null,
-            "Subject selection meta class not found",
+            "Subject selection meta stream not found",
           ),
         );
       return;
     }
     res
       .status(200)
-      .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta-class"));
+      .json(new ApiResponse(200, "SUCCESS", deleted, "Deleted meta-stream"));
   } catch (error) {
     handleError(error, req, res, next);
   }

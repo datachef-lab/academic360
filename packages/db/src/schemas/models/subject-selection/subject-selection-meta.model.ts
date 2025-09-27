@@ -1,12 +1,13 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
-import { streamModel, subjectTypeModel } from "../course-design";
+import { subjectTypeModel } from "../course-design";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { academicYearModel } from "../academics";
 
 export const subjectSelectionMetaModel = pgTable("subject_selection_meta", {
     id: serial().primaryKey(),
-    streamId: integer("stream_id_fk")
-        .references(() => streamModel.id)
+    academicYearId: integer("academic_year_id_fk")
+        .references(() => academicYearModel.id)
         .notNull(),
     subjectTypeId: integer("subject_type_id_fk")
         .references(() => subjectTypeModel.id)

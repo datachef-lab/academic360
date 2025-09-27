@@ -8,6 +8,7 @@ import subjectSpecificPassingRoutes from "./subject-specific-passing.routes.js";
 import studentSubjectsRoutes from "./student-subjects.routes.js";
 import subjectSelectionMetaRoutes from "./subject-selection-meta.routes.js";
 import subjectSelectionMetaClassRoutes from "./subject-selection-meta-class.routes.js";
+import subjectSelectionMetaStreamRoutes from "./subject-selection-meta-stream.routes.js";
 
 export {
   relatedSubjectMainRoutes,
@@ -20,4 +21,5 @@ export {
   studentSubjectsRoutes,
   subjectSelectionMetaRoutes,
   subjectSelectionMetaClassRoutes,
+  subjectSelectionMetaStreamRoutes,
 };
