@@ -2,12 +2,18 @@ import { db } from "@/db/index.js";
 import { and, countDistinct, desc, eq } from "drizzle-orm";
 import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
 import { sessionModel } from "@repo/db/schemas/models/academics";
-import { subjectSelectionMetaModel } from "@repo/db/schemas/models/subject-selection/subject-selection-meta.model";
+import {
+  subjectSelectionMetaModel,
+  subjectSelectionMetaStreamModel,
+  subjectSelectionMetaClassModel,
+} from "@repo/db/schemas/models/subject-selection";
 import {
   subjectModel,
   streamModel,
   subjectTypeModel,
 } from "@repo/db/schemas/models/course-design";
+import { academicYearModel } from "@repo/db/schemas/models/academics";
+import { classModel } from "@repo/db/schemas/models/academics/class.model";
 import {
   StudentSubjectSelection,
   StudentSubjectSelectionT,
@@ -15,7 +21,7 @@ import {
 import {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto,
-} from "@repo/db/dtos/subject-selection";
+} from "@repo/db/dtos/subject-selection/index";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 
 export type CreateStudentSubjectSelectionDtoInput = {
@@ -33,45 +39,15 @@ export type UpdateStudentSubjectSelectionDtoInput =
 async function modelToDto(
   row: StudentSubjectSelectionT,
 ): Promise<StudentSubjectSelectionDto> {
-  // Fetch the joined entities for full DTO (include stream and subjectType objects)
+  // Fetch the joined entities for full DTO
   const [[session], [meta], [subject]] = await Promise.all([
     db
       .select()
       .from(sessionModel)
       .where(eq(sessionModel.id, row.sessionId as number)),
     db
-      .select({
-        id: subjectSelectionMetaModel.id,
-        label: subjectSelectionMetaModel.label,
-        createdAt: subjectSelectionMetaModel.createdAt,
-        updatedAt: subjectSelectionMetaModel.updatedAt,
-        stream: {
-          id: streamModel.id,
-          name: streamModel.name,
-          code: streamModel.code,
-          shortName: streamModel.shortName,
-          isActive: streamModel.isActive,
-          createdAt: streamModel.createdAt,
-          updatedAt: streamModel.updatedAt,
-        },
-        subjectType: {
-          id: subjectTypeModel.id,
-          name: subjectTypeModel.name,
-          code: subjectTypeModel.code,
-          isActive: subjectTypeModel.isActive,
-          createdAt: subjectTypeModel.createdAt,
-          updatedAt: subjectTypeModel.updatedAt,
-        },
-      })
+      .select()
       .from(subjectSelectionMetaModel)
-      .leftJoin(
-        streamModel,
-        eq(subjectSelectionMetaModel.streamId, streamModel.id),
-      )
-      .leftJoin(
-        subjectTypeModel,
-        eq(subjectSelectionMetaModel.subjectTypeId, subjectTypeModel.id),
-      )
       .where(
         eq(subjectSelectionMetaModel.id, row.subjectSelectionMetaId as number),
       ),
@@ -90,15 +66,88 @@ async function modelToDto(
   if (!subject)
     throw new Error("Subject not found for StudentSubjectSelection");
 
+  // Fetch related data for SubjectSelectionMetaDto
+  const [academicYear, subjectType, streams, forClasses] = await Promise.all([
+    db
+      .select()
+      .from(academicYearModel)
+      .where(eq(academicYearModel.id, meta.academicYearId)),
+    db
+      .select()
+      .from(subjectTypeModel)
+      .where(eq(subjectTypeModel.id, meta.subjectTypeId)),
+    // Fetch streams through the many-to-many relationship
+    db
+      .select({
+        id: subjectSelectionMetaStreamModel.id,
+        createdAt: subjectSelectionMetaStreamModel.createdAt,
+        updatedAt: subjectSelectionMetaStreamModel.updatedAt,
+        stream: {
+          id: streamModel.id,
+          name: streamModel.name,
+          code: streamModel.code,
+          shortName: streamModel.shortName,
+          isActive: streamModel.isActive,
+          createdAt: streamModel.createdAt,
+          updatedAt: streamModel.updatedAt,
+        },
+      })
+      .from(subjectSelectionMetaStreamModel)
+      .leftJoin(
+        streamModel,
+        eq(subjectSelectionMetaStreamModel.streamId, streamModel.id),
+      )
+      .where(
+        eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, meta.id),
+      ),
+    // Fetch classes through the many-to-many relationship
+    db
+      .select({
+        id: subjectSelectionMetaClassModel.id,
+        subjectSelectionMetaId:
+          subjectSelectionMetaClassModel.subjectSelectionMetaId,
+        createdAt: subjectSelectionMetaClassModel.createdAt,
+        updatedAt: subjectSelectionMetaClassModel.updatedAt,
+        class: {
+          id: classModel.id,
+          name: classModel.name,
+          type: classModel.type,
+          isActive: classModel.isActive,
+          createdAt: classModel.createdAt,
+          updatedAt: classModel.updatedAt,
+        },
+      })
+      .from(subjectSelectionMetaClassModel)
+      .leftJoin(
+        classModel,
+        eq(subjectSelectionMetaClassModel.classId, classModel.id),
+      )
+      .where(
+        eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
+      ),
+  ]);
+
   const subjectSelectionMeta: SubjectSelectionMetaDto = {
     id: meta.id!,
-    stream: meta.stream!,
-    subjectType: meta.subjectType!,
+    academicYear: academicYear[0]!,
+    subjectType: subjectType[0]!,
+    streams: streams.map((s) => ({
+      id: s.id!,
+      createdAt: s.createdAt || new Date(),
+      updatedAt: s.updatedAt || new Date(),
+      stream: s.stream!,
+    })),
+    forClasses: forClasses.map((c) => ({
+      id: c.id!,
+      subjectSelectionMetaId: c.subjectSelectionMetaId!,
+      createdAt: c.createdAt || new Date(),
+      updatedAt: c.updatedAt || new Date(),
+      class: c.class!,
+    })),
     label: meta.label,
     createdAt: meta.createdAt || new Date(),
     updatedAt: meta.updatedAt || new Date(),
-    forClasses: [],
-  };
+  } as unknown as SubjectSelectionMetaDto;
 
   const dto: StudentSubjectSelectionDto = {
     id: row.id as number,

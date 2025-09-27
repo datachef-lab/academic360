@@ -120,6 +120,7 @@ import {
   studentSubjectsRoutes,
   subjectSelectionMetaRoutes,
   subjectSelectionMetaClassRoutes,
+  studentSubjectSelectionRoutes,
 } from "@/features/subject-selection/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";

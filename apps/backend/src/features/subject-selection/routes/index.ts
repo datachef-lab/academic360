@@ -23,4 +23,5 @@ export {
   subjectSelectionMetaRoutes,
   subjectSelectionMetaClassRoutes,
   subjectSelectionMetaStreamRoutes,
+  studentSubjectSelectionRoutes,
 };
