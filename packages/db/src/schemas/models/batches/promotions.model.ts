@@ -26,8 +26,7 @@ export const promotionModel = pgTable("promotions", {
         .references(() => classModel.id)
         .notNull(),
     sectionId: integer("section_id_fk")
-        .references(() => sectionModel.id)
-        .notNull(),
+        .references(() => sectionModel.id),
     isAlumni: boolean("is_alumni")
         .notNull()
         .default(false),

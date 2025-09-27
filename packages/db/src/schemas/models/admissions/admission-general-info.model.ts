@@ -3,7 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, date, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { applicationFormModel, eligibilityCriteriaModel, studentCategoryModel } from "@/schemas/models/admissions";
-import { accommodationModel, emergencyContactModel, healthModel, personalDetailsModel, transportDetailsModel, userModel } from "../user";
+import { userModel } from "../user";
 import { bankBranchModel } from "../payments";
 // import { staffModel } from "../user/staff.model";
 
@@ -22,7 +22,7 @@ export const admissionGeneralInfoModel = pgTable("admission_general_info", {
 
     studentCategoryId: integer("student_category_id_fk").references(() => studentCategoryModel.id),
 
-    personalDetailsId: integer("personal_details_id_fk").references(() => personalDetailsModel.id),
+    // personalDetailsId: integer("personal_details_id_fk").references(() => personalDetailsModel.id),
 
     isMinority: boolean("is_minority").default(false),
 
@@ -47,17 +47,17 @@ export const admissionGeneralInfoModel = pgTable("admission_general_info", {
 
     backDoorFlag: integer("back_door_flag"),
 
-    healthId: integer("health_id_fk").references(() => healthModel.id),
+    // healthId: integer("health_id_fk").references(() => healthModel.id),
 
-    accommodationId: integer("accommodation_id_fk").references(() => accommodationModel.id),
+    // accommodationId: integer("accommodation_id_fk").references(() => accommodationModel.id),
 
-    emergencyContactId: integer("emergency_contact_id_fk").references(() => emergencyContactModel.id),
+    // emergencyContactId: integer("emergency_contact_id_fk").references(() => emergencyContactModel.id),
 
     residenceOfKolkata: boolean("residence_of_kolkata").notNull(),
 
     bankBranchId: integer("bank_branch_id_fk").references(() => bankBranchModel.id),
 
-    transportDetailsId: integer("transport_details_id_fk").references(() => transportDetailsModel.id),
+    // transportDetailsId: integer("transport_details_id_fk").references(() => transportDetailsModel.id),
 
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),

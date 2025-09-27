@@ -3,12 +3,14 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { addressModel } from "@/schemas/models/user";
+import {  familyModel } from "@/schemas/models/user";
 import { occupationModel, qualificationModel } from "@/schemas/models/resources";
-import { genderTypeEnum, maritalStatusTypeEnum, personTitleType } from "@/schemas/enums";
+import { genderTypeEnum, maritalStatusTypeEnum, personTitleType, personTypeEnum } from "@/schemas/enums";
 
 export const personModel = pgTable("person", {
     id: serial().primaryKey(),
+    type: personTypeEnum(),
+    familyId: integer("family_id_fk").references(() => familyModel.id),
     title: personTitleType("person_title_type"),
     name: varchar({ length: 255 }),
     email: varchar({ length: 255 }),
@@ -22,7 +24,7 @@ export const personModel = pgTable("person", {
     qualificationId: integer("qualification_id_fk").references(() => qualificationModel.id),
     occupationId: integer("occupation_id_fk").references(() => occupationModel.id),
 
-    officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
+    // officeAddressId: integer("office_addres_id_fk").references(() => addressModel.id),
     
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
@@ -37,10 +39,10 @@ export const personRelations = relations(personModel, ({ one }) => ({
         fields: [personModel.occupationId],
         references: [occupationModel.id]
     }),
-    address: one(addressModel, {
-        fields: [personModel.officeAddressId],
-        references: [addressModel.id]
-    })
+    // address: one(addressModel, {
+    //     fields: [personModel.officeAddressId],
+    //     references: [addressModel.id]
+    // })
 }));
 
 export const createPersonSchema = createInsertSchema(personModel);

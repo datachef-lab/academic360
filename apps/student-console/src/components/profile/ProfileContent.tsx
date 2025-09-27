@@ -332,24 +332,34 @@ export default function ProfileContent() {
                           <label htmlFor="fatherNamePersonal" className="text-sm font-medium text-gray-700">
                             Father's Name
                           </label>
-                          <Input
-                            id="fatherNamePersonal"
-                            value={familyDetails?.father?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return (
+                              <Input
+                                id="fatherNamePersonal"
+                                value={father?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
+                          })()}
                         </div>
                         {/* Mother Name */}
                         <div className="space-y-2">
                           <label htmlFor="motherNamePersonal" className="text-sm font-medium text-gray-700">
                             Mother's Name
                           </label>
-                          <Input
-                            id="motherNamePersonal"
-                            value={familyDetails?.mother?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return (
+                              <Input
+                                id="motherNamePersonal"
+                                value={mother?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
+                          })()}
                         </div>
                         {/* Emails */}
                         <div className="space-y-2">
@@ -400,7 +410,7 @@ export default function ProfileContent() {
                               </label>
                               <Input
                                 id="resAddress"
-                                value={personalDetails?.residentialAddress?.addressLine || ""}
+                                value={personalDetails?.address?.[0]?.addressLine || ""}
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
                               />
@@ -412,7 +422,7 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resCity"
-                                  value={personalDetails?.residentialAddress?.city?.name || ""}
+                                  value={personalDetails?.address?.[0]?.city?.name || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -423,7 +433,7 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resState"
-                                  value={personalDetails?.residentialAddress?.state?.name || ""}
+                                  value={personalDetails?.address?.[0]?.state?.name || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -436,7 +446,7 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resCountry"
-                                  value={personalDetails?.residentialAddress?.country?.name || ""}
+                                  value={personalDetails?.address?.[0]?.country?.name || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -448,8 +458,8 @@ export default function ProfileContent() {
                                 <Input
                                   id="resDistrict"
                                   value={
-                                    personalDetails?.residentialAddress?.otherDistrict ||
-                                    personalDetails?.residentialAddress?.district?.name ||
+                                    personalDetails?.address?.[0]?.otherDistrict ||
+                                    personalDetails?.address?.[0]?.district?.name ||
                                     ""
                                   }
                                   disabled={!isEditing}
@@ -464,7 +474,7 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resPostOffice"
-                                  value={personalDetails?.residentialAddress?.otherPostoffice || ""}
+                                  value={personalDetails?.address?.[0]?.otherPostoffice || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -475,7 +485,7 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="resPoliceStation"
-                                  value={personalDetails?.residentialAddress?.otherPoliceStation || ""}
+                                  value={personalDetails?.address?.[0]?.otherPoliceStation || ""}
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -487,7 +497,7 @@ export default function ProfileContent() {
                               </label>
                               <Input
                                 id="resPincode"
-                                value={personalDetails?.residentialAddress?.pincode || ""}
+                                value={personalDetails?.address?.[0]?.pincode || ""}
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
                               />
@@ -504,7 +514,11 @@ export default function ProfileContent() {
                               </label>
                               <Input
                                 id="mailAddress"
-                                value={personalDetails?.mailingAddress?.addressLine || ""}
+                                value={
+                                  personalDetails?.address?.[1]?.addressLine ||
+                                  personalDetails?.address?.[0]?.addressLine ||
+                                  ""
+                                }
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
                               />
@@ -516,7 +530,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailCity"
-                                  value={personalDetails?.mailingAddress?.city?.name || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.city?.name ||
+                                    personalDetails?.address?.[0]?.city?.name ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -527,7 +545,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailState"
-                                  value={personalDetails?.mailingAddress?.state?.name || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.state?.name ||
+                                    personalDetails?.address?.[0]?.state?.name ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -540,7 +562,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailCountry"
-                                  value={personalDetails?.mailingAddress?.country?.name || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.country?.name ||
+                                    personalDetails?.address?.[0]?.country?.name ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -552,8 +578,10 @@ export default function ProfileContent() {
                                 <Input
                                   id="mailDistrict"
                                   value={
-                                    personalDetails?.mailingAddress?.otherDistrict ||
-                                    personalDetails?.mailingAddress?.district?.name ||
+                                    personalDetails?.address?.[1]?.otherDistrict ||
+                                    personalDetails?.address?.[1]?.district?.name ||
+                                    personalDetails?.address?.[0]?.otherDistrict ||
+                                    personalDetails?.address?.[0]?.district?.name ||
                                     ""
                                   }
                                   disabled={!isEditing}
@@ -568,7 +596,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailPostOffice"
-                                  value={personalDetails?.mailingAddress?.otherPostoffice || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.otherPostoffice ||
+                                    personalDetails?.address?.[0]?.otherPostoffice ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -579,7 +611,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailPoliceStation"
-                                  value={personalDetails?.mailingAddress?.otherPoliceStation || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.otherPoliceStation ||
+                                    personalDetails?.address?.[0]?.otherPoliceStation ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -592,7 +628,11 @@ export default function ProfileContent() {
                                 </label>
                                 <Input
                                   id="mailPincode"
-                                  value={personalDetails?.mailingAddress?.pincode || ""}
+                                  value={
+                                    personalDetails?.address?.[1]?.pincode ||
+                                    personalDetails?.address?.[0]?.pincode ||
+                                    ""
+                                  }
                                   disabled={!isEditing}
                                   className={!isEditing ? "bg-gray-50" : ""}
                                 />
@@ -620,56 +660,59 @@ export default function ProfileContent() {
                           <label htmlFor="fatherTitle" className="text-sm font-medium text-gray-700">
                             Title
                           </label>
-                          <Input
-                            id="fatherTitle"
-                            value={familyDetails?.father?.title || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return (
+                              <Input id="fatherTitle" value={father?.title || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="fatherName" className="text-sm font-medium text-gray-700">
                             Name
                           </label>
-                          <Input
-                            id="fatherName"
-                            value={familyDetails?.father?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return <Input id="fatherName" value={father?.name || ""} disabled className="bg-gray-50" />;
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="fatherPhone" className="text-sm font-medium text-gray-700">
                             Phone Number
                           </label>
-                          <Input
-                            id="fatherPhone"
-                            value={familyDetails?.father?.phone || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return (
+                              <Input id="fatherPhone" value={father?.phone || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="fatherEmail" className="text-sm font-medium text-gray-700">
                             Email
                           </label>
-                          <Input
-                            id="fatherEmail"
-                            value={familyDetails?.father?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return (
+                              <Input id="fatherEmail" value={father?.email || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="fatherOccupation" className="text-sm font-medium text-gray-700">
                             Occupation
                           </label>
-                          <Input
-                            id="fatherOccupation"
-                            value={familyDetails?.father?.occupation?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const father = familyDetails?.members?.find((m) => m.type === "FATHER");
+                            return (
+                              <Input
+                                id="fatherOccupation"
+                                value={father?.occupation?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
+                          })()}
                         </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="fatherAadhaar" className="text-sm font-medium text-gray-700">
@@ -694,56 +737,59 @@ export default function ProfileContent() {
                           <label htmlFor="motherTitle" className="text-sm font-medium text-gray-700">
                             Title
                           </label>
-                          <Input
-                            id="motherTitle"
-                            value={familyDetails?.mother?.title || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return (
+                              <Input id="motherTitle" value={mother?.title || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="motherName" className="text-sm font-medium text-gray-700">
                             Name
                           </label>
-                          <Input
-                            id="motherName"
-                            value={familyDetails?.mother?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return <Input id="motherName" value={mother?.name || ""} disabled className="bg-gray-50" />;
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="motherPhone" className="text-sm font-medium text-gray-700">
                             Phone Number
                           </label>
-                          <Input
-                            id="motherPhone"
-                            value={familyDetails?.mother?.phone || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return (
+                              <Input id="motherPhone" value={mother?.phone || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="motherEmail" className="text-sm font-medium text-gray-700">
                             Email
                           </label>
-                          <Input
-                            id="motherEmail"
-                            value={familyDetails?.mother?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return (
+                              <Input id="motherEmail" value={mother?.email || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="motherOccupation" className="text-sm font-medium text-gray-700">
                             Occupation
                           </label>
-                          <Input
-                            id="motherOccupation"
-                            value={familyDetails?.mother?.occupation?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const mother = familyDetails?.members?.find((m) => m.type === "MOTHER");
+                            return (
+                              <Input
+                                id="motherOccupation"
+                                value={mother?.occupation?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
+                          })()}
                         </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="motherAadhaar" className="text-sm font-medium text-gray-700">
@@ -768,56 +814,61 @@ export default function ProfileContent() {
                           <label htmlFor="guardianTitle" className="text-sm font-medium text-gray-700">
                             Title
                           </label>
-                          <Input
-                            id="guardianTitle"
-                            value={familyDetails?.guardian?.title || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            return (
+                              <Input id="guardianTitle" value={guardian?.title || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="guardianName" className="text-sm font-medium text-gray-700">
                             Name
                           </label>
-                          <Input
-                            id="guardianName"
-                            value={familyDetails?.guardian?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            return (
+                              <Input id="guardianName" value={guardian?.name || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="guardianPhone" className="text-sm font-medium text-gray-700">
                             Phone Number
                           </label>
-                          <Input
-                            id="guardianPhone"
-                            value={familyDetails?.guardian?.phone || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            return (
+                              <Input id="guardianPhone" value={guardian?.phone || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="guardianEmail" className="text-sm font-medium text-gray-700">
                             Email
                           </label>
-                          <Input
-                            id="guardianEmail"
-                            value={familyDetails?.guardian?.email || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            return (
+                              <Input id="guardianEmail" value={guardian?.email || ""} disabled className="bg-gray-50" />
+                            );
+                          })()}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="guardianOccupation" className="text-sm font-medium text-gray-700">
                             Occupation
                           </label>
-                          <Input
-                            id="guardianOccupation"
-                            value={familyDetails?.guardian?.occupation?.name || ""}
-                            disabled
-                            className="bg-gray-50"
-                          />
+                          {(() => {
+                            const guardian = familyDetails?.members?.find((m) => m.type === "GUARDIAN");
+                            return (
+                              <Input
+                                id="guardianOccupation"
+                                value={guardian?.occupation?.name || ""}
+                                disabled
+                                className="bg-gray-50"
+                              />
+                            );
+                          })()}
                         </div>
                         {/* <div className="space-y-2">
                           <label htmlFor="guardianAadhaar" className="text-sm font-medium text-gray-700">
@@ -859,7 +910,11 @@ export default function ProfileContent() {
                         </label>
                         <Input
                           id="section"
-                          value={student?.section?.name || applicationForm?.courseApplication?.[0]?.class?.name || ""}
+                          value={
+                            student?.currentPromotion?.section?.name ||
+                            applicationForm?.courseApplication?.[0]?.class?.name ||
+                            ""
+                          }
                           disabled
                           className="bg-gray-50"
                         />

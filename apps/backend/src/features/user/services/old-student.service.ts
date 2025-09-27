@@ -24,8 +24,9 @@ import {
   OldDegree,
   OldDistrict,
   OldInstitution,
+  OldPoliceStation,
+  OldPostOffice,
 } from "@repo/db/legacy-system-types/resources";
-import * as oldStudentController from "../controllers/oldStudent.controller";
 
 interface OldLanguageMedium {
   readonly id: number;
@@ -87,6 +88,7 @@ import {
   personModel,
   familyModel,
   Occupation,
+  gradeModel,
   userTypeEnum,
   userModel,
   User,
@@ -130,6 +132,8 @@ import {
   BoardResultStatus,
   boardResultStatusModel,
   Section,
+  Family,
+  Person,
 } from "@repo/db/schemas";
 import { AdmissionCourseDetailsT } from "@repo/db/schemas/models/admissions/adm-course-details.model";
 // import { processStudent } from "../controllers/oldStudent.controller"; // Removed to avoid conflict
@@ -160,12 +164,21 @@ import {
 } from "@repo/db/schemas/models/batches/promotions.model";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { promotionStatusModel } from "@repo/db/schemas/models/batches/promotion-status.model";
+import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model";
+import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model";
+import { upsertUser } from "./refactor-old-migration.service";
 
 const BATCH_SIZE = 500;
 
 type DbType = NodePgDatabase<Record<string, never>> & {
   $client: Pool;
 };
+
+const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff =>
+  "isTeacher" in d;
+const isAdmStudent = (
+  d: OldAdmStudentPersonalDetail | OldStaff,
+): d is OldAdmStudentPersonalDetail => "applevel" in d;
 
 async function fetchData(
   isTransferred: boolean,
@@ -258,98 +271,98 @@ export async function loadOldBoards() {
   }
 }
 
-export async function loadData(byIsTransferred: boolean) {
-  console.log("loading the boards and subjects");
-  await loadOldBoards();
-  // Do fetch the data from the old database which are transferred first
-  const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
+// export async function loadData(byIsTransferred: boolean) {
+//     console.log("loading the boards and subjects");
+//     await loadOldBoards();
+//     // Do fetch the data from the old database which are transferred first
+//     const { totalRows } = await fetchData(byIsTransferred, 0, BATCH_SIZE);
 
-  // STEP 1: Count the total numbers of students
-  console.log(
-    `\n\nCounting rows from table \`personaldetails\`... for ${byIsTransferred ? "transferred" : "not transferred"}`,
-  );
-  // STEP 2: Calculate the number of batches
-  const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
-  console.log(`\nTotal rows to migrate for personaldetails: ${totalRows}`);
-  // STEP 3: Loop over the batches
-  for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
-    const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+//     // STEP 1: Count the total numbers of students
+//     console.log(
+//         `\n\nCounting rows from table \`personaldetails\`... for ${byIsTransferred ? "transferred" : "not transferred"}`,
+//     );
+//     // STEP 2: Calculate the number of batches
+//     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+//     console.log(`\nTotal rows to migrate for personaldetails: ${totalRows}`);
+//     // STEP 3: Loop over the batches
+//     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+//         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-    const { oldDataArr } = await fetchData(byIsTransferred, offset, BATCH_SIZE);
+//         const { oldDataArr } = await fetchData(byIsTransferred, offset, BATCH_SIZE);
 
-    console.log(
-      `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
-    );
+//         console.log(
+//             `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
+//         );
 
-    for (let i = 0; i < oldDataArr.length; i++) {
-      // Fetch the related studentpersonalDetail
-      try {
-        await processApplicationForm(oldDataArr[i]);
-        const name = [
-          oldDataArr[i]?.firstName,
-          oldDataArr[i]?.middleName,
-          oldDataArr[i]?.lastName,
-        ]
-          .filter(Boolean)
-          .join(" ");
-        console.log(
-          `Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`,
-        );
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  }
+//         for (let i = 0; i < oldDataArr.length; i++) {
+//             // Fetch the related studentpersonalDetail
+//             try {
+//                 await processOldStudentApplicationForm(oldDataArr[i]);
+//                 const name = [
+//                     oldDataArr[i]?.firstName,
+//                     oldDataArr[i]?.middleName,
+//                     oldDataArr[i]?.lastName,
+//                 ]
+//                     .filter(Boolean)
+//                     .join(" ");
+//                 console.log(
+//                     `Batch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${name}`,
+//                 );
+//             } catch (error) {
+//                 console.log(error);
+//             }
+//         }
+//     }
 
-  console.log("Application forms migrated successfully");
+//     console.log("Application forms migrated successfully");
 
-  // await loadAllStaffs();
-}
+//     // await loadAllStaffs();
+// }
 
-async function loadAllStaffs() {
-  // Step 1: Load all the old staffs and admins
-  const [rowsStaffs] = await mysqlConnection.query(`
-        SELECT COUNT(*) AS totalRows
-        FROM staffpersonaldetails
-    `);
-  const { totalRows } = (rowsStaffs as { totalRows: number }[])[0];
-  // STEP 2: Calculate the number of batches
-  const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
-  console.log(`\nTotal rows to migrate: ${totalRows}`);
-  // STEP 3: Loop over the batches
-  for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
-    const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
+// async function loadAllStaffs() {
+//     // Step 1: Load all the old staffs and admins
+//     const [rowsStaffs] = await mysqlConnection.query(`
+//         SELECT COUNT(*) AS totalRows
+//         FROM staffpersonaldetails
+//     `);
+//     const { totalRows } = (rowsStaffs as { totalRows: number }[])[0];
+//     // STEP 2: Calculate the number of batches
+//     const totalBatches = Math.ceil(totalRows / BATCH_SIZE); // Calculate total number of batches
+//     console.log(`\nTotal rows to migrate: ${totalRows}`);
+//     // STEP 3: Loop over the batches
+//     for (let offset = 0; offset < totalRows; offset += BATCH_SIZE) {
+//         const currentBatch = Math.ceil((offset + 1) / BATCH_SIZE); // Determine current batch number
 
-    console.log(
-      `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
-    );
-    const [rows] = (await mysqlConnection.query(`
-            SELECT * 
-            FROM staffpersonaldetails
-            LIMIT ${BATCH_SIZE}
-            OFFSET ${offset};
-        `)) as [OldStaff[], any];
+//         console.log(
+//             `\nMigrating batch: ${offset + 1} to ${Math.min(offset + BATCH_SIZE, totalRows)}`,
+//         );
+//         const [rows] = (await mysqlConnection.query(`
+//             SELECT *
+//             FROM staffpersonaldetails
+//             LIMIT ${BATCH_SIZE}
+//             OFFSET ${offset};
+//         `)) as [OldStaff[], any];
 
-    const oldDataArr = rows as OldStaff[];
+//         const oldDataArr = rows as OldStaff[];
 
-    for (let i = 0; i < oldDataArr.length; i++) {
-      // Fetch the related staffs
-      const [staffPersonalDetailRows] = (await mysqlConnection.query(`
-                SELECT * 
-                FROM staffpersonaldetails
-                WHERE id = ${oldDataArr[i].id};
-            `)) as [OldStaff[], any];
+//         for (let i = 0; i < oldDataArr.length; i++) {
+//             // Fetch the related staffs
+//             const [staffPersonalDetailRows] = (await mysqlConnection.query(`
+//                 SELECT *
+//                 FROM staffpersonaldetails
+//                 WHERE id = ${oldDataArr[i].id};
+//             `)) as [OldStaff[], any];
 
-      await addUser(oldDataArr[i], "STAFF");
+//             await addUser(oldDataArr[i], "STAFF");
 
-      console.log(
-        `StaffsBatch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${staffPersonalDetailRows[0]?.name}`,
-      );
-    }
-  }
-}
+//             console.log(
+//                 `StaffsBatch: ${currentBatch}/${totalBatches} | Done: ${i + 1}/${oldDataArr.length} | Name: ${staffPersonalDetailRows[0]?.name}`,
+//             );
+//         }
+//     }
+// }
 
-async function addAdmissionApplicationForm(
+export async function addAdmissionApplicationForm(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
 ) {
   const [[oldSession]] = (await mysqlConnection.query(`
@@ -446,13 +459,13 @@ async function addAdmissionApplicationForm(
 
   let admApprovedBy: User | null = null;
   if (oldAdmStudentPersonalDetails.admapprovedby) {
-    admApprovedBy =
-      (await addUser(oldAdmStudentPersonalDetails, "STAFF")) ?? null;
-    const [[oldStaff]] = (await mysqlConnection.query(`
-        SELECT *
-        FROM staffpersonaldetails
-        WHERE id = ${oldAdmStudentPersonalDetails.id};
-    `)) as [OldStaff[], any];
+    const [[oldStaffAdmApprovedBy]] = (await mysqlConnection.query(`
+            SELECT *
+            FROM staffpersonaldetails
+            WHERE id = ${oldAdmStudentPersonalDetails.admapprovedby};
+        `)) as [OldStaff[], any];
+
+    admApprovedBy = (await upsertUser(oldStaffAdmApprovedBy, "STAFF")) ?? null;
   }
 
   const [applicationForm] = await db
@@ -476,7 +489,7 @@ async function addAdmissionApplicationForm(
   return applicationForm;
 }
 
-async function addAdmGeneralInformation(
+export async function addAdmGeneralInformation(
   oldStudent: OldStudent,
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
@@ -494,33 +507,18 @@ async function addAdmGeneralInformation(
     );
   }
 
-  let health = await addHealth(oldStudent);
-
-  let personalDetails = await addPersonalDetails(oldAdmStudentPersonalDetails);
-
-  let accommodation: Accommodation | null = null;
-  if (oldStudent && oldStudent.placeofstay) {
-    accommodation = await addAccommodation(
-      oldStudent.placeofstay,
-      oldStudent.placeofstayaddr || "",
-      oldStudent.localitytyp || "",
-      oldStudent.placeofstaycontactno || "",
-    );
-  }
-
-  let emergencyContact: EmergencyContact | null = null;
-  if (oldStudent) {
-    emergencyContact = await addEmergencyContact(
-      oldStudent as unknown as EmergencyContact,
-    );
-  }
-
   // let family = await addFamily(oldAdmStudentPersonalDetails, oldStudent); // TO BE ADDED IN Add Student
 
   let spqtaApprovedBy: User | null = null;
   if (oldAdmStudentPersonalDetails.spqtaapprovedby) {
+    const [[oldStaffSpqtaApprovedBy]] = (await mysqlConnection.query(`
+            SELECT *
+            FROM staffpersonaldetails
+            WHERE id = ${oldAdmStudentPersonalDetails.spqtaapprovedby};
+        `)) as [OldStaff[], any];
+
     spqtaApprovedBy =
-      (await addUser(oldAdmStudentPersonalDetails, "STAFF")) ?? null;
+      (await upsertUser(oldStaffSpqtaApprovedBy, "STAFF")) ?? null;
   }
 
   // let transportDetails = await addTransportDetails(oldStudent, personalDetails);
@@ -554,10 +552,6 @@ async function addAdmGeneralInformation(
     backDoorFlag: oldAdmStudentPersonalDetails.backdoorflag || undefined,
     eligibilityCriteriaId: eligibilityCriteria?.id,
     studentCategoryId: studentCategory?.id,
-    personalDetailsId: personalDetails?.id,
-    healthId: health?.id,
-    accommodationId: accommodation?.id,
-    emergencyContactId: emergencyContact?.id,
   };
 
   const [admGeneralInformation] = await db
@@ -565,10 +559,42 @@ async function addAdmGeneralInformation(
     .values(values)
     .returning();
 
+  let health = await upsertHealth(
+    oldStudent,
+    undefined,
+    admGeneralInformation.id,
+  );
+
+  let accommodation: Accommodation | null = null;
+  if (oldStudent && oldStudent.placeofstay) {
+    accommodation = await addAccommodation(
+      oldStudent.placeofstay,
+      oldStudent.placeofstayaddr || "",
+      oldStudent.localitytyp || "",
+      oldStudent.placeofstaycontactno || "",
+      admGeneralInformation.id,
+    );
+  }
+
+  let emergencyContact: EmergencyContact | null = null;
+  if (oldStudent) {
+    emergencyContact = await upsertEmergencyContact(
+      oldStudent as unknown as EmergencyContact,
+      undefined,
+      admGeneralInformation.id,
+    );
+  }
+
+  let personalDetails = await upsertPersonalDetails(
+    oldAdmStudentPersonalDetails,
+    undefined,
+    admGeneralInformation.id,
+  );
+
   return admGeneralInformation;
 }
 
-async function addAdmAcademicInfo(
+export async function addAdmAcademicInfo(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
 ) {
@@ -584,6 +610,23 @@ async function addAdmAcademicInfo(
       oldAdmStudentPersonalDetails.id,
     );
     return undefined;
+  }
+
+  const [existingAdmAcademicInfo] = await db
+    .select()
+    .from(admissionAcademicInfoModel)
+    .where(
+      and(
+        eq(admissionAcademicInfoModel.applicationFormId, applicationForm.id!),
+        eq(
+          admissionAcademicInfoModel.legacyAcademicInfoId,
+          oldAcademicDetails.id!,
+        ),
+      ),
+    );
+
+  if (existingAdmAcademicInfo) {
+    return existingAdmAcademicInfo;
   }
 
   let board: Board | undefined;
@@ -632,7 +675,9 @@ async function addAdmAcademicInfo(
       boardId: finalBoard.id as number,
 
       boardResultStatus:
-        oldAcademicDetails.boardResultStatus === "PASS" ? "PASS" : "FAIL", // Required field
+        oldAcademicDetails.boardResultStatus?.trim().toUpperCase() === "PASS"
+          ? "PASS"
+          : "FAIL", // Required field
       yearOfPassing: oldAcademicDetails.yearofPassing || 0, // Required field
 
       // Board and result information
@@ -679,10 +724,9 @@ async function addAdmAcademicInfo(
   return admAcademicInfo;
 }
 
-async function addAdmCourseApps(
+export async function addAdmCourseApps(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
-  oldAcademicDetails: OldAcademicDetails,
 ) {
   const [oldAdmCourseDetails] = (await mysqlConnection.query(`
         SELECT *
@@ -690,35 +734,42 @@ async function addAdmCourseApps(
         WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
     `)) as [OldCourseDetails[], any];
 
-  console.log(
-    "oldAdmCourseDetails",
-    oldAdmCourseDetails.map((courseDetail) => courseDetail.id),
-  );
+  let transferredAdmCourseDetails: AdmissionCourseDetails | undefined =
+    undefined;
   for (let i = 0; i < oldAdmCourseDetails.length; i++) {
     const oldCourseDetail = oldAdmCourseDetails[i];
 
-    const newAdmissionCourseDetails = await processOldCourseDetails(
+    const admissionCourseDetails = await processOldCourseDetails(
       oldCourseDetail,
       applicationForm,
     );
-    // console.log(
-    //     "newAdmissionCourseDetails",
-    //     newAdmissionCourseDetails,
-    //     "created newAdmissionCourseDetails?.id:",
-    //     newAdmissionCourseDetails?.id,
-    // );
+    if (admissionCourseDetails?.isTransferred) {
+      transferredAdmCourseDetails = admissionCourseDetails;
+    }
   }
+
+  return transferredAdmCourseDetails!;
 }
 
-async function processAdmissionApplicationForm(
+export async function processAdmissionApplicationForm(
   oldStudent: OldStudent,
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
-) {
+): Promise<{
+  applicationForm: ApplicationForm;
+  oldAcademicDetails: OldAcademicDetails;
+  transferredAdmCourseDetails: AdmissionCourseDetails;
+}> {
+  const [[oldAcademicDetails]] = (await mysqlConnection.query(`
+        SELECT *
+        FROM academicdetail
+        WHERE parent_id = ${oldAdmStudentPersonalDetails.id};
+    `)) as [OldAcademicDetails[], any];
+
   const applicationForm = await addAdmissionApplicationForm(
     oldAdmStudentPersonalDetails,
   );
 
-  const admGeneralInformation = await addAdmGeneralInformation(
+  await addAdmGeneralInformation(
     oldStudent,
     oldAdmStudentPersonalDetails,
     applicationForm,
@@ -728,37 +779,21 @@ async function processAdmissionApplicationForm(
     oldAdmStudentPersonalDetails,
     applicationForm,
   );
-  if (!admAcademicInfo) {
-    console.log(
-      "no academic info found for personal-details ID: ",
-      oldAdmStudentPersonalDetails.id,
-    );
-    return undefined;
-  }
 
-  const { oldAcademicDetails } = await addAdmAcademSubjects(
-    oldAdmStudentPersonalDetails,
-    applicationForm,
-    admAcademicInfo,
-  );
+  await addAdmAcademSubjects(oldAdmStudentPersonalDetails, admAcademicInfo);
 
-  await addAdmCourseApps(
-    oldAdmStudentPersonalDetails,
-    applicationForm,
-    oldAcademicDetails,
-  );
-
-  const admAdditionalInfo = await addAdmAdditionalInfo(
+  const transferredAdmCourseDetails = await addAdmCourseApps(
     oldAdmStudentPersonalDetails,
     applicationForm,
   );
 
-  return { applicationForm, oldAcademicDetails };
+  await addAdmAdditionalInfo(oldAdmStudentPersonalDetails, applicationForm);
+
+  return { applicationForm, oldAcademicDetails, transferredAdmCourseDetails };
 }
 
-async function addAdmAcademSubjects(
+export async function addAdmAcademSubjects(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
-  applicationForm: ApplicationForm,
   admAcademicInfo: AdmissionAcademicInfo,
 ) {
   const [[oldAcademicDetails]] = (await mysqlConnection.query(`
@@ -768,9 +803,10 @@ async function addAdmAcademSubjects(
     `)) as [OldAcademicDetails[], any];
 
   if (!oldAcademicDetails) {
-    throw new Error(
+    console.warn(
       `No academic details found for personal-details ID: ${oldAdmStudentPersonalDetails.id}`,
     );
+    return { oldAcademicDetails: null, admAcademicSubjects: [] };
   }
 
   const [admAcademicSubjects] = (await mysqlConnection.query(`
@@ -778,6 +814,13 @@ async function addAdmAcademSubjects(
         FROM subjectdetail
         WHERE parent_id = ${oldAcademicDetails.id};
     `)) as [OldAdmSubjectDetails[], any];
+
+  if (!admAcademicSubjects || admAcademicSubjects.length === 0) {
+    console.warn(
+      `No academic subjects found for academic details ID: ${oldAcademicDetails.id}`,
+    );
+    return { oldAcademicDetails, admAcademicSubjects: [] };
+  }
 
   for (let i = 0; i < admAcademicSubjects.length; i++) {
     const oldAdmAcademicSubject = admAcademicSubjects[i];
@@ -789,8 +832,6 @@ async function addAdmAcademSubjects(
     );
 
     if (!boardSubject) {
-      // throw new Error(`No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`);
-
       console.log(
         `No board subject found for subject ID: ${oldAdmAcademicSubject.subjectId}`,
       );
@@ -798,6 +839,13 @@ async function addAdmAcademSubjects(
       const [[oldAdmRelevantSubject]] = (await mysqlConnection.query(`
                 SELECT * FROM admrelevantpaper WHERE id = ${oldAdmAcademicSubject.subjectId};
             `)) as [OldBoardSubjectName[], any];
+
+      if (!oldAdmRelevantSubject) {
+        console.log(
+          `No relevant subject found for ID: ${oldAdmAcademicSubject.subjectId}`,
+        );
+        continue; // Skip this subject if no relevant subject found
+      }
 
       let [foundBoardSubjectName] = await db
         .select()
@@ -820,13 +868,18 @@ async function addAdmAcademSubjects(
       }
 
       const foundBoard = await addBoard(oldAcademicDetails.boardId!);
+      if (!foundBoard) {
+        console.log(`No board found for ID: ${oldAcademicDetails.boardId}`);
+        continue; // Skip this subject if no board found
+      }
 
-      const [foundBoardSubject] = await db
+      // Check if board subject already exists with these exact parameters
+      const [existingBoardSubject] = await db
         .select()
         .from(boardSubjectModel)
         .where(
           and(
-            eq(boardSubjectModel.boardId, foundBoard?.id!),
+            eq(boardSubjectModel.boardId, foundBoard.id!),
             eq(boardSubjectModel.boardSubjectNameId, foundBoardSubjectName.id!),
             eq(
               boardSubjectModel.passingMarksTheory,
@@ -847,18 +900,23 @@ async function addAdmAcademSubjects(
           ),
         );
 
-      const [newBoardSubject] = await db
-        .insert(boardSubjectModel)
-        .values({
-          boardId: foundBoard?.id!,
-          boardSubjectNameId: foundBoardSubjectName.id!,
-          passingMarksTheory: oldAdmAcademicSubject.theoryPassMarks || 0,
-          passingMarksPractical: oldAdmAcademicSubject.practicalPassMarks || 0,
-          fullMarksTheory: oldAdmAcademicSubject.theoryFullMarks || 0,
-          fullMarksPractical: oldAdmAcademicSubject.practicalFullMarks || 0,
-        })
-        .returning();
-      boardSubject = newBoardSubject;
+      if (existingBoardSubject) {
+        boardSubject = existingBoardSubject;
+      } else {
+        const [newBoardSubject] = await db
+          .insert(boardSubjectModel)
+          .values({
+            boardId: foundBoard.id!,
+            boardSubjectNameId: foundBoardSubjectName.id!,
+            passingMarksTheory: oldAdmAcademicSubject.theoryPassMarks || 0,
+            passingMarksPractical:
+              oldAdmAcademicSubject.practicalPassMarks || 0,
+            fullMarksTheory: oldAdmAcademicSubject.theoryFullMarks || 0,
+            fullMarksPractical: oldAdmAcademicSubject.practicalFullMarks || 0,
+          })
+          .returning();
+        boardSubject = newBoardSubject;
+      }
     }
 
     const [existingSubject] = await db
@@ -879,6 +937,16 @@ async function addAdmAcademSubjects(
       );
 
     if (!existingSubject) {
+      // Resolve grade ID from legacy grade ID
+      let resolvedGradeId: number | undefined = undefined;
+      if (oldAdmAcademicSubject.gradeid) {
+        const [existingGrade] = await db
+          .select()
+          .from(gradeModel)
+          .where(eq(gradeModel.legacygradeId, oldAdmAcademicSubject.gradeid));
+        resolvedGradeId = existingGrade?.id;
+      }
+
       await db.insert(studentAcademicSubjectModel).values({
         legacySubjectDetailsId: oldAdmAcademicSubject.id,
         admissionAcademicInfoId: admAcademicInfo.id!,
@@ -886,7 +954,7 @@ async function addAdmAcademSubjects(
         theoryMarks: oldAdmAcademicSubject.theoryMarksobtained || 0,
         practicalMarks: oldAdmAcademicSubject.practicalMarksobtained || 0,
         totalMarks: oldAdmAcademicSubject.totalMarks || 0,
-        gradeId: oldAdmAcademicSubject.gradeid || undefined,
+        gradeId: resolvedGradeId,
         resultStatus:
           (oldAdmAcademicSubject.status?.toUpperCase() as
             | "PASS"
@@ -900,20 +968,35 @@ async function addAdmAcademSubjects(
   return { oldAcademicDetails, admAcademicSubjects };
 }
 
-async function addAdmAdditionalInfo(
+export async function addAdmAdditionalInfo(
   oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
   applicationForm: ApplicationForm,
 ) {
-  const familyDetails = await addFamily(oldAdmStudentPersonalDetails);
-
   const annualIncome = await categorizeIncome(
     oldAdmStudentPersonalDetails.familyIncome,
   );
+
+  const [existingAdmAdditionalInfo] = await db
+    .select()
+    .from(admissionAdditionalInfoModel)
+    .where(
+      eq(admissionAdditionalInfoModel.applicationFormId, applicationForm.id!),
+    );
+
+  if (existingAdmAdditionalInfo) {
+    await upsertFamily2(
+      oldAdmStudentPersonalDetails,
+      undefined,
+      existingAdmAdditionalInfo.id,
+    );
+    return existingAdmAdditionalInfo;
+  }
+
   const [newAdmAdditionalInfo] = await db
     .insert(admissionAdditionalInfoModel)
     .values({
       applicationFormId: applicationForm.id!,
-      familyDetailsId: familyDetails?.id as number,
+      // familyDetailsId: familyDetails?.id as number,
 
       applyUnderNCCCategory: !!oldAdmStudentPersonalDetails.nccQuota,
       applyUnderSportsCategory: !!oldAdmStudentPersonalDetails.sportsquota,
@@ -926,10 +1009,15 @@ async function addAdmAdditionalInfo(
       annualIncomeId: annualIncome?.id || undefined,
     })
     .returning();
+  await upsertFamily2(
+    oldAdmStudentPersonalDetails,
+    undefined,
+    newAdmAdditionalInfo.id,
+  );
   return newAdmAdditionalInfo;
 }
 
-async function addBoardSubject(
+export async function addBoardSubject(
   oldAdmRelevantSubjectId: number,
   oldBoardId: number,
 ): Promise<BoardSubject | undefined> {
@@ -1049,50 +1137,58 @@ async function addBoardSubject(
   return newBoardSubject;
 }
 
-export async function processApplicationForm(
-  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
-) {
-  // Check if student already exists to prevent duplicate processing
-  if (oldAdmStudentPersonalDetails.id) {
-    const [existingStudent] = await db
+export async function processOldStudentApplicationForm(
+  oldStudent: OldStudent,
+  student: Student,
+): Promise<{
+  applicationForm: ApplicationForm;
+  transferredAdmCourseDetails: AdmissionCourseDetails;
+}> {
+  // Check if student application form already exists
+  const [[oldAdmStudentPersonalDetails]] = (await mysqlConnection.query(`
+        SELECT pd.*
+        FROM personaldetails pd
+        JOIN coursedetails cd ON pd.id = cd.parent_id
+        JOIN studentpersonaldetails spd ON spd.admissionid = cd.id
+        WHERE spd.id = ${oldStudent.id};
+    `)) as [OldAdmStudentPersonalDetail[], any];
+
+  // Check if personaldetails exists
+  const [existingAdmGeneralInfo] = await db
+    .select()
+    .from(admissionGeneralInfoModel)
+    .where(
+      eq(
+        admissionGeneralInfoModel.legacyPersonalDetailsId,
+        oldAdmStudentPersonalDetails.id!,
+      ),
+    );
+
+  if (existingAdmGeneralInfo) {
+    const [existingApplicationForm] = await db
       .select()
-      .from(studentModel)
-      .where(eq(studentModel.legacyStudentId, oldAdmStudentPersonalDetails.id));
-
-    if (existingStudent) {
-      console.log(
-        `Student with legacy ID ${oldAdmStudentPersonalDetails.id} already exists, skipping processing`,
+      .from(applicationFormModel)
+      .where(
+        eq(applicationFormModel.id, existingAdmGeneralInfo.applicationFormId),
       );
-      return existingStudent;
-    }
-  }
 
-  // Step 1: Fetch student personaldetails from old personaldetails table and create user
-  const [[oldCourseDetails]] = (await mysqlConnection.query(`
-        SELECT * 
-        FROM coursedetails
-        WHERE 
-            parent_id = ${oldAdmStudentPersonalDetails.id}
-            AND transferred = true;
-    `)) as [OldCourseDetails[], any];
+    const [transferredAdmCourseDetails] = await db
+      .select()
+      .from(admissionCourseDetailsModel)
+      .where(
+        and(
+          eq(
+            admissionCourseDetailsModel.applicationFormId,
+            existingApplicationForm.id,
+          ),
+          eq(admissionCourseDetailsModel.isTransferred, true),
+        ),
+      );
 
-  if (!oldCourseDetails) {
-    throw new Error(
-      `No course details found for adm-student-course-details ID: ${oldAdmStudentPersonalDetails.id}`,
-    );
-  }
-
-  const [[oldStudent]] = (await mysqlConnection.query(`
-        SELECT *
-        FROM studentpersonaldetails
-        WHERE admissionId = ${oldCourseDetails.id};
-    `)) as [OldStudent[], any];
-
-  if (!oldStudent) {
-    console.warn(
-      `No studentpersonaldetails found for admissionId: ${oldCourseDetails.id}`,
-    );
-    return undefined;
+    return {
+      applicationForm: existingApplicationForm,
+      transferredAdmCourseDetails,
+    };
   }
 
   // Do the admission application form
@@ -1101,244 +1197,31 @@ export async function processApplicationForm(
     oldAdmStudentPersonalDetails,
   );
 
-  if (!admApp?.applicationForm) {
-    return undefined;
+  if (!admApp) {
+    throw new Error("Admission application form not found");
   }
 
-  const { applicationForm, oldAcademicDetails } = admApp;
-
-  const [existingAdmCourseDetails] = await db
-    .select()
-    .from(admissionCourseDetailsModel)
-    .where(
-      and(
-        eq(
-          admissionCourseDetailsModel.applicationFormId,
-          applicationForm.id as number,
-        ),
-        eq(admissionCourseDetailsModel.isTransferred, true),
-      ),
-    );
-
-  if (!existingAdmCourseDetails) {
-    console.log(
-      "Is not transferred for application form ID: ",
-      applicationForm.id,
-    );
-    return undefined;
-  }
+  const { applicationForm, transferredAdmCourseDetails } = admApp;
 
   console.log(
     "in processStudent(), existingAdmCourseDetails",
-    existingAdmCourseDetails,
+    transferredAdmCourseDetails,
   );
 
-  const [admission] = await db
+  const [{ academic_years: academicYear }] = await db
     .select()
     .from(admissionModel)
+    .leftJoin(sessionModel, eq(admissionModel.sessionId, sessionModel.id))
+    .leftJoin(
+      academicYearModel,
+      eq(sessionModel.academicYearId, academicYearModel.id),
+    )
     .where(eq(admissionModel.id, applicationForm.admissionId as number));
-
-  const [session] = await db
-    .select()
-    .from(sessionModel)
-    .where(eq(sessionModel.id, admission?.sessionId as number));
-  const [academicYear] = await db
-    .select()
-    .from(academicYearModel)
-    .where(eq(academicYearModel.id, session?.academicYearId as number));
-
-  // console.log(
-  //     "oldStudent",
-  //     oldStudent,
-  //     "oldstudent_id:",
-  //     oldStudent?.id,
-  //     oldStudent?.name,
-  // );
-
-  const user = await addUser(
-    oldAdmStudentPersonalDetails,
-    "STUDENT",
-    oldStudent?.codeNumber,
-  );
-
-  if (!user) {
-    console.log(
-      "in processApplicationForm(), student-type user not added for application form ID: ",
-      applicationForm.id,
-    );
-    return undefined;
-  }
-
-  console.log("in processApplicationForm(), added student", user.email);
-  const [foundAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      eq(
-        admissionProgramCourseModel.id,
-        existingAdmCourseDetails.admissionProgramCourseId as number,
-      ),
-    );
-
-  const [foundProgramCourse] = await db
-    .select()
-    .from(programCourseModel)
-    .where(
-      eq(
-        programCourseModel.id,
-        foundAdmissionProgramCourse?.programCourseId as number,
-      ),
-    );
-
-  // Step 2: Check for the student
-  const student = await addStudent(
-    oldStudent,
-    oldAdmStudentPersonalDetails,
-    oldCourseDetails,
-    user,
-    foundProgramCourse,
-    applicationForm,
-    existingAdmCourseDetails,
-  );
-
-  await addPromotion(
-    student.id!,
-    applicationForm,
-    oldStudent.id!,
-    existingAdmCourseDetails,
-  );
-
-  // Step 3: Check for the accomodation
-  const accommodation = await addAccommodation(
-    oldStudent.placeofstay || "",
-    oldStudent.placeofstayaddr || "",
-    "",
-    oldStudent.placeofstaycontactno || "",
-  );
-
-  // Step 4: Check for the accomodation
-  await oldStudentController.addAccommodation(
-    oldStudent,
-    student,
-    accommodation.id!,
-  );
-
-  // Step 5: Check for the admission
-  // await addAdmission(oldStudent, student);
-
-  // Step 6: Check for the Familys
-  const [existingAdditionalInfo] = await db
-    .select()
-    .from(admissionAdditionalInfoModel)
-    .where(
-      eq(
-        admissionAdditionalInfoModel.applicationFormId,
-        applicationForm.id as number,
-      ),
-    );
-  if (existingAdditionalInfo) {
-    const [existingFamily] = await db
-      .select()
-      .from(familyModel)
-      .where(
-        eq(familyModel.id, existingAdditionalInfo.familyDetailsId as number),
-      );
-    if (existingFamily) {
-      await oldStudentController.addFamily(
-        oldStudent,
-        student,
-        existingFamily.id!,
-      );
-    }
-  }
-
-  // Step 7: Check for the health
-  const [foundAdmGeneralInfo] = await db
-    .select()
-    .from(admissionGeneralInfoModel)
-    .where(
-      eq(
-        admissionGeneralInfoModel.applicationFormId,
-        applicationForm.id as number,
-      ),
-    );
-  if (foundAdmGeneralInfo) {
-    const [existingHealth] = await db
-      .select()
-      .from(healthModel)
-      .where(eq(healthModel.id, foundAdmGeneralInfo.healthId as number));
-    if (existingHealth) {
-      await oldStudentController.addHealth(
-        oldStudent,
-        student,
-        existingHealth.id!,
-      );
-    }
-
-    const [foundEmergencyContact] = await db
-      .select()
-      .from(emergencyContactModel)
-      .where(
-        eq(
-          emergencyContactModel.id,
-          foundAdmGeneralInfo.emergencyContactId as number,
-        ),
-      );
-    if (foundEmergencyContact) {
-      await oldStudentController.addEmergencyContact(
-        oldStudent,
-        student,
-        foundEmergencyContact.id!,
-      );
-    }
-
-    const [foundPersonalDetails] = await db
-      .select()
-      .from(personalDetailsModel)
-      .where(
-        eq(
-          personalDetailsModel.id,
-          foundAdmGeneralInfo.personalDetailsId as number,
-        ),
-      );
-    if (foundPersonalDetails) {
-      await oldStudentController.addPersonalDetails(
-        oldStudent,
-        user,
-        foundPersonalDetails.id!,
-      );
-    }
-
-    const [foundTransportDetails] = await db
-      .select()
-      .from(transportDetailsModel)
-      .where(
-        eq(
-          transportDetailsModel.id,
-          foundAdmGeneralInfo.transportDetailsId as number,
-        ),
-      );
-    if (foundTransportDetails) {
-      await oldStudentController.addTransportDetails(
-        oldStudent,
-        student,
-        foundTransportDetails.id!,
-      );
-    }
-  }
-
-  console.log("updating application form to SUBJECT_PAPER_SELECTION");
-  await db
-    .update(applicationFormModel)
-    .set({
-      formStatus: "SUBJECT_PAPER_SELECTION",
-    })
-    .where(eq(applicationFormModel.id, applicationForm.id as number));
 
   const [[oldCourseDetailsTransferred]] = (await mysqlConnection.query(`
             SELECT * 
             FROM coursedetails
-            WHERE transferred = true and id = ${existingAdmCourseDetails.legacyCourseDetailsId};
+            WHERE transferred = true and id = ${transferredAdmCourseDetails.legacyCourseDetailsId};
         `)) as [OldCourseDetails[], any];
 
   console.log(
@@ -1348,137 +1231,138 @@ export async function processApplicationForm(
 
   await getSubjectRelatedFields(
     oldCourseDetailsTransferred,
-    existingAdmCourseDetails,
-    academicYear,
+    transferredAdmCourseDetails,
+    academicYear!,
     student.id!,
-    oldAcademicDetails.boardId!,
   );
 
-  return student;
+  return { applicationForm, transferredAdmCourseDetails };
 }
 
-async function addPromotion(
-  studentId: number,
-  applicationForm: ApplicationForm,
-  oldStudentId: number,
-  admissionCourseDetails: AdmissionCourseDetails,
-) {
-  const [foundAdmission] = await db
-    .select()
-    .from(admissionModel)
-    .where(eq(admissionModel.id, applicationForm.admissionId!));
+// export async function addPromotion(
+//     studentId: number,
+//     applicationForm: ApplicationForm,
+//     oldStudentId: number,
+//     admissionCourseDetails: AdmissionCourseDetails,
+// ) {
+//     const [foundAdmission] = await db
+//         .select()
+//         .from(admissionModel)
+//         .where(eq(admissionModel.id, applicationForm.admissionId!));
 
-  const [[oldHistoricalRecord]] = (await mysqlConnection.query(`
-        SELECT * FROM historicalrecord WHERE parent_id = ${oldStudentId}
-    `)) as [OldHistoricalRecord[], any];
+//     const [[oldHistoricalRecord]] = (await mysqlConnection.query(`
+//         SELECT * FROM historicalrecord WHERE parent_id = ${oldStudentId}
+//     `)) as [OldHistoricalRecord[], any];
 
-  const [foundSession] = await db
-    .select()
-    .from(sessionModel)
-    .where(eq(sessionModel.id, foundAdmission?.sessionId!));
+//     const [foundSession] = await db
+//         .select()
+//         .from(sessionModel)
+//         .where(eq(sessionModel.id, foundAdmission?.sessionId!));
 
-  const foundClass = await addClass(oldHistoricalRecord?.classId!);
+//     const foundClass = await addClass(oldHistoricalRecord?.classId!);
 
-  const [foundAdmissionProgramCourse] = await db
-    .select()
-    .from(admissionProgramCourseModel)
-    .where(
-      eq(
-        admissionProgramCourseModel.id,
-        admissionCourseDetails.admissionProgramCourseId,
-      ),
-    );
+//     const [foundAdmissionProgramCourse] = await db
+//         .select()
+//         .from(admissionProgramCourseModel)
+//         .where(
+//             eq(
+//                 admissionProgramCourseModel.id,
+//                 admissionCourseDetails.admissionProgramCourseId,
+//             ),
+//         );
 
-  const [foundProgramCourse] = await db
-    .select()
-    .from(programCourseModel)
-    .where(
-      eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId!),
-    );
+//     const [foundProgramCourse] = await db
+//         .select()
+//         .from(programCourseModel)
+//         .where(
+//             eq(programCourseModel.id, foundAdmissionProgramCourse?.programCourseId!),
+//         );
 
-  const [[oldPromotionStatus]] = (await mysqlConnection.query(`
-        SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord?.promotionstatus}
-    `)) as [OldPromotionStatus[], any];
+//     const [[oldPromotionStatus]] = (await mysqlConnection.query(`
+//         SELECT * FROM promotionstatus WHERE id = ${oldHistoricalRecord?.promotionstatus}
+//     `)) as [OldPromotionStatus[], any];
 
-  let [foundPromotionStatus] = await db
-    .select()
-    .from(promotionStatusModel)
-    .where(
-      eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
-    );
+//     let [foundPromotionStatus] = await db
+//         .select()
+//         .from(promotionStatusModel)
+//         .where(
+//             eq(promotionStatusModel.legacyPromotionStatusId, oldPromotionStatus?.id!),
+//         );
 
-  if (!foundPromotionStatus) {
-    foundPromotionStatus = (
-      await db
-        .insert(promotionStatusModel)
-        .values({
-          legacyPromotionStatusId: oldPromotionStatus?.id!,
-          name: oldPromotionStatus?.name!,
-          type: oldPromotionStatus?.spltype.toUpperCase().trim() as
-            | "REGULAR"
-            | "READMISSION"
-            | "CASUAL",
-        })
-        .returning()
-    )[0];
-  }
+//     if (!foundPromotionStatus) {
+//         foundPromotionStatus = (
+//             await db
+//                 .insert(promotionStatusModel)
+//                 .values({
+//                     legacyPromotionStatusId: oldPromotionStatus?.id!,
+//                     name: oldPromotionStatus?.name!,
+//                     type: oldPromotionStatus?.spltype.toUpperCase().trim() as
+//                         | "REGULAR"
+//                         | "READMISSION"
+//                         | "CASUAL",
+//                 })
+//                 .returning()
+//         )[0];
+//     }
 
-  let foundBoardResultStatus: BoardResultStatus | undefined;
-  if (oldHistoricalRecord?.boardresultid) {
-    foundBoardResultStatus = (
-      await db
-        .select()
-        .from(boardResultStatusModel)
-        .where(
-          eq(
-            boardResultStatusModel.legacyBoardResultStatusId,
-            oldHistoricalRecord?.boardresultid!,
-          ),
-        )
-    )[0];
+//     let foundBoardResultStatus: BoardResultStatus | undefined;
+//     if (oldHistoricalRecord?.boardresultid) {
+//         foundBoardResultStatus = (
+//             await db
+//                 .select()
+//                 .from(boardResultStatusModel)
+//                 .where(
+//                     eq(
+//                         boardResultStatusModel.legacyBoardResultStatusId,
+//                         oldHistoricalRecord?.boardresultid!,
+//                     ),
+//                 )
+//         )[0];
 
-    if (!foundBoardResultStatus) {
-      const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
-                SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord?.boardresultid}
-            `)) as [OldBoardResultStatus[], any];
-      foundBoardResultStatus = (
-        await db
-          .insert(boardResultStatusModel)
-          .values({
-            legacyBoardResultStatusId: oldBoardResultStatus?.id!,
-            name: oldBoardResultStatus?.name!,
-            spclType: oldBoardResultStatus?.spcltype,
-          })
-          .returning()
-      )[0];
-    }
-  }
+//         if (!foundBoardResultStatus) {
+//             const [[oldBoardResultStatus]] = (await mysqlConnection.query(`
+//                 SELECT * FROM boardresultstatus WHERE id = ${oldHistoricalRecord?.boardresultid}
+//             `)) as [OldBoardResultStatus[], any];
+//             foundBoardResultStatus = (
+//                 await db
+//                     .insert(boardResultStatusModel)
+//                     .values({
+//                         legacyBoardResultStatusId: oldBoardResultStatus?.id!,
+//                         name: oldBoardResultStatus?.name!,
+//                         spclType: oldBoardResultStatus?.spcltype,
+//                     })
+//                     .returning()
+//             )[0];
+//         }
+//     }
 
-  const foundSection = await addSection(oldHistoricalRecord?.sectionId!);
+//     const foundSection = await addSection(oldHistoricalRecord?.sectionId!);
 
-  await db.insert(promotionModel).values({
-    studentId: studentId,
-    sectionId: foundSection?.id,
-    legacyHistoricalRecordId: oldHistoricalRecord?.id!,
-    programCourseId: foundProgramCourse?.id!,
-    sessionId: foundSession?.id!,
-    shiftId: admissionCourseDetails.shiftId!,
-    classId: foundClass?.id!,
-    classRollNumber: String(oldHistoricalRecord?.rollNo!),
-    dateOfJoining: oldHistoricalRecord?.dateofJoining!,
-    promotionStatusId: foundPromotionStatus?.id!,
-    boardResultStatusId: foundBoardResultStatus?.id!,
-    startDate: oldHistoricalRecord?.startDate,
-    endDate: oldHistoricalRecord?.endDate,
-    remarks: oldHistoricalRecord?.specialisation,
-    rollNumber: oldHistoricalRecord?.univrollno,
-    rollNumberSI: oldHistoricalRecord?.univrollnosi,
-    examNumber: oldHistoricalRecord?.exmno,
-    examSerialNumber: oldHistoricalRecord?.exmsrl,
-  } as PromotionInsertSchema);
-}
+//     await db.insert(promotionModel).values({
+//         studentId: studentId,
+//         sectionId: foundSection?.id,
+//         legacyHistoricalRecordId: oldHistoricalRecord?.id!,
+//         programCourseId: foundProgramCourse?.id!,
+//         sessionId: foundSession?.id!,
+//         shiftId: admissionCourseDetails.shiftId!,
+//         classId: foundClass?.id!,
+//         classRollNumber: String(oldHistoricalRecord?.rollNo!),
+//         dateOfJoining: oldHistoricalRecord?.dateofJoining!,
+//         promotionStatusId: foundPromotionStatus?.id!,
+//         boardResultStatusId: foundBoardResultStatus?.id!,
+//         startDate: oldHistoricalRecord?.startDate,
+//         endDate: oldHistoricalRecord?.endDate,
+//         remarks: oldHistoricalRecord?.specialisation,
+//         rollNumber: oldHistoricalRecord?.univrollno,
+//         rollNumberSI: oldHistoricalRecord?.univrollnosi,
+//         examNumber: oldHistoricalRecord?.exmno,
+//         examSerialNumber: oldHistoricalRecord?.exmsrl,
+//     } as PromotionInsertSchema);
+// }
 
-async function addSection(oldSectionId: number): Promise<Section | undefined> {
+export async function addSection(
+  oldSectionId: number,
+): Promise<Section | undefined> {
   const [rows] = (await mysqlConnection.query(
     `SELECT * FROM section WHERE id = ${oldSectionId}`,
   )) as [OldSection[], any];
@@ -1486,7 +1370,8 @@ async function addSection(oldSectionId: number): Promise<Section | undefined> {
   const [oldSection] = rows;
 
   if (!oldSection) {
-    throw new Error("Section not found");
+    console.error("Section not found", oldSectionId);
+    return undefined;
   }
 
   const [existingSection] = await db
@@ -1517,7 +1402,7 @@ async function addSection(oldSectionId: number): Promise<Section | undefined> {
   return newSection;
 }
 
-async function addInstitution(
+export async function addInstitution(
   oldInstitutionId: number,
 ): Promise<Institution | undefined> {
   const [rows] = (await mysqlConnection.query(
@@ -1686,381 +1571,382 @@ export async function addBoard(oldBoardId: number): Promise<Board | undefined> {
   return newBoard;
 }
 
-export async function addUser(
-  oldData: OldAdmStudentPersonalDetail | OldStaff,
-  type: (typeof userTypeEnum.enumValues)[number],
-  uid?: string,
-) {
-  if (!oldData) {
-    return undefined;
-  }
+// export async function addUser(
+//     oldData: OldAdmStudentPersonalDetail | OldStaff,
+//     type: (typeof userTypeEnum.enumValues)[number],
+//     uid?: string,
+// ) {
+//     if (!oldData) {
+//         return undefined;
+//     }
 
-  if (type === "STUDENT" && (!uid || uid.trim() === "")) {
-    throw new Error("UID is required for student");
-  }
+//     if (type === "STUDENT" && (!uid || uid.trim() === "")) {
+//         throw new Error("UID is required for student");
+//     }
 
-  // console.log("oldData in addUser() ----->", oldData);
-  if (type !== "STAFF" && type !== "STUDENT") {
-    throw new Error("Invalid old details type");
-  }
+//     // console.log("oldData in addUser() ----->", oldData);
+//     if (type !== "STAFF" && type !== "STUDENT") {
+//         throw new Error("Invalid old details type");
+//     }
 
-  // Fetch personal details based on type
-  // let personalDetails = await addPersonalDetails(oldData);
-  let phone: string | undefined = oldData.contactNo?.trim();
-  let whatsappNumber: string | undefined = oldData.contactNo?.trim();
+//     // Fetch personal details based on type
+//     // let personalDetails = await addPersonalDetails(oldData);
+//     let phone: string | undefined = oldData.contactNo?.trim();
+//     let whatsappNumber: string | undefined = oldData.contactNo?.trim();
 
-  const cleanString = (value: unknown): string | undefined => {
-    if (typeof value === "string") {
-      return value.replace(/[\s\-\/]/g, "").trim();
-    }
-    return undefined;
-  };
+//     const cleanString = (value: unknown): string | undefined => {
+//         if (typeof value === "string") {
+//             return value.replace(/[\s\-\/]/g, "").trim();
+//         }
+//         return undefined;
+//     };
 
-  // const email = `${cleanString(codeNumber)}@thebges.edu.in`;
-  const hashedPassword = await bcrypt.hash("default", 10);
+//     // const email = `${cleanString(codeNumber)}@thebges.edu.in`;
+//     const hashedPassword = await bcrypt.hash("default", 10);
 
-  // Check if user already exists by legacyId OR email
-  let existingUser;
-  const email =
-    type === "STUDENT"
-      ? `${cleanString(uid)}@thebges.edu.in`
-      : oldData.email?.trim();
-  if (email) {
-    // Check by both legacyId and email
-    [existingUser] = await db
-      .select()
-      .from(userModel)
-      .where(
-        or(eq(userModel.legacyId, oldData.id!), eq(userModel.email, email)),
-      );
-  } else {
-    // Check only by legacyId
-    [existingUser] = await db
-      .select()
-      .from(userModel)
-      .where(eq(userModel.legacyId, oldData.id!));
-  }
+//     // Check if user already exists by legacyId OR email
+//     let existingUser;
+//     const email =
+//         type === "STUDENT"
+//             ? `${cleanString(uid)}@thebges.edu.in`
+//             : oldData.email?.trim();
+//     if (email) {
+//         // Check by both legacyId and email
+//         [existingUser] = await db
+//             .select()
+//             .from(userModel)
+//             .where(
+//                 or(eq(userModel.legacyId, oldData.id!), eq(userModel.email, email)),
+//             );
+//     } else {
+//         // Check only by legacyId
+//         [existingUser] = await db
+//             .select()
+//             .from(userModel)
+//             .where(eq(userModel.legacyId, oldData.id!));
+//     }
 
-  if (existingUser) {
-    console.log(
-      `User with legacy ID ${oldData.id} or email ${oldData?.email} already exists, skipping creation`,
-    );
-    return existingUser;
-  }
+//     if (existingUser) {
+//         console.log(
+//             `User with legacy ID ${oldData.id} or email ${oldData?.email} already exists, skipping creation`,
+//         );
+//         return existingUser;
+//     }
 
-  // Create the new user
-  let newUser: User | undefined;
-  let nameToUse = "";
-  if (type === "STUDENT") {
-    nameToUse = [
-      (oldData as OldAdmStudentPersonalDetail).firstName,
-      (oldData as OldAdmStudentPersonalDetail).middleName,
-      (oldData as OldAdmStudentPersonalDetail).lastName,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-  } else if (type === "STAFF") {
-    nameToUse = [(oldData as OldStaff).name].filter(Boolean).join(" ").trim();
-  }
-  try {
-    [newUser] = await db
-      .insert(userModel)
-      .values({
-        name: nameToUse,
-        legacyId: oldData.id!,
-        email: email ?? "",
-        password: hashedPassword,
-        phone: phone,
-        type,
-        whatsappNumber: whatsappNumber,
-      })
-      .returning();
-  } catch (error: any) {
-    // If there's a duplicate key error, try to find the existing user
-    throw error;
-  }
+//     // Create the new user
+//     let newUser: User | undefined;
+//     let nameToUse = "";
+//     if (type === "STUDENT") {
+//         nameToUse = [
+//             (oldData as OldAdmStudentPersonalDetail).firstName,
+//             (oldData as OldAdmStudentPersonalDetail).middleName,
+//             (oldData as OldAdmStudentPersonalDetail).lastName,
+//         ]
+//             .filter(Boolean)
+//             .join(" ")
+//             .trim();
+//     } else if (type === "STAFF") {
+//         nameToUse = [(oldData as OldStaff).name].filter(Boolean).join(" ").trim();
+//     }
+//     try {
+//         [newUser] = await db
+//             .insert(userModel)
+//             .values({
+//                 name: nameToUse,
+//                 legacyId: oldData.id!,
+//                 email: email ?? "",
+//                 password: hashedPassword,
+//                 phone: phone,
+//                 type,
+//                 whatsappNumber: whatsappNumber,
+//             })
+//             .returning();
+//     } catch (error: any) {
+//         // If there's a duplicate key error, try to find the existing user
+//         throw error;
+//     }
 
-  if (!newUser) {
-    throw new Error("Failed to create or find user");
-  }
+//     if (!newUser) {
+//         throw new Error("Failed to create or find user");
+//     }
 
-  if (type === "STAFF") {
-    if (oldData.id) {
-      await addStaff(oldData.id, newUser);
-      await db
-        .update(userModel)
-        .set({
-          isActive: !!(oldData as OldStaff).active,
-        })
-        .where(eq(userModel.id, newUser.id as number));
-    }
-  }
+//     if (type === "STAFF") {
+//         if (oldData.id) {
+//             await addStaff(oldData.id, newUser);
+//             await db
+//                 .update(userModel)
+//                 .set({
+//                     isActive: !!(oldData as OldStaff).active,
+//                 })
+//                 .where(eq(userModel.id, newUser.id as number));
+//         }
+//     }
 
-  return newUser;
-}
+//     return newUser;
+// }
 
-export async function addStaff(oldStaffId: number, user: User) {
-  const [existingStaff] = await db
-    .select()
-    .from(staffModel)
-    .where(eq(staffModel.userId, user.id as number));
-  if (existingStaff) {
-    return existingStaff;
-  }
+// export async function addStaff(oldStaffId: number, user: User) {
+//     const [existingStaff] = await db
+//         .select()
+//         .from(staffModel)
+//         .where(eq(staffModel.userId, user.id as number));
+//     if (existingStaff) {
+//         return existingStaff;
+//     }
 
-  const [[oldStaff]] = (await mysqlConnection.query(`
-        SELECT *
-        FROM staffpersonaldetails
-        WHERE id = ${oldStaffId}
-        `)) as [OldStaff[], any];
+//     const [[oldStaff]] = (await mysqlConnection.query(`
+//         SELECT *
+//         FROM staffpersonaldetails
+//         WHERE id = ${oldStaffId}
+//         `)) as [OldStaff[], any];
 
-  if (!oldStaff) {
-    return null;
-  }
+//     if (!oldStaff) {
+//         return null;
+//     }
 
-  const shift = await addShift(oldStaff.empShiftId);
+//     const shift = await addShift(oldStaff.empShiftId);
 
-  const personalDetails = await addPersonalDetails(oldStaff);
+//     const personalDetails = await addPersonalDetails(oldStaff);
 
-  const familyDetails = await addFamily(oldStaff);
+//     const familyDetails = await addFamily(oldStaff);
 
-  const studentCategory = await addStudentCategory(oldStaff.studentCategoryId);
+//     const studentCategory = await addStudentCategory(oldStaff.studentCategoryId);
 
-  const health = await addHealth(oldStaff);
+//     const health = await addHealth(oldStaff);
 
-  const emergencyContact = await addEmergencyContact({
-    personName: oldStaff.emergencyname ?? undefined,
-    havingRelationAs: oldStaff.emergencyrelationship ?? undefined,
-    email: undefined,
-    phone: oldStaff.emergencytelmobile ?? undefined,
-    officePhone: oldStaff.emergencytellandno ?? undefined,
-    residentialPhone: undefined,
-  } as EmergencyContact);
+//     const emergencyContact = await addEmergencyContact({
+//         personName: oldStaff.emergencyname ?? undefined,
+//         havingRelationAs: oldStaff.emergencyrelationship ?? undefined,
+//         email: undefined,
+//         phone: oldStaff.emergencytelmobile ?? undefined,
+//         officePhone: oldStaff.emergencytellandno ?? undefined,
+//         residentialPhone: undefined,
+//     } as EmergencyContact);
 
-  // Previous employer address if present
-  let previousEmployeeAddressId: number | undefined = undefined;
-  if (oldStaff.privempaddrs) {
-    const [addr] = await db
-      .insert(addressModel)
-      .values({
-        addressLine: oldStaff.privempaddrs.trim(),
-        localityType: null,
-      } as any)
-      .returning();
-    previousEmployeeAddressId = addr.id as number;
-  }
+//     // Previous employer address if present
+//     let previousEmployeeAddressId: number | undefined = undefined;
+//     if (oldStaff.privempaddrs) {
+//         const [addr] = await db
+//             .insert(addressModel)
+//             .values({
+//                 addressLine: oldStaff.privempaddrs.trim(),
+//                 localityType: null,
+//             } as any)
+//             .returning();
+//         previousEmployeeAddressId = addr.id as number;
+//     }
 
-  const bank = await addBank(oldStaff.bankid);
-  let board: Board | undefined = undefined;
-  if (oldStaff.board) {
-    const [existingBoard] = await db
-      .select()
-      .from(boardModel)
-      .where(eq(boardModel.name, oldStaff.board.trim()));
-    if (!existingBoard) {
-      const [newBoard] = await db
-        .insert(boardModel)
-        .values({
-          name: oldStaff.board.trim(),
-        })
-        .returning();
-      board = newBoard;
-    } else {
-      board = existingBoard;
-    }
-  }
+//     const bank = await addBank(oldStaff.bankid);
+//     let board: Board | undefined = undefined;
+//     if (oldStaff.board) {
+//         const [existingBoard] = await db
+//             .select()
+//             .from(boardModel)
+//             .where(eq(boardModel.name, oldStaff.board.trim()));
+//         if (!existingBoard) {
+//             const [newBoard] = await db
+//                 .insert(boardModel)
+//                 .values({
+//                     name: oldStaff.board.trim(),
+//                 })
+//                 .returning();
+//             board = newBoard;
+//         } else {
+//             board = existingBoard;
+//         }
+//     }
 
-  const [newStaff] = await db
-    .insert(staffModel)
-    .values({
-      userId: user.id as number,
-      boardId: board?.id ?? undefined,
-      attendanceCode: oldStaff.staffAttendanceCode ?? undefined,
-      uid: oldStaff.uid ? String(oldStaff.uid) : undefined,
-      codeNumber: oldStaff.codeNumber ?? undefined,
-      shiftId: shift?.id ?? undefined,
-      gratuityNumber: oldStaff.gratuityno ?? undefined,
-      personalDetailsId: personalDetails?.id ?? undefined,
-      familyDetailsId: familyDetails?.id ?? undefined,
-      studentCategoryId: studentCategory?.id ?? undefined,
-      healthId: health?.id ?? undefined,
-      emergencyContactId: emergencyContact?.id ?? undefined,
-      computerOperationKnown: !!oldStaff.computeroperationknown,
-      bankBranchId: undefined,
-      // Optional academic links not resolvable from legacy staff payload
-      bankAccountNumber: oldStaff.bankAccNo ?? undefined,
-      banlIfscCode: oldStaff.bankifsccode ?? undefined,
-      bankAccountType: oldStaff.bankacctype
-        ? (((t) =>
-            t === "SAVINGS" ||
-            t === "CURRENT" ||
-            t === "FIXED_DEPOSIT" ||
-            t === "RECURRING_DEPOSIT" ||
-            t === "OTHER"
-              ? t
-              : "OTHER")(String(oldStaff.bankacctype).trim()) as any)
-        : undefined,
-      providentFundAccountNumber: oldStaff.providentFundAccNo ?? undefined,
-      panNumber: oldStaff.panNo ?? undefined,
-      esiNumber: oldStaff.esiNo ?? undefined,
-      impNumber: oldStaff.impNo ?? undefined,
-      clinicAddress: oldStaff.clinicAddress ?? undefined,
-      hasPfNomination: !!oldStaff.pfnomination,
-      childrens: oldStaff.childrens ?? undefined,
-      majorChildName: oldStaff.majorChildName ?? undefined,
-      majorChildPhone: oldStaff.majorChildContactNo ?? undefined,
-      previousEmployeeName: oldStaff.privempnm ?? undefined,
-      previousEmployeePhone: undefined,
-      previousEmployeeAddressId: previousEmployeeAddressId,
-      gratuityNominationDate: oldStaff.gratuitynominationdt
-        ? new Date(oldStaff.gratuitynominationdt as any)
-        : undefined,
-      univAccountNumber: oldStaff.univAccNo ?? undefined,
-      dateOfConfirmation: oldStaff.dateofconfirmation
-        ? new Date(oldStaff.dateofconfirmation)
-        : undefined,
-      dateOfProbation: oldStaff.dateofprobation
-        ? new Date(oldStaff.dateofprobation)
-        : undefined,
-    })
-    .returning();
+//     const [newStaff] = await db
+//         .insert(staffModel)
+//         .values({
+//             userId: user.id as number,
+//             boardId: board?.id ?? undefined,
+//             attendanceCode: oldStaff.staffAttendanceCode ?? undefined,
+//             uid: oldStaff.uid ? String(oldStaff.uid) : undefined,
+//             codeNumber: oldStaff.codeNumber ?? undefined,
+//             shiftId: shift?.id ?? undefined,
+//             gratuityNumber: oldStaff.gratuityno ?? undefined,
+//             personalDetailsId: personalDetails?.id ?? undefined,
+//             familyDetailsId: familyDetails?.id ?? undefined,
+//             studentCategoryId: studentCategory?.id ?? undefined,
+//             healthId: health?.id ?? undefined,
+//             emergencyContactId: emergencyContact?.id ?? undefined,
+//             computerOperationKnown: !!oldStaff.computeroperationknown,
+//             bankBranchId: undefined,
+//             // Optional academic links not resolvable from legacy staff payload
+//             bankAccountNumber: oldStaff.bankAccNo ?? undefined,
+//             banlIfscCode: oldStaff.bankifsccode ?? undefined,
+//             bankAccountType: oldStaff.bankacctype
+//                 ? (((t) =>
+//                     t === "SAVINGS" ||
+//                         t === "CURRENT" ||
+//                         t === "FIXED_DEPOSIT" ||
+//                         t === "RECURRING_DEPOSIT" ||
+//                         t === "OTHER"
+//                         ? t
+//                         : "OTHER")(String(oldStaff.bankacctype).trim()) as any)
+//                 : undefined,
+//             providentFundAccountNumber: oldStaff.providentFundAccNo ?? undefined,
+//             panNumber: oldStaff.panNo ?? undefined,
+//             esiNumber: oldStaff.esiNo ?? undefined,
+//             impNumber: oldStaff.impNo ?? undefined,
+//             clinicAddress: oldStaff.clinicAddress ?? undefined,
+//             hasPfNomination: !!oldStaff.pfnomination,
+//             childrens: oldStaff.childrens ?? undefined,
+//             majorChildName: oldStaff.majorChildName ?? undefined,
+//             majorChildPhone: oldStaff.majorChildContactNo ?? undefined,
+//             previousEmployeeName: oldStaff.privempnm ?? undefined,
+//             previousEmployeePhone: undefined,
+//             previousEmployeeAddressId: previousEmployeeAddressId,
+//             gratuityNominationDate: oldStaff.gratuitynominationdt
+//                 ? new Date(oldStaff.gratuitynominationdt as any)
+//                 : undefined,
+//             univAccountNumber: oldStaff.univAccNo ?? undefined,
+//             dateOfConfirmation: oldStaff.dateofconfirmation
+//                 ? new Date(oldStaff.dateofconfirmation)
+//                 : undefined,
+//             dateOfProbation: oldStaff.dateofprobation
+//                 ? new Date(oldStaff.dateofprobation)
+//                 : undefined,
+//         })
+//         .returning();
 
-  let name = oldStaff.name ?? "";
-  if (personalDetails?.middleName) {
-    name += `${personalDetails?.middleName}`;
-  }
-  if (personalDetails?.lastName) {
-    name += ` ${personalDetails?.lastName}`;
-  }
+//     let name = oldStaff.name ?? "";
+//     if (personalDetails?.middleName) {
+//         name += `${personalDetails?.middleName}`;
+//     }
+//     if (personalDetails?.lastName) {
+//         name += ` ${personalDetails?.lastName}`;
+//     }
 
-  await db
-    .update(userModel)
-    .set({
-      name,
-    })
-    .where(eq(userModel.id, user.id as number));
+//     await db
+//         .update(userModel)
+//         .set({
+//             name,
+//         })
+//         .where(eq(userModel.id, user.id as number));
 
-  return newStaff;
-}
+//     return newStaff;
+// }
 
-export async function addStudent(
-  oldStudent: OldStudent,
-  oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
-  oldOldCourseDetails: OldCourseDetails,
-  user: User,
-  programCourse: ProgramCourse,
-  applicationForm: ApplicationForm,
-  admCourseDetails: AdmissionCourseDetails,
-) {
-  // Check for existing student by userId OR legacyStudentId to prevent duplicates
-  const [existingStudent] = await db
-    .select()
-    .from(studentModel)
-    .where(
-      or(
-        eq(studentModel.userId, user.id as number),
-        eq(studentModel.legacyStudentId, oldStudent.id as number),
-      ),
-    );
-  if (existingStudent) {
-    console.log(
-      `Student already exists with legacy ID: ${oldStudent.id}, skipping creation`,
-    );
-    return existingStudent;
-  }
+// export async function addStudent(
+//     oldStudent: OldStudent,
+//     oldAdmStudentPersonalDetails: OldAdmStudentPersonalDetail,
+//     oldOldCourseDetails: OldCourseDetails,
+//     user: User,
+//     programCourse: ProgramCourse,
+//     applicationForm: ApplicationForm,
+//     admCourseDetails: AdmissionCourseDetails,
+// ) {
+//     // Check for existing student by userId OR legacyStudentId to prevent duplicates
+//     const [existingStudent] = await db
+//         .select()
+//         .from(studentModel)
+//         .where(
+//             or(
+//                 eq(studentModel.userId, user.id as number),
+//                 eq(studentModel.legacyStudentId, oldStudent.id as number),
+//             ),
+//         );
+//     if (existingStudent) {
+//         console.log(
+//             `Student already exists with legacy ID: ${oldStudent.id}, skipping creation`,
+//         );
+//         return existingStudent;
+//     }
 
-  let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined = "UNDER_GRADUATE";
-  if (
-    oldAdmStudentPersonalDetails.uid?.startsWith("11") ||
-    oldAdmStudentPersonalDetails.uid?.startsWith("14")
-  ) {
-    level = "POST_GRADUATE";
-  } else if (!oldAdmStudentPersonalDetails.uid?.startsWith("B")) {
-    level = "UNDER_GRADUATE";
-  }
+//     let level: "UNDER_GRADUATE" | "POST_GRADUATE" | undefined = "UNDER_GRADUATE";
+//     if (
+//         oldAdmStudentPersonalDetails.uid?.startsWith("11") ||
+//         oldAdmStudentPersonalDetails.uid?.startsWith("14")
+//     ) {
+//         level = "POST_GRADUATE";
+//     } else if (!oldAdmStudentPersonalDetails.uid?.startsWith("B")) {
+//         level = "UNDER_GRADUATE";
+//     }
 
-  // Determine the active and alumni status based on oldStudent data
-  // let active: boolean | undefined = !!oldAdmStudentPersonalDetails.active;
-  // let alumni: boolean | undefined = !!oldAdmStudentPersonalDetails.alumni;
+//     // Determine the active and alumni status based on oldStudent data
+//     // let active: boolean | undefined = !!oldAdmStudentPersonalDetails.active;
+//     // let alumni: boolean | undefined = !!oldAdmStudentPersonalDetails.alumni;
 
-  // if (oldStudent.leavingdate) {
-  //     active = false; // If leaving date is present, student has left
-  //     alumni = true;  // Mark as alumni
-  // } else if (!oldStudent.alumni && !oldStudent.active) {
-  //     active = false; // Dropped off
-  // } else if (oldStudent.alumni && !oldStudent.active) {
-  //     active = false; // Fully graduated and left
-  // } else if (!oldStudent.alumni && oldStudent.active) {
-  //     active = true; // Regular student
-  // } else if (oldStudent.alumni && oldStudent.active) {
-  //     active = true; // Graduated but has supplementary papers left
-  // }
+//     // if (oldStudent.leavingdate) {
+//     //     active = false; // If leaving date is present, student has left
+//     //     alumni = true;  // Mark as alumni
+//     // } else if (!oldStudent.alumni && !oldStudent.active) {
+//     //     active = false; // Dropped off
+//     // } else if (oldStudent.alumni && !oldStudent.active) {
+//     //     active = false; // Fully graduated and left
+//     // } else if (!oldStudent.alumni && oldStudent.active) {
+//     //     active = true; // Regular student
+//     // } else if (oldStudent.alumni && oldStudent.active) {
+//     //     active = true; // Graduated but has supplementary papers left
+//     // }
 
-  const [newStudent] = await db
-    .insert(studentModel)
-    .values({
-      userId: user.id as number,
-      uid: oldStudent.codeNumber
-        ? String(oldStudent.codeNumber)
-        : oldStudent.oldcodeNumber
-          ? String(oldStudent.oldcodeNumber)
-          : "",
-      programCourseId: programCourse.id as number,
-      legacyStudentId: oldStudent.id as number,
-      rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
-      registrationNumber: oldStudent.univregno
-        ? String(oldStudent.univregno)
-        : undefined,
-      rollNumber: oldStudent.univlstexmrollno
-        ? String(oldStudent.univlstexmrollno)
-        : undefined,
-      cuFormNumber: oldStudent.cuformno
-        ? String(oldStudent.cuformno)
-        : undefined,
-      classRollNumber: oldStudent.rollNumber
-        ? String(oldStudent.rollNumber)
-        : undefined,
-      apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
-      abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
-      apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
-      checkRepeat: !!oldStudent.chkrepeat,
-      shiftId: admCourseDetails.shiftId,
-      applicationId: applicationForm.id as number,
-      community:
-        oldStudent.communityid === 0 || oldStudent.communityid === null
-          ? null
-          : oldStudent.communityid === 1
-            ? "GUJARATI"
-            : "NON-GUJARATI",
-      handicapped: !!oldStudent.handicapped,
-      lastPassedYear: oldStudent.lspassedyr ?? undefined,
-      notes: oldStudent.notes ?? undefined,
-      active: !!oldStudent.active,
-      alumni: !!oldStudent.alumni,
+//     const [newStudent] = await db
+//         .insert(studentModel)
+//         .values({
+//             userId: user.id as number,
+//             uid: oldStudent.codeNumber
+//                 ? String(oldStudent.codeNumber)
+//                 : oldStudent.oldcodeNumber
+//                     ? String(oldStudent.oldcodeNumber)
+//                     : "",
+//             programCourseId: programCourse.id as number,
+//             legacyStudentId: oldStudent.id as number,
+//             rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
+//             registrationNumber: oldStudent.univregno
+//                 ? String(oldStudent.univregno)
+//                 : undefined,
+//             rollNumber: oldStudent.univlstexmrollno
+//                 ? String(oldStudent.univlstexmrollno)
+//                 : undefined,
+//             cuFormNumber: oldStudent.cuformno
+//                 ? String(oldStudent.cuformno)
+//                 : undefined,
+//             classRollNumber: oldStudent.rollNumber
+//                 ? String(oldStudent.rollNumber)
+//                 : undefined,
+//             apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+//             abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
+//             apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+//             checkRepeat: !!oldStudent.chkrepeat,
+//             shiftId: admCourseDetails.shiftId,
+//             applicationId: applicationForm.id as number,
+//             community:
+//                 oldStudent.communityid === 0 || oldStudent.communityid === null
+//                     ? null
+//                     : oldStudent.communityid === 1
+//                         ? "GUJARATI"
+//                         : "NON-GUJARATI",
+//             handicapped: !!oldStudent.handicapped,
+//             lastPassedYear: oldStudent.lspassedyr ?? undefined,
+//             notes: oldStudent.notes ?? undefined,
+//             active: !!oldStudent.active,
+//             alumni: !!oldStudent.alumni,
 
-      leavingDate: oldStudent.leavingdate
-        ? new Date(oldStudent.leavingdate)
-        : undefined,
-      leavingReason: oldStudent.leavingreason ?? undefined,
-    })
-    .returning();
+//             leavingDate: oldStudent.leavingdate
+//                 ? new Date(oldStudent.leavingdate)
+//                 : undefined,
+//             leavingReason: oldStudent.leavingreason ?? undefined,
+//         })
+//         .returning();
 
-  await db
-    .update(userModel)
-    .set({
-      name: `${oldStudent.name}`,
-    })
-    .where(eq(userModel.id, user.id as number));
+//     await db
+//         .update(userModel)
+//         .set({
+//             name: `${oldStudent.name}`,
+//         })
+//         .where(eq(userModel.id, user.id as number));
 
-  return newStudent;
-}
+//     return newStudent;
+// }
 
 export async function addAccommodation(
   placeOfStay: string,
   placeOfStayAddr: string,
   localityType: string,
   placeOfStayContactNo: string,
+  admissionGeneralInfoId: number,
 ) {
   switch (placeOfStay) {
     case "Own":
@@ -2094,6 +1980,7 @@ export async function addAccommodation(
         | "PAYING_GUEST"
         | "RELATIVES",
       // addressId: address.id
+      admissionGeneralInfoId,
     })
     .returning();
 
@@ -2311,6 +2198,7 @@ export async function addState(legacyStateId: number) {
       and(
         ilike(stateModel.name, oldState.stateName.trim()),
         eq(stateModel.countryId, country.id),
+        eq(stateModel.legacyStateId, legacyStateId),
       ),
     );
   if (existingState) {
@@ -2329,6 +2217,73 @@ export async function addState(legacyStateId: number) {
   return newState;
 }
 
+export async function addPostOffice(oldPostOfficeId: number) {
+  const [[oldPostOffice]] = (await mysqlConnection.query(`
+        SELECT * 
+        FROM postoffice
+        WHERE id = ${oldPostOfficeId};
+    `)) as [OldPostOffice[], any];
+
+  if (!oldPostOffice) {
+    return null;
+  }
+
+  const [existingPostOffice] = await db
+    .select()
+    .from(postOfficeModel)
+    .where(
+      and(
+        ilike(postOfficeModel.name, oldPostOffice.postoffice.trim()),
+        eq(postOfficeModel.legacyPostOfficeId, oldPostOffice.id),
+      ),
+    );
+  if (existingPostOffice) {
+    return existingPostOffice;
+  }
+
+  const state = await addState(oldPostOffice.stateid);
+  if (!state) {
+    return null;
+  }
+
+  const [newPostOffice] = await db
+    .insert(postOfficeModel)
+    .values({
+      legacyPostOfficeId: oldPostOffice.id,
+      name: oldPostOffice.postoffice.trim(),
+      stateId: state.id,
+    })
+    .returning();
+  return newPostOffice;
+}
+
+export async function addPoliceStation(oldPoliceStationId: number) {
+  const [[oldPoliceStation]] = (await mysqlConnection.query(`
+        SELECT * 
+        FROM policestation
+        WHERE id = ${oldPoliceStationId};
+    `)) as [OldPoliceStation[], any];
+
+  if (!oldPoliceStation) {
+    return null;
+  }
+
+  const state = await addState(oldPoliceStation.stateid);
+  if (!state) {
+    return null;
+  }
+
+  const [newPoliceStation] = await db
+    .insert(policeStationModel)
+    .values({
+      legacyPoliceStationId: oldPoliceStation.id,
+      name: oldPoliceStation.policestation.trim(),
+      stateId: state.id,
+    })
+    .returning();
+
+  return newPoliceStation;
+}
 export async function addCity(oldCityId: number) {
   console.log("oldCityId in addCity() ----->", oldCityId);
   if (isNaN(oldCityId)) {
@@ -2438,7 +2393,7 @@ export async function addDistrict(oldDistrictId: number) {
   return newDistrict;
 }
 
-async function categorizeIncome(income: string | null | undefined) {
+export async function categorizeIncome(income: string | null | undefined) {
   if (!income || income.trim() === "" || income === "0") {
     return undefined;
   }
@@ -2494,12 +2449,14 @@ async function categorizeIncome(income: string | null | undefined) {
   return undefined; // Default to lowest category
 }
 
-function isOldStudent(x: OldStudent | OldStaff): x is OldStudent {
+export function isOldStudent(x: OldStudent | OldStaff): x is OldStudent {
   return "transferred" in x;
 }
 
-async function addHealth(
+export async function upsertHealth(
   details: OldStudent | OldStaff | null | undefined,
+  userId?: number,
+  admissionGeneralInfoId?: number,
 ): Promise<Health | null> {
   if (!details) {
     console.warn(
@@ -2507,6 +2464,13 @@ async function addHealth(
     );
     return null;
   }
+
+  if (admissionGeneralInfoId && userId) {
+    throw new Error(
+      "Either of admissionGeneralInfoId or userId is required, not both!",
+    );
+  }
+
   let bloodGroup: BloodGroup | undefined;
 
   // Resolve blood group if legacy id present
@@ -2547,220 +2511,146 @@ async function addHealth(
   const spectaclesNotes = undefined as string | undefined;
   const hasSpectacles = false;
 
-  const [newHealth] = await db
-    .insert(healthModel)
-    .values({
-      bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
-      eyePowerLeft: isNaN(eyeLeft as number) ? undefined : eyeLeft,
-      eyePowerRight: isNaN(eyeRight as number) ? undefined : eyeRight,
-      height,
-      weight,
-      hasSpectacles,
-      spectaclesNotes,
-      identificationMark: isOldStudent(details)
-        ? details.identificationmark || undefined
-        : details.identificationMark || undefined,
-    } as Health)
-    .returning();
+  let existingHealth: Health | undefined = undefined;
+  if (userId) {
+    existingHealth = (
+      await db.select().from(healthModel).where(eq(healthModel.userId, userId))
+    )[0];
+  } else if (admissionGeneralInfoId) {
+    existingHealth = (
+      await db
+        .select()
+        .from(healthModel)
+        .where(eq(healthModel.admissionGeneralInfoId, admissionGeneralInfoId!))
+    )[0];
+  } else {
+    existingHealth = undefined;
+  }
 
-  return newHealth;
+  if (existingHealth) {
+    const [updatedHealth] = await db
+      .update(healthModel)
+      .set({
+        bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
+        eyePowerLeft: isNaN(eyeLeft as number) ? undefined : eyeLeft,
+        eyePowerRight: isNaN(eyeRight as number) ? undefined : eyeRight,
+        height,
+        weight,
+        hasSpectacles,
+        spectaclesNotes,
+        identificationMark: isOldStudent(details)
+          ? details.identificationmark || undefined
+          : details.identificationMark || undefined,
+      } as Health)
+      .where(eq(healthModel.id, existingHealth.id!))
+      .returning();
+    existingHealth = updatedHealth;
+  } else {
+    const [newHealth] = await db
+      .insert(healthModel)
+      .values({
+        admissionGeneralInfoId,
+        userId,
+        bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
+        eyePowerLeft: isNaN(eyeLeft as number) ? undefined : eyeLeft,
+        eyePowerRight: isNaN(eyeRight as number) ? undefined : eyeRight,
+        height,
+        weight,
+        hasSpectacles,
+        spectaclesNotes,
+        identificationMark: isOldStudent(details)
+          ? details.identificationmark || undefined
+          : details.identificationMark || undefined,
+      } as Health)
+      .returning();
+    existingHealth = newHealth;
+  }
+
+  return existingHealth;
 }
 
-async function addEmergencyContact(emergencyContact: EmergencyContact) {
-  const [newEmergencyContact] = await db
-    .insert(emergencyContactModel)
-    .values({
-      personName: emergencyContact.personName?.trim(),
-      havingRelationAs: emergencyContact.havingRelationAs?.trim(),
-      email: emergencyContact.email?.trim()?.toLowerCase(),
-      phone: emergencyContact.phone?.trim(),
-      officePhone: emergencyContact.officePhone?.trim(),
-      residentialPhone: emergencyContact.residentialPhone?.trim(),
-    })
-    .returning();
-
-  return newEmergencyContact;
-}
-
-async function addPersonalDetails(
-  oldDetails: OldAdmStudentPersonalDetail | OldStaff,
+export async function upsertEmergencyContact(
+  emergencyContact: EmergencyContact,
+  userId?: number,
+  admissionGeneralInfoId?: number,
 ) {
-  const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff =>
-    "isTeacher" in d;
-  const isAdmStudent = (
-    d: OldAdmStudentPersonalDetail | OldStaff,
-  ): d is OldAdmStudentPersonalDetail => "applevel" in d;
+  if (userId && admissionGeneralInfoId) {
+    throw new Error(
+      "Either of userId or admissionGeneralInfoId is required, not both!",
+    );
+  }
 
+  let existingEmergencyContact: EmergencyContact | undefined = undefined;
+  if (userId) {
+    existingEmergencyContact = (
+      await db
+        .select()
+        .from(emergencyContactModel)
+        .where(eq(emergencyContactModel.userId, userId))
+    )[0];
+  } else {
+    existingEmergencyContact = (
+      await db
+        .select()
+        .from(emergencyContactModel)
+        .where(
+          eq(
+            emergencyContactModel.admissionGeneralInfoId,
+            admissionGeneralInfoId!,
+          ),
+        )
+    )[0];
+  }
+
+  if (existingEmergencyContact) {
+    const [updatedEmergencyContact] = await db
+      .update(emergencyContactModel)
+      .set({
+        personName: emergencyContact.personName?.trim(),
+        havingRelationAs: emergencyContact.havingRelationAs?.trim(),
+        email: emergencyContact.email?.trim()?.toLowerCase(),
+        phone: emergencyContact.phone?.trim(),
+        officePhone: emergencyContact.officePhone?.trim(),
+        residentialPhone: emergencyContact.residentialPhone?.trim(),
+      })
+      .where(eq(emergencyContactModel.id, existingEmergencyContact.id!))
+      .returning();
+    existingEmergencyContact = updatedEmergencyContact;
+  } else {
+    const [newEmergencyContact] = await db
+      .insert(emergencyContactModel)
+      .values({
+        admissionGeneralInfoId,
+        userId,
+        personName: emergencyContact.personName?.trim(),
+        havingRelationAs: emergencyContact.havingRelationAs?.trim(),
+        email: emergencyContact.email?.trim()?.toLowerCase(),
+        phone: emergencyContact.phone?.trim(),
+        officePhone: emergencyContact.officePhone?.trim(),
+        residentialPhone: emergencyContact.residentialPhone?.trim(),
+      })
+      .returning();
+    existingEmergencyContact = newEmergencyContact;
+  }
+
+  return existingEmergencyContact;
+}
+
+export async function upsertPersonalDetails(
+  oldDetails: OldAdmStudentPersonalDetail | OldStaff,
+  userId?: number,
+  admissionGeneralInfoId?: number,
+) {
   if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
     throw new Error("Invalid old details type");
   }
-
-  // Prepare address inputs per type
-  const mailingAddressLine = isStaff(oldDetails)
-    ? oldDetails.mailingAddress
-    : oldDetails.mailingAddress;
-  const mailingPin = isStaff(oldDetails)
-    ? oldDetails.mailingPinNo
-    : oldDetails.mailingPinNo;
-  const mailingCountryLegacy = isStaff(oldDetails)
-    ? (oldDetails.mcountryid ?? null)
-    : (oldDetails.newcountryId ?? oldDetails.countryId ?? null);
-  const mailingStateLegacy = isStaff(oldDetails)
-    ? (oldDetails.mstateid ?? null)
-    : (oldDetails.newstateId ?? null);
-  const mailingCityLegacy = isStaff(oldDetails)
-    ? (oldDetails.mcityid ?? null)
-    : (oldDetails.newcityId ?? null);
-  const mailingDistrictLegacy = isStaff(oldDetails)
-    ? null
-    : (oldDetails.newDistrictId ?? null);
-  const mailingOtherState = isStaff(oldDetails)
-    ? (oldDetails.mothstate ?? null)
-    : (oldDetails.othernewState ?? oldDetails.otherState ?? null);
-  const mailingOtherCity = isStaff(oldDetails)
-    ? (oldDetails.mothcity ?? null)
-    : (oldDetails.othernewCity ?? oldDetails.otherCity ?? null);
-  const mailingPostOfficeId = isStaff(oldDetails)
-    ? null
-    : (oldDetails.newpostofficeid ?? null);
-  const mailingOtherPostOffice = isStaff(oldDetails)
-    ? null
-    : (oldDetails.othernewpostoffice ?? null);
-  const mailingPoliceStationId = isStaff(oldDetails)
-    ? null
-    : (oldDetails.newpolicestationid ?? null);
-  const mailingOtherPoliceStation = isStaff(oldDetails)
-    ? null
-    : (oldDetails.othernewpolicestation ?? null);
-
-  const residentialAddressLine = isStaff(oldDetails)
-    ? oldDetails.residentialAddress
-    : oldDetails.parmanentAddress;
-  const resiPin = isStaff(oldDetails)
-    ? oldDetails.resiPinNo
-    : oldDetails.resiPinNo;
-  const resiPhone = isStaff(oldDetails)
-    ? oldDetails.resiPhoneMobileNo
-    : oldDetails.studentPersonalContactNo ||
-      oldDetails.studentcontactNo ||
-      oldDetails.contactNo ||
-      null;
-  const resiCountryLegacy = isStaff(oldDetails)
-    ? (oldDetails.rcountryid ?? null)
-    : (oldDetails.countryId ?? null);
-  const resiStateLegacy = isStaff(oldDetails)
-    ? (oldDetails.rstateid ?? null)
-    : (oldDetails.resiStateId ?? null);
-  const resiCityLegacy = isStaff(oldDetails)
-    ? (oldDetails.rcityid ?? null)
-    : (oldDetails.cityId ?? null);
-  const resiDistrictLegacy = isStaff(oldDetails)
-    ? null
-    : (oldDetails.resiDistrictId ?? null);
-  const resiOtherState = isStaff(oldDetails)
-    ? (oldDetails.rothstate ?? null)
-    : (oldDetails.otherState ?? null);
-  const resiOtherCity = isStaff(oldDetails)
-    ? (oldDetails.rothcity ?? null)
-    : (oldDetails.otherCity ?? null);
-  const resiOtherDistrict = isStaff(oldDetails)
-    ? null
-    : (oldDetails.otherresiDistrict ?? null);
-  const resiPostOfficeId = isStaff(oldDetails)
-    ? null
-    : (oldDetails.resipostofficeid ?? null);
-  const resiOtherPostOffice = isStaff(oldDetails)
-    ? null
-    : (oldDetails.otherresipostoffice ?? null);
-  const resiPoliceStationId = isStaff(oldDetails)
-    ? null
-    : (oldDetails.resipolicestationid ?? null);
-  const resiOtherPoliceStation = isStaff(oldDetails)
-    ? null
-    : (oldDetails.otherresipolicestation ?? null);
-
-  let mailingAddress: Address | undefined;
-  if (
-    mailingAddressLine ||
-    mailingPin ||
-    mailingCountryLegacy ||
-    mailingStateLegacy ||
-    mailingCityLegacy ||
-    mailingDistrictLegacy
-  ) {
-    const stateResolved = mailingStateLegacy
-      ? await addState(mailingStateLegacy)
-      : null;
-    const cityResolved = mailingCityLegacy
-      ? await addCity(mailingCityLegacy)
-      : null;
-    const districtResolved = mailingDistrictLegacy
-      ? await addDistrict(mailingDistrictLegacy)
-      : null;
-    const [address] = await db
-      .insert(addressModel)
-      .values({
-        countryId: mailingCountryLegacy || undefined,
-        stateId: stateResolved?.id || undefined,
-        cityId: cityResolved?.id || undefined,
-        districtId: districtResolved?.id || undefined,
-        otherState: mailingOtherState || undefined,
-        otherCity: mailingOtherCity || undefined,
-        otherDistrict: isAdmStudent(oldDetails)
-          ? ((oldDetails.othernewDistrict || undefined) as string | undefined)
-          : undefined,
-        postofficeId: mailingPostOfficeId || undefined,
-        otherPostoffice: mailingOtherPostOffice || undefined,
-        policeStationId: mailingPoliceStationId || undefined,
-        otherPoliceStation: mailingOtherPoliceStation || undefined,
-        addressLine: mailingAddressLine?.trim(),
-        pincode: mailingPin?.trim(),
-        localityType: null,
-      })
-      .returning();
-    mailingAddress = address;
+  if (isStaff(oldDetails) && !userId) {
+    throw new Error("userId is required for OldStaff");
   }
-
-  let residentialAddress: Address | undefined;
-  if (
-    residentialAddressLine ||
-    resiPin ||
-    resiPhone ||
-    resiCountryLegacy ||
-    resiStateLegacy ||
-    resiCityLegacy ||
-    resiDistrictLegacy
-  ) {
-    const stateResolved = resiStateLegacy
-      ? await addState(resiStateLegacy)
-      : null;
-    const cityResolved = resiCityLegacy ? await addCity(resiCityLegacy) : null;
-    const districtResolved = resiDistrictLegacy
-      ? await addDistrict(resiDistrictLegacy)
-      : null;
-    const [address] = await db
-      .insert(addressModel)
-      .values({
-        countryId: resiCountryLegacy || undefined,
-        stateId: stateResolved?.id || undefined,
-        cityId: cityResolved?.id || undefined,
-        districtId: districtResolved?.id || undefined,
-        otherDistrict: isAdmStudent(oldDetails)
-          ? ((oldDetails.otherresiDistrict || undefined) as string | undefined)
-          : undefined,
-        otherState: resiOtherState || undefined,
-        otherCity: resiOtherCity || undefined,
-        postofficeId: resiPostOfficeId || undefined,
-        otherPostoffice: resiOtherPostOffice || undefined,
-        policeStationId: resiPoliceStationId || undefined,
-        otherPoliceStation: resiOtherPoliceStation || undefined,
-        addressLine: residentialAddressLine?.trim(),
-        phone: resiPhone?.trim() || undefined,
-        pincode: resiPin?.trim(),
-        localityType: null,
-      })
-      .returning();
-    residentialAddress = address;
+  if (isAdmStudent(oldDetails) && !admissionGeneralInfoId) {
+    throw new Error(
+      "admissionGeneralInfoId is required for OldAdmStudentPersonalDetail",
+    );
   }
 
   // Core personal details
@@ -2826,8 +2716,10 @@ async function addPersonalDetails(
   const whatsappNumber = isStaff(oldDetails)
     ? undefined
     : oldDetails.whatsappno || undefined;
-  const emergencyContactNumber = isStaff(oldDetails)
-    ? undefined
+  const emergencyResidentialNumber = isStaff(oldDetails)
+    ? oldDetails.emergencytelmobile ||
+      oldDetails.emergencytellandno ||
+      undefined
     : oldDetails.emergencycontactno || undefined;
   const isGujarati = isStaff(oldDetails)
     ? false
@@ -2937,51 +2829,378 @@ async function addPersonalDetails(
     }
   }
 
-  const [newPersonalDetails] = await db
-    .insert(personalDetailsModel)
-    .values({
-      firstName,
-      middleName: isStaff(oldDetails)
-        ? undefined
-        : ((oldDetails.middleName || undefined) as string | undefined),
-      lastName: isStaff(oldDetails)
-        ? undefined
-        : ((oldDetails.lastName || undefined) as string | undefined),
-      mobileNumber: mobileNumber?.toString(),
-      whatsappNumber: whatsappNumber as string | undefined,
-      emergencyContactNumber: emergencyContactNumber as string | undefined,
-      // Store as YYYY-MM-DD string to prevent off-by-one due to timezone
-      dateOfBirth: dateOfBirthISO as unknown as string | null | undefined,
-      placeOfBirth: placeOfBirth as string | undefined,
-      gender: gender as any,
-      voterId: voterId as string | undefined,
-      passportNumber: passportNumber as string | undefined,
-      aadhaarCardNumber: aadhaar || undefined,
-      nationalityId,
-      otherNationality:
-        "othernationality" in oldDetails && oldDetails.othernationality
-          ? oldDetails.othernationality
-          : undefined,
-      religionId,
-      categoryId,
-      motherTongueId,
-      maritalStatus: maritalStatus as any,
-      isGujarati: isGujarati || false,
-      mailingAddressId: mailingAddress
-        ? (mailingAddress.id as number)
-        : undefined,
-      residentialAddressId: residentialAddress
-        ? (residentialAddress.id as number)
-        : undefined,
-    })
-    .returning();
+  let existingPersonalDetails: PersonalDetails | undefined;
+  if (isAdmStudent(oldDetails)) {
+    existingPersonalDetails = (
+      await db
+        .select()
+        .from(personalDetailsModel)
+        .where(
+          eq(
+            personalDetailsModel.admissionGeneralInfoId,
+            admissionGeneralInfoId!,
+          ),
+        )
+    )[0];
+  } else {
+    existingPersonalDetails = (
+      await db
+        .select()
+        .from(personalDetailsModel)
+        .where(eq(personalDetailsModel.userId, userId!))
+    )[0];
+  }
 
-  return newPersonalDetails;
+  if (existingPersonalDetails) {
+    const [updatedPersonalDetails] = await db
+      .update(personalDetailsModel)
+      .set({
+        firstName,
+        middleName: isStaff(oldDetails)
+          ? undefined
+          : ((oldDetails.middleName || undefined) as string | undefined),
+        lastName: isStaff(oldDetails)
+          ? undefined
+          : ((oldDetails.lastName || undefined) as string | undefined),
+        mobileNumber: mobileNumber?.toString(),
+        whatsappNumber: whatsappNumber as string | undefined,
+        emergencyResidentialNumber,
+        // Store as YYYY-MM-DD string to prevent off-by-one due to timezone
+        dateOfBirth: dateOfBirthISO as unknown as string | null | undefined,
+        placeOfBirth: placeOfBirth as string | undefined,
+        gender: gender as any,
+        voterId: voterId as string | undefined,
+        passportNumber: passportNumber as string | undefined,
+        aadhaarCardNumber: aadhaar || undefined,
+        nationalityId,
+        otherNationality:
+          "othernationality" in oldDetails && oldDetails.othernationality
+            ? oldDetails.othernationality
+            : undefined,
+        religionId,
+        categoryId,
+        motherTongueId,
+        maritalStatus: maritalStatus as any,
+        isGujarati: isGujarati || false,
+        // mailingAddressId: mailingAddress
+        //     ? (mailingAddress.id as number)
+        //     : undefined,
+        // residentialAddressId: residentialAddress
+        //     ? (residentialAddress.id as number)
+        //     : undefined,
+      })
+      .where(eq(personalDetailsModel.id, existingPersonalDetails.id!))
+      .returning();
+
+    await upsertPersonalDetailsAddress(oldDetails, updatedPersonalDetails.id);
+    return updatedPersonalDetails;
+  } else {
+    const [newPersonalDetails] = await db
+      .insert(personalDetailsModel)
+      .values({
+        admissionGeneralInfoId: isAdmStudent(oldDetails)
+          ? admissionGeneralInfoId
+          : undefined,
+        userId: isStaff(oldDetails) ? userId : undefined,
+
+        firstName,
+        middleName: isStaff(oldDetails)
+          ? undefined
+          : ((oldDetails.middleName || undefined) as string | undefined),
+        lastName: isStaff(oldDetails)
+          ? undefined
+          : ((oldDetails.lastName || undefined) as string | undefined),
+        mobileNumber: mobileNumber?.toString(),
+        whatsappNumber: whatsappNumber as string | undefined,
+        emergencyResidentialNumber,
+        // Store as YYYY-MM-DD string to prevent off-by-one due to timezone
+        dateOfBirth: dateOfBirthISO as unknown as string | null | undefined,
+        placeOfBirth: placeOfBirth as string | undefined,
+        gender: gender as any,
+        voterId: voterId as string | undefined,
+        passportNumber: passportNumber as string | undefined,
+        aadhaarCardNumber: aadhaar || undefined,
+        nationalityId,
+        otherNationality:
+          "othernationality" in oldDetails && oldDetails.othernationality
+            ? oldDetails.othernationality
+            : undefined,
+        religionId,
+        categoryId,
+        motherTongueId,
+        maritalStatus: maritalStatus as any,
+        isGujarati: isGujarati || false,
+        // mailingAddressId: mailingAddress
+        //     ? (mailingAddress.id as number)
+        //     : undefined,
+        // residentialAddressId: residentialAddress
+        //     ? (residentialAddress.id as number)
+        //     : undefined,
+      })
+      .returning();
+    await upsertPersonalDetailsAddress(oldDetails, newPersonalDetails.id);
+    return newPersonalDetails;
+  }
+}
+
+async function upsertPersonalDetailsAddress(
+  oldDetails: OldAdmStudentPersonalDetail | OldStaff,
+  personalDetailsId: number,
+) {
+  // Prepare address inputs per type
+  const mailingAddressLine = isStaff(oldDetails)
+    ? oldDetails.mailingAddress
+    : oldDetails.mailingAddress;
+  const mailingPin = isStaff(oldDetails)
+    ? oldDetails.mailingPinNo
+    : oldDetails.mailingPinNo;
+  const mailingCountryLegacy = isStaff(oldDetails)
+    ? (oldDetails.mcountryid ?? null)
+    : (oldDetails.newcountryId ?? oldDetails.countryId ?? null);
+  const mailingStateLegacy = isStaff(oldDetails)
+    ? (oldDetails.mstateid ?? null)
+    : (oldDetails.newstateId ?? null);
+  const mailingCityLegacy = isStaff(oldDetails)
+    ? (oldDetails.mcityid ?? null)
+    : (oldDetails.newcityId ?? null);
+  const mailingDistrictLegacy = isStaff(oldDetails)
+    ? null
+    : (oldDetails.newDistrictId ?? null);
+  const mailingOtherState = isStaff(oldDetails)
+    ? (oldDetails.mothstate ?? null)
+    : (oldDetails.othernewState ?? oldDetails.otherState ?? null);
+  const mailingOtherCity = isStaff(oldDetails)
+    ? (oldDetails.mothcity ?? null)
+    : (oldDetails.othernewCity ?? oldDetails.otherCity ?? null);
+  const mailingPostOfficeId = isStaff(oldDetails)
+    ? null
+    : (oldDetails.newpostofficeid ?? null);
+  const mailingOtherPostOffice = isStaff(oldDetails)
+    ? null
+    : (oldDetails.othernewpostoffice ?? null);
+  const mailingPoliceStationId = isStaff(oldDetails)
+    ? null
+    : (oldDetails.newpolicestationid ?? null);
+  const mailingOtherPoliceStation = isStaff(oldDetails)
+    ? null
+    : (oldDetails.othernewpolicestation ?? null);
+
+  const residentialAddressLine = isStaff(oldDetails)
+    ? oldDetails.residentialAddress
+    : oldDetails.parmanentAddress;
+  const resiPin = isStaff(oldDetails)
+    ? oldDetails.resiPinNo
+    : oldDetails.resiPinNo;
+  const resiPhone = isStaff(oldDetails)
+    ? oldDetails.resiPhoneMobileNo
+    : oldDetails.studentPersonalContactNo ||
+      oldDetails.studentcontactNo ||
+      oldDetails.contactNo ||
+      null;
+  const resiCountryLegacy = isStaff(oldDetails)
+    ? (oldDetails.rcountryid ?? null)
+    : (oldDetails.countryId ?? null);
+  const resiStateLegacy = isStaff(oldDetails)
+    ? (oldDetails.rstateid ?? null)
+    : (oldDetails.resiStateId ?? null);
+  const resiCityLegacy = isStaff(oldDetails)
+    ? (oldDetails.rcityid ?? null)
+    : (oldDetails.cityId ?? null);
+  const resiDistrictLegacy = isStaff(oldDetails)
+    ? null
+    : (oldDetails.resiDistrictId ?? null);
+  const resiOtherState = isStaff(oldDetails)
+    ? (oldDetails.rothstate ?? null)
+    : (oldDetails.otherState ?? null);
+  const resiOtherCity = isStaff(oldDetails)
+    ? (oldDetails.rothcity ?? null)
+    : (oldDetails.otherCity ?? null);
+  const resiOtherDistrict = isStaff(oldDetails)
+    ? null
+    : (oldDetails.otherresiDistrict ?? null);
+  const resiPostOfficeId = isStaff(oldDetails)
+    ? null
+    : (oldDetails.resipostofficeid ?? null);
+  const resiOtherPostOffice = isStaff(oldDetails)
+    ? null
+    : (oldDetails.otherresipostoffice ?? null);
+  const resiPoliceStationId = isStaff(oldDetails)
+    ? null
+    : (oldDetails.resipolicestationid ?? null);
+  const resiOtherPoliceStation = isStaff(oldDetails)
+    ? null
+    : (oldDetails.otherresipolicestation ?? null);
+
+  let mailingAddress: Address | undefined;
+  if (
+    mailingAddressLine ||
+    mailingPin ||
+    mailingCountryLegacy ||
+    mailingStateLegacy ||
+    mailingCityLegacy ||
+    mailingDistrictLegacy
+  ) {
+    const stateResolved = mailingStateLegacy
+      ? await addState(mailingStateLegacy)
+      : null;
+    const cityResolved = mailingCityLegacy
+      ? await addCity(mailingCityLegacy)
+      : null;
+    const districtResolved = mailingDistrictLegacy
+      ? await addDistrict(mailingDistrictLegacy)
+      : null;
+
+    const [existingAddress] = await db
+      .select()
+      .from(addressModel)
+      .where(
+        and(
+          eq(addressModel.type, "MAILING"),
+          eq(addressModel.personalDetailsId, personalDetailsId),
+        ),
+      );
+    if (existingAddress) {
+      const [updatedAddress] = await db
+        .update(addressModel)
+        .set({
+          countryId: mailingCountryLegacy || undefined,
+          stateId: stateResolved?.id || undefined,
+          cityId: cityResolved?.id || undefined,
+          districtId: districtResolved?.id || undefined,
+          otherState: mailingOtherState || undefined,
+          otherCity: mailingOtherCity || undefined,
+          otherDistrict: isAdmStudent(oldDetails)
+            ? ((oldDetails.othernewDistrict || undefined) as string | undefined)
+            : undefined,
+          postofficeId: mailingPostOfficeId || undefined,
+          otherPostoffice: mailingOtherPostOffice || undefined,
+          policeStationId: mailingPoliceStationId || undefined,
+          otherPoliceStation: mailingOtherPoliceStation || undefined,
+          addressLine: mailingAddressLine?.trim(),
+          pincode: mailingPin?.trim(),
+          localityType: null,
+        })
+        .where(eq(addressModel.id, existingAddress.id))
+        .returning();
+      mailingAddress = updatedAddress;
+    } else {
+      const [address] = await db
+        .insert(addressModel)
+        .values({
+          personalDetailsId,
+          countryId: mailingCountryLegacy || undefined,
+          stateId: stateResolved?.id || undefined,
+          cityId: cityResolved?.id || undefined,
+          districtId: districtResolved?.id || undefined,
+          otherState: mailingOtherState || undefined,
+          otherCity: mailingOtherCity || undefined,
+          otherDistrict: isAdmStudent(oldDetails)
+            ? ((oldDetails.othernewDistrict || undefined) as string | undefined)
+            : undefined,
+          postofficeId: mailingPostOfficeId || undefined,
+          otherPostoffice: mailingOtherPostOffice || undefined,
+          policeStationId: mailingPoliceStationId || undefined,
+          otherPoliceStation: mailingOtherPoliceStation || undefined,
+          addressLine: mailingAddressLine?.trim(),
+          pincode: mailingPin?.trim(),
+          localityType: null,
+        })
+        .returning();
+      mailingAddress = address;
+    }
+  }
+
+  let residentialAddress: Address | undefined;
+  if (
+    residentialAddressLine ||
+    resiPin ||
+    resiPhone ||
+    resiCountryLegacy ||
+    resiStateLegacy ||
+    resiCityLegacy ||
+    resiDistrictLegacy
+  ) {
+    const stateResolved = resiStateLegacy
+      ? await addState(resiStateLegacy)
+      : null;
+    const cityResolved = resiCityLegacy ? await addCity(resiCityLegacy) : null;
+    const districtResolved = resiDistrictLegacy
+      ? await addDistrict(resiDistrictLegacy)
+      : null;
+
+    const [existingAddress] = await db
+      .select()
+      .from(addressModel)
+      .where(
+        and(
+          eq(addressModel.type, "RESIDENTIAL"),
+          eq(addressModel.personalDetailsId, personalDetailsId),
+        ),
+      );
+    if (existingAddress) {
+      const [updatedAddress] = await db
+        .update(addressModel)
+        .set({
+          countryId: resiCountryLegacy || undefined,
+          stateId: stateResolved?.id || undefined,
+          cityId: cityResolved?.id || undefined,
+          districtId: districtResolved?.id || undefined,
+          otherDistrict: isAdmStudent(oldDetails)
+            ? ((oldDetails.otherresiDistrict || undefined) as
+                | string
+                | undefined)
+            : undefined,
+          otherState: resiOtherState || undefined,
+          otherCity: resiOtherCity || undefined,
+          postofficeId: resiPostOfficeId || undefined,
+          otherPostoffice: resiOtherPostOffice || undefined,
+          policeStationId: resiPoliceStationId || undefined,
+          otherPoliceStation: resiOtherPoliceStation || undefined,
+          addressLine: residentialAddressLine?.trim(),
+          phone: resiPhone?.trim() || undefined,
+          pincode: resiPin?.trim(),
+          localityType: null,
+        })
+        .where(eq(addressModel.id, existingAddress.id))
+        .returning();
+      residentialAddress = updatedAddress;
+    } else {
+      const [address] = await db
+        .insert(addressModel)
+        .values({
+          type: "RESIDENTIAL",
+          personalDetailsId,
+          countryId: resiCountryLegacy || undefined,
+          stateId: stateResolved?.id || undefined,
+          cityId: cityResolved?.id || undefined,
+          districtId: districtResolved?.id || undefined,
+          otherDistrict: isAdmStudent(oldDetails)
+            ? ((oldDetails.otherresiDistrict || undefined) as
+                | string
+                | undefined)
+            : undefined,
+          otherState: resiOtherState || undefined,
+          otherCity: resiOtherCity || undefined,
+          postofficeId: resiPostOfficeId || undefined,
+          otherPostoffice: resiOtherPostOffice || undefined,
+          policeStationId: resiPoliceStationId || undefined,
+          otherPoliceStation: resiOtherPoliceStation || undefined,
+          addressLine: residentialAddressLine?.trim(),
+          phone: resiPhone?.trim() || undefined,
+          pincode: resiPin?.trim(),
+          localityType: null,
+        })
+        .returning();
+      residentialAddress = address;
+    }
+  }
+
+  return { mailingAddress, residentialAddress };
 }
 
 // Board/Result/Transport helpers are handled in controllers or other services in the new schema
 
-async function processOldCourseDetails(
+export async function processOldCourseDetails(
   courseDetails: OldCourseDetails,
   applicationForm: ApplicationForm,
 ) {
@@ -2996,17 +3215,20 @@ async function processOldCourseDetails(
     any,
   ];
 
-  // const [existingAdmOldCourseDetails] = await db
-  //     .select()
-  //     .from(admissionCourseDetailsModel)
-  //     .where(
-  //         eq(
-  //             admissionCourseDetailsModel.applicationFormId,
-  //             applicationForm.id as number,
-  //         ),
-  //     );
+  const [existingAdmOldCourseDetails] = await db
+    .select()
+    .from(admissionCourseDetailsModel)
+    .where(
+      and(
+        eq(
+          admissionCourseDetailsModel.applicationFormId,
+          applicationForm.id as number,
+        ),
+        eq(admissionCourseDetailsModel.legacyCourseDetailsId, courseDetails.id),
+      ),
+    );
 
-  // if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
+  if (existingAdmOldCourseDetails) return existingAdmOldCourseDetails;
 
   // const course = await addCourse(courseDetails.courseid);
 
@@ -3020,7 +3242,7 @@ async function processOldCourseDetails(
     courseDetails.studentCategoryId,
   );
 
-  const shift = await addShift(courseDetails.shiftid);
+  const shift = await upsertShift(courseDetails.shiftid);
 
   const meritList = await addMeritList(courseDetails.meritlistid);
 
@@ -3095,7 +3317,6 @@ async function processOldCourseDetails(
   //     }
   // }
 
-  let programCourseName = oldCourse.courseName!.trim();
   console.log("oldCourse.courseName", oldCourse);
 
   const [programCourse] = await db
@@ -3149,7 +3370,7 @@ async function processOldCourseDetails(
     const [[oldStaff]] = (await mysqlConnection.query(
       `SELECT * FROM staffpersonaldetails WHERE id = ${courseDetails.canceluserid}`,
     )) as [OldStaff[], any];
-    cancelByUser = await addUser(oldStaff, "STAFF");
+    cancelByUser = await upsertUser(oldStaff, "STAFF");
   }
 
   let cancelSource: CancelSource | undefined;
@@ -3189,7 +3410,7 @@ async function processOldCourseDetails(
     const [[oldStaff]] = (await mysqlConnection.query(
       `SELECT * FROM staffpersonaldetails WHERE id = ${courseDetails.freeshipappby}`,
     )) as [OldStaff[], any];
-    freeshipApprovedBy = await addUser(oldStaff, "STAFF");
+    freeshipApprovedBy = await upsertUser(oldStaff, "STAFF");
   }
 
   let verifiedBy: User | undefined;
@@ -3197,7 +3418,7 @@ async function processOldCourseDetails(
     const [[oldStaff]] = (await mysqlConnection.query(
       `SELECT * FROM staffpersonaldetails WHERE id = ${courseDetails.verifiedby}`,
     )) as [OldStaff[], any];
-    verifiedBy = await addUser(oldStaff, "STAFF");
+    verifiedBy = await upsertUser(oldStaff, "STAFF");
   }
 
   let meritListBy: User | undefined;
@@ -3205,7 +3426,7 @@ async function processOldCourseDetails(
     const [[oldStaff]] = (await mysqlConnection.query(
       `SELECT * FROM staffpersonaldetails WHERE id = ${courseDetails.meritlistby}`,
     )) as [OldStaff[], any];
-    meritListBy = await addUser(oldStaff, "STAFF");
+    meritListBy = await upsertUser(oldStaff, "STAFF");
   }
 
   // Ensure required foreign keys are present
@@ -3222,6 +3443,7 @@ async function processOldCourseDetails(
   const insertValues: AdmissionCourseDetailsT = {
     applicationFormId: applicationForm.id as number,
     legacyCourseDetailsId: courseDetails.id,
+
     isTransferred: !!courseDetails.transferred,
     admissionProgramCourseId: existingAdmissionProgramCourse.id!,
     streamId: programCourse.streamId!,
@@ -3416,12 +3638,11 @@ async function processOldCourseDetails(
   return newAdmissionCourseDetails;
 }
 
-async function getSubjectRelatedFields(
+export async function getSubjectRelatedFields(
   courseDetails: OldCourseDetails,
-  newAdmissionCourseDetails: AdmissionCourseDetails,
+  transferredAdmCourseDetails: AdmissionCourseDetails,
   academicYear: AcademicYear,
   studentId: number,
-  oldBoardId: number,
 ) {
   const [admissionProgramCourse] = await db
     .select()
@@ -3429,7 +3650,7 @@ async function getSubjectRelatedFields(
     .where(
       eq(
         admissionProgramCourseModel.id,
-        newAdmissionCourseDetails.admissionProgramCourseId as number,
+        transferredAdmCourseDetails.admissionProgramCourseId as number,
       ),
     );
 
@@ -3490,14 +3711,6 @@ async function getSubjectRelatedFields(
     .where(ilike(regulationTypeModel.shortName, "CCF"));
 
   if (!foundRegulationType) {
-    // const newRegulationType = await db
-    //     .insert(regulationTypeModel)
-    //     .values({
-    //         name: "CCF",
-    //         shortName: "CCF",
-    //     })
-    //     .returning();
-    // foundRegulationType = newRegulationType[0];
     throw new Error("Regulation Type not found...!");
   }
 
@@ -3549,13 +3762,13 @@ async function getSubjectRelatedFields(
     await addAdmSubjectPaperSelection(
       oldCvSubjectSelection,
       studentId,
-      newAdmissionCourseDetails.id!,
+      transferredAdmCourseDetails.id!,
       foundPaper.id,
     );
   }
 }
 
-async function findPaper(
+export async function findPaper(
   oldCvSubjectSelection: OldCvSubjectSelection,
   foundAffiliation: Affiliation,
   foundClass: Class,
@@ -3692,7 +3905,7 @@ async function findPaper(
 //     return newProgramCourse[0];
 // }
 
-async function addStudentCategory(oldStudentCategoryId: number | null) {
+export async function addStudentCategory(oldStudentCategoryId: number | null) {
   if (!oldStudentCategoryId) return null;
 
   const [[studentCategoryRow]] = (await mysqlConnection.query(
@@ -3731,7 +3944,7 @@ async function addStudentCategory(oldStudentCategoryId: number | null) {
   )[0];
 }
 
-async function addClass(oldClassId: number | null) {
+export async function addClass(oldClassId: number | null) {
   if (!oldClassId) return null;
 
   const [[classRow]] = (await mysqlConnection.query(
@@ -3758,7 +3971,7 @@ async function addClass(oldClassId: number | null) {
   //   )[0];
 }
 
-async function addStream(stream: Stream) {
+export async function addStream(stream: Stream) {
   const [foundStream] = await db
     .select()
     .from(streamModel)
@@ -3769,7 +3982,7 @@ async function addStream(stream: Stream) {
   return (await db.insert(streamModel).values(stream).returning())[0];
 }
 
-async function addCourse(oldCourseId: number | null) {
+export async function addCourse(oldCourseId: number | null) {
   if (!oldCourseId) return null;
   const [[courseRow]] = (await mysqlConnection.query(
     `SELECT * FROM course WHERE id = ${oldCourseId}`,
@@ -3810,7 +4023,7 @@ async function addCourse(oldCourseId: number | null) {
   //   )[0];
 }
 
-async function addEligibilityCriteria(oldEligibilityId: number | null) {
+export async function addEligibilityCriteria(oldEligibilityId: number | null) {
   if (!oldEligibilityId) return null;
   const [[eligibilityRow]] = (await mysqlConnection.query(
     `SELECT * FROM eligibilitycriteria WHERE id = ${oldEligibilityId}`,
@@ -3846,7 +4059,7 @@ async function addEligibilityCriteria(oldEligibilityId: number | null) {
   )[0];
 }
 
-async function addShift(oldShiftId: number | null) {
+export async function upsertShift(oldShiftId: number | null) {
   if (!oldShiftId) return null;
 
   const [[shiftRow]] = (await mysqlConnection.query(
@@ -3860,7 +4073,18 @@ async function addShift(oldShiftId: number | null) {
     .from(shiftModel)
     .where(ilike(shiftModel.name, shiftRow.shiftName.trim()));
 
-  if (foundShift) return foundShift;
+  if (foundShift) {
+    const [updatedShift] = await db
+      .update(shiftModel)
+      .set({
+        name: shiftRow.shiftName.trim(),
+        codePrefix: shiftRow.codeprefix?.trim(),
+      })
+      .where(eq(shiftModel.id, foundShift.id as number))
+      .returning();
+
+    return updatedShift;
+  }
 
   return (
     await db
@@ -3874,7 +4098,7 @@ async function addShift(oldShiftId: number | null) {
   )[0];
 }
 
-async function addMeritList(oldMeritListId: number | null) {
+export async function addMeritList(oldMeritListId: number | null) {
   if (!oldMeritListId) return null;
 
   const [[meritListRow]] = (await mysqlConnection.query(
@@ -3903,7 +4127,7 @@ async function addMeritList(oldMeritListId: number | null) {
   )[0];
 }
 
-async function addBank(oldBankId: number | null) {
+export async function addBank(oldBankId: number | null) {
   if (!oldBankId) return null;
 
   const [[bankRow]] = (await mysqlConnection.query(
@@ -3931,7 +4155,7 @@ async function addBank(oldBankId: number | null) {
   )[0];
 }
 
-async function addBankBranch(oldBankBranchId: number | null) {
+export async function addBankBranch(oldBankBranchId: number | null) {
   if (!oldBankBranchId) return null;
 
   const [[bankBranchRow]] = (await mysqlConnection.query(
@@ -3967,7 +4191,7 @@ async function addBankBranch(oldBankBranchId: number | null) {
 }
 
 // This function is storing the minor subjects selected during admission-application form phas after merit list is generated.
-async function addAdmSubjectPaperSelection(
+export async function addAdmSubjectPaperSelection(
   cvSubjectSelectionRow: OldCvSubjectSelection,
   studentId: number,
   admissionCourseDetailsId: number,
@@ -4009,7 +4233,436 @@ async function addAdmSubjectPaperSelection(
   )[0];
 }
 
-async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff) {
+// export async function upsertFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff, userId?: number, admissionAdditionalInfoId?: number) {
+//     const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff =>
+//         "isTeacher" in d;
+//     const isAdmStudent = (
+//         d: OldAdmStudentPersonalDetail | OldStaff,
+//     ): d is OldAdmStudentPersonalDetail => "applevel" in d;
+
+//     if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
+//         throw new Error("Invalid old details type");
+//     }
+
+//     if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
+//         throw new Error("Invalid old details type");
+//     }
+
+//     if (isAdmStudent(oldDetails) && !admissionAdditionalInfoId) {
+//         throw new Error("admissionAdditionalInfoId is required for OldAdmStudentPersonalDetail");
+//     }
+//     if (isStaff(oldDetails) && !userId) {
+//         throw new Error("userId is required for OldStaff");
+//     }
+
+//     // Check if family already exists for this student - familyModel doesn't have studentId, so we'll skip this check
+//     let existingFamily: Family | undefined;
+//     if (isAdmStudent(oldDetails)) {
+//         existingFamily = (await db
+//             .select()
+//             .from(familyModel)
+//             .where(eq(familyModel.admissionAdditionalInfoId, admissionAdditionalInfoId!))
+//         )[0];
+//     }
+//     else {
+//         existingFamily = (await db
+//             .select()
+//             .from(familyModel)
+//             .where(eq(familyModel.userId, userId!))
+//         )[0];
+//     }
+
+//     let parentType: "BOTH" | "FATHER_ONLY" | "MOTHER_ONLY" | null = null;
+//     const singleParent = isStaff(oldDetails) ? null : oldDetails.separated; // Using 'separated' field instead of 'issnglprnt'
+//     if (singleParent) {
+//         if (singleParent.toLowerCase() === "bth") {
+//             parentType = "BOTH";
+//         } else if (singleParent.toLowerCase() === "sngl_fthr") {
+//             parentType = "FATHER_ONLY";
+//         } else if (singleParent.toLowerCase() === "sngl_mthr") {
+//             parentType = "MOTHER_ONLY";
+//         }
+//     }
+
+//     const annualIncome = await categorizeIncome(
+//         isStaff(oldDetails) ? null : oldDetails.familyIncome,
+//     );
+
+//     if (existingFamily) {
+//         const [updatedFamily] = await db
+//             .update(familyModel)
+//             .set({
+//                 annualIncomeId: annualIncome ? annualIncome.id : undefined,
+//                 parentType,
+//                 // fatherDetailsId: father.id,
+//                 // motherDetailsId: mother.id,
+//                 // guardianDetailsId: guardian.id,
+//             })
+//             .where(eq(familyModel.id, existingFamily.id!))
+//             .returning();
+
+//         existingFamily = updatedFamily;
+//     }
+//     else {
+//         const [newFamily] = await db
+//             .insert(familyModel)
+//             .values({
+//                 admissionAdditionalInfoId: isAdmStudent(oldDetails) ? admissionAdditionalInfoId : undefined,
+//                 userId: isStaff(oldDetails) ? userId : undefined,
+//                 annualIncomeId: annualIncome ? annualIncome.id : undefined,
+//                 parentType,
+//                 // fatherDetailsId: father.id,
+//                 // motherDetailsId: mother.id,
+//                 // guardianDetailsId: guardian.id,
+//             })
+//             .returning();
+
+//         existingFamily = newFamily;
+//     }
+
+//     // Father details
+//     let fatherOccupation: Occupation | undefined;
+//     const fatherOccupationId = isStaff(oldDetails)
+//         ? null
+//         : oldDetails.freeshipfatheroccupation;
+//     if (fatherOccupationId) {
+//         const [fatherOccupationResult] = (await mysqlConnection.query(
+//             `SELECT * FROM parentoccupation WHERE id = ${fatherOccupationId}`,
+//         )) as [{ id: number; occupationName: string }[], any];
+//         if (fatherOccupationResult.length > 0) {
+//             fatherOccupation = await addOccupation(
+//                 fatherOccupationResult[0].occupationName,
+//                 fatherOccupationId,
+//             );
+//         }
+//     }
+
+//     // Father qualification - not available in OldAdmStudentPersonalDetail
+//     let fatherQualificationId: number | undefined = undefined;
+
+//     // Father office address - not available in OldAdmStudentPersonalDetail
+//     let fatherOfficeAddress: Address | undefined;
+//     let existingFather = (await db
+//         .select()
+//         .from(personModel)
+//         .where(
+//             and(
+//                 eq(personModel.familyId, existingFamily.id!),
+//                 eq(personModel.type, "FATHER")
+//             )
+//         )
+//     )[0];
+
+//     if (existingFather) {
+//         const [father] = await db
+//             .update(personModel)
+//             .set({
+//                 title: undefined, // No title data in legacy
+//                 name: (isStaff(oldDetails) ? null : oldDetails.fatherName)?.trim(),
+//                 email: (isStaff(oldDetails) ? null : oldDetails.fatherEmail)
+//                     ?.trim()
+//                     .toLowerCase(),
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.fmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.fadhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: fatherQualificationId,
+//                 occupationId: fatherOccupation ? fatherOccupation.id : undefined,
+//                 officeAddressId: fatherOfficeAddress?.id,
+//             })
+//             .where(eq(personModel.id, existingFather.id!))
+//             .returning();
+//         existingFather = father;
+//     }
+//     else {
+//         const [father] = await db
+//             .insert(personModel)
+//             .values({
+//                 familyId: existingFamily.id!,
+//                 type: "FATHER",
+//                 title: undefined, // No title data in legacy
+//                 name: (isStaff(oldDetails) ? null : oldDetails.fatherName)?.trim(),
+//                 email: (isStaff(oldDetails) ? null : oldDetails.fatherEmail)
+//                     ?.trim()
+//                     .toLowerCase(),
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.fmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.fadhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: fatherQualificationId,
+//                 occupationId: fatherOccupation ? fatherOccupation.id : undefined,
+//                 officeAddressId: fatherOfficeAddress?.id,
+//             })
+//             .returning();
+//         existingFather = father;
+//     }
+
+//     // Mother details
+//     let motherOccupation: Occupation | undefined;
+//     const motherOccupationId = isStaff(oldDetails)
+//         ? null
+//         : oldDetails.motherOccupationId;
+//     if (motherOccupationId) {
+//         const [motherOccupationResult] = (await mysqlConnection.query(
+//             `SELECT * FROM parentoccupation WHERE id = ${motherOccupationId}`,
+//         )) as [{ id: number; occupationName: string }[], any];
+//         if (motherOccupationResult.length > 0) {
+//             motherOccupation = await addOccupation(
+//                 motherOccupationResult[0].occupationName,
+//                 Number(motherOccupationId),
+//             );
+//         }
+//     }
+
+//     // Mother qualification - not available in OldAdmStudentPersonalDetail
+//     let motherQualificationId: number | undefined = undefined;
+
+//     // Mother office address - not available in OldAdmStudentPersonalDetail
+//     let motherOfficeAddress: Address | undefined;
+
+//     let existingMother = (await db
+//         .select()
+//         .from(personModel)
+//         .where(
+//             and(eq(personModel.familyId, existingFamily.id!), eq(personModel.type, "MOTHER"))
+//         )
+//     )[0];
+
+//     if (existingMother) {
+//         const [mother] = await db
+//             .update(personModel)
+//             .set({
+//                 name: (isStaff(oldDetails) ? null : oldDetails.motherName)?.trim(),
+//                 email: (isStaff(oldDetails) ? null : oldDetails.motherEmail)
+//                     ?.trim()
+//                     .toLowerCase(),
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.mmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.madhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: motherQualificationId,
+//                 occupationId: motherOccupation ? motherOccupation.id : undefined,
+//                 officeAddressId: motherOfficeAddress?.id,
+//             })
+//             .where(eq(personModel.id, existingMother.id!))
+//             .returning();
+
+//         existingMother = mother;
+//     }
+//     else {
+//         const [mother] = await db
+//             .insert(personModel)
+//             .values({
+//                 familyId: existingFamily.id!,
+//                 type: "MOTHER",
+//                 title: undefined, // No title data in legacy
+//                 name: (isStaff(oldDetails) ? null : oldDetails.motherName)?.trim(),
+//                 email: (isStaff(oldDetails) ? null : oldDetails.motherEmail)
+//                     ?.trim()
+//                     .toLowerCase(),
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.mmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.madhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: motherQualificationId,
+//                 occupationId: motherOccupation ? motherOccupation.id : undefined,
+//                 officeAddressId: motherOfficeAddress?.id,
+//             })
+//             .returning();
+
+//         existingMother = mother;
+//     }
+
+//     // Guardian details
+//     let guardianOccupation: Occupation | undefined;
+//     const guardianOccupationId = isStaff(oldDetails)
+//         ? null
+//         : oldDetails.localguardianoccupation;
+//     if (guardianOccupationId) {
+//         const [guardianOccupationResult] = (await mysqlConnection.query(
+//             `SELECT * FROM parentoccupation WHERE id = ${guardianOccupationId}`,
+//         )) as [{ id: number; occupationName: string }[], any];
+//         if (guardianOccupationResult.length > 0) {
+//             guardianOccupation = await addOccupation(
+//                 guardianOccupationResult[0].occupationName,
+//                 guardianOccupationId,
+//             );
+//         }
+//     }
+
+//     // Guardian qualification - not available in OldAdmStudentPersonalDetail
+//     let guardianQualificationId: number | undefined = undefined;
+
+//     // Guardian office address - use localguardianAddress if available
+//     let guardianOfficeAddress: Address | undefined;
+//     const guardianOffAddress = isStaff(oldDetails)
+//         ? null
+//         : oldDetails.localguardianAddress;
+//     if (guardianOffAddress) {
+//         const [address] = await db
+//             .insert(addressModel)
+//             .values({
+//                 addressLine: guardianOffAddress?.trim(),
+//                 localityType: null,
+//             })
+//             .returning();
+//         guardianOfficeAddress = address;
+//     }
+
+//     let existingGuardian = (await db
+//         .select()
+//         .from(personModel)
+//         .where(
+//             and(eq(personModel.familyId, existingFamily.id!), eq(personModel.type, "GUARDIAN"))
+//         )
+//     )[0];
+
+//     if (existingGuardian) {
+//         const [guardian] = await db
+//             .update(personModel)
+//             .set({
+//                 familyId: existingFamily.id!,
+//                 type: "GUARDIAN",
+//                 title: undefined, // No title data in legacy
+//                 name:
+//                     (isStaff(oldDetails) ? null : oldDetails.otherGuardianName)?.trim() ||
+//                     "",
+//                 email: undefined, // No guardian email in legacy data
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.gmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.gadhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: guardianQualificationId,
+//                 occupationId: guardianOccupation ? guardianOccupation.id : undefined,
+//                 officeAddressId: guardianOfficeAddress
+//                     ? guardianOfficeAddress.id
+//                     : undefined,
+//             })
+//             .where(eq(personModel.id, existingGuardian.id!))
+//             .returning();
+
+//         existingGuardian = guardian;
+//     }
+//     else {
+//         const [guardian] = await db
+//             .insert(personModel)
+//             .values({
+//                 familyId: existingFamily.id!,
+//                 type: "GUARDIAN",
+//                 title: undefined, // No title data in legacy
+//                 name:
+//                     (isStaff(oldDetails) ? null : oldDetails.otherGuardianName)?.trim() ||
+//                     "",
+//                 email: undefined, // No guardian email in legacy data
+//                 phone: (isStaff(oldDetails) ? null : oldDetails.gmobno)?.trim(),
+//                 aadhaarCardNumber: formatAadhaarCardNumber(
+//                     isStaff(oldDetails) ? undefined : oldDetails.gadhaarcardno || undefined,
+//                 ),
+//                 image: undefined, // No image data in legacy
+//                 gender: undefined, // No gender data for parents in legacy
+//                 maritalStatus: undefined, // No marital status data for parents in legacy
+//                 qualificationId: guardianQualificationId,
+//                 occupationId: guardianOccupation ? guardianOccupation.id : undefined,
+//                 officeAddressId: guardianOfficeAddress
+//                     ? guardianOfficeAddress.id
+//                     : undefined,
+//             })
+//             .returning();
+
+//         existingGuardian = guardian;
+//     }
+
+//     return existingFamily;
+// }
+
+async function addHealth(
+  details: OldStudent | OldStaff | null | undefined,
+): Promise<Health | null> {
+  if (!details) {
+    console.warn(
+      "addHealth(): details is undefined/null; skipping health creation.",
+    );
+    return null;
+  }
+  let bloodGroup: BloodGroup | undefined;
+
+  // Resolve blood group if legacy id present
+  const legacyBgId = details?.bloodGroup;
+  if (legacyBgId) {
+    const [bloodGroupResult] = (await mysqlConnection.query(
+      `SELECT * FROM bloodgroup WHERE id = ${legacyBgId}`,
+    )) as [{ id: number; name: string }[], any];
+    if (bloodGroupResult.length > 0) {
+      bloodGroup = await addBloodGroup(bloodGroupResult[0].name.trim());
+    }
+  }
+
+  // Normalize values to match schema types
+  const eyeLeftRaw = details?.eyePowerLeft;
+  const eyeRightRaw = details?.eyePowerRight;
+  const eyeLeft =
+    eyeLeftRaw !== undefined && eyeLeftRaw !== null && eyeLeftRaw !== ""
+      ? Number(eyeLeftRaw)
+      : undefined;
+  const eyeRight =
+    eyeRightRaw !== undefined && eyeRightRaw !== null && eyeRightRaw !== ""
+      ? Number(eyeRightRaw)
+      : undefined;
+
+  const heightVal = details?.height;
+  const weightVal = details?.weight;
+
+  const height =
+    heightVal !== undefined && heightVal !== null
+      ? String(heightVal)
+      : undefined;
+  const weight =
+    weightVal !== undefined && weightVal !== null
+      ? String(weightVal)
+      : undefined;
+
+  const spectaclesNotes = undefined as string | undefined;
+  const hasSpectacles = false;
+
+  const [newHealth] = await db
+    .insert(healthModel)
+    .values({
+      bloodGroupId: bloodGroup ? bloodGroup.id : undefined,
+      eyePowerLeft: isNaN(eyeLeft as number) ? undefined : eyeLeft,
+      eyePowerRight: isNaN(eyeRight as number) ? undefined : eyeRight,
+      height,
+      weight,
+      hasSpectacles,
+      spectaclesNotes,
+      identificationMark: isOldStudent(details)
+        ? details.identificationmark || undefined
+        : details.identificationMark || undefined,
+    } as Health)
+    .returning();
+
+  return newHealth;
+}
+
+export async function upsertFamily2(
+  oldDetails: OldAdmStudentPersonalDetail | OldStaff,
+  userId?: number,
+  admissionAdditionalInfoId?: number,
+) {
   const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff =>
     "isTeacher" in d;
   const isAdmStudent = (
@@ -4020,16 +4673,13 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff) {
     throw new Error("Invalid old details type");
   }
 
-  if (!isStaff(oldDetails) && !isAdmStudent(oldDetails)) {
-    throw new Error("Invalid old details type");
+  if (userId && admissionAdditionalInfoId) {
+    throw new Error(
+      "userId and admissionAdditionalInfoId cannot be provided together",
+    );
   }
 
-  // Check if family already exists for this student - familyModel doesn't have studentId, so we'll skip this check
-  // const [existingFamily] = await db.select().from(familyModel).where(eq(familyModel.studentId, student.id as number));
-  // if (existingFamily) {
-  //     return existingFamily;
-  // }
-
+  // Map legacy single-parent flag to enum
   let parentType: "BOTH" | "FATHER_ONLY" | "MOTHER_ONLY" | null = null;
   const singleParent = isStaff(oldDetails) ? null : oldDetails.separated; // Using 'separated' field instead of 'issnglprnt'
   if (singleParent) {
@@ -4042,167 +4692,373 @@ async function addFamily(oldDetails: OldAdmStudentPersonalDetail | OldStaff) {
     }
   }
 
-  // Father details
-  let fatherOccupation: Occupation | undefined;
-  const fatherOccupationId = isStaff(oldDetails)
-    ? null
-    : oldDetails.freeshipfatheroccupation;
-  if (fatherOccupationId) {
-    const [fatherOccupationResult] = (await mysqlConnection.query(
-      `SELECT * FROM parentoccupation WHERE id = ${fatherOccupationId}`,
-    )) as [{ id: number; occupationName: string }[], any];
-    if (fatherOccupationResult.length > 0) {
-      fatherOccupation = await addOccupation(
-        fatherOccupationResult[0].occupationName,
-        fatherOccupationId,
-      );
-    }
-  }
-
-  // Father qualification - not available in OldAdmStudentPersonalDetail
-  let fatherQualificationId: number | undefined = undefined;
-
-  // Father office address - not available in OldAdmStudentPersonalDetail
-  let fatherOfficeAddress: Address | undefined;
-
-  const [father] = await db
-    .insert(personModel)
-    .values({
-      title: undefined, // No title data in legacy
-      name: (isStaff(oldDetails) ? null : oldDetails.fatherName)?.trim(),
-      email: (isStaff(oldDetails) ? null : oldDetails.fatherEmail)
-        ?.trim()
-        .toLowerCase(),
-      phone: (isStaff(oldDetails) ? null : oldDetails.fmobno)?.trim(),
-      aadhaarCardNumber: formatAadhaarCardNumber(
-        isStaff(oldDetails) ? undefined : oldDetails.fadhaarcardno || undefined,
-      ),
-      image: undefined, // No image data in legacy
-      gender: undefined, // No gender data for parents in legacy
-      maritalStatus: undefined, // No marital status data for parents in legacy
-      qualificationId: fatherQualificationId,
-      occupationId: fatherOccupation ? fatherOccupation.id : undefined,
-      officeAddressId: fatherOfficeAddress?.id,
-    })
-    .returning();
-
-  // Mother details
-  let motherOccupation: Occupation | undefined;
-  const motherOccupationId = isStaff(oldDetails)
-    ? null
-    : oldDetails.motherOccupationId;
-  if (motherOccupationId) {
-    const [motherOccupationResult] = (await mysqlConnection.query(
-      `SELECT * FROM parentoccupation WHERE id = ${motherOccupationId}`,
-    )) as [{ id: number; occupationName: string }[], any];
-    if (motherOccupationResult.length > 0) {
-      motherOccupation = await addOccupation(
-        motherOccupationResult[0].occupationName,
-        Number(motherOccupationId),
-      );
-    }
-  }
-
-  // Mother qualification - not available in OldAdmStudentPersonalDetail
-  let motherQualificationId: number | undefined = undefined;
-
-  // Mother office address - not available in OldAdmStudentPersonalDetail
-  let motherOfficeAddress: Address | undefined;
-
-  const [mother] = await db
-    .insert(personModel)
-    .values({
-      title: undefined, // No title data in legacy
-      name: (isStaff(oldDetails) ? null : oldDetails.motherName)?.trim(),
-      email: (isStaff(oldDetails) ? null : oldDetails.motherEmail)
-        ?.trim()
-        .toLowerCase(),
-      phone: (isStaff(oldDetails) ? null : oldDetails.mmobno)?.trim(),
-      aadhaarCardNumber: formatAadhaarCardNumber(
-        isStaff(oldDetails) ? undefined : oldDetails.madhaarcardno || undefined,
-      ),
-      image: undefined, // No image data in legacy
-      gender: undefined, // No gender data for parents in legacy
-      maritalStatus: undefined, // No marital status data for parents in legacy
-      qualificationId: motherQualificationId,
-      occupationId: motherOccupation ? motherOccupation.id : undefined,
-      officeAddressId: motherOfficeAddress?.id,
-    })
-    .returning();
-
-  // Guardian details
-  let guardianOccupation: Occupation | undefined;
-  const guardianOccupationId = isStaff(oldDetails)
-    ? null
-    : oldDetails.localguardianoccupation;
-  if (guardianOccupationId) {
-    const [guardianOccupationResult] = (await mysqlConnection.query(
-      `SELECT * FROM parentoccupation WHERE id = ${guardianOccupationId}`,
-    )) as [{ id: number; occupationName: string }[], any];
-    if (guardianOccupationResult.length > 0) {
-      guardianOccupation = await addOccupation(
-        guardianOccupationResult[0].occupationName,
-        guardianOccupationId,
-      );
-    }
-  }
-
-  // Guardian qualification - not available in OldAdmStudentPersonalDetail
-  let guardianQualificationId: number | undefined = undefined;
-
-  // Guardian office address - use localguardianAddress if available
-  let guardianOfficeAddress: Address | undefined;
-  const guardianOffAddress = isStaff(oldDetails)
-    ? null
-    : oldDetails.localguardianAddress;
-  if (guardianOffAddress) {
-    const [address] = await db
-      .insert(addressModel)
-      .values({
-        addressLine: guardianOffAddress?.trim(),
-        localityType: null,
-      })
-      .returning();
-    guardianOfficeAddress = address;
-  }
-
-  const [guardian] = await db
-    .insert(personModel)
-    .values({
-      title: undefined, // No title data in legacy
-      name:
-        (isStaff(oldDetails) ? null : oldDetails.otherGuardianName)?.trim() ||
-        "",
-      email: undefined, // No guardian email in legacy data
-      phone: (isStaff(oldDetails) ? null : oldDetails.gmobno)?.trim(),
-      aadhaarCardNumber: formatAadhaarCardNumber(
-        isStaff(oldDetails) ? undefined : oldDetails.gadhaarcardno || undefined,
-      ),
-      image: undefined, // No image data in legacy
-      gender: undefined, // No gender data for parents in legacy
-      maritalStatus: undefined, // No marital status data for parents in legacy
-      qualificationId: guardianQualificationId,
-      occupationId: guardianOccupation ? guardianOccupation.id : undefined,
-      officeAddressId: guardianOfficeAddress
-        ? guardianOfficeAddress.id
-        : undefined,
-    })
-    .returning();
-
   const annualIncome = await categorizeIncome(
     isStaff(oldDetails) ? null : oldDetails.familyIncome,
   );
 
-  const [newFamily] = await db
-    .insert(familyModel)
-    .values({
-      annualIncomeId: annualIncome ? annualIncome.id : undefined,
-      parentType,
-      fatherDetailsId: father.id,
-      motherDetailsId: mother.id,
-      guardianDetailsId: guardian.id,
-    })
-    .returning();
+  // Prepare insert payload
+  const insertValues: Partial<typeof familyModel.$inferInsert> = {
+    userId,
+    admissionAdditionalInfoId,
+    annualIncomeId: annualIncome ? annualIncome.id : undefined,
+    parentType,
+  };
 
-  return newFamily;
+  let existingFamily: Family | undefined;
+  if (userId) {
+    existingFamily = (
+      await db.select().from(familyModel).where(eq(familyModel.userId, userId))
+    )[0];
+  } else {
+    existingFamily = (
+      await db
+        .select()
+        .from(familyModel)
+        .where(
+          eq(familyModel.admissionAdditionalInfoId, admissionAdditionalInfoId!),
+        )
+    )[0];
+  }
+
+  if (existingFamily) {
+    const [family] = await db
+      .update(familyModel)
+      .set(insertValues)
+      .where(eq(familyModel.id, existingFamily.id!))
+      .returning();
+    existingFamily = family;
+  } else {
+    const [family] = await db
+      .insert(familyModel)
+      .values(insertValues)
+      .returning();
+    existingFamily = family;
+  }
+
+  // Helper to resolve occupation by legacy id
+  const resolveOccupation = async (
+    legacyOccupationId: number | undefined | null,
+  ) => {
+    if (!legacyOccupationId) return undefined;
+    const [occ] = (await mysqlConnection.query(
+      `SELECT * FROM parentoccupation WHERE id = ${legacyOccupationId}`,
+    )) as [{ id: number; occupationName: string }[], any];
+    if (occ.length === 0) return undefined;
+    return await addOccupation(occ[0].occupationName, legacyOccupationId);
+  };
+
+  // Generic upsert for a person by type under this family
+  const upsertPerson = async (args: {
+    type: "FATHER" | "MOTHER" | "GUARDIAN" | "OTHER_GUARDIAN" | "SPOUSE";
+    name?: string | null;
+    email?: string | null;
+    aadhaar?: string | null;
+    phone?: string | null;
+    image?: string | null;
+    legacyOccupationId?: number | null;
+    officeAddress?: string | null;
+    // Address details
+    countryId?: number | null;
+    stateId?: number | null;
+    cityId?: number | null;
+    districtId?: number | null;
+    postofficeId?: number | null;
+    policeStationId?: number | null;
+    otherCountry?: string | null;
+    otherState?: string | null;
+    otherCity?: string | null;
+    otherDistrict?: string | null;
+    otherPostoffice?: string | null;
+    otherPoliceStation?: string | null;
+    block?: string | null;
+    pincode?: string | null;
+    localityType?: "URBAN" | "RURAL" | null;
+  }) => {
+    const occupation = await resolveOccupation(
+      args.legacyOccupationId ?? undefined,
+    );
+
+    const values: Partial<typeof personModel.$inferInsert> = {
+      type: args.type,
+      familyId: existingFamily.id,
+      name: args.name?.toUpperCase()?.trim(),
+      email: args.email?.trim()?.toLowerCase(),
+      aadhaarCardNumber: formatAadhaarCardNumber(args.aadhaar || undefined),
+      phone: args.phone?.trim() || undefined,
+      image: args.image?.trim() || undefined,
+      occupationId: occupation ? occupation.id : undefined,
+    };
+
+    // Check if any meaningful value exists; if nothing to save, skip
+    const hasAny = Object.values(values).some(
+      (v) => v !== undefined && v !== null,
+    );
+    if (!hasAny) return;
+
+    const [existing] = await db
+      .select()
+      .from(personModel)
+      .where(
+        and(
+          eq(personModel.familyId, existingFamily.id!),
+          eq(personModel.type, args.type),
+        ),
+      );
+
+    let personId: number;
+    if (existing) {
+      const [updated] = await db
+        .update(personModel)
+        .set(values)
+        .where(eq(personModel.id, existing.id))
+        .returning();
+      personId = updated.id;
+    } else {
+      const [newPerson] = await db
+        .insert(personModel)
+        .values(values)
+        .returning();
+      personId = newPerson.id;
+    }
+
+    // Handle office address upsert
+    if (
+      args.officeAddress ||
+      args.countryId ||
+      args.stateId ||
+      args.cityId ||
+      args.districtId ||
+      args.postofficeId ||
+      args.policeStationId ||
+      args.otherCountry ||
+      args.otherState ||
+      args.otherCity ||
+      args.otherDistrict ||
+      args.otherPostoffice ||
+      args.otherPoliceStation ||
+      args.block ||
+      args.pincode ||
+      args.localityType
+    ) {
+      // Check if address already exists for this person
+      const [existingAddress] = await db
+        .select()
+        .from(addressModel)
+        .where(eq(addressModel.personId, personId));
+
+      const addressValues: Partial<typeof addressModel.$inferInsert> = {
+        personId,
+        type: "OFFICE",
+        addressLine: args.officeAddress?.trim()?.toUpperCase(),
+        countryId: args.countryId,
+        stateId: args.stateId,
+        cityId: args.cityId,
+        districtId: args.districtId,
+        postofficeId: args.postofficeId,
+        policeStationId: args.policeStationId,
+        otherCountry: args.otherCountry?.trim()?.toUpperCase(),
+        otherState: args.otherState?.trim()?.toUpperCase(),
+        otherCity: args.otherCity?.trim()?.toUpperCase(),
+        otherDistrict: args.otherDistrict?.trim()?.toUpperCase(),
+        otherPostoffice: args.otherPostoffice?.trim()?.toUpperCase(),
+        otherPoliceStation: args.otherPoliceStation?.trim()?.toUpperCase(),
+        block: args.block?.trim()?.toUpperCase(),
+        pincode: args.pincode?.trim()?.toUpperCase(),
+        localityType: args.localityType,
+      };
+
+      if (existingAddress) {
+        await db
+          .update(addressModel)
+          .set(addressValues)
+          .where(eq(addressModel.id, existingAddress.id));
+      } else {
+        await db.insert(addressModel).values(addressValues);
+      }
+    }
+  };
+
+  // Father details
+  await upsertPerson({
+    type: "FATHER",
+    name: isStaff(oldDetails) ? null : oldDetails.fatherName,
+    email: isStaff(oldDetails) ? null : oldDetails.fatherEmail,
+    aadhaar: isStaff(oldDetails) ? null : oldDetails.fadhaarcardno,
+    phone: isStaff(oldDetails) ? null : oldDetails.fmobno,
+    image: undefined, // No image data in legacy
+    legacyOccupationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.freeshipfatheroccupation,
+    // Father address details from legacy data - resolve IDs using helper functions
+    countryId: isStaff(oldDetails)
+      ? null
+      : oldDetails.countryId
+        ? (
+            await addCountry({
+              id: oldDetails.countryId,
+              countryName: "",
+            } as OldCountry)
+          ).id
+        : null,
+    stateId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resiStateId
+        ? (await addState(oldDetails.resiStateId))?.id
+        : null,
+    cityId: isStaff(oldDetails)
+      ? null
+      : oldDetails.cityId
+        ? (await addCity(oldDetails.cityId))?.id
+        : null,
+    districtId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resiDistrictId
+        ? (await addDistrict(oldDetails.resiDistrictId))?.id
+        : null,
+    postofficeId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipostofficeid
+        ? (await addPostOffice(oldDetails.resipostofficeid))?.id
+        : null,
+    policeStationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipolicestationid
+        ? (await addPoliceStation(oldDetails.resipolicestationid))?.id
+        : null,
+    otherState: isStaff(oldDetails) ? null : oldDetails.otherState,
+    otherCity: isStaff(oldDetails) ? null : oldDetails.otherCity,
+    otherDistrict: isStaff(oldDetails) ? null : oldDetails.otherresiDistrict,
+    otherPostoffice: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipostoffice,
+    otherPoliceStation: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipolicestation,
+    pincode: isStaff(oldDetails) ? null : oldDetails.resiPinNo,
+    officeAddress: isStaff(oldDetails) ? null : oldDetails.famAddress,
+  });
+
+  // Mother details
+  await upsertPerson({
+    type: "MOTHER",
+    name: isStaff(oldDetails) ? null : oldDetails.motherName,
+    email: isStaff(oldDetails) ? null : oldDetails.motherEmail,
+    aadhaar: isStaff(oldDetails) ? null : oldDetails.madhaarcardno,
+    phone: isStaff(oldDetails) ? null : oldDetails.mmobno,
+    image: undefined, // No image data in legacy
+    legacyOccupationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.motherOccupationId
+        ? Number(oldDetails.motherOccupationId)
+        : null,
+    // Mother address details from legacy data - resolve IDs using helper functions
+    countryId: isStaff(oldDetails)
+      ? null
+      : oldDetails.countryId
+        ? (
+            await addCountry({
+              id: oldDetails.countryId,
+              countryName: "",
+            } as OldCountry)
+          ).id
+        : null,
+    stateId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resiStateId
+        ? (await addState(oldDetails.resiStateId))?.id
+        : null,
+    cityId: isStaff(oldDetails)
+      ? null
+      : oldDetails.cityId
+        ? (await addCity(oldDetails.cityId))?.id
+        : null,
+    districtId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resiDistrictId
+        ? (await addDistrict(oldDetails.resiDistrictId))?.id
+        : null,
+    postofficeId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipostofficeid
+        ? (await addPostOffice(oldDetails.resipostofficeid))?.id
+        : null,
+    policeStationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipolicestationid
+        ? (await addPoliceStation(oldDetails.resipolicestationid))?.id
+        : null,
+    otherState: isStaff(oldDetails) ? null : oldDetails.otherState,
+    otherCity: isStaff(oldDetails) ? null : oldDetails.otherCity,
+    otherDistrict: isStaff(oldDetails) ? null : oldDetails.otherresiDistrict,
+    otherPostoffice: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipostoffice,
+    otherPoliceStation: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipolicestation,
+    pincode: isStaff(oldDetails) ? null : oldDetails.resiPinNo,
+    officeAddress: isStaff(oldDetails) ? null : oldDetails.famAddress,
+  });
+
+  // Guardian details
+  await upsertPerson({
+    type: "GUARDIAN",
+    name: isStaff(oldDetails) ? null : oldDetails.otherGuardianName,
+    email: undefined, // No guardian email in legacy data
+    aadhaar: isStaff(oldDetails) ? null : oldDetails.gadhaarcardno,
+    phone: isStaff(oldDetails) ? null : oldDetails.gmobno,
+    image: undefined, // No image data in legacy
+    legacyOccupationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.localguardianoccupation,
+    officeAddress: isStaff(oldDetails) ? null : oldDetails.localguardianAddress,
+    // Guardian address details from legacy data - resolve IDs using helper functions
+    countryId: isStaff(oldDetails)
+      ? null
+      : oldDetails.countryId
+        ? (
+            await addCountry({
+              id: oldDetails.countryId,
+              countryName: "",
+            } as OldCountry)
+          ).id
+        : null,
+    stateId: isStaff(oldDetails)
+      ? null
+      : oldDetails.localguardianStateId
+        ? (await addState(oldDetails.localguardianStateId))?.id
+        : null,
+    cityId: isStaff(oldDetails)
+      ? null
+      : oldDetails.cityId
+        ? (await addCity(oldDetails.cityId))?.id
+        : null,
+    districtId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resiDistrictId
+        ? (await addDistrict(oldDetails.resiDistrictId))?.id
+        : null,
+    postofficeId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipostofficeid
+        ? (await addPostOffice(oldDetails.resipostofficeid))?.id
+        : null,
+    policeStationId: isStaff(oldDetails)
+      ? null
+      : oldDetails.resipolicestationid
+        ? (await addPoliceStation(oldDetails.resipolicestationid))?.id
+        : null,
+    otherState: isStaff(oldDetails) ? null : oldDetails.otherState,
+    otherCity: isStaff(oldDetails) ? null : oldDetails.otherCity,
+    otherDistrict: isStaff(oldDetails) ? null : oldDetails.otherresiDistrict,
+    otherPostoffice: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipostoffice,
+    otherPoliceStation: isStaff(oldDetails)
+      ? null
+      : oldDetails.otherresipolicestation,
+    pincode: isStaff(oldDetails) ? null : oldDetails.resiPinNo,
+  });
+
+  return existingFamily;
 }

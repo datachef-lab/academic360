@@ -5,8 +5,8 @@ import { boolean, integer, pgTable, serial, text, timestamp, varchar } from "dri
 import { userModel } from "@/schemas/models/user";
 import { communityTypeEnum } from "@/schemas/enums";
 import { programCourseModel, specializationModel } from "@/schemas/models/course-design";
-import { applicationFormModel } from "@/schemas/models/admissions";
-import { sectionModel, shiftModel } from "../academics";
+import { admissionCourseDetailsModel, applicationFormModel } from "@/schemas/models/admissions";
+// import { sectionModel, shiftModel } from "../academics";
 import z from "zod";
 
 export const studentModel = pgTable("students", {
@@ -15,6 +15,8 @@ export const studentModel = pgTable("students", {
     userId: integer("user_id_fk").notNull().references(() => userModel.id),
     applicationId: integer("application_form_id_fk")
         .references(() => applicationFormModel.id),
+    admissionCourseDetailsId: integer("admission_course_details_id_fk")
+        .references(() => admissionCourseDetailsModel.id),
     programCourseId: integer("program_course_id_fk")
         .references(() => programCourseModel.id)
         .notNull(),
@@ -24,10 +26,10 @@ export const studentModel = pgTable("students", {
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
     rollNumber: varchar({ length: 255 }),
-    sectionId: integer("section_id_fk").references(() => sectionModel.id),
-    shiftId: integer("shift_id_fk")
-        .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
-        .notNull(),
+    // sectionId: integer("section_id_fk").references(() => sectionModel.id),
+    // shiftId: integer("shift_id_fk")
+    //     .references(() => shiftModel.id, { onDelete: "cascade", onUpdate: "cascade" })
+    //     .notNull(),
     classRollNumber: varchar({ length: 255 }),
     apaarId: varchar({ length: 255 }),
     abcId: varchar({ length: 255 }),

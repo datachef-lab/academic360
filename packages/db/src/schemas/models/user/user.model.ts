@@ -1,13 +1,12 @@
 import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
-import { pgTable, serial, varchar, boolean, timestamp, integer, text } from "drizzle-orm/pg-core";
+import { pgTable, serial, varchar, boolean, timestamp, text } from "drizzle-orm/pg-core";
 
 import { userTypeEnum } from "@/schemas/enums";
 // import { personalDetailsModel } from "./personalDetails.model";
 
 export const userModel = pgTable('users', {
     id: serial().primaryKey(),
-    legacyId: integer(),
     name: varchar({ length: 255 }).notNull(),
     email: varchar({ length: 500 }).unique().notNull(),
     password: varchar({ length: 255 }).notNull(),

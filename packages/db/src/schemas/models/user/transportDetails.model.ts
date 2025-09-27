@@ -3,9 +3,14 @@ import { createInsertSchema } from "drizzle-zod";
 import { integer, pgTable, serial, time, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { pickupPointModel, transportModel } from "@/schemas/models/resources";
+import { userModel } from "./user.model";
+import { admissionGeneralInfoModel } from "../admissions";
 
 export const transportDetailsModel = pgTable("transport_details", {
     id: serial().primaryKey(),
+    admissionGeneralInfoId: integer("admission_general_info_id_fk")
+        .references(() => admissionGeneralInfoModel.id),
+    userId: integer("user_id_fk").references(() => userModel.id),
     transportId: integer("transport_id_fk").references(() => transportModel.id),
     pickupPointId: integer("pickup_point_id_fk").references(() => pickupPointModel.id),
     seatNumber: varchar({ length: 255 }),

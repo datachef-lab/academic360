@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { PersonalDetailsDto } from "@repo/db/dtos";
+import { AddressDto, PersonalDetailsDto } from "@repo/db/dtos";
 import type { ReligionT as UiReligion, CategoryT as UiCategory, NationalityT as UiNationality } from "@repo/db/schemas";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Disability } from "@/types/enums";
@@ -31,7 +31,7 @@ type IdName = { id: number; name: string };
 
 type PersonalDetailProps = {
   studentId: number;
-  initialData?: PersonalDetailsDto | null;
+  initialData?: (PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto }) | null;
   personalEmail?: string | null;
 };
 
@@ -49,24 +49,32 @@ function SectionHeader({ title }: { title: string }) {
   );
 }
 
-// Typed helpers to safely update address without unsafe casts
-type AddressRel = NonNullable<PersonalDetailsDto["residentialAddress"]>;
-function ensureAddress(address: PersonalDetailsDto["residentialAddress"]): AddressRel {
-  return (
-    (address as AddressRel) ??
-    ({
-      id: 0,
-      addressLine: "",
-      landmark: "",
-      otherCity: null,
-      otherState: null,
-      otherCountry: null,
-      country: null,
-      state: null,
-      city: null,
-      district: null,
-    } as AddressRel)
-  );
+// Augment local view: PersonalDetails may be accompanied by shaped addresses in some screens
+type PersonalDetailsAug = PersonalDetailsDto & { residentialAddress?: AddressDto; mailingAddress?: AddressDto };
+
+// Typed helpers to safely update address without unsafe casts (using local augmented view)
+type AddressRel = NonNullable<PersonalDetailsAug["residentialAddress"]>;
+function ensureAddress(address: PersonalDetailsAug["residentialAddress"]): AddressRel {
+  if (address) return address as AddressRel;
+  const fallback = {
+    id: 0,
+    addressLine: "",
+    landmark: "",
+    otherCity: null,
+    otherState: null,
+    otherCountry: null,
+    country: null,
+    state: null,
+    city: null,
+    district: null,
+    previousCountry: null,
+    previousState: null,
+    previousCity: null,
+    previousDistrict: null,
+    postoffice: null,
+    policeStation: null,
+  } as unknown as AddressRel;
+  return fallback;
 }
 
 type UpdatePayload = Partial<PersonalDetailsDto>;
@@ -90,7 +98,7 @@ type AddressUpdate = {
 export default function PersonalDetailsReadOnly({ studentId, initialData, personalEmail }: PersonalDetailProps) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState<string>(personalEmail ?? "");
-  const [pd, setPd] = useState<PersonalDetailsDto | null>(initialData ?? null);
+  const [pd, setPd] = useState<PersonalDetailsAug | null>(initialData ?? null);
   const [residentialPostOffice, setResidentialPostOffice] = useState<string>("");
   const [residentialPoliceStation, setResidentialPoliceStation] = useState<string>("");
   const [mailingPostOffice, setMailingPostOffice] = useState<string>("");
@@ -114,7 +122,7 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   );
 
   useEffect(() => {
-    setPd(initialData ?? null);
+    setPd((initialData as PersonalDetailsAug) ?? null);
     const resAddr = initialData?.residentialAddress as (AddressRel & AddressExtras) | null | undefined;
     const mailAddr = initialData?.mailingAddress as (AddressRel & AddressExtras) | null | undefined;
     setResidentialPostOffice(resAddr?.otherPostoffice ?? "");
@@ -194,13 +202,14 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   });
 
   const resDistrictOptions: IdName[] = (resDistricts as IdName[] | undefined) ?? [];
+  const resDistrictOptionsStable = useMemo(() => resDistrictOptions, [resDistrictOptions]);
   const mailDistrictOptions: IdName[] = (mailDistricts as IdName[] | undefined) ?? [];
 
   // Ensure currently selected residential district is visible even if it doesn't belong to the loaded state options
   type DistrictLike = { id: number; name?: string } | null | undefined;
   const resSelectedDistrict = pd?.residentialAddress?.district as DistrictLike;
   const resDistrictOptionsWithSelected = useMemo(() => {
-    const list = [...resDistrictOptions];
+    const list = [...resDistrictOptionsStable];
     if (resSelectedDistrict?.id != null && !list.some((d) => String(d.id) === String(resSelectedDistrict.id))) {
       const name =
         resSelectedDistrict && typeof (resSelectedDistrict as { name?: string }).name === "string"
@@ -209,7 +218,7 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
       list.unshift({ id: Number(resSelectedDistrict.id), name });
     }
     return list;
-  }, [resDistrictOptions, resSelectedDistrict?.id]);
+  }, [resDistrictOptionsStable, resSelectedDistrict]);
 
   const genderOptions: { value: "MALE" | "FEMALE" | "OTHER"; label: string }[] = [
     { value: "MALE", label: "Male" },
@@ -225,11 +234,11 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   ];
 
   function buildPayload(): Partial<PersonalDetailsDto> {
-    const payload: Partial<PersonalDetailsDto> = {
+    const payload: Partial<PersonalDetailsAug> = {
       ...(pd ?? {}),
       personalEmail: email ?? null,
-    } as Partial<PersonalDetailsDto>;
-    const cleaned = stripDates(payload) as Partial<PersonalDetailsDto>;
+    } as Partial<PersonalDetailsAug>;
+    const cleaned = stripDates(payload) as Partial<PersonalDetailsAug>;
     // Flatten address relations to basic ids for backend API compatibility
     if (cleaned?.residentialAddress) {
       const ra = cleaned.residentialAddress;
@@ -280,7 +289,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
             otherPoliceStation: residentialPoliceStation || null,
           };
           await updateAddress(residential.id, resUpdate);
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
 
       const mailing = (payload as Partial<{ mailingAddress: AddressUpdate }>).mailingAddress;
@@ -298,17 +309,17 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
             otherPoliceStation: mailingPoliceStation || null,
           };
           await updateAddress(mailing.id, mailUpdate);
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
       if (pd?.id) {
         return updatePersonalDetail(String(pd.id), payload);
       }
       return updatePersonalDetailByStudentId(String(studentId), payload);
     },
-    onSuccess: (data) => {
-      // Debug: inspect API response after saving
-      // eslint-disable-next-line no-console
-      console.log("Personal details save response:", data);
+    onSuccess: () => {
+      // Saved successfully
       toast.success("Personal details saved");
       queryClient.invalidateQueries({ queryKey: ["user-profile"], exact: false });
     },

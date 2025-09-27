@@ -54,6 +54,11 @@ export const setupAxiosInterceptors = (
       if (error.config && error.response) {
         const { status } = error.response;
 
+        // Defer 401 handling to AuthProvider's interceptor (refresh/redirect). Avoid noisy toasts.
+        if (status === 401) {
+          return Promise.reject(error);
+        }
+
         // Retry logic (retries the failed request)
         const retry = async () => {
           try {

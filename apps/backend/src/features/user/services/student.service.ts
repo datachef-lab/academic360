@@ -460,8 +460,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     applicationId,
     programCourseId,
     specializationId,
-    sectionId,
-    shiftId,
+
     ...props
   } = student;
 
@@ -471,8 +470,8 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     programCourse,
     specialization,
     section,
-    shift,
-    currentBatch,
+    // shift,
+    // currentBatch,
   ] = await Promise.all([
     (async () => {
       if (!applicationId) return null;
@@ -493,8 +492,8 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     })(),
     programCourseService.findById(programCourseId),
     specializationId ? specializationService.findById(specializationId) : null,
-    sectionId ? sectionService.findById(sectionId) : null,
-    shiftId ? shiftService.findById(shiftId) : null,
+    // sectionId ? sectionService.findById(sectionId) : null,
+    // shiftId ? shiftService.findById(shiftId) : null,
     // TODO: Implement findCurrentBatchByStudentId or similar
     null,
   ]);
@@ -508,216 +507,216 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
 
   // Fetch personal details with related data
   let personalDetails = null;
-  if (generalInfo?.personalDetailsId) {
-    const [pd] = await db
-      .select()
-      .from(personalDetailsModel)
-      .where(eq(personalDetailsModel.id, generalInfo.personalDetailsId));
+  //   if (generalInfo?.personalDetailsId) {
+  //     const [pd] = await db
+  //       .select()
+  //       .from(personalDetailsModel)
+  //       .where(eq(personalDetailsModel.id, generalInfo.personalDetailsId));
 
-    if (pd) {
-      // Fetch related data for personal details
-      const [
-        nationality,
-        religion,
-        category,
-        motherTongue,
-        rawMailingAddress,
-        rawResidentialAddress,
-        disabilityCode,
-      ] = await Promise.all([
-        pd.nationalityId
-          ? db
-              .select()
-              .from(nationalityModel)
-              .where(eq(nationalityModel.id, pd.nationalityId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.religionId
-          ? db
-              .select()
-              .from(religionModel)
-              .where(eq(religionModel.id, pd.religionId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.categoryId
-          ? db
-              .select()
-              .from(categoryModel)
-              .where(eq(categoryModel.id, pd.categoryId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.motherTongueId
-          ? db
-              .select()
-              .from(languageMediumModel)
-              .where(eq(languageMediumModel.id, pd.motherTongueId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.mailingAddressId
-          ? db
-              .select()
-              .from(addressModel)
-              .where(eq(addressModel.id, pd.mailingAddressId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.residentialAddressId
-          ? db
-              .select()
-              .from(addressModel)
-              .where(eq(addressModel.id, pd.residentialAddressId))
-              .then((r) => r[0] ?? null)
-          : null,
-        pd.disabilityCodeId
-          ? db
-              .select()
-              .from(disabilityCodeModel)
-              .where(eq(disabilityCodeModel.id, pd.disabilityCodeId))
-              .then((r) => r[0] ?? null)
-          : null,
-      ]);
+  //     if (pd) {
+  //       // Fetch related data for personal details
+  //       const [
+  //         nationality,
+  //         religion,
+  //         category,
+  //         motherTongue,
+  //         rawMailingAddress,
+  //         rawResidentialAddress,
+  //         disabilityCode,
+  //       ] = await Promise.all([
+  //         pd.nationalityId
+  //           ? db
+  //               .select()
+  //               .from(nationalityModel)
+  //               .where(eq(nationalityModel.id, pd.nationalityId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.religionId
+  //           ? db
+  //               .select()
+  //               .from(religionModel)
+  //               .where(eq(religionModel.id, pd.religionId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.categoryId
+  //           ? db
+  //               .select()
+  //               .from(categoryModel)
+  //               .where(eq(categoryModel.id, pd.categoryId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.motherTongueId
+  //           ? db
+  //               .select()
+  //               .from(languageMediumModel)
+  //               .where(eq(languageMediumModel.id, pd.motherTongueId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.mailingAddressId
+  //           ? db
+  //               .select()
+  //               .from(addressModel)
+  //               .where(eq(addressModel.id, pd.mailingAddressId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.residentialAddressId
+  //           ? db
+  //               .select()
+  //               .from(addressModel)
+  //               .where(eq(addressModel.id, pd.residentialAddressId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //         pd.disabilityCodeId
+  //           ? db
+  //               .select()
+  //               .from(disabilityCodeModel)
+  //               .where(eq(disabilityCodeModel.id, pd.disabilityCodeId))
+  //               .then((r) => r[0] ?? null)
+  //           : null,
+  //       ]);
 
-      // Fetch related data for addresses
-      let mailingAddress = null;
-      let residentialAddress = null;
+  //       // Fetch related data for addresses
+  //       let mailingAddress = null;
+  //       let residentialAddress = null;
 
-      if (rawMailingAddress) {
-        const [country, state, city, district] = await Promise.all([
-          rawMailingAddress.countryId
-            ? db
-                .select({
-                  id: countryModel.id,
-                  legacyCountryId: countryModel.legacyCountryId,
-                  name: countryModel.name,
-                  sequence: countryModel.sequence,
-                  createdAt: countryModel.createdAt,
-                  updatedAt: countryModel.updatedAt,
-                })
-                .from(countryModel)
-                .where(eq(countryModel.id, rawMailingAddress.countryId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawMailingAddress.stateId
-            ? db
-                .select({
-                  id: stateModel.id,
-                  name: stateModel.name,
-                  createdAt: stateModel.createdAt,
-                  updatedAt: stateModel.updatedAt,
-                })
-                .from(stateModel)
-                .where(eq(stateModel.id, rawMailingAddress.stateId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawMailingAddress.cityId
-            ? db
-                .select({
-                  id: cityModel.id,
-                  name: cityModel.name,
-                  createdAt: cityModel.createdAt,
-                  updatedAt: cityModel.updatedAt,
-                })
-                .from(cityModel)
-                .where(eq(cityModel.id, rawMailingAddress.cityId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawMailingAddress.districtId
-            ? db
-                .select({
-                  id: districtModel.id,
-                  name: districtModel.name,
-                  createdAt: districtModel.createdAt,
-                  updatedAt: districtModel.updatedAt,
-                })
-                .from(districtModel)
-                .where(eq(districtModel.id, rawMailingAddress.districtId))
-                .then((r) => r[0] ?? null)
-            : null,
-        ]);
+  //       if (rawMailingAddress) {
+  //         const [country, state, city, district] = await Promise.all([
+  //           rawMailingAddress.countryId
+  //             ? db
+  //                 .select({
+  //                   id: countryModel.id,
+  //                   legacyCountryId: countryModel.legacyCountryId,
+  //                   name: countryModel.name,
+  //                   sequence: countryModel.sequence,
+  //                   createdAt: countryModel.createdAt,
+  //                   updatedAt: countryModel.updatedAt,
+  //                 })
+  //                 .from(countryModel)
+  //                 .where(eq(countryModel.id, rawMailingAddress.countryId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawMailingAddress.stateId
+  //             ? db
+  //                 .select({
+  //                   id: stateModel.id,
+  //                   name: stateModel.name,
+  //                   createdAt: stateModel.createdAt,
+  //                   updatedAt: stateModel.updatedAt,
+  //                 })
+  //                 .from(stateModel)
+  //                 .where(eq(stateModel.id, rawMailingAddress.stateId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawMailingAddress.cityId
+  //             ? db
+  //                 .select({
+  //                   id: cityModel.id,
+  //                   name: cityModel.name,
+  //                   createdAt: cityModel.createdAt,
+  //                   updatedAt: cityModel.updatedAt,
+  //                 })
+  //                 .from(cityModel)
+  //                 .where(eq(cityModel.id, rawMailingAddress.cityId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawMailingAddress.districtId
+  //             ? db
+  //                 .select({
+  //                   id: districtModel.id,
+  //                   name: districtModel.name,
+  //                   createdAt: districtModel.createdAt,
+  //                   updatedAt: districtModel.updatedAt,
+  //                 })
+  //                 .from(districtModel)
+  //                 .where(eq(districtModel.id, rawMailingAddress.districtId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //         ]);
 
-        mailingAddress = {
-          ...rawMailingAddress,
-          country,
-          state,
-          city,
-          district,
-        };
-      }
+  //         mailingAddress = {
+  //           ...rawMailingAddress,
+  //           country,
+  //           state,
+  //           city,
+  //           district,
+  //         };
+  //       }
 
-      if (rawResidentialAddress) {
-        const [resCountry, resState, resCity, resDistrict] = await Promise.all([
-          rawResidentialAddress.countryId
-            ? db
-                .select({
-                  id: countryModel.id,
-                  legacyCountryId: countryModel.legacyCountryId,
-                  name: countryModel.name,
-                  sequence: countryModel.sequence,
-                  createdAt: countryModel.createdAt,
-                  updatedAt: countryModel.updatedAt,
-                })
-                .from(countryModel)
-                .where(eq(countryModel.id, rawResidentialAddress.countryId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawResidentialAddress.stateId
-            ? db
-                .select({
-                  id: stateModel.id,
-                  name: stateModel.name,
-                  createdAt: stateModel.createdAt,
-                  updatedAt: stateModel.updatedAt,
-                })
-                .from(stateModel)
-                .where(eq(stateModel.id, rawResidentialAddress.stateId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawResidentialAddress.cityId
-            ? db
-                .select({
-                  id: cityModel.id,
-                  name: cityModel.name,
-                  createdAt: cityModel.createdAt,
-                  updatedAt: cityModel.updatedAt,
-                })
-                .from(cityModel)
-                .where(eq(cityModel.id, rawResidentialAddress.cityId))
-                .then((r) => r[0] ?? null)
-            : null,
-          rawResidentialAddress.districtId
-            ? db
-                .select({
-                  id: districtModel.id,
-                  name: districtModel.name,
-                  createdAt: districtModel.createdAt,
-                  updatedAt: districtModel.updatedAt,
-                })
-                .from(districtModel)
-                .where(eq(districtModel.id, rawResidentialAddress.districtId))
-                .then((r) => r[0] ?? null)
-            : null,
-        ]);
+  //       if (rawResidentialAddress) {
+  //         const [resCountry, resState, resCity, resDistrict] = await Promise.all([
+  //           rawResidentialAddress.countryId
+  //             ? db
+  //                 .select({
+  //                   id: countryModel.id,
+  //                   legacyCountryId: countryModel.legacyCountryId,
+  //                   name: countryModel.name,
+  //                   sequence: countryModel.sequence,
+  //                   createdAt: countryModel.createdAt,
+  //                   updatedAt: countryModel.updatedAt,
+  //                 })
+  //                 .from(countryModel)
+  //                 .where(eq(countryModel.id, rawResidentialAddress.countryId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawResidentialAddress.stateId
+  //             ? db
+  //                 .select({
+  //                   id: stateModel.id,
+  //                   name: stateModel.name,
+  //                   createdAt: stateModel.createdAt,
+  //                   updatedAt: stateModel.updatedAt,
+  //                 })
+  //                 .from(stateModel)
+  //                 .where(eq(stateModel.id, rawResidentialAddress.stateId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawResidentialAddress.cityId
+  //             ? db
+  //                 .select({
+  //                   id: cityModel.id,
+  //                   name: cityModel.name,
+  //                   createdAt: cityModel.createdAt,
+  //                   updatedAt: cityModel.updatedAt,
+  //                 })
+  //                 .from(cityModel)
+  //                 .where(eq(cityModel.id, rawResidentialAddress.cityId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //           rawResidentialAddress.districtId
+  //             ? db
+  //                 .select({
+  //                   id: districtModel.id,
+  //                   name: districtModel.name,
+  //                   createdAt: districtModel.createdAt,
+  //                   updatedAt: districtModel.updatedAt,
+  //                 })
+  //                 .from(districtModel)
+  //                 .where(eq(districtModel.id, rawResidentialAddress.districtId))
+  //                 .then((r) => r[0] ?? null)
+  //             : null,
+  //         ]);
 
-        residentialAddress = {
-          ...rawResidentialAddress,
-          country: resCountry,
-          state: resState,
-          city: resCity,
-          district: resDistrict,
-        };
-      }
+  //         residentialAddress = {
+  //           ...rawResidentialAddress,
+  //           country: resCountry,
+  //           state: resState,
+  //           city: resCity,
+  //           district: resDistrict,
+  //         };
+  //       }
 
-      personalDetails = {
-        ...pd,
-        nationality,
-        religion,
-        category,
-        motherTongue,
-        mailingAddress,
-        residentialAddress,
-        disabilityCode,
-      } as unknown as any;
-    }
-  }
+  //       personalDetails = {
+  //         ...pd,
+  //         nationality,
+  //         religion,
+  //         category,
+  //         motherTongue,
+  //         mailingAddress,
+  //         residentialAddress,
+  //         disabilityCode,
+  //       } as unknown as any;
+  //     }
+  //   }
 
   // Fetch latest promotion for the student
   const [latestPromotion] = await db
@@ -758,11 +757,13 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
           .from(classModel)
           .where(eq(classModel.id, latestPromotion.classId))
           .then((r) => r[0] ?? null),
-        db
-          .select()
-          .from(sectionModel)
-          .where(eq(sectionModel.id, latestPromotion.sectionId))
-          .then((r) => r[0] ?? null),
+        latestPromotion.sectionId
+          ? db
+              .select()
+              .from(sectionModel)
+              .where(eq(sectionModel.id, latestPromotion.sectionId))
+              .then((r) => r[0] ?? null)
+          : Promise.resolve(null),
         db
           .select()
           .from(shiftModel)
@@ -822,9 +823,7 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
     applicationFormAbstract: applicationForm,
     programCourse: programCourse!,
     specialization,
-    section,
-    shift,
-    currentBatch,
+    currentBatch: null,
     currentPromotion,
     personalDetails,
   };
