@@ -286,16 +286,16 @@ export async function findSubjectsSelections(studentId: number) {
     });
   }
 
-  const arr: PaperDetailedDto[] = [];
-  for (const subject of formatedSelectedMinorSubjects) {
-    if (arr.find((s) => s.id === subject.id)) {
-      arr.push(subject);
-    }
-  }
+  //   const arr: PaperDetailedDto[] = [];
+  //   for (const subject of formatedSelectedMinorSubjects) {
+  //     if (arr.find((s) => s.id === subject.id)) {
+  //       arr.push(subject);
+  //     }
+  //   }
 
   return {
     studentSubjectsSelection,
-    selectedMinorSubjects: arr, // Give distinct list of selected minor subjects based on legacy id
+    selectedMinorSubjects: formatedSelectedMinorSubjects, // Give distinct list of selected minor subjects based on legacy id
   };
 }
 
