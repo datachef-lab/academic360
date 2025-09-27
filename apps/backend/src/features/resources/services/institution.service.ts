@@ -95,16 +95,12 @@ export async function instituionResponseFormat(
     return null;
   }
 
-  const { degreeId, addressId, ...props } = instituion;
+  const { degreeId, ...props } = instituion;
 
   const formattedInstitution: InstitutionType = { ...props };
 
   if (degreeId) {
     formattedInstitution.degree = await findDegreeById(degreeId);
-  }
-
-  if (addressId) {
-    formattedInstitution.address = (await findAddressById(addressId)) as any;
   }
 
   return formattedInstitution;

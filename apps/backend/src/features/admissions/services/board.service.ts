@@ -3,7 +3,7 @@ import { boardModel } from "@repo/db/schemas/models/resources";
 import { Board, BoardT } from "@repo/db/schemas/models/resources/board.model";
 import { and, countDistinct, eq, ilike, ne } from "drizzle-orm";
 import { degreeModel } from "@repo/db/schemas/models/resources";
-import { addressModel } from "@repo/db/schemas/models/user";
+// import { addressModel } from "@repo/db/schemas/models/user";
 import XLSX from "xlsx";
 import fs from "fs";
 import { BoardDto } from "@repo/db/dtos";
@@ -58,7 +58,6 @@ export async function getAllBoards(
     .select({ total: countDistinct(boardModel.id) })
     .from(boardModel)
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
   // Get paginated results
@@ -79,18 +78,9 @@ export async function getAllBoards(
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
-      address: {
-        id: addressModel.id,
-        addressLine: addressModel.addressLine,
-        landmark: addressModel.landmark,
-        otherCity: addressModel.otherCity,
-        otherState: addressModel.otherState,
-        otherCountry: addressModel.otherCountry,
-      },
     })
     .from(boardModel)
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
     .limit(pageSize)
     .offset(offset);
@@ -106,7 +96,7 @@ export async function getAllBoards(
     createdAt: result.createdAt || new Date(),
     updatedAt: result.updatedAt || new Date(),
     degree: result.degree || null,
-    address: result.address ? { ...result.address, district: null } : null,
+    address: null,
   }));
 
   return {
@@ -135,18 +125,9 @@ export async function getBoardById(id: number): Promise<BoardDto | null> {
         sequence: degreeModel.sequence,
         isActive: degreeModel.isActive,
       },
-      address: {
-        id: addressModel.id,
-        addressLine: addressModel.addressLine,
-        landmark: addressModel.landmark,
-        otherCity: addressModel.otherCity,
-        otherState: addressModel.otherState,
-        otherCountry: addressModel.otherCountry,
-      },
     })
     .from(boardModel)
     .leftJoin(degreeModel, eq(boardModel.degreeId, degreeModel.id))
-    .leftJoin(addressModel, eq(boardModel.addressId, addressModel.id))
     .where(eq(boardModel.id, id));
 
   if (!result) return null;
@@ -162,7 +143,7 @@ export async function getBoardById(id: number): Promise<BoardDto | null> {
     createdAt: result.createdAt || new Date(),
     updatedAt: result.updatedAt || new Date(),
     degree: result.degree || null,
-    address: result.address ? { ...result.address, district: null } : null,
+    address: null,
   };
 }
 
@@ -212,7 +193,6 @@ export async function bulkUploadBoards(
         degreeId: row.degreeId || null,
         passingMarks: row.passingMarks || null,
         code: row.code || null,
-        addressId: row.addressId || null,
         sequence: row.sequence || null,
         isActive: row.isActive !== undefined ? row.isActive : true,
       };

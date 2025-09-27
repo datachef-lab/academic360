@@ -7,6 +7,7 @@ import {
 import { eq } from "drizzle-orm";
 import {
   addPerson,
+  findPersonByFamilyId,
   findPersonById,
   removePerson,
   savePerson,
@@ -14,6 +15,7 @@ import {
 import { FamilyType } from "@/types/user/family.js";
 import { findAnnualIncomeById } from "@/features/resources/services/annualIncome.service.js";
 import { z } from "zod";
+import { FamilyDto } from "@repo/db/index.js";
 
 // Validate input using Zod schema
 function validateFamilyInput(data: Omit<FamilyType, "id">) {
@@ -72,24 +74,24 @@ export async function removeFamily(id: number): Promise<boolean | null> {
   }
   // Delete the Family-person
   let isDeleted: boolean | null = false;
-  if (foundFamily.fatherDetailsId) {
-    isDeleted = await removePerson(foundFamily.fatherDetailsId);
-    if (isDeleted !== null && !isDeleted) {
-      return false;
-    }
-  }
-  if (foundFamily.motherDetailsId) {
-    isDeleted = await removePerson(foundFamily.motherDetailsId);
-    if (isDeleted !== null && !isDeleted) {
-      return false;
-    }
-  }
-  if (foundFamily.guardianDetailsId) {
-    isDeleted = await removePerson(foundFamily.guardianDetailsId);
-    if (isDeleted !== null && !isDeleted) {
-      return false;
-    }
-  }
+  //   if (foundFamily.      fatherDetailsId) {
+  //     isDeleted = await removePerson(foundFamily.fatherDetailsId);
+  //     if (isDeleted !== null && !isDeleted) {
+  //       return false;
+  //     }
+  //   }
+  //   if (foundFamily.motherDetailsId) {
+  //     isDeleted = await removePerson(foundFamily.motherDetailsId);
+  //     if (isDeleted !== null && !isDeleted) {
+  //       return false;
+  //     }
+  //   }
+  //   if (foundFamily.guardianDetailsId) {
+  //     isDeleted = await removePerson(foundFamily.guardianDetailsId);
+  //     if (isDeleted !== null && !isDeleted) {
+  //       return false;
+  //     }
+  //   }
   // Delete the family record itself
   const [deletedFamily] = await db
     .delete(familyModel)
@@ -161,29 +163,21 @@ export async function getAllFamilies(): Promise<Family[]> {
 
 export async function familyResponseFormat(
   family: Family,
-): Promise<FamilyType | null> {
+): Promise<FamilyDto | null> {
   if (!family) {
     return null;
   }
   const {
     annualIncomeId,
-    fatherDetailsId,
-    motherDetailsId,
-    guardianDetailsId,
+
     ...props
   } = family;
-  const formattedFamily: FamilyType = { ...props } as any;
+  const formattedFamily: FamilyDto = { ...props, members: [] };
   if (annualIncomeId) {
     formattedFamily.annualIncome = await findAnnualIncomeById(annualIncomeId);
   }
-  if (fatherDetailsId) {
-    formattedFamily.fatherDetails = await findPersonById(fatherDetailsId);
-  }
-  if (motherDetailsId) {
-    formattedFamily.motherDetails = await findPersonById(motherDetailsId);
-  }
-  if (guardianDetailsId) {
-    formattedFamily.guardianDetails = await findPersonById(guardianDetailsId);
-  }
+
+  formattedFamily.members = await findPersonByFamilyId(family.id!);
+
   return formattedFamily;
 }

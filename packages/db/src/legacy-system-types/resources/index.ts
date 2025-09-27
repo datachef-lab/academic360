@@ -45,3 +45,17 @@ export interface OldInstitution {
     pos: number;
     degreeid: number;
 }
+
+export interface OldPostOffice {
+    readonly id: number;
+    postoffice: string;
+    state: string;
+    stateid: number;
+}
+
+export interface OldPoliceStation {
+    readonly id: number;
+    policestation: string;
+    state: string;
+    stateid: number;
+}

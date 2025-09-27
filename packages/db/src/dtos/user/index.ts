@@ -6,6 +6,8 @@ import { StudentT } from "../../schemas/models/user/student.model";
 import { ProgramCourseDto } from "../course-design";
 import { BatchDto } from "../batches";
 import { ApplicationFormDto } from "../admissions";
+import { PoliceStationT } from "@/schemas/models/user/police-station.model";
+import { PostOfficeT } from "@/schemas/models/user/post-office.model";
 
 export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "boardResultStatusId" | "sessionId" | "classId" | "sectionId" | "shiftId" | "programCourseId"> {
     promotionStatus: PromotionStatusT;
@@ -17,14 +19,14 @@ export interface PromotionDto extends Omit<PromotionT, "promotionStatusId" | "bo
     programCourse: ProgramCourseDto;
 }
 
-export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId" | "sectionId" | "shiftId"> {
+export interface StudentDto extends Omit<StudentT, "applicationId" | "programCourseId" | "specializationId"> {
     applicationFormAbstract: ApplicationFormT | null;
     personalEmail: string | null;
     programCourse: ProgramCourseDto;
     personalDetails: PersonalDetailsDto | null;
     specialization: SpecializationT | null;
-    section: SectionT | null;
-    shift: ShiftT | null;
+    // section: SectionT | null;
+    // shift: ShiftT | null;
     currentPromotion: PromotionDto | null;
     currentBatch: BatchDto | null;
 }
@@ -37,11 +39,21 @@ export interface UserDto extends UserT {
     payload: StudentDto | StaffDto,
 }
 
-export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId"> {
-    country?: CountryT | null;
-    state?: StateT | null;
-    city?: CityT | null;
+export interface AddressDto extends Omit<AddressT, "countryId" | "stateId" | "cityId" | "districtId" | "previousCountryId" | "previousStateId" | "previousCityId" | "previousDistrictId" | "postofficeId" | "policeStationId"> {
+    country: CountryT | null;
+    previousCountry: CountryT | null;
+
+    state: StateT | null;
+    previousState: StateT | null;
+
+    city: CityT | null;
+    previousCity: CityT | null;
+
     district: districtT | null;
+    previousDistrict: districtT | null;
+
+    postoffice: PostOfficeT | null;
+    policeStation: PoliceStationT | null;
 }
 
 export interface AccommodationDto extends Omit<AccommodationT, "addressId"> {
@@ -49,15 +61,13 @@ export interface AccommodationDto extends Omit<AccommodationT, "addressId"> {
 }
 
 export interface PersonDto extends Omit<PersonT, "qualificationId" | "occupationId" | "officeAddressId"> {
-    qualification?: QualificationT | null;
-    occupation?: OccupationT | null;
-    officeAddress?: AddressDto | null;
+    qualification: QualificationT | null;
+    occupation: OccupationT | null;
+    officeAddress: AddressDto | null;
 }
 
-export interface FamilyDto extends Omit<FamilyT, "fatherDetailsId" | "motherDetailsId" | "guardianDetailsId" | "annualIncomeId"> {
-    fatherDetails?: PersonDto | null;
-    motherDetails?: PersonDto | null;
-    guardianDetails?: PersonDto | null;
+export interface FamilyDto extends Omit<FamilyT, "annualIncomeId"> {
+    members: PersonDto[];
     annualIncome?: AnnualIncomeT | null;
 }
 
@@ -70,8 +80,7 @@ export interface PersonalDetailsDto extends Omit<PersonalDetailsT, "nationalityI
     religion?: ReligionT | null;
     category?: CategoryT | null;
     motherTongue?: LanguageMediumT | null;
-    mailingAddress?: AddressDto | null;
-    residentialAddress?: AddressDto | null;
+    address: AddressDto[];
     disabilityCode?: DisabilityCodeT | null;
 }
 
@@ -91,7 +100,7 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
 
 export interface ProfileInfo {
     applicationFormDto?: ApplicationFormDto | null; // Only for student
-    familyDetails: FamilyDetailDto | null;
+    familyDetails: FamilyDto | null;
     personalDetails: PersonalDetailsDto | null;
     healthDetails: HealthDto | null;
     emergencyContactDetails: EmergencyContactT | null;

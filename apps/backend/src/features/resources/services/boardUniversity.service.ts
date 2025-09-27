@@ -97,7 +97,7 @@ export async function boardUniversityResponseFormat(
     return null;
   }
 
-  const { degreeId, addressId, ...props } = boardUniversity;
+  const { degreeId, ...props } = boardUniversity;
 
   const formattedBoardUniversity: BoardDto = {
     ...(props as unknown as Omit<BoardDto, "degree" | "address">),
@@ -107,18 +107,6 @@ export async function boardUniversityResponseFormat(
 
   if (degreeId) {
     formattedBoardUniversity.degree = await findDegreeById(degreeId as number);
-  }
-
-  if (addressId) {
-    const addr = await findAddressById(addressId as number);
-    // Ensure AddressDto contract includes district (nullable)
-    formattedBoardUniversity.address = addr
-      ? ({
-          ...(addr as unknown as object),
-          district:
-            (addr as unknown as { district?: unknown }).district ?? null,
-        } as unknown as BoardDto["address"])
-      : null;
   }
 
   return formattedBoardUniversity;

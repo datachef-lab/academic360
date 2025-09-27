@@ -11,6 +11,7 @@ import PersonalDetailsReadOnly from "./PersonalDetails";
 import { useQuery } from "@tanstack/react-query";
 import { fetchUserProfile } from "@/services/student";
 import { TabsContent } from "../ui/tabs";
+import type { AddressDto, FamilyDto, PersonDto, PersonalDetailsDto } from "@repo/db/dtos";
 
 type StudentContentProps = {
   studentId: number;
@@ -33,6 +34,45 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
     },
     enabled: (userId || studentId) > 0,
   });
+  // Shape helpers to adapt Profile API payload to UI components' expected props (no "any")
+  const getShapedPersonalDetails = ():
+    | (PersonalDetailsDto & {
+        residentialAddress?: AddressDto;
+        mailingAddress?: AddressDto;
+      })
+    | null => {
+    const pd = profile?.personalDetails as PersonalDetailsDto | undefined;
+    if (!pd) return null;
+    const addresses = (pd.address ?? []).filter(Boolean) as AddressDto[];
+    const residential = addresses.find((a) => a.type === "RESIDENTIAL");
+    const mailing = addresses.find((a) => a.type === "MAILING");
+    return {
+      ...pd,
+      residentialAddress: residential,
+      mailingAddress: mailing,
+    };
+  };
+
+  const getShapedFamilyDetails = ():
+    | (FamilyDto & {
+        father?: PersonDto;
+        mother?: PersonDto;
+        guardian?: PersonDto;
+      })
+    | null => {
+    const fam = profile?.familyDetails as FamilyDto | undefined;
+    if (!fam) return null;
+    const members = (fam.members ?? []).filter(Boolean) as PersonDto[];
+    const father = members.find((m) => m.type === "FATHER");
+    const mother = members.find((m) => m.type === "MOTHER");
+    const guardian = members.find((m) => m.type === "GUARDIAN");
+    return {
+      ...fam,
+      father,
+      mother,
+      guardian,
+    };
+  };
   const handleContent = () => {
     switch (activeTab.label) {
       case "Overview":
@@ -42,12 +82,12 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
         return (
           <PersonalDetailsReadOnly
             studentId={studentId}
-            initialData={profile?.personalDetails ?? null}
+            initialData={getShapedPersonalDetails()}
             personalEmail={personalEmail ?? null}
           />
         );
       case "Family":
-        return <FamilyDetails studentId={studentId} initialData={profile?.familyDetails ?? null} />;
+        return <FamilyDetails studentId={studentId} initialData={getShapedFamilyDetails()} />;
       case "Health":
         return (
           <HealthDetails

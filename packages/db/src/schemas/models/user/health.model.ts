@@ -3,10 +3,14 @@ import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, numeric, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 
 import { bloodGroupModel } from "@/schemas/models/resources";
+import { admissionGeneralInfoModel } from "../admissions";
+import { userModel } from "./user.model";
 
 export const healthModel = pgTable("health", {
     id: serial().primaryKey(),
-    
+    admissionGeneralInfoId: integer("admission_general_info_id_fk")
+        .references(() => admissionGeneralInfoModel.id),
+    userId: integer("user_id_fk").references(() => userModel.id),
     bloodGroupId: integer("blood_group_id_fk").references(() => bloodGroupModel.id),
 
     identificationMark: varchar("identification_mark", { length: 255 }),

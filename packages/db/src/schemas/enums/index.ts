@@ -258,3 +258,24 @@ export const promotionStatusTypeEnum = pgEnum("promotion_status_type", [
     "READMISSION",
     "CASUAL",
 ]);
+
+export const personTypeEnum = pgEnum("person_type", [
+    "FATHER",
+    "MOTHER",
+    "GUARDIAN",
+    "OTHER_GUARDIAN",
+    "SPOUSE",
+    "NOMINEE",
+    "BROTHER",
+    "SISTER",
+    "SON",
+    "DAUGHTER",
+    "OTHER",
+]);
+
+export const addressTypeEnum = pgEnum("address_type", [
+    "MAILING",
+    "RESIDENTIAL",
+    "OFFICE",
+    "OTHER",
+]);

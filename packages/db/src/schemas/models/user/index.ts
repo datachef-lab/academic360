@@ -12,3 +12,5 @@ export * from "./personalDetails.model";
 export * from "./student.model";
 export * from "./transportDetails.model";
 export * from "./staff.model";
+export * from "./police-station.model";
+export * from "./post-office.model";

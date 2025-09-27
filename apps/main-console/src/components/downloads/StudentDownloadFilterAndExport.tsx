@@ -188,13 +188,13 @@ const StudentDownloadFilterAndExport: React.FC = () => {
         Category: student.personalDetails?.category?.name || "",
         "Category Code": student.personalDetails?.category?.code || "",
 
-        "Mailing Address": student.personalDetails?.mailingAddress?.addressLine || "",
-        "Mailing Pincode": student.personalDetails?.mailingAddress?.pincode || "",
-        "Mailing Locality": student.personalDetails?.mailingAddress?.localityType || "",
+        "Mailing Address": (student.personalDetails as any)?.mailingAddress?.addressLine || "",
+        "Mailing Pincode": (student.personalDetails as any)?.mailingAddress?.pincode || "",
+        "Mailing Locality": (student.personalDetails as any)?.mailingAddress?.localityType || "",
 
-        "Residential Address": student.personalDetails?.residentialAddress?.addressLine || "",
-        "Residential Pincode": student.personalDetails?.residentialAddress?.pincode || "",
-        "Residential Locality": student.personalDetails?.residentialAddress?.localityType || "",
+        "Residential Address": (student.personalDetails as any)?.residentialAddress?.addressLine || "",
+        "Residential Pincode": (student.personalDetails as any)?.residentialAddress?.pincode || "",
+        "Residential Locality": (student.personalDetails as any)?.residentialAddress?.localityType || "",
 
         Nationality: student.personalDetails?.nationality?.name || "",
         Religion: student.personalDetails?.religion?.name || "",

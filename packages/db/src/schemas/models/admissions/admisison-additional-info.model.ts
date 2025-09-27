@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createInsertSchema } from "drizzle-zod";
 import { boolean, integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 
-import { departmentModel, familyModel } from "@/schemas/models/user";
+import { departmentModel } from "@/schemas/models/user";
 import { disabilityTypeEnum } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { annualIncomeModel } from "@/schemas/models/resources";
@@ -21,7 +21,7 @@ export const admissionAdditionalInfoModel = pgTable("admission_additional_info",
 
     isSingleParent: boolean("is_single_parent").default(false),
 
-    familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
+    // familyDetailsId: integer("family_details_id_fk").references(() => familyModel.id),
 
     isEitherParentStaff: boolean("is_either_parent_staff").default(false),
 
