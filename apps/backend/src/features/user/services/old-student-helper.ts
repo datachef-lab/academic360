@@ -1686,29 +1686,41 @@ export async function upsertTransportDetails(
     .where(eq(transportDetailsModel.userId, userId));
 
   if (existingTransportDetails) {
-    const [updatedTransportDetails] = await db
-      .update(transportDetailsModel)
-      .set({
-        // Add any transport-related fields from oldStudent here
-        // transportId: oldStudent.transportId,
-        // pickupPointId: oldStudent.pickupPointId,
-      })
-      .where(eq(transportDetailsModel.id, existingTransportDetails.id))
-      .returning();
+    // Only update if there are actual values to set
+    const updateData: any = {};
 
-    return updatedTransportDetails;
+    if (oldStudent.transportId) {
+      updateData.transportId = oldStudent.transportId;
+    }
+
+    // Only perform update if there are fields to update
+    if (Object.keys(updateData).length > 0) {
+      const [updatedTransportDetails] = await db
+        .update(transportDetailsModel)
+        .set(updateData)
+        .where(eq(transportDetailsModel.id, existingTransportDetails.id))
+        .returning();
+
+      return updatedTransportDetails;
+    }
+
+    return existingTransportDetails;
   }
 
   // Original creation logic when no ID is provided
   // Note: transport_details table doesn't have studentId field, it's referenced through other tables
 
+  const insertData: any = {
+    userId,
+  };
+
+  if (oldStudent.transportId) {
+    insertData.transportId = oldStudent.transportId;
+  }
+
   const [newTransportDetail] = await db
     .insert(transportDetailsModel)
-    .values({
-      // transportId
-      // pickupPointId
-      userId,
-    })
+    .values(insertData)
     .returning();
 
   return newTransportDetail;
