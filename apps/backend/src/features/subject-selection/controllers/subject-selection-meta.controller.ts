@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
-  createFromInput,
+  createOrUpdateMetaWithRelations,
   findAll,
   findById,
   remove,
@@ -15,7 +15,7 @@ export async function createSubjectSelectionMetaHandler(
   next: NextFunction,
 ) {
   try {
-    const created = await createFromInput(req.body);
+    const created = await createOrUpdateMetaWithRelations(req.body);
     if (!created) {
       res
         .status(400)

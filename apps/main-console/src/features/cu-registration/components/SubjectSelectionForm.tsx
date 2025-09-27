@@ -2,7 +2,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Combobox } from "@/components/ui/combobox";
-import { fetchStudentSubjectSelections, PaperDto } from "@/services/subject-selection";
+import {
+  fetchStudentSubjectSelections,
+  PaperDto,
+  SubjectSelectionMetaDto,
+  StudentSubjectSelectionGroupDto,
+  AdminStudentSubjectSelectionForSave,
+  saveStudentSubjectSelectionsAdmin,
+} from "@/services/student-subject-selection";
 import { fetchRestrictedGroupings } from "@/services/restricted-grouping";
 import { fetchStudentByUid } from "@/services/student";
 import { StudentDto } from "@repo/db/dtos/user";
@@ -12,16 +19,22 @@ interface SubjectSelectionFormProps {
 }
 
 export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps) {
-  const [step, setStep] = useState<1 | 2>(1);
   const [errors, setErrors] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  const [agree1, setAgree1] = useState(false);
-  const [agree2, setAgree2] = useState(false);
-  const [agree3, setAgree3] = useState(false);
 
   const [student, setStudent] = useState<StudentDto | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // New state for meta data and saving
+  const [subjectSelectionMetas, setSubjectSelectionMetas] = useState<SubjectSelectionMetaDto[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasExistingSelections, setHasExistingSelections] = useState(false);
+  const [currentSession, setCurrentSession] = useState<{ id: number } | null>(null);
+  const [reason, setReason] = useState(""); // Reason for admin changes
+  const [groups, setGroups] = useState<StudentSubjectSelectionGroupDto[]>([]); // Store groups for subject ID lookup
 
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
@@ -85,7 +98,55 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
         const resp = await fetchStudentSubjectSelections(studentData.id);
         console.log("subject-selection-form data", resp);
 
+        // Set meta data from the response
+        setSubjectSelectionMetas(resp.subjectSelectionMetas || []);
+
+        // Set session information
+        setCurrentSession(resp.session || null);
+
         const groups = resp.studentSubjectsSelection ?? [];
+        setGroups(groups);
+
+        // Check if student has actually submitted selections through the form
+        const hasExisting = resp.hasFormSubmissions || false;
+        setHasExistingSelections(hasExisting);
+
+        // Auto-populate existing selections if they exist
+        if (hasExisting && resp.actualStudentSelections && resp.actualStudentSelections.length > 0) {
+          const existingSelections = resp.actualStudentSelections;
+          console.log("Auto-populating existing selections:", existingSelections);
+
+          // Transform and populate form fields with existing selections
+          for (const selection of existingSelections) {
+            const metaId = selection.subjectSelectionMeta?.id;
+            const subjectName = selection.subject?.name;
+
+            if (!metaId || !subjectName) continue;
+
+            // Find the meta label by looking up the metaId in the metas array
+            const meta = resp.subjectSelectionMetas?.find((m) => m.id === metaId);
+            const metaLabel = meta?.label;
+
+            if (!metaLabel) continue;
+
+            // Map meta labels to form fields
+            if (metaLabel.includes("Minor 1")) {
+              setMinor1(subjectName);
+            } else if (metaLabel.includes("Minor 2") || metaLabel.includes("Minor 3")) {
+              setMinor2(subjectName);
+            } else if (metaLabel.includes("IDC 1")) {
+              setIdc1(subjectName);
+            } else if (metaLabel.includes("IDC 2")) {
+              setIdc2(subjectName);
+            } else if (metaLabel.includes("IDC 3")) {
+              setIdc3(subjectName);
+            } else if (metaLabel.includes("AEC")) {
+              setAec3(subjectName);
+            } else if (metaLabel.includes("CVAC")) {
+              setCvac4(subjectName);
+            }
+          }
+        }
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
@@ -273,73 +334,6 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     }
   };
 
-  // Dynamic validation function that updates errors in real-time
-  const updateValidationErrors = (showErrors: boolean = false) => {
-    const newErrors: string[] = [];
-
-    // Only show validation errors if explicitly requested (e.g., when clicking Next)
-    if (!showErrors) {
-      setErrors([]);
-      return true;
-    }
-
-    const shouldAskForAec = hasActualOptions(availableAecSubjects);
-    const shouldAskForCvac = hasActualOptions(availableCvacOptions);
-
-    // Required field validation - create individual error messages
-    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
-    if (hasActualOptions(admissionMinor2Subjects) && !minor2) newErrors.push("Minor II subject is required");
-    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
-    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
-    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
-    if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
-    if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
-
-    // Business rule validation
-    if (minor1 && idc1 && minor1 === idc1) {
-      newErrors.push("Minor I cannot be the same as IDC 1");
-    }
-    if (minor1 && idc2 && minor1 === idc2) {
-      newErrors.push("Minor I cannot be the same as IDC 2");
-    }
-    if (minor1 && idc3 && minor1 === idc3) {
-      newErrors.push("Minor I cannot be the same as IDC 3");
-    }
-    if (minor2 && idc1 && minor2 === idc1) {
-      newErrors.push("Minor II cannot be the same as IDC 1");
-    }
-    if (minor2 && idc2 && minor2 === idc2) {
-      newErrors.push("Minor II cannot be the same as IDC 2");
-    }
-    if (minor2 && idc3 && minor2 === idc3) {
-      newErrors.push("Minor II cannot be the same as IDC 3");
-    }
-
-    // IDC uniqueness validation
-    if (idc1 && idc2 && idc1 === idc2) {
-      newErrors.push("IDC 1 and IDC 2 cannot be the same");
-    }
-    if (idc1 && idc3 && idc1 === idc3) {
-      newErrors.push("IDC 1 and IDC 3 cannot be the same");
-    }
-    if (idc2 && idc3 && idc2 === idc3) {
-      newErrors.push("IDC 2 and IDC 3 cannot be the same");
-    }
-
-    // Auto-assigned subject must be present in one of the minors
-    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
-      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
-    }
-
-    setErrors(newErrors);
-    return newErrors.length === 0;
-  };
-
-  // Validation function - only show errors when explicitly requested
-  const validateForm = () => {
-    return updateValidationErrors(true);
-  };
-
   // Mark user interaction when they start selecting fields
   const handleFieldChange = (setter: (value: string) => void, value: string, fieldType: string) => {
     if (!hasUserInteracted) {
@@ -377,20 +371,249 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     }
   };
 
-  const handleNext = () => {
-    // Mark user interaction when they try to proceed
-    setHasUserInteracted(true);
-
-    // Show validation errors when user tries to proceed
-    const isValid = validateForm();
-
-    if (isValid) {
-      // Do not block; mismatch is informational only
-      setStep(2);
-    }
-    // If not valid, errors will be displayed by validateForm()
+  // Helper function to get dynamic label from meta data
+  const getDynamicLabel = (subjectTypeCode: string, semester?: string): string => {
+    const meta = subjectSelectionMetas.find(
+      (m) =>
+        m.subjectType.code === subjectTypeCode &&
+        (!semester || m.forClasses.some((c) => c.class.name.includes(semester))),
+    );
+    return meta?.label || getDefaultLabel(subjectTypeCode, semester);
   };
-  const handleBack = () => setStep(1);
+
+  // Helper function to get default label if meta data is not available
+  const getDefaultLabel = (subjectTypeCode: string, semester?: string): string => {
+    switch (subjectTypeCode) {
+      case "MN":
+        if (semester === "I" || semester === "II") return "Minor I (Semester I & II)";
+        if (semester === "III" || semester === "IV") return "Minor II (Semester III & IV)";
+        return "Minor Subject";
+      case "IDC":
+        if (semester === "I") return "IDC 1 (Semester I)";
+        if (semester === "II") return "IDC 2 (Semester II)";
+        if (semester === "III") return "IDC 3 (Semester III)";
+        return "IDC Subject";
+      case "AEC":
+        return "AEC (Semester III & IV)";
+      case "CVAC":
+        return "CVAC 4 (Semester II)";
+      default:
+        return "Subject";
+    }
+  };
+
+  // Create selections array for saving with fresh meta data
+  const createSelectionsForSave = (): AdminStudentSubjectSelectionForSave[] => {
+    const selectionsToSave: AdminStudentSubjectSelectionForSave[] = [];
+
+    if (!student?.id || !subjectSelectionMetas.length || !currentSession?.id) {
+      return selectionsToSave;
+    }
+
+    // Helper function to find subject ID by name
+    const findSubjectId = (subjectName: string): number | null => {
+      for (const group of groups) {
+        for (const paper of group.paperOptions || []) {
+          if (paper.subject?.name === subjectName) {
+            return paper.subject.id;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Helper function to find meta ID by subject type, semester, and stream
+    const findMetaId = (subjectTypeCode: string, semester?: string): number | null => {
+      const studentStreamId = student?.currentPromotion?.programCourse?.stream?.id;
+
+      const meta = subjectSelectionMetas.find((m) => {
+        if (m.subjectType.code !== subjectTypeCode) return false;
+
+        // Check if the meta applies to the student's stream
+        if (studentStreamId && m.streams.length > 0) {
+          const hasMatchingStream = m.streams.some((s) => s.stream?.id === studentStreamId);
+          if (!hasMatchingStream) return false;
+        }
+
+        // For semester-specific matching, check if the meta applies to the semester
+        if (semester && m.forClasses.length > 0) {
+          return m.forClasses.some((c) => c.class.name.includes(semester));
+        }
+
+        return true;
+      });
+      return meta?.id || null;
+    };
+
+    // Add Minor 1 selection
+    if (minor1) {
+      const subjectId = findSubjectId(minor1);
+      const metaId = findMetaId("MN", "I");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor1 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    // Add Minor 2 selection
+    if (minor2) {
+      const subjectId = findSubjectId(minor2);
+      const metaId = findMetaId("MN", "III");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor2 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    // Add IDC selections
+    if (idc1) {
+      const subjectId = findSubjectId(idc1);
+      const metaId = findMetaId("IDC", "I");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc1 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    if (idc2) {
+      const subjectId = findSubjectId(idc2);
+      const metaId = findMetaId("IDC", "II");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc2 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    if (idc3) {
+      const subjectId = findSubjectId(idc3);
+      const metaId = findMetaId("IDC", "III");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc3 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    // Add AEC selection
+    if (aec3) {
+      const subjectId = findSubjectId(aec3);
+      const metaId = findMetaId("AEC", "III");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: aec3 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    // Add CVAC selection
+    if (cvac4) {
+      const subjectId = findSubjectId(cvac4);
+      const metaId = findMetaId("CVAC", "II");
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: cvac4 },
+          createdBy: 1, // TODO: Get actual admin user ID
+          reason: reason || "Admin update",
+        });
+      }
+    }
+
+    return selectionsToSave;
+  };
+
+  // Handle save
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const selectionsToSave = createSelectionsForSave();
+      console.log("Saving selections:", selectionsToSave);
+
+      const result = await saveStudentSubjectSelectionsAdmin(selectionsToSave);
+
+      if (result.success) {
+        setSaveSuccess(true);
+        console.log("Selections saved successfully:", result.data);
+
+        // Play success sound
+        try {
+          const audioContext = new (window.AudioContext ||
+            (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+
+          // Create a more distinctive "success" sound with two quick beeps
+          const playBeep = (frequency: number, startTime: number, duration: number) => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(frequency, startTime);
+            oscillator.type = "sine";
+
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+          };
+
+          // Play two quick ascending beeps
+          playBeep(800, audioContext.currentTime, 0.15); // Higher pitch
+          playBeep(1000, audioContext.currentTime + 0.2, 0.15); // Even higher pitch
+        } catch (error) {
+          console.log("Could not play success sound:", error);
+        }
+      } else {
+        setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to save selections";
+      setSaveError(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Filter out Minor subjects from IDC options (per list)
   const getFilteredIdcOptions = (sourceList: string[], currentIdcValue: string) => {
@@ -500,6 +723,17 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     }
   }, [minor2, autoMinor1, minor1, admissionMinor1Subjects, getFilteredByCategory]);
 
+  // Auto-fade success message after 2 seconds
+  useEffect(() => {
+    if (saveSuccess) {
+      const timer = setTimeout(() => {
+        setSaveSuccess(false);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [saveSuccess]);
+
   // Loading skeleton component for dropdowns
   const LoadingDropdown = ({ label }: { label: string }) => (
     <div className="space-y-2 min-h-[84px]">
@@ -539,39 +773,6 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
     return subjects.filter((subject) => subject && subject.trim() !== "").length > 0;
   };
 
-  // Dynamic semester labeling function
-  const getSemesterLabel = (subjectType: "minor1" | "minor2", baseLabel: string) => {
-    // Try multiple paths to get program course name
-    const programCourseName =
-      student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
-
-    // Check for BCOM programs - handle both "B.Com" and "BCOM" variations
-    const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
-    const isBcomProgram = normalizedName.includes("bcom");
-
-    if (subjectType === "minor2" && isBcomProgram) {
-      const newLabel = baseLabel.replace("Minor II (Semester III & IV)", "Minor III (Semester III)");
-      return newLabel;
-    }
-
-    return baseLabel;
-  };
-
-  // Dynamic placeholder function
-  const getPlaceholder = (subjectType: "minor1" | "minor2", basePlaceholder: string) => {
-    const programCourseName =
-      student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
-
-    const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
-    const isBcomProgram = normalizedName.includes("bcom");
-
-    if (subjectType === "minor2" && isBcomProgram) {
-      return basePlaceholder.replace("Minor II", "Minor III");
-    }
-
-    return basePlaceholder;
-  };
-
   return (
     <div className="w-full h-full flex flex-col overflow-hidden">
       {/* Form Section - No Scrolling */}
@@ -579,24 +780,15 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
         <div className="shadow-lg rounded-xl bg-white p-6 border border-gray-100 h-full overflow-y-auto">
           <div className="mb-6">
             <h2 className="text-xl font-bold text-gray-800 mb-8">
-              {step === 1
-                ? "Semester-wise Subject Selection for Calcutta University Registration"
-                : "Preview Your Selections"}
+              {hasExistingSelections
+                ? "Update Student Subject Selections (Admin)"
+                : "Create Student Subject Selections (Admin)"}
             </h2>
+
             <p className="text-gray-600 text-sm">
-              {step === 1 ? (
-                <>
-                  <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 mt-0.5" />
-                    <div className="text-sm">
-                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
-                      selection process. These notes are provided here for your reference and guidance.
-                    </div>
-                  </div>
-                </>
-              ) : (
-                "Review and confirm declarations before saving"
-              )}
+              {hasExistingSelections
+                ? "Existing selections are pre-populated below. Make your changes and save to update."
+                : "Select subjects for this student. All validation rules apply as in the student console."}
             </p>
             {loading && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg flex items-center gap-2">
@@ -614,317 +806,213 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
             )}
           </div>
 
-          {step === 1 && (
-            <div className="grid grid-cols-1 gap-4">
-              {/* Minor Subjects */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {loading ? (
-                  <>
-                    <LoadingDropdown label={getSemesterLabel("minor1", "Minor I (Semester I & II)")} />
-                    <LoadingDropdown label={getSemesterLabel("minor2", "Minor II (Semester III & IV)")} />
-                  </>
-                ) : (
-                  <>
-                    {hasActualOptions(admissionMinor1Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">
-                          {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
-                        </label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              admissionMinor1Subjects,
-                              getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
-                            ),
-                            getGlobalExcludes(minor1),
-                          )}
-                          value={minor1}
-                          onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
-                          placeholder={getPlaceholder("minor1", "Select Minor I")}
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-
-                    {hasActualOptions(admissionMinor2Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">
-                          {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
-                        </label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              admissionMinor2Subjects,
-                              getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
-                            ),
-                            getGlobalExcludes(minor2),
-                          )}
-                          value={minor2}
-                          onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
-                          placeholder={getPlaceholder("minor2", "Select Minor II")}
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
+          <div className="grid grid-cols-1 gap-4">
+            {/* Minor Subjects */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {loading ? (
-                <LoadingDropdown label="AEC (Semester III & IV)" />
-              ) : hasActualOptions(availableAecSubjects) ? (
-                <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                  <label className="text-sm font-semibold text-gray-700">AEC (Semester III & IV)</label>
-                  <Combobox
-                    dataArr={convertToComboboxData(availableAecSubjects)}
-                    value={aec3}
-                    onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
-                    placeholder="Select AEC 3"
-                    className="w-full"
-                  />
-                </div>
-              ) : null}
+                <>
+                  <LoadingDropdown label={getDynamicLabel("MN", "I")} />
+                  <LoadingDropdown label={getDynamicLabel("MN", "III")} />
+                </>
+              ) : (
+                <>
+                  {hasActualOptions(admissionMinor1Subjects) && (
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
+                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "I")}</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(
+                          preserveAecIfPresent(
+                            admissionMinor1Subjects,
+                            getFilteredByCategory(admissionMinor1Subjects, minor1, "MN", ["I", "II"]),
+                          ),
+                          getGlobalExcludes(minor1),
+                        )}
+                        value={minor1}
+                        onChange={(value) => handleFieldChange(setMinor1, value, "minor1")}
+                        placeholder="Select Minor I"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
 
-              {/* IDC Subjects */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {loading ? (
-                  <>
-                    <LoadingDropdown label="IDC 1 (Semester I)" />
-                    <LoadingDropdown label="IDC 2 (Semester II)" />
-                    <LoadingDropdown label="IDC 3 (Semester III)" />
-                  </>
-                ) : (
-                  <>
-                    {hasActualOptions(availableIdcSem1Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 1 (Semester I)</label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              availableIdcSem1Subjects,
-                              getFilteredByCategory(
-                                getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
-                                idc1,
-                                "IDC",
-                                "I",
-                              ),
-                            ),
-                            getGlobalExcludes(idc1),
-                          )}
-                          value={idc1}
-                          onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
-                          placeholder="Select IDC 1"
-                          className="w-full"
-                        />
-                      </div>
-                    )}
+                  {hasActualOptions(admissionMinor2Subjects) && (
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
+                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "III")}</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(
+                          preserveAecIfPresent(
+                            admissionMinor2Subjects,
+                            getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]),
+                          ),
+                          getGlobalExcludes(minor2),
+                        )}
+                        value={minor2}
+                        onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
+                        placeholder="Select Minor II"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
 
-                    {hasActualOptions(availableIdcSem2Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 2 (Semester II)</label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              availableIdcSem2Subjects,
-                              getFilteredByCategory(
-                                getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
-                                idc2,
-                                "IDC",
-                                "II",
-                              ),
-                            ),
-                            getGlobalExcludes(idc2),
-                          )}
-                          value={idc2}
-                          onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
-                          placeholder="Select IDC 2"
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-
-                    {hasActualOptions(availableIdcSem3Subjects) && (
-                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">IDC 3 (Semester III)</label>
-                        <Combobox
-                          dataArr={convertToComboboxData(
-                            preserveAecIfPresent(
-                              availableIdcSem3Subjects,
-                              getFilteredByCategory(
-                                getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
-                                idc3,
-                                "IDC",
-                                "III",
-                              ),
-                            ),
-                            getGlobalExcludes(idc3),
-                          )}
-                          value={idc3}
-                          onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
-                          placeholder="Select IDC 3"
-                          className="w-full"
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
+            {loading ? (
+              <LoadingDropdown label={getDynamicLabel("AEC")} />
+            ) : hasActualOptions(availableAecSubjects) ? (
+              <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
+                <label className="text-base font-medium text-gray-700">{getDynamicLabel("AEC")}</label>
+                <Combobox
+                  dataArr={convertToComboboxData(availableAecSubjects)}
+                  value={aec3}
+                  onChange={(value) => handleFieldChange(setAec3, value, "aec3")}
+                  placeholder="Select AEC 3"
+                  className="w-full"
+                />
               </div>
+            ) : null}
 
-              {/* CVAC Subjects */}
+            {/* IDC Subjects */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {loading ? (
-                <LoadingDropdown label="CVAC 4 (Semester II)" />
-              ) : hasActualOptions(availableCvacOptions) ? (
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">CVAC 4 (Semester II)</label>
-                  <Combobox
-                    dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
-                    value={cvac4}
-                    onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
-                    placeholder="Select CVAC 4"
-                    className="w-full"
-                  />
-                </div>
-              ) : null}
+                <>
+                  <LoadingDropdown label={getDynamicLabel("IDC", "I")} />
+                  <LoadingDropdown label={getDynamicLabel("IDC", "II")} />
+                  <LoadingDropdown label={getDynamicLabel("IDC", "III")} />
+                </>
+              ) : (
+                <>
+                  {hasActualOptions(availableIdcSem1Subjects) && (
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(
+                          preserveAecIfPresent(
+                            availableIdcSem1Subjects,
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem1Subjects, idc1),
+                              idc1,
+                              "IDC",
+                              "I",
+                            ),
+                          ),
+                          getGlobalExcludes(idc1),
+                        )}
+                        value={idc1}
+                        onChange={(value) => handleFieldChange(setIdc1, value, "idc1")}
+                        placeholder="Select IDC 1"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
 
-              <div className="space-y-2">{/* Empty space for grid alignment */}</div>
+                  {hasActualOptions(availableIdcSem2Subjects) && (
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(
+                          preserveAecIfPresent(
+                            availableIdcSem2Subjects,
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem2Subjects, idc2),
+                              idc2,
+                              "IDC",
+                              "II",
+                            ),
+                          ),
+                          getGlobalExcludes(idc2),
+                        )}
+                        value={idc2}
+                        onChange={(value) => handleFieldChange(setIdc2, value, "idc2")}
+                        placeholder="Select IDC 2"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+
+                  {hasActualOptions(availableIdcSem3Subjects) && (
+                    <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
+                      <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</label>
+                      <Combobox
+                        dataArr={convertToComboboxData(
+                          preserveAecIfPresent(
+                            availableIdcSem3Subjects,
+                            getFilteredByCategory(
+                              getFilteredIdcOptions(availableIdcSem3Subjects, idc3),
+                              idc3,
+                              "IDC",
+                              "III",
+                            ),
+                          ),
+                          getGlobalExcludes(idc3),
+                        )}
+                        value={idc3}
+                        onChange={(value) => handleFieldChange(setIdc3, value, "idc3")}
+                        placeholder="Select IDC 3"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* CVAC Subjects */}
+            {loading ? (
+              <LoadingDropdown label={getDynamicLabel("CVAC")} />
+            ) : hasActualOptions(availableCvacOptions) ? (
+              <div className="space-y-2">
+                <label className="text-base font-medium text-gray-700">{getDynamicLabel("CVAC")}</label>
+                <Combobox
+                  dataArr={convertToComboboxData(availableCvacOptions, getGlobalExcludes(cvac4))}
+                  value={cvac4}
+                  onChange={(value) => handleFieldChange(setCvac4, value, "cvac4")}
+                  placeholder="Select CVAC 4"
+                  className="w-full"
+                />
+              </div>
+            ) : null}
+
+            <div className="space-y-2">{/* Empty space for grid alignment */}</div>
+          </div>
+
+          {/* Save Status Messages */}
+          {saveSuccess && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-base font-medium">Subject selections saved successfully!</span>
+              </div>
             </div>
           )}
 
-          {step === 2 && (
-            <>
-              {/* Errors (should be none here, but guard just in case) */}
-              {errors.length > 0 && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
-                  <p className="font-medium mb-2">Please fix the following errors:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    {errors.map((error, index) => (
-                      <li key={index}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Preview */}
-              {errors.length === 0 && (
-                <div className="overflow-x-auto my-4">
-                  <table className="w-full border border-gray-200 text-sm rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="border p-2 text-left font-semibold text-gray-700">Subject Category</th>
-                        <th className="border p-2 text-left font-semibold text-gray-700">Selection</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Minor I - Always show if there are subjects available */}
-                      {admissionMinor1Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">
-                            {getSemesterLabel("minor1", "Minor I (Semester I & II)")}
-                          </td>
-                          <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* Minor II - Always show if there are subjects available */}
-                      {admissionMinor2Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">
-                            {getSemesterLabel("minor2", "Minor II (Semester III & IV)")}
-                          </td>
-                          <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* IDC 1 - Only show if there are subjects available */}
-                      {availableIdcSem1Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 1 (Semester I)</td>
-                          <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* IDC 2 - Only show if there are subjects available */}
-                      {availableIdcSem2Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 2 (Semester II)</td>
-                          <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* IDC 3 - Only show if there are subjects available */}
-                      {availableIdcSem3Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">IDC 3 (Semester III)</td>
-                          <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* AEC 3 - Only show if there are subjects available */}
-                      {availableAecSubjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">AEC (Semester III & IV)</td>
-                          <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
-                        </tr>
-                      )}
-
-                      {/* CVAC 4 - Only show if there are subjects available */}
-                      {availableCvacOptions.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">CVAC 4 (Semester II)</td>
-                          <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Declarations */}
-              {errors.length === 0 && (
-                <div className="space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree1}
-                      onChange={(e) => setAgree1(e.target.checked)}
-                    />
-                    <span>I confirm that I have read the semester-wise subject selection guidelines given above.</span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree2}
-                      onChange={(e) => setAgree2(e.target.checked)}
-                    />
-                    <span>
-                      I understand that once submitted, I will not be allowed to change the selected subjects in the
-                      future.
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree3}
-                      onChange={(e) => setAgree3(e.target.checked)}
-                    />
-                    <span>
-                      In the event of violation of subject selection rules, I will abide by the final decision taken by
-                      the Vice-Principal/Course Coordinator/Calcutta University.
-                    </span>
-                  </label>
-                </div>
-              )}
-            </>
+          {saveError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-base font-medium">Error saving selections: {saveError}</span>
+              </div>
+            </div>
           )}
 
-          {/* Step 1 inline errors (shown above Next) */}
-          {step === 1 && errors.length > 0 && (
+          {/* Reason for Change (Admin only) */}
+          <div className="space-y-2">
+            <label className="text-base font-medium text-gray-700">Reason for Change/Update (Optional)</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Enter reason for this change (e.g., Student request, Academic requirement, etc.)"
+              className="w-full p-3 border border-gray-300 rounded-md text-base"
+              rows={3}
+            />
+          </div>
+
+          {/* Inline errors */}
+          {errors.length > 0 && (
             <div id="form-error" className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
-              <ul className="list-disc list-inside space-y-1 text-sm">
+              <ul className="list-disc list-inside space-y-1 text-base">
                 {errors.map((error, index) => (
                   <li key={index}>{error}</li>
                 ))}
@@ -933,13 +1021,13 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
           )}
 
           {/* Non-blocking Minor mismatch notice */}
-          {step === 1 && minorMismatch && (
+          {minorMismatch && (
             <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
               <div>
-                Your current Minor I and II subject combination is different from the one you had selected at the time
-                of admission.
+                The current Minor I and II subject combination is different from the one selected at the time of
+                admission.
               </div>
-              <div className="mt-1 text-sm">
+              <div className="mt-1 text-base">
                 Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
                 <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>
               </div>
@@ -948,32 +1036,14 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-100">
-            {step === 1 && (
-              <button
-                onClick={handleNext}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm flex items-center gap-2"
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? "Loading..." : "Next"}
-              </button>
-            )}
-            {step === 2 && (
-              <>
-                <button
-                  onClick={handleBack}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium text-gray-700 text-sm"
-                >
-                  Back
-                </button>
-                <button
-                  disabled={!agree1 || !agree2 || !agree3}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm text-sm"
-                >
-                  Save
-                </button>
-              </>
-            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm text-base flex items-center gap-2"
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving ? "Saving..." : hasExistingSelections ? "Update Selections" : "Save Selections"}
+            </button>
           </div>
         </div>
       </div>

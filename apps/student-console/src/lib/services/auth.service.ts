@@ -7,7 +7,7 @@
 // import { axiosInstance } from '../utils';
 import { UserDto } from "@repo/db/dtos/user";
 import { ApiResponse } from "@/types/api-response";
-import { axiosInstance } from "@/lib/utils";
+import { ingaxiosInstance as axiosInstance } from "@/lib/utils";
 
 // // JWT Secret should be in environment variables
 // const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key';

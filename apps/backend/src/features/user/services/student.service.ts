@@ -36,6 +36,7 @@ import {
   classModel,
   sectionModel,
   shiftModel,
+  academicYearModel,
 } from "@repo/db/schemas/models/academics";
 import { programCourseModel } from "@repo/db/schemas/models/course-design";
 
@@ -751,7 +752,21 @@ async function modelToDto(student: Student): Promise<StudentDto | null> {
           .select()
           .from(sessionModel)
           .where(eq(sessionModel.id, latestPromotion.sessionId))
-          .then((r) => r[0] ?? null),
+          .then(async (r) => {
+            const session = r[0] ?? null;
+            if (session && session.academicYearId) {
+              const [academicYear] = await db
+                .select()
+                .from(academicYearModel)
+                .where(eq(academicYearModel.id, session.academicYearId));
+
+              return {
+                ...session,
+                academicYear: academicYear || null,
+              };
+            }
+            return session;
+          }),
         db
           .select()
           .from(classModel)

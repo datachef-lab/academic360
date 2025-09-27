@@ -14,6 +14,9 @@ import {
   sessionModel,
   studentModel,
 } from "@repo/db/schemas";
+import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
+// import { subjectSelectionMetaModel } from "@repo/db/schemas/models/subject-selection/subject-selection-meta.model";
+// import { subjectModel } from "@repo/db/schemas/models/course-design";
 import { classModel } from "@repo/db/schemas/models/academics";
 import * as classService from "@/features/academics/services/class.service";
 import * as shiftService from "@/features/academics/services/shift.service";
@@ -104,7 +107,7 @@ async function findPromotionByStudentId(studentId: number) {
 }
 
 export async function findSubjectsSelections(studentId: number) {
-  const { foundProgramCourse, foundClass } =
+  const { foundProgramCourse, foundClass, foundSession } =
     await findPromotionByStudentId(studentId);
   const { foundAdmAcademicInfo, foundAcademicYear } =
     await findHierarchy(studentId);
@@ -319,10 +322,68 @@ export async function findSubjectsSelections(studentId: number) {
       )
     : [];
 
+  // Check if student has actually submitted subject selections through the form
+  // (not just admission selections)
+  const [actualStudentSelections] = await Promise.all([
+    db
+      .select({
+        id: studentSubjectSelectionModel.id,
+        sessionId: studentSubjectSelectionModel.sessionId,
+        subjectSelectionMetaId:
+          studentSubjectSelectionModel.subjectSelectionMetaId,
+        studentId: studentSubjectSelectionModel.studentId,
+        subjectId: studentSubjectSelectionModel.subjectId,
+        version: studentSubjectSelectionModel.version,
+        parentId: studentSubjectSelectionModel.parentId,
+        isDeprecated: studentSubjectSelectionModel.isDeprecated,
+        isActive: studentSubjectSelectionModel.isActive,
+        createdBy: studentSubjectSelectionModel.createdBy,
+        changeReason: studentSubjectSelectionModel.changeReason,
+        createdAt: studentSubjectSelectionModel.createdAt,
+        updatedAt: studentSubjectSelectionModel.updatedAt,
+        // Include related subject information
+        subject: {
+          id: subjectModel.id,
+          name: subjectModel.name,
+          code: subjectModel.code,
+        },
+        // Include related meta information
+        subjectSelectionMeta: {
+          id: subjectSelectionMetaModel.id,
+          label: subjectSelectionMetaModel.label,
+          subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+          academicYearId: subjectSelectionMetaModel.academicYearId,
+        },
+      })
+      .from(studentSubjectSelectionModel)
+      .leftJoin(
+        subjectModel,
+        eq(studentSubjectSelectionModel.subjectId, subjectModel.id),
+      )
+      .leftJoin(
+        subjectSelectionMetaModel,
+        eq(
+          studentSubjectSelectionModel.subjectSelectionMetaId,
+          subjectSelectionMetaModel.id,
+        ),
+      )
+      .where(
+        and(
+          eq(studentSubjectSelectionModel.studentId, studentId),
+          eq(studentSubjectSelectionModel.isActive, true),
+        ),
+      ),
+  ]);
+
+  const hasFormSubmissions = actualStudentSelections.length > 0;
+
   return {
     studentSubjectsSelection,
-    selectedMinorSubjects: formatedSelectedMinorSubjects, // Give distinct list of selected minor subjects based on legacy id
+    selectedMinorSubjects: formatedSelectedMinorSubjects, // Keep original logic for form display
     subjectSelectionMetas, // Include meta data for dynamic labels
+    hasFormSubmissions, // New field to indicate if student has submitted through the form
+    actualStudentSelections: hasFormSubmissions ? actualStudentSelections : [], // Include actual form submissions if they exist
+    session: foundSession, // Include session information for form submission
   };
 }
 

@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, timestamp, varchar, boolean } from "drizzle-orm/pg-core";
 import { subjectTypeModel } from "../course-design";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
@@ -14,6 +14,7 @@ export const subjectSelectionMetaModel = pgTable("subject_selection_meta", {
         .notNull(),
     label: varchar("label", { length: 255 })
         .notNull(),
+    isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),
 });

@@ -1,4 +1,5 @@
 import { Router, RequestHandler } from "express";
+import { verifyJWT } from "@/middlewares/verifyJWT.js";
 import {
   createStudentSubjectSelectionsHandler,
   updateStudentSubjectSelectionsHandler,
@@ -12,8 +13,12 @@ import {
   canCreateSelectionsHandler,
   getSelectionStatisticsHandler,
 } from "../controllers/student-subject-selection.controller.js";
+import { createAdminStudentSubjectSelectionsHandler } from "../controllers/student-subject-selection.controller.js";
 
 const router = Router();
+
+// Apply JWT verification middleware to all routes
+router.use(verifyJWT);
 
 // Get subject selection meta data for UI form
 router.get(
@@ -23,6 +28,12 @@ router.get(
 
 // Create multiple subject selections with validation
 router.post("/", createStudentSubjectSelectionsHandler as RequestHandler);
+
+// Create multiple subject selections with validation (Admin access with audit trail)
+router.post(
+  "/admin",
+  createAdminStudentSubjectSelectionsHandler as RequestHandler,
+);
 
 // Update multiple subject selections with validation
 router.put(

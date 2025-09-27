@@ -120,6 +120,7 @@ import {
   studentSubjectsRoutes,
   subjectSelectionMetaRoutes,
   subjectSelectionMetaClassRoutes,
+  subjectSelectionMetaStreamRoutes,
   studentSubjectSelectionRoutes,
 } from "@/features/subject-selection/routes/index.js";
 
@@ -415,8 +416,15 @@ app.use(
 );
 app.use("/api/subject-selection/metas", subjectSelectionMetaRoutes);
 app.use("/api/subject-selection/meta-classes", subjectSelectionMetaClassRoutes);
+app.use(
+  "/api/subject-selection/meta-streams",
+  subjectSelectionMetaStreamRoutes,
+);
 app.use("/api/subject-selection", studentSubjectsRoutes);
-app.use("/api/student-subject-selection", studentSubjectSelectionRoutes);
+app.use(
+  "/api/subject-selection/student-subject-selection",
+  studentSubjectSelectionRoutes,
+);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
 

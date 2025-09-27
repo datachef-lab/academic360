@@ -3,6 +3,7 @@ import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
 import {
   createStudentSubjectSelectionsWithValidation,
+  updateStudentSubjectSelectionsEfficiently,
   getStudentSubjectSelectionsPaginated,
   getStudentSubjectSelectionById,
   updateStudentSubjectSelectionsWithValidation,
@@ -77,10 +78,19 @@ export async function createStudentSubjectSelectionsHandler(
 
     // Extract user info from request (assuming middleware sets req.user)
     const userId = (req as any).user?.id;
-    const userRole = (req as any).user?.role;
+    const userType = (req as any).user?.type;
 
-    // Check if user is student (only students can create initial selections)
-    if (userRole !== "student") {
+    // Debug logging
+    console.log("🔍 Debug - User object:", (req as any).user);
+    console.log("🔍 Debug - User ID:", userId);
+    console.log("🔍 Debug - User Type:", userType);
+    console.log(
+      "🔍 Debug - User Type Check:",
+      userType !== "STUDENT" && userType !== "ADMIN",
+    );
+
+    // Check if user is student or admin (students can create their own, admins can create on behalf of students)
+    if (userType !== "STUDENT" && userType !== "ADMIN") {
       res
         .status(403)
         .json(
@@ -88,16 +98,23 @@ export async function createStudentSubjectSelectionsHandler(
             403,
             "FORBIDDEN",
             null,
-            "Only students can create initial subject selections",
+            "Only students and admins can create subject selections",
           ),
         );
       return;
     }
 
+    // Set appropriate change reason based on user type
+    const changeReason =
+      userType === "STUDENT"
+        ? undefined // No change reason for initial student selections
+        : "Admin created selection on behalf of student";
+
     const result = await createStudentSubjectSelectionsWithValidation(
       selections,
       userId,
-      "Student initial selection",
+      changeReason,
+      userType,
     );
 
     if (!result.success) {
@@ -122,6 +139,92 @@ export async function createStudentSubjectSelectionsHandler(
           "SUCCESS",
           result.data,
           "Subject selections created successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Create multiple subject selections with validation (Admin access with audit trail)
+export async function createAdminStudentSubjectSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const selections = req.body;
+    if (!Array.isArray(selections) || selections.length === 0) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid selections array provided",
+          ),
+        );
+      return;
+    }
+
+    // Extract user info from request (assuming middleware sets req.user)
+    const userId = (req as any).user?.id;
+    const userType = (req as any).user?.type;
+
+    // Debug logging
+    console.log("🔍 Admin Debug - User object:", (req as any).user);
+    console.log("🔍 Admin Debug - User ID:", userId);
+    console.log("🔍 Admin Debug - User Type:", userType);
+
+    // Check if user is admin (only admins can use this endpoint)
+    if (userType !== "ADMIN") {
+      res
+        .status(403)
+        .json(
+          new ApiResponse(
+            403,
+            "FORBIDDEN",
+            null,
+            "Only admins can use this endpoint",
+          ),
+        );
+      return;
+    }
+
+    // For admin selections, use the reason provided in the request body
+    // or default to admin action
+    const changeReason =
+      selections[0]?.reason || "Admin created/updated selection";
+
+    const result = await updateStudentSubjectSelectionsEfficiently(
+      selections,
+      userId,
+      changeReason,
+    );
+
+    if (!result.success) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            { errors: result.errors },
+            "Validation failed for subject selections",
+          ),
+        );
+      return;
+    }
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          "SUCCESS",
+          result.data,
+          "Admin subject selections created successfully",
         ),
       );
   } catch (error) {

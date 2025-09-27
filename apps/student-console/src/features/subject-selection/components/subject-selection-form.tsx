@@ -35,6 +35,16 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasExistingSelections, setHasExistingSelections] = useState(false);
+  const [savedSelections, setSavedSelections] = useState<{
+    minor1?: string;
+    minor2?: string;
+    idc1?: string;
+    idc2?: string;
+    idc3?: string;
+    aec3?: string;
+    cvac4?: string;
+  }>({});
+  const [currentSession, setCurrentSession] = useState<{ id: number } | null>(null);
 
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
@@ -93,12 +103,30 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         // Set meta data from the response
         setSubjectSelectionMetas(resp.subjectSelectionMetas || []);
 
+        // Set session information
+        setCurrentSession(resp.session || null);
+
         const groups = resp.studentSubjectsSelection ?? [];
         setSelections(groups);
 
-        // Check if student already has existing selections (from selectedMinorSubjects)
-        const hasExisting = resp.selectedMinorSubjects && resp.selectedMinorSubjects.length > 0;
+        // Check if student has actually submitted selections through the form
+        const hasExisting = resp.hasFormSubmissions || false;
         setHasExistingSelections(hasExisting);
+
+        // If student has existing form submissions, populate the saved selections for display
+        if (hasExisting) {
+          const savedSelectionsData: typeof savedSelections = {};
+
+          // Extract saved selections from actualStudentSelections
+          const actualSelections = resp.actualStudentSelections || [];
+
+          // Transform actualStudentSelections array into the format expected by SavedSelectionsDisplay
+          const transformedSelections = transformActualSelectionsToDisplayFormat(
+            actualSelections,
+            resp.subjectSelectionMetas || [],
+          );
+          setSavedSelections(transformedSelections);
+        }
 
         // Derive groups
         const getLabel = (p: PaperDto) => p?.subject?.name || "";
@@ -481,11 +509,27 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
   };
 
-  // Create selections array for saving
-  const createSelectionsForSave = (): StudentSubjectSelectionForSave[] => {
+  // Create selections array for saving with fresh meta data (no cache)
+  const createSelectionsForSaveWithFreshData = (
+    freshMetas: SubjectSelectionMetaDto[],
+    freshSession: { id: number } | null,
+  ): StudentSubjectSelectionForSave[] => {
     const selectionsToSave: StudentSubjectSelectionForSave[] = [];
 
-    if (!student?.id || !selections || subjectSelectionMetas.length === 0) {
+    console.log("🔍 Frontend Debug - createSelectionsForSaveWithFreshData called with:", {
+      studentId: student?.id,
+      hasSelections: !!selections,
+      freshMetasCount: freshMetas.length,
+      freshSessionId: freshSession?.id,
+      freshMetas: freshMetas.map((m) => ({
+        id: m.id,
+        label: m.label,
+        subjectTypeCode: m.subjectType.code,
+      })),
+    });
+
+    if (!student?.id || !selections || freshMetas.length === 0 || !freshSession?.id) {
+      console.log("🔍 Frontend Debug - Early return due to missing data");
       return selectionsToSave;
     }
 
@@ -501,20 +545,62 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       return null;
     };
 
-    // Helper function to find meta ID by label and subject type
-    const findMetaId = (label: string, subjectTypeCode: string): number | null => {
-      const meta = subjectSelectionMetas.find((m) => m.label === label && m.subjectType.code === subjectTypeCode);
+    // Helper function to find meta ID by subject type, semester, and stream using fresh data
+    const findMetaId = (subjectTypeCode: string, semester?: string): number | null => {
+      const studentStreamId = student?.currentPromotion?.programCourse?.stream?.id;
+
+      console.log("🔍 Frontend Debug - Finding meta ID for:", {
+        subjectTypeCode,
+        semester,
+        studentStreamId,
+        availableMetas: freshMetas.map((m) => ({
+          id: m.id,
+          label: m.label,
+          subjectTypeCode: m.subjectType.code,
+          streams: m.streams.map((s) => s.stream?.id),
+          classes: m.forClasses.map((c) => c.class.name),
+        })),
+      });
+
+      const meta = freshMetas.find((m) => {
+        if (m.subjectType.code !== subjectTypeCode) return false;
+
+        // Check if the meta applies to the student's stream
+        if (studentStreamId && m.streams.length > 0) {
+          const hasMatchingStream = m.streams.some((s) => s.stream?.id === studentStreamId);
+          if (!hasMatchingStream) return false;
+        }
+
+        // For semester-specific matching, check if the meta applies to the semester
+        if (semester && m.forClasses.length > 0) {
+          return m.forClasses.some((c) => c.class.name.includes(semester));
+        }
+
+        return true;
+      });
+
+      console.log(
+        "🔍 Frontend Debug - Found meta:",
+        meta
+          ? {
+              id: meta.id,
+              label: meta.label,
+              subjectTypeCode: meta.subjectType.code,
+            }
+          : null,
+      );
+
       return meta?.id || null;
     };
 
     // Add Minor 1 selection
     if (minor1) {
       const subjectId = findSubjectId(minor1);
-      const metaId = findMetaId("Minor 1 (Semester I & II)", "MN");
+      const metaId = findMetaId("MN", "I"); // Minor for Semester I
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: minor1 },
         });
@@ -524,11 +610,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Add Minor 2 selection
     if (minor2) {
       const subjectId = findSubjectId(minor2);
-      const metaId = findMetaId("Minor 2 (Semester III & IV)", "MN");
+      const metaId = findMetaId("MN", "III"); // Minor for Semester III
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: minor2 },
         });
@@ -538,11 +624,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Add IDC selections
     if (idc1) {
       const subjectId = findSubjectId(idc1);
-      const metaId = findMetaId("IDC 1 (Semester I)", "IDC");
+      const metaId = findMetaId("IDC", "I"); // IDC for Semester I
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: idc1 },
         });
@@ -551,11 +637,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
     if (idc2) {
       const subjectId = findSubjectId(idc2);
-      const metaId = findMetaId("IDC 2 (Semester II)", "IDC");
+      const metaId = findMetaId("IDC", "II"); // IDC for Semester II
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: idc2 },
         });
@@ -564,11 +650,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
     if (idc3) {
       const subjectId = findSubjectId(idc3);
-      const metaId = findMetaId("IDC 3 (Semester III)", "IDC");
+      const metaId = findMetaId("IDC", "III"); // IDC for Semester III
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: idc3 },
         });
@@ -578,11 +664,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Add AEC selection
     if (aec3) {
       const subjectId = findSubjectId(aec3);
-      const metaId = findMetaId("AEC (Semester III & IV)", "AEC");
+      const metaId = findMetaId("AEC", "III"); // AEC for Semester III
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: aec3 },
         });
@@ -592,11 +678,154 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     // Add CVAC selection
     if (cvac4) {
       const subjectId = findSubjectId(cvac4);
-      const metaId = findMetaId("CVAC 4 (Semester II)", "CVAC");
+      const metaId = findMetaId("CVAC", "II"); // CVAC for Semester II
       if (subjectId && metaId) {
         selectionsToSave.push({
           studentId: student.id,
-          session: { id: 1 }, // TODO: Get actual session ID
+          session: { id: freshSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: cvac4 },
+        });
+      }
+    }
+
+    console.log("🔍 Frontend Debug - Final selections to save:", selectionsToSave);
+    return selectionsToSave;
+  };
+
+  // Original createSelectionsForSave function (kept for backward compatibility)
+  const createSelectionsForSave = (): StudentSubjectSelectionForSave[] => {
+    const selectionsToSave: StudentSubjectSelectionForSave[] = [];
+
+    if (!student?.id || !selections || subjectSelectionMetas.length === 0 || !currentSession?.id) {
+      return selectionsToSave;
+    }
+
+    // Helper function to find subject ID by name
+    const findSubjectId = (subjectName: string): number | null => {
+      for (const group of selections) {
+        for (const paper of group.paperOptions || []) {
+          if (paper.subject?.name === subjectName) {
+            return paper.subject.id;
+          }
+        }
+      }
+      return null;
+    };
+
+    // Helper function to find meta ID by subject type, semester, and stream
+    const findMetaId = (subjectTypeCode: string, semester?: string): number | null => {
+      const studentStreamId = student?.currentPromotion?.programCourse?.stream?.id;
+
+      const meta = subjectSelectionMetas.find((m) => {
+        if (m.subjectType.code !== subjectTypeCode) return false;
+
+        // Check if the meta applies to the student's stream
+        if (studentStreamId && m.streams.length > 0) {
+          const hasMatchingStream = m.streams.some((s) => s.stream?.id === studentStreamId);
+          if (!hasMatchingStream) return false;
+        }
+
+        // For semester-specific matching, check if the meta applies to the semester
+        if (semester && m.forClasses.length > 0) {
+          return m.forClasses.some((c) => c.class.name.includes(semester));
+        }
+
+        return true;
+      });
+      return meta?.id || null;
+    };
+
+    // Add Minor 1 selection
+    if (minor1) {
+      const subjectId = findSubjectId(minor1);
+      const metaId = findMetaId("MN", "I"); // Minor for Semester I
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor1 },
+        });
+      }
+    }
+
+    // Add Minor 2 selection
+    if (minor2) {
+      const subjectId = findSubjectId(minor2);
+      const metaId = findMetaId("MN", "III"); // Minor for Semester III
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor2 },
+        });
+      }
+    }
+
+    // Add IDC selections
+    if (idc1) {
+      const subjectId = findSubjectId(idc1);
+      const metaId = findMetaId("IDC", "I"); // IDC for Semester I
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc1 },
+        });
+      }
+    }
+
+    if (idc2) {
+      const subjectId = findSubjectId(idc2);
+      const metaId = findMetaId("IDC", "II"); // IDC for Semester II
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc2 },
+        });
+      }
+    }
+
+    if (idc3) {
+      const subjectId = findSubjectId(idc3);
+      const metaId = findMetaId("IDC", "III"); // IDC for Semester III
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: idc3 },
+        });
+      }
+    }
+
+    // Add AEC selection
+    if (aec3) {
+      const subjectId = findSubjectId(aec3);
+      const metaId = findMetaId("AEC", "III"); // AEC for Semester III
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: aec3 },
+        });
+      }
+    }
+
+    // Add CVAC selection
+    if (cvac4) {
+      const subjectId = findSubjectId(cvac4);
+      const metaId = findMetaId("CVAC", "II"); // CVAC for Semester II
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: cvac4 },
         });
@@ -617,15 +846,94 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     setSaveSuccess(false);
 
     try {
-      const selectionsToSave = createSelectionsForSave();
+      // Always fetch fresh meta data before saving to avoid cache issues
+      console.log("🔍 Frontend Debug - Fetching fresh meta data before save...");
+      const freshResp = await fetchStudentSubjectSelections(student?.id!);
+
+      // Use fresh data directly without caching
+      const freshMetas = freshResp.subjectSelectionMetas || [];
+      const freshSession = freshResp.session || null;
+
+      console.log(
+        "🔍 Frontend Debug - Fresh meta data:",
+        freshMetas.map((m) => ({
+          id: m.id,
+          label: m.label,
+          subjectTypeCode: m.subjectType.code,
+        })),
+      );
+
+      // Create selections using fresh meta data
+      const selectionsToSave = createSelectionsForSaveWithFreshData(freshMetas, freshSession);
       console.log("Saving selections:", selectionsToSave);
 
       const result = await saveStudentSubjectSelections(selectionsToSave);
 
       if (result.success) {
         setSaveSuccess(true);
-        // Optionally redirect or show success message
+        // Update local state with fresh data
+        setSubjectSelectionMetas(freshMetas);
+        setCurrentSession(freshSession);
+
+        // Refresh the data to get the updated hasFormSubmissions status
+        console.log("🔍 Frontend Debug - Refreshing data after successful save...");
+        const updatedResp = await fetchStudentSubjectSelections(student?.id!);
+
+        // Update the hasExistingSelections state to trigger UI change
+        setHasExistingSelections(updatedResp.hasFormSubmissions);
+
+        // Transform actualStudentSelections array into the format expected by SavedSelectionsDisplay
+        console.log("🔍 Frontend Debug - About to transform selections:", {
+          actualStudentSelections: updatedResp.actualStudentSelections,
+          subjectSelectionMetas: updatedResp.subjectSelectionMetas,
+        });
+
+        const transformedSelections = transformActualSelectionsToDisplayFormat(
+          updatedResp.actualStudentSelections,
+          updatedResp.subjectSelectionMetas,
+        );
+
+        console.log("🔍 Frontend Debug - Transformed selections:", transformedSelections);
+        setSavedSelections(transformedSelections);
+
+        // Reset to step 1 to show the saved selections display
+        setStep(1);
+
+        // Reset minor mismatch alert since selections have been updated
+        setMinorMismatch(false);
+
+        // Play success sound
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+          // Create a more distinctive "success" sound with two quick beeps
+          const playBeep = (frequency: number, startTime: number, duration: number) => {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.setValueAtTime(frequency, startTime);
+            oscillator.type = "sine";
+
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.2, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+          };
+
+          // Play two quick ascending beeps
+          playBeep(800, audioContext.currentTime, 0.15); // Higher pitch
+          playBeep(1000, audioContext.currentTime + 0.2, 0.15); // Even higher pitch
+        } catch (error) {
+          console.log("Could not play success sound:", error);
+        }
+
         console.log("Selections saved successfully:", result.data);
+        console.log("🔍 Frontend Debug - Updated hasFormSubmissions:", updatedResp.hasFormSubmissions);
       } else {
         setSaveError("Validation failed: " + (result.errors?.map((e) => e.message).join(", ") || "Unknown error"));
       }
@@ -791,10 +1099,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Loading skeleton component for dropdowns
   const LoadingDropdown = ({ label }: { label: string }) => (
     <div className="space-y-2 min-h-[84px]">
-      <label className="text-sm font-semibold text-gray-700">{label}</label>
+      <label className="text-base font-medium text-gray-700">{label}</label>
       <div className="w-full border border-gray-300 rounded-md h-10 flex items-center justify-center bg-gray-50">
         <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-        <span className="ml-2 text-sm text-gray-500">Loading options...</span>
+        <span className="ml-2 text-base text-gray-500">Loading options...</span>
       </div>
     </div>
   );
@@ -825,6 +1133,176 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Helper function to check if there are actual subject options (excluding placeholder)
   const hasActualOptions = (subjects: string[]) => {
     return subjects.filter((subject) => subject && subject.trim() !== "").length > 0;
+  };
+
+  // Transform actualStudentSelections array into the format expected by SavedSelectionsDisplay
+  const transformActualSelectionsToDisplayFormat = (actualSelections: any[], metas: any[]) => {
+    const result: any = {};
+
+    console.log("🔍 Frontend Debug - transformActualSelectionsToDisplayFormat called with:", {
+      actualSelectionsCount: actualSelections.length,
+      actualSelections: actualSelections.map((s) => ({
+        subjectName: s.subject?.name,
+        metaId: s.subjectSelectionMeta?.id,
+        metaLabel: s.subjectSelectionMeta?.label,
+        fullSelection: s, // Add full selection object for debugging
+      })),
+      availableMetas: metas.map((m) => ({ id: m.id, label: m.label })),
+    });
+
+    for (const selection of actualSelections) {
+      const metaId = selection.subjectSelectionMeta?.id;
+      const subjectName = selection.subject?.name;
+
+      console.log("🔍 Frontend Debug - Processing selection:", { metaId, subjectName });
+
+      if (!metaId || !subjectName) continue;
+
+      // Find the meta label by looking up the metaId in the metas array
+      const meta = metas.find((m) => m.id === metaId);
+      const metaLabel = meta?.label;
+
+      console.log("🔍 Frontend Debug - Found meta:", { metaId, metaLabel });
+
+      if (!metaLabel) continue;
+
+      // Map meta labels to the expected format
+      if (metaLabel.includes("Minor 1")) {
+        result.minor1 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to minor1:", subjectName);
+      } else if (metaLabel.includes("Minor 2")) {
+        result.minor2 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to minor2:", subjectName);
+      } else if (metaLabel.includes("Minor 3")) {
+        result.minor2 = subjectName; // Minor 3 maps to minor2 slot
+        console.log("🔍 Frontend Debug - Mapped Minor 3 to minor2:", subjectName);
+      } else if (metaLabel.includes("IDC 1")) {
+        result.idc1 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to idc1:", subjectName);
+      } else if (metaLabel.includes("IDC 2")) {
+        result.idc2 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to idc2:", subjectName);
+      } else if (metaLabel.includes("IDC 3")) {
+        result.idc3 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to idc3:", subjectName);
+      } else if (metaLabel.includes("AEC")) {
+        result.aec3 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to aec3:", subjectName);
+      } else if (metaLabel.includes("CVAC")) {
+        result.cvac4 = subjectName;
+        console.log("🔍 Frontend Debug - Mapped to cvac4:", subjectName);
+      }
+    }
+
+    console.log("🔍 Frontend Debug - Final transformed result:", result);
+    return result;
+  };
+
+  // Component to display saved selections in read-only table format
+  const SavedSelectionsDisplay = () => {
+    console.log("🔍 Frontend Debug - SavedSelectionsDisplay rendering with:", savedSelections);
+
+    return (
+      <div className="space-y-6">
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="text-base font-semibold text-green-800">Your Subject Selections</h3>
+          </div>
+          <p className="text-base text-green-700">
+            Your subject selections have been successfully saved. Below are your confirmed selections:
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full border text-base rounded-lg overflow-hidden shadow-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="border p-3 text-left font-semibold text-gray-800 text-base">Subject Category</th>
+                <th className="border p-3 text-left font-semibold text-gray-800 text-base">Your Selection</th>
+              </tr>
+            </thead>
+            <tbody>
+              {/* Minor I */}
+              {savedSelections.minor1 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("MN", "I")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor1}</td>
+                </tr>
+              )}
+
+              {/* Minor II */}
+              {savedSelections.minor2 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("MN", "III")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor2}</td>
+                </tr>
+              )}
+
+              {/* IDC 1 */}
+              {savedSelections.idc1 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "I")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc1}</td>
+                </tr>
+              )}
+
+              {/* IDC 2 */}
+              {savedSelections.idc2 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "II")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc2}</td>
+                </tr>
+              )}
+
+              {/* IDC 3 */}
+              {savedSelections.idc3 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("IDC", "III")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.idc3}</td>
+                </tr>
+              )}
+
+              {/* AEC 3 */}
+              {savedSelections.aec3 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("AEC")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.aec3}</td>
+                </tr>
+              )}
+
+              {/* CVAC 4 */}
+              {savedSelections.cvac4 && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("CVAC")}</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.cvac4}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <h4 className="font-medium text-blue-800 mb-1">Need to make changes?</h4>
+              <p className="text-base text-blue-700">
+                If you need to modify your subject selections, please contact your academic advisor or administration
+                staff. Changes can only be made by authorized personnel.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Dynamic semester labeling function
@@ -864,7 +1342,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     <div className="w-full h-full flex flex-col overflow-hidden ">
       {/* Student Information Section - Fixed */}
       {/* <div className="bg-blue-800 shadow-2xl rounded-2xl border-0 p-8 mb-6 flex-shrink-0">
-        <h3 className="text-2xl font-bold text-white mb-8 flex items-center gap-4">
+        <h3 className="text-2xl font-semibold text-white mb-8 flex items-center gap-3">
           <div className="w-12 h-12 rounded-full flex items-center justify-center backdrop-blur-sm">
             <svg className="w-7 h-7 text-w hite" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -877,7 +1355,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           </div>
           <div>
             <div className="text-white">Student Information</div>
-            <div className="text-blue-100 text-sm font-normal">Academic Year 2024-25</div>
+            <div className="text-blue-100 text-base font-normal">Academic Year 2024-25</div>
           </div>
         </h3>
         <div className="grid grid-cols-5 gap-8">
@@ -893,7 +1371,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </svg>
             </div>
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Name</label>
-            <p className="text-base font-bold text-white">Dipanwita Sarkar</p>
+            <p className="text-base font-semibold text-white">Dipanwita Sarkar</p>
           </div>
           <div className="space-y-3 text-center">
             <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
@@ -907,7 +1385,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </svg>
             </div>
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">0101255656</p>
+            <p className="text-base font-semibold text-white">0101255656</p>
           </div>
           <div className="space-y-3 text-center">
             <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
@@ -921,7 +1399,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </svg>
             </div>
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">251000</p>
+            <p className="text-base font-semibold text-white">251000</p>
           </div>
           <div className="space-y-3 text-center">
             <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
@@ -935,7 +1413,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </svg>
             </div>
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
-            <p className="text-base font-bold text-white">B.A. English (H)</p>
+            <p className="text-base font-semibold text-white">B.A. English (H)</p>
           </div>
           <div className="space-y-3 text-center">
             <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center mx-auto mb-2 backdrop-blur-sm">
@@ -949,7 +1427,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               </svg>
             </div>
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
-            <p className="text-base font-bold text-white">Day</p>
+            <p className="text-base font-semibold text-white">Day</p>
           </div>
         </div>
       </div> */}
@@ -959,7 +1437,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         <button
           type="button"
           onClick={() => setShowStudentInfoMobile((v) => !v)}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 bg-white"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-base text-gray-700 bg-white"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
             <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
@@ -969,7 +1447,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       </div> */}
 
       {/* <div
-        className={`bg-blue-600 mt-2 mb-4 text-white font-bold p-2 rounded-lg ${showStudentInfoMobile ? "block" : "hidden"} lg:block`}
+        className={`bg-blue-600 mt-2 mb-4 text-white font-semibold p-2 rounded-lg ${showStudentInfoMobile ? "block" : "hidden"} lg:block`}
       >
         <div className="flex items-center gap-2 justify-between py-2 mb-3 text-xl border-b">
           <div className="text-white">Student Information</div>
@@ -978,37 +1456,37 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         <div className="grid grid-cols-5 gap-8">
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Name</label>
-            <p className="text-base font-bold text-white">{user?.name}</p>
+            <p className="text-base font-semibold text-white">{user?.name}</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">UID</label>
-            <p className="text-base font-bold text-white">{student?.uid}</p>
+            <p className="text-base font-semibold text-white">{student?.uid}</p>
           </div>
           
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Roll Number</label>
-            <p className="text-base font-bold text-white">{student?.currentPromotion?.rollNumber}</p>
+            <p className="text-base font-semibold text-white">{student?.currentPromotion?.rollNumber}</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Program Course</label>
-            <p className="text-base font-bold text-white">{student?.currentPromotion?.programCourse?.name}</p>
+            <p className="text-base font-semibold text-white">{student?.currentPromotion?.programCourse?.name}</p>
           </div>
           <div className="space-y-3 text-center">
             <label className="text-xs font-semibold text-blue-100 uppercase tracking-wide block">Shift</label>
-            <p className="text-base font-bold text-white">{student?.shift?.name}</p>
+            <p className="text-base font-semibold text-white">{student?.shift?.name}</p>
           </div>
         </div>
       </div> */}
 
       {/* Form Section - No Scrolling */}
       <div className="flex-1 overflow-hidden">
-        <div className="shadow-lg rounded-xl bg-white mt-6 md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
+        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
             {showTips && (
               <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
                 <AlertCircle className="w-4 h-4 mt-0.5" />
-                <div className="text-sm">
+                <div className="text-base">
                   Before selecting subjects, please review the guidelines. Tap the info button to view notes.
                 </div>
                 <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
@@ -1019,62 +1497,101 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             {/* <button
               type="button"
               onClick={() => openNotes?.()}
-              className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-sm text-gray-700 hover:bg-gray-50"
+              className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-md border text-base text-gray-700 hover:bg-gray-50"
             >
               <Info className="w-4 h-4" /> View Notes
             </button> */}
           </div>
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-8">
-              {step === 1
-                ? "Semester-wise Subject Selection for Calcutta University Registration"
-                : "Preview Your Selections"}
+            <h2 className="text-xl font-semibold text-gray-800 mb-8">
+              {hasExistingSelections
+                ? "Your Subject Selections - Already Saved"
+                : step === 1
+                  ? "Semester-wise Subject Selection for Calcutta University Registration"
+                  : "Preview Your Selections"}
             </h2>
-            <p className="text-gray-600 text-sm">
-              {step === 1 ? (
-                <>
-                  <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 mt-0.5" />
-                    <div className="text-sm">
-                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
-                      selection process. These notes are provided here for your reference and guidance.
-                    </div>
-                    {/* <button className="ml-auto text-xs underline" onClick={() => setShowTips(false)}>
-                      Dismiss
-                    </button> */}
+
+            {/* Combined Academic Information and Guidance Notes */}
+            {student?.currentPromotion && (
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg">
+                {/* Academic Information */}
+                <div className="flex mb-4">
+                  <div className="w-44 pr-2">
+                    <div className="text-base font-bold">Academic Year</div>
+                    <div className="text-base font-bold mt-1">Program Course</div>
                   </div>
+                  <div className="w-4 pr-2">
+                    <div className="text-base font-bold">:</div>
+                    <div className="text-base font-bold mt-1">:</div>
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-base font-bold text-blue-900">
+                      {student.currentPromotion.session?.academicYear?.year || "N/A"}
+                    </div>
+                    <div className="text-base font-bold text-blue-900 mt-1">
+                      {student.currentPromotion.programCourse?.name || "N/A"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Guidance Notes - Only in step 1 for new selections */}
+                {step === 1 && !hasExistingSelections && (
+                  <div className="flex items-start gap-3 pt-4 border-t border-blue-200">
+                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-base leading-relaxed">
+                        Before selecting your subjects, please read the following notes carefully to ensure clarity on
+                        the selection process. These notes are provided here for your reference and guidance.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <p className="text-gray-600 text-base">
+              {step === 1 && !hasExistingSelections ? (
+                <>
                   {/* <div className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400">
-                    <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
+                    <h4 className="font-semibold text-blue-800 mb-2 text-base bg-blue-50 px-2 py-1 rounded inline-block">
                       Before You Begin
                     </h4>
-                    <p className="text-blue-700 text-sm leading-relaxed">
+                    <p className="text-blue-700 text-base leading-relaxed">
                       Before selecting your subjects, please read the following notes carefully to ensure clarity on the
                       selection process. These notes are provided here for your reference and guidance.
                     </p>
                   </div> */}
                 </>
-              ) : (
+              ) : step === 1 && hasExistingSelections ? (
+                "Your subject selections have been successfully saved and are displayed below. No further action is required."
+              ) : step === 2 ? (
                 "Review and confirm declarations before saving"
+              ) : (
+                ""
               )}
             </p>
-            {loading && (
+            {loading && !hasExistingSelections && (
               <div className="mt-3 p-3 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Loading subject options...</span>
+                <span className="text-base">Loading subject options...</span>
               </div>
             )}
             {loadError && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm">Error loading subjects: {loadError}</span>
+                  <span className="text-base">
+                    {hasExistingSelections
+                      ? `Error loading your saved selections: ${loadError}`
+                      : `Error loading subjects: ${loadError}`}
+                  </span>
                 </div>
               </div>
             )}
           </div>
 
-          {step === 1 && (
-            <div className="grid grid-cols-1 gap-4">
+          {step === 1 && !hasExistingSelections && (
+            <div className="grid grid-cols-1 gap-3">
               {/* Removed: Available Paper Options preview */}
               {/* Minor Subjects */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1087,7 +1604,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   <>
                     {hasActualOptions(admissionMinor1Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("MN", "I")}</label>
+                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "I")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1106,7 +1623,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(admissionMinor2Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("MN", "III")}</label>
+                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "III")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1130,7 +1647,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <LoadingDropdown label={getDynamicLabel("AEC")} />
               ) : hasActualOptions(availableAecSubjects) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("aec")}>
-                  <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("AEC")}</label>
+                  <label className="text-base font-medium text-gray-700">{getDynamicLabel("AEC")}</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableAecSubjects)}
                     value={aec3}
@@ -1153,7 +1670,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   <>
                     {hasActualOptions(availableIdcSem1Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "I")}</label>
+                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1177,7 +1694,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(availableIdcSem2Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "II")}</label>
+                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1201,7 +1718,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
                     {hasActualOptions(availableIdcSem3Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("idc")}>
-                        <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("IDC", "III")}</label>
+                        <label className="text-base font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</label>
                         <Combobox
                           dataArr={convertToComboboxData(
                             preserveAecIfPresent(
@@ -1232,7 +1749,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <LoadingDropdown label={getDynamicLabel("CVAC")} />
               ) : hasActualOptions(availableCvacOptions) ? (
                 <div className="space-y-2" onClick={() => handleFieldFocus("cvac")}>
-                  <label className="text-sm font-semibold text-gray-700">{getDynamicLabel("CVAC")}</label>
+                  <label className="text-base font-medium text-gray-700">{getDynamicLabel("CVAC")}</label>
                   <Combobox
                     dataArr={convertToComboboxData(availableCvacOptions)}
                     value={cvac4}
@@ -1247,11 +1764,26 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             </div>
           )}
 
-          {step === 2 && (
+          {step === 1 && hasExistingSelections && (
+            <>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Loading your saved selections...</span>
+                  </div>
+                </div>
+              ) : (
+                <SavedSelectionsDisplay />
+              )}
+            </>
+          )}
+
+          {step === 2 && !hasExistingSelections && (
             <>
               {/* Errors (should be none here, but guard just in case) */}
               {errors.length > 0 && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+                <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
                   <p className="font-medium mb-2">Please fix the following errors:</p>
                   <ul className="list-disc list-inside space-y-1">
                     {errors.map((error, index) => (
@@ -1264,67 +1796,77 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
               {/* Preview */}
               {errors.length === 0 && (
                 <div className="overflow-x-auto my-4">
-                  <table className="w-full border border-gray-200 text-sm rounded-lg overflow-hidden">
+                  <table className="w-full border text-base rounded-lg overflow-hidden shadow-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="border p-2 text-left font-semibold text-gray-700">Subject Category</th>
-                        <th className="border p-2 text-left font-semibold text-gray-700">Selection</th>
+                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">Subject Category</th>
+                        <th className="border p-3 text-left font-semibold text-gray-800 text-base">Selection</th>
                       </tr>
                     </thead>
                     <tbody>
                       {/* Minor I - Always show if there are subjects available */}
                       {admissionMinor1Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("MN", "I")}</td>
-                          <td className="border p-2 text-gray-800">{minor1 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("MN", "I")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{minor1 || "-"}</td>
                         </tr>
                       )}
 
                       {/* Minor II - Always show if there are subjects available */}
                       {admissionMinor2Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("MN", "III")}</td>
-                          <td className="border p-2 text-gray-800">{minor2 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("MN", "III")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{minor2 || "-"}</td>
                         </tr>
                       )}
 
                       {/* IDC 1 - Only show if there are subjects available */}
                       {availableIdcSem1Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "I")}</td>
-                          <td className="border p-2 text-gray-800">{idc1 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("IDC", "I")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{idc1 || "-"}</td>
                         </tr>
                       )}
 
                       {/* IDC 2 - Only show if there are subjects available */}
                       {availableIdcSem2Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "II")}</td>
-                          <td className="border p-2 text-gray-800">{idc2 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("IDC", "II")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{idc2 || "-"}</td>
                         </tr>
                       )}
 
                       {/* IDC 3 - Only show if there are subjects available */}
                       {availableIdcSem3Subjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("IDC", "III")}</td>
-                          <td className="border p-2 text-gray-800">{idc3 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">
+                            {getDynamicLabel("IDC", "III")}
+                          </td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{idc3 || "-"}</td>
                         </tr>
                       )}
 
                       {/* AEC 3 - Only show if there are subjects available */}
                       {availableAecSubjects.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("AEC")}</td>
-                          <td className="border p-2 text-gray-800">{aec3 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("AEC")}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{aec3 || "-"}</td>
                         </tr>
                       )}
 
                       {/* CVAC 4 - Only show if there are subjects available */}
                       {availableCvacOptions.length > 0 && (
-                        <tr className="hover:bg-gray-50">
-                          <td className="border p-2 font-medium text-gray-700">{getDynamicLabel("CVAC")}</td>
-                          <td className="border p-2 text-gray-800">{cvac4 || "-"}</td>
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("CVAC")}</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{cvac4 || "-"}</td>
                         </tr>
                       )}
                     </tbody>
@@ -1339,7 +1881,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <span className="text-sm font-medium">Subject selections saved successfully!</span>
+                    <span className="text-base font-medium">Subject selections saved successfully!</span>
                   </div>
                 </div>
               )}
@@ -1348,14 +1890,14 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Error saving selections: {saveError}</span>
+                    <span className="text-base font-medium">Error saving selections: {saveError}</span>
                   </div>
                 </div>
               )}
 
               {/* Declarations */}
               {errors.length === 0 && (
-                <div className="space-y-3 text-sm text-gray-700 bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-3 text-base text-gray-700 bg-gray-50 p-3 rounded-lg">
                   <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
                   <label className="flex items-start gap-2">
                     <input
@@ -1398,7 +1940,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           {/* Step 1 inline errors (shown above Next) */}
           {step === 1 && errors.length > 0 && (
             <div id="form-error" className="mt-4 p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
-              <ul className="list-disc list-inside space-y-1 text-sm">
+              <ul className="list-disc list-inside space-y-1 text-base">
                 {errors.map((error, index) => (
                   <li key={index}>{error}</li>
                 ))}
@@ -1408,65 +1950,51 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
           {/* Non-blocking Minor mismatch notice */}
           {step === 1 && minorMismatch && (
-            <div className="mt-4 p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-lg">
+            <div className="mt-4 p-3 bg-amber-50 border-2 border-amber-400 text-amber-900 rounded-lg shadow-sm">
               <div>
                 Your current Minor I and II subject combination is different from the one you had selected at the time
                 of admission.
               </div>
-              <div className="mt-1 text-sm">
+              <div className="mt-1 text-base">
                 Previously saved: <span className="font-semibold">{earlierMinorSelections[0] || "-"}</span> and{" "}
                 <span className="font-semibold">{earlierMinorSelections[1] || "-"}</span>
               </div>
             </div>
           )}
 
-          {/* Existing Selections Notice */}
-          {hasExistingSelections && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h4 className="font-medium text-yellow-800">Subject Selections Already Saved</h4>
-                  <p className="text-sm text-yellow-700 mt-1">
-                    You have already saved your subject selections. If you need to make changes, please contact your
-                    academic advisor or administration staff.
-                  </p>
-                </div>
-              </div>
+          {/* Action Buttons - Only show when selections are not already saved */}
+          {!hasExistingSelections && (
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+              {step === 1 && (
+                <button
+                  onClick={handleNext}
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed  font-medium shadow-sm text-base flex items-center gap-2"
+                >
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading ? "Loading..." : "Next"}
+                </button>
+              )}
+              {step === 2 && (
+                <>
+                  <button
+                    onClick={handleBack}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50  font-medium text-gray-700 text-base"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={!agree1 || !agree2 || !agree3 || saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50  font-medium shadow-sm text-base flex items-center gap-2"
+                  >
+                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                </>
+              )}
             </div>
           )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-4 mt-6 pt-4 border-t border-gray-100">
-            {step === 1 && (
-              <button
-                onClick={handleNext}
-                disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium shadow-sm text-sm flex items-center gap-2"
-              >
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                {loading ? "Loading..." : "Next"}
-              </button>
-            )}
-            {step === 2 && (
-              <>
-                <button
-                  onClick={handleBack}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors font-medium text-gray-700 text-sm"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={!agree1 || !agree2 || !agree3 || saving || hasExistingSelections}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium shadow-sm text-sm flex items-center gap-2"
-                >
-                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {saving ? "Saving..." : hasExistingSelections ? "Already Saved" : "Save"}
-                </button>
-              </>
-            )}
-          </div>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import {
   subjectSelectionMetaModel,
   subjectSelectionMetaClassModel,
   subjectSelectionMetaStreamModel,
+  studentSubjectSelectionModel,
 } from "@repo/db/schemas/models/subject-selection";
 import {
   streamModel,
@@ -38,64 +39,191 @@ type ClassRow = typeof classModel.$inferSelect;
 type StreamRow = typeof streamModel.$inferSelect;
 type SubjectTypeRow = typeof subjectTypeModel.$inferSelect;
 
+// Helper function to check if a meta already exists
+async function metaExists(
+  label: string,
+  subjectTypeId: number,
+  academicYearId: number,
+): Promise<boolean> {
+  const existing = await db
+    .select()
+    .from(subjectSelectionMetaModel)
+    .where(
+      and(
+        eq(subjectSelectionMetaModel.label, label),
+        eq(subjectSelectionMetaModel.subjectTypeId, subjectTypeId),
+        eq(subjectSelectionMetaModel.academicYearId, academicYearId),
+      ),
+    );
+
+  return existing.length > 0;
+}
+
+// Helper function to check if a meta-class relationship already exists
+async function metaClassExists(
+  metaId: number,
+  classId: number,
+): Promise<boolean> {
+  const existing = await db
+    .select()
+    .from(subjectSelectionMetaClassModel)
+    .where(
+      and(
+        eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, metaId),
+        eq(subjectSelectionMetaClassModel.classId, classId),
+      ),
+    );
+
+  return existing.length > 0;
+}
+
+// Helper function to check if a meta-stream relationship already exists
+async function metaStreamExists(
+  metaId: number,
+  streamId: number,
+): Promise<boolean> {
+  const existing = await db
+    .select()
+    .from(subjectSelectionMetaStreamModel)
+    .where(
+      and(
+        eq(subjectSelectionMetaStreamModel.subjectSelectionMetaId, metaId),
+        eq(subjectSelectionMetaStreamModel.streamId, streamId),
+      ),
+    );
+
+  return existing.length > 0;
+}
+
 export async function loadDefaultSubjectSelectionMetas() {
-  const streams = await db.select().from(streamModel);
-  const subjectTypes = await db.select().from(subjectTypeModel);
-  const classes = await db.select().from(classModel);
+  console.log("loading default subject-selection-meta");
+
   const academicYear = await db
     .select()
     .from(academicYearModel)
     .where(eq(academicYearModel.year, "2025-26"));
 
-  for (const stream of streams) {
-    for (const subjectType of subjectTypes) {
-      // For Minor
-      if (subjectType.code?.toUpperCase().trim() === "MN") {
-        if (stream.name.toLowerCase().trim() === "commerce") {
-          const semester3Class = classes.find(
-            (c) => c.name.toUpperCase().trim() === "SEMESTER III",
+  if (!academicYear[0]) {
+    console.log("Academic year 2025-26 not found, skipping meta creation");
+    return;
+  }
+
+  console.log("Creating default metas with proper duplicate checking...");
+
+  const streams = await db.select().from(streamModel);
+  const subjectTypes = await db.select().from(subjectTypeModel);
+  const classes = await db.select().from(classModel);
+
+  console.log(
+    `Found ${streams.length} streams, ${subjectTypes.length} subject types, ${classes.length} classes`,
+  );
+
+  // Create metas by subject type, not by stream
+  for (const subjectType of subjectTypes) {
+    // For Minor
+    if (subjectType.code?.toUpperCase().trim() === "MN") {
+      // Minor 3 (Semester III) - Only for Commerce
+      const commerceStream = streams.find(
+        (s) => s.name.toLowerCase().trim() === "commerce",
+      );
+      if (commerceStream) {
+        const semester3Class = classes.find(
+          (c) => c.name.toUpperCase().trim() === "SEMESTER III",
+        );
+
+        const exists = await metaExists(
+          "Minor 3 (Semester III)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists) {
+          console.log(
+            `Creating Minor 3 (Semester III) for Commerce stream and subject type ${subjectType.code}`,
           );
-          await createFromInput({
+          await createOrUpdateMetaWithRelations({
             label: "Minor 3 (Semester III)",
-            streams: [{ id: stream.id }],
+            streams: [{ id: commerceStream.id }],
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
             forClasses: [{ id: semester3Class!.id }],
           });
         } else {
-          // Minor 1 (Semester I & II)
-          const semester1And2Classes = classes.filter(
-            (c) =>
-              c.name.toUpperCase().trim() === "SEMESTER I" ||
-              c.name.toUpperCase().trim() === "SEMESTER II",
+          console.log(
+            `Minor 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
           );
-          await createFromInput({
+        }
+      }
+
+      // Minor 1 (Semester I & II) - For all streams except Commerce
+      const nonCommerceStreams = streams.filter(
+        (s) => s.name.toLowerCase().trim() !== "commerce",
+      );
+      if (nonCommerceStreams.length > 0) {
+        const semester1And2Classes = classes.filter(
+          (c) =>
+            c.name.toUpperCase().trim() === "SEMESTER I" ||
+            c.name.toUpperCase().trim() === "SEMESTER II",
+        );
+
+        const exists1 = await metaExists(
+          "Minor 1 (Semester I & II)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists1) {
+          console.log(
+            `Creating Minor 1 (Semester I & II) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
             label: "Minor 1 (Semester I & II)",
-            streams: [{ id: stream.id }],
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
             forClasses: semester1And2Classes.map((c) => ({ id: c.id })),
           });
-          // Minor 2 (Semester III & IV)
-          const semester3And4Classes = classes.filter(
-            (c) =>
-              c.name.toUpperCase().trim() === "SEMESTER III" ||
-              c.name.toUpperCase().trim() === "SEMESTER IV",
+        } else {
+          console.log(
+            `Minor 1 (Semester I & II) already exists for subject type ${subjectType.code}, skipping`,
           );
-          await createFromInput({
+        }
+
+        // Minor 2 (Semester III & IV) - For all streams except Commerce
+        const semester3And4Classes = classes.filter(
+          (c) =>
+            c.name.toUpperCase().trim() === "SEMESTER III" ||
+            c.name.toUpperCase().trim() === "SEMESTER IV",
+        );
+
+        const exists2 = await metaExists(
+          "Minor 2 (Semester III & IV)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists2) {
+          console.log(
+            `Creating Minor 2 (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
             label: "Minor 2 (Semester III & IV)",
-            streams: [{ id: stream.id }],
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
             forClasses: semester3And4Classes.map((c) => ({ id: c.id })),
           });
+        } else {
+          console.log(
+            `Minor 2 (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
+          );
         }
       }
+    }
 
-      if (stream.name.toLowerCase().trim() === "commerce") continue;
-
-      // For IDC
-      if (subjectType.code?.toUpperCase().trim() === "IDC") {
+    // For IDC - Only for non-commerce streams
+    if (subjectType.code?.toUpperCase().trim() === "IDC") {
+      const nonCommerceStreams = streams.filter(
+        (s) => s.name.toLowerCase().trim() !== "commerce",
+      );
+      if (nonCommerceStreams.length > 0) {
         const semester1Class = classes.find(
           (c) => c.name.toUpperCase().trim() === "SEMESTER I",
         );
@@ -105,31 +233,81 @@ export async function loadDefaultSubjectSelectionMetas() {
         const semester3Class = classes.find(
           (c) => c.name.toUpperCase().trim() === "SEMESTER III",
         );
-        await createFromInput({
-          label: "IDC 1 (Semester I)",
-          streams: [{ id: stream.id }],
-          subjectType: { id: subjectType.id },
-          academicYear: { id: academicYear[0].id },
-          forClasses: [{ id: semester1Class!.id }],
-        });
-        await createFromInput({
-          label: "IDC 2 (Semester II)",
-          streams: [{ id: stream.id }],
-          subjectType: { id: subjectType.id },
-          academicYear: { id: academicYear[0].id },
-          forClasses: [{ id: semester2Class!.id }],
-        });
-        await createFromInput({
-          label: "IDC 3 (Semester III)",
-          streams: [{ id: stream.id }],
-          subjectType: { id: subjectType.id },
-          academicYear: { id: academicYear[0].id },
-          forClasses: [{ id: semester3Class!.id }],
-        });
-      }
 
-      // For AEC
-      if (subjectType.code?.toUpperCase().trim() === "AEC") {
+        const exists1 = await metaExists(
+          "IDC 1 (Semester I)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists1) {
+          console.log(
+            `Creating IDC 1 (Semester I) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
+            label: "IDC 1 (Semester I)",
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
+            subjectType: { id: subjectType.id },
+            academicYear: { id: academicYear[0].id },
+            forClasses: [{ id: semester1Class!.id }],
+          });
+        } else {
+          console.log(
+            `IDC 1 (Semester I) already exists for subject type ${subjectType.code}, skipping`,
+          );
+        }
+
+        const exists2 = await metaExists(
+          "IDC 2 (Semester II)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists2) {
+          console.log(
+            `Creating IDC 2 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
+            label: "IDC 2 (Semester II)",
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
+            subjectType: { id: subjectType.id },
+            academicYear: { id: academicYear[0].id },
+            forClasses: [{ id: semester2Class!.id }],
+          });
+        } else {
+          console.log(
+            `IDC 2 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
+          );
+        }
+
+        const exists3 = await metaExists(
+          "IDC 3 (Semester III)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists3) {
+          console.log(
+            `Creating IDC 3 (Semester III) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
+            label: "IDC 3 (Semester III)",
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
+            subjectType: { id: subjectType.id },
+            academicYear: { id: academicYear[0].id },
+            forClasses: [{ id: semester3Class!.id }],
+          });
+        } else {
+          console.log(
+            `IDC 3 (Semester III) already exists for subject type ${subjectType.code}, skipping`,
+          );
+        }
+      }
+    }
+
+    // For AEC - Only for non-commerce streams
+    if (subjectType.code?.toUpperCase().trim() === "AEC") {
+      const nonCommerceStreams = streams.filter(
+        (s) => s.name.toLowerCase().trim() !== "commerce",
+      );
+      if (nonCommerceStreams.length > 0) {
         const semester3Class = classes.find(
           (c) => c.name.toUpperCase().trim() === "SEMESTER III",
         );
@@ -137,30 +315,68 @@ export async function loadDefaultSubjectSelectionMetas() {
           (c) => c.name.toUpperCase().trim() === "SEMESTER IV",
         );
 
-        await createFromInput({
-          label: "AEC (Semester III & IV)",
-          streams: [{ id: stream.id }],
-          subjectType: { id: subjectType.id },
-          academicYear: { id: academicYear[0].id },
-          forClasses: [{ id: semester3Class!.id }, { id: semester4Class!.id }],
-        });
+        const exists = await metaExists(
+          "AEC (Semester III & IV)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists) {
+          console.log(
+            `Creating AEC (Semester III & IV) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
+            label: "AEC (Semester III & IV)",
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
+            subjectType: { id: subjectType.id },
+            academicYear: { id: academicYear[0].id },
+            forClasses: [
+              { id: semester3Class!.id },
+              { id: semester4Class!.id },
+            ],
+          });
+        } else {
+          console.log(
+            `AEC (Semester III & IV) already exists for subject type ${subjectType.code}, skipping`,
+          );
+        }
       }
+    }
 
-      // For CVAC
-      if (subjectType.code?.toUpperCase().trim() === "CVAC") {
+    // For CVAC - Only for non-commerce streams
+    if (subjectType.code?.toUpperCase().trim() === "CVAC") {
+      const nonCommerceStreams = streams.filter(
+        (s) => s.name.toLowerCase().trim() !== "commerce",
+      );
+      if (nonCommerceStreams.length > 0) {
         const semester2Class = classes.find(
           (c) => c.name.toUpperCase().trim() === "SEMESTER II",
         );
-        await createFromInput({
-          label: "CVAC 4 (Semester II)",
-          streams: [{ id: stream.id }],
-          subjectType: { id: subjectType.id },
-          academicYear: { id: academicYear[0].id },
-          forClasses: [{ id: semester2Class!.id }],
-        });
+
+        const exists = await metaExists(
+          "CVAC 4 (Semester II)",
+          subjectType.id,
+          academicYear[0].id,
+        );
+        if (!exists) {
+          console.log(
+            `Creating CVAC 4 (Semester II) for non-commerce streams and subject type ${subjectType.code}`,
+          );
+          await createOrUpdateMetaWithRelations({
+            label: "CVAC 4 (Semester II)",
+            streams: nonCommerceStreams.map((s) => ({ id: s.id })),
+            subjectType: { id: subjectType.id },
+            academicYear: { id: academicYear[0].id },
+            forClasses: [{ id: semester2Class!.id }],
+          });
+        } else {
+          console.log(
+            `CVAC 4 (Semester II) already exists for subject type ${subjectType.code}, skipping`,
+          );
+        }
       }
     }
   }
+  console.log("Default subject selection metas creation completed");
 }
 
 export async function toDto(
@@ -268,40 +484,51 @@ export async function findAll(): Promise<SubjectSelectionMetaDto[]> {
   return results;
 }
 
-export async function createFromInput(
+// Function to create or update meta with streams and classes
+export async function createOrUpdateMetaWithRelations(
   input: CreateSubjectSelectionMetaInput,
 ): Promise<SubjectSelectionMetaDto | null> {
   if (!input.subjectType?.id || !input.academicYear?.id) {
     return null;
   }
 
-  const [subjectType, academicYear] = await Promise.all([
-    db
-      .select()
-      .from(subjectTypeModel)
-      .where(eq(subjectTypeModel.id, input.subjectType.id)),
-    db
-      .select()
-      .from(academicYearModel)
-      .where(eq(academicYearModel.id, input.academicYear.id)),
-  ]);
+  // Check if meta already exists
+  const existingMeta = await db
+    .select()
+    .from(subjectSelectionMetaModel)
+    .where(
+      and(
+        eq(subjectSelectionMetaModel.label, input.label),
+        eq(subjectSelectionMetaModel.subjectTypeId, input.subjectType.id),
+        eq(subjectSelectionMetaModel.academicYearId, input.academicYear.id),
+      ),
+    );
 
-  if (!subjectType || !academicYear) {
-    return null;
+  let metaId: number;
+
+  if (existingMeta.length > 0) {
+    // Use existing meta
+    metaId = existingMeta[0].id;
+    console.log(
+      `Using existing meta with ID ${metaId} for label "${input.label}"`,
+    );
+  } else {
+    // Create new meta
+    const [created] = await db
+      .insert(subjectSelectionMetaModel)
+      .values({
+        label: input.label,
+        subjectTypeId: input.subjectType.id,
+        academicYearId: input.academicYear.id,
+      })
+      .returning();
+    metaId = created.id;
+    console.log(
+      `Created new meta with ID ${metaId} for label "${input.label}"`,
+    );
   }
 
-  const [created] = await db
-    .insert(subjectSelectionMetaModel)
-    .values({
-      label: input.label,
-      subjectTypeId: input.subjectType.id,
-      academicYearId: input.academicYear.id,
-    })
-    .returning();
-  const createdRow = created as SubjectSelectionMetaRow;
-  const metaId = createdRow.id as number;
-
-  // Create stream relationships
+  // Create stream relationships (with duplicate checking)
   const streamIds = input.streams
     .map((s) => s?.id)
     .filter((v): v is number => typeof v === "number");
@@ -313,13 +540,21 @@ export async function createFromInput(
       .where(inArray(streamModel.id, streamIds));
     const validSet = new Set(rows.map((r) => r.id));
     const toInsert = streamIds.filter((id) => validSet.has(id));
-    if (toInsert.length > 0) {
-      await db.insert(subjectSelectionMetaStreamModel).values(
-        toInsert.map((sid) => ({
+
+    // Check for existing stream relationships and only insert new ones
+    for (const streamId of toInsert) {
+      const exists = await metaStreamExists(metaId, streamId);
+      if (!exists) {
+        await db.insert(subjectSelectionMetaStreamModel).values({
           subjectSelectionMetaId: metaId,
-          streamId: sid,
-        })),
-      );
+          streamId: streamId,
+        });
+        console.log(`Added stream ${streamId} to meta ${metaId}`);
+      } else {
+        console.log(
+          `Stream ${streamId} already exists for meta ${metaId}, skipping`,
+        );
+      }
     }
   }
 
@@ -334,13 +569,20 @@ export async function createFromInput(
       .where(inArray(classModel.id, classIds));
     const validSet = new Set(rows.map((r) => r.id));
     const toInsert = classIds.filter((id) => validSet.has(id));
-    if (toInsert.length > 0) {
-      await db.insert(subjectSelectionMetaClassModel).values(
-        toInsert.map((cid) => ({
+    // Check for existing class relationships and only insert new ones
+    for (const classId of toInsert) {
+      const exists = await metaClassExists(metaId, classId);
+      if (!exists) {
+        await db.insert(subjectSelectionMetaClassModel).values({
           subjectSelectionMetaId: metaId,
-          classId: cid,
-        })),
-      );
+          classId: classId,
+        });
+        console.log(`Added class ${classId} to meta ${metaId}`);
+      } else {
+        console.log(
+          `Class ${classId} already exists for meta ${metaId}, skipping`,
+        );
+      }
     }
   }
 

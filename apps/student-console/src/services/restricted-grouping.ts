@@ -1,4 +1,4 @@
-import { axiosInstance as api } from "@/lib/utils";
+import { ingaxiosInstance as api } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api-response";
 import type { RestrictedGroupingMainDto } from "@repo/db/dtos/subject-selection";
 

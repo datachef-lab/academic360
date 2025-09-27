@@ -3,7 +3,7 @@ import {
   SubjectSelectionMetaDto,
   StudentSubjectSelectionDto as DbStudentSubjectSelectionDto,
 } from "@repo/db/dtos/subject-selection";
-import { ingaxiosInstance as api } from "@/lib/utils";
+import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 
 // Re-export for convenience
@@ -66,6 +66,13 @@ export interface StudentSubjectSelectionForSave {
   subject: { id: number; name: string };
 }
 
+// For admin console - includes parent linking for audit trail
+export interface AdminStudentSubjectSelectionForSave extends StudentSubjectSelectionForSave {
+  parentId?: number; // Link to previous selection for audit trail
+  createdBy: number; // Admin user ID who made the change
+  reason?: string; // Reason for the change
+}
+
 export interface SaveSelectionsResponse {
   success: boolean;
   data?: StudentSubjectSelectionForSave[];
@@ -73,7 +80,7 @@ export interface SaveSelectionsResponse {
 }
 
 export async function fetchStudentSubjectSelections(studentId: number): Promise<StudentSubjectSelectionApiResponse> {
-  const res = await api.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
+  const res = await axiosInstance.get<ApiResponse<StudentSubjectSelectionApiResponse>>(
     `/api/subject-selection/students/${studentId}/selections`,
   );
 
@@ -92,15 +99,13 @@ export async function fetchStudentSubjectSelections(studentId: number): Promise<
   return payload as StudentSubjectSelectionApiResponse;
 }
 
-// Note: Subject selection meta data is now included in the main fetchStudentSubjectSelections API response
-
-// Save student subject selections
-export async function saveStudentSubjectSelections(
-  selections: StudentSubjectSelectionForSave[],
+// Save student subject selections (admin version with audit trail)
+export async function saveStudentSubjectSelectionsAdmin(
+  selections: AdminStudentSubjectSelectionForSave[],
 ): Promise<SaveSelectionsResponse> {
   try {
-    const res = await api.post<ApiResponse<StudentSubjectSelectionForSave[]>>(
-      "/api/subject-selection/student-subject-selection/",
+    const res = await axiosInstance.post<ApiResponse<StudentSubjectSelectionForSave[]>>(
+      "/api/subject-selection/student-subject-selection/admin",
       selections,
     );
 

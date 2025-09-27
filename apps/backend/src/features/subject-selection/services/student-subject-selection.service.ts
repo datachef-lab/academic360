@@ -36,6 +36,14 @@ export type CreateStudentSubjectSelectionDtoInput = {
   changeReason?: string; // Reason for creation/change
 };
 
+// Input format from frontend (simplified)
+export type StudentSubjectSelectionInput = {
+  studentId: number;
+  session: { id: number };
+  subjectSelectionMeta: { id: number };
+  subject: { id: number; name: string };
+};
+
 export type UpdateStudentSubjectSelectionDtoInput =
   Partial<CreateStudentSubjectSelectionDtoInput>;
 
@@ -382,7 +390,7 @@ async function getRestrictedGroupingsForStudent(
 // Validate subject selections from DTO array
 export async function validateStudentSubjectSelections(
   studentId: number,
-  selections: StudentSubjectSelectionDto[],
+  selections: (StudentSubjectSelectionDto | StudentSubjectSelectionInput)[],
 ): Promise<SubjectSelectionValidationError[]> {
   const errors: SubjectSelectionValidationError[] = [];
 
@@ -457,47 +465,60 @@ export async function validateStudentSubjectSelections(
   const structuredSelections: SubjectSelectionData = {};
 
   // Group selections by subject type and semester
+  console.log(
+    "🔍 Debug - Starting validation for selections:",
+    selections.length,
+  );
+
   for (const selection of selections) {
     const subjectName = selection.subject?.name;
-    const subjectTypeCode = selection.subjectSelectionMeta?.subjectType?.code;
+
+    // Check if this is the enriched format (has subjectType) or simplified format (only has id)
+    const hasEnrichedMeta = "subjectType" in selection.subjectSelectionMeta;
+    const subjectTypeCode = hasEnrichedMeta
+      ? (selection.subjectSelectionMeta as any).subjectType?.code
+      : null;
+
     const category = categorizeSubject(subjectName || "", subjectTypeCode);
 
-    // Extract semester from class name in the subject selection meta
-    const semester = extractSemesterRoman(
-      selection.subjectSelectionMeta?.forClasses?.[0]?.class?.name,
-    );
+    // Use the meta label to determine the category and slot
+    const metaLabel = hasEnrichedMeta
+      ? (selection.subjectSelectionMeta as any).label
+      : null;
+
+    console.log("🔍 Debug - Processing selection:", {
+      subjectName,
+      subjectTypeCode,
+      category,
+      metaLabel,
+      hasEnrichedMeta,
+    });
 
     if (!subjectName) continue;
 
-    switch (category) {
-      case "MINOR":
-        if (semester === "I" || semester === "II") {
-          structuredSelections.minor1 = subjectName;
-        } else if (semester === "III" || semester === "IV") {
-          structuredSelections.minor2 = subjectName;
-        }
-        break;
-      case "IDC":
-        if (semester === "I") {
-          structuredSelections.idc1 = subjectName;
-        } else if (semester === "II") {
-          structuredSelections.idc2 = subjectName;
-        } else if (semester === "III") {
-          structuredSelections.idc3 = subjectName;
-        }
-        break;
-      case "AEC":
-        if (semester === "III") {
-          structuredSelections.aec3 = subjectName;
-        }
-        break;
-      case "CVAC":
-        if (semester === "II") {
-          structuredSelections.cvac4 = subjectName;
-        }
-        break;
+    // Use meta label to determine the exact slot instead of extracting semester
+    if (metaLabel) {
+      if (metaLabel.includes("Minor 1")) {
+        structuredSelections.minor1 = subjectName;
+      } else if (metaLabel.includes("Minor 2")) {
+        structuredSelections.minor2 = subjectName;
+      } else if (metaLabel.includes("Minor 3")) {
+        structuredSelections.minor2 = subjectName; // Minor 3 maps to minor2 slot
+      } else if (metaLabel.includes("IDC 1")) {
+        structuredSelections.idc1 = subjectName;
+      } else if (metaLabel.includes("IDC 2")) {
+        structuredSelections.idc2 = subjectName;
+      } else if (metaLabel.includes("IDC 3")) {
+        structuredSelections.idc3 = subjectName;
+      } else if (metaLabel.includes("AEC")) {
+        structuredSelections.aec3 = subjectName;
+      } else if (metaLabel.includes("CVAC")) {
+        structuredSelections.cvac4 = subjectName;
+      }
     }
   }
+
+  console.log("🔍 Debug - Final structured selections:", structuredSelections);
 
   // Required field validation
   if (
@@ -881,11 +902,12 @@ export async function deleteStudentSubjectSelection(id: number) {
   return deleted;
 }
 
-// Create multiple subject selections with validation (Student version - creates initial version)
+// Create multiple subject selections with validation (Student/Admin version - creates initial version)
 export async function createStudentSubjectSelectionsWithValidation(
-  selections: StudentSubjectSelectionDto[],
+  selections: StudentSubjectSelectionInput[],
   createdBy?: number,
   changeReason?: string,
+  userType?: string,
 ): Promise<{
   success: boolean;
   errors?: SubjectSelectionValidationError[];
@@ -931,7 +953,8 @@ export async function createStudentSubjectSelectionsWithValidation(
       ),
     );
 
-  if (existingSelections.length > 0) {
+  // Check if student already has selections (prevent duplicate creation for students, allow admins to override)
+  if (existingSelections.length > 0 && userType === "STUDENT") {
     return {
       success: false,
       errors: [
@@ -944,10 +967,155 @@ export async function createStudentSubjectSelectionsWithValidation(
     };
   }
 
-  // Validate the selections first
+  // If admin is creating and selections exist, mark existing ones as deprecated
+  if (existingSelections.length > 0 && userType === "ADMIN") {
+    console.log(
+      `Admin overriding existing selections for student ${studentId}`,
+    );
+
+    // Mark existing selections as deprecated
+    await db
+      .update(studentSubjectSelectionModel)
+      .set({
+        isDeprecated: true,
+        isActive: false,
+      })
+      .where(
+        and(
+          eq(studentSubjectSelectionModel.studentId, studentId),
+          eq(studentSubjectSelectionModel.sessionId, sessionId),
+          eq(studentSubjectSelectionModel.isActive, true),
+        ),
+      );
+  }
+
+  // Enrich selections with full subjectSelectionMeta data for validation
+  console.log(
+    "🔍 Debug - Original selections:",
+    JSON.stringify(selections, null, 2),
+  );
+
+  // Debug: Check what meta IDs exist in the database
+  const allMetas = await db.select().from(subjectSelectionMetaModel);
+  console.log(
+    "🔍 Debug - All existing meta IDs:",
+    allMetas.map((m) => ({
+      id: m.id,
+      label: m.label,
+      subjectTypeId: m.subjectTypeId,
+    })),
+  );
+
+  // Debug: Check what meta IDs are being requested
+  const requestedIds = selections.map((s) => s.subjectSelectionMeta.id);
+  console.log("🔍 Debug - Requested meta IDs:", requestedIds);
+
+  // Debug: Try to load default metas if none exist
+  if (allMetas.length === 0) {
+    console.log(
+      "🔍 Debug - No metas found, attempting to load default metas...",
+    );
+    try {
+      const { loadDefaultSubjectSelectionMetas } = await import(
+        "./subject-selection-meta.service.js"
+      );
+      await loadDefaultSubjectSelectionMetas();
+      console.log("🔍 Debug - Default metas loaded successfully");
+
+      // Check again after loading
+      const newMetas = await db.select().from(subjectSelectionMetaModel);
+      console.log(
+        "🔍 Debug - Meta IDs after loading defaults:",
+        newMetas.map((m) => ({
+          id: m.id,
+          label: m.label,
+          subjectTypeId: m.subjectTypeId,
+        })),
+      );
+    } catch (error) {
+      console.log("🔍 Debug - Error loading default metas:", error);
+    }
+  }
+
+  const enrichedSelections = await Promise.all(
+    selections.map(async (selection) => {
+      // Fetch full subjectSelectionMeta data with subjectType
+      if (!selection.subjectSelectionMeta?.id) {
+        console.log("❌ No meta ID for selection:", selection);
+        return selection; // Return original if no id
+      }
+
+      const [meta] = await db
+        .select()
+        .from(subjectSelectionMetaModel)
+        .where(
+          eq(subjectSelectionMetaModel.id, selection.subjectSelectionMeta.id),
+        );
+
+      if (!meta) {
+        console.log(
+          "❌ Meta not found for ID:",
+          selection.subjectSelectionMeta.id,
+        );
+        return selection; // Return original if meta not found
+      }
+
+      // Fetch subjectType
+      const [subjectType] = await db
+        .select()
+        .from(subjectTypeModel)
+        .where(eq(subjectTypeModel.id, meta.subjectTypeId));
+
+      // Fetch classes
+      const classes = await db
+        .select({
+          class: {
+            id: classModel.id,
+            name: classModel.name,
+          },
+        })
+        .from(subjectSelectionMetaClassModel)
+        .leftJoin(
+          classModel,
+          eq(subjectSelectionMetaClassModel.classId, classModel.id),
+        )
+        .where(
+          eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
+        );
+
+      const enrichedMeta = {
+        id: meta.id,
+        label: meta.label,
+        subjectTypeId: meta.subjectTypeId,
+        academicYearId: meta.academicYearId,
+        subjectType: subjectType || null,
+        forClasses: classes.map((c) => c.class).filter(Boolean),
+      };
+
+      console.log("✅ Enriched selection:", {
+        subject: selection.subject.name,
+        metaId: meta.id,
+        metaLabel: meta.label,
+        subjectType: subjectType?.code,
+        classes: classes.map((c) => c.class?.name).filter(Boolean),
+      });
+
+      return {
+        ...selection,
+        subjectSelectionMeta: enrichedMeta,
+      };
+    }),
+  );
+
+  console.log(
+    "🔍 Debug - Enriched selections:",
+    JSON.stringify(enrichedSelections, null, 2),
+  );
+
+  // Validate the enriched selections
   const validationErrors = await validateStudentSubjectSelections(
     studentId,
-    selections,
+    enrichedSelections,
   );
 
   if (validationErrors.length > 0) {
@@ -957,7 +1125,7 @@ export async function createStudentSubjectSelectionsWithValidation(
   // Prepare data for insertion (Version 1 - Initial creation)
   const insertData: StudentSubjectSelection[] = [];
 
-  for (const selection of selections) {
+  for (const selection of enrichedSelections) {
     insertData.push({
       studentId: selection.studentId,
       sessionId: selection.session.id,
@@ -968,7 +1136,7 @@ export async function createStudentSubjectSelectionsWithValidation(
       isDeprecated: false,
       isActive: true,
       createdBy: createdBy || null,
-      changeReason: changeReason || "Initial student selection",
+      changeReason: null, // No change reason for initial selections
     } as StudentSubjectSelection);
   }
 
@@ -1054,6 +1222,26 @@ export async function updateStudentSubjectSelectionsWithValidation(
     };
   }
 
+  // Get ALL selections (including deprecated) to find the original/first entry for each metaId
+  const allSelections = await db
+    .select()
+    .from(studentSubjectSelectionModel)
+    .where(
+      and(
+        eq(studentSubjectSelectionModel.studentId, studentId),
+        eq(studentSubjectSelectionModel.sessionId, sessionId),
+      ),
+    )
+    .orderBy(studentSubjectSelectionModel.createdAt);
+
+  // Create map of original/first entries for each metaId
+  const originalSelectionsMap = new Map<number, StudentSubjectSelection>();
+  allSelections.forEach((selection) => {
+    if (!originalSelectionsMap.has(selection.subjectSelectionMetaId)) {
+      originalSelectionsMap.set(selection.subjectSelectionMetaId, selection);
+    }
+  });
+
   // Determine next version number
   const maxVersion = Math.max(...currentSelections.map((s) => s.version || 1));
   const nextVersion = maxVersion + 1;
@@ -1078,10 +1266,11 @@ export async function updateStudentSubjectSelectionsWithValidation(
   const insertData: StudentSubjectSelection[] = [];
 
   for (const selection of selections) {
-    // Find the corresponding current selection to get parentId
-    const currentSelection = currentSelections.find(
-      (cs) => cs.subjectSelectionMetaId === selection.subjectSelectionMeta.id,
-    );
+    // Find the original/first selection for this metaId to get parentId
+    const metaId = selection.subjectSelectionMeta.id;
+    const originalSelection = metaId
+      ? originalSelectionsMap.get(metaId)
+      : undefined;
 
     insertData.push({
       studentId: selection.studentId,
@@ -1089,7 +1278,7 @@ export async function updateStudentSubjectSelectionsWithValidation(
       subjectSelectionMetaId: selection.subjectSelectionMeta.id,
       subjectId: selection.subject.id,
       version: nextVersion,
-      parentId: currentSelection?.id || null, // Link to previous version
+      parentId: originalSelection?.id || null, // Link to original/first entry
       isDeprecated: false,
       isActive: true,
       createdBy: updatedBy || null,
@@ -1123,130 +1312,17 @@ export async function getSubjectSelectionMetaForStudent(
   // Get available subjects first
   const availableSubjects = await getAvailableSubjectsForStudent(studentId);
 
-  // For now, fetch all subject selection metas for the current academic year
-  // In a real implementation, you'd filter by student's academic year and program course
-  const currentAcademicYear = await db
-    .select()
-    .from(academicYearModel)
-    .where(eq(academicYearModel.year, "2025-26"))
-    .limit(1);
+  // Get the student's data which includes academic year information
+  const studentData =
+    await studentSubjectsService.findSubjectsSelections(studentId);
 
-  if (currentAcademicYear.length === 0) {
-    return { subjectSelectionMetas: [], availableSubjects };
-  }
+  // Use the subject selection metas that are already properly filtered by academic year
+  const subjectSelectionMetas = studentData.subjectSelectionMetas;
 
-  // Fetch subject selection metas for the current academic year
-  const subjectSelectionMetas = await db
-    .select({
-      id: subjectSelectionMetaModel.id,
-      label: subjectSelectionMetaModel.label,
-      subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
-      academicYearId: subjectSelectionMetaModel.academicYearId,
-      createdAt: subjectSelectionMetaModel.createdAt,
-      updatedAt: subjectSelectionMetaModel.updatedAt,
-    })
-    .from(subjectSelectionMetaModel)
-    .where(
-      eq(subjectSelectionMetaModel.academicYearId, currentAcademicYear[0].id),
-    );
-
-  // Convert to full DTOs with related data
-  const fullDtos = await Promise.all(
-    subjectSelectionMetas.map(async (meta) => {
-      // Fetch related data for each meta
-      const [academicYear, subjectType, streams, forClasses] =
-        await Promise.all([
-          db
-            .select()
-            .from(academicYearModel)
-            .where(eq(academicYearModel.id, meta.academicYearId)),
-          db
-            .select()
-            .from(subjectTypeModel)
-            .where(eq(subjectTypeModel.id, meta.subjectTypeId)),
-          // Fetch streams through the many-to-many relationship
-          db
-            .select({
-              id: subjectSelectionMetaStreamModel.id,
-              createdAt: subjectSelectionMetaStreamModel.createdAt,
-              updatedAt: subjectSelectionMetaStreamModel.updatedAt,
-              stream: {
-                id: streamModel.id,
-                name: streamModel.name,
-                code: streamModel.code,
-                shortName: streamModel.shortName,
-                isActive: streamModel.isActive,
-                createdAt: streamModel.createdAt,
-                updatedAt: streamModel.updatedAt,
-              },
-            })
-            .from(subjectSelectionMetaStreamModel)
-            .leftJoin(
-              streamModel,
-              eq(subjectSelectionMetaStreamModel.streamId, streamModel.id),
-            )
-            .where(
-              eq(
-                subjectSelectionMetaStreamModel.subjectSelectionMetaId,
-                meta.id,
-              ),
-            ),
-          // Fetch classes through the many-to-many relationship
-          db
-            .select({
-              id: subjectSelectionMetaClassModel.id,
-              subjectSelectionMetaId:
-                subjectSelectionMetaClassModel.subjectSelectionMetaId,
-              createdAt: subjectSelectionMetaClassModel.createdAt,
-              updatedAt: subjectSelectionMetaClassModel.updatedAt,
-              class: {
-                id: classModel.id,
-                name: classModel.name,
-                type: classModel.type,
-                isActive: classModel.isActive,
-                createdAt: classModel.createdAt,
-                updatedAt: classModel.updatedAt,
-              },
-            })
-            .from(subjectSelectionMetaClassModel)
-            .leftJoin(
-              classModel,
-              eq(subjectSelectionMetaClassModel.classId, classModel.id),
-            )
-            .where(
-              eq(
-                subjectSelectionMetaClassModel.subjectSelectionMetaId,
-                meta.id,
-              ),
-            ),
-        ]);
-
-      return {
-        id: meta.id!,
-        academicYear: academicYear[0]!,
-        subjectType: subjectType[0]!,
-        streams: streams.map((s) => ({
-          id: s.id!,
-          createdAt: s.createdAt || new Date(),
-          updatedAt: s.updatedAt || new Date(),
-          stream: s.stream!,
-        })),
-        forClasses: forClasses.map((c) => ({
-          id: c.id!,
-          subjectSelectionMetaId: c.subjectSelectionMetaId!,
-          createdAt: c.createdAt || new Date(),
-          updatedAt: c.updatedAt || new Date(),
-          class: c.class!,
-        })),
-        label: meta.label,
-        createdAt: meta.createdAt || new Date(),
-        updatedAt: meta.updatedAt || new Date(),
-      } as unknown as SubjectSelectionMetaDto;
-    }),
-  );
+  // The subjectSelectionMetas are already properly formatted DTOs from findSubjectsSelections
 
   return {
-    subjectSelectionMetas: fullDtos,
+    subjectSelectionMetas,
     availableSubjects,
   };
 }
@@ -1405,5 +1481,313 @@ export async function getSelectionStatistics(studentId: number): Promise<{
     changeHistory: Array.from(versionMap.values()).sort(
       (a, b) => b.version - a.version,
     ),
+  };
+}
+
+// Efficient admin update function - only updates changed selections with proper parent relationships
+export async function updateStudentSubjectSelectionsEfficiently(
+  selections: StudentSubjectSelectionInput[],
+  createdBy?: number,
+  changeReason?: string,
+): Promise<{
+  success: boolean;
+  errors?: SubjectSelectionValidationError[];
+  data?: StudentSubjectSelection[];
+}> {
+  if (selections.length === 0) {
+    return { success: true, data: [] };
+  }
+
+  // Extract studentId and sessionId from first selection
+  const studentId = selections[0].studentId;
+  const sessionId = selections[0].session.id;
+
+  console.log(
+    `🔍 Efficient Update - Processing ${selections.length} selections for student ${studentId}`,
+  );
+
+  // Get current active selections
+  const currentSelections = await db
+    .select()
+    .from(studentSubjectSelectionModel)
+    .where(
+      and(
+        eq(studentSubjectSelectionModel.studentId, studentId),
+        eq(studentSubjectSelectionModel.sessionId, sessionId),
+        eq(studentSubjectSelectionModel.isActive, true),
+      ),
+    );
+
+  console.log(`🔍 Current active selections: ${currentSelections.length}`);
+
+  // Get ALL selections (including deprecated) to find the original/first entry for each metaId
+  const allSelections = await db
+    .select()
+    .from(studentSubjectSelectionModel)
+    .where(
+      and(
+        eq(studentSubjectSelectionModel.studentId, studentId),
+        eq(studentSubjectSelectionModel.sessionId, sessionId),
+      ),
+    )
+    .orderBy(studentSubjectSelectionModel.createdAt);
+
+  console.log(
+    `🔍 All selections (including deprecated): ${allSelections.length}`,
+  );
+
+  // Create maps for easy comparison
+  const currentSelectionsMap = new Map<number, StudentSubjectSelection>();
+  const originalSelectionsMap = new Map<number, StudentSubjectSelection>();
+
+  currentSelections.forEach((selection) => {
+    currentSelectionsMap.set(selection.subjectSelectionMetaId, selection);
+  });
+
+  // Find the original/first entry for each metaId
+  allSelections.forEach((selection) => {
+    if (!originalSelectionsMap.has(selection.subjectSelectionMetaId)) {
+      originalSelectionsMap.set(selection.subjectSelectionMetaId, selection);
+    }
+  });
+
+  // Find what has actually changed
+  const changedSelections: StudentSubjectSelectionInput[] = [];
+  const unchangedSelections: StudentSubjectSelection[] = [];
+
+  for (const newSelection of selections) {
+    const metaId = newSelection.subjectSelectionMeta.id;
+    const currentSelection = currentSelectionsMap.get(metaId);
+
+    if (!currentSelection) {
+      // New selection (metaId not in current selections)
+      console.log(
+        `🆕 New selection for metaId ${metaId}: ${newSelection.subject.name}`,
+      );
+      changedSelections.push(newSelection);
+    } else if (currentSelection.subjectId !== newSelection.subject.id) {
+      // Changed selection (different subject)
+      console.log(
+        `🔄 Changed selection for metaId ${metaId}: ${currentSelection.subjectId} -> ${newSelection.subject.id}`,
+      );
+      changedSelections.push(newSelection);
+    } else {
+      // Unchanged selection
+      console.log(
+        `✅ Unchanged selection for metaId ${metaId}: ${newSelection.subject.name}`,
+      );
+      unchangedSelections.push(currentSelection);
+    }
+  }
+
+  console.log(
+    `📊 Summary: ${changedSelections.length} changed, ${unchangedSelections.length} unchanged`,
+  );
+
+  // If nothing changed, return success with current data
+  if (changedSelections.length === 0) {
+    console.log("✅ No changes detected, returning current selections");
+    return {
+      success: true,
+      data: unchangedSelections,
+    };
+  }
+
+  // Enrich only the changed selections
+  const enrichedChangedSelections = await Promise.all(
+    changedSelections.map(async (selection) => {
+      const [meta] = await db
+        .select()
+        .from(subjectSelectionMetaModel)
+        .where(
+          eq(subjectSelectionMetaModel.id, selection.subjectSelectionMeta.id),
+        );
+
+      if (!meta) {
+        throw new Error(
+          `Meta not found for ID: ${selection.subjectSelectionMeta.id}`,
+        );
+      }
+
+      const [subjectType] = await db
+        .select()
+        .from(subjectTypeModel)
+        .where(eq(subjectTypeModel.id, meta.subjectTypeId));
+
+      const classes = await db
+        .select({
+          class: {
+            id: classModel.id,
+            name: classModel.name,
+          },
+        })
+        .from(subjectSelectionMetaClassModel)
+        .leftJoin(
+          classModel,
+          eq(subjectSelectionMetaClassModel.classId, classModel.id),
+        )
+        .where(
+          eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
+        );
+
+      return {
+        ...selection,
+        subjectSelectionMeta: {
+          id: meta.id,
+          label: meta.label,
+          subjectTypeId: meta.subjectTypeId,
+          academicYearId: meta.academicYearId,
+          subjectType: subjectType || null,
+          forClasses: classes.map((c) => c.class).filter(Boolean),
+        },
+      };
+    }),
+  );
+
+  // Enrich unchanged selections for validation
+  const enrichedUnchangedSelections = await Promise.all(
+    unchangedSelections.map(async (selection) => {
+      const [meta] = await db
+        .select()
+        .from(subjectSelectionMetaModel)
+        .where(
+          eq(subjectSelectionMetaModel.id, selection.subjectSelectionMetaId),
+        );
+
+      if (!meta) {
+        throw new Error(
+          `Meta not found for ID: ${selection.subjectSelectionMetaId}`,
+        );
+      }
+
+      const [subjectType] = await db
+        .select()
+        .from(subjectTypeModel)
+        .where(eq(subjectTypeModel.id, meta.subjectTypeId));
+
+      const [subject] = await db
+        .select()
+        .from(subjectModel)
+        .where(eq(subjectModel.id, selection.subjectId));
+
+      const classes = await db
+        .select({
+          class: {
+            id: classModel.id,
+            name: classModel.name,
+          },
+        })
+        .from(subjectSelectionMetaClassModel)
+        .leftJoin(
+          classModel,
+          eq(subjectSelectionMetaClassModel.classId, classModel.id),
+        )
+        .where(
+          eq(subjectSelectionMetaClassModel.subjectSelectionMetaId, meta.id),
+        );
+
+      return {
+        studentId: selection.studentId,
+        session: { id: selection.sessionId },
+        subjectSelectionMeta: {
+          id: meta.id,
+          label: meta.label,
+          subjectTypeId: meta.subjectTypeId,
+          academicYearId: meta.academicYearId,
+          subjectType: subjectType || null,
+          forClasses: classes.map((c) => c.class).filter(Boolean),
+        },
+        subject: {
+          id: selection.subjectId,
+          name: subject?.name || "",
+        },
+      };
+    }),
+  );
+
+  // Validate ALL selections (changed + unchanged) to ensure completeness
+  const allSelectionsForValidation = [
+    ...enrichedChangedSelections,
+    ...enrichedUnchangedSelections,
+  ];
+
+  const validationErrors = await validateStudentSubjectSelections(
+    studentId,
+    allSelectionsForValidation,
+  );
+
+  if (validationErrors.length > 0) {
+    return { success: false, errors: validationErrors };
+  }
+
+  // Process changes: deprecate old and create new with proper parent relationships
+  const newSelections: StudentSubjectSelection[] = [];
+  const deprecatedIds: number[] = [];
+
+  for (const changedSelection of enrichedChangedSelections) {
+    const metaId = changedSelection.subjectSelectionMeta.id;
+    const currentSelection = currentSelectionsMap.get(metaId);
+    const originalSelection = originalSelectionsMap.get(metaId);
+
+    if (currentSelection && currentSelection.id) {
+      // Mark current selection as deprecated
+      await db
+        .update(studentSubjectSelectionModel)
+        .set({
+          isDeprecated: true,
+          isActive: false,
+        })
+        .where(eq(studentSubjectSelectionModel.id, currentSelection.id));
+
+      deprecatedIds.push(currentSelection.id);
+      console.log(
+        `🗑️ Deprecated selection ID ${currentSelection.id} for metaId ${metaId}`,
+      );
+    }
+
+    // Calculate next version number
+    const nextVersion = currentSelection
+      ? (currentSelection.version || 1) + 1
+      : 1;
+
+    // Parent ID should always point to the original/first entry for this metaId
+    const parentId = originalSelection ? originalSelection.id : null;
+
+    // Create new selection with parent relationship pointing to original
+    const newSelection: StudentSubjectSelection = {
+      studentId: changedSelection.studentId,
+      sessionId: changedSelection.session.id,
+      subjectSelectionMetaId: changedSelection.subjectSelectionMeta.id,
+      subjectId: changedSelection.subject.id,
+      version: nextVersion,
+      parentId: parentId, // Always point to the original/first entry
+      isDeprecated: false,
+      isActive: true,
+      createdBy: createdBy || null,
+      changeReason: changeReason || "Admin update",
+    } as StudentSubjectSelection;
+
+    newSelections.push(newSelection);
+    console.log(
+      `✨ Created new selection for metaId ${metaId} with parentId ${parentId || "null"} (original) and version ${nextVersion}`,
+    );
+  }
+
+  // Insert new selections
+  const insertedSelections = await db
+    .insert(studentSubjectSelectionModel)
+    .values(newSelections)
+    .returning();
+
+  console.log(
+    `✅ Successfully inserted ${insertedSelections.length} new selections`,
+  );
+
+  // Return all active selections (unchanged + newly inserted)
+  const allActiveSelections = [...unchangedSelections, ...insertedSelections];
+
+  return {
+    success: true,
+    data: allActiveSelections,
   };
 }

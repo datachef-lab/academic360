@@ -58,7 +58,7 @@ function checkRequiredEnvs() {
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");
       //   await brainstormOldMigration();
-      await startLoadDataScheduler();
+      //   await startLoadDataScheduler();
     });
   } catch (error) {
     console.error("[backend] - Failed to start the application: ⚠️\n", error);

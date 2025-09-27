@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, User, FileText, Edit3, BookOpen, GraduationCap } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { User, FileText, Edit3, BookOpen, GraduationCap } from "lucide-react";
 import { useState, useEffect } from "react";
 import SubjectSelectionForm from "../components/SubjectSelectionForm";
 import { fetchStudentByUid } from "@/services/student";
@@ -12,7 +11,6 @@ import { StudentDto } from "@repo/db/dtos/user";
 
 export default function CuRegStudentPage() {
   const { uid } = useParams<{ uid: string }>();
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("subject-selection");
   const [studentData, setStudentData] = useState<StudentDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,44 +97,53 @@ export default function CuRegStudentPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/dashboard/cu-registration")}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Overview
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Student Details</h1>
-            {loading ? (
-              <p className="text-slate-600">Loading student data...</p>
-            ) : error ? (
-              <p className="text-red-600">Error: {error}</p>
-            ) : studentData ? (
-              <p className="text-slate-600">
-                UID: {studentData.uid} •{" "}
-                {studentData.personalDetails
-                  ? `${studentData.personalDetails.firstName} ${studentData.personalDetails.middleName || ""} ${studentData.personalDetails.lastName || ""}`.trim()
-                  : "Unknown"}
-              </p>
-            ) : (
-              <p className="text-slate-600">No student data available</p>
-            )}
+      {/* Student Information Card */}
+      {studentData?.currentPromotion && (
+        <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg">
+          {/* Academic Information */}
+          <div className="flex mb-4">
+            <div className="w-44 pr-2">
+              <div className="text-base font-bold">Academic Year</div>
+              <div className="text-base font-bold mt-1">Program Course</div>
+              <div className="text-base font-bold mt-1">Student Name</div>
+              <div className="text-base font-bold mt-1">UID</div>
+            </div>
+            <div className="w-4 pr-2">
+              <div className="text-base font-bold">:</div>
+              <div className="text-base font-bold mt-1">:</div>
+              <div className="text-base font-bold mt-1">:</div>
+              <div className="text-base font-bold mt-1">:</div>
+            </div>
+            <div className="flex-1">
+              <div className="text-base font-bold text-blue-900">
+                {studentData.currentPromotion.session?.academicYear?.year || "N/A"}
+              </div>
+              <div className="text-base font-bold text-blue-900 mt-1">
+                {studentData.currentPromotion.programCourse?.name || "N/A"}
+              </div>
+              <div className="text-base font-bold text-blue-900 mt-1">
+                {studentData.personalDetails?.firstName && studentData.personalDetails?.lastName
+                  ? `${studentData.personalDetails.firstName} ${studentData.personalDetails.lastName}`
+                  : "N/A"}
+              </div>
+              <div className="text-base font-bold text-blue-900 mt-1">{studentData.uid || "N/A"}</div>
+            </div>
           </div>
+
+          {/* Admin Notes - Only show for Subject Selection tab */}
+          {activeTab === "subject-selection" && (
+            <div className="flex items-start gap-3 pt-4 border-t border-blue-200">
+              <div className="w-5 h-5 mt-0.5 flex-shrink-0">ℹ️</div>
+              <div className="flex-1">
+                <div className="text-base leading-relaxed">
+                  This student has existing subject selections. You can modify them below. Changes will be logged for
+                  audit purposes.
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        <div className="flex gap-3">
-          {studentData && getStatusBadge("submitted")}
-          <Button variant="outline" className="flex items-center gap-2">
-            <Edit3 className="h-4 w-4" />
-            Edit Details
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

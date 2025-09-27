@@ -55,6 +55,9 @@ export const connectToDatabase = async () => {
     loadCourseLevel();
     loadCourseType();
     loadRegulationType();
+
+    // Clear existing duplicates and load fresh metas (only in development)
+
     loadDefaultSubjectSelectionMetas();
     // loadOldSubjects();
     // loadOldCourses();

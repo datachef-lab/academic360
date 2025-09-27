@@ -32,7 +32,9 @@ export const verifyJWT = async (
       .where(eq(userModel.id, decoded.id));
 
     console.log("JWT Verification - User ID:", decoded.id);
+    console.log("JWT Verification - Decoded Type:", decoded.type);
     console.log("JWT Verification - Found User:", foundUser);
+    console.log("JWT Verification - Found User Type:", foundUser?.type);
     console.log("JWT Verification - User Active:", foundUser?.isActive);
 
     if (!foundUser) {
