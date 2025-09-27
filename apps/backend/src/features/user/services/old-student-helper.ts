@@ -1220,6 +1220,7 @@ export async function upsertStudentPersonalDetails(
       .set({
         userId: user.id as number,
         dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
+        whatsappNumber: oldDetails.whatsappno || undefined,
         gender:
           oldDetails.sexId === 0
             ? undefined
@@ -1479,8 +1480,19 @@ export async function upsertStudentPersonalDetails(
     .values({
       userId: user.id as number,
       firstName: oldDetails.name?.split(" ")[0] || "", // Required field
-      lastName: oldDetails.name?.split(" ")[1] || "",
-      middleName: oldDetails.name?.split(" ")[2] || "",
+      middleName: (() => {
+        const nameParts = oldDetails.name?.split(" ");
+        return nameParts && nameParts.length >= 3
+          ? nameParts.slice(1, -1).join(" ")
+          : "";
+      })(),
+      lastName: (() => {
+        const nameParts = oldDetails.name?.split(" ");
+        return nameParts && nameParts.length >= 2
+          ? nameParts[nameParts.length - 1]
+          : "";
+      })(),
+      whatsappNumber: oldDetails.whatsappno || undefined,
       mobileNumber: oldDetails.phoneMobileNo || oldDetails.contactNo || "", // Required field
       dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
       gender:
