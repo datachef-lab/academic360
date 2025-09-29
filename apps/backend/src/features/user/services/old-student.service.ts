@@ -386,6 +386,7 @@ export async function addAdmissionApplicationForm(
   }
 
   const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
+  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
 
   let [foundAcademicYear] = await db
     .select()
@@ -405,6 +406,7 @@ export async function addAdmissionApplicationForm(
           legacyAcademicYearId: oldAcademicYear.id,
           year: academicYearName,
           isCurrentYear: oldAcademicYear.presentAcademicYear,
+          codePrefix: codePrefix.toString(),
         })
         .returning()
     )[0];
@@ -1172,9 +1174,16 @@ export async function processOldStudentApplicationForm(
         eq(applicationFormModel.id, existingAdmGeneralInfo.applicationFormId),
       );
 
-    const [transferredAdmCourseDetails] = await db
+    const [{ admission_course_details: transferredAdmCourseDetails }] = await db
       .select()
       .from(admissionCourseDetailsModel)
+      .leftJoin(
+        admissionProgramCourseModel,
+        eq(
+          admissionCourseDetailsModel.admissionProgramCourseId,
+          admissionProgramCourseModel.id,
+        ),
+      )
       .where(
         and(
           eq(
@@ -1182,6 +1191,10 @@ export async function processOldStudentApplicationForm(
             existingApplicationForm.id,
           ),
           eq(admissionCourseDetailsModel.isTransferred, true),
+          eq(
+            admissionProgramCourseModel.programCourseId,
+            student.programCourseId!,
+          ),
         ),
       );
 

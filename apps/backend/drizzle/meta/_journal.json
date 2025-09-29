@@ -134,6 +134,27 @@
       "when": 1758997615279,
       "tag": "0018_glorious_gamora",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1759124948578,
+      "tag": "0019_quick_miracleman",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1759139358536,
+      "tag": "0020_dizzy_lester",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1759139618611,
+      "tag": "0021_lame_runaways",
+      "breakpoints": true
     }
   ]
 }

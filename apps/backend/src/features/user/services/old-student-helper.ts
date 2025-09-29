@@ -69,6 +69,7 @@ import {
   promotionModel,
   PromotionInsertSchema,
   ApplicationForm,
+  applicationFormModel,
 } from "@repo/db/schemas/models";
 import {
   OldAdmStudentPersonalDetail,
@@ -520,20 +521,25 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
   let [existingStudent] = await db
     .select()
     .from(studentModel)
-    .where(eq(studentModel.userId, user.id as number));
+    .where(
+      and(
+        eq(studentModel.userId, user.id as number),
+        eq(studentModel.legacyStudentId, oldStudent.id),
+      ),
+    );
 
   const [[oldCourse]] = (await mysqlConnection.query(`
         SELECT crs.*
         FROM course crs
         JOIN coursedetails cd ON cd.courseid = crs.id
-        WHERE cd.id = ${oldStudent.admissionid}
+        WHERE cd.id = ${oldStudent.admissionid} AND cd.transferred = true
     `)) as [OldCourse[], any];
 
   if (!oldCourse) {
     throw new Error(`Course not found for student ${oldStudent.codeNumber}`);
   }
 
-  const [foundProgramCourse] = await db
+  let [foundProgramCourse] = await db
     .select()
     .from(programCourseModel)
     .where(ilike(programCourseModel.name, oldCourse.courseName.trim()));
@@ -544,11 +550,21 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
     );
   }
 
+  [foundProgramCourse] = await db
+    .update(programCourseModel)
+    .set({
+      codePrefix: oldCourse.codeprefix?.trim(),
+      universityCode: oldCourse.univcode?.trim(),
+    })
+    .where(eq(programCourseModel.id, foundProgramCourse.id))
+    .returning();
+
   if (existingStudent) {
     const [updatedStudent] = await db
       .update(studentModel)
       .set({
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
+        oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         applicationId: null, // TODO: Add applicationId
         programCourseId: foundProgramCourse.id,
         community:
@@ -595,6 +611,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         userId: user.id as number,
         legacyStudentId: oldStudent.id,
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
+        oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
         applicationId: null, // TODO: Add applicationId
         programCourseId: foundProgramCourse.id,
         community:
@@ -1220,6 +1237,19 @@ export async function upsertStudentPersonalDetails(
       .set({
         userId: user.id as number,
         dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
+        firstName: oldDetails.name?.split(" ")[0] || "", // Required field
+        middleName: (() => {
+          const nameParts = oldDetails.name?.split(" ");
+          return nameParts && nameParts.length >= 3
+            ? nameParts.slice(1, -1).join(" ")
+            : "";
+        })(),
+        lastName: (() => {
+          const nameParts = oldDetails.name?.split(" ");
+          return nameParts && nameParts.length >= 2
+            ? nameParts[nameParts.length - 1]
+            : "";
+        })(),
         whatsappNumber: oldDetails.whatsappno || undefined,
         gender:
           oldDetails.sexId === 0
@@ -1259,6 +1289,7 @@ export async function upsertStudentPersonalDetails(
       .update(addressModel)
       .set({
         personalDetailsId: existingPersonalDetails.id,
+
         address: oldDetails.mailingAddress,
         block: oldDetails.mailblock,
         countryId: oldCountry
@@ -1738,51 +1769,142 @@ export async function upsertTransportDetails(
   return newTransportDetail;
 }
 
-export async function processStudent(oldStudent: OldStudent, user: User) {
-  // Step 1: Check for the student
-  const student = await upsertStudent(oldStudent, user);
+export async function processStudent(
+  oldStudent: OldStudent,
+  user: User,
+  studentId: number | undefined,
+  lastSyncTime?: Date,
+) {
+  let student: Student | undefined;
 
-  // Step 2: Check for the accomodation
-  await upsertAccommodation(oldStudent, user.id!);
+  // Check if we need to update student data (Steps 1-8)
+  let shouldUpdateStudentData = false;
 
-  // Step 3: Check for the Familys
-  await upsertFamily(oldStudent, user.id!);
+  if (!studentId) {
+    // Student doesn't exist in new DB - need to create everything
+    shouldUpdateStudentData = true;
+  } else if (oldStudent.modifydt && lastSyncTime) {
+    // Student exists and has been modified - check if modified since last sync
+    const modifyTime = new Date(oldStudent.modifydt);
+    // Update student data if it was modified after our last sync
+    shouldUpdateStudentData = modifyTime.getTime() > lastSyncTime.getTime();
+  }
+  // If modifydt is null, it means data hasn't been updated since creation - no need to update
+  // If lastSyncTime is undefined (manual call), we don't update student data
 
-  // Step 4: Check for the health
-  await upsertHealth(oldStudent, user.id!);
+  if (shouldUpdateStudentData) {
+    // Step 1: Upsert the student first
+    student = await upsertStudent(oldStudent, user);
 
-  // Step 5: Check for the emergency-contact
-  await upsertEmergencyContact(oldStudent, user.id!);
+    // Step 2: Check for the accomodation
+    await upsertAccommodation(oldStudent, user.id!);
 
-  // Step 6: Check for the personal-details
-  await upsertStudentPersonalDetails(oldStudent, user);
+    // Step 3: Check for the Familys
+    await upsertFamily(oldStudent, user.id!);
 
-  // Step 7: Check for the transport-details
-  await upsertTransportDetails(oldStudent, user.id!);
+    // Step 4: Check for the health
+    await upsertHealth(oldStudent, user.id!);
 
-  // Step 8: Application Form
-  if (!student.applicationId) {
-    const { applicationForm, transferredAdmCourseDetails } =
-      await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
-        oldStudent,
-        student,
+    // Step 5: Check for the emergency-contact
+    await upsertEmergencyContact(oldStudent, user.id!);
+
+    // Step 6: Check for the personal-details
+    await upsertStudentPersonalDetails(oldStudent, user);
+
+    // Step 7: Check for the transport-details
+    await upsertTransportDetails(oldStudent, user.id!);
+
+    // Step 8: Application Form
+    if (!student.applicationId) {
+      const result =
+        await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
+          oldStudent,
+          student,
+        );
+      const [updatedStudent] = await db
+        .update(studentModel)
+        .set({
+          applicationId: result.applicationForm.id,
+          admissionCourseDetailsId: result.transferredAdmCourseDetails.id!,
+        })
+        .where(eq(studentModel.id, student.id!))
+        .returning();
+
+      student = updatedStudent;
+    }
+  } else {
+    // Student exists and data hasn't changed - just fetch existing student
+    student = (
+      await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.userId, user.id as number))
+    )[0];
+  }
+
+  console.log(
+    "update personal details names and whatsapp number for student:",
+    student?.uid,
+  );
+  await db
+    .update(personalDetailsModel)
+    .set({
+      firstName: oldStudent.name?.split(" ")[0] || "", // Required field
+      middleName: (() => {
+        const nameParts = oldStudent.name?.split(" ");
+        return nameParts && nameParts.length >= 3
+          ? nameParts.slice(1, -1).join(" ")
+          : "";
+      })(),
+      lastName: (() => {
+        const nameParts = oldStudent.name?.split(" ");
+        return nameParts && nameParts.length >= 2
+          ? nameParts[nameParts.length - 1]
+          : "";
+      })(),
+      whatsappNumber: oldStudent.whatsappno || undefined,
+    })
+    .where(eq(personalDetailsModel.userId, student?.userId!));
+
+  console.log("updating promotion data for student:", student?.uid);
+
+  // Step 9: ALWAYS update promotion data regardless of student data changes
+  // This is crucial because historicalrecord table doesn't have timestamps
+  if (student && student.applicationId) {
+    const [applicationForm] = await db
+      .select()
+      .from(applicationFormModel)
+      .where(eq(applicationFormModel.id, student.applicationId as number));
+
+    const [{ admission_course_details: transferredAdmCourseDetails }] = await db
+      .select()
+      .from(admissionCourseDetailsModel)
+      .leftJoin(
+        admissionProgramCourseModel,
+        eq(
+          admissionCourseDetailsModel.admissionProgramCourseId,
+          admissionProgramCourseModel.id,
+        ),
+      )
+      .where(
+        and(
+          eq(admissionCourseDetailsModel.applicationFormId, applicationForm.id),
+          eq(admissionCourseDetailsModel.isTransferred, true),
+          eq(
+            admissionProgramCourseModel.programCourseId,
+            student.programCourseId!,
+          ),
+        ),
       );
-    const [updatedStudent] = await db
-      .update(studentModel)
-      .set({
-        applicationId: applicationForm.id,
-        admissionCourseDetailsId: transferredAdmCourseDetails.id!,
-      })
-      .where(eq(studentModel.id, student.id))
-      .returning();
 
-    // Step 9: Promotion
-    await addPromotion(
-      updatedStudent.id!,
-      applicationForm,
-      oldStudent.id!,
-      transferredAdmCourseDetails,
-    );
+    if (applicationForm && transferredAdmCourseDetails) {
+      await addPromotion(
+        student.id!,
+        applicationForm,
+        oldStudent.id!,
+        transferredAdmCourseDetails,
+      );
+    }
   }
 
   return student;
@@ -1895,26 +2017,19 @@ export async function addPromotion(
     oldHistoricalRecord?.shiftId!,
   );
 
-  const [existingPromotion] = await db
+  // First try to find existing promotion by studentId and legacyHistoricalRecordId
+  let [existingPromotion] = await db
     .select()
     .from(promotionModel)
     .where(
       and(
         eq(promotionModel.studentId, studentId),
-        eq(promotionModel.sectionId, foundSection?.id!),
-        eq(promotionModel.programCourseId, foundProgramCourse?.id!),
-        eq(promotionModel.sessionId, foundSession?.id!),
-        eq(promotionModel.shiftId, shift?.id!),
-        eq(promotionModel.classId, foundClass?.id!),
-        eq(
-          promotionModel.classRollNumber,
-          String(oldHistoricalRecord?.rollNo!),
-        ),
-        eq(promotionModel.promotionStatusId, foundPromotionStatus?.id!),
+        eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord?.id!),
       ),
     );
 
   if (existingPromotion) {
+    console.log("Updating promotion data for student:", studentId);
     await db
       .update(promotionModel)
       .set({
@@ -1939,6 +2054,7 @@ export async function addPromotion(
       })
       .where(eq(promotionModel.id, existingPromotion.id));
   } else {
+    console.log("Creating promotion data for student:", studentId);
     await db.insert(promotionModel).values({
       studentId: studentId,
       sectionId: foundSection?.id,

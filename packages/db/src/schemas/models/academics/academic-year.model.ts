@@ -7,6 +7,7 @@ export const academicYearModel = pgTable("academic_years", {
     legacyAcademicYearId: integer(),
     year: varchar({ length: 255 }).notNull(),
     isCurrentYear: boolean("is_current_year").notNull().default(false),
+    codePrefix: varchar("code_prefix", { length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

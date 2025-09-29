@@ -38,9 +38,6 @@ async function sleep(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-// Watermark for incremental runs
-let lastRunCompletedAt: Date = new Date(0);
-
 /*
  * This function is responsible for loading the students data from the old system to the new system
  *
@@ -54,7 +51,11 @@ export async function loadData(sinceDate?: Date) {
   for (let i = 0; i < oldSessions.length; i++) {
     const oldSession = oldSessions[i];
 
-    const { foundSession } = await getMetadata(oldSession);
+    const meta = await getMetadata(oldSession);
+
+    if (!meta) continue;
+
+    const { foundSession } = meta;
 
     const stats = await getOldAdmissionStatsByOldSessionId(oldSession.id!);
 
@@ -75,41 +76,25 @@ export async function loadData(sinceDate?: Date) {
         .from(classModel)
         .where(ilike(classModel.name, "SEMESTER I")); // Fetch the `SEMESTER I` class only for now
 
-      const [{ count: totalPromotions }] = await db
-        .select({ count: count() })
-        .from(promotionModel)
-        .where(
-          and(
-            eq(promotionModel.programCourseId, foundProgramCourse?.id!),
-            eq(promotionModel.classId, foundClass?.id!),
-            eq(promotionModel.sessionId, foundSession?.id!),
-          ),
-        );
-
       if (stat.total === 0) {
         console.log(
-          `No promotions found for ${stat.course} in ${oldSession.sessionName}`,
+          `No students found for ${stat.course} in ${oldSession.sessionName}`,
         );
         continue;
       }
 
-      // If counts mismatch: backfill missing students
-      if (totalPromotions !== stat.total) {
-        console.log(
-          `Promotion count (${totalPromotions}) != legacy total (${stat.total}) for ${stat.course} in ${oldSession.sessionName}. Backfilling missing students...`,
-        );
-        await backfillMissingStudents(stat, oldSession.id!);
-        continue;
-      }
-
-      // Counts match: process only modified students since watermark
+      // Always process all students to ensure promotion data is always updated
+      // This is necessary because historicalrecord table doesn't have timestamps
       console.log(
-        `Promotion count matches for ${stat.course} in ${oldSession.sessionName}. Processing modified students${sinceDate ? ` since ${sinceDate.toISOString()}` : ""}...`,
+        `Processing all ${stat.total} students for ${stat.course} in ${oldSession.sessionName}...`,
       );
-      await processModifiedStudents(stat, oldSession.id!, sinceDate);
+      await processAllStudents(stat, oldSession.id!, sinceDate);
     }
   }
 }
+
+// Watermark for incremental runs
+let lastRunCompletedAt: Date = new Date(0);
 
 // Continuously runs loadData, waits for 2 hours, then runs again
 export async function startLoadDataScheduler() {
@@ -126,10 +111,11 @@ export async function startLoadDataScheduler() {
   }
 }
 
-// Backfills students present in legacy for a course/session but missing in new DB (by legacyStudentId)
-async function backfillMissingStudents(
+// Processes all students for a course/session to ensure promotion data is always updated
+async function processAllStudents(
   stats: OldAdmissionStats,
   oldSessionId: number,
+  sinceDate?: Date,
 ) {
   const [[{ totalStudents }]] = (await mysqlConnection.query(`
         SELECT COUNT(sp.id) AS totalStudents
@@ -145,47 +131,19 @@ async function backfillMissingStudents(
         AND crs.courseName = '${stats.course.trim()}'
     `)) as [{ totalStudents: number }[], any];
 
+  if (totalStudents === 0) {
+    console.log(`${stats.course}: no students to process`);
+    return;
+  }
+
   const totalBatches = Math.ceil(totalStudents / BATCH_SIZE);
+  console.log(
+    `${stats.course}: processing ${totalStudents} students in ${totalBatches} batches`,
+  );
+
   for (let i = 0; i < totalBatches; i++) {
     const offset = i * BATCH_SIZE;
     const limit = BATCH_SIZE;
-    const [oldStudentIds] = (await mysqlConnection.query(`
-            SELECT sp.id AS legacyStudentId, sp.codeNumber
-            FROM personaldetails pd
-            JOIN coursedetails cd ON cd.parent_id = pd.id
-            JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
-            JOIN currentsessionmaster sess ON sess.id = pd.sessionId
-            JOIN course crs ON crs.id = cd.courseId
-            WHERE cd.transferred = true
-                AND sess.id = ${oldSessionId}
-                AND crs.courseName = '${stats.course.trim()}'
-            ORDER BY sp.id
-            LIMIT ${limit}
-            OFFSET ${offset};
-        `)) as [{ legacyStudentId: number; codeNumber: string }[], any];
-
-    if (oldStudentIds.length === 0) {
-      continue;
-    }
-
-    const legacyIds = oldStudentIds.map((r) => r.legacyStudentId);
-    const existing = await db
-      .select({ legacyStudentId: studentModel.legacyStudentId })
-      .from(studentModel)
-      .where(inArray(studentModel.legacyStudentId, legacyIds));
-
-    const existingSet = new Set(
-      existing
-        .map((r) => r.legacyStudentId)
-        .filter((v): v is number => typeof v === "number"),
-    );
-    const missingIds = legacyIds.filter((id) => !existingSet.has(id));
-    if (missingIds.length === 0) {
-      console.log(
-        `${stats.course}: batch ${i + 1}/${totalBatches} — no missing students`,
-      );
-      continue;
-    }
 
     const [rows] = (await mysqlConnection.query(`
             SELECT sp.*
@@ -197,65 +155,22 @@ async function backfillMissingStudents(
             WHERE cd.transferred = true
                 AND sess.id = ${oldSessionId}
                 AND crs.courseName = '${stats.course.trim()}'
-                AND sp.id IN (${missingIds.join(", ")})
-            ORDER BY sp.id;
+            ORDER BY sp.id
+            LIMIT ${limit}
+            OFFSET ${offset};
         `)) as [OldStudent[], any];
 
     for (let j = 0; j < rows.length; j++) {
       const oldStudent = rows[j];
-      const student = await processStudent(oldStudent);
-      console.log("Backfilled student:", student?.uid);
+      // Always process student - steps 1-8 only if new/modified, promotion always updated
+      const student = await processStudent(oldStudent, sinceDate);
+      console.log("Processed student:", student?.uid);
     }
 
     console.log(
-      `${stats.course} | Backfill batch ${i + 1}/${totalBatches}: processed ${rows.length} missing`,
+      `${stats.course} | Batch ${i + 1}/${totalBatches}: processed ${rows.length} students`,
     );
   }
-}
-
-// Processes only students modified since a given date for a course/session
-async function processModifiedStudents(
-  stats: OldAdmissionStats,
-  oldSessionId: number,
-  sinceDate?: Date,
-) {
-  if (!sinceDate || sinceDate.getTime() === 0) {
-    console.log(
-      `${stats.course}: no sinceDate provided, skipping modified-only run.`,
-    );
-    return;
-  }
-
-  const sinceIso = sinceDate.toISOString().slice(0, 19).replace("T", " ");
-
-  const [rows] = (await mysqlConnection.query(`
-        SELECT sp.*
-        FROM personaldetails pd
-        JOIN coursedetails cd ON cd.parent_id = pd.id
-        JOIN studentpersonaldetails sp ON sp.admissionId = cd.id
-        JOIN currentsessionmaster sess ON sess.id = pd.sessionId
-        JOIN course crs ON crs.id = cd.courseId
-        WHERE cd.transferred = true
-            AND sess.id = ${oldSessionId}
-            AND crs.courseName = '${stats.course.trim()}'
-            AND sp.modifydt > '${sinceIso}'
-        ORDER BY sp.id;
-    `)) as [OldStudent[], any];
-
-  if (rows.length === 0) {
-    console.log(`${stats.course}: no modified students since ${sinceIso}`);
-    return;
-  }
-
-  for (let j = 0; j < rows.length; j++) {
-    const oldStudent = rows[j];
-    const student = await processStudent(oldStudent);
-    console.log("Updated student:", student?.uid);
-  }
-
-  console.log(
-    `${stats.course}: processed ${rows.length} modified students since ${sinceIso}`,
-  );
 }
 
 export async function processDataFetching(
@@ -306,6 +221,7 @@ export async function processDataFetching(
 
     for (let j = 0; j < rows.length; j++) {
       const oldStudent = rows[j];
+      // Process all students in full sync - always update student data
       const student = await processStudent(oldStudent);
       console.log("Created student:", student?.uid);
     }
@@ -374,7 +290,13 @@ export async function getMetadata(oldSession: OldSession) {
     `);
   console.log("oldAcademicYear", oldAcademicYear);
 
+  if (!oldAcademicYear) {
+    console.log("No old academic year found for session", oldSession);
+    return null;
+  }
+
   const academicYearName = `${oldAcademicYear.accademicYearName}-${(Number(oldAcademicYear.accademicYearName) + 1) % 100}`;
+  const codePrefix = Number(oldAcademicYear.accademicYearName) % 100;
 
   let [foundAcademicYear] = await db
     .select()
@@ -395,6 +317,7 @@ export async function getMetadata(oldSession: OldSession) {
           legacyAcademicYearId: oldAcademicYear.id!,
           year: academicYearName,
           isCurrentYear: oldAcademicYear.presentAcademicYear,
+          codePrefix: codePrefix.toString(),
         })
         .returning()
     )[0];
@@ -762,16 +685,26 @@ export async function upsertStaff(oldStaffId: number, user: User) {
   return existingStaff;
 }
 
-async function processStudent(oldStudent: OldStudent) {
+async function processStudent(oldStudent: OldStudent, lastSyncTime?: Date) {
   const user = await upsertUser(oldStudent, "STUDENT");
   if (!user) {
     console.log("User not created for student", oldStudent.id);
     return;
   }
 
+  const [foundStudent] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.userId, user.id as number));
+
+  // Call processStudent from helper with lastSyncTime for optimization
+  // Steps 1-8 only run if student is new or modifydt indicates changes
+  // Promotion data is always updated regardless
   const student = await oldStudentPersonalDetailsHelper.processStudent(
     oldStudent,
     user,
+    foundStudent?.id,
+    lastSyncTime,
   );
 
   return student;
@@ -897,4 +830,43 @@ export async function upsertShift(oldShiftId: number | null) {
 //         }
 //     }
 //     console.log(`Total missing across all batches: ${grandMissingCount}`);
+// }
+
+// export async function refactorPromotions() {
+//     const programCourses = await db
+//         .select()
+//         .from(programCourseModel)
+//         .where(eq(programCourseModel.isActive, true));
+
+//     for (let i = 0; i < programCourses.length; i++) {
+//         const [{promotionCount}] = await db
+//             .select({promotionCount: count()})
+//             .from(promotionModel)
+//             .where(eq(promotionModel.programCourseId, programCourses[i].id));
+
+//         const totalBatches = Math.ceil(promotionCount / BATCH_SIZE);
+
+//         for (let j = 0; j < totalBatches; j++) {
+//             const offset = j * BATCH_SIZE;
+//             const limit = BATCH_SIZE;
+
+//             const promotions = await db
+//                 .select()
+//                 .from(promotionModel)
+//                 .leftJoin(studentModel, eq(promotionModel.studentId, studentModel.id))
+//                 .where(eq(promotionModel.programCourseId, programCourses[i].id))
+//                 .limit(limit)
+//                 .offset(offset);
+
+//             for (let k = 0; k < promotions.length; k++) {
+//                 const promotion = promotions[k];
+//                 if (promotion.students?.uid.startsWith(programCourses[i].codePrefix!) && promotion.promotions.programCourseId !== programCourses[i].id) {
+//                     await db
+//                 }
+//             }
+
+//         }
+
+//         console.log(`${programCourses[i].name} | Batch ${i + 1}/${totalBatches}: processed ${promotions.length} promotions`);
+//     }
 // }

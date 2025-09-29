@@ -22,6 +22,7 @@ export const studentModel = pgTable("students", {
         .notNull(),
     specializationId: integer("specialization_id_fk").references(() => specializationModel.id),
     uid: varchar({ length: 255 }).notNull().unique(),
+    oldUid: varchar({ length: 255 }),
     rfidNumber: varchar({ length: 255 }),
     cuFormNumber: varchar({ length: 255 }),
     registrationNumber: varchar({ length: 255 }),
