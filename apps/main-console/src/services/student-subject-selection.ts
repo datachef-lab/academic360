@@ -1,8 +1,5 @@
 // Import DTOs from shared package
-import {
-  SubjectSelectionMetaDto,
-  StudentSubjectSelectionDto as DbStudentSubjectSelectionDto,
-} from "@repo/db/dtos/subject-selection";
+import type { SubjectSelectionMetaDto } from "@repo/db/dtos/subject-selection";
 import axiosInstance from "@/utils/api";
 import type { ApiResponse } from "@/types/api-response";
 
@@ -33,8 +30,8 @@ export interface StudentSubjectSelectionApiResponse {
   selectedMinorSubjects: PaperDto[]; // earlier selected Minor papers (admission data)
   subjectSelectionMetas: SubjectSelectionMetaDto[]; // meta data for dynamic labels
   hasFormSubmissions: boolean; // indicates if student has submitted through the form
-  actualStudentSelections: any[]; // actual form submissions from student-subject-selection table
-  session: { id: number; name?: string; [key: string]: any }; // session information for form submission
+  actualStudentSelections: unknown[]; // actual form submissions from student-subject-selection table
+  session: { id: number; name?: string } & Record<string, unknown>; // session information for form submission
 }
 
 // Additional interfaces for API responses
@@ -113,16 +110,24 @@ export async function saveStudentSubjectSelectionsAdmin(
       success: true,
       data: res.data.payload,
     };
-  } catch (error: any) {
-    // Handle validation errors
-    if (error.response?.status === 400 && error.response?.data?.payload?.errors) {
+  } catch (error: unknown) {
+    // Narrow to an axios-like error shape
+    const maybeAxios = error as {
+      response?: {
+        status?: number;
+        data?: { payload?: { errors?: Array<{ field: string; message: string }> }; message?: string };
+      };
+      message?: string;
+    };
+
+    if (maybeAxios.response?.status === 400 && maybeAxios.response?.data?.payload?.errors) {
       return {
         success: false,
-        errors: error.response.data.payload.errors,
+        errors: maybeAxios.response.data.payload.errors,
       };
     }
-    throw new Error(
-      `Failed to save subject selections (${error.response?.status || 500}): ${error.response?.data?.message || error.message || "Unknown error"}`,
-    );
+    const status = maybeAxios.response?.status ?? 500;
+    const message = maybeAxios.response?.data?.message ?? maybeAxios.message ?? "Unknown error";
+    throw new Error(`Failed to save subject selections (${status}): ${message}`);
   }
 }

@@ -113,13 +113,28 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
 
         // Auto-populate existing selections if they exist
         if (hasExisting && resp.actualStudentSelections && resp.actualStudentSelections.length > 0) {
-          const existingSelections = resp.actualStudentSelections;
+          type ActualSelection = {
+            subjectSelectionMeta?: { id?: number; label?: string | null } | null;
+            subject?: { id?: number; name?: string | null } | null;
+          };
+
+          const isActualSelection = (x: unknown): x is ActualSelection => {
+            if (typeof x !== "object" || x === null) return false;
+            const s = x as Record<string, unknown>;
+            const meta = s["subjectSelectionMeta"];
+            const subj = s["subject"];
+            const okMeta = meta === undefined || meta === null || typeof meta === "object";
+            const okSubj = subj === undefined || subj === null || typeof subj === "object";
+            return okMeta && okSubj;
+          };
+
+          const existingSelections = (resp.actualStudentSelections as unknown[]).filter(isActualSelection);
           console.log("Auto-populating existing selections:", existingSelections);
 
           // Transform and populate form fields with existing selections
           for (const selection of existingSelections) {
-            const metaId = selection.subjectSelectionMeta?.id;
-            const subjectName = selection.subject?.name;
+            const metaId = selection.subjectSelectionMeta?.id ?? undefined;
+            const subjectName = selection.subject?.name ?? undefined;
 
             if (!metaId || !subjectName) continue;
 

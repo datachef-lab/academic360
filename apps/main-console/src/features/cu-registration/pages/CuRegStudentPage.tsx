@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, FileText, Edit3, BookOpen, GraduationCap } from "lucide-react";
+import { User, FileText, BookOpen, GraduationCap } from "lucide-react";
 import { useState, useEffect } from "react";
 import SubjectSelectionForm from "../components/SubjectSelectionForm";
 import { fetchStudentByUid } from "@/services/student";
@@ -82,18 +82,7 @@ export default function CuRegStudentPage() {
     },
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "submitted":
-        return <Badge className="bg-blue-100 text-blue-800">Submitted</Badge>;
-      case "approved":
-        return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
-      case "corrections":
-        return <Badge className="bg-orange-100 text-orange-800">Corrections Required</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  // Note: status badge helper removed as it was unused
 
   return (
     <div className="p-6 space-y-6">

@@ -191,6 +191,8 @@ export function ProgramCourseForm({ initialData, onSubmit, onCancel, isLoading =
       regulationTypeId: data.regulationTypeId,
       shortName: data.shortName?.trim() || null,
       isActive: data.isActive,
+      codePrefix: "",
+      universityCode: "",
     });
   };
 
