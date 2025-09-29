@@ -1,0 +1,32 @@
+# VCS
+.git
+.gitignore
+
+# Node / pnpm
+node_modules
+.pnpm-store
+.pnp*
+
+# Build outputs
+apps/**/dist
+apps/**/.next
+apps/**/.turbo
+.turbo
+
+# Logs
+*.log
+apps/**/logs
+
+# Env files (keep on servers only)
+.env
+.env.*
+
+# Editor/OS
+.DS_Store
+.vscode
+.idea
+
+# Misc
+coverage
+**/uploads
+**/public/temp

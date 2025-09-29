@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+
+  main_console:
+    build:
+      context: ..
+      dockerfile: apps/main-console/Dockerfile
+      args:
+        - VITE_APP_BACKEND_URL=${VITE_APP_BACKEND_URL}
+        - VITE_APP_PREFIX=${VITE_APP_PREFIX}
+        - VITE_STUDENT_PROFILE_URL=${VITE_STUDENT_PROFILE_URL}
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MAIN_CONSOLE_PORT:-8081}:80"
+
+  student_console:
+    build:
+      context: ..
+      dockerfile: apps/student-console/Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_APP_BASE_URL=${NEXT_PUBLIC_APP_BASE_URL}
+        - NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL}
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    ports:
+      - "127.0.0.1:${STUDENT_CONSOLE_PORT:-3008}:3008"

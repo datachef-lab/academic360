@@ -1,0 +1,258 @@
+name: CI/CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, production]
+      apps:
+        description: "Apps to rebuild (comma-separated: backend,main-console,student-console)"
+        required: true
+        default: backend,main-console,student-console
+  push:
+    branches: [main, staging]
+    paths:
+      - "apps/backend/**"
+      - "apps/main-console/**"
+      - "apps/student-console/**"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "turbo.json"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select server host, compose file, and remote dir
+        id: host
+        shell: bash
+        run: |
+          if [ -n "${{ github.event.inputs.environment }}" ]; then
+            ENV="${{ github.event.inputs.environment }}"
+          else
+            if [ "${GITHUB_REF_NAME}" = "staging" ]; then ENV="staging"; else ENV="production"; fi
+          fi
+          echo "env=${ENV}" >> $GITHUB_OUTPUT
+
+          if [ "$ENV" = "production" ]; then
+            echo "host=${{ secrets.PROD_HOST }}" >> $GITHUB_OUTPUT
+            echo "compose=deploy/docker-compose.prod.yml" >> $GITHUB_OUTPUT
+            echo "envfile=.env.production" >> $GITHUB_OUTPUT
+            # Prefer PROD_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
+            if [ -n "${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" ]; then
+              echo "remotedir=${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+            else
+              echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "host=${{ secrets.STAGING_HOST }}" >> $GITHUB_OUTPUT
+            echo "compose=deploy/docker-compose.staging.yml" >> $GITHUB_OUTPUT
+            echo "envfile=.env.staging" >> $GITHUB_OUTPUT
+            # Prefer STAGING_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
+            if [ -n "${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" ]; then
+              echo "remotedir=${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+            else
+              echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Archive repository for upload
+        run: |
+          tar --exclude-vcs -czf repo.tar.gz .
+
+      - name: Build env file from per-key secrets (base defaults + env overrides)
+        id: genenv
+        shell: bash
+        run: |
+          ENV=${{ steps.host.outputs.env }}
+          outfile=env.deploy
+          : > "$outfile"
+          put() { key="$1"; val="$2"; [ -n "$val" ] && printf "%s=%s\n" "$key" "$val" >> "$outfile"; }
+          choose() { envval="$1"; baseval="$2"; if [ -n "$envval" ]; then echo "$envval"; else echo "$baseval"; fi }
+
+          if [ "$ENV" = "production" ]; then
+            NODE_ENV_VAL=production
+            # Backend
+            put PORT "$(choose '${{ secrets.PROD_PORT }}' '${{ secrets.PORT }}')"
+            put DATABASE_URL "${{ secrets.PROD_DATABASE_URL }}"
+            put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.PROD_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
+            put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.PROD_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
+            put REFRESH_TOKEN_SECRET "$(choose '${{ secrets.PROD_REFRESH_TOKEN_SECRET }}' '${{ secrets.REFRESH_TOKEN_SECRET }}')"
+            put REFRESH_TOKEN_EXPIRY "$(choose '${{ secrets.PROD_REFRESH_TOKEN_EXPIRY }}' '${{ secrets.REFRESH_TOKEN_EXPIRY }}')"
+            put CORS_ORIGIN "$(choose '${{ secrets.PROD_CORS_ORIGIN }}' '${{ secrets.CORS_ORIGIN }}')"
+            put GOOGLE_CLIENT_ID "$(choose '${{ secrets.PROD_GOOGLE_CLIENT_ID }}' '${{ secrets.GOOGLE_CLIENT_ID }}')"
+            put GOOGLE_CLIENT_SECRET "$(choose '${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}' '${{ secrets.GOOGLE_CLIENT_SECRET }}')"
+            put BACKEND_URL "$(choose '${{ secrets.PROD_BACKEND_URL }}' '${{ secrets.BACKEND_URL }}')"
+            put SMTP_HOST "$(choose '${{ secrets.PROD_SMTP_HOST }}' '${{ secrets.SMTP_HOST }}')"
+            put SMTP_PORT "$(choose '${{ secrets.PROD_SMTP_PORT }}' '${{ secrets.SMTP_PORT }}')"
+            put SMTP_USER "$(choose '${{ secrets.PROD_SMTP_USER }}' '${{ secrets.SMTP_USER }}')"
+            put SMTP_PASS "$(choose '${{ secrets.PROD_SMTP_PASS }}' '${{ secrets.SMTP_PASS }}')"
+            put SETTINGS_PATH "$(choose '${{ secrets.PROD_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
+            put DOCUMENTS_PATH "$(choose '${{ secrets.PROD_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+            put OLD_DB_HOST "$(choose '${{ secrets.PROD_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
+            put OLD_DB_PORT "$(choose '${{ secrets.PROD_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"
+            put OLD_DB_USER "$(choose '${{ secrets.PROD_OLD_DB_USER }}' '${{ secrets.OLD_DB_USER }}')"
+            put OLD_DB_PASSWORD "$(choose '${{ secrets.PROD_OLD_DB_PASSWORD }}' '${{ secrets.OLD_DB_PASSWORD }}')"
+            put OLD_DB_NAME "$(choose '${{ secrets.PROD_OLD_DB_NAME }}' '${{ secrets.OLD_DB_NAME }}')"
+            put STUDY_MATERIAL_BASE_PATH "$(choose '${{ secrets.PROD_STUDY_MATERIAL_BASE_PATH }}' '${{ secrets.STUDY_MATERIAL_BASE_PATH }}')"
+            put LOG_DIRECTORY "$(choose '${{ secrets.PROD_LOG_DIRECTORY }}' '${{ secrets.LOG_DIRECTORY }}')"
+            # Frontends build
+            put VITE_APP_BACKEND_URL "$(choose '${{ secrets.PROD_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
+            put VITE_APP_PREFIX "$(choose '${{ secrets.PROD_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
+            put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.PROD_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
+            put VITE_GOOGLE_CLIENT_ID "$(choose '${{ secrets.PROD_VITE_GOOGLE_CLIENT_ID }}' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}')"
+            put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
+            put NEXT_PUBLIC_APP_BASE_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_APP_BASE_URL }}' '${{ secrets.NEXT_PUBLIC_APP_BASE_URL }}')"
+            put NEXT_PUBLIC_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_URL }}' '${{ secrets.NEXT_PUBLIC_URL }}')"
+            # Student server-only
+            put JWT_SECRET "$(choose '${{ secrets.PROD_JWT_SECRET }}' '${{ secrets.JWT_SECRET }}')"
+            put ZEPTO_URL "$(choose '${{ secrets.PROD_ZEPTO_URL }}' '${{ secrets.ZEPTO_URL }}')"
+            put ZEPTO_FROM "$(choose '${{ secrets.PROD_ZEPTO_FROM }}' '${{ secrets.ZEPTO_FROM }}')"
+            put ZEPTO_TOKEN "$(choose '${{ secrets.PROD_ZEPTO_TOKEN }}' '${{ secrets.ZEPTO_TOKEN }}')"
+            put INTERAKT_API_KEY "$(choose '${{ secrets.PROD_INTERAKT_API_KEY }}' '${{ secrets.INTERAKT_API_KEY }}')"
+            put INTERAKT_BASE_URL "$(choose '${{ secrets.PROD_INTERAKT_BASE_URL }}' '${{ secrets.INTERAKT_BASE_URL }}')"
+            put DEVELOPER_PHONE "$(choose '${{ secrets.PROD_DEVELOPER_PHONE }}' '${{ secrets.DEVELOPER_PHONE }}')"
+            put DEVELOPER_EMAIL "$(choose '${{ secrets.PROD_DEVELOPER_EMAIL }}' '${{ secrets.DEVELOPER_EMAIL }}')"
+            # Student DB/runtime paths
+            put DB_HOST "$(choose '${{ secrets.PROD_DB_HOST }}' '${{ secrets.DB_HOST }}')"
+            put DB_PORT "$(choose '${{ secrets.PROD_DB_PORT }}' '${{ secrets.DB_PORT }}')"
+            put DB_USER "$(choose '${{ secrets.PROD_DB_USER }}' '${{ secrets.DB_USER }}')"
+            put DB_PASSWORD "$(choose '${{ secrets.PROD_DB_PASSWORD }}' '${{ secrets.DB_PASSWORD }}')"
+            put DB_NAME "$(choose '${{ secrets.PROD_DB_NAME }}' '${{ secrets.DB_NAME }}')"
+            put COURSE_MATERIAL_PATH "$(choose '${{ secrets.PROD_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
+            put DOCS_PATH "$(choose '${{ secrets.PROD_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
+            put ACADEMIC_360_URL "$(choose '${{ secrets.PROD_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
+            # Ports for host mapping
+            put BACKEND_PORT "$(choose '${{ secrets.PROD_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
+            put MAIN_CONSOLE_PORT "$(choose '${{ secrets.PROD_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
+            put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.PROD_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
+          else
+            NODE_ENV_VAL=staging
+            # Backend
+            put PORT "$(choose '${{ secrets.STAGING_PORT }}' '${{ secrets.PORT }}')"
+            put DATABASE_URL "${{ secrets.STAGING_DATABASE_URL }}"
+            put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
+            put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
+            put REFRESH_TOKEN_SECRET "$(choose '${{ secrets.STAGING_REFRESH_TOKEN_SECRET }}' '${{ secrets.REFRESH_TOKEN_SECRET }}')"
+            put REFRESH_TOKEN_EXPIRY "$(choose '${{ secrets.STAGING_REFRESH_TOKEN_EXPIRY }}' '${{ secrets.REFRESH_TOKEN_EXPIRY }}')"
+            put CORS_ORIGIN "$(choose '${{ secrets.STAGING_CORS_ORIGIN }}' '${{ secrets.CORS_ORIGIN }}')"
+            put GOOGLE_CLIENT_ID "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_ID }}' '${{ secrets.GOOGLE_CLIENT_ID }}')"
+            put GOOGLE_CLIENT_SECRET "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}' '${{ secrets.GOOGLE_CLIENT_SECRET }}')"
+            put BACKEND_URL "$(choose '${{ secrets.STAGING_BACKEND_URL }}' '${{ secrets.BACKEND_URL }}')"
+            put SMTP_HOST "$(choose '${{ secrets.STAGING_SMTP_HOST }}' '${{ secrets.SMTP_HOST }}')"
+            put SMTP_PORT "$(choose '${{ secrets.STAGING_SMTP_PORT }}' '${{ secrets.SMTP_PORT }}')"
+            put SMTP_USER "$(choose '${{ secrets.STAGING_SMTP_USER }}' '${{ secrets.SMTP_USER }}')"
+            put SMTP_PASS "$(choose '${{ secrets.STAGING_SMTP_PASS }}' '${{ secrets.SMTP_PASS }}')"
+            put SETTINGS_PATH "$(choose '${{ secrets.STAGING_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
+            put DOCUMENTS_PATH "$(choose '${{ secrets.STAGING_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+            put OLD_DB_HOST "$(choose '${{ secrets.STAGING_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
+            put OLD_DB_PORT "$(choose '${{ secrets.STAGING_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"
+            put OLD_DB_USER "$(choose '${{ secrets.STAGING_OLD_DB_USER }}' '${{ secrets.OLD_DB_USER }}')"
+            put OLD_DB_PASSWORD "$(choose '${{ secrets.STAGING_OLD_DB_PASSWORD }}' '${{ secrets.OLD_DB_PASSWORD }}')"
+            put OLD_DB_NAME "$(choose '${{ secrets.STAGING_OLD_DB_NAME }}' '${{ secrets.OLD_DB_NAME }}')"
+            put STUDY_MATERIAL_BASE_PATH "$(choose '${{ secrets.STAGING_STUDY_MATERIAL_BASE_PATH }}' '${{ secrets.STUDY_MATERIAL_BASE_PATH }}')"
+            put LOG_DIRECTORY "$(choose '${{ secrets.STAGING_LOG_DIRECTORY }}' '${{ secrets.LOG_DIRECTORY }}')"
+            # Frontends build
+            put VITE_APP_BACKEND_URL "$(choose '${{ secrets.STAGING_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
+            put VITE_APP_PREFIX "$(choose '${{ secrets.STAGING_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
+            put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.STAGING_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
+            put VITE_GOOGLE_CLIENT_ID "$(choose '${{ secrets.STAGING_VITE_GOOGLE_CLIENT_ID }}' '${{ secrets.VITE_GOOGLE_CLIENT_ID }}')"
+            put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
+            put NEXT_PUBLIC_APP_BASE_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_APP_BASE_URL }}' '${{ secrets.NEXT_PUBLIC_APP_BASE_URL }}')"
+            put NEXT_PUBLIC_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_URL }}' '${{ secrets.NEXT_PUBLIC_URL }}')"
+            # Student server-only
+            put JWT_SECRET "$(choose '${{ secrets.STAGING_JWT_SECRET }}' '${{ secrets.JWT_SECRET }}')"
+            put ZEPTO_URL "$(choose '${{ secrets.STAGING_ZEPTO_URL }}' '${{ secrets.ZEPTO_URL }}')"
+            put ZEPTO_FROM "$(choose '${{ secrets.STAGING_ZEPTO_FROM }}' '${{ secrets.ZEPTO_FROM }}')"
+            put ZEPTO_TOKEN "$(choose '${{ secrets.STAGING_ZEPTO_TOKEN }}' '${{ secrets.ZEPTO_TOKEN }}')"
+            put INTERAKT_API_KEY "$(choose '${{ secrets.STAGING_INTERAKT_API_KEY }}' '${{ secrets.INTERAKT_API_KEY }}')"
+            put INTERAKT_BASE_URL "$(choose '${{ secrets.STAGING_INTERAKT_BASE_URL }}' '${{ secrets.INTERAKT_BASE_URL }}')"
+            put DEVELOPER_PHONE "$(choose '${{ secrets.STAGING_DEVELOPER_PHONE }}' '${{ secrets.DEVELOPER_PHONE }}')"
+            put DEVELOPER_EMAIL "$(choose '${{ secrets.STAGING_DEVELOPER_EMAIL }}' '${{ secrets.DEVELOPER_EMAIL }}')"
+            # Student DB/runtime paths
+            put DB_HOST "$(choose '${{ secrets.STAGING_DB_HOST }}' '${{ secrets.DB_HOST }}')"
+            put DB_PORT "$(choose '${{ secrets.STAGING_DB_PORT }}' '${{ secrets.DB_PORT }}')"
+            put DB_USER "$(choose '${{ secrets.STAGING_DB_USER }}' '${{ secrets.DB_USER }}')"
+            put DB_PASSWORD "$(choose '${{ secrets.STAGING_DB_PASSWORD }}' '${{ secrets.DB_PASSWORD }}')"
+            put DB_NAME "$(choose '${{ secrets.STAGING_DB_NAME }}' '${{ secrets.DB_NAME }}')"
+            put COURSE_MATERIAL_PATH "$(choose '${{ secrets.STAGING_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
+            put DOCS_PATH "$(choose '${{ secrets.STAGING_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
+            put ACADEMIC_360_URL "$(choose '${{ secrets.STAGING_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
+            # Ports for host mapping
+            put BACKEND_PORT "$(choose '${{ secrets.STAGING_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
+            put MAIN_CONSOLE_PORT "$(choose '${{ secrets.STAGING_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
+            put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.STAGING_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
+          fi
+          put NODE_ENV "$NODE_ENV_VAL"
+          echo "Generated env file with $(wc -l < "$outfile") entries"
+
+      - name: Copy repo and env to server (staging)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          source: "repo.tar.gz,env.deploy"
+          target: "${{ steps.host.outputs.remotedir }}"
+        if: steps.host.outputs.env == 'staging'
+
+      - name: Copy repo and env to server (prod)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          source: "repo.tar.gz,env.deploy"
+          target: "${{ steps.host.outputs.remotedir }}"
+        if: steps.host.outputs.env == 'production'
+
+      - name: Deploy over SSH (compose down/build/migrate/up) (staging)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ${{ steps.host.outputs.remotedir }}
+            sudo rm -rf current || true
+            sudo mkdir -p current
+            sudo tar -xzf repo.tar.gz -C current
+            sudo mkdir -p current/deploy
+            sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
+            cd current
+            docker compose -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
+            docker compose -f ${{ steps.host.outputs.compose }} build --no-cache
+            docker compose -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate || true
+            docker compose -f ${{ steps.host.outputs.compose }} up -d
+            docker image prune -f
+        if: steps.host.outputs.env == 'staging'
+
+      - name: Deploy over SSH (compose down/build/migrate/up) (prod)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd ${{ steps.host.outputs.remotedir }}
+            sudo rm -rf current || true
+            sudo mkdir -p current
+            sudo tar -xzf repo.tar.gz -C current
+            sudo mkdir -p current/deploy
+            sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
+            cd current
+            docker compose -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
+            docker compose -f ${{ steps.host.outputs.compose }} build --no-cache
+            docker compose -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate || true
+            docker compose -f ${{ steps.host.outputs.compose }} up -d
+            docker image prune -f
+        if: steps.host.outputs.env == 'production'

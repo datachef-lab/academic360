@@ -50,7 +50,13 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
-    await connectToMySQL();
+    console.log(process.env.NODE_ENV);
+    if (
+      process.env.NODE_ENV === "production" ||
+      process.env.NODE_ENV === "development"
+    ) {
+      await connectToMySQL();
+    }
     httpServer.listen(PORT, async () => {
       console.log(
         `[backend] - academic360 is running on http://localhost:${PORT} 🚀\n`,
@@ -58,7 +64,12 @@ function checkRequiredEnvs() {
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");
       //   await brainstormOldMigration();
-      await startLoadDataScheduler();
+      if (
+        process.env.NODE_ENV === "production" ||
+        process.env.NODE_ENV === "development"
+      ) {
+        await startLoadDataScheduler();
+      }
     });
   } catch (error) {
     console.error("[backend] - Failed to start the application: ⚠️\n", error);
