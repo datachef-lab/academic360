@@ -64,8 +64,10 @@ jobs:
           fi
 
       - name: Archive repository for upload
+        shell: bash
         run: |
-          tar --exclude-vcs -czf repo.tar.gz .
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git archive --format=tar.gz -o repo.tar.gz HEAD
 
       - name: Build env file from per-key secrets (base defaults + env overrides)
         id: genenv
