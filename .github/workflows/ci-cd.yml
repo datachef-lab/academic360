@@ -108,7 +108,16 @@ jobs:
           ENV=${{ steps.host.outputs.env }}
           outfile=env.deploy
           : > "$outfile"
-          put() { key="$1"; val="$2"; [ -n "$val" ] && printf "%s=%s\n" "$key" "$val" >> "$outfile"; }
+          put() {
+            key="$1"
+            val="$2"
+            if [ -n "$val" ]; then
+              printf "%s=%s\n" "$key" "$val" >> "$outfile"
+            else
+              # Avoid failing under `set -e` when value is empty
+              echo "(skip) $key is empty; not writing to $outfile"
+            fi
+          }
           choose() { envval="$1"; baseval="$2"; if [ -n "$envval" ]; then echo "$envval"; else echo "$baseval"; fi }
 
           echo "🔧 Building environment file for: $ENV"
