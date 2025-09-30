@@ -467,10 +467,26 @@ jobs:
             sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
             cd current
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build --no-cache
+
+            echo "🏗️ Pre-building workspace at repository root (pnpm build)..."
+            docker run --rm -v "$(pwd)":/app -w /app node:20-alpine sh -lc "set -e; apk add --no-cache git bash >/dev/null 2>&1 || true; corepack enable && corepack prepare pnpm@10.15.0 --activate; pnpm install --frozen-lockfile; pnpm build"
+
+            echo "🧱 Building backend image..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build backend
             echo "🚚 Running database migrations (staging/prod as per env)..."
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d
+            echo "🚀 Starting backend..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d backend
+
+            echo "🧱 Building main-console image..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build main_console
+            echo "🚀 Starting main-console..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d main_console
+
+            echo "🧱 Building student-console image..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build student_console
+            echo "🚀 Starting student-console..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d student_console
             docker image prune -f
         if: steps.host.outputs.env == 'staging'
 

@@ -33,6 +33,14 @@ COPY . .
 # Build only required shared packages before main-console build (after sources copied)
 RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
 
+# Debug: verify @repo/db presence and build output
+RUN set -e \
+  && echo "Verifying @repo/db sources and build artifacts" \
+  && ls -la packages/db || true \
+  && ls -la packages/db/src || true \
+  && ls -la packages/db/dist || true \
+  && node -v && pnpm -v && npx tsc -v || true
+
 # Build only main-console
 RUN pnpm --filter main-console... build
 
