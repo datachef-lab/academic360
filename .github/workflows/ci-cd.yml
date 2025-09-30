@@ -471,9 +471,7 @@ jobs:
               curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
               sudo apt-get install -y nodejs
             fi
-            corepack enable || true
-            corepack prepare pnpm@10.15.0 --activate || true
-            sudo npm i -g pm2 serve || true
+            sudo npm i -g pnpm@10.15.0 pm2 serve || true
 
             echo "🔑 Load environment (robust parser)"
             load_env() {
@@ -489,6 +487,12 @@ jobs:
               done < "$file"
             }
             load_env "deploy/${{ steps.host.outputs.envfile }}"
+
+            echo "🔐 Fix permissions in workspace (avoid root-owned artifacts)"
+            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
+            chmod -R u+rw . || true
+            find . -maxdepth 3 -name "*.tsbuildinfo" -delete || true
+            export CI=true
 
             echo "📦 Install workspace dependencies"
             pnpm install --frozen-lockfile
