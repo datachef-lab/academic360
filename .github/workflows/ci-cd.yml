@@ -34,54 +34,90 @@ jobs:
         id: host
         shell: bash
         run: |
+          echo "🚀 Starting deployment configuration..."
+          echo "GitHub Event: ${{ github.event_name }}"
+          echo "GitHub Ref: ${{ github.ref_name }}"
+          echo "GitHub Input Environment: ${{ github.event.inputs.environment }}"
+
           if [ -n "${{ github.event.inputs.environment }}" ]; then
             ENV="${{ github.event.inputs.environment }}"
+            echo "✅ Using manual input environment: $ENV"
           else
             if [ "${GITHUB_REF_NAME}" = "staging" ]; then ENV="staging"; else ENV="production"; fi
+            echo "✅ Auto-detected environment from branch: $ENV"
           fi
           echo "env=${ENV}" >> $GITHUB_OUTPUT
 
           if [ "$ENV" = "production" ]; then
+            echo "🏭 Configuring for PRODUCTION environment"
             echo "host=${{ secrets.PROD_HOST }}" >> $GITHUB_OUTPUT
             echo "compose=deploy/docker-compose.prod.yml" >> $GITHUB_OUTPUT
             echo "envfile=.env.production" >> $GITHUB_OUTPUT
             # Prefer PROD_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
             if [ -n "${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" ]; then
               echo "remotedir=${{ secrets.PROD_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "✅ Using PROD_REMOTE_DEPLOY_DIR: ${{ secrets.PROD_REMOTE_DEPLOY_DIR }}"
             else
               echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
             fi
           else
+            echo "🧪 Configuring for STAGING environment"
             echo "host=${{ secrets.STAGING_HOST }}" >> $GITHUB_OUTPUT
             echo "compose=deploy/docker-compose.staging.yml" >> $GITHUB_OUTPUT
             echo "envfile=.env.staging" >> $GITHUB_OUTPUT
             # Prefer STAGING_REMOTE_DEPLOY_DIR, fallback to REMOTE_DEPLOY_DIR
             if [ -n "${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" ]; then
               echo "remotedir=${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "✅ Using STAGING_REMOTE_DEPLOY_DIR: ${{ secrets.STAGING_REMOTE_DEPLOY_DIR }}"
             else
               echo "remotedir=${{ secrets.REMOTE_DEPLOY_DIR }}" >> $GITHUB_OUTPUT
+              echo "⚠️  Using fallback REMOTE_DEPLOY_DIR: ${{ secrets.REMOTE_DEPLOY_DIR }}"
             fi
           fi
+
+          echo "📋 Final Configuration:"
+          echo "  Environment: $ENV"
+          echo "  Host: ${{ steps.host.outputs.host }}"
+          echo "  Compose File: deploy/docker-compose.$ENV.yml"
+          echo "  Env File: .env.$ENV"
 
       - name: Archive repository for upload
         shell: bash
         run: |
+          echo "📦 Creating repository archive..."
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          echo "Git workspace: $GITHUB_WORKSPACE"
+          echo "Current directory: $(pwd)"
+          echo "Git status:"
+          git status --porcelain
+          echo "Creating archive..."
           git archive --format=tar.gz -o repo.tar.gz HEAD
+          echo "✅ Archive created successfully"
+          echo "Archive size: $(du -h repo.tar.gz | cut -f1)"
+          echo "Archive contents preview:"
+          tar -tzf repo.tar.gz | head -20
 
       - name: Build env file from per-key secrets (base defaults + env overrides)
         id: genenv
         shell: bash
         run: |
+          set -e  # Exit on any error
           ENV=${{ steps.host.outputs.env }}
           outfile=env.deploy
           : > "$outfile"
           put() { key="$1"; val="$2"; [ -n "$val" ] && printf "%s=%s\n" "$key" "$val" >> "$outfile"; }
           choose() { envval="$1"; baseval="$2"; if [ -n "$envval" ]; then echo "$envval"; else echo "$baseval"; fi }
 
+          echo "🔧 Building environment file for: $ENV"
+          echo "Output file: $outfile"
+          echo "Starting environment variable processing..."
+
           if [ "$ENV" = "production" ]; then
+            echo "🏭 Processing PRODUCTION environment variables..."
             NODE_ENV_VAL=production
             # Backend
+            echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.PROD_PORT }}' '${{ secrets.PORT }}')"
             put DATABASE_URL "${{ secrets.PROD_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.PROD_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
@@ -92,12 +128,15 @@ jobs:
             put GOOGLE_CLIENT_ID "$(choose '${{ secrets.PROD_GOOGLE_CLIENT_ID }}' '${{ secrets.GOOGLE_CLIENT_ID }}')"
             put GOOGLE_CLIENT_SECRET "$(choose '${{ secrets.PROD_GOOGLE_CLIENT_SECRET }}' '${{ secrets.GOOGLE_CLIENT_SECRET }}')"
             put BACKEND_URL "$(choose '${{ secrets.PROD_BACKEND_URL }}' '${{ secrets.BACKEND_URL }}')"
+            echo "  📧 Email configuration..."
             put SMTP_HOST "$(choose '${{ secrets.PROD_SMTP_HOST }}' '${{ secrets.SMTP_HOST }}')"
             put SMTP_PORT "$(choose '${{ secrets.PROD_SMTP_PORT }}' '${{ secrets.SMTP_PORT }}')"
             put SMTP_USER "$(choose '${{ secrets.PROD_SMTP_USER }}' '${{ secrets.SMTP_USER }}')"
             put SMTP_PASS "$(choose '${{ secrets.PROD_SMTP_PASS }}' '${{ secrets.SMTP_PASS }}')"
+            echo "  📁 File paths..."
             put SETTINGS_PATH "$(choose '${{ secrets.PROD_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
             put DOCUMENTS_PATH "$(choose '${{ secrets.PROD_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+            echo "  🗄️  Legacy database..."
             put OLD_DB_HOST "$(choose '${{ secrets.PROD_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
             put OLD_DB_PORT "$(choose '${{ secrets.PROD_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"
             put OLD_DB_USER "$(choose '${{ secrets.PROD_OLD_DB_USER }}' '${{ secrets.OLD_DB_USER }}')"
@@ -105,7 +144,7 @@ jobs:
             put OLD_DB_NAME "$(choose '${{ secrets.PROD_OLD_DB_NAME }}' '${{ secrets.OLD_DB_NAME }}')"
             put STUDY_MATERIAL_BASE_PATH "$(choose '${{ secrets.PROD_STUDY_MATERIAL_BASE_PATH }}' '${{ secrets.STUDY_MATERIAL_BASE_PATH }}')"
             put LOG_DIRECTORY "$(choose '${{ secrets.PROD_LOG_DIRECTORY }}' '${{ secrets.LOG_DIRECTORY }}')"
-            # Frontends build
+            echo "  🎨 Frontend build variables..."
             put VITE_APP_BACKEND_URL "$(choose '${{ secrets.PROD_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
             put VITE_APP_PREFIX "$(choose '${{ secrets.PROD_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
             put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.PROD_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
@@ -113,7 +152,7 @@ jobs:
             put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
             put NEXT_PUBLIC_APP_BASE_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_APP_BASE_URL }}' '${{ secrets.NEXT_PUBLIC_APP_BASE_URL }}')"
             put NEXT_PUBLIC_URL "$(choose '${{ secrets.PROD_NEXT_PUBLIC_URL }}' '${{ secrets.NEXT_PUBLIC_URL }}')"
-            # Student server-only
+            echo "  🔐 Student console server variables..."
             put JWT_SECRET "$(choose '${{ secrets.PROD_JWT_SECRET }}' '${{ secrets.JWT_SECRET }}')"
             put ZEPTO_URL "$(choose '${{ secrets.PROD_ZEPTO_URL }}' '${{ secrets.ZEPTO_URL }}')"
             put ZEPTO_FROM "$(choose '${{ secrets.PROD_ZEPTO_FROM }}' '${{ secrets.ZEPTO_FROM }}')"
@@ -122,7 +161,7 @@ jobs:
             put INTERAKT_BASE_URL "$(choose '${{ secrets.PROD_INTERAKT_BASE_URL }}' '${{ secrets.INTERAKT_BASE_URL }}')"
             put DEVELOPER_PHONE "$(choose '${{ secrets.PROD_DEVELOPER_PHONE }}' '${{ secrets.DEVELOPER_PHONE }}')"
             put DEVELOPER_EMAIL "$(choose '${{ secrets.PROD_DEVELOPER_EMAIL }}' '${{ secrets.DEVELOPER_EMAIL }}')"
-            # Student DB/runtime paths
+            echo "  🗃️  Student database..."
             put DB_HOST "$(choose '${{ secrets.PROD_DB_HOST }}' '${{ secrets.DB_HOST }}')"
             put DB_PORT "$(choose '${{ secrets.PROD_DB_PORT }}' '${{ secrets.DB_PORT }}')"
             put DB_USER "$(choose '${{ secrets.PROD_DB_USER }}' '${{ secrets.DB_USER }}')"
@@ -131,13 +170,15 @@ jobs:
             put COURSE_MATERIAL_PATH "$(choose '${{ secrets.PROD_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
             put DOCS_PATH "$(choose '${{ secrets.PROD_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
             put ACADEMIC_360_URL "$(choose '${{ secrets.PROD_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
-            # Ports for host mapping
+            echo "  🐳 Docker ports..."
             put BACKEND_PORT "$(choose '${{ secrets.PROD_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.PROD_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.PROD_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
           else
+            echo "🧪 Processing STAGING environment variables..."
             NODE_ENV_VAL=staging
             # Backend
+            echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.STAGING_PORT }}' '${{ secrets.PORT }}')"
             put DATABASE_URL "${{ secrets.STAGING_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
@@ -148,12 +189,15 @@ jobs:
             put GOOGLE_CLIENT_ID "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_ID }}' '${{ secrets.GOOGLE_CLIENT_ID }}')"
             put GOOGLE_CLIENT_SECRET "$(choose '${{ secrets.STAGING_GOOGLE_CLIENT_SECRET }}' '${{ secrets.GOOGLE_CLIENT_SECRET }}')"
             put BACKEND_URL "$(choose '${{ secrets.STAGING_BACKEND_URL }}' '${{ secrets.BACKEND_URL }}')"
+            echo "  📧 Email configuration..."
             put SMTP_HOST "$(choose '${{ secrets.STAGING_SMTP_HOST }}' '${{ secrets.SMTP_HOST }}')"
             put SMTP_PORT "$(choose '${{ secrets.STAGING_SMTP_PORT }}' '${{ secrets.SMTP_PORT }}')"
             put SMTP_USER "$(choose '${{ secrets.STAGING_SMTP_USER }}' '${{ secrets.SMTP_USER }}')"
             put SMTP_PASS "$(choose '${{ secrets.STAGING_SMTP_PASS }}' '${{ secrets.SMTP_PASS }}')"
+            echo "  📁 File paths..."
             put SETTINGS_PATH "$(choose '${{ secrets.STAGING_SETTINGS_PATH }}' '${{ secrets.SETTINGS_PATH }}')"
             put DOCUMENTS_PATH "$(choose '${{ secrets.STAGING_DOCUMENTS_PATH }}' '${{ secrets.DOCUMENTS_PATH }}')"
+            echo "  🗄️  Legacy database..."
             put OLD_DB_HOST "$(choose '${{ secrets.STAGING_OLD_DB_HOST }}' '${{ secrets.OLD_DB_HOST }}')"
             put OLD_DB_PORT "$(choose '${{ secrets.STAGING_OLD_DB_PORT }}' '${{ secrets.OLD_DB_PORT }}')"
             put OLD_DB_USER "$(choose '${{ secrets.STAGING_OLD_DB_USER }}' '${{ secrets.OLD_DB_USER }}')"
@@ -161,7 +205,7 @@ jobs:
             put OLD_DB_NAME "$(choose '${{ secrets.STAGING_OLD_DB_NAME }}' '${{ secrets.OLD_DB_NAME }}')"
             put STUDY_MATERIAL_BASE_PATH "$(choose '${{ secrets.STAGING_STUDY_MATERIAL_BASE_PATH }}' '${{ secrets.STUDY_MATERIAL_BASE_PATH }}')"
             put LOG_DIRECTORY "$(choose '${{ secrets.STAGING_LOG_DIRECTORY }}' '${{ secrets.LOG_DIRECTORY }}')"
-            # Frontends build
+            echo "  🎨 Frontend build variables..."
             put VITE_APP_BACKEND_URL "$(choose '${{ secrets.STAGING_VITE_APP_BACKEND_URL }}' '${{ secrets.VITE_APP_BACKEND_URL }}')"
             put VITE_APP_PREFIX "$(choose '${{ secrets.STAGING_VITE_APP_PREFIX }}' '${{ secrets.VITE_APP_PREFIX }}')"
             put VITE_STUDENT_PROFILE_URL "$(choose '${{ secrets.STAGING_VITE_STUDENT_PROFILE_URL }}' '${{ secrets.VITE_STUDENT_PROFILE_URL }}')"
@@ -169,7 +213,7 @@ jobs:
             put NEXT_PUBLIC_API_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_API_URL }}' '${{ secrets.NEXT_PUBLIC_API_URL }}')"
             put NEXT_PUBLIC_APP_BASE_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_APP_BASE_URL }}' '${{ secrets.NEXT_PUBLIC_APP_BASE_URL }}')"
             put NEXT_PUBLIC_URL "$(choose '${{ secrets.STAGING_NEXT_PUBLIC_URL }}' '${{ secrets.NEXT_PUBLIC_URL }}')"
-            # Student server-only
+            echo "  🔐 Student console server variables..."
             put JWT_SECRET "$(choose '${{ secrets.STAGING_JWT_SECRET }}' '${{ secrets.JWT_SECRET }}')"
             put ZEPTO_URL "$(choose '${{ secrets.STAGING_ZEPTO_URL }}' '${{ secrets.ZEPTO_URL }}')"
             put ZEPTO_FROM "$(choose '${{ secrets.STAGING_ZEPTO_FROM }}' '${{ secrets.ZEPTO_FROM }}')"
@@ -178,7 +222,7 @@ jobs:
             put INTERAKT_BASE_URL "$(choose '${{ secrets.STAGING_INTERAKT_BASE_URL }}' '${{ secrets.INTERAKT_BASE_URL }}')"
             put DEVELOPER_PHONE "$(choose '${{ secrets.STAGING_DEVELOPER_PHONE }}' '${{ secrets.DEVELOPER_PHONE }}')"
             put DEVELOPER_EMAIL "$(choose '${{ secrets.STAGING_DEVELOPER_EMAIL }}' '${{ secrets.DEVELOPER_EMAIL }}')"
-            # Student DB/runtime paths
+            echo "  🗃️  Student database..."
             put DB_HOST "$(choose '${{ secrets.STAGING_DB_HOST }}' '${{ secrets.DB_HOST }}')"
             put DB_PORT "$(choose '${{ secrets.STAGING_DB_PORT }}' '${{ secrets.DB_PORT }}')"
             put DB_USER "$(choose '${{ secrets.STAGING_DB_USER }}' '${{ secrets.DB_USER }}')"
@@ -187,13 +231,112 @@ jobs:
             put COURSE_MATERIAL_PATH "$(choose '${{ secrets.STAGING_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
             put DOCS_PATH "$(choose '${{ secrets.STAGING_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
             put ACADEMIC_360_URL "$(choose '${{ secrets.STAGING_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
-            # Ports for host mapping
+            echo "  🐳 Docker ports..."
             put BACKEND_PORT "$(choose '${{ secrets.STAGING_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.STAGING_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.STAGING_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
           fi
           put NODE_ENV "$NODE_ENV_VAL"
-          echo "Generated env file with $(wc -l < "$outfile") entries"
+
+          echo "✅ Environment variable processing completed"
+          echo "🔍 Validating generated environment file..."
+
+          # Check if env file was created successfully
+          if [ ! -f "$outfile" ]; then
+            echo "❌ Error: Environment file was not created"
+            exit 1
+          fi
+
+          line_count=$(wc -l < "$outfile")
+          echo "✅ Generated environment file with $line_count entries"
+
+          # Validate critical environment variables
+          echo "🔍 Validating critical environment variables..."
+          missing_vars=()
+
+          # Check for critical variables
+          critical_vars=("NODE_ENV" "PORT" "DATABASE_URL" "ACCESS_TOKEN_SECRET" "REFRESH_TOKEN_SECRET" "CORS_ORIGIN" "BACKEND_URL")
+          for var in "${critical_vars[@]}"; do
+            if ! grep -q "^${var}=" "$outfile"; then
+              missing_vars+=("$var")
+            fi
+          done
+
+          if [ ${#missing_vars[@]} -gt 0 ]; then
+            echo "❌ Missing critical environment variables:"
+            printf '  - %s\n' "${missing_vars[@]}"
+            echo "⚠️  Deployment may fail due to missing critical variables"
+          else
+            echo "✅ All critical environment variables are present"
+          fi
+
+          # Show first few lines for debugging (without sensitive values)
+          echo "📋 Environment file preview (first 10 entries):"
+          head -10 "$outfile" | sed 's/=.*/=***/' || true
+
+          echo "📊 Environment file statistics:"
+          echo "  Total variables: $line_count"
+          echo "  File size: $(du -h "$outfile" | cut -f1)"
+
+          # Full audit of all expected variables (present/missing, length, masked preview)
+          echo "🧾 Auditing all expected environment variables..."
+          expected_vars=(
+            # Common
+            "NODE_ENV" "PORT" "DATABASE_URL" "CORS_ORIGIN" "BACKEND_URL"
+            "ACCESS_TOKEN_SECRET" "ACCESS_TOKEN_EXPIRY" "REFRESH_TOKEN_SECRET" "REFRESH_TOKEN_EXPIRY"
+            "GOOGLE_CLIENT_ID" "GOOGLE_CLIENT_SECRET"
+            # Email
+            "SMTP_HOST" "SMTP_PORT" "SMTP_USER" "SMTP_PASS"
+            # File paths
+            "SETTINGS_PATH" "DOCUMENTS_PATH" "STUDY_MATERIAL_BASE_PATH" "LOG_DIRECTORY"
+            # Legacy DB
+            "OLD_DB_HOST" "OLD_DB_PORT" "OLD_DB_USER" "OLD_DB_PASSWORD" "OLD_DB_NAME"
+            # Frontend build
+            "VITE_APP_BACKEND_URL" "VITE_APP_PREFIX" "VITE_STUDENT_PROFILE_URL" "VITE_GOOGLE_CLIENT_ID"
+            "NEXT_PUBLIC_API_URL" "NEXT_PUBLIC_APP_BASE_URL" "NEXT_PUBLIC_URL"
+            # Student server-only
+            "JWT_SECRET" "ZEPTO_URL" "ZEPTO_FROM" "ZEPTO_TOKEN" "INTERAKT_API_KEY" "INTERAKT_BASE_URL"
+            "DEVELOPER_PHONE" "DEVELOPER_EMAIL"
+            # Student DB/runtime
+            "DB_HOST" "DB_PORT" "DB_USER" "DB_PASSWORD" "DB_NAME"
+            "COURSE_MATERIAL_PATH" "DOCS_PATH" "ACADEMIC_360_URL"
+            # Docker exposed ports
+            "BACKEND_PORT" "MAIN_CONSOLE_PORT" "STUDENT_CONSOLE_PORT"
+          )
+
+          audit_missing=()
+          for key in "${expected_vars[@]}"; do
+            if grep -q "^${key}=" "$outfile"; then
+              raw_line=$(grep "^${key}=" "$outfile" | head -1)
+              value=${raw_line#${key}=}
+              vlen=${#value}
+              if [ "$vlen" -le 0 ]; then
+                masked="<empty>"
+              else
+                # Mask value: show first and last char only, rest as * (length only)
+                first_char=${value:0:1}
+                last_char=${value: -1}
+                masked_len=$(( vlen > 2 ? vlen-2 : 0 ))
+                stars=$(printf '%*s' "$masked_len" | tr ' ' '*')
+                if [ "$vlen" -le 2 ]; then
+                  masked="$value"
+                else
+                  masked="${first_char}${stars}${last_char}"
+                fi
+              fi
+              echo "  ✔ ${key}: present (len=${vlen}) value=${masked}"
+            else
+              echo "  ✖ ${key}: MISSING"
+              audit_missing+=("$key")
+            fi
+          done
+
+          if [ ${#audit_missing[@]} -gt 0 ]; then
+            echo "❗ Summary: ${#audit_missing[@]} variables missing from $outfile"
+            printf '    - %s\n' "${audit_missing[@]}"
+          else
+            echo "✅ All expected environment variables are present in $outfile"
+          fi
 
       - name: Create remote directory (staging)
         uses: appleboy/ssh-action@v1.0.3
@@ -202,10 +345,22 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           script: |
-            echo "Creating remote directory: ${{ steps.host.outputs.remotedir }}"
+            echo "🏗️  Creating remote directory for STAGING deployment..."
+            echo "Target directory: ${{ steps.host.outputs.remotedir }}"
+            echo "Current user: $(whoami)"
+            echo "Current directory: $(pwd)"
+
+            echo "Creating directory structure..."
             sudo mkdir -p ${{ steps.host.outputs.remotedir }}
+            echo "✅ Directory created successfully"
+
+            echo "Setting ownership..."
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ steps.host.outputs.remotedir }}
-            echo "Directory created and ownership set"
+            echo "✅ Ownership set to ${{ secrets.SSH_USER }}"
+
+            echo "Verifying directory permissions..."
+            ls -la ${{ steps.host.outputs.remotedir }} || echo "Directory listing failed"
+            echo "✅ Remote directory setup completed"
         if: steps.host.outputs.env == 'staging'
 
       - name: Copy repo and env to server (staging)
@@ -219,6 +374,21 @@ jobs:
           strip_components: 0
         if: steps.host.outputs.env == 'staging'
 
+      - name: Verify file transfer (staging)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          script: |
+            echo "📁 Verifying file transfer for STAGING..."
+            echo "Checking files in: ${{ steps.host.outputs.remotedir }}"
+            ls -la ${{ steps.host.outputs.remotedir }}/
+            echo "Repository archive size: $(du -h ${{ steps.host.outputs.remotedir }}/repo.tar.gz 2>/dev/null || echo 'Not found')"
+            echo "Environment file size: $(du -h ${{ steps.host.outputs.remotedir }}/env.deploy 2>/dev/null || echo 'Not found')"
+            echo "✅ File transfer verification completed"
+        if: steps.host.outputs.env == 'staging'
+
       - name: Create remote directory (prod)
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -226,10 +396,22 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
-            echo "Creating remote directory: ${{ steps.host.outputs.remotedir }}"
+            echo "🏗️  Creating remote directory for PRODUCTION deployment..."
+            echo "Target directory: ${{ steps.host.outputs.remotedir }}"
+            echo "Current user: $(whoami)"
+            echo "Current directory: $(pwd)"
+
+            echo "Creating directory structure..."
             sudo mkdir -p ${{ steps.host.outputs.remotedir }}
+            echo "✅ Directory created successfully"
+
+            echo "Setting ownership..."
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} ${{ steps.host.outputs.remotedir }}
-            echo "Directory created and ownership set"
+            echo "✅ Ownership set to ${{ secrets.SSH_USER }}"
+
+            echo "Verifying directory permissions..."
+            ls -la ${{ steps.host.outputs.remotedir }} || echo "Directory listing failed"
+            echo "✅ Remote directory setup completed"
         if: steps.host.outputs.env == 'production'
 
       - name: Copy repo and env to server (prod)
@@ -241,6 +423,21 @@ jobs:
           source: "repo.tar.gz,env.deploy"
           target: "${{ steps.host.outputs.remotedir }}"
           strip_components: 0
+        if: steps.host.outputs.env == 'production'
+
+      - name: Verify file transfer (prod)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.host.outputs.host }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          script: |
+            echo "📁 Verifying file transfer for PRODUCTION..."
+            echo "Checking files in: ${{ steps.host.outputs.remotedir }}"
+            ls -la ${{ steps.host.outputs.remotedir }}/
+            echo "Repository archive size: $(du -h ${{ steps.host.outputs.remotedir }}/repo.tar.gz 2>/dev/null || echo 'Not found')"
+            echo "Environment file size: $(du -h ${{ steps.host.outputs.remotedir }}/env.deploy 2>/dev/null || echo 'Not found')"
+            echo "✅ File transfer verification completed"
         if: steps.host.outputs.env == 'production'
 
       - name: Deploy over SSH (compose down/build/migrate/up) (staging)
