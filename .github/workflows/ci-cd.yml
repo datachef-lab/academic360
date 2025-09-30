@@ -487,6 +487,14 @@ jobs:
               done < "$file"
             }
             load_env "deploy/${{ steps.host.outputs.envfile }}"
+            echo "🔎 Backend URL in use: ${BACKEND_URL}"
+            # Mask password in DATABASE_URL for logging
+            if [ -n "${DATABASE_URL}" ]; then
+              MASKED_DB_URL=$(echo "${DATABASE_URL}" | sed -E 's#(//[^:@/]+:)[^@]+@#\1***@#')
+              echo "🔎 Database URL in use: ${MASKED_DB_URL}"
+            else
+              echo "🔎 Database URL not set"
+            fi
 
             echo "🔐 Fix permissions in workspace (avoid root-owned artifacts)"
             sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} . || true
