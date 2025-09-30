@@ -50,5 +50,9 @@ FROM nginx:1.27-alpine AS runtime
 # Copy built static assets from builder
 COPY --from=builder /app/apps/main-console/dist /usr/share/nginx/html
 
+# Run nginx as non-root user (101)
+RUN chown -R 101:101 /usr/share/nginx/html
+USER 101
+
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

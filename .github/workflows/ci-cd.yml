@@ -457,6 +457,7 @@ jobs:
           host: ${{ steps.host.outputs.host }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+          command_timeout: 60m
           script: |
             set -e
             cd ${{ steps.host.outputs.remotedir }}
