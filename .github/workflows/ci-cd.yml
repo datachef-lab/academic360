@@ -466,6 +466,8 @@ jobs:
             sudo mkdir -p current/deploy
             sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
             cd current
+            # Make compose build args available by placing env as .env in working dir
+            cp deploy/${{ steps.host.outputs.envfile }} .env
             docker compose -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
             docker compose -f ${{ steps.host.outputs.compose }} build --no-cache
             docker compose -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate || true
