@@ -451,7 +451,7 @@ jobs:
             echo "✅ File transfer verification completed"
         if: steps.host.outputs.env == 'production'
 
-      - name: Deploy over SSH (compose down/build/migrate/up) (staging)
+      - name: Deploy over SSH with PM2 (staging)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.host.outputs.host }}
@@ -461,32 +461,49 @@ jobs:
           script: |
             set -e
             cd ${{ steps.host.outputs.remotedir }}
-            # Extract repo directly into the provided remote directory (no nested 'current')
+            # Extract repo and place env
             sudo tar -xzf repo.tar.gz -C .
             sudo mkdir -p deploy
             sudo mv -f env.deploy deploy/${{ steps.host.outputs.envfile }}
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
 
-            echo "🏗️ Pre-building only shared DB package (@repo/db) at repo root..."
-            docker run --rm -v "$(pwd)":/app -w /app node:20-alpine sh -lc "set -e; apk add --no-cache git bash >/dev/null 2>&1 || true; corepack enable && corepack prepare pnpm@10.15.0 --activate; pnpm install --frozen-lockfile; pnpm --filter @repo/db... build"
+            echo "🧰 Ensure Node, pnpm, pm2 available..."
+            if ! command -v node >/dev/null 2>&1; then
+              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+            corepack enable || true
+            corepack prepare pnpm@10.15.0 --activate || true
+            sudo npm i -g pm2 serve || true
 
-            echo "🧱 Building backend image..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build backend
-            echo "🚚 Running database migrations (staging/prod as per env)..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate
-            echo "🚀 Starting backend..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d backend
+            echo "🔑 Load environment"
+            set -a; . deploy/${{ steps.host.outputs.envfile }}; set +a
 
-            echo "🧱 Building main-console image..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build main_console
-            echo "🚀 Starting main-console..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d main_console
+            echo "📦 Install workspace dependencies"
+            pnpm install --frozen-lockfile
 
-            echo "🧱 Building student-console image..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build student_console
-            echo "🚀 Starting student-console..."
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d student_console
-            docker image prune -f
+            echo "🏗️ Build shared DB and apps"
+            pnpm --filter @repo/db... build
+            pnpm --filter backend... build
+            pnpm --filter main-console... build
+            pnpm --filter student-console... build || true
+
+            echo "🚚 Run database migrations"
+            pnpm --filter backend db:migrate
+
+            echo "🚀 Start/restart backend with PM2"
+            pm2 delete backend || true
+            pm2 start "node dist/apps/backend/src/index.js" --name backend --update-env
+
+            echo "🚀 Serve main-console dist with PM2"
+            pm2 delete main-console || true
+            pm2 start "serve -s apps/main-console/dist -l ${MAIN_CONSOLE_PORT:-8081}" --name main-console --update-env
+
+            echo "🚀 Start student-console (Next.js) with PM2"
+            pm2 delete student-console || true
+            pm2 start "bash -lc 'cd apps/student-console && pnpm install --frozen-lockfile && pnpm start -p ${STUDENT_CONSOLE_PORT:-3008}'" --name student-console --update-env
+
+            pm2 save
+            pm2 status
         if: steps.host.outputs.env == 'staging'
 
       - name: Deploy over SSH (compose down/build/migrate/up) (prod)
