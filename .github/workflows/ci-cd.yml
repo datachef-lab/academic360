@@ -96,7 +96,9 @@ jobs:
           echo "✅ Archive created successfully"
           echo "Archive size: $(du -h repo.tar.gz | cut -f1)"
           echo "Archive contents preview:"
-          tar -tzf repo.tar.gz | head -20
+          # The head command will close early and can cause tar to error on SIGPIPE; ignore preview errors
+          tar -tzf repo.tar.gz | head -20 || true
+          echo "Preview complete"
 
       - name: Build env file from per-key secrets (base defaults + env overrides)
         id: genenv
