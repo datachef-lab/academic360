@@ -50,11 +50,9 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
-    console.log("NODE_ENV: updated v17", process.env.NODE_ENV);
-    if (
-      process.env.NODE_ENV === "production" ||
-      process.env.NODE_ENV === "development"
-    ) {
+    console.log("NODE_ENV: updated v18", process.env.NODE_ENV);
+    const shouldConnectMySQL = process.env.NODE_ENV === "production";
+    if (shouldConnectMySQL) {
       await connectToMySQL();
     }
     httpServer.listen(PORT, async () => {
@@ -64,10 +62,7 @@ function checkRequiredEnvs() {
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");
       //   await brainstormOldMigration();
-      if (
-        process.env.NODE_ENV === "production" ||
-        process.env.NODE_ENV === "development"
-      ) {
+      if (process.env.NODE_ENV === "production") {
         await startLoadDataScheduler();
       }
     });

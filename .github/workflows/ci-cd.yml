@@ -514,17 +514,30 @@ jobs:
             echo "🚚 Run database migrations"
             pnpm --filter backend db:migrate
 
-            echo "🚀 Start/restart backend with PM2"
-            pm2 delete backend || true
-            pm2 start "node dist/apps/backend/src/index.js" --name backend --update-env
+            echo "🚀 Start/restart backend with PM2 (detect dist path)"
+            pm2 delete academic360-backend || true
+            BACKEND_ENTRY=""
+            if [ -f "apps/backend/dist/apps/backend/src/index.js" ]; then
+              BACKEND_ENTRY="apps/backend/dist/apps/backend/src/index.js"
+            elif [ -f "dist/apps/backend/src/index.js" ]; then
+              BACKEND_ENTRY="dist/apps/backend/src/index.js"
+            else
+              echo "❌ Backend entry not found in expected locations"
+              ls -la apps/backend/dist || true
+              ls -la apps/backend/dist/apps/backend/src || true
+              ls -la dist/apps/backend/src || true
+              exit 1
+            fi
+            echo "Using backend entry: $BACKEND_ENTRY"
+            pm2 start "node $BACKEND_ENTRY" --name academic360-backend --cwd "$(pwd)" --update-env
 
-            echo "🚀 Serve main-console dist with PM2"
-            pm2 delete main-console || true
-            pm2 start "serve -s apps/main-console/dist -l ${MAIN_CONSOLE_PORT:-8081}" --name main-console --update-env
+            echo "🚀 Serve main-console dist with PM2 (repo root as CWD)"
+            pm2 delete academic360-frontend || true
+            pm2 start "serve -s apps/main-console/dist -l ${MAIN_CONSOLE_PORT:-8081}" --name academic360-frontend --cwd "$(pwd)" --update-env
 
             echo "🚀 Start student-console (Next.js) with PM2"
-            pm2 delete student-console || true
-            pm2 start "bash -lc 'cd apps/student-console && pnpm install --frozen-lockfile && pnpm start -p ${STUDENT_CONSOLE_PORT:-3008}'" --name student-console --update-env
+            pm2 delete besc-student-console || true
+            pm2 start "bash -lc 'cd apps/student-console && pnpm install --frozen-lockfile && pnpm start -p ${STUDENT_CONSOLE_PORT:-3008}'" --name besc-student-console --cwd "$(pwd)" --update-env
 
             pm2 save
             pm2 status
