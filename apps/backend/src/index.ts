@@ -50,7 +50,6 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
-    console.log("NODE_ENV: updated v19", process.env.NODE_ENV);
     const shouldConnectMySQL = process.env.NODE_ENV === "production";
     if (shouldConnectMySQL) {
       await connectToMySQL();
