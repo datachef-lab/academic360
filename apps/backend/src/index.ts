@@ -50,7 +50,7 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
-    console.log("NODE_ENV: updated v10", process.env.NODE_ENV);
+    console.log("NODE_ENV: updated v11", process.env.NODE_ENV);
     if (
       process.env.NODE_ENV === "production" ||
       process.env.NODE_ENV === "development"

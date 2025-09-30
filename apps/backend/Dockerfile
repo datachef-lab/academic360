@@ -34,8 +34,8 @@ COPY . .
 # Build only required shared packages to satisfy backend imports (now that sources exist)
 RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
 
-# Build only backend
-RUN pnpm --filter backend... build
+# Build DB package explicitly before backend
+RUN pnpm -C packages/db build && pnpm --filter backend... build
 
 # Normalize build output location to /app/dist so runtime stage can COPY consistently
 # Some setups may emit to apps/backend/dist; unify to /app/dist if needed

@@ -41,8 +41,8 @@ RUN set -e \
   && ls -la packages/db/dist || true \
   && node -v && pnpm -v && npx tsc -v || true
 
-# Build only main-console
-RUN pnpm --filter main-console... build
+# Build DB package explicitly, then main-console (ensures @repo/db types are available)
+RUN pnpm -C packages/db build && pnpm -C apps/main-console build
 
 # ---------- Nginx runtime ----------
 FROM nginx:1.27-alpine AS runtime
