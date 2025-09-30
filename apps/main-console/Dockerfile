@@ -28,10 +28,10 @@ COPY packages/eslint-config/package.json packages/eslint-config/package.json
 
 RUN pnpm install --frozen-lockfile
 
-# Ensure all shared packages are built at the workspace root (db, utils, ui, etc.)
-RUN pnpm build
-
 COPY . .
+
+# Build only required shared packages before main-console build (after sources copied)
+RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
 
 # Build only main-console
 RUN pnpm --filter main-console... build

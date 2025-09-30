@@ -468,7 +468,8 @@ jobs:
             cd current
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build --no-cache
-            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate || true
+            echo "🚚 Running database migrations (staging/prod as per env)..."
+            docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} up -d
             docker image prune -f
         if: steps.host.outputs.env == 'staging'

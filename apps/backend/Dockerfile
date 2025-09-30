@@ -28,11 +28,11 @@ COPY packages/eslint-config/package.json packages/eslint-config/package.json
 # Install with full deps to keep drizzle-kit available for migrations
 RUN pnpm install --frozen-lockfile
 
-# Build all workspace packages first so backend can import compiled outputs
-RUN pnpm build
-
 # Copy full repo (honors .dockerignore if present)
 COPY . .
+
+# Build only required shared packages to satisfy backend imports (now that sources exist)
+RUN pnpm --filter @repo/db... build || (cd packages/db && pnpm run build)
 
 # Build only backend
 RUN pnpm --filter backend... build
