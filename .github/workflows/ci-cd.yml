@@ -475,8 +475,20 @@ jobs:
             corepack prepare pnpm@10.15.0 --activate || true
             sudo npm i -g pm2 serve || true
 
-            echo "🔑 Load environment"
-            set -a; . deploy/${{ steps.host.outputs.envfile }}; set +a
+            echo "🔑 Load environment (robust parser)"
+            load_env() {
+              file="$1"
+              while IFS= read -r line || [ -n "$line" ]; do
+                # skip comments/blank
+                case "$line" in ''|'#'*) continue;; esac
+                # tolerate CRLF
+                line="${line%$'\r'}"
+                key="${line%%=*}"
+                val="${line#*=}"
+                export "$key=$val"
+              done < "$file"
+            }
+            load_env "deploy/${{ steps.host.outputs.envfile }}"
 
             echo "📦 Install workspace dependencies"
             pnpm install --frozen-lockfile
