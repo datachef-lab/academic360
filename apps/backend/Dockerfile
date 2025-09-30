@@ -34,6 +34,22 @@ COPY . .
 # Build only backend
 RUN pnpm --filter backend... build
 
+# Normalize build output location to /app/dist so runtime stage can COPY consistently
+# Some setups may emit to apps/backend/dist; unify to /app/dist if needed
+RUN set -e \
+    && if [ -d "dist" ]; then \
+         echo "Using root dist directory"; \
+       elif [ -d "apps/backend/dist" ]; then \
+         echo "Syncing apps/backend/dist to root dist"; \
+         mkdir -p dist; \
+         cp -r apps/backend/dist/* dist/; \
+       else \
+         echo "Error: No dist directory produced by build"; \
+         ls -la; \
+         ls -la apps/backend || true; \
+         exit 1; \
+       fi
+
 # ---------- Runtime ----------
 FROM node:20-alpine AS runtime
 ENV NODE_ENV=production
@@ -43,16 +59,13 @@ RUN corepack enable && corepack prepare pnpm@10.15.0 --activate
 
 WORKDIR /app
 
-# Copy only needed runtime files from builder
+# Copy full build output and runtime deps
 COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/apps/backend/package.json /app/apps/backend/package.json
-COPY --from=builder /app/packages /app/packages
 COPY --from=builder /app/node_modules /app/node_modules
-COPY --from=builder /app/apps/backend/views /app/apps/backend/views
-COPY --from=builder /app/apps/backend/public /app/apps/backend/public
+COPY --from=builder /app/package.json /app/package.json
 
 ENV PORT=8080
 EXPOSE 8080
 
-# Default command: start the compiled server
+# Default command: start the compiled server (matches package.json start script)
 CMD ["node", "dist/apps/backend/src/index.js"]
