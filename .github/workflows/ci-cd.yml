@@ -461,16 +461,14 @@ jobs:
           script: |
             set -e
             cd ${{ steps.host.outputs.remotedir }}
-            sudo rm -rf current || true
-            sudo mkdir -p current
-            sudo tar -xzf repo.tar.gz -C current
-            sudo mkdir -p current/deploy
-            sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
-            cd current
+            # Extract repo directly into the provided remote directory (no nested 'current')
+            sudo tar -xzf repo.tar.gz -C .
+            sudo mkdir -p deploy
+            sudo mv -f env.deploy deploy/${{ steps.host.outputs.envfile }}
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
 
-            echo "🏗️ Pre-building workspace at repository root (pnpm build)..."
-            docker run --rm -v "$(pwd)":/app -w /app node:20-alpine sh -lc "set -e; apk add --no-cache git bash >/dev/null 2>&1 || true; corepack enable && corepack prepare pnpm@10.15.0 --activate; pnpm install --frozen-lockfile; pnpm build"
+            echo "🏗️ Pre-building only shared DB package (@repo/db) at repo root..."
+            docker run --rm -v "$(pwd)":/app -w /app node:20-alpine sh -lc "set -e; apk add --no-cache git bash >/dev/null 2>&1 || true; corepack enable && corepack prepare pnpm@10.15.0 --activate; pnpm install --frozen-lockfile; pnpm --filter @repo/db... build"
 
             echo "🧱 Building backend image..."
             docker compose --env-file deploy/${{ steps.host.outputs.envfile }} -f ${{ steps.host.outputs.compose }} build backend
@@ -500,12 +498,10 @@ jobs:
           script: |
             set -e
             cd ${{ steps.host.outputs.remotedir }}
-            sudo rm -rf current || true
-            sudo mkdir -p current
-            sudo tar -xzf repo.tar.gz -C current
-            sudo mkdir -p current/deploy
-            sudo mv -f env.deploy current/deploy/${{ steps.host.outputs.envfile }}
-            cd current
+            # Extract repo directly into the provided remote directory (no nested 'current')
+            sudo tar -xzf repo.tar.gz -C .
+            sudo mkdir -p deploy
+            sudo mv -f env.deploy deploy/${{ steps.host.outputs.envfile }}
             docker compose -f ${{ steps.host.outputs.compose }} down --remove-orphans || true
             docker compose -f ${{ steps.host.outputs.compose }} build --no-cache
             docker compose -f ${{ steps.host.outputs.compose }} run --rm backend pnpm --filter backend db:migrate || true
