@@ -294,7 +294,16 @@ export const notificationTypeEnum = pgEnum("notification_type", [
     "SEMESTER_WISE_SUBJECT_SELECTION",
     "ALERT",
     "OTP",
-    
+
+]);
+
+export const notificationQueueTypeEnum = pgEnum("notification_queue_type", [
+    "EMAIL_QUEUE",
+    "WHATSAPP_QUEUE",
+    "SMS_QUEUE",
+    "WEB_QUEUE",
+    "IN_APP_QUEUE",
+    "DEAD_LETTER_QUEUE",
 ]);
 
 export const notificationStatusEnum = pgEnum("notification_status", [

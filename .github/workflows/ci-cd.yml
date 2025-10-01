@@ -181,6 +181,11 @@ jobs:
             put COURSE_MATERIAL_PATH "$(choose '${{ secrets.PROD_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
             put DOCS_PATH "$(choose '${{ secrets.PROD_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
             put ACADEMIC_360_URL "$(choose '${{ secrets.PROD_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
+            echo "  📨 Notification/RabbitMQ..."
+            put RABBITMQ_URL "$(choose '${{ secrets.PROD_RABBITMQ_URL }}' '${{ secrets.RABBITMQ_URL }}')"
+            put RABBITMQ_PREFETCH "$(choose '${{ secrets.PROD_RABBITMQ_PREFETCH }}' '${{ secrets.RABBITMQ_PREFETCH }}')"
+            put RABBITMQ_RETRY_MAX "$(choose '${{ secrets.PROD_RABBITMQ_RETRY_MAX }}' '${{ secrets.RABBITMQ_RETRY_MAX }}')"
+            put RABBITMQ_RETRY_DELAY_MS "$(choose '${{ secrets.PROD_RABBITMQ_RETRY_DELAY_MS }}' '${{ secrets.RABBITMQ_RETRY_DELAY_MS }}')"
             echo "  🐳 Docker ports..."
             put BACKEND_PORT "$(choose '${{ secrets.PROD_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.PROD_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
@@ -242,6 +247,11 @@ jobs:
             put COURSE_MATERIAL_PATH "$(choose '${{ secrets.STAGING_COURSE_MATERIAL_PATH }}' '${{ secrets.COURSE_MATERIAL_PATH }}')"
             put DOCS_PATH "$(choose '${{ secrets.STAGING_DOCS_PATH }}' '${{ secrets.DOCS_PATH }}')"
             put ACADEMIC_360_URL "$(choose '${{ secrets.STAGING_ACADEMIC_360_URL }}' '${{ secrets.ACADEMIC_360_URL }}')"
+            echo "  📨 Notification/RabbitMQ..."
+            put RABBITMQ_URL "$(choose '${{ secrets.STAGING_RABBITMQ_URL }}' '${{ secrets.RABBITMQ_URL }}')"
+            put RABBITMQ_PREFETCH "$(choose '${{ secrets.STAGING_RABBITMQ_PREFETCH }}' '${{ secrets.RABBITMQ_PREFETCH }}')"
+            put RABBITMQ_RETRY_MAX "$(choose '${{ secrets.STAGING_RABBITMQ_RETRY_MAX }}' '${{ secrets.RABBITMQ_RETRY_MAX }}')"
+            put RABBITMQ_RETRY_DELAY_MS "$(choose '${{ secrets.STAGING_RABBITMQ_RETRY_DELAY_MS }}' '${{ secrets.RABBITMQ_RETRY_DELAY_MS }}')"
             echo "  🐳 Docker ports..."
             put BACKEND_PORT "$(choose '${{ secrets.STAGING_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.STAGING_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
@@ -541,6 +551,9 @@ jobs:
 
             pm2 save
             pm2 status
+            echo "🚀 Start notification workers"
+            pm2 delete academic360-notify-whatsapp || true
+            pm2 start "node apps/notification-system/dist/index.js" --name academic360-notify-whatsapp --cwd "$(pwd)" --update-env
         if: steps.host.outputs.env == 'staging'
 
       - name: Deploy over SSH (compose down/build/migrate/up) (prod)

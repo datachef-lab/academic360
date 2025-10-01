@@ -1,0 +1,57 @@
+import { SendMailClient } from "zeptomail";
+
+const client = new SendMailClient({
+  url: process.env.ZEPTO_URL!,
+  token: `Zoho-enczapikey ${process.env.ZEPTO_TOKEN!}`,
+});
+
+interface ZeptoAttachmentPayload {
+  name: string;
+  mime_type: string;
+  content: string; // base64
+}
+
+interface ZeptoPayload {
+  from: { address: string; name: string };
+  to: { email_address: { address: string; name: string } }[];
+  subject: string;
+  htmlbody: string;
+  attachments?: ZeptoAttachmentPayload[];
+}
+
+export async function sendZeptoMail(
+  to: string,
+  subject: string,
+  htmlBody: string,
+  name?: string,
+  attachments?: Array<{
+    filename: string;
+    contentBase64: string;
+    mimeType: string;
+  }>,
+  fromNameOverride?: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const recipient =
+    process.env.NODE_ENV === "development" ? process.env.DEVELOPER_EMAIL! : to;
+  const fromName = fromNameOverride || "Academic360 Notifications";
+  const payload: ZeptoPayload = {
+    from: { address: process.env.ZEPTO_FROM!, name: fromName },
+    to: [{ email_address: { address: recipient, name: name || "User" } }],
+    subject,
+    htmlbody: htmlBody,
+  };
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map((a) => ({
+      name: a.filename,
+      mime_type: a.mimeType,
+      content: a.contentBase64,
+    }));
+  }
+  try {
+    await client.sendMail(payload);
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg.slice(0, 500) };
+  }
+}

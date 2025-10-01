@@ -2,16 +2,18 @@ import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/
 import { notificationModel } from "./notification.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
+import { notificationQueueTypeEnum } from "@/schemas/enums";
 
 export const notificationQueueModel = pgTable("notification_queue", {
     id: serial().primaryKey(),
     notificationId: integer("notification_id_fk")
         .references(() => notificationModel.id)
         .notNull(),
+    type: notificationQueueTypeEnum().notNull(),
     retryAttempts: integer("retry_attempts").notNull().default(0),
-    isDead: boolean().notNull().default(false),
+    isDeadLetter: boolean().notNull().default(false),
     failedReason: text("failed_reason"),
-    deadAt: timestamp("dead_at"),
+    deadLetterAt: timestamp("dead_letter_at"),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

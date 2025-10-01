@@ -18,6 +18,7 @@ export const userModel = pgTable('users', {
     suspendedReason: text(),
     suspendedTillDate: timestamp(),
     isActive: boolean().default(true),
+    sendStagingNotifications: boolean().default(false),
     createdAt: timestamp().notNull().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

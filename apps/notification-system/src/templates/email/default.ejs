@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= content && content.subject ? content.subject : "Notification" %></title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 0; background: #f6f8fb; }
+      .container { max-width: 640px; margin: 24px auto; background: #ffffff; border: 1px solid #e6e8ee; border-radius: 8px; overflow: hidden; }
+      .header { padding: 16px 20px; background: #0f172a; color: #ffffff; font-weight: 600; font-size: 16px; }
+      .content { padding: 20px; color: #0f172a; font-size: 14px; line-height: 1.6; }
+      .footer { padding: 16px 20px; color: #475569; font-size: 12px; border-top: 1px solid #e6e8ee; }
+      a.btn { display: inline-block; background: #2563eb; color: #ffffff !important; text-decoration: none; padding: 10px 16px; border-radius: 6px; margin-top: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header"><%= content && content.emailFromName ? content.emailFromName : "Academic360 Notifications" %></div>
+      <div class="content">
+        <% if (content && content.greetingName) { %>
+          <p>Hi <strong><%= content.greetingName %></strong>,</p>
+        <% } %>
+        <p><%= notif && notif.message ? notif.message : "You have a new notification." %></p>
+
+        <% if (content && content.ctaUrl && content.ctaText) { %>
+          <p>
+            <a class="btn" href="<%= content.ctaUrl %>" target="_blank" rel="noopener noreferrer"><%= content.ctaText %></a>
+          </p>
+        <% } %>
+      </div>
+      <div class="footer">
+        <div>This is an automated message. Please do not reply.</div>
+        <div>&copy; <%= new Date().getFullYear() %> Academic360</div>
+      </div>
+    </div>
+  </body>
+  </html>
+
+

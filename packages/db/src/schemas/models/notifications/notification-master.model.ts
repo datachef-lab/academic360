@@ -2,7 +2,7 @@ import { boolean, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
-export const whatsappAlertTable = pgTable("whatsapp_alerts", {
+export const notificationMasterModel = pgTable("notification_masters", {
     id: serial().primaryKey(),
     name: varchar({ length: 255 }).notNull().unique(),
     template: varchar({ length: 255 }).unique(),
@@ -13,8 +13,8 @@ export const whatsappAlertTable = pgTable("whatsapp_alerts", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const whatsappAlertInsertSchema = createInsertSchema(whatsappAlertTable);
+export const notificationMasterInsertSchema = createInsertSchema(notificationMasterModel);
 
-export type WhatsappAlert = z.infer<typeof whatsappAlertInsertSchema>;
+export type NotificationMaster = z.infer<typeof notificationMasterInsertSchema>;
 
-export type WhatsappAlertT = typeof whatsappAlertTable.$inferSelect;
+export type NotificationMasterT = typeof notificationMasterModel.$inferSelect;

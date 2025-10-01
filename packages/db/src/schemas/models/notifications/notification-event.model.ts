@@ -1,6 +1,6 @@
 import { integer, pgTable, serial, timestamp, varchar } from "drizzle-orm/pg-core";
 import { userModel } from "../user";
-import { whatsappAlertTable } from "./whatsapp-alert.model";
+import { notificationMasterModel } from "./notification-master.model";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
@@ -11,8 +11,8 @@ export const notificationEventModel = pgTable("notification_events", {
     updatedByUserId: integer("updated_by_user_id_fk")
         .references(() => userModel.id),
     emailTemplate: varchar({ length: 255 }),
-    whatsAppAlertId: integer("whatsapp_alert_id_fk")
-        .references(() => whatsappAlertTable.id),
+        notificationMasterId: integer("notification_master_id_fk")
+        .references(() => notificationMasterModel.id),
     name: varchar({ length: 255 }).notNull(),
     description: varchar({ length: 255 }),
     createdAt: timestamp().notNull().defaultNow(),

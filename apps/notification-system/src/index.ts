@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { app } from "@/app.js";
 import { getDbConnection } from "@repo/db/connection";
+import { database } from "./db";
 
 const PORT = process.env.PORT || 8080;
 
@@ -9,6 +10,10 @@ const REQUIRED_ENVS = [
   "PORT",
   "NODE_ENV",
   "DATABASE_URL",
+  "RABBITMQ_URL",
+  "RABBITMQ_PREFETCH",
+  "RABBITMQ_RETRY_MAX",
+  "RABBITMQ_RETRY_DELAY_MS",
   "ZEPTO_URL",
   "ZEPTO_FROM",
   "ZEPTO_TOKEN",
@@ -34,8 +39,22 @@ function checkRequiredEnvs() {
 (async () => {
   console.log("\nInitializing notification-system...\n");
   checkRequiredEnvs();
-  await getDbConnection(process.env.DATABASE_URL!);
+  if (database) {
+    console.log("Database connected");
+  } else {
+    console.error("Database not connected");
+    process.exit(1);
+  }
   try {
+    const { notificationsRouter } = await import("@/api/notifications.js");
+    app.use("/api/notifications", notificationsRouter);
+    // Start workers before HTTP
+    const { startEmailWorker } = await import("@/workers/email.worker.js");
+    const { startWhatsAppWorker } = await import(
+      "@/workers/whatsapp.worker.js"
+    );
+    startEmailWorker();
+    startWhatsAppWorker();
     app.listen(PORT, async () => {
       console.log(
         `[notification-system] - notification-system is running on http://localhost:${PORT} 🚀\n`,
