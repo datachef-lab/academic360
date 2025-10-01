@@ -18,7 +18,7 @@ export async function getSearchedUsers(
 export async function findAllUsers(
   page: number,
   pageSize: number,
-  type?: "ADMIN" | "STUDENT" | "TEACHER",
+  type?: "ADMIN" | "STUDENT" | "STAFF",
 ): Promise<ApiResponse<PaginatedResponse<User>>> {
   let url = `/api/users?page=${page}&pageSize=${pageSize}`;
   if (type) {
@@ -27,6 +27,21 @@ export async function findAllUsers(
   const response = await axiosInstance.get(url);
   console.log(response.data);
   return response.data;
+}
+
+export async function findAdminsAndStaff(page: number, pageSize: number): Promise<User[]> {
+  const [adminsRes, staffRes] = await Promise.all([
+    findAllUsers(page, pageSize, "ADMIN"),
+    findAllUsers(page, pageSize, "STAFF"),
+  ]);
+  const admins = adminsRes.payload.content || [];
+  const staff = staffRes.payload.content || [];
+  // Merge and de-duplicate by id
+  const map = new Map<number, User>();
+  for (const u of [...admins, ...staff]) {
+    map.set(u.id as number, u);
+  }
+  return Array.from(map.values());
 }
 
 // services/user.ts

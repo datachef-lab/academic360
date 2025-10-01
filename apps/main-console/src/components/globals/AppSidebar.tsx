@@ -161,14 +161,18 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-purple-700/50 transition-colors">
                   <div className="flex items-center justify-center p-1.5 bg-white/10 rounded-lg backdrop-blur-sm">
-                    <Avatar className="h-7 w-7 ring-2 ring-white/20">
-                      <AvatarImage
-                        src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
-                        alt="college-logo"
-                      />
-                      <AvatarFallback className="bg-white text-purple-600 font-bold">
-                        <GalleryVerticalEnd className="h-3 w-3" />
-                      </AvatarFallback>
+                    <Avatar className="h-8 w-8 ring-2 ring-white/20 overflow-hidden">
+                      {settings?.find((ele) => ele.name == "College Logo Image")?.id ? (
+                        <AvatarImage
+                          src={`${import.meta.env.VITE_APP_BACKEND_URL!}/api/v1/settings/file/${settings?.find((ele) => ele.name == "College Logo Image")?.id}`}
+                          alt="college-logo"
+                          className="object-cover"
+                        />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-fuchsia-500 to-violet-600 text-white font-bold">
+                          <GalleryVerticalEnd className="h-3 w-3" />
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                   </div>
                   <div className="flex-1 min-w-0">

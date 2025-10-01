@@ -256,7 +256,9 @@ export default function HomeLayout() {
                       <span className="text-xs">⌘</span>K
                     </kbd>
                   </Button>
-                  <NavUser />
+                  <div>
+                    <NavUser />
+                  </div>
                   {/* <NotifcationPanel /> */}
                   {/* <ModeToggle /> */}
                 </div>
