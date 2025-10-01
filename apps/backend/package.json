@@ -61,6 +61,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.7",
     "@types/axios": "^0.14.0",
     "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "^1.4.8",
