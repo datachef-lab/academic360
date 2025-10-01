@@ -279,3 +279,34 @@ export const addressTypeEnum = pgEnum("address_type", [
     "OFFICE",
     "OTHER",
 ]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+    "UPLOAD",
+    "EDIT",
+    "UPDATE",
+    "INFO",
+    "FEE",
+    "EVENT",
+    "OTHER",
+    "ADMISSION",
+    "EXAM",
+    "MINOR_PAPER_SELECTION",
+    "SEMESTER_WISE_SUBJECT_SELECTION",
+    "ALERT",
+    "OTP",
+    
+]);
+
+export const notificationStatusEnum = pgEnum("notification_status", [
+    "PENDING",
+    "SENT",
+    "FAILED",
+]);
+
+export const notificationVariantEnum = pgEnum("notification_variant", [
+    "EMAIL",
+    "WHATSAPP",
+    "SMS",
+    "WEB",
+    "OTHER",
+]);

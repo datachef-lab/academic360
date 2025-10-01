@@ -617,6 +617,166 @@ importers:
         specifier: 4.9.5
         version: 4.9.5
 
+  apps/notification-system:
+    dependencies:
+      '@repo/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      cookie-parser:
+        specifier: ^1.4.7
+        version: 1.4.7
+      cors:
+        specifier: ^2.8.5
+        version: 2.8.5
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
+      dotenv:
+        specifier: ^16.6.1
+        version: 16.6.1
+      drizzle-orm:
+        specifier: 0.44.5
+        version: 0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7)
+      drizzle-zod:
+        specifier: ^0.6.1
+        version: 0.6.1(drizzle-orm@0.44.5(@types/pg@8.15.5)(gel@2.1.1)(mysql2@3.14.3)(pg@8.16.3)(postgres@3.4.7))(zod@3.25.76)
+      express:
+        specifier: ^4.21.2
+        version: 4.21.2
+      express-rate-limit:
+        specifier: ^7.5.1
+        version: 7.5.1(express@4.21.2)
+      express-session:
+        specifier: ^1.18.2
+        version: 1.18.2
+      jsonwebtoken:
+        specifier: ^9.0.2
+        version: 9.0.2
+      mime-type:
+        specifier: ^5.0.3
+        version: 5.0.3
+      mime-types:
+        specifier: ^3.0.1
+        version: 3.0.1
+      module-alias:
+        specifier: ^2.2.3
+        version: 2.2.3
+      ms:
+        specifier: ^2.1.3
+        version: 2.1.3
+      multer:
+        specifier: 1.4.5-lts.2
+        version: 1.4.5-lts.2
+      node-fetch:
+        specifier: ^3.3.2
+        version: 3.3.2
+      pg:
+        specifier: ^8.16.3
+        version: 8.16.3
+      qs:
+        specifier: ^6.14.0
+        version: 6.14.0
+      socket.io:
+        specifier: ^4.8.1
+        version: 4.8.1
+      string-similarity:
+        specifier: ^4.0.4
+        version: 4.0.4
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
+      xlsx:
+        specifier: ^0.18.5
+        version: 0.18.5
+      zeptomail:
+        specifier: ^6.2.1
+        version: 6.2.1
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/axios':
+        specifier: ^0.14.0
+        version: 0.14.4
+      '@types/cookie-parser':
+        specifier: ^1.4.8
+        version: 1.4.9(@types/express@5.0.3)
+      '@types/cors':
+        specifier: ^2.8.17
+        version: 2.8.19
+      '@types/express':
+        specifier: ^5.0.0
+        version: 5.0.3
+      '@types/express-session':
+        specifier: ^1.18.1
+        version: 1.18.2
+      '@types/jsonwebtoken':
+        specifier: ^9.0.8
+        version: 9.0.10
+      '@types/mime-types':
+        specifier: ^3.0.1
+        version: 3.0.1
+      '@types/ms':
+        specifier: ^2.1.0
+        version: 2.1.0
+      '@types/node':
+        specifier: ^22.10.2
+        version: 22.18.0
+      '@types/passport':
+        specifier: ^1.0.17
+        version: 1.0.17
+      '@types/passport-google-oauth20':
+        specifier: ^2.0.16
+        version: 2.0.16
+      '@types/pg':
+        specifier: ^8.11.10
+        version: 8.15.5
+      cross-env:
+        specifier: ^10.0.0
+        version: 10.0.0
+      drizzle-kit:
+        specifier: ^0.30.1
+        version: 0.30.6
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
+      lint-staged:
+        specifier: ^15.2.11
+        version: 15.5.2
+      nodemon:
+        specifier: ^3.1.9
+        version: 3.1.10
+      passport:
+        specifier: ^0.7.0
+        version: 0.7.0
+      prettier:
+        specifier: ^3.4.2
+        version: 3.6.2
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      ts-add-js-extension:
+        specifier: ^1.6.6
+        version: 1.6.6
+      ts-node:
+        specifier: ^10.9.2
+        version: 10.9.2(@types/node@22.18.0)(typescript@5.9.2)
+      tsc-alias:
+        specifier: ^1.8.10
+        version: 1.8.16
+      tsc-esm-fix:
+        specifier: ^3.1.2
+        version: 3.1.2
+      tsconfig-paths:
+        specifier: ^4.2.0
+        version: 4.2.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.5
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.2
+
   apps/student-console:
     dependencies:
       '@clerk/nextjs':
@@ -12372,7 +12532,7 @@ snapshots:
       eslint: 8.57.1
       eslint-import-resolver-node: 0.3.9
       eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1)
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
       eslint-plugin-jsx-a11y: 6.10.2(eslint@8.57.1)
       eslint-plugin-react: 7.37.5(eslint@8.57.1)
       eslint-plugin-react-hooks: 5.0.0-canary-7118f5dd7-20230705(eslint@8.57.1)
@@ -12415,7 +12575,7 @@ snapshots:
       tinyglobby: 0.2.14
       unrs-resolver: 1.11.1
     optionalDependencies:
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1)
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -12430,7 +12590,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@8.57.1):
+  eslint-plugin-import@2.32.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(eslint@8.57.1))(eslint@8.57.1))(eslint@8.57.1):
     dependencies:
       '@rtsao/scc': 1.1.0
       array-includes: 3.1.9
