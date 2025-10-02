@@ -4,7 +4,12 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon src/index.ts",
+    "clean": "rimraf dist",
+    "copy-public-views": "mkdir -p dist/views && cp -r src/views/* dist/views/ 2>/dev/null || true",
+    "build": "pnpm run clean && tsc -p tsconfig.json && tsc-alias -p tsconfig.json && ts-add-js-extension --dir=dist && pnpm run copy-public-views",
+    "start": "node --stack-size=8192 dist/apps/notification-system/src/index.js"
   },
   "keywords": [],
   "author": "Harsh Nilesh Desai",

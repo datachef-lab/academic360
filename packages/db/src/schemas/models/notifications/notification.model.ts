@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { applicationFormModel } from "../admissions";
 import { userModel } from "../user";
 import { notificationStatusEnum, notificationTypeEnum, notificationVariantEnum } from "@/schemas/enums";

@@ -77,7 +77,7 @@ export default function EditUserModal({ onUpdate, user }: Props) {
           </DialogHeader>
 
           <div className="flex flex-col items-center gap-4">
-            <UserAvatar user={{ ...user, id: String(user.id) }} className="w-20 h-20" />
+            <UserAvatar user={user} className="w-20 h-20" />
 
             <div className="w-full space-y-3">
               {/* Name */}

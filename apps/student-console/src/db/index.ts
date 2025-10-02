@@ -1,27 +1,25 @@
-import dotenv from 'dotenv';
-import { drizzle, type MySql2Database } from 'drizzle-orm/mysql2';
-import { createPool, type Pool, type PoolConnection, type RowDataPacket } from 'mysql2/promise';
-import { drizzle as drizzlePostgres, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import dotenv from "dotenv";
+import { drizzle, type MySql2Database } from "drizzle-orm/mysql2";
+import { createPool, type Pool, type PoolConnection, type RowDataPacket } from "mysql2/promise";
+import { drizzle as drizzlePostgres, PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import * as schema from "./schema"; // Import your schema
-import { db as dbWorkspace } from "@repo/db/connection";
-import { migrate } from 'drizzle-orm/postgres-js/migrator'; // Ensure migrations are applied
 
 // Load environment variables
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 const dbPostgres: PostgresJsDatabase<typeof schema> = drizzlePostgres(process.env.DATABASE_URL!, { schema });
 
 // Connection configuration for MySQL (assuming it's still used elsewhere)
 const dbConfig = {
-    host: process.env.DB_HOST!,
-    port: parseInt(process.env.DB_PORT!, 10),
-    user: process.env.DB_USER!,
-    password: process.env.DB_PASSWORD!,
-    database: process.env.DB_NAME!,
-    waitForConnections: true,
-    connectionLimit: 15,
-    queueLimit: 0,
-    enableKeepAlive: true,
-    keepAliveInitialDelay: 10000,
+  host: process.env.DB_HOST!,
+  port: parseInt(process.env.DB_PORT!, 10),
+  user: process.env.DB_USER!,
+  password: process.env.DB_PASSWORD!,
+  database: process.env.DB_NAME!,
+  waitForConnections: true,
+  connectionLimit: 15,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 10000,
 };
 
 // Create a global pool that can be reused for MySQL
@@ -30,38 +28,35 @@ let db: MySql2Database<Record<string, never>>;
 
 // Initialize MySQL pool right away
 try {
-    pool = createPool(dbConfig);
-    db = drizzle(pool);
-    console.log('MySQL Database pool created');
+  pool = createPool(dbConfig);
+  db = drizzle(pool);
+  console.log("MySQL Database pool created");
 } catch (error) {
-    console.error('Failed to create MySQL database pool:', error);
-    // Do not throw here if MySQL is optional/not critical for all operations
+  console.error("Failed to create MySQL database pool:", error);
+  // Do not throw here if MySQL is optional/not critical for all operations
 }
 
 // Simple query function for MySQL
-export async function query<T extends RowDataPacket[]>(
-    sql: string,
-    values?: unknown[]
-): Promise<T> {
-    let connection: PoolConnection | null = null;
+export async function query<T extends RowDataPacket[]>(sql: string, values?: unknown[]): Promise<T> {
+  let connection: PoolConnection | null = null;
 
-    try {
-        if (!pool) throw new Error("MySQL pool not initialized");
-        // Get connection from the pool
-        connection = await pool.getConnection();
+  try {
+    if (!pool) throw new Error("MySQL pool not initialized");
+    // Get connection from the pool
+    connection = await pool.getConnection();
 
-        // Execute the query
-        const [results] = await connection.query<T>(sql, values);
+    // Execute the query
+    const [results] = await connection.query<T>(sql, values);
 
-        // Return just the results (not the fields info)
-        return results;
-    } catch (error) {
-        console.error('MySQL Query execution error:', error);
-        throw error;
-    } finally {
-        // Always release the connection back to the pool
-        if (connection) connection.release();
-    }
+    // Return just the results (not the fields info)
+    return results;
+  } catch (error) {
+    console.error("MySQL Query execution error:", error);
+    throw error;
+  } finally {
+    // Always release the connection back to the pool
+    if (connection) connection.release();
+  }
 }
 
 // Graceful shutdown handler

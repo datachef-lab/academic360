@@ -13,9 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Play, Pause, Square, Settings, BookOpen, FileText, CheckCircle, AlertCircle, Calendar } from "lucide-react";
-import { ProcessControlService, ProcessControlFilters } from "@/services/process-control";
-import { ProcessControl } from "@repo/db/schemas/models/process-control";
+import { Play, Pause, Square, Settings, BookOpen, FileText, CheckCircle } from "lucide-react";
 
 interface ProgramCourse {
   id: number;
@@ -206,17 +204,6 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
     }
   };
 
-  const getProcessIcon = (processType: string) => {
-    switch (processType) {
-      case "SUBJECT_SELECTION":
-        return <BookOpen className="h-4 w-4" />;
-      case "CU_REGISTRATION":
-        return <FileText className="h-4 w-4" />;
-      default:
-        return <Settings className="h-4 w-4" />;
-    }
-  };
-
   const getActionIcon = (action: string) => {
     switch (action) {
       case "ACTIVATE":
@@ -257,7 +244,14 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="process-type">Process Type</Label>
-                <Select value={processType} onValueChange={(value: any) => setProcessType(value)}>
+                <Select
+                  value={processType}
+                  onValueChange={(value) => {
+                    if (value === "SUBJECT_SELECTION" || value === "CU_REGISTRATION") {
+                      setProcessType(value);
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select process type" />
                   </SelectTrigger>
@@ -280,7 +274,14 @@ export default function ProcessControlDialog({ open, onOpenChange, onProcessUpda
 
               <div className="space-y-2">
                 <Label htmlFor="action">Action</Label>
-                <Select value={action} onValueChange={(value: any) => setAction(value)}>
+                <Select
+                  value={action}
+                  onValueChange={(value) => {
+                    if (value === "ACTIVATE" || value === "DEACTIVATE") {
+                      setAction(value);
+                    }
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select action" />
                   </SelectTrigger>
