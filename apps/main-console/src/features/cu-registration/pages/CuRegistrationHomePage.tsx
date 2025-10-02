@@ -14,24 +14,17 @@ import {
   Edit3,
   Send,
   Filter,
+  Settings,
+  Search,
 } from "lucide-react";
-import {
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useState } from "react";
-import { useSelector } from "react-redux";
-import { selectCurrentAcademicYear } from "@/store/slices/academicYearSlice";
-import { getSearchedStudents, StudentSearchItem } from "@/services/student";
-import { useNavigate } from "react-router-dom";
+import ProcessControlDialog from "../components/ProcessControlDialog";
+import { CuRegistrationSearch } from "../components/CuRegistrationSearch";
 
 export default function CuRegistrationHomePage() {
-  const [openSearch, setOpenSearch] = useState(false);
+  const [processControlOpen, setProcessControlOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+
   // Mock data - replace with actual data from API
   const overallStats = {
     totalStudents: 3537,
@@ -215,6 +208,11 @@ export default function CuRegistrationHomePage() {
     },
   ];
 
+  const handleProcessUpdate = (updates: unknown[]) => {
+    console.log("Process updates:", updates);
+    // TODO: Implement API call to update processes
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -224,10 +222,21 @@ export default function CuRegistrationHomePage() {
           <p className="text-slate-600 mt-2">Summary of Subject Selection and CU Registration processes</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setOpenSearch(true)}>
-            Search Student
+          <Button
+            onClick={() => setSearchDialogOpen(true)}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm"
+          >
+            <Search className="h-4 w-4" />
+            Search Students
           </Button>
-          <Button variant="outline" className="flex items-center gap-2">
+          <Button
+            onClick={() => setProcessControlOpen(true)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white border-0 shadow-sm"
+          >
+            <Settings className="h-4 w-4" />
+            Process Controls
+          </Button>
+          <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm">
             <Download className="h-4 w-4" />
             Export Report
           </Button>
@@ -546,7 +555,7 @@ export default function CuRegistrationHomePage() {
                   Completed subject selection but haven't submitted CU registration
                 </p>
               </div>
-              <Button className="w-full" variant="outline">
+              <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white border-0 shadow-sm">
                 <Upload className="h-4 w-4 mr-2" />
                 Send Registration Reminders
               </Button>
@@ -562,122 +571,39 @@ export default function CuRegistrationHomePage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button className="h-20 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm">
               <BookOpen className="h-6 w-6" />
               <span>Subject Selection</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button className="h-20 flex flex-col gap-2 bg-purple-600 hover:bg-purple-700 text-white border-0 shadow-sm">
               <FileText className="h-6 w-6" />
               <span>CU Registration</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button className="h-20 flex flex-col gap-2 bg-amber-600 hover:bg-amber-700 text-white border-0 shadow-sm">
               <Edit3 className="h-6 w-6" />
               <span>Review Corrections</span>
             </Button>
-            <Button variant="outline" className="h-20 flex flex-col gap-2">
+            <Button className="h-20 flex flex-col gap-2 bg-emerald-600 hover:bg-emerald-700 text-white border-0 shadow-sm">
               <BarChart3 className="h-6 w-6" />
               <span>View Reports</span>
             </Button>
           </div>
         </CardContent>
       </Card>
-      <CuRegistrationSearchDialog open={openSearch} onOpenChange={setOpenSearch} />
-    </div>
-  );
-}
 
-export function CuRegistrationSearchDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-}) {
-  const [suggestions, setSuggestions] = useState<Array<{ uid: string; name?: string | null }>>([]);
-  const [inputValue, setInputValue] = useState("");
-  const navigate = useNavigate();
-  const currentYear = useSelector(selectCurrentAcademicYear);
-
-  async function fetchSuggestions(q: string) {
-    const query = q.trim();
-    if (query.length < 2) return [] as Array<{ uid: string; name?: string | null }>;
-    if (/^\d{4,}$/.test(query)) {
-      try {
-        const token = localStorage.getItem("token");
-        const resp = await fetch(`/api/students/uid/${encodeURIComponent(query)}`, {
-          headers: token ? { Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}` } : undefined,
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          const one = data?.payload;
-          if (one?.uid) return [{ uid: String(one.uid), name: one?.personalDetails?.firstName ?? null }];
-        }
-      } catch {
-        // ignore errors in quick UID probe
-      }
-    }
-    try {
-      const res = await getSearchedStudents(query, 1, 6);
-      return (res?.content ?? [])
-        .map((s: StudentSearchItem) => ({ uid: String(s.uid ?? s.id ?? ""), name: s.name ?? null }))
-        .filter((s) => s.uid);
-    } catch {
-      return [] as Array<{ uid: string; name?: string | null }>;
-    }
-  }
-
-  return (
-    <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput
-        placeholder={`Search by UID, Roll No, or Name ${currentYear?.year ? `(Year: ${currentYear.year})` : ""}`}
-        onValueChange={async (v) => {
-          setInputValue(v);
-          setSuggestions(await fetchSuggestions(v));
-        }}
+      {/* Process Control Dialog */}
+      <ProcessControlDialog
+        open={processControlOpen}
+        onOpenChange={setProcessControlOpen}
+        onProcessUpdate={handleProcessUpdate}
       />
-      <CommandList className="min-h-[160px] max-h-80 overflow-auto">
-        <CommandEmpty>No results found.</CommandEmpty>
-        {suggestions.length > 0 && (
-          <CommandGroup heading="Students">
-            {suggestions.map((s) => (
-              <CommandItem
-                key={s.uid}
-                value={s.uid}
-                onSelect={() => {
-                  onOpenChange(false);
-                  navigate(`/dashboard/cu-registration/${s.uid}`);
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={`${import.meta.env.VITE_STUDENT_PROFILE_URL}/Student_Image_${s.uid}.jpg`} />
-                    <AvatarFallback className="text-[10px]">{(s.name ?? s.uid)?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <span className="font-medium">{s.uid}</span>
-                  <span className="text-xs text-muted-foreground">{s.name ?? ""}</span>
-                </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-        {/\d{6,}/.test(inputValue.trim()) && (
-          <CommandGroup heading="Quick action">
-            <CommandItem
-              value={`open-${inputValue.trim()}`}
-              onSelect={() => {
-                onOpenChange(false);
-                navigate(`/dashboard/cu-registration/${inputValue.trim()}`);
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span className="font-medium">Open UID</span>
-                <span className="text-xs text-muted-foreground">{inputValue.trim()}</span>
-              </div>
-            </CommandItem>
-          </CommandGroup>
-        )}
-      </CommandList>
-    </CommandDialog>
+
+      {/* CU Registration Search */}
+      <CuRegistrationSearch
+        isOpen={searchDialogOpen}
+        onClose={() => setSearchDialogOpen(false)}
+        onOpenProcessControls={() => setProcessControlOpen(true)}
+      />
+    </div>
   );
 }
