@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
@@ -59,9 +60,35 @@ export default function SignInPage() {
         throw new Error(response.message || "Login failed");
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "Invalid credentials";
-      setError(msg);
-      setInvalidMessage("Invalid credentials. Please check your UID and password.");
+      let uiMessage = "Invalid credentials. Please check your UID and password.";
+      let bannerMessage = uiMessage;
+
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const data: any = error.response?.data ?? {};
+        const serverMsg: string | undefined = (data && (data.message || data.error)) as string | undefined;
+
+        if (status === 403) {
+          uiMessage = serverMsg || "Your account is disabled. Please contact support.";
+          bannerMessage = uiMessage;
+        } else if (status === 429) {
+          uiMessage = serverMsg || "Too many login attempts. Please try again after a minute.";
+          bannerMessage = uiMessage;
+        } else if (status === 401) {
+          uiMessage = serverMsg || "Invalid credentials. Please check your UID and password.";
+          bannerMessage = uiMessage;
+        } else if (serverMsg) {
+          bannerMessage = serverMsg;
+          uiMessage = serverMsg;
+        } else if (error.message) {
+          bannerMessage = error.message;
+        }
+      } else if (error instanceof Error && error.message) {
+        bannerMessage = error.message;
+      }
+
+      setError(bannerMessage);
+      setInvalidMessage(uiMessage);
       setInvalidOpen(true);
     } finally {
       setIsLoading(false);

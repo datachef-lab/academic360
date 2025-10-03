@@ -181,8 +181,8 @@ export async function createAdminStudentSubjectSelectionsHandler(
     console.log("🔍 Admin Debug - User ID:", userId);
     console.log("🔍 Admin Debug - User Type:", userType);
 
-    // Check if user is admin (only admins can use this endpoint)
-    if (userType !== "ADMIN") {
+    // Check if user is admin or staff (both can use this endpoint)
+    if (userType !== "ADMIN" && userType !== "STAFF") {
       res
         .status(403)
         .json(
@@ -190,7 +190,7 @@ export async function createAdminStudentSubjectSelectionsHandler(
             403,
             "FORBIDDEN",
             null,
-            "Only admins can use this endpoint",
+            "Only admins or staff can use this endpoint",
           ),
         );
       return;
@@ -199,7 +199,7 @@ export async function createAdminStudentSubjectSelectionsHandler(
     // For admin selections, use the reason provided in the request body
     // or default to admin action
     const changeReason =
-      selections[0]?.reason || "Admin created/updated selection";
+      selections[0]?.reason || "Admin/Staff created/updated selection";
 
     const result = await updateStudentSubjectSelectionsEfficiently(
       selections,
