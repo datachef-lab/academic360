@@ -65,8 +65,9 @@ export function CuRegistrationSearchModal({ open, onOpenChange }: CuRegistration
     (studentId: number) => {
       isNavigatingRef.current = true;
       onOpenChange(false);
+      const target = String(studentId ?? "");
       setTimeout(() => {
-        navigate(`/dashboard/cu-registration/${studentId}`);
+        navigate(`/dashboard/cu-registration/${target}`);
         isNavigatingRef.current = false;
       }, 100);
     },

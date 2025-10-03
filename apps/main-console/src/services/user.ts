@@ -2,6 +2,7 @@ import { ApiResponse } from "@/types/api-response";
 import { PaginatedResponse } from "@/types/pagination";
 import { User } from "@/types/user/user";
 import axiosInstance from "@/utils/api";
+import type { AuthUser } from "@/types/Auth/authUser";
 
 export async function getSearchedUsers(
   page: number,
@@ -50,4 +51,10 @@ export async function addUser(
 ): Promise<ApiResponse<User>> {
   const response = await axiosInstance.post("/auth", user);
   return response.data;
+}
+
+// Fetch a single user by id (used to show student name/photo in CU Reg page)
+export async function getUserById(id: number): Promise<ApiResponse<AuthUser>> {
+  const response = await axiosInstance.get(`/api/users`, { params: { id } });
+  return response.data as ApiResponse<AuthUser>;
 }

@@ -8,13 +8,21 @@ import { useState, useEffect } from "react";
 import SubjectSelectionForm from "../components/SubjectSelectionForm";
 import { fetchStudentByUid } from "@/services/student";
 import { StudentDto } from "@repo/db/dtos/user";
+import { getUserById } from "@/services/user";
+import { UserAvatar } from "@/hooks/UserAvatar";
 
 export default function CuRegStudentPage() {
   const { uid } = useParams<{ uid: string }>();
   const [activeTab, setActiveTab] = useState("subject-selection");
   const [studentData, setStudentData] = useState<StudentDto | null>(null);
+  const [userName, setUserName] = useState<string | undefined>(undefined);
+  const [userImage, setUserImage] = useState<string | undefined>(undefined);
+  const [displayName, setDisplayName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const display = (v?: string | null) => (v && String(v).trim().length > 0 ? String(v) : "—");
+  const valueClass = "text-slate-800 bg-gray-50 p-2 rounded border min-h-[40px] flex items-center";
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -27,6 +35,26 @@ export default function CuRegStudentPage() {
         setLoading(true);
         const data = await fetchStudentByUid(uid);
         setStudentData(data);
+
+        // Provisional name from personalDetails
+        const first = data?.personalDetails?.firstName || "";
+        const middle = data?.personalDetails?.middleName || "";
+        const last = data?.personalDetails?.lastName || "";
+        const fromPersonal = `${first} ${middle} ${last}`.replace(/\s+/g, " ").trim();
+        if (fromPersonal) setDisplayName(fromPersonal);
+
+        // fetch linked user for official name/photo
+        if (data?.userId) {
+          const res = await getUserById(data.userId);
+          console.log("res", res);
+          const nm = res.payload?.name;
+          if (nm && nm.trim()) setDisplayName(nm.trim());
+          setUserName(nm || undefined);
+          setUserImage(res.payload?.image || undefined);
+        }
+
+        // Ensure some value is present to avoid blank cell
+        setDisplayName((prev) => prev || "N/A");
         setError(null);
       } catch (err) {
         console.error("Failed to fetch student by UID:", err);
@@ -40,45 +68,58 @@ export default function CuRegStudentPage() {
     fetchStudent();
   }, [uid]);
 
-  // Mock CU Registration form data (similar to student console form)
+  // Build CU Registration display data from real student data
   const cuRegistrationData = {
     personalInfo: {
-      fullName: "John Doe",
-      parentName: "Robert Doe",
-      gender: "Male",
-      nationality: "Indian",
-      aadhaarNumber: "1234 5678 9012",
-      apaarId: "APAAR123456789",
+      fullName: displayName || "",
+      parentName: "",
+      gender: studentData?.personalDetails?.gender || "",
+      nationality:
+        studentData?.personalDetails?.nationality?.name || studentData?.personalDetails?.otherNationality || "",
+      aadhaarNumber: studentData?.personalDetails?.aadhaarCardNumber || "",
+      apaarId: studentData?.apaarId || studentData?.personalDetails?.aadhaarCardNumber || "",
     },
     addressData: {
       residential: {
-        addressLine: "123 Main Street, Park Avenue",
-        city: "Kolkata",
-        district: "Kolkata",
-        policeStation: "Park Street",
-        postOffice: "Park Street",
-        state: "West Bengal",
-        country: "India",
-        pinCode: "700016",
+        addressLine: studentData?.personalDetails?.address?.[0]?.address || "",
+        city: studentData?.personalDetails?.address?.[0]?.city?.name || "",
+        district: studentData?.personalDetails?.address?.[0]?.district?.name || "",
+        policeStation:
+          studentData?.personalDetails?.address?.[0]?.policeStation?.name ||
+          studentData?.personalDetails?.address?.[0]?.otherPoliceStation ||
+          "",
+        postOffice:
+          studentData?.personalDetails?.address?.[0]?.postoffice?.name ||
+          studentData?.personalDetails?.address?.[0]?.otherPostoffice ||
+          "",
+        state: studentData?.personalDetails?.address?.[0]?.state?.name || "",
+        country: studentData?.personalDetails?.address?.[0]?.country?.name || "",
+        pinCode: studentData?.personalDetails?.address?.[0]?.pincode || "",
       },
       mailing: {
-        addressLine: "123 Main Street, Park Avenue",
-        city: "Kolkata",
-        district: "Kolkata",
-        policeStation: "Park Street",
-        postOffice: "Park Street",
-        state: "West Bengal",
-        country: "India",
-        pinCode: "700016",
+        addressLine: studentData?.personalDetails?.address?.[1]?.address || "",
+        city: studentData?.personalDetails?.address?.[1]?.city?.name || "",
+        district: studentData?.personalDetails?.address?.[1]?.district?.name || "",
+        policeStation:
+          studentData?.personalDetails?.address?.[1]?.policeStation?.name ||
+          studentData?.personalDetails?.address?.[1]?.otherPoliceStation ||
+          "",
+        postOffice:
+          studentData?.personalDetails?.address?.[1]?.postoffice?.name ||
+          studentData?.personalDetails?.address?.[1]?.otherPostoffice ||
+          "",
+        state: studentData?.personalDetails?.address?.[1]?.state?.name || "",
+        country: studentData?.personalDetails?.address?.[1]?.country?.name || "",
+        pinCode: studentData?.personalDetails?.address?.[1]?.pincode || "",
       },
     },
     documents: {
-      classXIIMarksheet: "uploaded",
-      aadhaarCard: "uploaded",
-      apaarId: "uploaded",
-      fatherId: "uploaded",
-      motherId: "uploaded",
-      ewsCertificate: "not-applicable",
+      classXIIMarksheet: "",
+      aadhaarCard: "",
+      apaarId: "",
+      fatherId: "",
+      motherId: "",
+      ewsCertificate: "",
     },
   };
 
@@ -90,7 +131,21 @@ export default function CuRegStudentPage() {
       {studentData?.currentPromotion && (
         <div className="p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg">
           {/* Academic Information */}
-          <div className="flex mb-4">
+          <div className="flex mb-4 items-start">
+            <div className="mr-4 self-stretch flex items-center">
+              <UserAvatar
+                user={{
+                  name: userName || studentData?.personalDetails?.firstName || undefined,
+                  image:
+                    userImage ||
+                    (studentData?.uid
+                      ? `https://74.207.233.48:8443/hrclIRP/studentimages/Student_Image_${studentData.uid}.jpg`
+                      : undefined),
+                }}
+                size="lg"
+                className="h-20 w-20 md:h-24 md:w-24"
+              />
+            </div>
             <div className="w-44 pr-2">
               <div className="text-base font-bold">Academic Year</div>
               <div className="text-base font-bold mt-1">Program Course</div>
@@ -110,24 +165,17 @@ export default function CuRegStudentPage() {
               <div className="text-base font-bold text-blue-900 mt-1">
                 {studentData.currentPromotion.programCourse?.name || "N/A"}
               </div>
-              <div className="text-base font-bold text-blue-900 mt-1">
-                {studentData.personalDetails?.firstName && studentData.personalDetails?.lastName
-                  ? `${studentData.personalDetails.firstName} ${studentData.personalDetails.lastName}`
-                  : "N/A"}
-              </div>
+              <div className="text-base font-bold text-blue-900 mt-1">{displayName || ""}</div>
               <div className="text-base font-bold text-blue-900 mt-1">{studentData.uid || "N/A"}</div>
             </div>
           </div>
 
-          {/* Admin Notes - Only show for Subject Selection tab */}
+          {/* Admin Notes - Always show for Subject Selection tab */}
           {activeTab === "subject-selection" && (
             <div className="flex items-start gap-3 pt-4 border-t border-blue-200">
               <div className="w-5 h-5 mt-0.5 flex-shrink-0">ℹ️</div>
               <div className="flex-1">
-                <div className="text-base leading-relaxed">
-                  This student has existing subject selections. You can modify them below. Changes will be logged for
-                  audit purposes.
-                </div>
+                <div className="text-base leading-relaxed">Changes will be logged for audit purposes.</div>
               </div>
             </div>
           )}
@@ -203,41 +251,29 @@ export default function CuRegStudentPage() {
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.1 Full Name</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.fullName}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.fullName)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.2 Parent/Guardian Name</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.parentName}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.parentName)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.3 Gender</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.gender}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.gender)}</p>
                       </div>
                     </div>
                     <div className="space-y-4">
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.4 Nationality</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.nationality}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.nationality)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.5 Aadhaar Number</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.aadhaarNumber}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.aadhaarNumber)}</p>
                       </div>
                       <div>
                         <label className="text-sm font-medium text-slate-600">1.6 APAAR ID</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                          {cuRegistrationData.personalInfo.apaarId}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.personalInfo.apaarId)}</p>
                       </div>
                     </div>
                   </div>
@@ -259,56 +295,42 @@ export default function CuRegStudentPage() {
                       <h3 className="text-lg font-semibold text-slate-800">Residential Address</h3>
                       <div>
                         <label className="text-sm font-medium text-slate-600">2.1 Address Line</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border min-h-[60px]">
-                          {cuRegistrationData.addressData.residential.addressLine}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.addressData.residential.addressLine)}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.2 City</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.city}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.city)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.3 District</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.district}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.district)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.4 Police Station</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.policeStation}
+                          <p className={valueClass}>
+                            {display(cuRegistrationData.addressData.residential.policeStation)}
                           </p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.5 Post Office</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.postOffice}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.postOffice)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.6 State</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.state}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.state)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.7 Country</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.country}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.country)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">2.8 Pin Code</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.residential.pinCode}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.residential.pinCode)}</p>
                         </div>
                       </div>
                     </div>
@@ -318,56 +340,40 @@ export default function CuRegStudentPage() {
                       <h3 className="text-lg font-semibold text-slate-800">Mailing Address</h3>
                       <div>
                         <label className="text-sm font-medium text-slate-600">3.1 Address Line</label>
-                        <p className="text-slate-800 bg-gray-50 p-2 rounded border min-h-[60px]">
-                          {cuRegistrationData.addressData.mailing.addressLine}
-                        </p>
+                        <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.addressLine)}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.2 City</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.city}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.city)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.3 District</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.district}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.district)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.4 Police Station</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.policeStation}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.policeStation)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.5 Post Office</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.postOffice}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.postOffice)}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.6 State</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.state}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.state)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.7 Country</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.country}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.country)}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-slate-600">3.8 Pin Code</label>
-                          <p className="text-slate-800 bg-gray-50 p-2 rounded border">
-                            {cuRegistrationData.addressData.mailing.pinCode}
-                          </p>
+                          <p className={valueClass}>{display(cuRegistrationData.addressData.mailing.pinCode)}</p>
                         </div>
                       </div>
                     </div>

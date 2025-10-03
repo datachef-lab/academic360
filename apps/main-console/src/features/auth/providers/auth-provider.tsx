@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect, ReactNode, createContext, useContext } from "react";
 import axiosInstance, { setAccessTokenForApi } from "@/utils/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 import { ApiResponse } from "@/types/api-response";
 import { UserDto } from "@repo/db/dtos/user";
@@ -35,8 +37,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isReady, setIsReady] = useState(false);
   const [interceptorsReady, setInterceptorsReady] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Modal state for auth-related messages
+  const [authDialog, setAuthDialog] = useState<{ open: boolean; title: string; message: string }>({
+    open: false,
+    title: "",
+    message: "",
+  });
+
+  // Refresh in-flight lock + subscribers (avoid multiple parallel refresh calls)
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshSubscribers = React.useRef<((token: string | null) => void)[]>([]);
+  const subscribeTokenRefresh = (cb: (token: string | null) => void) => {
+    refreshSubscribers.current.push(cb);
+  };
+  const onRrefreshed = (token: string | null) => {
+    refreshSubscribers.current.forEach((cb) => cb(token));
+    refreshSubscribers.current = [];
+  };
 
   const login = (accessToken: string, userData: UserDto) => {
+    // Allow only ADMIN or STAFF
+    if (userData?.type !== "ADMIN" && userData?.type !== "STAFF") {
+      // immediate logout and redirect
+      logout();
+      setAuthDialog({
+        open: true,
+        title: "Access restricted",
+        message: "Only ADMIN or STAFF can use the Admin Console.",
+      });
+      return;
+    }
     setAccessToken(accessToken);
     setAccessTokenForApi(accessToken);
     setUser(userData);
@@ -67,18 +99,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         { withCredentials: true }, // Include cookies in the request
       );
       console.log("response:", response);
+      const nextUser = response.data.payload.user;
+      if (nextUser?.type !== "ADMIN" && nextUser?.type !== "STAFF") {
+        throw new Error("ACCESS_RESTRICTED");
+      }
       setAccessToken(response.data.payload.accessToken);
       setAccessTokenForApi(response.data.payload.accessToken);
-      setUser(response.data.payload.user);
+      setUser(nextUser);
 
       return response.data.payload.accessToken;
     } catch (error) {
-      console.error("Failed to generate new token:", error);
-      // Only show alert if we're not on the login page
-      if (window.location.pathname !== "/") {
-        alert("Session expired or failed to authenticate. Please log in again.");
+      const isAccessRestricted = error instanceof Error && error.message === "ACCESS_RESTRICTED";
+      if (!isAccessRestricted) {
+        console.error("Failed to generate new token:", error);
       }
-      logout();
+      if (window.location.pathname !== "/") {
+        // immediate logout and redirect to root
+        logout();
+        setAuthDialog({
+          open: true,
+          title: isAccessRestricted ? "Access restricted" : "Session expired",
+          message: isAccessRestricted
+            ? "Only ADMIN or STAFF can use the Admin Console. Please login with an authorized account."
+            : "Session expired or failed to authenticate. Please log in again.",
+        });
+      }
       return null;
     }
   }, [logout]);
@@ -136,7 +181,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const originalRequest = error.config;
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
+          if (isRefreshing) {
+            // Wait for the refresh to finish
+            return new Promise((resolve) => {
+              subscribeTokenRefresh((token) => {
+                if (token) originalRequest.headers["Authorization"] = `Bearer ${token}`;
+                resolve(axiosInstance(originalRequest));
+              });
+            });
+          }
+          setIsRefreshing(true);
           const newAccessToken = await generateNewToken();
+          setIsRefreshing(false);
+          onRrefreshed(newAccessToken);
           if (newAccessToken) {
             originalRequest.headers["Authorization"] = `Bearer ${newAccessToken}`;
             return axiosInstance(originalRequest);
@@ -164,11 +221,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isReady,
   };
 
+  // Proactively resync token on route changes or tab focus to catch cross-tab logins
+  const lastSyncRef = React.useRef<number>(0);
+  useEffect(() => {
+    const trySync = async () => {
+      const now = Date.now();
+      if (now - lastSyncRef.current < 1000) return; // throttle
+      lastSyncRef.current = now;
+      const onProtected = /dashboard|home|console/i.test(location.pathname);
+      if (onProtected) {
+        await generateNewToken();
+      }
+    };
+    const onFocus = () => void trySync();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void trySync();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    void trySync();
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [location.pathname, generateNewToken]);
+
   const protectedPath = /dashboard|home|console/i.test(window.location.pathname);
   // If on a protected path, defer rendering children until token is present
   if (protectedPath && (!accessToken || !interceptorsReady)) {
     return null;
   }
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+      <Dialog open={authDialog.open} onOpenChange={(open) => setAuthDialog((p) => ({ ...p, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{authDialog.title}</DialogTitle>
+          </DialogHeader>
+          <div className="text-sm text-slate-600">{authDialog.message}</div>
+          <DialogFooter>
+            <Button onClick={() => setAuthDialog((p) => ({ ...p, open: false }))}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AuthContext.Provider>
+  );
 };

@@ -16,9 +16,10 @@ import { StudentDto } from "@repo/db/dtos/user";
 
 interface SubjectSelectionFormProps {
   uid: string;
+  onStatusChange?: (status: { hasExistingSelections: boolean }) => void;
 }
 
-export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps) {
+export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSelectionFormProps) {
   const [errors, setErrors] = useState<string[]>([]);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
@@ -110,6 +111,13 @@ export default function SubjectSelectionForm({ uid }: SubjectSelectionFormProps)
         // Check if student has actually submitted selections through the form
         const hasExisting = resp.hasFormSubmissions || false;
         setHasExistingSelections(hasExisting);
+        if (onStatusChange) {
+          try {
+            onStatusChange({ hasExistingSelections: hasExisting });
+          } catch {
+            // noop: best-effort notify parent
+          }
+        }
 
         // Auto-populate existing selections if they exist
         if (hasExisting && resp.actualStudentSelections && resp.actualStudentSelections.length > 0) {

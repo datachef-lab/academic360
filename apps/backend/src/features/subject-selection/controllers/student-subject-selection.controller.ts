@@ -90,7 +90,11 @@ export async function createStudentSubjectSelectionsHandler(
     );
 
     // Check if user is student or admin (students can create their own, admins can create on behalf of students)
-    if (userType !== "STUDENT" && userType !== "ADMIN") {
+    if (
+      userType !== "STUDENT" &&
+      userType !== "ADMIN" &&
+      userType !== "STAFF"
+    ) {
       res
         .status(403)
         .json(
