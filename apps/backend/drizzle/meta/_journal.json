@@ -162,6 +162,13 @@
       "when": 1759329203958,
       "tag": "0022_breezy_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1759562577413,
+      "tag": "0023_wild_carlie_cooper",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { eq, count, desc, or, ilike, and } from "drizzle-orm";
+import { eq, count, desc, or, ilike, and, isNull, is, sql } from "drizzle-orm";
 import { db } from "@/db/index.js";
 
 import { User, userModel } from "@repo/db/schemas/models/user";
@@ -476,6 +476,15 @@ export async function findProfileInfo(
       ])
     : [null, null];
 
+  // Fetch student reference academic info (where applicationFormId is null and studentId is set)
+  const studentAcademicInfo = isStudent
+    ? await db
+        .select()
+        .from(admissionAcademicInfoModel)
+        .where(and(eq(admissionAcademicInfoModel.studentId, student?.id!)))
+        .then((r) => r[0] ?? null)
+    : null;
+
   const applicationFormDto: ApplicationFormDto | null | undefined =
     isStudent && applicationForm
       ? await mapApplicationFormToDto(applicationForm, {
@@ -511,6 +520,9 @@ export async function findProfileInfo(
 
   const result: ProfileInfo = {
     applicationFormDto,
+    academicInfo: studentAcademicInfo
+      ? await mapAcademicInfoToDto(studentAcademicInfo)
+      : ({} as any),
     familyDetails: family ? await mapFamilyToDto(family) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,

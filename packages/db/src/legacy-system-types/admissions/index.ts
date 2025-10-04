@@ -483,3 +483,33 @@ export interface OldAdmissionStats {
     morning: number;
     total: number;
 }
+
+export interface OldStudentAcademicDetails {
+    readonly id: number;
+    index_col: number | null;
+    parent_id: number | null;
+    degreeId: number | null;
+    boardId: number | null;
+    year: number | null;
+    percentageOfMarks: number | null;
+    division: string | null;
+    rank: string | null;
+    institute: string | null;
+    otherbrd: string | null;
+    regno: string | null;
+    examroll: string | null;
+    examno: string | null;
+    degreecourseId: number | null;
+    rollno: string | null;
+    prevregno: string | null;
+}
+
+export interface OldStudentSubjectDetails {
+    readonly id: number;
+    index_col: number |  null;
+    parent_id: number |  null;
+    subjectId: number |  null;
+    marksObtained: number |  null;
+    totalMarks: number |  null;
+    othermarks: string | null;
+}

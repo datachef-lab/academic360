@@ -621,7 +621,7 @@ export async function addAdmAcademicInfo(
       and(
         eq(admissionAcademicInfoModel.applicationFormId, applicationForm.id!),
         eq(
-          admissionAcademicInfoModel.legacyAcademicInfoId,
+          admissionAcademicInfoModel.legacyAcademicDetailsId,
           oldAcademicDetails.id!,
         ),
       ),
@@ -672,7 +672,7 @@ export async function addAdmAcademicInfo(
   const [admAcademicInfo] = await db
     .insert(admissionAcademicInfoModel)
     .values({
-      legacyAcademicInfoId: oldAcademicDetails.id,
+      legacyAcademicDetailsId: oldAcademicDetails.id,
       applicationFormId: applicationForm.id!,
       boardId: finalBoard.id as number,
 
