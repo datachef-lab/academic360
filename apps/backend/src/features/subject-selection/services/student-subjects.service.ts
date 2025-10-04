@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import * as programCourseService from "@/features/course-design/services/program-course.service";
 import * as sessionService from "@/features/academics/services/session.service";
 import {
@@ -401,12 +401,7 @@ async function findHierarchy(studentId: number) {
   const [foundAdmAcademicInfo] = await db
     .select()
     .from(admissionAcademicInfoModel)
-    .where(
-      eq(
-        admissionAcademicInfoModel.applicationFormId,
-        foundApplicationForm?.id,
-      ),
-    );
+    .where(and(eq(admissionAcademicInfoModel.studentId, foundStudent?.id!)));
 
   const [foundAdmission] = await db
     .select()

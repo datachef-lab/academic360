@@ -5,7 +5,7 @@ import { DisabilityCodeT, EmergencyContactT, StaffT, TransportDetailsT, } from "
 import { StudentT } from "../../schemas/models/user/student.model";
 import { ProgramCourseDto } from "../course-design";
 import { BatchDto } from "../batches";
-import { ApplicationFormDto } from "../admissions";
+import { AdmissionAcademicInfoDto, ApplicationFormDto } from "../admissions";
 import { PoliceStationT } from "@/schemas/models/user/police-station.model";
 import { PostOfficeT } from "@/schemas/models/user/post-office.model";
 
@@ -101,6 +101,7 @@ export interface FamilyDetailDto extends Omit<Family, "fatherDetailsPersonId" | 
 
 export interface ProfileInfo {
     applicationFormDto?: ApplicationFormDto | null; // Only for student
+    academicInfo: AdmissionAcademicInfoDto;
     familyDetails: FamilyDto | null;
     personalDetails: PersonalDetailsDto | null;
     healthDetails: HealthDto | null;

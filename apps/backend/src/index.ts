@@ -50,7 +50,10 @@ function checkRequiredEnvs() {
   // checkRequiredEnvs(); // WILL BE NEED TO UNCOMMENT
   try {
     await connectToDatabase();
-    const shouldConnectMySQL = process.env.NODE_ENV === "production";
+    const shouldConnectMySQL =
+      process.env.NODE_ENV === "production" ||
+      process.env.NODE_ENV === "development" ||
+      process.env.NODE_ENV === "staging";
     if (shouldConnectMySQL) {
       await connectToMySQL();
     }
@@ -61,7 +64,11 @@ function checkRequiredEnvs() {
       console.log(`PROFILE: ${process.env.NODE_ENV!}\n`);
       console.log("Press Ctrl+C to stop the application.\n");
       //   await brainstormOldMigration();
-      if (process.env.NODE_ENV === "production") {
+      if (
+        process.env.NODE_ENV === "production" ||
+        process.env.NODE_ENV === "development" ||
+        process.env.NODE_ENV === "staging"
+      ) {
         await startLoadDataScheduler();
       }
     });

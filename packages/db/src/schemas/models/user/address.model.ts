@@ -26,18 +26,22 @@ export const addressModel = pgTable("address", {
     countryId: integer("country_id_fk").references(() => countryModel.id),
     otherCountry: varchar({ length: 255 }),
     previousCountryId: integer("previous_country_id_fk").references(() => countryModel.id),
+    previousOtherCountry: varchar({ length: 255 }),
 
     stateId: integer("state_id_fk").references(() => stateModel.id),
     otherState: varchar({ length: 255 }),
     previousStateId: integer("previous_state_id_fk").references(() => stateModel.id),
+    previousOtherState: varchar({ length: 255 }),
 
     cityId: integer("city_id_fk").references(() => cityModel.id),
     otherCity: varchar({ length: 255 }),
     previousCityId: integer("previous_city_id_fk").references(() => cityModel.id),
+    previousOtherCity: varchar({ length: 255 }),
 
     districtId: integer("district_id_fk").references(() => districtModel.id),
     otherDistrict: varchar({ length: 255 }),
     previousDistrictId: integer("previous_district_id_fk").references(() => districtModel.id),
+    previousOtherDistrict: varchar({ length: 255 }),
 
     address: varchar({ length: 255 }),
     addressLine: varchar({ length: 1000 }),
