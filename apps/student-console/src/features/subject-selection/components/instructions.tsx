@@ -20,7 +20,7 @@ export default function Instructions({ compact = false }: { compact?: boolean })
       </div>
 
       {/* Scrollable Content - Cleaner Design */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
         <div className="bg-white rounded-xl shadow-lg border border-gray-100">
           <div className="p-4">
             <div className="space-y-4 text-sm text-gray-700">

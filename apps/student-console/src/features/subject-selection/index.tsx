@@ -17,7 +17,7 @@ export default function SubjectSelection() {
           <SubjectSelectionForm openNotes={() => setOpenMobileNotes(true)} />
         </div>
         {/* Right: Notes (desktop only) */}
-        <div className="w-[25%] h-full border hidden lg:block overflow-y-auto">
+        <div className="w-[25%] h-full border hidden lg:block overflow-y-auto scrollbar-hide">
           <Instructions />
         </div>
 
@@ -46,7 +46,7 @@ export default function SubjectSelection() {
                   Close
                 </button>
               </div>
-              <div className="px-4 py-3 overflow-y-auto" style={{ maxHeight: "calc(85vh - 48px)" }}>
+              <div className="px-4 py-3 overflow-y-auto scrollbar-hide" style={{ maxHeight: "calc(85vh - 48px)" }}>
                 <Instructions />
               </div>
             </div>

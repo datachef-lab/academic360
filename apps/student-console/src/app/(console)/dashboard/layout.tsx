@@ -183,7 +183,7 @@ export default function DashboardLayout({
               })()} */}
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 overflow-y-scroll">
+          <div className="flex flex-1 flex-col gap-4 overflow-y-scroll scrollbar-hide">
             <div className="h-[calc(100vh-3.5rem)] flex-1 rounded-xl">
               <SharedArea>{children}</SharedArea>
             </div>

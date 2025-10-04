@@ -1480,7 +1480,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
       {/* Form Section - No Scrolling */}
       <div className="flex-1 overflow-hidden">
-        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
+        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto scrollbar-hide">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
             {showTips && (
