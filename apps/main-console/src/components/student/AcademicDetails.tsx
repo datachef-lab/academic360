@@ -21,7 +21,7 @@ import axiosInstance from "@/utils/api";
 import { toast } from "@/hooks/useToast";
 
 type AcademicDetailsProps = {
-  applicationAcademicInfo?: AdmissionAcademicInfoDto | null;
+  studentAcademicDetails?: AdmissionAcademicInfoDto | null;
   studentId?: number;
   userId?: number;
 };
@@ -112,9 +112,9 @@ function Field({
   );
 }
 
-export default function AcademicDetails({ applicationAcademicInfo, studentId, userId }: AcademicDetailsProps) {
+export default function AcademicDetails({ studentAcademicDetails, studentId, userId }: AcademicDetailsProps) {
   const queryClient = useQueryClient();
-  const [form, setForm] = useState<AdmissionAcademicInfoDto | null>(applicationAcademicInfo ?? null);
+  const [form, setForm] = useState<AdmissionAcademicInfoDto | null>(studentAcademicDetails ?? null);
   const subjects: StudentAcademicSubjectsDto[] = useMemo(() => {
     const list = (form?.subjects ?? []) as StudentAcademicSubjectsDto[];
     return [...list].sort((a, b) => Number(a?.id ?? 0) - Number(b?.id ?? 0));
@@ -214,8 +214,8 @@ export default function AcademicDetails({ applicationAcademicInfo, studentId, us
 
   // Keep local state in sync if prop changes (e.g., after save/load)
   useEffect(() => {
-    setForm(applicationAcademicInfo ?? null);
-  }, [applicationAcademicInfo]);
+    setForm(studentAcademicDetails ?? null);
+  }, [studentAcademicDetails]);
 
   useEffect(() => {
     (async () => {
@@ -432,12 +432,13 @@ export default function AcademicDetails({ applicationAcademicInfo, studentId, us
             disabled={!(form as AdmissionAcademicInfoDto | null)?.id}
             onClick={async () => {
               if (!form || !(form as AdmissionAcademicInfoDto).id) return;
-              const original = (applicationAcademicInfo ?? {}) as Partial<AdmissionAcademicInfoDto>;
+              const original = (studentAcademicDetails ?? {}) as Partial<AdmissionAcademicInfoDto>;
               const f = form as unknown as FormWithAddress;
 
               const payload: Partial<AdmissionAcademicInfoDto> = {
                 id: (form as AdmissionAcademicInfoDto).id,
-                applicationFormId: original.applicationFormId!,
+                applicationFormId: null, // Student reference academic info has null applicationFormId
+                studentId: studentId || userId, // Set studentId for student reference
                 boardId: (f.board?.id ??
                   (original as unknown as { boardId?: number; boardUniversityId?: number }).boardId ??
                   (original as unknown as { boardUniversityId?: number }).boardUniversityId) as number,

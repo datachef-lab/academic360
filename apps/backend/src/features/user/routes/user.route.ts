@@ -7,12 +7,15 @@ import {
   toggleDisableUser,
   updateUser,
   getProfileInfo,
+  exportStudents,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
 const router = express.Router();
 
 router.get("/:userId/profile", getProfileInfo);
+// Export students to Excel
+router.get("/export/students", exportStudents);
 router.use(verifyJWT);
 
 // Profile

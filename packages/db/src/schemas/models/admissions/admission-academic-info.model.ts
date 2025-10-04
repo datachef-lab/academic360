@@ -14,14 +14,16 @@ import { programCourseModel, specializationModel } from "@/schemas/models/course
 import { boardResultStatusType } from "@/schemas/enums";
 import { applicationFormModel } from "@/schemas/models/admissions";
 import { boardModel, institutionModel, languageMediumModel } from "@/schemas/models/resources";
-import { addressModel } from "../user";
+import { addressModel, studentModel } from "../user";
 
 export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     id: serial("id").primaryKey(),
-    legacyAcademicInfoId: integer("legacy_academic_info_id"),
+    legacyAcademicDetailsId: integer("legacy_academic_details_id"),
+    legacyStudentAcademicDetailsId: integer("legacy_student_academic_details_id"),
     applicationFormId: integer("application_form_id_fk")
-        .references(() => applicationFormModel.id)
-        .notNull(),
+        .references(() => applicationFormModel.id),
+    studentId: integer("student_id_fk")
+        .references(() => studentModel.id),
     boardId: integer("board_id_fk")
         .references(() => boardModel.id)
         .notNull(),
@@ -42,7 +44,10 @@ export const admissionAcademicInfoModel = pgTable("admission_academic_info", {
     indexNumber2: varchar("index_number_2", { length: 255 }),
 
     registrationNumber: varchar("registration_number", { length: 255 }),
+    previousRegistrationNumber: varchar("previous_registration_number", { length: 255 }),
     rollNumber: varchar("roll_number", { length: 255 }),
+    examNumber: varchar("exam_number", { length: 255 }),
+
     schoolNumber: varchar("school_number", { length: 255 }),
     centerNumber: varchar("center_number", { length: 255 }),
     admitCardId: varchar("admit_card_id", { length: 255 }),

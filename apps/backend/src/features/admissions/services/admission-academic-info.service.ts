@@ -197,6 +197,11 @@ export async function updateAcademicInfo(
   if (prevInstId != null) base.previousInstituteId = prevInstId;
   if (typeof (rest as any).otherPreviousInstitute === "string")
     base.otherPreviousInstitute = (rest as any).otherPreviousInstitute;
+
+  // Handle studentId for student reference academic info
+  const studentId = toNum((rest as any).studentId);
+  if (studentId != null) base.studentId = studentId;
+
   // Intentionally avoid updating applicationFormId and boardId to prevent FK/constraint issues
 
   // Hydrate missing required fields from existing row to satisfy DB constraints

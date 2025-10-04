@@ -8,6 +8,7 @@ import { admissionAcademicInfoModel, boardSubjectModel, gradeModel } from "@/sch
 export const studentAcademicSubjectModel = pgTable("student_academic_subjects", {
     id: serial("id").primaryKey(),
     legacySubjectDetailsId: integer("legacy_subject_details_id"),
+    legacyStudentSubjectDetailsId: integer("legacy_student_subject_details_id"),
     admissionAcademicInfoId: integer("admission_academic_info_id_fk")
         .references(() => admissionAcademicInfoModel.id)
         .notNull(),

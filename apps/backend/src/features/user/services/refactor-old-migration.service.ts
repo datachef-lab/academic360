@@ -58,6 +58,9 @@ export async function loadData(sinceDate?: Date) {
     const { foundSession } = meta;
 
     const stats = await getOldAdmissionStatsByOldSessionId(oldSession.id!);
+    // Mate the stats sort by the total number of students in ascending order
+    stats.sort((a, b) => a.total - b.total);
+    console.log("stats", stats);
 
     for (let i = 0; i < stats.length; i++) {
       if (i == stats.length - 1) {

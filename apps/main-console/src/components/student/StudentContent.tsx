@@ -113,7 +113,7 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
       case "Academic":
         return (
           <AcademicDetails
-            applicationAcademicInfo={profile?.applicationFormDto?.academicInfo ?? null}
+            studentAcademicDetails={profile?.academicInfo ?? null}
             studentId={studentId}
             userId={userId}
           />

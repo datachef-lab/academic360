@@ -70,12 +70,24 @@ import {
   PromotionInsertSchema,
   ApplicationForm,
   applicationFormModel,
+  studentAcademicSubjectModel,
+  admissionAcademicInfoModel,
+  boardSubjectModel,
+  boardSubjectNameModel,
+  gradeModel,
+  AdmissionAcademicInfo,
+  StudentAcademicSubjects,
+  BoardSubject,
+  BoardSubjectName,
 } from "@repo/db/schemas/models";
 import {
   OldAdmStudentPersonalDetail,
   OldBoardResultStatus,
   OldCourseDetails,
   OldStudentCategory,
+  OldStudentSubjectDetails,
+  OldBoardSubjectName,
+  OldStudentAcademicDetails,
 } from "@repo/db/legacy-system-types/admissions";
 
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
@@ -1907,7 +1919,376 @@ export async function processStudent(
     }
   }
 
+  // Step 10: Load the student academic info and subjects
+  await loadStudentAcademicInfoAndSubjects(oldStudent, student);
   return student;
+}
+
+async function loadStudentAcademicInfoAndSubjects(
+  oldStudent: OldStudent,
+  student: Student,
+) {
+  const [oldStudentAcademicDetailsRows] = (await mysqlConnection.query(`
+    SELECT * FROM studentacademicdetail WHERE parent_id = ${oldStudent.id}
+  `)) as [OldStudentAcademicDetails[], any];
+
+  const oldStudentAcademicDetails = oldStudentAcademicDetailsRows[0];
+
+  if (!oldStudentAcademicDetails) {
+    console.warn(
+      `No student academic info found for student ID: ${oldStudent.id}`,
+    );
+    return;
+  }
+
+  const [studentSubjects] = (await mysqlConnection.query(`
+    SELECT * FROM studentsubjectdetail WHERE parent_id = ${oldStudentAcademicDetails.id}
+  `)) as [OldStudentSubjectDetails[], any];
+
+  if (!studentSubjects || studentSubjects.length === 0) {
+    console.warn(
+      `No student subjects found for academic info ID: ${oldStudentAcademicDetails.id}`,
+    );
+    return;
+  }
+
+  // Step 1: Fetch existing academic info and student academic subjects by application form ID
+  const existingAcademicInfo = await db
+    .select()
+    .from(admissionAcademicInfoModel)
+    .where(
+      eq(admissionAcademicInfoModel.applicationFormId, student.applicationId!),
+    );
+
+  const existingStudentSubjects = await db
+    .select()
+    .from(studentAcademicSubjectModel)
+    .innerJoin(
+      admissionAcademicInfoModel,
+      eq(
+        studentAcademicSubjectModel.admissionAcademicInfoId,
+        admissionAcademicInfoModel.id,
+      ),
+    )
+    .where(
+      eq(admissionAcademicInfoModel.applicationFormId, student.applicationId!),
+    );
+  for (let i = 0; i < existingStudentSubjects.length; i++) {
+    const existingStudentSubject = existingStudentSubjects[i];
+    const studentAcademicSubject =
+      existingStudentSubject.student_academic_subjects;
+    const totalMarks =
+      (studentAcademicSubject.theoryMarks || 0) +
+      (studentAcademicSubject.practicalMarks || 0);
+    await db
+      .update(studentAcademicSubjectModel)
+      .set({
+        totalMarks,
+      })
+      .where(
+        eq(
+          studentAcademicSubjectModel.id,
+          existingStudentSubject.student_academic_subjects.id,
+        ),
+      );
+  }
+
+  // Step 2: Check if academic info exists by legacyStudentAcademicDetailsId and student.id
+  const [foundAcademicInfo] = await db
+    .select()
+    .from(admissionAcademicInfoModel)
+    .where(
+      and(
+        eq(admissionAcademicInfoModel.studentId, student.id!),
+        eq(
+          admissionAcademicInfoModel.legacyStudentAcademicDetailsId,
+          oldStudentAcademicDetails.id,
+        ),
+      ),
+    );
+
+  let academicInfo: AdmissionAcademicInfo;
+
+  if (foundAcademicInfo) {
+    // Update existing academic info with data from application form, then overwrite with old data
+    const baseData = existingAcademicInfo[0] || {};
+
+    const foundBoard = await oldAdmPersonalDetailsHelper.addBoard(
+      oldStudentAcademicDetails.boardId!,
+    );
+    if (!foundBoard) {
+      console.warn(
+        `No board found for ID: ${oldStudentAcademicDetails.boardId}`,
+      );
+      return;
+    }
+
+    const [boardResultStatus] = await db
+      .select()
+      .from(boardResultStatusModel)
+      .where(eq(boardResultStatusModel.name, "PASS"));
+
+    await db
+      .update(admissionAcademicInfoModel)
+      .set({
+        // Use base data from application form only if not available in oldStudentAcademicDetails
+        totalPoints: baseData.totalPoints || 0,
+        bestOfFour: baseData.bestOfFour || 0,
+        oldBestOfFour: baseData.oldBestOfFour || 0,
+        subjectStudied: baseData.subjectStudied,
+        lastSchoolId: baseData.lastSchoolId,
+        lastSchoolAddress: baseData.lastSchoolAddress,
+        indexNumber1: baseData.indexNumber1,
+        indexNumber2: baseData.indexNumber2,
+        schoolNumber: baseData.schoolNumber,
+        centerNumber: baseData.centerNumber,
+        admitCardId: baseData.admitCardId,
+        languageMediumId: baseData.languageMediumId,
+        studiedUpToClass: baseData.studiedUpToClass,
+        specializationId: baseData.specializationId,
+        isRegisteredForUGInCU: baseData.isRegisteredForUGInCU,
+        cuRegistrationNumber: baseData.cuRegistrationNumber,
+        previouslyRegisteredProgramCourseId:
+          baseData.previouslyRegisteredProgramCourseId,
+        otherPreviouslyRegisteredProgramCourse:
+          baseData.otherPreviouslyRegisteredProgramCourse,
+        previousInstituteId: baseData.previousInstituteId,
+        otherPreviousInstitute: baseData.otherPreviousInstitute,
+        // Overwrite with old student academic details (these take priority)
+        legacyStudentAcademicDetailsId: oldStudentAcademicDetails.id,
+        studentId: student.id!,
+        applicationFormId: null, // Set to null for student reference
+        boardId: foundBoard.id!,
+        boardResultStatus: (boardResultStatus?.name || "PASS") as
+          | "PASS"
+          | "FAIL"
+          | "COMPARTMENTAL",
+        percentageOfMarks: oldStudentAcademicDetails.percentageOfMarks,
+        division: oldStudentAcademicDetails.division,
+        rank: oldStudentAcademicDetails.rank
+          ? parseInt(oldStudentAcademicDetails.rank)
+          : undefined,
+        yearOfPassing: oldStudentAcademicDetails.year!,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        rollNumber: oldStudentAcademicDetails.examroll,
+        examNumber: oldStudentAcademicDetails.examno,
+        previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
+        otherBoard: oldStudentAcademicDetails.otherbrd,
+        lastSchoolName: oldStudentAcademicDetails.institute,
+        aggregate: oldStudentAcademicDetails.percentageOfMarks,
+        totalScore: oldStudentAcademicDetails.percentageOfMarks,
+        oldTotalScore: oldStudentAcademicDetails.percentageOfMarks,
+      })
+      .where(eq(admissionAcademicInfoModel.id, foundAcademicInfo.id));
+
+    academicInfo = foundAcademicInfo;
+  } else {
+    // Create new academic info with data from application form, then overwrite with old data
+    const baseData = existingAcademicInfo[0] || {};
+
+    const foundBoard = await oldAdmPersonalDetailsHelper.addBoard(
+      oldStudentAcademicDetails.boardId!,
+    );
+    if (!foundBoard) {
+      console.warn(
+        `No board found for ID: ${oldStudentAcademicDetails.boardId}`,
+      );
+      return;
+    }
+
+    const [boardResultStatus] = await db
+      .select()
+      .from(boardResultStatusModel)
+      .where(eq(boardResultStatusModel.name, "PASS"));
+
+    const [newAcademicInfo] = await db
+      .insert(admissionAcademicInfoModel)
+      .values({
+        // Use base data from application form only if not available in oldStudentAcademicDetails
+        totalPoints: baseData.totalPoints || 0,
+        bestOfFour: baseData.bestOfFour || 0,
+        oldBestOfFour: baseData.oldBestOfFour || 0,
+        subjectStudied: baseData.subjectStudied,
+        lastSchoolId: baseData.lastSchoolId,
+        lastSchoolAddress: baseData.lastSchoolAddress,
+        indexNumber1: baseData.indexNumber1,
+        indexNumber2: baseData.indexNumber2,
+        schoolNumber: baseData.schoolNumber,
+        centerNumber: baseData.centerNumber,
+        admitCardId: baseData.admitCardId,
+        languageMediumId: baseData.languageMediumId,
+        studiedUpToClass: baseData.studiedUpToClass,
+        specializationId: baseData.specializationId,
+        isRegisteredForUGInCU: baseData.isRegisteredForUGInCU,
+        cuRegistrationNumber: baseData.cuRegistrationNumber,
+        previouslyRegisteredProgramCourseId:
+          baseData.previouslyRegisteredProgramCourseId,
+        otherPreviouslyRegisteredProgramCourse:
+          baseData.otherPreviouslyRegisteredProgramCourse,
+        previousInstituteId: baseData.previousInstituteId,
+        otherPreviousInstitute: baseData.otherPreviousInstitute,
+        // Overwrite with old student academic details (these take priority)
+        legacyStudentAcademicDetailsId: oldStudentAcademicDetails.id,
+        studentId: student.id!,
+        applicationFormId: null, // Set to null for student reference
+        boardId: foundBoard.id!,
+        boardResultStatus: (boardResultStatus?.name || "PASS") as
+          | "PASS"
+          | "FAIL"
+          | "COMPARTMENTAL",
+        percentageOfMarks: oldStudentAcademicDetails.percentageOfMarks,
+        division: oldStudentAcademicDetails.division,
+        rank: oldStudentAcademicDetails.rank
+          ? parseInt(oldStudentAcademicDetails.rank)
+          : undefined,
+        yearOfPassing: oldStudentAcademicDetails.year!,
+        registrationNumber: oldStudentAcademicDetails.regno,
+        rollNumber: oldStudentAcademicDetails.examroll,
+        examNumber: oldStudentAcademicDetails.examno,
+        previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
+        otherBoard: oldStudentAcademicDetails.otherbrd,
+        lastSchoolName: oldStudentAcademicDetails.institute,
+      })
+      .returning();
+
+    academicInfo = newAcademicInfo;
+  }
+
+  // Step 3: Process subjects from old student data only
+  for (let i = 0; i < studentSubjects.length; i++) {
+    const oldStudentSubject = studentSubjects[i];
+
+    // Create Board and subject mapping
+    let boardSubject = await oldAdmPersonalDetailsHelper.addBoardSubject(
+      oldStudentSubject.subjectId!,
+      oldStudentAcademicDetails.boardId!,
+    );
+
+    if (!boardSubject) {
+      console.log(
+        `No board subject found for subject ID: ${oldStudentSubject.subjectId}`,
+      );
+
+      // Try to find the subject from admrelevantpaper table
+      const [[oldRelevantSubject]] = (await mysqlConnection.query(`
+        SELECT * FROM admrelevantpaper WHERE id = ${oldStudentSubject.subjectId};
+      `)) as [any[], any];
+
+      if (!oldRelevantSubject) {
+        console.log(
+          `No relevant subject found for ID: ${oldStudentSubject.subjectId}`,
+        );
+        continue; // Skip this subject if no relevant subject found
+      }
+
+      // Find or create board subject name
+      let [foundBoardSubjectName] = await db
+        .select()
+        .from(boardSubjectNameModel)
+        .where(
+          ilike(
+            boardSubjectNameModel.name,
+            oldRelevantSubject.paperName.trim(),
+          ),
+        );
+
+      if (!foundBoardSubjectName) {
+        const [newBoardSubjectName] = await db
+          .insert(boardSubjectNameModel)
+          .values({
+            name: oldRelevantSubject.paperName.trim(),
+            legacyBoardSubjectNameId: oldRelevantSubject.id,
+          })
+          .returning();
+        foundBoardSubjectName = newBoardSubjectName;
+      }
+
+      const foundBoard = await oldAdmPersonalDetailsHelper.addBoard(
+        oldStudentAcademicDetails.boardId!,
+      );
+      if (!foundBoard) {
+        console.log(
+          `No board found for ID: ${oldStudentAcademicDetails.boardId}`,
+        );
+        continue; // Skip this subject if no board found
+      }
+
+      // Create board subject with default values
+      const [newBoardSubject] = await db
+        .insert(boardSubjectModel)
+        .values({
+          boardId: foundBoard.id!,
+          boardSubjectNameId: foundBoardSubjectName.id!,
+          passingMarksTheory: 0,
+          passingMarksPractical: 0,
+          fullMarksTheory: 0,
+          fullMarksPractical: 0,
+        })
+        .returning();
+      boardSubject = newBoardSubject;
+    }
+
+    // Find existing student academic subject by legacyStudentSubjectDetailsId and admissionAcademicInfoId
+    const [existingSubject] = await db
+      .select()
+      .from(studentAcademicSubjectModel)
+      .where(
+        and(
+          eq(
+            studentAcademicSubjectModel.legacyStudentSubjectDetailsId,
+            oldStudentSubject.id,
+          ),
+          eq(
+            studentAcademicSubjectModel.admissionAcademicInfoId,
+            academicInfo.id!,
+          ),
+        ),
+      );
+
+    // Find corresponding subject from application form data
+    const baseSubjectData =
+      existingStudentSubjects.find(
+        (sub) =>
+          sub.student_academic_subjects.boardSubjectId === boardSubject.id,
+      )?.student_academic_subjects || ({} as Partial<StudentAcademicSubjects>);
+
+    if (existingSubject) {
+      // Update existing subject with data from application form, then overwrite with old data
+      await db
+        .update(studentAcademicSubjectModel)
+        .set({
+          // Use base data from application form only if not available in oldStudentSubject
+          theoryMarks: baseSubjectData.theoryMarks || 0,
+          practicalMarks: baseSubjectData.practicalMarks || 0,
+          gradeId: baseSubjectData.gradeId || undefined,
+          resultStatus: baseSubjectData.resultStatus || "PASS",
+          // Overwrite with old student subject details (these take priority)
+          legacyStudentSubjectDetailsId: oldStudentSubject.id,
+          totalMarks: oldStudentSubject.marksObtained || 0,
+          admissionAcademicInfoId: academicInfo.id!,
+          boardSubjectId: boardSubject.id!,
+        })
+        .where(eq(studentAcademicSubjectModel.id, existingSubject.id));
+    } else {
+      // Create new student academic subject with data from application form, then overwrite with old data
+      await db.insert(studentAcademicSubjectModel).values({
+        // Use base data from application form only if not available in oldStudentSubject
+        theoryMarks: baseSubjectData.theoryMarks || 0,
+        practicalMarks: baseSubjectData.practicalMarks || 0,
+        gradeId: baseSubjectData.gradeId || undefined,
+        resultStatus: baseSubjectData.resultStatus || "PASS",
+        // Overwrite with old student subject details (these take priority)
+        legacyStudentSubjectDetailsId: oldStudentSubject.id,
+        admissionAcademicInfoId: academicInfo.id!,
+        boardSubjectId: boardSubject.id!,
+        totalMarks: oldStudentSubject.marksObtained || 0,
+      });
+    }
+  }
+
+  console.log(
+    `Processed ${studentSubjects.length} subjects for student ${student.id}, old-student-id: ${oldStudent.id}`,
+  );
 }
 
 export async function addPromotion(

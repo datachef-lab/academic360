@@ -8,6 +8,7 @@ import { handleError } from "@/utils/handleError.js";
 // import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
 import * as userService from "@/features/user/services/user.service.js";
+import { generateExport } from "@/features/user/services/student.service.js";
 function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res)).catch(next);
@@ -206,6 +207,38 @@ export const toggleDisableUser = async (
       res.status(404).json(new ApiError(404, "User not found"));
     }
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+export const exportStudents = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    console.log("Starting student export...");
+    const exportResult = await generateExport();
+
+    // Set headers for file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${exportResult.fileName}"`,
+    );
+    res.setHeader("Content-Length", exportResult.buffer.length);
+
+    console.log(
+      `Export completed. Total records: ${exportResult.totalRecords}`,
+    );
+
+    // Send the Excel buffer as response
+    res.status(200).send(exportResult.buffer);
+  } catch (error) {
+    console.error("Export error:", error);
     handleError(error, res, next);
   }
 };
