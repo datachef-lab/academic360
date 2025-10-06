@@ -35,7 +35,6 @@ import * as courseSubjectModule from "@/pages/courses-subjects-design";
 import * as admissionFeesModule from "@/pages/admissions-fees";
 import * as batchModule from "@/pages/batches";
 import * as studentModule from "@/pages/students";
-import * as examModule from "@/pages/exam-management";
 import * as attendanceModule from "@/pages/attendance-timetable";
 import * as libraryModule from "@/pages/library";
 import * as appModule from "./pages/apps";
@@ -82,6 +81,7 @@ import CURegistrationMasterLayout from "./features/cu-registration/layouts/CUReg
 import CuRegistrationHomePage from "./features/cu-registration/pages/CuRegistrationHomePage";
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
+import * as examManagementModule from "@/features/exam-management";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -159,6 +159,45 @@ const router = createBrowserRouter(
                 { path: "semester-availability", element: <SemesterAvailabilityPage /> },
               ],
             },
+          ],
+        },
+        {
+          path: "exam-management",
+          element: <examManagementModule.ExamManagementMasterLayout />,
+          children: [
+            { path: "", element: <examManagementModule.HomePage /> },
+            { path: "exams", element: <examManagementModule.ExamsPage /> },
+            { path: "schedule", element: <examManagementModule.ScheduleExamPage /> },
+            { path: "components", element: <examManagementModule.ExamComponentsPage /> },
+            { path: "floors", element: <examManagementModule.ExamFloorsPage /> },
+            { path: "rooms", element: <examManagementModule.ExamRoomsPage /> },
+          ],
+        },
+        {
+          path: "exam-management/exams/:examId",
+          element: <examManagementModule.ExamLayoutMaster />,
+          children: [
+            { path: "", element: <examManagementModule.ExamPage /> },
+            {
+              path: "floors",
+              element: <Outlet />,
+              children: [
+                { path: "", element: <examManagementModule.FloorsPage /> },
+                {
+                  path: ":floorNumber",
+                  element: <Outlet />,
+                  children: [
+                    { path: "", element: <examManagementModule.RoomsPage /> },
+                    { path: ":roomNumber", element: <examManagementModule.RoomPage /> },
+                  ],
+                },
+              ],
+            },
+            { path: "invigilators", element: <examManagementModule.InvigilatorsPage /> },
+            { path: "support-staff", element: <examManagementModule.SupportStaffPage /> },
+            { path: "examiners", element: <examManagementModule.ExaminersPage /> },
+            { path: "allot", element: <examManagementModule.AllotAnswerscriptsPage /> },
+            { path: "collect", element: <examManagementModule.CollectAnswerscriptsPage /> },
           ],
         },
         {
@@ -297,16 +336,7 @@ const router = createBrowserRouter(
           ],
         },
         { path: "batches/:batchId", element: <batchModule.BatchDetailsPage /> },
-        {
-          path: "exam-management",
-          element: <examModule.ExamMaster />,
-          children: [
-            { path: "", element: <examModule.MyWorkspacePage /> },
-            { path: ":examId", element: <examModule.ExamPage /> },
-            { path: "create", element: <examModule.CreateExamPage /> },
-            { path: "reports", element: <examModule.ReportsPage /> },
-          ],
-        },
+        // Legacy exam-management routes removed to avoid conflict with new feature module
 
         {
           path: "attendance-timetable",
