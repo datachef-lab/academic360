@@ -351,7 +351,14 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
         (current as unknown as Record<string, unknown>)[field] = value as unknown;
       }
 
-      // Auto-calc total and result (PASS/FAIL) based on board subject passing marks
+      // Auto-calc total marks when theory or practical marks change
+      if (field === "theoryMarks" || field === "practicalMarks") {
+        const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
+        const practical = Number((current as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+        (current as unknown as { totalMarks?: number }).totalMarks = theory + practical;
+      }
+
+      // Auto-calc result (PASS/FAIL) based on board subject passing marks and total marks
       const bsId = Number(
         (current as unknown as { boardSubjectId?: number }).boardSubjectId ??
           (current as unknown as { boardSubject?: { id?: number } }).boardSubject?.id ??
@@ -360,17 +367,19 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
       const bs = boardSubjects.find((b) => Number(b.id) === bsId);
       const theory = Number((current as unknown as { theoryMarks?: number }).theoryMarks ?? 0);
       const practical = Number((current as unknown as { practicalMarks?: number }).practicalMarks ?? 0);
+      const total = Number((current as unknown as { totalMarks?: number }).totalMarks ?? 0);
+
       // If the subject has practical passing marks, student must meet both components;
       // else fall back to total >= (theory pass + practical pass)
       const hasTheoryRule = Number.isFinite(Number(bs?.passingMarksTheory ?? NaN));
       const hasPracRule = Number.isFinite(Number(bs?.passingMarksPractical ?? NaN));
       const requiredTotal = Number(bs?.passingMarksTheory ?? 0) + Number(bs?.passingMarksPractical ?? 0);
-      (current as unknown as { totalMarks?: number }).totalMarks = theory + practical;
+
       if (hasTheoryRule || hasPracRule) {
         const pass =
           hasTheoryRule && hasPracRule
             ? theory >= Number(bs?.passingMarksTheory ?? 0) && practical >= Number(bs?.passingMarksPractical ?? 0)
-            : theory + practical >= requiredTotal;
+            : total >= requiredTotal;
         (current as unknown as { resultStatus?: string }).resultStatus = pass ? "PASS" : "FAIL";
       }
       nextSubjects[targetIndex] = current as unknown as StudentAcademicSubjectsDto;
@@ -1174,11 +1183,20 @@ export default function AcademicDetails({ studentAcademicDetails, studentId, use
                         })()}
                       </td>
                       <td className="px-3 py-2 text-gray-700">
-                        {(() => {
-                          const t = Number((s as unknown as { theoryMarks?: number } | null)?.theoryMarks ?? 0);
-                          const p = Number((s as unknown as { practicalMarks?: number } | null)?.practicalMarks ?? 0);
-                          return t + p;
-                        })()}
+                        <Input
+                          value={(s as unknown as { totalMarks?: number } | null)?.totalMarks ?? ""}
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="h-8"
+                          onChange={(e) =>
+                            handleSubjectChangeById(
+                              (s as unknown as { id?: number })?.id,
+                              "totalMarks",
+                              Number(e.target.value),
+                            )
+                          }
+                        />
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         <Select

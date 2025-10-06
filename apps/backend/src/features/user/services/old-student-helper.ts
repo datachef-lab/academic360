@@ -2263,7 +2263,7 @@ async function loadStudentAcademicInfoAndSubjects(
           gradeId: baseSubjectData.gradeId || undefined,
           resultStatus: baseSubjectData.resultStatus || "PASS",
           // Overwrite with old student subject details (these take priority)
-          legacyStudentSubjectDetailsId: oldStudentSubject.id,
+          legacySubjectDetailsId: oldStudentSubject.id,
           totalMarks: oldStudentSubject.marksObtained || 0,
           admissionAcademicInfoId: academicInfo.id!,
           boardSubjectId: boardSubject.id!,
@@ -2273,7 +2273,7 @@ async function loadStudentAcademicInfoAndSubjects(
       // Create new student academic subject with data from application form, then overwrite with old data
       await db.insert(studentAcademicSubjectModel).values({
         // Use base data from application form only if not available in oldStudentSubject
-        theoryMarks: baseSubjectData.theoryMarks || 0,
+        theoryMarks: oldStudentSubject.marksObtained || 0,
         practicalMarks: baseSubjectData.practicalMarks || 0,
         gradeId: baseSubjectData.gradeId || undefined,
         resultStatus: baseSubjectData.resultStatus || "PASS",

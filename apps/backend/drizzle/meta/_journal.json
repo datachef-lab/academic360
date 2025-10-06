@@ -169,6 +169,13 @@
       "when": 1759562577413,
       "tag": "0023_wild_carlie_cooper",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1759574399772,
+      "tag": "0024_dazzling_rhino",
+      "breakpoints": true
     }
   ]
 }

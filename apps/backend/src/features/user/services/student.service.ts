@@ -38,28 +38,6 @@ import { processClassBySemesterNumber } from "@/features/academics/services/clas
 import { StudentDto } from "@repo/db/dtos/user/index.js";
 import XLSX from "xlsx";
 
-function generateAcademicSubjectColumns(academicSubjects: any[] | null) {
-  const columns: any = {};
-
-  if (!academicSubjects || academicSubjects.length === 0) {
-    return columns;
-  }
-
-  academicSubjects.forEach((subject, index) => {
-    const prefix = `academic_subject_${index + 1}_`;
-
-    columns[`${prefix}theory_marks`] = subject?.theoryMarks || null;
-    columns[`${prefix}practical_marks`] = subject?.practicalMarks || null;
-    columns[`${prefix}total_marks`] = subject?.totalMarks || null;
-    columns[`${prefix}result_status`] = subject?.resultStatus || null;
-    columns[`${prefix}board_subject_name`] =
-      subject?.boardSubject?.boardSubjectName?.name || null;
-    columns[`${prefix}board_name`] = subject?.boardSubject?.board?.name || null;
-  });
-
-  return columns;
-}
-
 function generateStudentReferenceAcademicSubjectColumns(
   studentReferenceAcademicSubjects: any[] | null,
 ) {
@@ -1066,6 +1044,67 @@ export async function generateExport() {
   };
 }
 
+// Helper function to dynamically generate export fields from database objects
+function generateExportFields(
+  data: any,
+  prefix: string,
+  excludeFields: string[] = [],
+): Record<string, any> {
+  if (!data) return {};
+
+  const fields: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    // Skip ID fields and excluded fields
+    if (key.endsWith("Id") || key === "id" || excludeFields.includes(key)) {
+      continue;
+    }
+
+    const fieldName = `${prefix}_${key}`;
+    fields[fieldName] = value || null;
+  }
+
+  return fields;
+}
+
+// Helper function to generate export fields for nested objects
+function generateNestedExportFields(
+  data: any,
+  prefix: string,
+  excludeFields: string[] = [],
+): Record<string, any> {
+  if (!data) return {};
+
+  const fields: Record<string, any> = {};
+
+  for (const [key, value] of Object.entries(data)) {
+    // Skip ID fields and excluded fields
+    if (key.endsWith("Id") || key === "id" || excludeFields.includes(key)) {
+      continue;
+    }
+
+    // Handle nested objects
+    if (
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      !(value instanceof Date)
+    ) {
+      const nestedFields = generateExportFields(
+        value,
+        `${prefix}_${key}`,
+        excludeFields,
+      );
+      Object.assign(fields, nestedFields);
+    } else {
+      const fieldName = `${prefix}_${key}`;
+      fields[fieldName] = value || null;
+    }
+  }
+
+  return fields;
+}
+
 async function getCompleteStudentData(student: any) {
   // Get basic user and student fields
   const [userFields, studentFields, promotionFields] = await Promise.all([
@@ -1108,42 +1147,28 @@ async function getCompleteStudentData(student: any) {
     .where(eq(emergencyContactModel.userId, student.userId))
     .then((r) => r[0] || null);
 
-  // Get transport details
-  const transportDetails = await db
-    .select()
-    .from(transportDetailsModel)
-    .where(eq(transportDetailsModel.userId, student.userId))
-    .then((r) => r[0] || null);
-
-  // Get student academic subjects (via application form)
-  const academicSubjects = student.applicationId
-    ? await getStudentAcademicSubjects(student.applicationId)
-    : null;
-
   // Get student reference academic subjects (where applicationFormId is null and studentId is set)
   const studentReferenceAcademicSubjects =
     await getStudentReferenceAcademicSubjects(student.id);
 
-  // Get admission academic info
-  const admissionAcademicInfo = student.applicationId
-    ? await db
-        .select()
-        .from(admissionAcademicInfoModel)
-        .where(
-          eq(
-            admissionAcademicInfoModel.applicationFormId,
-            student.applicationId,
-          ),
-        )
-        .then((r) => r[0] || null)
-    : null;
+  // Get student reference academic info (where applicationFormId is null and studentId is set)
+  const studentReferenceAcademicInfo = await db
+    .select()
+    .from(admissionAcademicInfoModel)
+    .where(
+      and(
+        eq(admissionAcademicInfoModel.studentId, student.id),
+        sql`${admissionAcademicInfoModel.applicationFormId} IS NULL`,
+      ),
+    )
+    .then((r) => r[0] || null);
 
-  // Get board name for admission academic info
-  const boardName = admissionAcademicInfo?.boardId
+  // Get board name for student reference academic info
+  const boardName = studentReferenceAcademicInfo?.boardId
     ? await db
         .select()
         .from(boardModel)
-        .where(eq(boardModel.id, admissionAcademicInfo.boardId))
+        .where(eq(boardModel.id, studentReferenceAcademicInfo.boardId))
         .then((r) => r[0]?.name || null)
     : null;
 
@@ -1152,263 +1177,54 @@ async function getCompleteStudentData(student: any) {
     student.id,
   );
 
-  // Flatten all data into a single object with ALL fields
+  // Dynamically generate export fields for each data source
   const flattenedData = {
     // ===== USER TABLE FIELDS =====
-    user_id: userFields?.id || null,
-    user_name: userFields?.name || null,
-    user_email: userFields?.email || null,
-    user_password: null, // Note: Password not exported for security
-    user_phone: userFields?.phone || null,
-    user_whatsapp_number: userFields?.whatsappNumber || null,
-    user_image: userFields?.image || null,
-    user_type: userFields?.type || null,
-    user_is_suspended: userFields?.isSuspended || null,
-    user_suspended_reason: userFields?.suspendedReason || null,
-    user_suspended_till_date: userFields?.suspendedTillDate || null,
-    user_is_active: userFields?.isActive || null,
-    user_send_staging_notifications: null, // Field not available in current query
+    ...generateExportFields(userFields, "user", ["password"]), // Exclude password for security
 
     // ===== STUDENT TABLE FIELDS =====
-    student_id: student.id,
-    student_legacy_student_id: student.legacyStudentId || null,
-    student_uid: student.uid || null,
-    student_old_uid: student.oldUid || null,
-    student_rfid_number: student.rfidNumber || null,
-    student_cu_form_number: student.cuFormNumber || null,
-    student_registration_number: student.registrationNumber || null,
-    student_roll_number: student.rollNumber || null,
-    student_class_roll_number: student.classRollNumber || null,
-    student_apaar_id: student.apaarId || null,
-    student_abc_id: student.abcId || null,
-    student_apprid: student.apprid || null,
-    student_check_repeat: student.checkRepeat || null,
-    student_community: student.community || null,
-    student_handicapped: student.handicapped || null,
-    student_last_passed_year: student.lastPassedYear || null,
-    student_notes: student.notes || null,
-    student_active: student.active || null,
-    student_alumni: student.alumni || null,
-    student_leaving_date: student.leavingDate || null,
-    student_leaving_reason: student.leavingReason || null,
+    ...generateExportFields(student, "student"),
 
     // ===== PERSONAL DETAILS TABLE FIELDS =====
-    personal_details_id: personalDetails?.id || null,
-    personal_details_first_name: personalDetails?.firstName || null,
-    personal_details_middle_name: personalDetails?.middleName || null,
-    personal_details_last_name: personalDetails?.lastName || null,
-    personal_details_whatsapp_number: personalDetails?.whatsappNumber || null,
-    personal_details_mobile_number: personalDetails?.mobileNumber || null,
-    personal_details_emergency_residential_number:
-      personalDetails?.emergencyResidentialNumber || null,
-    personal_details_other_nationality:
-      personalDetails?.otherNationality || null,
-    personal_details_voter_id: personalDetails?.voterId || null,
-    personal_details_passport_number: personalDetails?.passportNumber || null,
-    personal_details_aadhaar_card_number:
-      personalDetails?.aadhaarCardNumber || null,
-    personal_details_date_of_birth: personalDetails?.dateOfBirth || null,
-    personal_details_place_of_birth: personalDetails?.placeOfBirth || null,
-    personal_details_gender: personalDetails?.gender || null,
-    personal_details_is_gujarati: personalDetails?.isGujarati || null,
-    personal_details_marital_status: personalDetails?.maritalStatus || null,
-    personal_details_disability: personalDetails?.disability || null,
+    ...generateExportFields(personalDetails, "personal_details"),
 
     // ===== FAMILY DETAILS TABLE FIELDS =====
-    family_details_id: familyDetails?.family?.id || null,
-    family_details_parent_type: familyDetails?.family?.parentType || null,
+    ...generateNestedExportFields(familyDetails?.family, "family_details"),
 
     // ===== FATHER PERSON DETAILS =====
-    father_person_id: familyDetails?.father?.id || null,
-    father_person_type: familyDetails?.father?.type || null,
-    father_person_title: familyDetails?.father?.title || null,
-    father_person_name: familyDetails?.father?.name || null,
-    father_person_email: familyDetails?.father?.email || null,
-    father_person_phone: familyDetails?.father?.phone || null,
-    father_person_aadhaar_card_number:
-      familyDetails?.father?.aadhaarCardNumber || null,
-    father_person_image: familyDetails?.father?.image || null,
-    father_person_gender: familyDetails?.father?.gender || null,
-    father_person_marital_status: familyDetails?.father?.maritalStatus || null,
-    father_occupation_name: familyDetails?.father?.occupation?.name || null,
-    father_qualification_name:
-      familyDetails?.father?.qualification?.name || null,
+    ...generateNestedExportFields(familyDetails?.father, "father_person"),
 
     // ===== MOTHER PERSON DETAILS =====
-    mother_person_id: familyDetails?.mother?.id || null,
-    mother_person_type: familyDetails?.mother?.type || null,
-    mother_person_title: familyDetails?.mother?.title || null,
-    mother_person_name: familyDetails?.mother?.name || null,
-    mother_person_email: familyDetails?.mother?.email || null,
-    mother_person_phone: familyDetails?.mother?.phone || null,
-    mother_person_aadhaar_card_number:
-      familyDetails?.mother?.aadhaarCardNumber || null,
-    mother_person_image: familyDetails?.mother?.image || null,
-    mother_person_gender: familyDetails?.mother?.gender || null,
-    mother_person_marital_status: familyDetails?.mother?.maritalStatus || null,
-    mother_occupation_name: familyDetails?.mother?.occupation?.name || null,
-    mother_qualification_name:
-      familyDetails?.mother?.qualification?.name || null,
+    ...generateNestedExportFields(familyDetails?.mother, "mother_person"),
 
     // ===== GUARDIAN PERSON DETAILS =====
-    guardian_person_id: familyDetails?.guardian?.id || null,
-    guardian_person_type: familyDetails?.guardian?.type || null,
-    guardian_person_title: familyDetails?.guardian?.title || null,
-    guardian_person_name: familyDetails?.guardian?.name || null,
-    guardian_person_email: familyDetails?.guardian?.email || null,
-    guardian_person_phone: familyDetails?.guardian?.phone || null,
-    guardian_person_aadhaar_card_number:
-      familyDetails?.guardian?.aadhaarCardNumber || null,
-    guardian_person_image: familyDetails?.guardian?.image || null,
-    guardian_person_gender: familyDetails?.guardian?.gender || null,
-    guardian_person_marital_status:
-      familyDetails?.guardian?.maritalStatus || null,
-    guardian_occupation_name: familyDetails?.guardian?.occupation?.name || null,
-    guardian_qualification_name:
-      familyDetails?.guardian?.qualification?.name || null,
+    ...generateNestedExportFields(familyDetails?.guardian, "guardian_person"),
 
     // ===== ANNUAL INCOME DETAILS =====
-    annual_income_id: familyDetails?.annualIncome?.id || null,
-    annual_income_range: familyDetails?.annualIncome?.range || null,
+    ...generateNestedExportFields(familyDetails?.annualIncome, "annual_income"),
 
     // ===== ADDRESS DETAILS (DYNAMICALLY GENERATED) =====
     ...generateAddressColumns(addressDetails),
 
     // ===== ACCOMMODATION DETAILS =====
-    accommodation_id: accommodationDetails?.id || null,
-    accommodation_place_of_stay: accommodationDetails?.placeOfStay || null,
-    accommodation_start_date: accommodationDetails?.startDate || null,
-    accommodation_end_date: accommodationDetails?.endDate || null,
+    ...generateExportFields(accommodationDetails, "accommodation"),
 
     // ===== HEALTH DETAILS =====
-    health_id: healthDetails?.id || null,
-    health_identification_mark: healthDetails?.identificationMark || null,
-    health_height: healthDetails?.height || null,
-    health_weight: healthDetails?.weight || null,
-    health_has_spectacles: healthDetails?.hasSpectacles || null,
-    health_spectacles_notes: healthDetails?.spectaclesNotes || null,
-    health_eye_power_left: healthDetails?.eyePowerLeft || null,
-    health_eye_power_right: healthDetails?.eyePowerRight || null,
-    health_illness: healthDetails?.illness || null,
-    health_illness_notes: healthDetails?.illnessNotes || null,
-    health_allergy: healthDetails?.allergy || null,
-    health_allergy_notes: healthDetails?.allergyNotes || null,
-    health_surgery: healthDetails?.surgery || null,
-    health_surgery_notes: healthDetails?.surgeryNotes || null,
-    health_is_infected_covid19: healthDetails?.isInfectedCOVID19 || null,
-    health_is_vaccinated_covid19: healthDetails?.isVaccinatedCOVID19 || null,
-    health_vaccine_name: healthDetails?.vaccineName || null,
-    health_other_vaccine_name: healthDetails?.otherVaccineName || null,
-    health_has_donated_blood: healthDetails?.hasDonatedBlood || null,
-    health_is_donating_blood: healthDetails?.isDonatingBlood || null,
-    health_other_health_conditions:
-      healthDetails?.otherHealthConditions || null,
-    health_other_health_conditions_notes:
-      healthDetails?.otherHealthConditionsNotes || null,
-    health_past_medical_history: healthDetails?.pastMedicalHistory || null,
-    health_past_surgical_history: healthDetails?.pastSurgicalHistory || null,
-    health_drug_allergy: healthDetails?.drugAllergy || null,
-    health_mediclaim_id: healthDetails?.mediclaimId || null,
-    health_mediclaim_file: healthDetails?.mediclaimFile || null,
-    health_mediclaim_provider: healthDetails?.mediclaimProvider || null,
-    health_mediclaim_provider_number:
-      healthDetails?.mediclaimProviderNumber || null,
+    ...generateExportFields(healthDetails, "health"),
 
     // ===== EMERGENCY CONTACT DETAILS =====
-    emergency_contact_id: emergencyContactDetails?.id || null,
-    emergency_contact_person_name: emergencyContactDetails?.personName || null,
-    emergency_contact_having_relation_as:
-      emergencyContactDetails?.havingRelationAs || null,
-    emergency_contact_email: emergencyContactDetails?.email || null,
-    emergency_contact_phone: emergencyContactDetails?.phone || null,
-    emergency_contact_office_phone:
-      emergencyContactDetails?.officePhone || null,
-    emergency_contact_residential_phone:
-      emergencyContactDetails?.residentialPhone || null,
-
-    // ===== TRANSPORT DETAILS =====
-    transport_details_id: transportDetails?.id || null,
-    transport_details_seat_number: transportDetails?.seatNumber || null,
-    transport_details_pickup_time: transportDetails?.pickupTime || null,
-    transport_details_drop_off_time: transportDetails?.dropOffTime || null,
+    ...generateExportFields(emergencyContactDetails, "emergency_contact"),
 
     // ===== PROMOTION DETAILS =====
-    promotion_id: promotionFields?.id || null,
-    promotion_legacy_historical_record_id:
-      promotionFields?.legacyHistoricalRecordId || null,
-    promotion_is_alumni: promotionFields?.isAlumni || null,
-    promotion_date_of_joining: promotionFields?.dateOfJoining || null,
-    promotion_class_roll_number: promotionFields?.classRollNumber || null,
-    promotion_roll_number: promotionFields?.rollNumber || null,
-    promotion_roll_number_si: promotionFields?.rollNumberSI || null,
-    promotion_exam_number: promotionFields?.examNumber || null,
-    promotion_exam_serial_number: promotionFields?.examSerialNumber || null,
-    promotion_start_date: promotionFields?.startDate || null,
-    promotion_end_date: promotionFields?.endDate || null,
-    promotion_remarks: promotionFields?.remarks || null,
+    ...generateExportFields(promotionFields, "promotion"),
 
-    // ===== PROMOTION RELATED NAMES =====
-    promotion_session_name: promotionFields?.sessionName || null,
-    promotion_shift_name: promotionFields?.shiftName || null,
-    promotion_section_name: promotionFields?.sectionName || null,
-    promotion_class_name: promotionFields?.className || null,
-    promotion_program_course_name: promotionFields?.programCourseName || null,
-
-    // ===== ADMISSION ACADEMIC INFO =====
-    admission_academic_info_id: admissionAcademicInfo?.id || null,
-    admission_academic_info_legacy_id:
-      admissionAcademicInfo?.legacyAcademicDetailsId || null,
-    admission_academic_info_board_name: boardName || null,
-    admission_academic_info_other_board:
-      admissionAcademicInfo?.otherBoard || null,
-    admission_academic_info_board_result_status:
-      admissionAcademicInfo?.boardResultStatus || null,
-    admission_academic_info_percentage_of_marks:
-      admissionAcademicInfo?.percentageOfMarks || null,
-    admission_academic_info_division: admissionAcademicInfo?.division || null,
-    admission_academic_info_rank: admissionAcademicInfo?.rank || null,
-    admission_academic_info_total_points:
-      admissionAcademicInfo?.totalPoints || null,
-    admission_academic_info_aggregate: admissionAcademicInfo?.aggregate || null,
-    admission_academic_info_subject_studied:
-      admissionAcademicInfo?.subjectStudied || null,
-    admission_academic_info_last_school_name:
-      admissionAcademicInfo?.lastSchoolName || null,
-    admission_academic_info_index_number_1:
-      admissionAcademicInfo?.indexNumber1 || null,
-    admission_academic_info_index_number_2:
-      admissionAcademicInfo?.indexNumber2 || null,
-    admission_academic_info_registration_number:
-      admissionAcademicInfo?.registrationNumber || null,
-    admission_academic_info_roll_number:
-      admissionAcademicInfo?.rollNumber || null,
-    admission_academic_info_school_number:
-      admissionAcademicInfo?.schoolNumber || null,
-    admission_academic_info_center_number:
-      admissionAcademicInfo?.centerNumber || null,
-    admission_academic_info_year_of_passing:
-      admissionAcademicInfo?.yearOfPassing || null,
-    admission_academic_info_studied_up_to_class:
-      admissionAcademicInfo?.studiedUpToClass || null,
-    admission_academic_info_best_of_four:
-      admissionAcademicInfo?.bestOfFour || null,
-    admission_academic_info_total_score:
-      admissionAcademicInfo?.totalScore || null,
-    admission_academic_info_old_best_of_four:
-      admissionAcademicInfo?.oldBestOfFour || null,
-    admission_academic_info_old_total_score:
-      admissionAcademicInfo?.oldTotalScore || null,
-    admission_academic_info_is_registered_for_ug_in_cu:
-      admissionAcademicInfo?.isRegisteredForUGInCU || null,
-    admission_academic_info_cu_registration_number:
-      admissionAcademicInfo?.cuRegistrationNumber || null,
-    admission_academic_info_other_previously_registered_program_course:
-      admissionAcademicInfo?.otherPreviouslyRegisteredProgramCourse || null,
-    admission_academic_info_other_previous_institute:
-      admissionAcademicInfo?.otherPreviousInstitute || null,
-
-    // ===== ACADEMIC SUBJECTS (DYNAMICALLY GENERATED) =====
-    ...generateAcademicSubjectColumns(academicSubjects),
+    // ===== STUDENT REFERENCE ACADEMIC INFO =====
+    ...generateExportFields(
+      studentReferenceAcademicInfo,
+      "student_academic_info",
+    ),
+    // Add board name separately since it's a related field
+    student_academic_info_board_name: boardName || null,
 
     // ===== STUDENT REFERENCE ACADEMIC SUBJECTS (DYNAMICALLY GENERATED) =====
     ...generateStudentReferenceAcademicSubjectColumns(
@@ -1613,84 +1429,6 @@ async function getAccommodationDetailsForStudent(userId: number) {
     .then((r) => r[0] || null);
 
   return accommodation;
-}
-
-async function getStudentAcademicSubjects(applicationFormId: number) {
-  // First get the admission academic info for this application
-  const admissionAcademicInfo = await db
-    .select()
-    .from(admissionAcademicInfoModel)
-    .where(eq(admissionAcademicInfoModel.applicationFormId, applicationFormId))
-    .then((r) => r[0] || null);
-
-  if (!admissionAcademicInfo) return null;
-
-  // Then get academic subjects for this admission academic info
-  const academicSubjects = await db
-    .select()
-    .from(studentAcademicSubjectModel)
-    .where(
-      eq(
-        studentAcademicSubjectModel.admissionAcademicInfoId,
-        admissionAcademicInfo.id,
-      ),
-    );
-
-  if (academicSubjects.length === 0) return null;
-
-  // Get related data for each subject
-  const enrichedSubjects = await Promise.all(
-    academicSubjects.map(async (subject) => {
-      const [boardSubject, grade] = await Promise.all([
-        db
-          .select()
-          .from(boardSubjectModel)
-          .where(eq(boardSubjectModel.id, subject.boardSubjectId))
-          .then((r) => r[0] || null),
-        subject.gradeId
-          ? db
-              .select()
-              .from(gradeModel)
-              .where(eq(gradeModel.id, subject.gradeId))
-              .then((r) => r[0] || null)
-          : null,
-      ]);
-
-      // Get board subject name
-      const boardSubjectName = boardSubject
-        ? await db
-            .select()
-            .from(boardSubjectNameModel)
-            .where(
-              eq(boardSubjectNameModel.id, boardSubject.boardSubjectNameId),
-            )
-            .then((r) => r[0] || null)
-        : null;
-
-      // Get board details
-      const board = boardSubject
-        ? await db
-            .select()
-            .from(boardModel)
-            .where(eq(boardModel.id, boardSubject.boardId))
-            .then((r) => r[0] || null)
-        : null;
-
-      return {
-        ...subject,
-        boardSubject: boardSubject
-          ? {
-              ...boardSubject,
-              boardSubjectName,
-              board,
-            }
-          : null,
-        grade,
-      };
-    }),
-  );
-
-  return enrichedSubjects;
 }
 
 async function getStudentReferenceAcademicSubjects(studentId: number) {

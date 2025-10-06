@@ -520,9 +520,7 @@ export async function findProfileInfo(
 
   const result: ProfileInfo = {
     applicationFormDto,
-    academicInfo: studentAcademicInfo
-      ? await mapAcademicInfoToDto(studentAcademicInfo)
-      : ({} as any),
+    academicInfo: (await mapAcademicInfoToDto(studentAcademicInfo))!,
     familyDetails: family ? await mapFamilyToDto(family) : null,
     personalDetails: personalDetailsDto,
     healthDetails: healthDto,
