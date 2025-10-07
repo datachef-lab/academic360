@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Download, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 
 interface ProgressUpdate {
   id: string;
@@ -22,11 +22,10 @@ interface ProgressUpdate {
 interface ExportProgressDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onDownload?: (fileName: string) => void;
   progressUpdate?: ProgressUpdate | null;
 }
 
-export function ExportProgressDialog({ isOpen, onClose, onDownload, progressUpdate }: ExportProgressDialogProps) {
+export function ExportProgressDialog({ isOpen, onClose, progressUpdate }: ExportProgressDialogProps) {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState<"started" | "in_progress" | "completed" | "error">("started");

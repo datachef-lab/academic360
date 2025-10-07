@@ -18,10 +18,18 @@ interface ProgressUpdate {
 interface UseSocketOptions {
   userId?: string;
   onProgressUpdate?: (data: ProgressUpdate) => void;
-  onNotification?: (data: any) => void;
+  onNotification?: (data: unknown) => void;
 }
 
-export function useSocket(options: UseSocketOptions = {}) {
+interface UseSocketResult {
+  socket: Socket | null;
+  isConnected: boolean;
+  error: string | null;
+  emit: (event: string, data?: unknown) => void;
+  disconnect: () => void;
+}
+
+export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
   const { userId, onProgressUpdate, onNotification } = options;
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +50,7 @@ export function useSocket(options: UseSocketOptions = {}) {
   );
 
   const handleNotification = useCallback(
-    (data: any) => {
+    (data: unknown) => {
       console.log("Notification received:", data);
       if (onNotification) {
         onNotification(data);
@@ -90,12 +98,12 @@ export function useSocket(options: UseSocketOptions = {}) {
     socket.on("notification", handleNotification);
 
     // Make socket available globally for other components
-    (window as any).socket = socket;
+    (window as unknown as { socket: Socket | null }).socket = socket;
 
     // Cleanup on unmount
     return () => {
       socket.disconnect();
-      (window as any).socket = null;
+      (window as unknown as { socket: Socket | null }).socket = null;
     };
   }, [userId, handleProgressUpdate, handleNotification]);
 
@@ -106,7 +114,7 @@ export function useSocket(options: UseSocketOptions = {}) {
     }
   }, [userId, isConnected]);
 
-  const emit = (event: string, data?: any) => {
+  const emit = (event: string, data?: unknown) => {
     if (socketRef.current && isConnected) {
       socketRef.current.emit(event, data);
     }

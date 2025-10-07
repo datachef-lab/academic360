@@ -75,7 +75,7 @@ export default function CuRegistrationHomePage() {
   );
 
   // Initialize WebSocket connection
-  const { isConnected } = useSocket({
+  useSocket({
     userId,
     onProgressUpdate: handleProgressUpdate,
   });
@@ -306,22 +306,7 @@ export default function CuRegistrationHomePage() {
     }
   };
 
-  const handleDownloadFile = (fileName: string) => {
-    // This will be called when the progress dialog receives a completion event
-    // For now, we'll trigger a new download request
-    const subjectSelectionMetaId = 1;
-    ExportService.exportStudentSubjectSelections(subjectSelectionMetaId)
-      .then((result) => {
-        if (result.success && result.data) {
-          // Use the fileName from the progress dialog if available, otherwise use the one from result
-          const downloadFileName = fileName || result.data.fileName;
-          ExportService.downloadFile(result.data.downloadUrl, downloadFileName);
-        }
-      })
-      .catch((error) => {
-        console.error("Download error:", error);
-      });
-  };
+  // Removed legacy onDownload handler after auto-download implementation
 
   return (
     <div className="p-6 space-y-6">
@@ -330,11 +315,6 @@ export default function CuRegistrationHomePage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800">CU Registration Overview</h1>
           <p className="text-slate-600 mt-2">Summary of Subject Selection and CU Registration processes</p>
-          {/* Debug info */}
-          <div className="mt-2 text-xs text-slate-500">
-            WebSocket: {isConnected ? "✅ Connected" : "❌ Disconnected"} | User ID: {userId} | Exporting:{" "}
-            {isExporting ? "Yes" : "No"}
-          </div>
         </div>
         <div className="flex gap-3">
           <Button
@@ -358,9 +338,6 @@ export default function CuRegistrationHomePage() {
           >
             <Download className="h-4 w-4" />
             {isExporting ? "Exporting..." : "Export Report"}
-            {!isConnected && (
-              <span className="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded">No WebSocket</span>
-            )}
           </Button>
         </div>
       </div>
@@ -735,7 +712,6 @@ export default function CuRegistrationHomePage() {
           setIsExporting(false);
           setCurrentProgressUpdate(null);
         }}
-        onDownload={handleDownloadFile}
         progressUpdate={currentProgressUpdate}
       />
     </div>
