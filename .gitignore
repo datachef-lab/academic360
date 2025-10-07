@@ -1,7 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # Dependencies
-/node_modules
+node_modules/
+**/node_modules/
 /apps/**/node_modules
 /apps/**/dist
 /apps/**/build
@@ -13,6 +14,11 @@
 /.idea
 .pnp
 .pnp.js
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 /apps/backend/public/temp
 # Local env files
