@@ -6,11 +6,26 @@ export interface Notification {
   id: string;
   userId?: string; // Target user ID (if specific to a user)
   userName?: string; // Name of the user who performed the action
-  type: "upload" | "edit" | "update" | "info";
+  type: "upload" | "edit" | "update" | "info" | "progress";
   message: string;
   createdAt: Date;
   read: boolean;
   meta?: Record<string, unknown>; // Additional metadata
+}
+
+// Define progress tracking interface
+export interface ProgressUpdate {
+  id: string;
+  userId: string;
+  type: "export_progress";
+  message: string;
+  progress: number; // 0-100
+  status: "started" | "in_progress" | "completed" | "error";
+  fileName?: string;
+  downloadUrl?: string;
+  error?: string;
+  createdAt: Date;
+  meta?: Record<string, unknown>;
 }
 
 // Socket service class
@@ -190,6 +205,52 @@ class SocketService {
       createdAt: new Date(),
       read: false,
       meta: { itemName },
+    };
+  }
+
+  // Send progress update to a specific user
+  sendProgressUpdate(userId: string, progressUpdate: ProgressUpdate) {
+    if (!this.io) {
+      console.error("[SocketService] Cannot send progress update: io is null");
+      return;
+    }
+
+    try {
+      this.io.to(`user:${userId}`).emit("progress_update", progressUpdate);
+      console.log(
+        `[SocketService] Sent progress update to user ${userId}: ${progressUpdate.message} (${progressUpdate.progress}%)`,
+      );
+    } catch (error) {
+      console.error(
+        `[SocketService] Error sending progress update to user ${userId}:`,
+        error,
+      );
+    }
+  }
+
+  // Create a progress update for export operations
+  createExportProgressUpdate(
+    userId: string,
+    message: string,
+    progress: number,
+    status: "started" | "in_progress" | "completed" | "error",
+    fileName?: string,
+    downloadUrl?: string,
+    error?: string,
+    meta?: Record<string, unknown>,
+  ): ProgressUpdate {
+    return {
+      id: `export_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      userId,
+      type: "export_progress",
+      message,
+      progress,
+      status,
+      fileName,
+      downloadUrl,
+      error,
+      createdAt: new Date(),
+      meta,
     };
   }
 }

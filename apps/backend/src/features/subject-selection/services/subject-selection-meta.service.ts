@@ -24,6 +24,7 @@ import {
 
 export interface CreateSubjectSelectionMetaInput {
   label: string;
+  sequence: number;
   streams: { id: number }[];
   subjectType: { id: number };
   academicYear: { id: number };
@@ -142,6 +143,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "Minor 3 (Semester III)",
+            sequence: 3,
             streams: [{ id: commerceStream.id }],
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -176,6 +178,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "Minor 1 (Semester I & II)",
+            sequence: 1,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -205,6 +208,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "Minor 2 (Semester III & IV)",
+            sequence: 2,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -245,6 +249,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "IDC 1 (Semester I)",
+            sequence: 4,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -267,6 +272,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "IDC 2 (Semester II)",
+            sequence: 5,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -289,6 +295,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "IDC 3 (Semester III)",
+            sequence: 6,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -326,6 +333,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "AEC (Semester III & IV)",
+            sequence: 7,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },
@@ -363,6 +371,7 @@ export async function loadDefaultSubjectSelectionMetas() {
           );
           await createOrUpdateMetaWithRelations({
             label: "CVAC 4 (Semester II)",
+            sequence: 8,
             streams: nonCommerceStreams.map((s) => ({ id: s.id })),
             subjectType: { id: subjectType.id },
             academicYear: { id: academicYear[0].id },

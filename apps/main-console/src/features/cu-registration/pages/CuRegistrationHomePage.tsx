@@ -17,13 +17,68 @@ import {
   Settings,
   Search,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useAuth } from "@/features/auth/providers/auth-provider";
 import ProcessControlDialog from "../components/ProcessControlDialog";
 import { CuRegistrationSearch } from "../components/CuRegistrationSearch";
+import { ExportProgressDialog } from "@/components/ui/export-progress-dialog";
+import { useSocket } from "@/hooks/useSocket";
+import { ExportService } from "@/services/exportService";
 
 export default function CuRegistrationHomePage() {
   const [processControlOpen, setProcessControlOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [exportProgressOpen, setExportProgressOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [currentProgressUpdate, setCurrentProgressUpdate] = useState<{
+    id: string;
+    userId: string;
+    type: "export_progress";
+    message: string;
+    progress: number;
+    status: "started" | "in_progress" | "completed" | "error";
+    fileName?: string;
+    downloadUrl?: string;
+    error?: string;
+    createdAt: Date;
+    meta?: Record<string, unknown>;
+  } | null>(null);
+
+  // Debug: Log component re-renders
+  console.log("CuRegistrationHomePage rendered", { isExporting, exportProgressOpen });
+
+  // Authenticated user id for scoping socket room
+  const { user } = useAuth();
+  const userId = (user?.id ?? "").toString();
+
+  // Memoize the progress update handler to prevent re-renders
+  const handleProgressUpdate = useCallback(
+    (data: {
+      id: string;
+      userId: string;
+      type: "export_progress";
+      message: string;
+      progress: number;
+      status: "started" | "in_progress" | "completed" | "error";
+      fileName?: string;
+      downloadUrl?: string;
+      error?: string;
+      createdAt: Date;
+      meta?: Record<string, unknown>;
+    }) => {
+      console.log("Progress update received:", data);
+      setCurrentProgressUpdate(data);
+
+      // We rely on the HTTP response to trigger download; socket just updates UI
+    },
+    [],
+  );
+
+  // Initialize WebSocket connection
+  const { isConnected } = useSocket({
+    userId,
+    onProgressUpdate: handleProgressUpdate,
+  });
 
   // Mock data - replace with actual data from API
   const overallStats = {
@@ -213,6 +268,61 @@ export default function CuRegistrationHomePage() {
     // TODO: Implement API call to update processes
   };
 
+  const handleExportReport = async () => {
+    try {
+      setIsExporting(true);
+      setExportProgressOpen(true);
+
+      // Set initial progress
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Starting export process...",
+        progress: 0,
+        status: "started",
+        createdAt: new Date(),
+      });
+
+      // Mock subject selection meta ID - replace with actual ID from your data
+      const subjectSelectionMetaId = 1;
+
+      // Start the export process
+      const result = await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
+
+      if (result.success && result.data) {
+        // Immediately trigger download based on HTTP response
+        ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
+        console.log("Export completed and download triggered");
+      } else {
+        console.error("Export failed:", result.message);
+        setIsExporting(false);
+        setExportProgressOpen(false);
+      }
+    } catch (error) {
+      console.error("Export error:", error);
+      setIsExporting(false);
+      setExportProgressOpen(false);
+    }
+  };
+
+  const handleDownloadFile = (fileName: string) => {
+    // This will be called when the progress dialog receives a completion event
+    // For now, we'll trigger a new download request
+    const subjectSelectionMetaId = 1;
+    ExportService.exportStudentSubjectSelections(subjectSelectionMetaId)
+      .then((result) => {
+        if (result.success && result.data) {
+          // Use the fileName from the progress dialog if available, otherwise use the one from result
+          const downloadFileName = fileName || result.data.fileName;
+          ExportService.downloadFile(result.data.downloadUrl, downloadFileName);
+        }
+      })
+      .catch((error) => {
+        console.error("Download error:", error);
+      });
+  };
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -220,6 +330,11 @@ export default function CuRegistrationHomePage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800">CU Registration Overview</h1>
           <p className="text-slate-600 mt-2">Summary of Subject Selection and CU Registration processes</p>
+          {/* Debug info */}
+          <div className="mt-2 text-xs text-slate-500">
+            WebSocket: {isConnected ? "✅ Connected" : "❌ Disconnected"} | User ID: {userId} | Exporting:{" "}
+            {isExporting ? "Yes" : "No"}
+          </div>
         </div>
         <div className="flex gap-3">
           <Button
@@ -236,9 +351,16 @@ export default function CuRegistrationHomePage() {
             <Settings className="h-4 w-4" />
             Process Controls
           </Button>
-          <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm">
+          <Button
+            onClick={handleExportReport}
+            disabled={isExporting}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white border-0 shadow-sm disabled:opacity-50"
+          >
             <Download className="h-4 w-4" />
-            Export Report
+            {isExporting ? "Exporting..." : "Export Report"}
+            {!isConnected && (
+              <span className="ml-2 text-xs bg-yellow-500 text-white px-2 py-1 rounded">No WebSocket</span>
+            )}
           </Button>
         </div>
       </div>
@@ -603,6 +725,18 @@ export default function CuRegistrationHomePage() {
         isOpen={searchDialogOpen}
         onClose={() => setSearchDialogOpen(false)}
         onOpenProcessControls={() => setProcessControlOpen(true)}
+      />
+
+      {/* Export Progress Dialog */}
+      <ExportProgressDialog
+        isOpen={exportProgressOpen}
+        onClose={() => {
+          setExportProgressOpen(false);
+          setIsExporting(false);
+          setCurrentProgressUpdate(null);
+        }}
+        onDownload={handleDownloadFile}
+        progressUpdate={currentProgressUpdate}
       />
     </div>
   );

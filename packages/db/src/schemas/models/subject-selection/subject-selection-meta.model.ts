@@ -14,6 +14,7 @@ export const subjectSelectionMetaModel = pgTable("subject_selection_meta", {
         .notNull(),
     label: varchar("label", { length: 255 })
         .notNull(),
+    sequence: integer("sequence"),
     isActive: boolean().default(true),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()),

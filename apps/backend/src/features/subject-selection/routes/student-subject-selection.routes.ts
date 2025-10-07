@@ -12,6 +12,7 @@ import {
   getAuditTrailHandler,
   canCreateSelectionsHandler,
   getSelectionStatisticsHandler,
+  exportStudentSubjectSelectionsHandler,
 } from "../controllers/student-subject-selection.controller.js";
 import { createAdminStudentSubjectSelectionsHandler } from "../controllers/student-subject-selection.controller.js";
 
@@ -77,6 +78,12 @@ router.get(
 router.get(
   "/statistics/:studentId",
   getSelectionStatisticsHandler as RequestHandler,
+);
+
+// Export student subject selections to Excel
+router.get(
+  "/export/:subjectSelectionMetaId",
+  exportStudentSubjectSelectionsHandler as RequestHandler,
 );
 
 export default router;

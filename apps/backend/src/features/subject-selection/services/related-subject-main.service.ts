@@ -136,7 +136,7 @@ export async function createRelatedSubjectMainFromDto(
     for (const sub of input.relatedSubjectSubs) {
       const subId = sub?.boardSubjectName?.id;
       if (!subId) continue;
-      if (subId === created.boardSubjectName.id) continue; // skip target == alt
+      // Allow target == related subject as per requirement
 
       const [[existsBoardSubjectName], [existingSub]] = await Promise.all([
         db
@@ -634,14 +634,14 @@ export async function updateRelatedSubjectMainFromDto(
     const desiredIds = new Set(
       input.relatedSubjectSubs
         .map((s) => (s as any).boardSubjectName?.id)
-        .filter((v): v is number => !!v),
+        .filter((v): v is number => typeof v === "number" && !Number.isNaN(v)),
     );
 
     // Add any desired that are missing (skip when equals target id)
     const targetId: number | undefined =
       (input as any).boardSubjectName?.id ?? undefined;
     for (const desiredId of desiredIds) {
-      if (desiredId === targetId) continue;
+      // Allow target id as a related id too
       if (!currentIds.has(desiredId)) {
         await db.insert(relatedSubjectSubModel).values({
           relatedSubjectMainId: id,

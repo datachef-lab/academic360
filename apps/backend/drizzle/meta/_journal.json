@@ -176,6 +176,13 @@
       "when": 1759574399772,
       "tag": "0024_dazzling_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1759820976842,
+      "tag": "0025_lyrical_zuras",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
   subjectSelectionApi,
@@ -69,6 +79,16 @@ export default function AlternativeSubjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Delete confirmation state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteSummary, setDeleteSummary] = useState<{
+    programCourse: string;
+    subjectCategory: string;
+    subject: string;
+    related: string[];
+  } | null>(null);
 
   useEffect(() => {
     if (!isReady || !accessToken) return; // wait for auth
@@ -210,17 +230,16 @@ export default function AlternativeSubjectsPage() {
   // Removed hardcoded arrays - now using dynamic data from master APIs
 
   const programCourses = useMemo(() => {
-    return masterProgramCourses.map((pc) => pc.name).filter((name): name is string => name !== null);
+    return masterProgramCourses.map((pc) => pc.name).filter((name): name is string => Boolean(name));
   }, [masterProgramCourses]);
 
   const subjectCategories = useMemo(() => {
-    return masterSubjectTypes.map((st) => st.code || st.name).filter((name): name is string => name !== null);
+    return masterSubjectTypes.map((st) => st.code || st.name).filter((name): name is string => Boolean(name));
   }, [masterSubjectTypes]);
 
+  // Work with full objects to avoid collisions when different subjects share the same name
   const allSubjects = useMemo(() => {
-    const subjects = masterBoardSubjectNames.map((bsn) => bsn.name).filter(Boolean);
-    console.log("[RelatedSubjects] allSubjects count:", subjects.length, "first 5:", subjects.slice(0, 5));
-    return subjects;
+    return masterBoardSubjectNames.filter((bsn) => typeof bsn.id === "number" && !!bsn.name);
   }, [masterBoardSubjectNames]);
 
   // (Combobox helpers removed after reverting to Select)
@@ -228,8 +247,10 @@ export default function AlternativeSubjectsPage() {
   type DialogRow = {
     programCourse: string;
     subjectCategory: string;
+    // To avoid name collisions, store selections as token `${id}::${name}`
     targetedSubject: string;
     alternativeSubjects: string[];
+    isActive?: boolean;
   };
 
   const [dialogRows, setDialogRows] = useState<DialogRow[]>([]);
@@ -239,18 +260,29 @@ export default function AlternativeSubjectsPage() {
   const [editCategory, setEditCategory] = useState<string>("");
   const [editTargetSubject, setEditTargetSubject] = useState<string>("");
   const [editSelectedAlternatives, setEditSelectedAlternatives] = useState<string[]>([]);
+  const [editIsActive, setEditIsActive] = useState<boolean>(true);
   // Keep track of original identifiers to find the correct main even if user edits dropdowns
   const [editOriginal, setEditOriginal] = useState<{ pc: string; cat: string; subj: string } | null>(null);
 
+  // Available alternatives (exclude already selected; INCLUDE target as allowed)
   const editAvailableAlternatives = useMemo(() => {
-    return allSubjects.filter((s) => !editSelectedAlternatives.includes(s) && s !== editTargetSubject);
+    const selectedIds = new Set(editSelectedAlternatives.map((t) => Number(t.split("::")[0])));
+    return allSubjects.filter((s) => !selectedIds.has(s.id!));
   }, [allSubjects, editSelectedAlternatives, editTargetSubject]);
 
-  const addEditAlternative = (s: string) => {
-    setEditSelectedAlternatives((prev) => (prev.includes(s) ? prev : [...prev, s]));
+  // Search within available alternatives
+  const [altSearch, setAltSearch] = useState("");
+  const filteredEditAvailableAlternatives = useMemo(() => {
+    const q = altSearch.trim().toLowerCase();
+    if (!q) return editAvailableAlternatives;
+    return editAvailableAlternatives.filter((s) => String(s.name).toLowerCase().includes(q));
+  }, [editAvailableAlternatives, altSearch]);
+
+  const addEditAlternative = (token: string) => {
+    setEditSelectedAlternatives((prev: string[]) => (prev.includes(token) ? prev : [...prev, token]));
   };
-  const removeEditAlternative = (s: string) => {
-    setEditSelectedAlternatives((prev) => prev.filter((x) => x !== s));
+  const removeEditAlternative = (token: string) => {
+    setEditSelectedAlternatives((prev) => prev.filter((x) => x !== token));
   };
 
   const openAddDialog = () => {
@@ -259,21 +291,79 @@ export default function AlternativeSubjectsPage() {
     setIsDialogOpen(true);
   };
 
+  // Open delete dialog for a row
+  const openDeleteDialog = (row: UIGrouping) => {
+    setDeleteId(row.id);
+    setDeleteSummary({
+      programCourse: row.programCourses[0] ?? "",
+      subjectCategory: row.subjectCategory ?? "",
+      subject: row.subjects[0] ?? "",
+      related: row.subjects.slice(1),
+    });
+    setDeleteOpen(true);
+  };
+
+  // Perform delete
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await subjectSelectionApi.deleteRelatedSubjectMain(deleteId);
+      sonnerToast.success("Mapping deleted");
+      // Reload current page
+      const refreshedPaged = await subjectSelectionApi.listRelatedSubjectMainsPaginated({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        search: searchTerm || undefined,
+        programCourse: selectedProgramCourse && selectedProgramCourse !== "all" ? selectedProgramCourse : undefined,
+      });
+      const refreshed = refreshedPaged.content as RelatedSubjectMainDto[];
+      const mapped: UIGrouping[] = refreshed.map((dto) => ({
+        id: dto.id || 0,
+        programCourses: [dto.programCourse?.name || ""],
+        subjectCategory: dto.subjectType?.code || dto.subjectType?.name || "",
+        subjects: [
+          dto.boardSubjectName?.name || "",
+          ...dto.relatedSubjectSubs.map((s) => s.boardSubjectName?.name || "").filter(Boolean),
+        ],
+        isActive: dto.isActive ?? true,
+      }));
+      setGroupings(mapped);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete mapping";
+      sonnerToast.error(message);
+    } finally {
+      setDeleteOpen(false);
+      setDeleteId(null);
+    }
+  };
+
   const openEditDialog = (grouping: UIGrouping) => {
     setDialogMode("edit");
+    // Convert existing names into id::name tokens for the controls
+    const targetName = grouping.subjects[0] ?? "";
+    const targetId = subjectNameToId[targetName];
+    const targetToken = targetId ? `${targetId}::${targetName}` : "";
+    const altTokens = grouping.subjects
+      .slice(1)
+      .map((name) => {
+        const id = subjectNameToId[name];
+        return id ? `${id}::${name}` : "";
+      })
+      .filter((t): t is string => Boolean(t));
+
     setDialogRows([
       {
         programCourse: grouping.programCourses[0] ?? "",
         subjectCategory: grouping.subjectCategory ?? "",
-        targetedSubject: grouping.subjects[0] ?? "",
-        alternativeSubjects: grouping.subjects.slice(1),
+        targetedSubject: targetToken,
+        alternativeSubjects: altTokens,
       },
     ]);
     // Initialize edit form state
     setEditProgramCourse(grouping.programCourses[0] ?? "");
     setEditCategory(grouping.subjectCategory ?? "");
-    setEditTargetSubject(grouping.subjects[0] ?? "");
-    setEditSelectedAlternatives(grouping.subjects.slice(1));
+    setEditTargetSubject(targetToken);
+    setEditSelectedAlternatives(altTokens);
     setEditOriginal({
       pc: grouping.programCourses[0] ?? "",
       cat: grouping.subjectCategory ?? "",
@@ -331,7 +421,8 @@ export default function AlternativeSubjectsPage() {
       for (const row of dialogRows) {
         const programCourseId = programCourseNameToId[row.programCourse];
         const subjectTypeId = subjectCategoryLabelToId[row.subjectCategory];
-        const targetId = subjectNameToId[row.targetedSubject];
+        // targetedSubject now stores tokens in the form `${id}::${name}`
+        const targetId = row.targetedSubject ? Number(String(row.targetedSubject).split("::")[0]) : undefined;
         if (!programCourseId || !subjectTypeId || !targetId) {
           // Collect reason for skipping to inform user
           const missing: string[] = [];
@@ -339,7 +430,9 @@ export default function AlternativeSubjectsPage() {
           if (!subjectTypeId) missing.push("category");
           if (!targetId) missing.push("subject");
           skipped.push(
-            `${row.programCourse || "—"} | ${row.subjectCategory || "—"} | ${row.targetedSubject || "—"} — missing: ${missing.join(", ")}`,
+            `${row.programCourse || "—"} | ${row.subjectCategory || "—"} | ${
+              (row.targetedSubject && String(row.targetedSubject).split("::")[1]) || row.targetedSubject || "—"
+            } — missing: ${missing.join(", ")}`,
           );
           continue; // skip invalid row, but allow others to proceed
         }
@@ -352,14 +445,11 @@ export default function AlternativeSubjectsPage() {
         const payload: CreateRelatedSubjectMainInput = {
           programCourse: { id: programCourseId },
           subjectType: { id: subjectTypeId },
-          boardSubjectName: { id: targetId },
+          boardSubjectName: { id: Number(row.targetedSubject.split("::")[0]) },
           isActive: true,
           relatedSubjectSubs: row.alternativeSubjects
-            .map((name) => ({ boardSubjectName: { id: subjectNameToId[name] } }))
-            .filter(
-              (sub): sub is { boardSubjectName: { id: number } } =>
-                !!sub.boardSubjectName.id && sub.boardSubjectName.id !== targetId,
-            ),
+            .map((token) => ({ boardSubjectName: { id: Number(token.split("::")[0]) } }))
+            .filter((sub): sub is { boardSubjectName: { id: number } } => !!sub.boardSubjectName.id),
         };
         await subjectSelectionApi.createRelatedSubjectMain(payload);
         createdCount += 1;
@@ -440,7 +530,7 @@ export default function AlternativeSubjectsPage() {
       // Always send a DTO-style update for main first (idempotent on backend)
       const programCourseId = programCourseNameToId[editProgramCourse];
       const subjectTypeId = subjectCategoryLabelToId[editCategory];
-      const targetId = subjectNameToId[editTargetSubject];
+      const targetId = Number(editTargetSubject.split("::")[0]);
       if (!programCourseId || !subjectTypeId || !targetId) {
         sonnerToast.error("Missing required fields for update", {
           description: "Program-course, category and subject are required.",
@@ -450,8 +540,8 @@ export default function AlternativeSubjectsPage() {
       }
       // Build subs DTO from the current selection and let backend reconcile add/remove
       const desiredSubsDto = editSelectedAlternatives
-        .map((name) => subjectNameToId[name])
-        .filter((id): id is number => !!id && id !== targetId)
+        .map((token) => Number(token.split("::")[0]))
+        .filter((id): id is number => !!id)
         .map((id) => ({ boardSubjectName: { id } }));
 
       // Debug: log outgoing DTO
@@ -493,6 +583,8 @@ export default function AlternativeSubjectsPage() {
         isActive: d.isActive ?? true,
       }));
       setGroupings(mapped);
+      // Keep checkbox in sync with latest saved value
+      setEditIsActive(Boolean((refreshed.find((d) => d.id === dto.id) || {}).isActive));
       setIsDialogOpen(false);
       sonnerToast.success("Related subject mapping updated");
     } catch (err: unknown) {
@@ -654,7 +746,12 @@ export default function AlternativeSubjectsPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:text-red-700">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700"
+                            onClick={() => openDeleteDialog(grouping)}
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -775,11 +872,16 @@ export default function AlternativeSubjectsPage() {
                               <SelectValue placeholder="Select subject" />
                             </SelectTrigger>
                             <SelectContent className="max-h-64 overflow-auto">
-                              {allSubjects.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {s}
-                                </SelectItem>
-                              ))}
+                              {allSubjects.map((s: { id: number; name: string }) => {
+                                const key = String(s.id);
+                                const value = `${s.id}::${s.name}`;
+                                const label = String(s.name);
+                                return (
+                                  <SelectItem key={key} value={value}>
+                                    {label}
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -795,11 +897,14 @@ export default function AlternativeSubjectsPage() {
                                   <span className="text-muted-foreground">Select related subjects</span>
                                 ) : (
                                   <div className="flex flex-wrap gap-1 items-center justify-start h-auto">
-                                    {row.alternativeSubjects.map((label) => (
-                                      <Badge key={label} variant="outline" className={`text-xs ${altBadgeColor}`}>
-                                        {label}
-                                      </Badge>
-                                    ))}
+                                    {row.alternativeSubjects.map((token) => {
+                                      const name = token.split("::").slice(1).join("::");
+                                      return (
+                                        <Badge key={token} variant="outline" className={`text-xs ${altBadgeColor}`}>
+                                          {name}
+                                        </Badge>
+                                      );
+                                    })}
                                   </div>
                                 )}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -822,24 +927,25 @@ export default function AlternativeSubjectsPage() {
                                 >
                                   <CommandEmpty>No subjects found.</CommandEmpty>
                                   <CommandGroup>
-                                    {allSubjects.map((opt) => (
-                                      <CommandItem
-                                        key={opt}
-                                        onSelect={() => {
-                                          const exists = row.alternativeSubjects.includes(opt);
-                                          const next = exists
-                                            ? row.alternativeSubjects.filter((v) => v !== opt)
-                                            : [...row.alternativeSubjects, opt];
-                                          updateRowField(idx, "alternativeSubjects", next);
-                                        }}
-                                        className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
-                                      >
-                                        <Check
-                                          className={`mr-2 h-4 w-4 ${row.alternativeSubjects.includes(opt) ? "opacity-100" : "opacity-0"}`}
-                                        />
-                                        <span className="block truncate">{opt}</span>
-                                      </CommandItem>
-                                    ))}
+                                    {allSubjects.map((opt: { id: number; name: string }) => {
+                                      const token = `${opt.id}::${opt.name}`;
+                                      const selected = row.alternativeSubjects.includes(token);
+                                      return (
+                                        <CommandItem
+                                          key={String(opt.id)}
+                                          onSelect={() => {
+                                            const next = selected
+                                              ? row.alternativeSubjects.filter((v) => v !== token)
+                                              : [...row.alternativeSubjects, token];
+                                            updateRowField(idx, "alternativeSubjects", next);
+                                          }}
+                                          className="text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis"
+                                        >
+                                          <Check className={`mr-2 h-4 w-4 ${selected ? "opacity-100" : "opacity-0"}`} />
+                                          <span className="block truncate">{String(opt.name)}</span>
+                                        </CommandItem>
+                                      );
+                                    })}
                                   </CommandGroup>
                                 </CommandList>
                               </Command>
@@ -885,7 +991,7 @@ export default function AlternativeSubjectsPage() {
               <div className="grid grid-cols-3 gap-6 pt-2 pb-2">
                 <div className="flex flex-col gap-1">
                   <Label>Program-Course</Label>
-                  <Select value={editProgramCourse} onValueChange={setEditProgramCourse}>
+                  <Select value={editProgramCourse} onValueChange={setEditProgramCourse} disabled>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select program-course" />
                     </SelectTrigger>
@@ -901,7 +1007,7 @@ export default function AlternativeSubjectsPage() {
 
                 <div className="flex flex-col gap-1">
                   <Label>Subject Category</Label>
-                  <Select value={editCategory} onValueChange={setEditCategory}>
+                  <Select value={editCategory} onValueChange={setEditCategory} disabled>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -917,19 +1023,33 @@ export default function AlternativeSubjectsPage() {
 
                 <div className="flex flex-col gap-1">
                   <Label>Subject</Label>
-                  <Select value={editTargetSubject} onValueChange={setEditTargetSubject}>
+                  <Select value={editTargetSubject} onValueChange={setEditTargetSubject} disabled>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select targeted subject" />
                     </SelectTrigger>
                     <SelectContent className="max-h-64 overflow-auto">
-                      {allSubjects.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {s}
-                        </SelectItem>
-                      ))}
+                      {allSubjects.map((s) => {
+                        const key = String(s.id);
+                        const value = `${s.id}::${s.name}`;
+                        const label = String(s.name);
+                        return (
+                          <SelectItem key={key} value={value}>
+                            {label}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  id="edit-active"
+                  type="checkbox"
+                  checked={editIsActive}
+                  onChange={(e) => setEditIsActive(e.target.checked)}
+                />
+                <Label htmlFor="edit-active">Active</Label>
               </div>
 
               {/* Dual cards */}
@@ -942,21 +1062,27 @@ export default function AlternativeSubjectsPage() {
                       <div className="text-sm text-muted-foreground">No related subjects selected</div>
                     ) : (
                       <div className="space-y-2">
-                        {editSelectedAlternatives.map((s) => (
-                          <div key={s} className="flex items-center justify-between gap-2 border rounded-md px-2 py-1">
-                            <Badge variant="outline" className={`text-xs ${altBadgeColor}`}>
-                              {s}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-red-700 bg-red-100 hover:bg-red-200 rounded"
-                              onClick={() => removeEditAlternative(s)}
+                        {editSelectedAlternatives.map((token) => {
+                          const name = token.split("::").slice(1).join("::");
+                          return (
+                            <div
+                              key={token}
+                              className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+                              <Badge variant="outline" className={`text-xs ${altBadgeColor}`}>
+                                {name}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-red-700 bg-red-100 hover:bg-red-200 rounded"
+                                onClick={() => removeEditAlternative(token)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -973,25 +1099,40 @@ export default function AlternativeSubjectsPage() {
 
                 {/* Available Subjects */}
                 <div className="border rounded-md flex flex-col h-[52vh]">
-                  <div className="px-3 py-2 bg-gray-100 border-b font-semibold">Available Related Subjects</div>
+                  <div className="px-3 py-2 bg-gray-100 border-b flex items-center justify-between gap-3">
+                    <div className="font-semibold">Available Related Subjects</div>
+                    <div className="w-72">
+                      <Input
+                        placeholder="Search subjects..."
+                        value={altSearch}
+                        onChange={(e) => setAltSearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
                   <div className="p-3 flex-1 min-h-0 overflow-auto">
-                    {editAvailableAlternatives.length === 0 ? (
+                    {filteredEditAvailableAlternatives.length === 0 ? (
                       <div className="text-sm text-muted-foreground">No available related subjects</div>
                     ) : (
                       <div className="space-y-2">
-                        {editAvailableAlternatives.map((s) => (
-                          <div key={s} className="flex items-center justify-between gap-2 border rounded-md px-2 py-1">
-                            <span className="text-sm text-gray-700">{s}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-purple-700 bg-purple-100 hover:bg-purple-200 rounded"
-                              onClick={() => addEditAlternative(s)}
+                        {filteredEditAvailableAlternatives.map((s) => {
+                          const token = `${s.id}::${s.name}`;
+                          return (
+                            <div
+                              key={token}
+                              className="flex items-center justify-between gap-2 border rounded-md px-2 py-1"
                             >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
+                              <span className="text-sm text-gray-700">{String(s.name)}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-purple-700 bg-purple-100 hover:bg-purple-200 rounded"
+                                onClick={() => addEditAlternative(token)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -999,11 +1140,10 @@ export default function AlternativeSubjectsPage() {
                     <Button
                       variant="ghost"
                       className="bg-purple-100 hover:bg-purple-200 text-purple-700 h-8 px-3"
-                      onClick={() =>
-                        setEditSelectedAlternatives((prev) =>
-                          Array.from(new Set([...prev, ...editAvailableAlternatives])),
-                        )
-                      }
+                      onClick={() => {
+                        const tokens = filteredEditAvailableAlternatives.map((s) => `${s.id}::${s.name}`);
+                        setEditSelectedAlternatives((prev: string[]) => Array.from(new Set([...prev, ...tokens])));
+                      }}
                     >
                       Select All
                     </Button>
@@ -1023,6 +1163,70 @@ export default function AlternativeSubjectsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent className="max-w-3xl w-[56rem]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete related subject mapping?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected mapping.
+            </AlertDialogDescription>
+            {deleteSummary && (
+              <div className="mt-3">
+                <Table className="table-fixed border border-slate-300">
+                  <TableHeader>
+                    <TableRow className="bg-slate-100">
+                      <TableHead className="border border-slate-300 w-[16rem]">Program-Course</TableHead>
+                      <TableHead className="border border-slate-300 w-[8rem]">Subject Category</TableHead>
+                      <TableHead className="border border-slate-300 w-[10rem]">Subject</TableHead>
+                      <TableHead className="border border-slate-300">Related Subjects</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="border border-slate-300 text-sm font-medium">
+                        {deleteSummary.programCourse || "—"}
+                      </TableCell>
+                      <TableCell className="border border-slate-300">
+                        <Badge variant="outline" className="border-purple-500 text-purple-700 bg-purple-50 text-xs">
+                          {deleteSummary.subjectCategory || "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="border border-slate-300">
+                        <Badge variant="outline" className="text-xs border-red-500 text-red-700 bg-red-50">
+                          {deleteSummary.subject || "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="border border-slate-300">
+                        <div className="flex flex-wrap gap-1">
+                          {deleteSummary.related.length > 0 ? (
+                            deleteSummary.related.map((rs, i) => (
+                              <Badge
+                                key={`${rs}-${i}`}
+                                variant="outline"
+                                className="text-xs bg-indigo-50 text-indigo-700 border-indigo-300"
+                              >
+                                {rs}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-slate-500 text-sm">None</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

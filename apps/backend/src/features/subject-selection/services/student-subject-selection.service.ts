@@ -1,5 +1,5 @@
 import { db } from "@/db/index.js";
-import { and, countDistinct, desc, eq, inArray } from "drizzle-orm";
+import { and, countDistinct, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { studentSubjectSelectionModel } from "@repo/db/schemas/models/subject-selection/student-subject-selection.model";
 import { sessionModel } from "@repo/db/schemas/models/academics";
 import {
@@ -15,6 +15,9 @@ import {
 import { academicYearModel } from "@repo/db/schemas/models/academics";
 import { classModel } from "@repo/db/schemas/models/academics/class.model";
 import { userModel } from "@repo/db/schemas/models/user";
+import { studentModel } from "@repo/db/schemas/models/user/student.model";
+import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
+import { sectionModel } from "@repo/db/schemas/models/academics/section.model";
 import {
   StudentSubjectSelection,
   StudentSubjectSelectionT,
@@ -25,6 +28,8 @@ import {
 } from "@repo/db/dtos/subject-selection/index";
 import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as studentSubjectsService from "./student-subjects.service";
+import * as XLSX from "xlsx";
+import { socketService } from "@/services/socketService.js";
 
 export type CreateStudentSubjectSelectionDtoInput = {
   studentId: number;
@@ -1789,5 +1794,391 @@ export async function updateStudentSubjectSelectionsEfficiently(
   return {
     success: true,
     data: allActiveSelections,
+  };
+}
+
+// Export function for student subject selections
+export async function exportStudentSubjectSelections(
+  subjectSelectionMetaId: number,
+  userId?: string,
+) {
+  console.log(
+    `Starting export for subject selection meta ID: ${subjectSelectionMetaId}`,
+  );
+
+  // Send initial progress update
+  if (userId) {
+    const progressUpdate = socketService.createExportProgressUpdate(
+      userId,
+      "Starting export process...",
+      0,
+      "started",
+    );
+    socketService.sendProgressUpdate(userId, progressUpdate);
+  }
+
+  // Get all subject selection meta labels for this meta ID
+  const subjectSelectionMetas = await db
+    .select({
+      id: subjectSelectionMetaModel.id,
+      label: subjectSelectionMetaModel.label,
+      subjectTypeId: subjectSelectionMetaModel.subjectTypeId,
+      academicYearId: subjectSelectionMetaModel.academicYearId,
+    })
+    .from(subjectSelectionMetaModel)
+    .where(eq(subjectSelectionMetaModel.id, subjectSelectionMetaId));
+
+  if (subjectSelectionMetas.length === 0) {
+    return {
+      buffer: null,
+      fileName: `student_subject_selections_${subjectSelectionMetaId}_not_found.xlsx`,
+      totalRecords: 0,
+      error: `Subject selection meta with ID ${subjectSelectionMetaId} not found`,
+    };
+  }
+
+  const meta = subjectSelectionMetas[0];
+
+  // Send progress update - fetching metadata
+  if (userId) {
+    const progressUpdate = socketService.createExportProgressUpdate(
+      userId,
+      "Fetching subject selection metadata...",
+      10,
+      "in_progress",
+    );
+    socketService.sendProgressUpdate(userId, progressUpdate);
+  }
+
+  // Get all subject selection meta labels for the academic year to include as columns
+  let allMetasForYear = await db
+    .select({
+      id: subjectSelectionMetaModel.id,
+      label: subjectSelectionMetaModel.label,
+      sequence: subjectSelectionMetaModel.sequence,
+    })
+    .from(subjectSelectionMetaModel)
+    .where(eq(subjectSelectionMetaModel.academicYearId, meta.academicYearId));
+
+  // Sort by sequence (nulls last), to ensure consistent column order after Section
+  allMetasForYear = allMetasForYear.sort((a, b) => {
+    const av = a.sequence ?? Number.MAX_SAFE_INTEGER;
+    const bv = b.sequence ?? Number.MAX_SAFE_INTEGER;
+    return av - bv;
+  });
+
+  // Get latest version of student subject selections for the specified meta ID (per student+subject)
+  const latestSelections = await db
+    .select({
+      studentId: studentSubjectSelectionModel.studentId,
+      subjectId: studentSubjectSelectionModel.subjectId,
+      version: max(studentSubjectSelectionModel.version),
+      createdAt: max(studentSubjectSelectionModel.createdAt),
+      updatedAt: max(studentSubjectSelectionModel.updatedAt),
+    })
+    .from(studentSubjectSelectionModel)
+    .where(
+      and(
+        eq(
+          studentSubjectSelectionModel.subjectSelectionMetaId,
+          subjectSelectionMetaId,
+        ),
+        eq(studentSubjectSelectionModel.isActive, true),
+      ),
+    )
+    .groupBy(
+      studentSubjectSelectionModel.studentId,
+      studentSubjectSelectionModel.subjectId,
+    );
+
+  if (latestSelections.length === 0) {
+    console.log(
+      "No student subject selections found for the specified meta ID",
+    );
+    return {
+      buffer: null,
+      fileName: `student_subject_selections_${subjectSelectionMetaId}_empty.xlsx`,
+      totalRecords: 0,
+    };
+  }
+
+  // Send progress update - fetching student data
+  if (userId) {
+    const progressUpdate = socketService.createExportProgressUpdate(
+      userId,
+      `Fetching student data for ${latestSelections.length} selections...`,
+      30,
+      "in_progress",
+    );
+    socketService.sendProgressUpdate(userId, progressUpdate);
+  }
+
+  // Get student IDs for batch fetching
+  const studentIds = [...new Set(latestSelections.map((s) => s.studentId))];
+
+  // Get student details with user info and promotions
+  const studentsWithDetails = await db
+    .select({
+      studentId: studentModel.id,
+      uid: studentModel.uid,
+      userId: studentModel.userId,
+      userName: userModel.name,
+      userType: userModel.type,
+      promotionId: promotionModel.id,
+      rollNumber: promotionModel.rollNumber,
+      sectionId: promotionModel.sectionId,
+      sectionName: sectionModel.name,
+      sessionId: promotionModel.sessionId,
+      sessionName: sessionModel.name,
+    })
+    .from(studentModel)
+    .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+    .leftJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
+    .leftJoin(sectionModel, eq(promotionModel.sectionId, sectionModel.id))
+    .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .where(inArray(studentModel.id, studentIds));
+
+  // We'll compute subjectIds after loading allSelectionsForYear
+  // we'll declare 'subjects' after we have subjectIds computed
+  let subjects: { id: number; name: string; code: string | null }[] = [];
+
+  // Get user details for createdBy (collect from raw rows per student in meta later); initialize empty map for now
+  const createdByUsers = await db
+    .select({
+      id: userModel.id,
+      name: userModel.name,
+      type: userModel.type,
+    })
+    .from(userModel)
+    .where(sql`1=0`); // placeholder empty selection; we'll look up createdBy users dynamically below
+
+  // Create lookup maps
+  const studentMap = new Map(studentsWithDetails.map((s) => [s.studentId, s]));
+  const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+  const userMap = new Map<number, { id: number; name: string; type: string }>(
+    createdByUsers.map((u) => [u.id, u]),
+  );
+
+  // Get all student subject selections for all metas in the academic year
+  const allSelectionsForYear = await db
+    .select({
+      studentId: studentSubjectSelectionModel.studentId,
+      subjectSelectionMetaId:
+        studentSubjectSelectionModel.subjectSelectionMetaId,
+      subjectId: studentSubjectSelectionModel.subjectId,
+      subjectName: subjectModel.name,
+      version: max(studentSubjectSelectionModel.version),
+      createdAt: max(studentSubjectSelectionModel.createdAt),
+      updatedAt: max(studentSubjectSelectionModel.updatedAt),
+    })
+    .from(studentSubjectSelectionModel)
+    .leftJoin(
+      subjectModel,
+      eq(studentSubjectSelectionModel.subjectId, subjectModel.id),
+    )
+    .where(
+      and(
+        inArray(
+          studentSubjectSelectionModel.subjectSelectionMetaId,
+          allMetasForYear.map((m) => m.id),
+        ),
+        eq(studentSubjectSelectionModel.isActive, true),
+      ),
+    )
+    .groupBy(
+      studentSubjectSelectionModel.studentId,
+      studentSubjectSelectionModel.subjectSelectionMetaId,
+      studentSubjectSelectionModel.subjectId,
+      subjectModel.name,
+    );
+
+  // Now that we have all selections across metas, compute subject ids and build maps
+  const subjectIds = [
+    ...new Set(allSelectionsForYear.map((s: any) => s.subjectId)),
+  ];
+  if (subjectIds.length > 0) {
+    subjects = await db
+      .select({
+        id: subjectModel.id,
+        name: subjectModel.name,
+        code: subjectModel.code,
+      })
+      .from(subjectModel)
+      .where(inArray(subjectModel.id, subjectIds));
+  }
+
+  // Group selections by student and meta (each entry is the latest per student+meta+subject)
+  const studentSelectionsMap = new Map();
+  allSelectionsForYear.forEach((selection) => {
+    const key = `${selection.studentId}_${selection.subjectSelectionMetaId}`;
+    if (!studentSelectionsMap.has(key)) {
+      studentSelectionsMap.set(key, []);
+    }
+    studentSelectionsMap.get(key).push(selection);
+  });
+
+  // Prepare Excel data
+  const excelData = [];
+
+  for (const studentDetail of studentsWithDetails) {
+    const row: any = {
+      UID: studentDetail.uid || "",
+      Name: studentDetail.userName || "",
+      "Roll No.": studentDetail.rollNumber || "",
+      Session: studentDetail.sessionName || "",
+      Section: studentDetail.sectionName || "",
+    };
+
+    // Add columns for each subject selection meta
+    for (const metaItem of allMetasForYear) {
+      const key = `${studentDetail.studentId}_${metaItem.id}`;
+      const selections = studentSelectionsMap.get(key) || [];
+
+      if (selections.length > 0) {
+        const subjectNames = selections
+          .map((sel: any) => {
+            if (sel.subjectName) return sel.subjectName as string;
+            const subject = subjectMap.get(sel.subjectId);
+            return subject ? subject.name : "";
+          })
+          .filter(Boolean);
+        row[metaItem.label] = subjectNames.join(", ");
+      } else {
+        row[metaItem.label] = "";
+      }
+    }
+
+    // Find the latest audit info for this student across all metas of this academic year
+    // This fulfills the requirement: last updated should be the latest among ALL student-subject-selection rows
+    const studentRowsForMeta = await db
+      .select({
+        id: studentSubjectSelectionModel.id,
+        studentId: studentSubjectSelectionModel.studentId,
+        updatedAt: studentSubjectSelectionModel.updatedAt,
+        createdBy: studentSubjectSelectionModel.createdBy,
+        changeReason: studentSubjectSelectionModel.changeReason,
+      })
+      .from(studentSubjectSelectionModel)
+      .where(
+        and(
+          inArray(
+            studentSubjectSelectionModel.subjectSelectionMetaId,
+            allMetasForYear.map((m) => m.id),
+          ),
+          eq(studentSubjectSelectionModel.studentId, studentDetail.studentId),
+        ),
+      )
+      .orderBy(
+        desc(studentSubjectSelectionModel.updatedAt),
+        desc(studentSubjectSelectionModel.id),
+      );
+
+    // Pick the very latest row (sorted desc by updatedAt, id)
+    const latestAudit = studentRowsForMeta[0];
+    if (latestAudit) {
+      if (!userMap.has(latestAudit.createdBy)) {
+        const [u] = await db
+          .select({
+            id: userModel.id,
+            name: userModel.name,
+            type: userModel.type,
+          })
+          .from(userModel)
+          .where(eq(userModel.id, latestAudit.createdBy));
+        if (u) userMap.set(u.id, u);
+      }
+      const createdByUser = userMap.get(latestAudit.createdBy);
+      row["Created by"] = createdByUser?.type?.toString().toUpperCase() || "";
+      const lastUpdated = latestAudit.updatedAt || null;
+      row["Last Updated"] = lastUpdated
+        ? new Date(lastUpdated).toLocaleString()
+        : "";
+
+      // Aggregate all non-empty remarks for the student in this meta (deduped, latest first)
+      const remarks = studentRowsForMeta
+        .map((r) => r.changeReason)
+        .filter((v): v is string => Boolean(v && v.trim())) as string[];
+      const uniqueRemarks: string[] = [];
+      for (const r of remarks) {
+        if (!uniqueRemarks.includes(r)) uniqueRemarks.push(r);
+      }
+      row["Remarks"] = uniqueRemarks.join(" | ");
+
+      // Latest updated by user name
+      row["By User Name"] = createdByUser ? createdByUser.name : "";
+    } else {
+      row["Created by"] = "";
+      row["Last Updated"] = "";
+      row["Remarks"] = "";
+      row["By User Name"] = "";
+    }
+
+    excelData.push(row);
+  }
+
+  // Send progress update - generating Excel file
+  if (userId) {
+    const progressUpdate = socketService.createExportProgressUpdate(
+      userId,
+      `Generating Excel file with ${excelData.length} records...`,
+      80,
+      "in_progress",
+    );
+    socketService.sendProgressUpdate(userId, progressUpdate);
+  }
+
+  // Generate Excel file
+  const wb = XLSX.utils.book_new();
+
+  // Set column widths
+  const colWidths = [
+    { wch: 15 }, // UID
+    { wch: 30 }, // Name
+    { wch: 15 }, // Roll No.
+    { wch: 15 }, // Section
+    { wch: 20 }, // Session
+  ];
+
+  // Add widths for subject selection meta columns
+  allMetasForYear.forEach(() => {
+    colWidths.push({ wch: 25 });
+  });
+
+  // Add widths for remaining columns
+  colWidths.push(
+    { wch: 15 }, // Created by
+    { wch: 20 }, // Last Updated
+    { wch: 30 }, // Remarks
+    { wch: 25 }, // By User Name
+  );
+
+  const ws = XLSX.utils.json_to_sheet(excelData);
+  ws["!cols"] = colWidths;
+  XLSX.utils.book_append_sheet(wb, ws, "Student Subject Selections");
+
+  // Generate buffer
+  const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const fileName = `student_subject_selections_${meta.label.replace(/[^a-zA-Z0-9]/g, "_")}_${timestamp}.xlsx`;
+
+  console.log(`Export completed. Total records: ${excelData.length}`);
+
+  // Send final progress update - completed
+  if (userId) {
+    const progressUpdate = socketService.createExportProgressUpdate(
+      userId,
+      `Export completed successfully! Generated ${excelData.length} records.`,
+      100,
+      "completed",
+      fileName,
+    );
+    socketService.sendProgressUpdate(userId, progressUpdate);
+  }
+
+  return {
+    buffer,
+    fileName,
+    totalRecords: excelData.length,
   };
 }

@@ -14,6 +14,7 @@ import {
   getSubjectSelectionAuditTrail,
   canStudentCreateSelections,
   getSelectionStatistics,
+  exportStudentSubjectSelections,
 } from "../services/student-subject-selection.service.js";
 
 // Get subject selection meta data for UI form
@@ -714,6 +715,87 @@ export async function getSelectionStatisticsHandler(
         ),
       );
   } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Export student subject selections to Excel
+export async function exportStudentSubjectSelectionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const subjectSelectionMetaId = Number(req.params.subjectSelectionMetaId);
+
+    if (!subjectSelectionMetaId || isNaN(subjectSelectionMetaId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(
+            400,
+            "BAD_REQUEST",
+            null,
+            "Invalid subject selection meta ID provided",
+          ),
+        );
+      return;
+    }
+
+    console.log(
+      `Starting export for subject selection meta ID: ${subjectSelectionMetaId}`,
+    );
+
+    // Get user ID from request (assuming it's available in req.user or similar)
+    const userId = (req as any).user?.id || (req as any).user?.userId;
+
+    const exportResult = await exportStudentSubjectSelections(
+      subjectSelectionMetaId,
+      userId,
+    );
+
+    // Check if there was an error in the service
+    if (exportResult.error) {
+      res
+        .status(404)
+        .json(new ApiResponse(404, "NOT_FOUND", null, exportResult.error));
+      return;
+    }
+
+    // Check if no data was found
+    if (!exportResult.buffer) {
+      res
+        .status(404)
+        .json(
+          new ApiResponse(
+            404,
+            "NOT_FOUND",
+            null,
+            "No data found for the specified subject selection meta ID",
+          ),
+        );
+      return;
+    }
+
+    // Set headers for file download
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${exportResult.fileName}"`,
+    );
+    res.setHeader("Content-Length", exportResult.buffer.length);
+
+    console.log(
+      `Export completed. Total records: ${exportResult.totalRecords}`,
+    );
+
+    // Send the Excel buffer as response
+    res.status(200).send(exportResult.buffer);
+  } catch (error) {
+    console.error("Export error:", error);
     handleError(error, res, next);
   }
 }
