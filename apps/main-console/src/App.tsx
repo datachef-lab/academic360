@@ -171,6 +171,8 @@ const router = createBrowserRouter(
             { path: "components", element: <examManagementModule.ExamComponentsPage /> },
             { path: "floors", element: <examManagementModule.ExamFloorsPage /> },
             { path: "rooms", element: <examManagementModule.ExamRoomsPage /> },
+            { path: "test-types", element: <examManagementModule.TestTypePage /> },
+            { path: "evaluation-types", element: <examManagementModule.EvaluationTypePage /> },
           ],
         },
         {

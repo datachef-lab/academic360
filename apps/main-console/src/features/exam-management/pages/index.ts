@@ -13,6 +13,8 @@ import RoomPage from "./room-page";
 import ScheduleExamPage from "./schedule-exam-page";
 import SupportStaffPage from "./support-staff-page";
 import ExamPage from "./exam-page";
+import TestTypePage from "./test-type-page";
+import EvaluationTypePage from "./evaluation-type-page";
 
 export {
   AllotAnswerscriptsPage,
@@ -30,4 +32,6 @@ export {
   RoomPage,
   ScheduleExamPage,
   SupportStaffPage,
+  TestTypePage,
+  EvaluationTypePage,
 };
