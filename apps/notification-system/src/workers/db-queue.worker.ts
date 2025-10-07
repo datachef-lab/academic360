@@ -5,12 +5,12 @@ import {
 } from "@repo/db/schemas/models/notifications";
 import { and, eq } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
+import { db } from "@/db";
 
 const BATCH_SIZE = Number(process.env.NOTIF_BATCH_SIZE ?? 100);
 const MAX_RETRIES = 7;
 
 export async function processDbQueueOnce() {
-  const db = getDbConnection(process.env.DATABASE_URL!);
   // Fetch oldest pending
   const rows = await db.select().from(notificationQueueModel).limit(BATCH_SIZE);
   for (const row of rows) {
@@ -21,9 +21,10 @@ export async function processDbQueueOnce() {
         .update(notificationModel)
         .set({ status: "SENT", sentAt: new Date() })
         .where(eq(notificationModel.id, row.notificationId));
-      // Dequeue
+      // Dead-letter instead of delete to preserve history
       await db
-        .delete(notificationQueueModel)
+        .update(notificationQueueModel)
+        .set({ isDeadLetter: true, deadLetterAt: new Date() })
         .where(eq(notificationQueueModel.id, row.id));
     } catch (err) {
       const attempts = (row.retryAttempts ?? 0) + 1;
@@ -37,7 +38,8 @@ export async function processDbQueueOnce() {
           })
           .where(eq(notificationModel.id, row.notificationId));
         await db
-          .delete(notificationQueueModel)
+          .update(notificationQueueModel)
+          .set({ isDeadLetter: true, deadLetterAt: new Date() })
           .where(eq(notificationQueueModel.id, row.id));
       } else {
         await db

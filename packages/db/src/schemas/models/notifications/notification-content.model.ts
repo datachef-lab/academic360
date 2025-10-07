@@ -8,7 +8,7 @@ import { notificationEventModel } from "./notification-event.model";
 export const notificationContentModel = pgTable("notification_contents", {
     id: serial().primaryKey(),
     notificationId: integer("notification_id_fk").references(() => notificationModel.id).notNull(),
-    notificationEventId: integer("notification_event_id_fk").references(() => notificationEventModel.id).notNull(),
+    notificationEventId: integer("notification_event_id_fk").references(() => notificationEventModel.id),
     emailTemplate: varchar({ length: 255 }),
     whatsappFieldId: integer("whatsapp_field_id_fk")
         .references(() => notificationMasterFieldModel.id)

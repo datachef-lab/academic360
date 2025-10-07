@@ -164,6 +164,48 @@ app.use(
   }),
 );
 
+// Internal proxy to notification-system (minimal without extra deps)
+const NOTIFICATION_SYSTEM_URL =
+  process.env.NOTIFICATION_SYSTEM_URL ||
+  `http://localhost:${process.env.NOTIFICATION_SYSTEM_PORT || 8080}`;
+console.log("[backend] proxy target:", NOTIFICATION_SYSTEM_URL);
+app.use("/internal/notifications", async (req: Request, res: Response) => {
+  try {
+    const upstreamPath = req.originalUrl.replace(
+      /^\/internal\/notifications/,
+      "",
+    );
+    const url = `${NOTIFICATION_SYSTEM_URL}${upstreamPath}`;
+    console.log("[backend] proxy ->", { method: req.method, url });
+    const method = req.method.toUpperCase();
+    const headers: Record<string, string> = {};
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (typeof v === "string") headers[k] = v;
+    }
+    delete headers["host"];
+    const hasBody = !["GET", "HEAD"].includes(method);
+    const body = hasBody ? JSON.stringify(req.body ?? {}) : undefined;
+    const upstream = await fetch(url, {
+      method,
+      headers: {
+        ...headers,
+        "content-type": headers["content-type"] || "application/json",
+      },
+      body,
+    } as any);
+    console.log("[backend] proxy <-", upstream.status);
+    res.status(upstream.status);
+    upstream.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "transfer-encoding") return;
+      res.setHeader(key, value);
+    });
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
+  } catch (e: any) {
+    res.status(502).json({ ok: false, error: String(e).slice(0, 500) });
+  }
+});
+
 app.use(passport.initialize());
 
 app.use(passport.session());

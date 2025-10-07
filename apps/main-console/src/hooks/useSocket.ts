@@ -61,8 +61,16 @@ export function useSocket(options: UseSocketOptions = {}): UseSocketResult {
 
   useEffect(() => {
     // Initialize socket connection
-    const socket = io(import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:3000", {
-      withCredentials: true,
+    const backendEnv = import.meta.env.VITE_APP_BACKEND_URL || "http://localhost:3000";
+    // Support backends mounted under a path prefix like `/backend`
+    const parsed = new URL(backendEnv);
+    const origin = `${parsed.protocol}//${parsed.host}`;
+    const pathPrefix = parsed.pathname.replace(/\/$/, "");
+    const socketPath = pathPrefix ? `${pathPrefix}/socket.io` : "/socket.io";
+
+    const socket = io(origin, {
+      path: socketPath,
+      withCredentials: false,
       transports: ["websocket", "polling"],
     });
 

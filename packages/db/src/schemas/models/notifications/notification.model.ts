@@ -5,6 +5,7 @@ import { notificationStatusEnum, notificationTypeEnum, notificationVariantEnum }
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 import { notificationEventModel } from "./notification-event.model";
+import { notificationMasterModel } from "./notification-master.model";
 
 export const notificationModel = pgTable("notifications", {
     id: serial().primaryKey(),
@@ -12,6 +13,8 @@ export const notificationModel = pgTable("notifications", {
     .references(() => applicationFormModel.id),
     userId: integer("user_id_fk")
     .references(() => userModel.id),
+    notificationMasterId: integer("notification_master_id_fk")
+    .references(() => notificationMasterModel.id),
     notificationEventId: integer("notification_event_id_fk")
     .references(() => notificationEventModel.id),
     variant: notificationVariantEnum().notNull(),

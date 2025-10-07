@@ -8,7 +8,6 @@ export const notificationMasterModel = pgTable("notification_masters", {
     template: varchar({ length: 255 }).unique(),
     previewImage: text("preview_image"),
     isActive: boolean().notNull().default(true),
-
     createdAt: timestamp().defaultNow(),
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });

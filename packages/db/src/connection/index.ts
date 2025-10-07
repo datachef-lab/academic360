@@ -13,5 +13,5 @@ export const getDbConnection = (databaseUrl: string) => {
         maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
     });
 
-    return drizzle(pool);
+    return drizzle(pool, {casing: "snake_case"});
 };

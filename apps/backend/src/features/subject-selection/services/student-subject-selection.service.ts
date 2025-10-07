@@ -11,6 +11,7 @@ import {
   subjectModel,
   streamModel,
   subjectTypeModel,
+  programCourseModel,
 } from "@repo/db/schemas/models/course-design";
 import { academicYearModel } from "@repo/db/schemas/models/academics";
 import { classModel } from "@repo/db/schemas/models/academics/class.model";
@@ -30,6 +31,8 @@ import { PaginatedResponse } from "@/utils/PaginatedResponse.js";
 import * as studentSubjectsService from "./student-subjects.service";
 import * as XLSX from "xlsx";
 import { socketService } from "@/services/socketService.js";
+import { enqueueNotification } from "@/services/notificationClient.js";
+import { getNotificationMasterIdByName } from "@/services/notificationMastersCache.js";
 
 export type CreateStudentSubjectSelectionDtoInput = {
   studentId: number;
@@ -215,6 +218,95 @@ async function modelToDto(
   };
   return dto;
 }
+
+// Helper: Build subject grid for email
+function buildSubjectsByCategoryForEmail(
+  rows: Array<{ metaLabel: string; subjectName: string }>,
+): Record<string, Record<string, string>> {
+  const grid: Record<string, Record<string, string>> = {};
+  const put = (cat: string, sem: string, name: string) => {
+    if (!grid[cat]) grid[cat] = {};
+    if (!grid[cat][sem]) grid[cat][sem] = name;
+  };
+  for (const r of rows) {
+    const label = String(r.metaLabel || "");
+    const name = r.subjectName || "";
+    if (!name) continue;
+    const sem = /\b(I|II|III|IV)\b/.exec(label)?.[1] || "";
+    if (/DSCC/i.test(label)) put("DSCC", sem, name);
+    else if (/Minor/i.test(label)) put("Minor", sem, name);
+    else if (/IDC/i.test(label)) put("IDC", sem, name);
+    else if (/SEC/i.test(label)) put("SEC", sem, name);
+    else if (/AEC/i.test(label)) put("AEC", sem, name);
+    else if (/CVAC/i.test(label)) put("CVAC", sem, name);
+  }
+  return grid;
+}
+
+// async function enqueueSubjectSelectionEmail(
+//     userId: number,
+//     academicYearName: string,
+//     subjectsByCategory: Record<string, Record<string, string>>,
+// ) {
+//     const { notificationModel } = await import("@repo/db/schemas/models/notifications/notification.model");
+//     const { notificationContentModel } = await import("@repo/db/schemas/models/notifications/notification-content.model");
+//     const { notificationQueueModel } = await import("@repo/db/schemas/models/notifications/notification-queue.model");
+//     const { notificationMasterModel } = await import("@repo/db/schemas/models/notifications/notification-master.model");
+//     const { notificationTypeEnum, notificationVariantEnum, notificationStatusEnum } = await import("@repo/db/schemas/enums");
+
+//     // Global toggle via env
+//     const enabled = String(process.env.NOTIFICATIONS_ENABLED || "true").toLowerCase() === "true";
+//     if (!enabled) {
+//         console.log("[Notif] Skipped: NOTIFICATIONS_ENABLED is false");
+//         return;
+//     }
+
+//     // Respect master isActive flag
+//     const MASTER_NAME = "STUDENT_SUBJECT_SELECTION_CONFIRMATION";
+//     const [master] = await db
+//         .select({ id: notificationMasterModel.id, isActive: notificationMasterModel.isActive })
+//         .from(notificationMasterModel)
+//         .where(eq(notificationMasterModel.name, MASTER_NAME))
+//         .limit(1);
+//     if (!master || master.isActive === false) {
+//         console.log("[Notif] Skipped: master inactive or missing =>", MASTER_NAME);
+//         return;
+//     }
+
+//     const notifInsert = await db
+//         .insert(notificationModel)
+//         .values({
+//             userId,
+//             notificationEventId: null,
+//             variant: "INFO" as any,
+//             type: "EMAIL" as any,
+//             message: "Confirmation of Semester-wise Subject Selection",
+//             status: "PENDING" as any,
+//         })
+//         .returning();
+//     const notif = notifInsert[0];
+
+//     const payload = {
+//         subject: "Confirmation of Semester-wise Subject Selection under CCF",
+//         emailTemplate: "student-subject-selection",
+//         academicYear: academicYearName,
+//         subjectsByCategory,
+//     };
+
+//     await db
+//         .insert(notificationContentModel)
+//         .values({
+//             notificationId: notif.id as number,
+//             notificationEventId: 0 as any,
+//             emailTemplate: "student-subject-selection",
+//             whatsappFieldId: 1 as any,
+//             content: JSON.stringify(payload),
+//         });
+
+//     await db
+//         .insert(notificationQueueModel)
+//         .values({ notificationId: notif.id as number, type: "EMAIL_QUEUE" as any });
+// }
 
 // -- Validation Helpers -----------------------------------------------------------------
 
@@ -1158,6 +1250,144 @@ export async function createStudentSubjectSelectionsWithValidation(
     ),
   );
 
+  // Enqueue confirmation email (non-blocking)
+  try {
+    const [student] = await db
+      .select({ userId: studentModel.userId })
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId))
+      .limit(1);
+    const rowsForGrid = dtos.map((d) => ({
+      metaLabel: (d.subjectSelectionMeta as any)?.label || "",
+      subjectName: d.subject?.name || "",
+    }));
+    const academicYearName = String(
+      (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
+    );
+    if (student?.userId) {
+      const masterId = await getNotificationMasterIdByName(
+        "Subject Selection Confirmation",
+      );
+      console.log("[backend] enqueue subject-selection (create) ->", {
+        userId: student.userId,
+        masterId,
+        academicYearName,
+      });
+      // Build per-field content rows from notification master meta
+      let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
+      if (masterId) {
+        const { notificationMasterMetaModel } = await import(
+          "@repo/db/schemas/models/notifications/notification-master-meta.model"
+        );
+        const { notificationMasterFieldModel } = await import(
+          "@repo/db/schemas/models/notifications/notification-master-field.model"
+        );
+
+        console.log("[backend] notification master ID:", masterId);
+
+        const metas = await db
+          .select({
+            fieldId: notificationMasterMetaModel.notificationMasterFieldId,
+            sequence: notificationMasterMetaModel.sequence,
+            flag: notificationMasterMetaModel.flag,
+          })
+          .from(notificationMasterMetaModel)
+          .where(
+            eq(notificationMasterMetaModel.notificationMasterId, masterId),
+          );
+        const activeMetas = metas
+          .filter((m) => m.flag === true)
+          .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+
+        console.log(
+          "[backend] notification master metas:",
+          JSON.stringify(activeMetas, null, 2),
+        );
+
+        const fieldIds = activeMetas.map((m) => m.fieldId as number);
+        if (fieldIds.length > 0) {
+          const fields = await db
+            .select({
+              id: notificationMasterFieldModel.id,
+              name: notificationMasterFieldModel.name,
+            })
+            .from(notificationMasterFieldModel)
+            .where(inArray(notificationMasterFieldModel.id, fieldIds));
+
+          console.log(
+            "[backend] notification master fields:",
+            JSON.stringify(fields, null, 2),
+          );
+
+          const nameById = new Map(
+            fields.map((f) => [f.id as number, String(f.name)]),
+          );
+
+          console.log(
+            "[backend] subject selection meta labels from rowsForGrid:",
+            JSON.stringify(rowsForGrid, null, 2),
+          );
+
+          // Build values: academicYear and each selection label -> selected subject name
+          const normalize = (s: string) =>
+            String(s || "")
+              .normalize("NFKD")
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "");
+          const labelToValue: Record<string, string> = {};
+          // Support common key variants for academic year
+          labelToValue[normalize("academicYear")] = academicYearName;
+          labelToValue[normalize("Academic Year")] = academicYearName;
+          for (const r of rowsForGrid) {
+            labelToValue[normalize(r.metaLabel)] = r.subjectName;
+          }
+
+          console.log(
+            "[backend] normalized labelToValue mapping:",
+            JSON.stringify(labelToValue, null, 2),
+          );
+
+          contentRows = activeMetas.map((m) => {
+            const rawName = nameById.get(m.fieldId as number) || "";
+            const key = normalize(rawName);
+            const value = labelToValue[key] ?? "";
+            console.log(
+              `[backend] field mapping: rawName="${rawName}" -> normalized="${key}" -> value="${value}"`,
+            );
+            return {
+              whatsappFieldId: m.fieldId as number,
+              content: String(value ?? ""),
+            };
+          });
+
+          console.log(
+            "[backend] final contentRows:",
+            JSON.stringify(contentRows, null, 2),
+          );
+        }
+      }
+
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "EMAIL",
+        type: "INFO",
+        message: "Confirmation of Semester-wise Subject Selection",
+        notificationMasterId: masterId,
+        notificationEvent: {
+          subject: "Confirmation of Semester-wise Subject Selection",
+          templateData: {
+            academicYear: academicYearName,
+          },
+          meta: { devOnly: true },
+        },
+        content: contentRows,
+      });
+      console.log("[backend] enqueue subject-selection (create) <- done");
+    }
+  } catch (err) {
+    console.log("[Notif] enqueue failed (create):", err);
+  }
+
   return { success: true, data: dtos };
 }
 
@@ -1589,13 +1819,165 @@ export async function updateStudentSubjectSelectionsEfficiently(
     `📊 Summary: ${changedSelections.length} changed, ${unchangedSelections.length} unchanged`,
   );
 
-  // If nothing changed, return success with current data
+  // If nothing changed, still trigger notification and return
   if (changedSelections.length === 0) {
     console.log("✅ No changes detected, returning current selections");
-    return {
-      success: true,
-      data: unchangedSelections,
-    };
+    try {
+      const [student] = await db
+        .select({ userId: studentModel.userId })
+        .from(studentModel)
+        .where(eq(studentModel.id, studentId))
+        .limit(1);
+
+      // derive academic year name from any current selection
+      let academicYearName = "";
+      if (currentSelections.length > 0) {
+        const dto = await modelToDto(
+          currentSelections[0] as StudentSubjectSelectionT,
+        );
+        academicYearName = String(
+          (dto.subjectSelectionMeta as any)?.academicYear?.name || "",
+        );
+      }
+
+      if (student?.userId) {
+        const masterId = await getNotificationMasterIdByName(
+          "Subject Selection Confirmation",
+        );
+        console.log("[backend] enqueue subject-selection (no-change) ->", {
+          userId: student.userId,
+          masterId,
+          academicYearName,
+        });
+
+        // Build rowsForGrid from current selections for no-change scenario
+        const rowsForGrid = await Promise.all(
+          currentSelections.map(async (selection) => {
+            const dto = await modelToDto(selection as StudentSubjectSelectionT);
+            return {
+              metaLabel: (dto.subjectSelectionMeta as any)?.label || "",
+              subjectName: dto.subject?.name || "",
+            };
+          }),
+        );
+
+        // Build per-field content rows from notification master meta
+        let contentRows: Array<{ whatsappFieldId: number; content: string }> =
+          [];
+        if (masterId) {
+          const { notificationMasterMetaModel } = await import(
+            "@repo/db/schemas/models/notifications/notification-master-meta.model"
+          );
+          const { notificationMasterFieldModel } = await import(
+            "@repo/db/schemas/models/notifications/notification-master-field.model"
+          );
+
+          console.log(
+            "[backend] notification master ID (no-change):",
+            masterId,
+          );
+
+          const metas = await db
+            .select({
+              fieldId: notificationMasterMetaModel.notificationMasterFieldId,
+              sequence: notificationMasterMetaModel.sequence,
+              flag: notificationMasterMetaModel.flag,
+            })
+            .from(notificationMasterMetaModel)
+            .where(
+              eq(notificationMasterMetaModel.notificationMasterId, masterId),
+            );
+          const activeMetas = metas
+            .filter((m) => m.flag === true)
+            .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+
+          console.log(
+            "[backend] notification master metas (no-change):",
+            JSON.stringify(activeMetas, null, 2),
+          );
+
+          const fieldIds = activeMetas.map((m) => m.fieldId as number);
+          if (fieldIds.length > 0) {
+            const fields = await db
+              .select({
+                id: notificationMasterFieldModel.id,
+                name: notificationMasterFieldModel.name,
+              })
+              .from(notificationMasterFieldModel)
+              .where(inArray(notificationMasterFieldModel.id, fieldIds));
+
+            console.log(
+              "[backend] notification master fields (no-change):",
+              JSON.stringify(fields, null, 2),
+            );
+
+            const nameById = new Map(
+              fields.map((f) => [f.id as number, String(f.name)]),
+            );
+
+            console.log(
+              "[backend] subject selection meta labels from rowsForGrid (no-change):",
+              JSON.stringify(rowsForGrid, null, 2),
+            );
+
+            // Build values: academicYear and each selection label -> selected subject name
+            const normalize = (s: string) =>
+              String(s || "")
+                .normalize("NFKD")
+                .toUpperCase()
+                .replace(/[^A-Z0-9]/g, "");
+            const labelToValue: Record<string, string> = {};
+            // Support common key variants for academic year
+            labelToValue[normalize("academicYear")] = academicYearName;
+            labelToValue[normalize("Academic Year")] = academicYearName;
+            for (const r of rowsForGrid) {
+              labelToValue[normalize(r.metaLabel)] = r.subjectName;
+            }
+
+            console.log(
+              "[backend] normalized labelToValue mapping (no-change):",
+              JSON.stringify(labelToValue, null, 2),
+            );
+
+            contentRows = activeMetas.map((m) => {
+              const rawName = nameById.get(m.fieldId as number) || "";
+              const key = normalize(rawName);
+              const value = labelToValue[key] ?? "";
+              console.log(
+                `[backend] field mapping (no-change): rawName="${rawName}" -> normalized="${key}" -> value="${value}"`,
+              );
+              return {
+                whatsappFieldId: m.fieldId as number,
+                content: String(value ?? ""),
+              };
+            });
+
+            console.log(
+              "[backend] final contentRows (no-change):",
+              JSON.stringify(contentRows, null, 2),
+            );
+          }
+        }
+
+        await enqueueNotification({
+          userId: student.userId as number,
+          variant: "EMAIL",
+          type: "INFO",
+          message: "Confirmation of Semester-wise Subject Selection",
+          notificationMasterId: masterId,
+          notificationEvent: {
+            subject: "Confirmation of Semester-wise Subject Selection",
+            templateData: { academicYear: academicYearName },
+            meta: { devOnly: true },
+          },
+          content: contentRows,
+        });
+        console.log("[backend] enqueue subject-selection (no-change) <- done");
+      }
+    } catch (err) {
+      console.log("[Notif] enqueue failed (no-change):", err);
+    }
+    return { success: true, data: unchangedSelections };
   }
 
   // Enrich only the changed selections
@@ -1791,6 +2173,54 @@ export async function updateStudentSubjectSelectionsEfficiently(
   // Return all active selections (unchanged + newly inserted)
   const allActiveSelections = [...unchangedSelections, ...insertedSelections];
 
+  // Enqueue updated confirmation email (non-blocking)
+  try {
+    const [student] = await db
+      .select({ userId: studentModel.userId })
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId))
+      .limit(1);
+    const dtos = await Promise.all(
+      allActiveSelections.map((selection) =>
+        modelToDto(selection as StudentSubjectSelectionT),
+      ),
+    );
+    const rowsForGrid = dtos.map((d) => ({
+      metaLabel: (d.subjectSelectionMeta as any)?.label || "",
+      subjectName: d.subject?.name || "",
+    }));
+    const academicYearName = String(
+      (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
+    );
+    if (student?.userId) {
+      const masterId = await getNotificationMasterIdByName(
+        "Subject Selection Confirmation",
+      );
+      console.log("[backend] enqueue subject-selection (update) ->", {
+        userId: student.userId,
+        masterId,
+        academicYearName,
+      });
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "EMAIL",
+        type: "INFO",
+        message: "Confirmation of Semester-wise Subject Selection",
+        notificationMasterId: masterId,
+        notificationEvent: {
+          subject: "Confirmation of Semester-wise Subject Selection",
+          templateData: {
+            academicYear: academicYearName,
+          },
+          meta: { devOnly: true },
+        },
+      });
+      console.log("[backend] enqueue subject-selection (update) <- done");
+    }
+  } catch (err) {
+    console.log("[Notif] enqueue failed (update):", err);
+  }
+
   return {
     success: true,
     data: allActiveSelections,
@@ -1921,6 +2351,7 @@ export async function exportStudentSubjectSelections(
     .select({
       studentId: studentModel.id,
       uid: studentModel.uid,
+      studentClassRoll: studentModel.classRollNumber,
       userId: studentModel.userId,
       userName: userModel.name,
       userType: userModel.type,
@@ -1930,12 +2361,17 @@ export async function exportStudentSubjectSelections(
       sectionName: sectionModel.name,
       sessionId: promotionModel.sessionId,
       sessionName: sessionModel.name,
+      programCourseName: programCourseModel.name,
     })
     .from(studentModel)
     .innerJoin(userModel, eq(studentModel.userId, userModel.id))
     .leftJoin(promotionModel, eq(studentModel.id, promotionModel.studentId))
     .leftJoin(sectionModel, eq(promotionModel.sectionId, sectionModel.id))
     .leftJoin(sessionModel, eq(promotionModel.sessionId, sessionModel.id))
+    .leftJoin(
+      programCourseModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
     .where(inArray(studentModel.id, studentIds));
 
   // We'll compute subjectIds after loading allSelectionsForYear
@@ -2024,8 +2460,10 @@ export async function exportStudentSubjectSelections(
     const row: any = {
       UID: studentDetail.uid || "",
       Name: studentDetail.userName || "",
-      "Roll No.": studentDetail.rollNumber || "",
       Session: studentDetail.sessionName || "",
+      "Program-Course": studentDetail.programCourseName || "",
+      "Class Roll No.":
+        studentDetail.studentClassRoll || studentDetail.rollNumber || "",
       Section: studentDetail.sectionName || "",
     };
 
@@ -2088,7 +2526,8 @@ export async function exportStudentSubjectSelections(
         if (u) userMap.set(u.id, u);
       }
       const createdByUser = userMap.get(latestAudit.createdBy);
-      row["Created by"] = createdByUser?.type?.toString().toUpperCase() || "";
+      row["Last updated by user type"] =
+        createdByUser?.type?.toString().toUpperCase() || "";
       const lastUpdated = latestAudit.updatedAt || null;
       row["Last Updated"] = lastUpdated
         ? new Date(lastUpdated).toLocaleString()
@@ -2107,7 +2546,7 @@ export async function exportStudentSubjectSelections(
       // Latest updated by user name
       row["By User Name"] = createdByUser ? createdByUser.name : "";
     } else {
-      row["Created by"] = "";
+      row["Last updated by user type"] = "";
       row["Last Updated"] = "";
       row["Remarks"] = "";
       row["By User Name"] = "";
@@ -2134,9 +2573,10 @@ export async function exportStudentSubjectSelections(
   const colWidths = [
     { wch: 15 }, // UID
     { wch: 30 }, // Name
-    { wch: 15 }, // Roll No.
-    { wch: 15 }, // Section
+    { wch: 28 }, // Program-Course
+    { wch: 15 }, // Class Roll No.
     { wch: 20 }, // Session
+    { wch: 15 }, // Section
   ];
 
   // Add widths for subject selection meta columns
@@ -2146,7 +2586,7 @@ export async function exportStudentSubjectSelections(
 
   // Add widths for remaining columns
   colWidths.push(
-    { wch: 15 }, // Created by
+    { wch: 18 }, // Last updated by user type
     { wch: 20 }, // Last Updated
     { wch: 30 }, // Remarks
     { wch: 25 }, // By User Name

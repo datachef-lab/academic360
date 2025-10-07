@@ -1,3 +1,3 @@
 import { getDbConnection } from "@repo/db/connection";
 
-export const database = getDbConnection(process.env.DATABASE_URL!);
+export const db = getDbConnection(process.env.DATABASE_URL!);

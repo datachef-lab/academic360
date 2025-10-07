@@ -1,6 +1,6 @@
 
 import { NotificationMasterMetaT } from "@/schemas/models/notifications/notification-master-meta.model";
-import { NotificationEventT, NotificationT, NotificationMasterT, NotificationMasterFieldT } from "../../schemas/models/notifications";
+import { NotificationEventT, NotificationT, NotificationMasterT, NotificationMasterFieldT, NotificationContentT } from "../../schemas/models/notifications";
 
 export interface NotificationMasterDto extends NotificationMasterT {
     fields: NotificationMasterFieldT[];
@@ -29,6 +29,7 @@ export interface NotificationEventDto extends NotificationEventT {
 
 export interface NotificationDto extends NotificationT {
     notificationEvent: NotificationEventDto;
+    content: NotificationContentT[];
 }
 
 export type TemplateScalar = string | number | boolean | null | undefined;

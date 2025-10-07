@@ -30,9 +30,26 @@ export class NotificationsController {
             ? true
             : isDevOrigin === true;
 
+      // Debug: surface env-driven routing inputs
+      console.log(
+        "[notifications] enqueue env check =>",
+        JSON.stringify({ env, origin, host, isDevOrigin, devOnly }),
+      );
+
+      console.log("[notif-sys] enqueue ->", {
+        env,
+        origin,
+        host,
+        userId: req.body?.userId,
+        variant: req.body?.variant,
+        type: req.body?.type,
+        hasMasterId: Boolean(req.body?.notificationMasterId),
+      });
+
       const id = await NotificationsService.enqueue(req.body, {
         meta: { devOnly },
       });
+      console.log("[notif-sys] enqueue <- id", id);
       res.json({ ok: true, id });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

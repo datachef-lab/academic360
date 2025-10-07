@@ -50,8 +50,27 @@ export async function sendZeptoMail(
   try {
     await client.sendMail(payload);
     return { ok: true };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: msg.slice(0, 500) };
+  } catch (e: any) {
+    console.log(
+      `[zepto] sendZeptoMail error:`,
+      e.error,
+      e.error.message,
+      e.error.details,
+    );
+
+    // Extract proper error message from ZeptoMail API response
+    let errorMessage = "Unknown error";
+    if (e?.error?.message) {
+      errorMessage = e.error.message;
+    } else if (e?.message) {
+      errorMessage = e.message;
+    } else if (typeof e === "string") {
+      errorMessage = e;
+    } else if (e && typeof e === "object") {
+      errorMessage = JSON.stringify(e);
+    }
+
+    console.log(`[zepto] extracted error message:`, errorMessage);
+    return { ok: false, error: errorMessage.slice(0, 500) };
   }
 }

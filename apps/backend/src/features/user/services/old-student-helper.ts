@@ -1911,7 +1911,7 @@ export async function processStudent(
 
     if (applicationForm && transferredAdmCourseDetails) {
       await addPromotion(
-        student.id!,
+        student,
         applicationForm,
         oldStudent.id!,
         transferredAdmCourseDetails,
@@ -2292,7 +2292,7 @@ async function loadStudentAcademicInfoAndSubjects(
 }
 
 export async function addPromotion(
-  studentId: number,
+  student: Student,
   applicationForm: ApplicationForm,
   oldStudentId: number,
   admissionCourseDetails: AdmissionCourseDetails,
@@ -2404,24 +2404,25 @@ export async function addPromotion(
     .from(promotionModel)
     .where(
       and(
-        eq(promotionModel.studentId, studentId),
+        eq(promotionModel.studentId, student.id!),
         eq(promotionModel.legacyHistoricalRecordId, oldHistoricalRecord?.id!),
       ),
     );
 
   if (existingPromotion) {
-    console.log("Updating promotion data for student:", studentId);
+    console.log("Updating promotion data for student:", student.id);
     await db
       .update(promotionModel)
       .set({
-        studentId: studentId,
+        studentId: student.id!,
         sectionId: foundSection?.id,
         legacyHistoricalRecordId: oldHistoricalRecord?.id!,
         programCourseId: foundProgramCourse?.id!,
         sessionId: foundSession?.id!,
         shiftId: shift?.id!,
         classId: foundClass?.id!,
-        classRollNumber: String(oldHistoricalRecord?.rollNo!),
+        classRollNumber:
+          String(oldHistoricalRecord?.rollNo!) || student.classRollNumber!,
         dateOfJoining: toDate(oldHistoricalRecord?.dateofJoining),
         promotionStatusId: foundPromotionStatus?.id!,
         boardResultStatusId: foundBoardResultStatus?.id!,
@@ -2435,9 +2436,9 @@ export async function addPromotion(
       })
       .where(eq(promotionModel.id, existingPromotion.id));
   } else {
-    console.log("Creating promotion data for student:", studentId);
+    console.log("Creating promotion data for student:", student.id);
     await db.insert(promotionModel).values({
-      studentId: studentId,
+      studentId: student.id!,
       sectionId: foundSection?.id,
       legacyHistoricalRecordId: oldHistoricalRecord?.id!,
       programCourseId: foundProgramCourse?.id!,

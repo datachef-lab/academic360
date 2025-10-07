@@ -4,12 +4,17 @@ import {
   notificationModel,
   notificationContentModel,
 } from "@repo/db/schemas/models/notifications";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/providers/interakt.js";
 import type {
   NotificationEventDto,
   TemplateData,
 } from "@repo/db/dtos/notifications";
+import {
+  notificationMasterModel,
+  notificationMasterMetaModel,
+} from "@repo/db/schemas/models/notifications";
+import { db } from "@/db";
 
 const POLL_MS = Number(process.env.WHATSAPP_POLL_MS ?? 3000);
 const BATCH_SIZE = Number(process.env.WHATSAPP_BATCH_SIZE ?? 50);
@@ -42,7 +47,6 @@ function readFromTemplateData(
 }
 
 async function processBatch() {
-  const db = getDbConnection(process.env.DATABASE_URL!);
   const rows = await db
     .select()
     .from(notificationQueueModel)
@@ -74,11 +78,48 @@ async function processBatch() {
         : ({} as NotificationEventDto);
       const env = String(process.env.NODE_ENV || "development");
       const devOnlyMeta = Boolean(dto?.meta?.devOnly);
-      const templateName = asString(
+      // Resolve template via notification master id (preferred), fallback to dto
+      let templateName = asString(
         dto?.notificationMaster?.template,
         "generic_alert",
       );
-      // Build body values using WhatsappFieldMetaT entries as the canonical sequence
+      if (notif.notificationMasterId) {
+        const [master] = await db
+          .select()
+          .from(notificationMasterModel)
+          .where(eq(notificationMasterModel.id, notif.notificationMasterId))
+          .limit(1);
+        console.log(
+          "[whatsapp.worker] master check =>",
+          JSON.stringify({
+            id: notif.notificationMasterId,
+            isActive: master?.isActive,
+            template: master?.template,
+          }),
+        );
+        if (!master?.isActive) {
+          await db
+            .update(notificationModel)
+            .set({
+              status: "FAILED",
+              failedAt: new Date(),
+              failedReason: "Notification master inactive",
+            })
+            .where(eq(notificationModel.id, row.notificationId));
+          await db
+            .update(notificationQueueModel)
+            .set({
+              isDeadLetter: true,
+              deadLetterAt: new Date(),
+              failedReason: "Notification master inactive",
+            })
+            .where(eq(notificationQueueModel.id, row.id));
+          continue;
+        }
+        if (master?.template) templateName = String(master.template);
+      }
+
+      // Build body values using DB meta as the canonical sequence
       const contents = await db
         .select()
         .from(notificationContentModel)
@@ -96,11 +137,31 @@ async function processBatch() {
         arr.push({ content: asString(c.content, "") });
         mapFieldToContents.set(fid, arr);
       }
-      // Use WhatsApp Alert Meta (design-driven ordering and gating)
-      const metaEntries = (dto?.notificationMaster?.meta || [])
-        .map((m, idx) => ({ ...m, __i: idx }))
-        .filter((m) => m.flag === true)
-        .sort((a, b) => (a.sequence || 0) - (b.sequence || 0) || a.__i - b.__i);
+      // Use DB Meta (design-driven ordering and gating)
+      let metaEntries: {
+        notificationMasterFieldId: number;
+        sequence: number;
+      }[] = [];
+      if (notif.notificationMasterId) {
+        const metas = await db
+          .select()
+          .from(notificationMasterMetaModel)
+          .where(
+            and(
+              eq(
+                notificationMasterMetaModel.notificationMasterId,
+                notif.notificationMasterId,
+              ),
+              eq(notificationMasterMetaModel.flag, true),
+            ),
+          );
+        metaEntries = metas
+          .sort((a, b) => (a.sequence || 0) - (b.sequence || 0))
+          .map((m) => ({
+            notificationMasterFieldId: m.notificationMasterFieldId as number,
+            sequence: m.sequence as number,
+          }));
+      }
       const bodyValues: string[] = [];
       for (const m of metaEntries) {
         const arr = mapFieldToContents.get(m.notificationMasterFieldId) || [];
@@ -152,13 +213,13 @@ async function processBatch() {
           await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
       } else {
-        const devOnly = env === "development" ? true : devOnlyMeta;
-        const resolvedPhone = devOnly
-          ? process.env.DEVELOPER_PHONE!
-          : asString(
-              user?.whatsappNumber || user?.phone,
-              process.env.DEVELOPER_PHONE!,
-            );
+        const resolvedPhone =
+          env === "development"
+            ? process.env.DEVELOPER_PHONE!
+            : asString(
+                user?.whatsappNumber || user?.phone,
+                process.env.DEVELOPER_PHONE!,
+              );
         const resp = await sendWhatsAppMessage(
           resolvedPhone,
           bodyValues,
@@ -174,7 +235,8 @@ async function processBatch() {
         .set({ status: "SENT", sentAt: new Date() })
         .where(eq(notificationModel.id, row.notificationId));
       await db
-        .delete(notificationQueueModel)
+        .update(notificationQueueModel)
+        .set({ isDeadLetter: true, deadLetterAt: new Date() })
         .where(eq(notificationQueueModel.id, row.id));
 
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
@@ -191,7 +253,8 @@ async function processBatch() {
           })
           .where(eq(notificationModel.id, row.notificationId));
         await db
-          .delete(notificationQueueModel)
+          .update(notificationQueueModel)
+          .set({ isDeadLetter: true, deadLetterAt: new Date() })
           .where(eq(notificationQueueModel.id, row.id));
       } else {
         await db

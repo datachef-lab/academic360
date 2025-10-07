@@ -1,0 +1,1 @@
+ALTER TABLE "notification_contents" ALTER COLUMN "notification_event_id_fk" DROP NOT NULL;

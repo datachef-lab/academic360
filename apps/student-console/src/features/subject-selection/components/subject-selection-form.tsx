@@ -480,11 +480,17 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
   // Helper function to get dynamic label from meta data
   const getDynamicLabel = (subjectTypeCode: string, semester?: string): string => {
-    const meta = subjectSelectionMetas.find(
-      (m) =>
-        m.subjectType.code === subjectTypeCode &&
-        (!semester || m.forClasses.some((c) => c.class.name.includes(semester))),
-    );
+    const extractSemesterRomanFromClass = (name?: string | null): string => {
+      if (!name) return "";
+      const upper = String(name).toUpperCase();
+      const match = upper.match(/\b(I|II|III|IV|V|VI)\b/);
+      return match ? match[1] : "";
+    };
+    const meta = subjectSelectionMetas.find((m) => {
+      if (m.subjectType.code !== subjectTypeCode) return false;
+      if (!semester) return true;
+      return m.forClasses.some((c) => extractSemesterRomanFromClass(c.class?.name) === semester);
+    });
     return meta?.label || getDefaultLabel(subjectTypeCode, semester);
   };
 
@@ -562,6 +568,13 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         })),
       });
 
+      const extractSemesterRomanFromClass = (name?: string | null): string => {
+        if (!name) return "";
+        const upper = String(name).toUpperCase();
+        const match = upper.match(/\b(I|II|III|IV|V|VI)\b/);
+        return match ? match[1] : "";
+      };
+
       const meta = freshMetas.find((m) => {
         if (m.subjectType.code !== subjectTypeCode) return false;
 
@@ -573,7 +586,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
         // For semester-specific matching, check if the meta applies to the semester
         if (semester && m.forClasses.length > 0) {
-          return m.forClasses.some((c) => c.class.name.includes(semester));
+          return m.forClasses.some((c) => extractSemesterRomanFromClass(c.class?.name) === semester);
         }
 
         return true;
