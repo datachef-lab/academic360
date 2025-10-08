@@ -35,7 +35,7 @@ export interface UploadConfig {
 }
 
 // Initialize S3 client with configuration
-function createS3Client(config?: Partial<S3Config>): S3Client {
+function createS3Client(config?: Partial<S3Config>): S3Client | null {
   const s3Config: S3Config = {
     region: config?.region || process.env.AWS_REGION || "ap-south-1",
     bucket: config?.bucket || process.env.AWS_S3_BUCKET || "",
@@ -45,15 +45,17 @@ function createS3Client(config?: Partial<S3Config>): S3Client {
   };
 
   if (!s3Config.bucket) {
-    throw new Error(
-      "S3 bucket name is required. Set AWS_S3_BUCKET environment variable or provide bucket in config.",
+    console.warn(
+      "⚠️  S3 bucket name not configured. Set AWS_S3_BUCKET environment variable or provide bucket in config.",
     );
+    return null;
   }
 
   if (!s3Config.accessKeyId || !s3Config.secretAccessKey) {
-    throw new Error(
-      "AWS credentials are required. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables or provide them in config.",
+    console.warn(
+      "⚠️  AWS credentials not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables or provide them in config.",
     );
+    return null;
   }
 
   return new S3Client({
@@ -65,7 +67,7 @@ function createS3Client(config?: Partial<S3Config>): S3Client {
   });
 }
 
-// Default S3 client instance
+// Default S3 client instance (null if AWS credentials not configured)
 const defaultS3Client = createS3Client();
 const defaultBucket = process.env.AWS_S3_BUCKET || "";
 
@@ -92,6 +94,14 @@ export async function uploadToS3(
 ): Promise<S3UploadResult> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
     const region = s3Config?.region || process.env.AWS_REGION || "ap-south-1";
 
@@ -173,6 +183,14 @@ export async function deleteFromS3(
 ): Promise<boolean> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
 
     const deleteParams = {
@@ -200,6 +218,14 @@ export async function getSignedUrlForFile(
 ): Promise<string> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
 
     const command = new GetObjectCommand({
@@ -271,6 +297,14 @@ export async function listFilesInFolder(
 ): Promise<string[]> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
 
     const command = new ListObjectsV2Command({
@@ -321,6 +355,14 @@ export async function listStudentFiles(
 ): Promise<string[]> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
 
     let prefix: string;
@@ -376,6 +418,14 @@ export async function getStudentFolderStats(
 }> {
   try {
     const s3Client = s3Config ? createS3Client(s3Config) : defaultS3Client;
+
+    if (!s3Client) {
+      throw new ApiError(
+        500,
+        "S3 service is not configured. Please set AWS environment variables.",
+      );
+    }
+
     const bucket = s3Config?.bucket || defaultBucket;
 
     const prefix = `students/${studentUid}/`;

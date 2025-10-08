@@ -1,0 +1,1 @@
+ALTER TABLE "students" ADD COLUMN "belongs_to_ews" boolean DEFAULT false;

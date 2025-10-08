@@ -35,6 +35,7 @@ export const studentModel = pgTable("students", {
     apaarId: varchar({ length: 255 }),
     abcId: varchar({ length: 255 }),
     apprid: varchar({ length: 255 }),
+    belongsToEWS: boolean().default(false),
     checkRepeat: boolean(),
     community: communityTypeEnum(),
     handicapped: boolean().default(false),

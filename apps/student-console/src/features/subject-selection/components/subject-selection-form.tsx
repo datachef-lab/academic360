@@ -1527,29 +1527,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             {/* Combined Academic Information and Guidance Notes */}
             {student?.currentPromotion && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg">
-                {/* Academic Information */}
-                <div className="flex mb-4">
-                  <div className="w-44 pr-2">
-                    <div className="text-base font-bold">Academic Year</div>
-                    <div className="text-base font-bold mt-1">Program Course</div>
-                  </div>
-                  <div className="w-4 pr-2">
-                    <div className="text-base font-bold">:</div>
-                    <div className="text-base font-bold mt-1">:</div>
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-base font-bold text-blue-900">
-                      {student.currentPromotion.session?.academicYear?.year || "N/A"}
-                    </div>
-                    <div className="text-base font-bold text-blue-900 mt-1">
-                      {student.currentPromotion.programCourse?.name || "N/A"}
-                    </div>
-                  </div>
-                </div>
-
                 {/* Guidance Notes - Only in step 1 for new selections */}
                 {step === 1 && !hasExistingSelections && (
-                  <div className="flex items-start gap-3 pt-4 border-t border-blue-200">
+                  <div className="flex items-start gap-3 border-blue-200">
                     <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <div className="text-base leading-relaxed">

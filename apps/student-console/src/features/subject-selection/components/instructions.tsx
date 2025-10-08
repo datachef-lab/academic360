@@ -24,17 +24,6 @@ export default function Instructions({ compact = false }: { compact?: boolean })
         <div className="bg-white rounded-xl shadow-lg border border-gray-100">
           <div className="p-4">
             <div className="space-y-4 text-sm text-gray-700">
-              {/* Before You Begin */}
-              <div className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400">
-                <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
-                  Before You Begin
-                </h4>
-                <p className="text-blue-700 text-sm leading-relaxed">
-                  Please read all guidelines carefully before selecting your subjects. These selections will determine
-                  your academic path for the upcoming semesters.
-                </p>
-              </div>
-
               {/* Introduction */}
               {/* <div className="border border-gray-200 rounded-lg p-3">
                 <p className="text-gray-700 leading-relaxed text-sm">

@@ -1367,21 +1367,21 @@ export async function createStudentSubjectSelectionsWithValidation(
         }
       }
 
-      await enqueueNotification({
-        userId: student.userId as number,
-        variant: "EMAIL",
-        type: "INFO",
-        message: "Confirmation of Semester-wise Subject Selection",
-        notificationMasterId: masterId,
-        notificationEvent: {
-          subject: "Confirmation of Semester-wise Subject Selection",
-          templateData: {
-            academicYear: academicYearName,
-          },
-          meta: { devOnly: true },
-        },
-        content: contentRows,
-      });
+      //   await enqueueNotification({
+      //     userId: student.userId as number,
+      //     variant: "EMAIL",
+      //     type: "INFO",
+      //     message: "Confirmation of Semester-wise Subject Selection",
+      //     notificationMasterId: masterId,
+      //     notificationEvent: {
+      //       subject: "Confirmation of Semester-wise Subject Selection",
+      //       templateData: {
+      //         academicYear: academicYearName,
+      //       },
+      //       meta: { devOnly: true },
+      //     },
+      //     content: contentRows,
+      //   });
       console.log("[backend] enqueue subject-selection (create) <- done");
     }
   } catch (err) {
@@ -1959,19 +1959,19 @@ export async function updateStudentSubjectSelectionsEfficiently(
           }
         }
 
-        await enqueueNotification({
-          userId: student.userId as number,
-          variant: "EMAIL",
-          type: "INFO",
-          message: "Confirmation of Semester-wise Subject Selection",
-          notificationMasterId: masterId,
-          notificationEvent: {
-            subject: "Confirmation of Semester-wise Subject Selection",
-            templateData: { academicYear: academicYearName },
-            meta: { devOnly: true },
-          },
-          content: contentRows,
-        });
+        // await enqueueNotification({
+        //   userId: student.userId as number,
+        //   variant: "EMAIL",
+        //   type: "INFO",
+        //   message: "Confirmation of Semester-wise Subject Selection",
+        //   notificationMasterId: masterId,
+        //   notificationEvent: {
+        //     subject: "Confirmation of Semester-wise Subject Selection",
+        //     templateData: { academicYear: academicYearName },
+        //     meta: { devOnly: true },
+        //   },
+        //   content: contentRows,
+        // });
         console.log("[backend] enqueue subject-selection (no-change) <- done");
       }
     } catch (err) {
@@ -2201,20 +2201,20 @@ export async function updateStudentSubjectSelectionsEfficiently(
         masterId,
         academicYearName,
       });
-      await enqueueNotification({
-        userId: student.userId as number,
-        variant: "EMAIL",
-        type: "INFO",
-        message: "Confirmation of Semester-wise Subject Selection",
-        notificationMasterId: masterId,
-        notificationEvent: {
-          subject: "Confirmation of Semester-wise Subject Selection",
-          templateData: {
-            academicYear: academicYearName,
-          },
-          meta: { devOnly: true },
-        },
-      });
+      //   await enqueueNotification({
+      //     userId: student.userId as number,
+      //     variant: "EMAIL",
+      //     type: "INFO",
+      //     message: "Confirmation of Semester-wise Subject Selection",
+      //     notificationMasterId: masterId,
+      //     notificationEvent: {
+      //       subject: "Confirmation of Semester-wise Subject Selection",
+      //       templateData: {
+      //         academicYear: academicYearName,
+      //       },
+      //       meta: { devOnly: true },
+      //     },
+      //   });
       console.log("[backend] enqueue subject-selection (update) <- done");
     }
   } catch (err) {

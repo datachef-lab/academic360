@@ -36,22 +36,22 @@ jobs:
           fi
 
           # Determine the resource type
-            if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
+          if [[ "${ACTION}" == "push" || "${ACTION}" == "create" || "${ACTION}" == "delete" ]]; then
             RESOURCE="Branch"
-            elif [[ "${ACTION}" == "pull_request" ]]; then
+          elif [[ "${ACTION}" == "pull_request" ]]; then
             RESOURCE="Pull Request"
-            elif [[ "${ACTION}" == "issues" ]]; then
+          elif [[ "${ACTION}" == "issues" ]]; then
             RESOURCE="Issue"  # Explicitly set resource to "Issue" for any issue event
-            fi
+          fi
 
           # Extract description
-            DESCRIPTION=""
-            if [[ "$ACTION" == "push" ]]; then
-                DESCRIPTION=$(jq -r '.commits[].message' "$GITHUB_EVENT_PATH" | tr '\n' ' ' | sed 's/ $//')
-                [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
-            else
-                DESCRIPTION=$(jq -r '.pull_request.title // .issue.title // "No details available for this event"' "$GITHUB_EVENT_PATH")
-            fi
+          DESCRIPTION=""
+          if [[ "$ACTION" == "push" ]]; then
+            DESCRIPTION=$(jq -r '.commits[].message' "$GITHUB_EVENT_PATH" | tr '\n' ' ' | sed 's/ $//')
+            [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No commit messages available"
+          else
+            DESCRIPTION=$(jq -r '.pull_request.title // .issue.title // "No details available for this event"' "$GITHUB_EVENT_PATH")
+          fi
 
 
           # Debug logs
