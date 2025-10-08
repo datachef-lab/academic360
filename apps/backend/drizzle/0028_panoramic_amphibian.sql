@@ -1,0 +1,1 @@
+CREATE TYPE "public"."cu_registration_correction_request_status" AS ENUM('PENDING', 'REQUEST_CORRECTION', 'APPROVED', 'REJECTED');

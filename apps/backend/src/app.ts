@@ -91,6 +91,8 @@ import {
   boardSubjectNameRouter,
   boardSubjectRouter,
   boardSubjectUnivSubjectMappingRouter,
+  cuRegistrationCorrectionRequestRouter,
+  cuRegistrationDocumentUploadRouter,
 } from "@/features/admissions/index.js";
 // import studyMaterialRouter from "@/features/academics/routes/study-material.route.js";
 import { sectionRoutes } from "@/features/academics/routes/index.js";
@@ -395,6 +397,14 @@ app.use(
   "/api/admissions/board-subject-univ-subject-mappings",
   boardSubjectUnivSubjectMappingRouter,
 );
+app.use(
+  "/api/admissions/cu-registration-correction-requests",
+  cuRegistrationCorrectionRequestRouter,
+);
+app.use(
+  "/api/admissions/cu-registration-document-uploads",
+  cuRegistrationDocumentUploadRouter,
+);
 // Mount the generic admission router last to avoid conflicts with specific routes
 app.use("/api/admissions", admissionRouter);
 
@@ -668,6 +678,14 @@ app.use(
   "/api/admissions/board-subject-univ-subject-mappings",
 
   boardSubjectUnivSubjectMappingRouter,
+);
+app.use(
+  "/api/admissions/cu-registration-correction-requests",
+  cuRegistrationCorrectionRequestRouter,
+);
+app.use(
+  "/api/admissions/cu-registration-document-uploads",
+  cuRegistrationDocumentUploadRouter,
 );
 
 // Mount the generic admission router last to avoid conflicts with specific routes

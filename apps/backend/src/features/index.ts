@@ -64,6 +64,8 @@ import {
   boardRouter,
   boardSubjectNameRouter,
   boardSubjectRouter,
+  cuRegistrationCorrectionRequestRouter,
+  cuRegistrationDocumentUploadRouter,
 } from "./admissions/index.js";
 
 export {
@@ -122,4 +124,6 @@ export {
   boardRouter,
   boardSubjectNameRouter,
   boardSubjectRouter,
+  cuRegistrationCorrectionRequestRouter,
+  cuRegistrationDocumentUploadRouter,
 };

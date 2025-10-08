@@ -197,6 +197,20 @@
       "when": 1759869011632,
       "tag": "0027_silky_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1759905129896,
+      "tag": "0028_panoramic_amphibian",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1759905211438,
+      "tag": "0029_real_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

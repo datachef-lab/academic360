@@ -22,6 +22,7 @@ import { loadRegulationType } from "@/features/course-design/services/regulation
 import { loadOldCourses } from "@/features/course-design/services/course.service";
 import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
 import { loadDefaultSubjectSelectionMetas } from "@/features/subject-selection/services/subject-selection-meta.service";
+import { loadDefaultDocuments } from "@/features/academics/services/document.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -55,7 +56,7 @@ export const connectToDatabase = async () => {
     loadCourseLevel();
     loadCourseType();
     loadRegulationType();
-
+    loadDefaultDocuments();
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();

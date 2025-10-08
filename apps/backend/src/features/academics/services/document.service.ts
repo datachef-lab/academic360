@@ -1,4 +1,7 @@
+import { db } from "@/db";
+import { documentModel, DocumentT } from "@repo/db/schemas";
 import "dotenv/config";
+import { ilike } from "drizzle-orm";
 import { promises as fs } from "fs";
 import path from "path";
 
@@ -7,6 +10,25 @@ interface ScanExistingMarksheetFilesByRollNumbrProps {
   stream: string;
   rollNumber: string;
   semester: number;
+}
+
+const defaultDocuments: DocumentT[] = [
+  { name: "Class XII Marksheet", description: "Class XII Marksheet" },
+  { name: "Aadhaar Card", description: "Aadhaar Card" },
+  { name: "APAAR ID Card", description: "APAAR ID Card" },
+  { name: "Father Photo ID", description: "Father Photo ID" },
+  { name: "Mother Photo ID", description: "Mother Photo ID" },
+];
+export async function loadDefaultDocuments() {
+  for (const document of defaultDocuments) {
+    const existingDocument = await db
+      .select()
+      .from(documentModel)
+      .where(ilike(documentModel.name, document.name));
+    if (existingDocument.length === 0) {
+      await db.insert(documentModel).values(document);
+    }
+  }
 }
 
 export async function scanExistingMarksheetFilesByRollNumber({

@@ -1,7 +1,9 @@
-import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardSubjectUnivSubjectMappingT, BoardT, ClassT, DegreeT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
+import { AccommodationT, AdmissionAcademicInfoT, AdmissionAdditionalInfoT, AdmissionCourseDetailsT, AdmissionGeneralInfoT, ApplicationFormT, BankBranchT, BoardSubjectT, BoardSubjectUnivSubjectMappingT, BoardT, ClassT, DegreeT, DocumentT, EligibilityCriteriaT, EmergencyContactT, HealthT, PaymentT, PersonalDetailsT, ShiftT, Stream, StudentAcademicSubjectsT, StudentCategoryT, StudentT, SubjectT, TransportDetailsT, UserT } from "@/schemas";
 import { ProgramCourseDto } from "../course-design";
 import { AddressDto } from "../user";
 import { BoardSubjectNameT } from "@/schemas/models/admissions/board-subject-name.model";
+import { CuRegistrationCorrectionRequest } from "@/schemas/models/admissions/cu-registration-correction-request.model";
+import { CuRegistrationDocumentUpload } from "@/schemas/models/admissions/cu-registration-document-upload.model";
 
 export interface AdmissionCourseDetailsDto extends Omit<AdmissionCourseDetailsT, "streamId" | "programCourseId" | "classId" | "shiftId" | "eligibilityCriteriaId" | "studentCategoryId"> {
     stream: Stream | null;
@@ -74,4 +76,16 @@ export interface BoardSubjectDto extends Omit<BoardSubjectT, "boardSubjectNameId
 export interface BoardSubjectUnivSubjectMappingDto extends Omit<BoardSubjectUnivSubjectMappingT, "boardSubjectId" | "subjectId"> {
     subject: SubjectT;
     boardSubjects: BoardSubjectDto[];
+}
+
+export interface CuRegistrationDocumentUploadDto extends Omit<CuRegistrationDocumentUpload, "cuRegistrationCorrectionRequestId" | "documentId"> {
+    document: DocumentT;
+    file: File;
+}
+
+export interface CuRegistrationCorrectionRequestDto extends Omit<CuRegistrationCorrectionRequest, "studentId" | "approvedBy" | "rejectedBy"> {
+    student: StudentT;
+    approvedBy: UserT | null;
+    rejectedBy: UserT | null;
+    documents: CuRegistrationDocumentUploadDto[];
 }

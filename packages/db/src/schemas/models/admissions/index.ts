@@ -19,3 +19,5 @@ export * from "./student-academic-subject.model";
 export * from "./board-subject-name.model";
 
 export * from "./board-subject-univ-subject-mapping.model";
+export * from "./cu-registration-correction-request.model";
+export * from "./cu-registration-document-upload.model";

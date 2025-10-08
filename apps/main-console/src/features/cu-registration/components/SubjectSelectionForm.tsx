@@ -400,7 +400,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       if (!name) return "";
       const upper = String(name).toUpperCase();
       const match = upper.match(/\b(I|II|III|IV|V|VI)\b/);
-      return match ? match[1] : "";
+      return match?.[1] ?? "";
     };
     const meta = subjectSelectionMetas.find((m) => {
       if (m.subjectType.code !== subjectTypeCode) return false;
@@ -459,7 +459,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         if (!name) return "";
         const upper = String(name).toUpperCase();
         const match = upper.match(/\b(I|II|III|IV|V|VI)\b/);
-        return match ? match[1] : "";
+        return match?.[1] ?? "";
       };
 
       const meta = subjectSelectionMetas.find((m) => {

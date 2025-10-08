@@ -319,3 +319,10 @@ export const notificationVariantEnum = pgEnum("notification_variant", [
     "WEB",
     "OTHER",
 ]);
+
+export const cuRegistrationCorrectionRequestStatusEnum = pgEnum("cu_registration_correction_request_status", [
+    "PENDING",
+    "REQUEST_CORRECTION",
+    "APPROVED",
+    "REJECTED",
+]);

@@ -190,6 +190,11 @@ jobs:
             put BACKEND_PORT "$(choose '${{ secrets.PROD_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.PROD_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.PROD_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
+            echo "  ☁️  AWS S3 configuration..."
+            put AWS_ACCESS_KEY_ID "${{ secrets.PROD_AWS_ACCESS_KEY_ID }}"
+            put AWS_SECRET_ACCESS_KEY "${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}"
+            put AWS_REGION "$(choose '${{ secrets.PROD_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
+            put AWS_S3_BUCKET "${{ secrets.PROD_AWS_S3_BUCKET }}"
           else
             echo "🧪 Processing STAGING environment variables..."
             NODE_ENV_VAL=staging
@@ -256,6 +261,11 @@ jobs:
             put BACKEND_PORT "$(choose '${{ secrets.STAGING_BACKEND_PORT }}' '${{ secrets.BACKEND_PORT }}')"
             put MAIN_CONSOLE_PORT "$(choose '${{ secrets.STAGING_MAIN_CONSOLE_PORT }}' '${{ secrets.MAIN_CONSOLE_PORT }}')"
             put STUDENT_CONSOLE_PORT "$(choose '${{ secrets.STAGING_STUDENT_CONSOLE_PORT }}' '${{ secrets.STUDENT_CONSOLE_PORT }}')"
+            echo "  ☁️  AWS S3 configuration..."
+            put AWS_ACCESS_KEY_ID "${{ secrets.STAGING_AWS_ACCESS_KEY_ID }}"
+            put AWS_SECRET_ACCESS_KEY "${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}"
+            put AWS_REGION "$(choose '${{ secrets.STAGING_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
+            put AWS_S3_BUCKET "${{ secrets.STAGING_AWS_S3_BUCKET }}"
           fi
           put NODE_ENV "$NODE_ENV_VAL"
 
@@ -276,7 +286,7 @@ jobs:
           missing_vars=()
 
           # Check for critical variables
-          critical_vars=("NODE_ENV" "PORT" "DATABASE_URL" "ACCESS_TOKEN_SECRET" "REFRESH_TOKEN_SECRET" "CORS_ORIGIN" "BACKEND_URL")
+          critical_vars=("NODE_ENV" "PORT" "DATABASE_URL" "ACCESS_TOKEN_SECRET" "REFRESH_TOKEN_SECRET" "CORS_ORIGIN" "BACKEND_URL" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_S3_BUCKET")
           for var in "${critical_vars[@]}"; do
             if ! grep -q "^${var}=" "$outfile"; then
               missing_vars+=("$var")
@@ -323,6 +333,8 @@ jobs:
             "COURSE_MATERIAL_PATH" "DOCS_PATH" "ACADEMIC_360_URL"
             # Docker exposed ports
             "BACKEND_PORT" "MAIN_CONSOLE_PORT" "STUDENT_CONSOLE_PORT"
+            # AWS S3
+            "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY" "AWS_REGION" "AWS_S3_BUCKET"
           )
 
           audit_missing=()
