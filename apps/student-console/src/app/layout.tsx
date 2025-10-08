@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import type { Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/providers/auth-provider";
 // This is imported but not directly used in the component
@@ -35,6 +36,14 @@ export const metadata = {
   applicationName: "Student Console",
 };
 
+// Ensure proper scaling on mobile devices
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -43,7 +52,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="html">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased w-screen h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased w-screen h-screen no-scrollbar`}
         suppressHydrationWarning
       >
         <ToastProvider>

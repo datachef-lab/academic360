@@ -113,7 +113,7 @@ export default function DashboardLayout({
     <StudentProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="h-screen py-2 pr-2 ">
+        <SidebarInset className="h-screen overflow-hidden px-2 py-2 md:pr-2 ">
           {/* Invalid user dialog */}
           <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
             <DialogContent>
@@ -125,10 +125,10 @@ export default function DashboardLayout({
               </DialogHeader>
             </DialogContent>
           </Dialog>
-          <header className="flex h-14 shrink-0 mb-3 items-center justify-between transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 rounded-lg border border-border bg-card shadow-sm px-4">
+          <header className="flex h-12 md:h-14 shrink-0 mb-3 items-center justify-between transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 rounded-lg border border-border bg-card shadow-sm px-2 md:px-4">
             <div className="flex items-center gap-3 ">
               <SidebarTrigger className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800" />
-              <Separator orientation="vertical" />
+              <Separator orientation="vertical" className="hidden md:block" />
               <Breadcrumb>
                 <BreadcrumbList className="text-sm">
                   <BreadcrumbItem className="hidden md:flex">
@@ -156,7 +156,7 @@ export default function DashboardLayout({
               </Breadcrumb>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">{user?.payload?.uid} </span>
+              <span className="text-xs md:text-sm text-gray-600">{user?.payload?.uid} </span>
               <Avatar
               // src={getStudentImage(user?.payload?.uid!)}
               // alt={user?.name || "User"}
@@ -183,8 +183,8 @@ export default function DashboardLayout({
               })()} */}
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 overflow-y-scroll">
-            <div className="h-[calc(100vh-3.5rem)] flex-1 rounded-xl">
+          <div className="flex flex-1 flex-col gap-4 h-[calc(100%-3rem)] overflow-hidden">
+            <div className="h-[calc(100vh-3.5rem)] flex-1 rounded-xl overflow-y-auto no-scrollbar">
               <SharedArea>{children}</SharedArea>
             </div>
           </div>

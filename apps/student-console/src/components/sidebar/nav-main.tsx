@@ -14,6 +14,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 export function NavMain({
@@ -37,6 +38,11 @@ export function NavMain({
   const handleMouseLeave = () => {};
 
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { isMobile, setOpenMobile } = useSidebar();
+
+  const handleNavigate = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   // Initialize expanded items based on active state
   useEffect(() => {
@@ -81,7 +87,7 @@ export function NavMain({
                     border: "none",
                   }}
                 >
-                  <Link href={item.url} passHref>
+                  <Link href={item.url} passHref onClick={handleNavigate}>
                     <SidebarMenuButton
                       size="lg"
                       data-active={item.isActive}
@@ -172,7 +178,7 @@ export function NavMain({
                                   asChild
                                   className="relative px-3 py-1.5 text-sm rounded-md transition-all duration-200 hover:text-white group"
                                 >
-                                  <Link href={subItem.url}>
+                                  <Link href={subItem.url} onClick={handleNavigate}>
                                     <span className="relative z-10">{subItem.title}</span>
                                     <motion.span
                                       className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"

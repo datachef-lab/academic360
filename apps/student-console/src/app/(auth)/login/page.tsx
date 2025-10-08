@@ -100,7 +100,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900">
+    <div className="flex min-h-screen items-center justify-center bg-[#9333ea] px-4 py-6 sm:px-6">
       {/* Invalid user / credentials dialog */}
       <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
         <DialogContent>
@@ -110,18 +110,16 @@ export default function SignInPage() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-      {/* Background pattern */}
-      <div className="absolute inset-0 z-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMDIwNDAiIGZpbGwtb3BhY2l0eT0iMC4zIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjwvZz48L2c+PC9zdmc+')] opacity-20"></div>
 
       {/* Floating card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="relative z-10 flex w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl"
+        className="relative z-10 flex w-full max-w-md md:max-w-5xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
       >
         {/* Left section */}
-        <div className="w-full bg-white p-8 md:w-1/2 md:p-12">
+        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12">
           <div className="mb-8 flex items-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-600 text-white">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
@@ -131,19 +129,21 @@ export default function SignInPage() {
               </svg>
             </div>
             <div className="ml-3">
-              <h1 className="text-2xl font-bold text-gray-800">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
                 BESC <span className="text-indigo-600">Student</span>
               </h1>
-              <p className="text-xs font-medium text-gray-500">CONSOLE</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-500">CONSOLE</p>
             </div>
           </div>
 
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
-            <p className="mt-2 text-sm text-gray-600">Enter your credentials below to access the portal</p>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+            <p className="mt-2 text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left sm:whitespace-nowrap">
+              Enter your credentials below to access the portal
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:space-y-6">
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -179,7 +179,7 @@ export default function SignInPage() {
                     placeholder="Enter your UID"
                     value={credentials.email}
                     onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11"
                     required
                   />
                 </div>
@@ -213,7 +213,7 @@ export default function SignInPage() {
                     placeholder="Enter your password"
                     value={credentials.password}
                     onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 pl-10 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    className="block w-full rounded-md border-gray-300 pl-10 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11"
                     required
                   />
                   <button
@@ -260,7 +260,7 @@ export default function SignInPage() {
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={isLoading}
-              className="w-full rounded-md bg-indigo-600 py-3 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
+              className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -297,7 +297,7 @@ export default function SignInPage() {
         </div>
 
         {/* Right section */}
-        <div className="hidden w-1/2 bg-indigo-600 md:block">
+        <div className="hidden w-1/2 bg-[#9333ea] md:block">
           <div className="relative h-full w-full">
             <img
               src={`${process.env.NEXT_PUBLIC_URL!}/hero-image.jpeg`}

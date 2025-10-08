@@ -1352,7 +1352,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   };
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden ">
+    <div className="w-full h-full flex flex-col overflow-visible ">
       {/* Student Information Section - Fixed */}
       {/* <div className="bg-blue-800 shadow-2xl rounded-2xl border-0 p-8 mb-6 flex-shrink-0">
         <h3 className="text-2xl font-semibold text-white mb-8 flex items-center gap-3">
@@ -1491,9 +1491,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         </div>
       </div> */}
 
-      {/* Form Section - No Scrolling */}
-      <div className="flex-1 overflow-hidden">
-        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 h-full overflow-y-auto">
+      {/* Form Section */}
+      <div className="flex-1 overflow-visible">
+        <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 min-h-[calc(100%-1rem)]">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
             {showTips && (

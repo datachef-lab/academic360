@@ -69,7 +69,7 @@ function checkRequiredEnvs() {
         process.env.NODE_ENV === "development" ||
         process.env.NODE_ENV === "staging"
       ) {
-        await startLoadDataScheduler();
+        // await startLoadDataScheduler();
       }
     });
   } catch (error) {
