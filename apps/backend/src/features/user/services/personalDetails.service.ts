@@ -4,6 +4,7 @@ import {
   PersonalDetails,
   personalDetailsModel,
   createPersonalDetailsSchema,
+  studentModel,
 } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { PersonalDetailsDto } from "@repo/db/index.js";
@@ -84,12 +85,31 @@ export async function findPersonalDetailsById(
 }
 
 export async function findPersonalDetailsByStudentId(
-  stdentId: number,
+  studentId: number,
 ): Promise<PersonalDetailsDto | null> {
-  // const [foundPersonalDetail] = await db.select().from(personalDetailsModel).where(eq(personalDetailsModel.studentId, stdentId));
-  return null;
-  // const formattedPersonalDetails = await personalDetailsResponseFormat(foundPersonalDetail);
-  // return formattedPersonalDetails;
+  // First get the student to find their userId
+  const [student] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.id, studentId));
+
+  if (!student) {
+    return null;
+  }
+
+  // Then get personal details using the userId
+  const [foundPersonalDetail] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.userId, student.userId as number));
+
+  if (!foundPersonalDetail) {
+    return null;
+  }
+
+  const formattedPersonalDetails =
+    await personalDetailsResponseFormat(foundPersonalDetail);
+  return formattedPersonalDetails;
 }
 
 export async function savePersonalDetails(

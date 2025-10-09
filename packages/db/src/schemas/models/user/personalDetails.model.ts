@@ -17,6 +17,9 @@ export const personalDetailsModel = pgTable("personal_details", {
     middleName: varchar("middle_name", { length: 255 }),
     lastName: varchar("last_name", { length: 255 }),
 
+    email: varchar("email", { length: 255 }),
+    alternativeEmail: varchar("alternative_email", { length: 255 }),
+
     whatsappNumber: varchar("whatsapp_number", { length: 15 }),
     mobileNumber: varchar("mobile_number", { length: 15 }).notNull(),
     emergencyResidentialNumber: varchar("emergency_residential_number", { length: 15 }),

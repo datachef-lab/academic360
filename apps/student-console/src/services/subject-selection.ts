@@ -92,6 +92,14 @@ export async function fetchStudentSubjectSelections(studentId: number): Promise<
   return payload as StudentSubjectSelectionApiResponse;
 }
 
+// Fetch current active selections (flat DTO array)
+export async function fetchCurrentActiveSelections(studentId: number) {
+  const res = await api.get<ApiResponse<DbStudentSubjectSelectionDto[]>>(
+    `/api/subject-selection/student-subject-selection/active/${studentId}`,
+  );
+  return res.data.payload;
+}
+
 // Note: Subject selection meta data is now included in the main fetchStudentSubjectSelections API response
 
 // Save student subject selections

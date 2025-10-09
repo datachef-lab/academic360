@@ -28,6 +28,10 @@ import {
   deleteAllStudentFiles as deleteAllStudentFilesFromS3,
   getStudentFolderStats,
 } from "@/services/s3.service.js";
+import {
+  uploadToFileSystem,
+  deleteFromFileSystem,
+} from "@/services/filesystem-storage.service.js";
 import multer from "multer";
 
 // Configure multer for memory storage (for S3 uploads)
@@ -38,6 +42,10 @@ const upload = multer({
       UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB * 1024 * 1024,
   },
   fileFilter: (req, file, cb) => {
+    console.info(
+      `[CU-REG DOC UPLOAD] File received: ${file.originalname}, size: ${file.size || "undefined"} bytes, type: ${file.mimetype}`,
+    );
+
     // Validate file type using predefined config
     if (
       !validateFileType(
@@ -52,19 +60,11 @@ const upload = multer({
       );
     }
 
-    // Validate file size using predefined config
-    if (
-      !validateFileSize(
-        file,
-        UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB,
-      )
-    ) {
-      return cb(
-        new Error(
-          `File size must be less than ${UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB}MB`,
-        ),
-      );
-    }
+    // Skip size validation in fileFilter - multer memory storage doesn't set file.size
+    // We'll validate size in the controller after the file is fully received
+    console.info(
+      `[CU-REG DOC UPLOAD] File type validation passed, proceeding with upload`,
+    );
 
     cb(null, true);
   },
@@ -83,8 +83,36 @@ export const createNewCuRegistrationDocumentUpload = async (
     const { cuRegistrationCorrectionRequestId, documentId, remarks } = req.body;
     const file = req.file;
 
+    console.info(`[CU-REG DOC UPLOAD] Request body:`, {
+      cuRegistrationCorrectionRequestId,
+      documentId,
+      remarks,
+      cuRegistrationCorrectionRequestIdType:
+        typeof cuRegistrationCorrectionRequestId,
+      documentIdType: typeof documentId,
+    });
+
     if (!file) {
       res.status(400).json(new ApiError(400, "File is required"));
+      return;
+    }
+
+    // Validate file size after multer has processed the file
+    const fileSizeMB = file.size / (1024 * 1024);
+    const maxSizeMB = UploadConfigs.CU_REGISTRATION_DOCUMENTS.maxFileSizeMB;
+    console.info(
+      `[CU-REG DOC UPLOAD] Controller size check: ${fileSizeMB.toFixed(2)} MB <= ${maxSizeMB} MB = ${fileSizeMB <= maxSizeMB}`,
+    );
+
+    if (fileSizeMB > maxSizeMB) {
+      res
+        .status(400)
+        .json(
+          new ApiError(
+            400,
+            `File size must be less than or equal to ${maxSizeMB}MB`,
+          ),
+        );
       return;
     }
 
@@ -132,16 +160,46 @@ export const createNewCuRegistrationDocumentUpload = async (
       },
     );
 
-    // Upload file to S3 using student-specific configuration
-    const s3Result = await uploadToS3(file, uploadConfig);
+    // Try to upload to S3 first, fallback to file system if S3 is not configured
+    let uploadResult;
+    try {
+      console.info("[CU-REG DOC UPLOAD] Attempting S3 upload...");
+      uploadResult = await uploadToS3(file, uploadConfig);
+      console.info("[CU-REG DOC UPLOAD] S3 upload successful");
+    } catch (s3Error: any) {
+      if (s3Error.message?.includes("S3 service is not configured")) {
+        console.info(
+          "[CU-REG DOC UPLOAD] S3 not configured, falling back to file system storage",
+        );
+        // Get document type name for file system storage
+        const documentTypeMap: Record<string, string> = {
+          "1": "class-xii-marksheet",
+          "2": "aadhaar-card",
+          "3": "apaar-id-card",
+          "4": "father-photo-id",
+          "5": "mother-photo-id",
+          "10": "ews-certificate",
+        };
+        const documentType =
+          documentTypeMap[documentId] || `document-${documentId}`;
+        uploadResult = await uploadToFileSystem(
+          file,
+          correctionRequest.cuRegistrationApplicationNumber,
+          documentType,
+        );
+        console.info("[CU-REG DOC UPLOAD] File system upload successful");
+      } else {
+        throw s3Error;
+      }
+    }
 
     const documentData = {
       cuRegistrationCorrectionRequestId: parseInt(
         cuRegistrationCorrectionRequestId,
       ),
       documentId: parseInt(documentId),
-      documentUrl: s3Result.url,
-      path: s3Result.key, // Store S3 key as path
+      documentUrl: uploadResult.url,
+      path: uploadResult.key, // Store S3 key or file system path
       fileName: file.originalname,
       fileType: file.mimetype,
       fileSize: file.size,
@@ -152,12 +210,18 @@ export const createNewCuRegistrationDocumentUpload = async (
     const parseResult =
       cuRegistrationDocumentUploadInsertSchema.safeParse(documentData);
     if (!parseResult.success) {
-      // Clean up uploaded file from S3 if validation fails
+      // Clean up uploaded file if validation fails
       try {
-        await deleteFromS3(s3Result.key);
+        if (uploadResult.url.startsWith("/uploads/")) {
+          // File system storage
+          await deleteFromFileSystem(uploadResult.key);
+        } else {
+          // S3 storage
+          await deleteFromS3(uploadResult.key);
+        }
       } catch (deleteError) {
         console.error(
-          "Failed to delete file from S3 after validation error:",
+          "Failed to delete file after validation error:",
           deleteError,
         );
       }
@@ -501,26 +565,84 @@ export const getSignedUrlForDocument = async (
       return;
     }
 
-    if (!document.path) {
-      res.status(400).json(new ApiError(400, "Document path not found"));
+    // Filesystem fallback: when documentUrl points to our /uploads mount, just return absolute URL
+    const isFilesystemUrl =
+      !!document.documentUrl && document.documentUrl.startsWith("/uploads/");
+
+    if (isFilesystemUrl) {
+      const absolute = `${req.protocol}://${req.get("host")}${document.documentUrl}`;
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          {
+            signedUrl: absolute,
+            expiresIn,
+            documentUrl: document.documentUrl,
+            fileName: document.fileName,
+          },
+          "Filesystem URL returned successfully!",
+        ),
+      );
       return;
     }
 
-    const signedUrl = await getSignedUrlForFile(document.path, expiresIn);
+    // S3 path expected. If S3 not configured, fall back to documentUrl (if present)
+    if (!document.path) {
+      const absolute = document.documentUrl
+        ? `${req.protocol}://${req.get("host")}${document.documentUrl}`
+        : undefined;
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          {
+            signedUrl: absolute,
+            expiresIn,
+            documentUrl: document.documentUrl,
+            fileName: document.fileName,
+          },
+          "Document path missing; returned documentUrl.",
+        ),
+      );
+      return;
+    }
 
-    res.status(200).json(
-      new ApiResponse(
-        200,
-        "SUCCESS",
-        {
-          signedUrl,
-          expiresIn,
-          documentUrl: document.documentUrl,
-          fileName: document.fileName,
-        },
-        "Signed URL generated successfully!",
-      ),
-    );
+    try {
+      const signedUrl = await getSignedUrlForFile(document.path, expiresIn);
+
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          {
+            signedUrl,
+            expiresIn,
+            documentUrl: document.documentUrl,
+            fileName: document.fileName,
+          },
+          "Signed URL generated successfully!",
+        ),
+      );
+    } catch (error: any) {
+      // Fallback to filesystem/public URL if S3 not available
+      const absolute = document.documentUrl
+        ? `${req.protocol}://${req.get("host")}${document.documentUrl}`
+        : undefined;
+      res.status(200).json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          {
+            signedUrl: absolute,
+            expiresIn,
+            documentUrl: document.documentUrl,
+            fileName: document.fileName,
+          },
+          "S3 not configured; returned filesystem/public URL instead.",
+        ),
+      );
+    }
   } catch (error) {
     handleError(error, res, next);
   }

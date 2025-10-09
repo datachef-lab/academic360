@@ -2152,6 +2152,25 @@ export async function addSpecialization(
   return newSpecialization;
 }
 
+export async function loadAllCountry() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM countrymaintab;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [countries] = (await mysqlConnection.query(`
+            SELECT * FROM countrymaintab LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldCountry[], any];
+
+    for (const country of countries) {
+      await addCountry(country);
+      console.log("country", country);
+    }
+  }
+}
+
 export async function addCountry(oldCountry: OldCountry) {
   const [existingCountry] = await db
     .select()
@@ -2211,7 +2230,6 @@ export async function addState(legacyStateId: number) {
       and(
         ilike(stateModel.name, oldState.stateName.trim()),
         eq(stateModel.countryId, country.id),
-        eq(stateModel.legacyStateId, legacyStateId),
       ),
     );
   if (existingState) {
@@ -2230,14 +2248,128 @@ export async function addState(legacyStateId: number) {
   return newState;
 }
 
+export async function loadAllState() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM countrysubtab;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [states] = (await mysqlConnection.query(`
+            SELECT * FROM countrysubtab LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldCountrySubTab[], any];
+
+    for (const state of states) {
+      await addStateByName(state.stateName);
+      console.log("state", state);
+    }
+  }
+}
+
+export async function addStateByName(name: string) {
+  const [[oldState]] = (await mysqlConnection.query(
+    `
+        SELECT * 
+        FROM countrysubtab
+        WHERE stateName = ?;
+    `,
+    [name],
+  )) as [OldCountrySubTab[], any];
+
+  if (!oldState) {
+    console.log("oldState not found", name);
+    return null;
+  }
+
+  const [[oldCountry]] = (await mysqlConnection.query(
+    `
+        SELECT * 
+        FROM countrymaintab
+        WHERE id = ?;
+    `,
+    [oldState.parent_id],
+  )) as [OldCountry[], any];
+
+  const country = await addCountry(oldCountry);
+  if (!country) {
+    console.log("country not found", oldCountry);
+    return null;
+  }
+  const [existingState] = await db
+    .select()
+    .from(stateModel)
+    .where(
+      and(
+        ilike(stateModel.name, oldState.stateName.trim()),
+        eq(stateModel.countryId, country.id),
+      ),
+    );
+
+  if (existingState) {
+    return existingState;
+  }
+
+  const [newState] = await db
+    .insert(stateModel)
+    .values({
+      countryId: country.id,
+      name: oldState.stateName.trim(),
+      legacyStateId: oldState.id,
+    })
+    .returning();
+
+  return newState;
+}
+
+export async function loadAllPostOffice() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM statepostoffice;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [postOffices] = (await mysqlConnection.query(`
+            SELECT * FROM statepostoffice LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldPostOffice[], any];
+
+    for (const postOffice of postOffices) {
+      const newPostOffice = await addPostOffice(postOffice.id);
+      console.log("oldPostOffice", postOffice);
+      console.log("newPostOffice", newPostOffice);
+    }
+  }
+}
+
+export async function loadAllPoliceStation() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM statepolicestation;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [policeStations] = (await mysqlConnection.query(`
+            SELECT * FROM statepolicestation LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldPoliceStation[], any];
+
+    for (const policeStation of policeStations) {
+      const newPoliceStation = await addPoliceStation(policeStation.id);
+      console.log("oliceStation", newPoliceStation);
+    }
+  }
+}
+
 export async function addPostOffice(oldPostOfficeId: number) {
   const [[oldPostOffice]] = (await mysqlConnection.query(`
         SELECT * 
-        FROM postoffice
+        FROM statepostoffice
         WHERE id = ${oldPostOfficeId};
     `)) as [OldPostOffice[], any];
 
   if (!oldPostOffice) {
+    console.log("oldPostOffice not found", oldPostOfficeId);
     return null;
   }
 
@@ -2254,8 +2386,9 @@ export async function addPostOffice(oldPostOfficeId: number) {
     return existingPostOffice;
   }
 
-  const state = await addState(oldPostOffice.stateid);
+  const state = await addStateByName(oldPostOffice.state);
   if (!state) {
+    console.log("state not found", oldPostOffice.state);
     return null;
   }
 
@@ -2273,17 +2406,33 @@ export async function addPostOffice(oldPostOfficeId: number) {
 export async function addPoliceStation(oldPoliceStationId: number) {
   const [[oldPoliceStation]] = (await mysqlConnection.query(`
         SELECT * 
-        FROM policestation
+        FROM statepolicestation
         WHERE id = ${oldPoliceStationId};
     `)) as [OldPoliceStation[], any];
 
   if (!oldPoliceStation) {
+    console.log("oldPoliceStation not found", oldPoliceStationId);
     return null;
   }
 
-  const state = await addState(oldPoliceStation.stateid);
+  const state = await addStateByName(oldPoliceStation.state);
   if (!state) {
+    console.log("state not found", oldPoliceStation.state);
     return null;
+  }
+
+  const [existingPoliceStation] = await db
+    .select()
+    .from(policeStationModel)
+    .where(
+      and(
+        ilike(policeStationModel.name, oldPoliceStation.policestation.trim()),
+        eq(policeStationModel.stateId, state.id),
+        eq(policeStationModel.legacyPoliceStationId, oldPoliceStation.id),
+      ),
+    );
+  if (existingPoliceStation) {
+    return existingPoliceStation;
   }
 
   const [newPoliceStation] = await db
@@ -2297,6 +2446,26 @@ export async function addPoliceStation(oldPoliceStationId: number) {
 
   return newPoliceStation;
 }
+
+export async function loadAllCity() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM citysub;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [cities] = (await mysqlConnection.query(`
+            SELECT * FROM citysub LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldCitySubtab[], any];
+
+    for (const city of cities) {
+      await addCity(city.id);
+      console.log("city", city);
+    }
+  }
+}
+
 export async function addCity(oldCityId: number) {
   console.log("oldCityId in addCity() ----->", oldCityId);
   if (isNaN(oldCityId)) {
@@ -2341,6 +2510,24 @@ export async function addCity(oldCityId: number) {
     })
     .returning();
   return newCity;
+}
+
+export async function loadAllDistrict() {
+  const [[{ totalRows }]] = (await mysqlConnection.query(`
+        SELECT COUNT(*) as totalRows FROM district;
+    `)) as [{ totalRows: number }[], any];
+
+  const totalPages = Math.ceil(totalRows / BATCH_SIZE);
+
+  for (let i = 0; i < totalPages; i++) {
+    const [districts] = (await mysqlConnection.query(`
+            SELECT * FROM district LIMIT ${BATCH_SIZE} OFFSET ${i * 100};
+        `)) as [OldDistrict[], any];
+    for (const district of districts) {
+      await addDistrict(district.id);
+      console.log("district", district);
+    }
+  }
 }
 
 export async function addDistrict(oldDistrictId: number) {

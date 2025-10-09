@@ -3,6 +3,10 @@ import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/ad
 import { cuRegistrationDocumentUploadModel } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import { studentModel } from "@repo/db/schemas/models/user";
 import { userModel } from "@repo/db/schemas/models/user";
+import {
+  personalDetailsModel,
+  addressModel,
+} from "@repo/db/schemas/models/user";
 import { documentModel } from "@repo/db/schemas/models/academics";
 import { eq, and, desc, count, ilike, or } from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
@@ -17,6 +21,14 @@ import { CuRegistrationNumberService } from "@/services/cu-registration-number.s
 export async function createCuRegistrationCorrectionRequest(
   requestData: CuRegistrationCorrectionRequestInsertTypeT,
 ): Promise<CuRegistrationCorrectionRequestDto | null> {
+  console.info(
+    "[CU-REG CORRECTION][CREATE] Incoming payload",
+    JSON.stringify({
+      studentId: requestData.studentId,
+      cuRegistrationApplicationNumber:
+        requestData.cuRegistrationApplicationNumber,
+    }),
+  );
   // Generate CU Registration Application Number if not provided
   let cuRegistrationApplicationNumber =
     requestData.cuRegistrationApplicationNumber;
@@ -56,6 +68,14 @@ export async function createCuRegistrationCorrectionRequest(
     .values(requestDataWithNumber)
     .returning();
 
+  console.info(
+    "[CU-REG CORRECTION][CREATE] Created",
+    JSON.stringify({
+      id: newRequest.id,
+      studentId: newRequest.studentId,
+      application: newRequest.cuRegistrationApplicationNumber,
+    }),
+  );
   return await modelToDto(newRequest);
 }
 
@@ -223,17 +243,213 @@ export async function updateCuRegistrationCorrectionRequest(
   id: number,
   updateData: Partial<CuRegistrationCorrectionRequestInsertTypeT>,
 ): Promise<CuRegistrationCorrectionRequestDto | null> {
-  const [updatedRequest] = await db
-    .update(cuRegistrationCorrectionRequestModel)
-    .set({
-      ...updateData,
+  console.info(
+    "[CU-REG CORRECTION][UPDATE] Start",
+    JSON.stringify({
+      id,
+      flags: (updateData as any)?.flags
+        ? Object.keys((updateData as any).flags as any)
+        : [],
+    }),
+  );
+  // Load existing request to resolve student and user context
+  const [existing] = await db
+    .select()
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(eq(cuRegistrationCorrectionRequestModel.id, id));
+
+  if (!existing) return null;
+
+  const [student] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.id, existing.studentId));
+
+  // Guard: student must exist
+  if (!student) return null;
+
+  const [pd] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.userId, student.userId as number));
+
+  // Begin transactional update to keep data in sync
+  const [updatedRequest] = await db.transaction(async (tx) => {
+    // 1) Update the correction request record itself
+    const flags: any = (updateData as any)?.flags || {};
+    const setData: any = {
       updatedAt: new Date(),
-    })
-    .where(eq(cuRegistrationCorrectionRequestModel.id, id))
-    .returning();
+    };
+    if (typeof (updateData as any).remarks !== "undefined")
+      setData.remarks = (updateData as any).remarks;
+    if (typeof (updateData as any).status !== "undefined")
+      setData.status = (updateData as any).status as any;
+
+    // Map flags into explicit columns if provided
+    if (typeof flags.gender !== "undefined")
+      setData.genderCorrectionRequest = !!flags.gender;
+    if (typeof flags.nationality !== "undefined")
+      setData.nationalityCorrectionRequest = !!flags.nationality;
+    if (typeof flags.apaarId !== "undefined")
+      setData.apaarIdCorrectionRequest = !!flags.apaarId;
+    if (typeof flags.subjects !== "undefined")
+      setData.subjectsCorrectionRequest = !!flags.subjects;
+
+    // Determine status based on correction flags if status is not explicitly provided
+    if (typeof (updateData as any).status === "undefined") {
+      const hasCorrectionFlags = Object.values(flags).some(Boolean);
+      setData.status = hasCorrectionFlags ? "REQUEST_CORRECTION" : "APPROVED";
+      console.info(
+        `[CU-REG CORRECTION][UPDATE] Auto-setting status to: ${setData.status} (hasCorrectionFlags: ${hasCorrectionFlags})`,
+      );
+    }
+
+    const [req] = await tx
+      .update(cuRegistrationCorrectionRequestModel)
+      .set(setData)
+      .where(eq(cuRegistrationCorrectionRequestModel.id, id))
+      .returning();
+
+    // 2) If payload provided, persist relevant fields to canonical tables
+    const payload: any = (updateData as any)?.payload;
+    if (payload) {
+      // personalInfo: gender, nationality, apaar/abc
+      if (payload.personalInfo && pd) {
+        const personalUpdates: any = {};
+        if (payload.personalInfo.gender) {
+          personalUpdates.gender = payload.personalInfo.gender;
+        }
+        if (payload.personalInfo.nationalityId) {
+          personalUpdates.nationalityId = payload.personalInfo.nationalityId;
+        }
+
+        if (Object.keys(personalUpdates).length > 0) {
+          await tx
+            .update(personalDetailsModel)
+            .set(personalUpdates)
+            .where(eq(personalDetailsModel.id, pd.id as number));
+        }
+
+        // Student APAAR/ABC update
+        if (payload.personalInfo.apaarId) {
+          await tx
+            .update(studentModel)
+            .set({ apaarId: payload.personalInfo.apaarId })
+            .where(eq(studentModel.id, student.id));
+        }
+
+        // Student EWS status update (EWS is editable by students)
+        if (payload.personalInfo.ews !== undefined) {
+          const ewsValue =
+            payload.personalInfo.ews === "Yes" ||
+            payload.personalInfo.ews === true;
+          await tx
+            .update(studentModel)
+            .set({ belongsToEWS: ewsValue })
+            .where(eq(studentModel.id, student.id));
+          console.info("[CU-REG CORRECTION][UPDATE] Updated EWS status", {
+            ews: ewsValue,
+          });
+        }
+      }
+
+      // addressData: residential and mailing
+      if (payload.addressData && pd) {
+        const upsertAddress = async (
+          type: "RESIDENTIAL" | "MAILING",
+          data: any,
+        ) => {
+          if (!data) return;
+          const [addr] = await tx
+            .select()
+            .from(addressModel)
+            .where(
+              and(
+                eq(addressModel.personalDetailsId, pd.id as number),
+                eq(addressModel.type, type as any),
+              ),
+            );
+
+          const addressUpdates: any = {};
+          if (typeof data.cityId !== "undefined")
+            addressUpdates.cityId = data.cityId || null;
+          if (typeof data.districtId !== "undefined")
+            addressUpdates.districtId = data.districtId || null;
+          if (typeof data.stateId !== "undefined")
+            addressUpdates.stateId = data.stateId || null;
+          if (typeof data.countryId !== "undefined")
+            addressUpdates.countryId = data.countryId || null;
+          if (typeof data.postofficeId !== "undefined")
+            addressUpdates.postofficeId = data.postofficeId || null;
+          if (typeof data.otherPostoffice !== "undefined")
+            addressUpdates.otherPostoffice = data.otherPostoffice || null;
+          if (typeof data.policeStationId !== "undefined")
+            addressUpdates.policeStationId = data.policeStationId || null;
+          if (typeof data.otherPoliceStation !== "undefined")
+            addressUpdates.otherPoliceStation = data.otherPoliceStation || null;
+          if (typeof data.addressLine !== "undefined")
+            addressUpdates.addressLine = data.addressLine || null;
+          if (typeof data.pincode !== "undefined")
+            addressUpdates.pincode = data.pincode || null;
+
+          if (addr) {
+            await tx
+              .update(addressModel)
+              .set(addressUpdates)
+              .where(eq(addressModel.id, addr.id as number));
+          }
+        };
+
+        await upsertAddress("RESIDENTIAL", payload.addressData.residential);
+        await upsertAddress("MAILING", payload.addressData.mailing);
+      }
+    }
+
+    // 3) Optional: nested document metadata save
+    const docs: Array<Partial<cuRegistrationDocumentUploadInsertTypeT>> =
+      (updateData as any)?.documentUploads || [];
+    if (Array.isArray(docs) && docs.length > 0) {
+      for (const d of docs) {
+        if (!d?.documentId) continue;
+        // Replace existing record for this request+documentId with latest metadata
+        await tx
+          .delete(cuRegistrationDocumentUploadModel)
+          .where(
+            and(
+              eq(
+                cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+                id,
+              ),
+              eq(cuRegistrationDocumentUploadModel.documentId, d.documentId),
+            ),
+          );
+
+        await tx.insert(cuRegistrationDocumentUploadModel).values({
+          cuRegistrationCorrectionRequestId: id,
+          documentId: d.documentId,
+          fileName: d.fileName ?? null,
+          fileType: d.fileType ?? null,
+          fileSize: (d as any).fileSize ?? null,
+          path: (d as any).path ?? null,
+          documentUrl: (d as any).documentUrl ?? null,
+          remarks: d.remarks ?? null,
+        });
+      }
+    }
+
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Persisted",
+      JSON.stringify({ id: req.id, studentId: existing.studentId }),
+    );
+    return [req];
+  });
 
   if (!updatedRequest) return null;
 
+  console.info(
+    "[CU-REG CORRECTION][UPDATE] Completed",
+    JSON.stringify({ id: updatedRequest.id }),
+  );
   return await modelToDto(updatedRequest);
 }
 
@@ -332,6 +548,220 @@ export async function findCuRegistrationCorrectionRequestsByStatus(
     total,
     totalPages,
   };
+}
+
+// Update actual database fields based on correction request data
+export async function updateStudentDataFromCorrectionRequest(
+  studentId: number,
+  correctionFlags: {
+    gender?: boolean;
+    nationality?: boolean;
+    apaarId?: boolean;
+    subjects?: boolean;
+  },
+  formData: {
+    personalInfo?: {
+      gender?: string;
+      nationalityId?: number;
+      apaarId?: string;
+      ews?: string | boolean;
+    };
+    addressData?: {
+      residential?: any;
+      mailing?: any;
+    };
+    // Note: Subject selections are not updated by students in CU registration
+  },
+): Promise<{
+  success: boolean;
+  errors?: string[];
+  updatedFields?: string[];
+}> {
+  console.info(
+    "[CU-REG DB UPDATE] Starting database field updates",
+    JSON.stringify({
+      studentId,
+      correctionFlags,
+      formDataKeys: Object.keys(formData),
+    }),
+  );
+
+  const errors: string[] = [];
+  const updatedFields: string[] = [];
+
+  try {
+    // Get student and personal details
+    const [student] = await db
+      .select()
+      .from(studentModel)
+      .where(eq(studentModel.id, studentId));
+
+    if (!student) {
+      return { success: false, errors: ["Student not found"] };
+    }
+
+    const [personalDetails] = await db
+      .select()
+      .from(personalDetailsModel)
+      .where(eq(personalDetailsModel.userId, student.userId as number));
+
+    if (!personalDetails) {
+      return { success: false, errors: ["Personal details not found"] };
+    }
+
+    // Note: Personal details (gender, nationality) are not updated by students
+    // Students can only request corrections via flags, but cannot provide new values
+    // These corrections need to be handled by admin separately
+    if (correctionFlags.gender || correctionFlags.nationality) {
+      console.info(
+        "[CU-REG DB UPDATE] Personal details correction requested but not updated - requires admin approval",
+      );
+      updatedFields.push("personalDetailsCorrectionRequested");
+    }
+
+    // Note: APAAR ID is not updated by students
+    // Students can only request corrections via flags, but cannot provide new values
+    // These corrections need to be handled by admin separately
+    if (correctionFlags.apaarId) {
+      console.info(
+        "[CU-REG DB UPDATE] APAAR ID correction requested but not updated - requires admin approval",
+      );
+      updatedFields.push("apaarIdCorrectionRequested");
+    }
+
+    // Update EWS status if provided (EWS is editable by students)
+    if (formData.personalInfo?.ews !== undefined) {
+      const ewsValue =
+        formData.personalInfo.ews === "Yes" ||
+        formData.personalInfo.ews === true;
+      await db
+        .update(studentModel)
+        .set({ belongsToEWS: ewsValue })
+        .where(eq(studentModel.id, studentId));
+
+      updatedFields.push("ewsStatus");
+      console.info("[CU-REG DB UPDATE] Updated EWS status", { ews: ewsValue });
+    }
+
+    // Update addresses if provided (addresses are always editable in the form)
+    if (formData.addressData) {
+      console.info(
+        "[CU-REG DB UPDATE] Address data provided, will update address fields",
+      );
+      console.info(
+        "[CU-REG DB UPDATE] Full address data received:",
+        JSON.stringify(formData.addressData, null, 2),
+      );
+      const updateAddress = async (
+        type: "RESIDENTIAL" | "MAILING",
+        data: any,
+      ) => {
+        if (!data) return;
+        console.info(
+          `[CU-REG DB UPDATE] Processing ${type} address:`,
+          JSON.stringify(data, null, 2),
+        );
+
+        const [address] = await db
+          .select()
+          .from(addressModel)
+          .where(
+            and(
+              eq(addressModel.personalDetailsId, personalDetails.id as number),
+              eq(addressModel.type, type as any),
+            ),
+          );
+
+        console.info(
+          `[CU-REG DB UPDATE] Current ${type} address in DB:`,
+          JSON.stringify(address, null, 2),
+        );
+
+        const addressUpdates: any = {};
+        if (typeof data.cityId !== "undefined")
+          addressUpdates.cityId = data.cityId || null;
+        if (typeof data.districtId !== "undefined")
+          addressUpdates.districtId = data.districtId || null;
+        if (typeof data.stateId !== "undefined")
+          addressUpdates.stateId = data.stateId || null;
+        if (typeof data.countryId !== "undefined")
+          addressUpdates.countryId = data.countryId || null;
+        if (typeof data.postofficeId !== "undefined")
+          addressUpdates.postofficeId = data.postofficeId || null;
+        if (typeof data.otherPostoffice !== "undefined")
+          addressUpdates.otherPostoffice = data.otherPostoffice || null;
+        if (typeof data.policeStationId !== "undefined")
+          addressUpdates.policeStationId = data.policeStationId || null;
+        if (typeof data.otherPoliceStation !== "undefined")
+          addressUpdates.otherPoliceStation = data.otherPoliceStation || null;
+        if (typeof data.addressLine !== "undefined")
+          addressUpdates.addressLine = data.addressLine || null;
+        if (typeof data.pincode !== "undefined")
+          addressUpdates.pincode = data.pincode || null;
+
+        console.info(
+          `[CU-REG DB UPDATE] Address updates for ${type}:`,
+          JSON.stringify(addressUpdates, null, 2),
+        );
+
+        if (address && Object.keys(addressUpdates).length > 0) {
+          await db
+            .update(addressModel)
+            .set(addressUpdates)
+            .where(eq(addressModel.id, address.id as number));
+
+          updatedFields.push(`${type.toLowerCase()}Address`);
+          console.info(
+            `[CU-REG DB UPDATE] Updated ${type} address`,
+            addressUpdates,
+          );
+
+          // Verify the update by fetching the address again
+          const [updatedAddress] = await db
+            .select()
+            .from(addressModel)
+            .where(eq(addressModel.id, address.id as number));
+          console.info(
+            `[CU-REG DB UPDATE] ${type} address after update:`,
+            JSON.stringify(updatedAddress, null, 2),
+          );
+        } else {
+          console.warn(
+            `[CU-REG DB UPDATE] No ${type} address found or no updates to apply`,
+          );
+        }
+      };
+
+      await updateAddress("RESIDENTIAL", formData.addressData.residential);
+      await updateAddress("MAILING", formData.addressData.mailing);
+    }
+
+    // Note: Subject selections are not updated by students in CU registration
+    // Subject changes require admin approval and should be handled separately
+    if (correctionFlags.subjects) {
+      console.info(
+        "[CU-REG DB UPDATE] Subject selection updates are not allowed for students in CU registration",
+      );
+      // Don't update subject selections - this should be handled by admin separately
+    }
+
+    console.info(
+      "[CU-REG DB UPDATE] Completed",
+      JSON.stringify({ success: true, updatedFields, errors }),
+    );
+
+    return {
+      success: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+      updatedFields,
+    };
+  } catch (error: any) {
+    console.error("[CU-REG DB UPDATE] Error:", error);
+    return {
+      success: false,
+      errors: [`Database update failed: ${error.message}`],
+    };
+  }
 }
 
 // Helper function to convert model to DTO

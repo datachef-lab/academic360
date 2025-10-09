@@ -17,6 +17,18 @@ import {
   validateCuRegistrationApplicationNumber,
   getCuRegistrationApplicationNumberStats,
 } from "../services/cu-registration-correction-request.service.js";
+import {
+  uploadToS3,
+  deleteFromS3,
+  createStudentUploadConfig,
+  FileTypeConfigs,
+} from "@/services/s3.service.js";
+import {
+  uploadToFileSystem,
+  deleteFromFileSystem,
+} from "@/services/filesystem-storage.service.js";
+import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
+import multer from "multer";
 
 // Create a new CU registration correction request
 export const createNewCuRegistrationCorrectionRequest = async (
