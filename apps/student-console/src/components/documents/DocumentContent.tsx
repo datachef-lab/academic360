@@ -2,13 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, Download, Eye, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -48,11 +42,9 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
       year: doc.year,
       fileName: doc.filePath.split("/").pop() || "Unknown",
       framework: doc.framework,
-    })) || []
+    })) || [],
   );
-  const hasInitialDataRef = React.useRef(
-    !!scannedDocs && scannedDocs.length > 0
-  );
+  const hasInitialDataRef = React.useRef(!!scannedDocs && scannedDocs.length > 0);
   const loadingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [loading, setLoading] = useState<boolean>(!hasInitialDataRef.current);
   const [error, setError] = useState<string | null>(null);
@@ -226,13 +218,9 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
   });
 
   // Get unique semesters for the semester dropdown
-  const semesters = [
-    ...new Set(
-      documents
-        .filter((doc) => doc.semester !== null)
-        .map((doc) => doc.semester)
-    ),
-  ].sort((a, b) => (a || 0) - (b || 0));
+  const semesters = [...new Set(documents.filter((doc) => doc.semester !== null).map((doc) => doc.semester))].sort(
+    (a, b) => (a || 0) - (b || 0),
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/30 via-indigo-50/20 to-purple-50/20">
@@ -250,12 +238,11 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
               <FileText size={36} className="text-white drop-shadow-md" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 text-white drop-shadow-md">
                 Academic Documents
               </h1>
               <p className="text-blue-50 text-lg drop-shadow max-w-2xl">
-                Access and manage all your important academic documents in one
-                place
+                Access and manage all your important academic documents in one place
               </p>
             </div>
           </div>
@@ -265,11 +252,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
       <div className="max-w-6xl mx-auto px-6 pb-12">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
           <div className="bg-white/70 backdrop-blur-sm px-5 py-3 rounded-xl shadow-sm border border-indigo-100">
-            <Tabs
-              value={selectedView}
-              onValueChange={setSelectedView}
-              className="w-full"
-            >
+            <Tabs value={selectedView} onValueChange={setSelectedView} className="w-full">
               <TabsList className="grid grid-cols-2 w-[360px] bg-indigo-50">
                 <TabsTrigger
                   value="marksheets"
@@ -289,10 +272,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
 
           {selectedView === "marksheets" && semesters.length > 0 && (
             <div className="mt-4 sm:mt-0">
-              <Select
-                value={selectedSemester}
-                onValueChange={setSelectedSemester}
-              >
+              <Select value={selectedSemester} onValueChange={setSelectedSemester}>
                 <SelectTrigger className="w-[180px] border-indigo-200 bg-white/80 backdrop-blur-sm">
                   <SelectValue placeholder="All Semesters" />
                 </SelectTrigger>
@@ -328,22 +308,16 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
         {!loading && documents.length === 0 && (
           <div className="text-center py-12 bg-white/50 rounded-lg shadow-sm">
             <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-700 mb-2">
-              No Documents Found
-            </h3>
+            <h3 className="text-lg font-medium text-gray-700 mb-2">No Documents Found</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              We couldn&apos;t find any documents for your account. If you
-              believe this is an error, please contact the administrative staff.
+              We couldn&apos;t find any documents for your account. If you believe this is an error, please contact the
+              administrative staff.
             </p>
           </div>
         )}
 
         {!loading && filteredDocuments.length > 0 && (
-          <Tabs
-            value={selectedView}
-            onValueChange={setSelectedView}
-            className="mt-0"
-          >
+          <Tabs value={selectedView} onValueChange={setSelectedView} className="mt-0">
             <TabsContent value="marksheets">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {filteredDocuments.map((doc, index) => (
@@ -360,8 +334,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
                               <FileText className="w-5 h-5" />
                             </div>
                             <span className="font-semibold">
-                              {doc.type}{" "}
-                              {doc.semester ? `(Semester ${doc.semester})` : ""}
+                              {doc.type} {doc.semester ? `(Semester ${doc.semester})` : ""}
                             </span>
                           </CardTitle>
                           <p className="text-sm text-gray-500 mt-2 ml-12 flex items-center">
@@ -371,9 +344,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
                                 {doc.framework}
                               </span>
                             )}
-                            {doc.year && (
-                              <span className="mr-2">{doc.year}</span>
-                            )}
+                            {doc.year && <span className="mr-2">{doc.year}</span>}
                             <span>Filename: {doc.fileName}</span>
                           </p>
                         </div>
@@ -427,9 +398,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
                                 {cert.framework}
                               </span>
                             )}
-                            {cert.year && (
-                              <span className="mr-2">{cert.year}</span>
-                            )}
+                            {cert.year && <span className="mr-2">{cert.year}</span>}
                             <span>Filename: {cert.fileName}</span>
                           </p>
                         </div>
@@ -494,10 +463,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
               className="h-8 w-8 p-0 bg-white/90 backdrop-blur-sm rounded-full border-gray-300 shadow-md"
               onClick={() => {
                 if (previewUrl) {
-                  const downloadUrl = previewUrl.replace(
-                    "disposition=inline",
-                    "disposition=attachment"
-                  );
+                  const downloadUrl = previewUrl.replace("disposition=inline", "disposition=attachment");
                   window.open(downloadUrl, "_blank");
                 }
               }}
@@ -515,11 +481,7 @@ export default function DocumentContent({ scannedDocs }: DocumentContentProps) {
           </div>
 
           {/* Direct PDF display */}
-          <iframe
-            src={previewUrl || ""}
-            className="w-full h-full border-0"
-            title="PDF Preview"
-          />
+          <iframe src={previewUrl || ""} className="w-full h-full border-0" title="PDF Preview" />
         </DialogContent>
       </Dialog>
     </div>

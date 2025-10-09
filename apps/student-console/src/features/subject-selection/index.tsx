@@ -31,23 +31,25 @@ export default function SubjectSelection() {
           <Info className="w-4 h-4" /> Notes
         </button>
 
-        {/* Mobile notes modal - fallback custom overlay for reliable scroll/close on small devices */}
+        {/* Mobile notes modal - optimized for mobile scrolling */}
         {openMobileNotes && (
-          <div className="lg:hidden fixed inset-0 z-50 flex items-center justify-center">
+          <div className="lg:hidden fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
             <div className="absolute inset-0 bg-black/50" onClick={() => setOpenMobileNotes(false)} />
-            <div className="relative bg-white w-[95vw] max-w-[95vw] max-h-[85vh] rounded-lg shadow-xl border z-10 overflow-y-auto no-scrollbar">
-              <div className="flex items-center justify-between px-4 py-3 border-b">
-                <h3 className="text-sm font-semibold">Important Notes & Guide</h3>
+            <div className="relative bg-white w-full max-w-md max-h-[95vh] sm:max-h-[90vh] rounded-lg shadow-xl border z-10 flex flex-col">
+              {/* Fixed Header */}
+              <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b bg-white rounded-t-lg flex-shrink-0">
+                <h3 className="text-sm font-semibold text-gray-800">Important Notes & Guide</h3>
                 <button
                   aria-label="Close"
                   onClick={() => setOpenMobileNotes(false)}
-                  className="px-2 py-1 text-sm rounded-md border hover:bg-gray-50"
+                  className="px-2 py-1 text-sm rounded-md border hover:bg-gray-50 transition-colors touch-manipulation"
                 >
                   Close
                 </button>
               </div>
-              <div className="px-4 py-3">
-                <Instructions />
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 mobile-modal-scroll">
+                <Instructions compact={true} />
               </div>
             </div>
           </div>

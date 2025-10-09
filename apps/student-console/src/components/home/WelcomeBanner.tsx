@@ -16,14 +16,16 @@ export default function WelcomeBanner({ student }: { student: StudentDto }) {
   });
 
   return (
-    <div className="relative bg-[#a674fe] text-white rounded-2xl shadow-lg overflow-hidden p-6 md:p-8 flex items-center justify-between min-h-[180px]">
+    <div className="relative bg-[#a674fe] text-white rounded-2xl shadow-lg overflow-hidden p-4 sm:p-6 md:p-8 flex items-center justify-between min-h-[140px] sm:min-h-[160px] md:min-h-[180px]">
       <div className="z-10 relative">
         <div className="flex items-center gap-2 text-sm font-medium opacity-90 mb-2">
           <Calendar className="w-4 h-4" />
           <span>{dateString}</span>
         </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-1">Welcome {(user?.name as string) || "Student"}!</h1>
-        <p className="text-base opacity-90 max-w-md">Always stay updated in your student portal</p>
+        <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-1">
+          Welcome {(user?.name as string) || "Student"}!
+        </h1>
+        <p className="text-sm sm:text-base opacity-90 max-w-md">Always stay updated in your student portal</p>
 
         {/* Notification button - Moved to be part of the welcome text section */}
         <NotificationCorner />

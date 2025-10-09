@@ -317,6 +317,22 @@
   display: none; /* Chrome, Safari, Opera */
 }
 
+/* Mobile-optimized scrolling */
+.mobile-scroll {
+  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
+  overscroll-behavior: contain; /* Prevent scroll chaining */
+  scroll-behavior: smooth;
+}
+
+/* Mobile modal scrolling improvements */
+.mobile-modal-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+  /* Ensure proper touch scrolling on mobile */
+  touch-action: pan-y;
+}
+
 @layer base {
   * {
     @apply border-border;
