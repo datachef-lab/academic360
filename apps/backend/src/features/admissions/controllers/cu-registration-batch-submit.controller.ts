@@ -87,8 +87,10 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
       {
-        flags: parsedFlags || {},
-        payload: parsedPayload || {},
+        genderCorrectionRequest: parsedFlags?.gender || false,
+        nationalityCorrectionRequest: parsedFlags?.nationality || false,
+        apaarIdCorrectionRequest: parsedFlags?.apaarId || false,
+        subjectsCorrectionRequest: parsedFlags?.subjects || false,
         status: newStatus,
       },
     );
@@ -99,7 +101,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
 
     // Update actual database fields based on correction request data
     // Always update editable fields (EWS, addresses) on final submission, regardless of correction flags
-    if (parsedPayload) {
+    if (parsedPayload && correctionRequest.student?.id) {
       console.info(
         `[CU-REG BATCH SUBMIT] Updating database fields for student: ${correctionRequest.student.id}`,
       );
