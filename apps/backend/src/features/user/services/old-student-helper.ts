@@ -588,9 +588,21 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
               ? "GUJARATI"
               : "NON-GUJARATI",
         handicapped: !!oldStudent.handicapped,
-        abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
-        apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
-        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        abcId: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
+        apprid: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
+        apaarId: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -635,9 +647,21 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
               ? "GUJARATI"
               : "NON-GUJARATI",
         handicapped: !!oldStudent.handicapped,
-        abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
-        apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
-        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+        abcId: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
+        apprid: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
+        apaarId: oldStudent.abcid
+          ? String(oldStudent.abcid)
+          : oldStudent.apprid
+            ? String(oldStudent.apprid)
+            : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -1849,7 +1873,24 @@ export async function processStudent(
         if (Object.keys(updateData).length > 0) {
           await db
             .update(studentModel)
-            .set(updateData as any)
+            .set({
+              ...updateData,
+              abcId: oldStudent.abcid
+                ? String(oldStudent.abcid)
+                : oldStudent.apprid
+                  ? String(oldStudent.apprid)
+                  : undefined,
+              apprid: oldStudent.abcid
+                ? String(oldStudent.abcid)
+                : oldStudent.apprid
+                  ? String(oldStudent.apprid)
+                  : undefined,
+              apaarId: oldStudent.abcid
+                ? String(oldStudent.abcid)
+                : oldStudent.apprid
+                  ? String(oldStudent.apprid)
+                  : undefined,
+            })
             .where(eq(studentModel.id, student.id!));
         }
       }
@@ -1883,15 +1924,29 @@ export async function processStudent(
     )[0];
   }
 
-  await db
+  const [updatedStudent] = await db
     .update(studentModel)
     .set({
       oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
-      abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
-      apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
-      apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+      abcId: oldStudent.abcid
+        ? String(oldStudent.abcid)
+        : oldStudent.apprid
+          ? String(oldStudent.apprid)
+          : undefined,
+      apprid: oldStudent.abcid
+        ? String(oldStudent.abcid)
+        : oldStudent.apprid
+          ? String(oldStudent.apprid)
+          : undefined,
+      apaarId: oldStudent.abcid
+        ? String(oldStudent.abcid)
+        : oldStudent.apprid
+          ? String(oldStudent.apprid)
+          : undefined,
     })
-    .where(eq(studentModel.id, student.id!));
+    .where(eq(studentModel.id, student.id!))
+    .returning();
+  console.log("updated student:", updatedStudent);
 
   console.log(
     "update personal details names and whatsapp number for student:",

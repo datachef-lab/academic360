@@ -176,14 +176,16 @@ async function processBatch() {
       }
 
       if (env === "staging") {
-        // Fan-out to all STAFF who opted-in
+        // Fan-out to all STAFF who opted-in and are active/not suspended
         const staffUsers = await db
           .select()
           .from(userModel)
           .where(
             and(
-              eq(userModel.type, "STAFF" as never),
+              eq(userModel.type, "STAFF"),
               eq(userModel.sendStagingNotifications, true),
+              eq(userModel.isActive, true),
+              eq(userModel.isSuspended, false),
             ),
           )
           .limit(500);
@@ -212,14 +214,23 @@ async function processBatch() {
           if (!resp.ok) throw new Error(resp.error);
           await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
+      } else if (env === "development") {
+        // development -> always send to developer
+        const resolvedPhone = process.env.DEVELOPER_PHONE!;
+        const resp = await sendWhatsAppMessage(
+          resolvedPhone,
+          bodyValues,
+          templateName,
+          dto.whatsappHeaderMediaUrl,
+        );
+        if (!resp.ok) throw new Error(resp.error);
+        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
       } else {
-        const resolvedPhone =
-          env === "development"
-            ? process.env.DEVELOPER_PHONE!
-            : asString(
-                user?.whatsappNumber || user?.phone,
-                process.env.DEVELOPER_PHONE!,
-              );
+        // production -> send to real user
+        const resolvedPhone = asString(
+          user?.whatsappNumber || user?.phone,
+          process.env.DEVELOPER_PHONE!,
+        );
         const resp = await sendWhatsAppMessage(
           resolvedPhone,
           bodyValues,

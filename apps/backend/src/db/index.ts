@@ -30,6 +30,7 @@ import {
   loadAllPostOffice,
   loadAllState,
 } from "@/features/user/services/old-student.service";
+// import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -70,6 +71,7 @@ export const connectToDatabase = async () => {
     // Clear existing duplicates and load fresh metas (only in development)
 
     loadDefaultSubjectSelectionMetas();
+    // loadDefaultOtpNotificationMaster();
     // loadOldSubjects();
     // loadOldCourses();
     // loadOldSubjectTypes();

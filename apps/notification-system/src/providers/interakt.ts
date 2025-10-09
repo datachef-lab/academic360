@@ -13,9 +13,12 @@ export async function sendWhatsAppMessage(
         ? process.env.DEVELOPER_PHONE!
         : to;
 
+    console.log("phoneNumber:", phoneNumber);
+    console.log("to in interakt:", to);
+
     const requestBody: Record<string, unknown> = {
       countryCode: "+91",
-      phoneNumber,
+      phoneNumber: "9322585046",
       type: "Template",
       template: {
         name: templateName,

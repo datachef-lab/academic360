@@ -1,10 +1,12 @@
+import { notificationVariantEnum } from "@/schemas/enums";
 import { boolean, pgTable, serial, text, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import z from "zod";
 
 export const notificationMasterModel = pgTable("notification_masters", {
     id: serial().primaryKey(),
-    name: varchar({ length: 255 }).notNull().unique(),
+    name: varchar({ length: 255 }).notNull(),
+    variant: notificationVariantEnum().notNull(),
     template: varchar({ length: 255 }).unique(),
     previewImage: text("preview_image"),
     isActive: boolean().notNull().default(true),

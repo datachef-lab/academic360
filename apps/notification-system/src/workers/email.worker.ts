@@ -269,7 +269,7 @@ async function processBatch() {
 
       if (env === "staging") {
         console.log("[email.worker] sending to staging staff users");
-        // Fan-out to all STAFF who opted-in
+        // Fan-out to all STAFF who opted-in and are active/not suspended
         const staffUsers = await db
           .select()
           .from(userModel)
@@ -277,6 +277,8 @@ async function processBatch() {
             and(
               eq(userModel.type, "STAFF" as never),
               eq(userModel.sendStagingNotifications, true),
+              eq(userModel.isActive, true),
+              eq(userModel.isSuspended, false),
             ),
           )
           .limit(500);
@@ -326,13 +328,33 @@ async function processBatch() {
           }
           await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
         }
+      } else if (env === "development") {
+        // development -> always send to developer
+        const resolvedEmail = process.env.DEVELOPER_EMAIL!;
+        console.log(`[email.worker] sending to developer: ${resolvedEmail}`);
+        const res = await sendZeptoMail(
+          resolvedEmail,
+          subject,
+          html,
+          undefined,
+          dto.emailAttachments,
+          asString(dto.emailFromName, "Academic360 Notifications"),
+        );
+        console.log(`[email.worker] sendZeptoMail response:`, res);
+        if (!res.ok) {
+          console.log(`[email.worker] ZeptoMail failed with error:`, res.error);
+          throw new Error(`ZeptoMail API Error: ${res.error}`);
+        }
+        await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
       } else {
-        // development -> developer contact; production -> real user
-        const resolvedEmail =
-          env === "development"
-            ? process.env.DEVELOPER_EMAIL!
-            : asString(user?.email, process.env.DEVELOPER_EMAIL!);
-        console.log(`[email.worker] sending to ${env} user: ${resolvedEmail}`);
+        // production -> send to real user
+        const resolvedEmail = asString(
+          user?.email,
+          process.env.DEVELOPER_EMAIL!,
+        );
+        console.log(
+          `[email.worker] sending to production user: ${resolvedEmail}`,
+        );
         const res = await sendZeptoMail(
           resolvedEmail,
           subject,

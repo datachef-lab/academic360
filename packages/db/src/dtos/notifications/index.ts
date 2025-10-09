@@ -1,10 +1,10 @@
 
-import { NotificationMasterMetaT } from "@/schemas/models/notifications/notification-master-meta.model";
-import { NotificationEventT, NotificationT, NotificationMasterT, NotificationMasterFieldT, NotificationContentT } from "../../schemas/models/notifications";
+import { NotificationMasterMeta, NotificationMasterMetaT } from "@/schemas/models/notifications/notification-master-meta.model";
+import { NotificationEventT, NotificationT, NotificationMasterT, NotificationMasterFieldT, NotificationContentT, NotificationMasterField } from "../../schemas/models/notifications";
 
 export interface NotificationMasterDto extends NotificationMasterT {
-    fields: NotificationMasterFieldT[];
-    meta: NotificationMasterMetaT[];
+    fields: NotificationMasterField[];
+    meta: NotificationMasterMeta[];
 }
 
 export interface NotificationEventDto extends NotificationEventT {

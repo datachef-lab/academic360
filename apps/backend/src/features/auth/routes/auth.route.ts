@@ -6,6 +6,7 @@ import {
   postGoogleLogin,
   refresh,
 } from "../controllers/auth.controller.js";
+import otpRouter from "./otp.routes.js";
 
 import { loginLimiter } from "@/middlewares/loginLimiter.middleware.js";
 import { validateData } from "@/middlewares/validation.middleware.js";
@@ -38,5 +39,8 @@ router.get(
 router.get("/refresh", refresh);
 
 router.get("/logout", logout);
+
+// OTP routes
+router.use("/otp", otpRouter);
 
 export default router;

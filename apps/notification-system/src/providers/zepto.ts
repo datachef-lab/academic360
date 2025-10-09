@@ -33,10 +33,18 @@ export async function sendZeptoMail(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const recipient =
     process.env.NODE_ENV === "development" ? process.env.DEVELOPER_EMAIL! : to;
+  console.log("recipient in zepto:", recipient);
   const fromName = fromNameOverride || "Academic360 Notifications";
   const payload: ZeptoPayload = {
     from: { address: process.env.ZEPTO_FROM!, name: fromName },
-    to: [{ email_address: { address: recipient, name: name || "User" } }],
+    to: [
+      {
+        email_address: {
+          address: "desaiharsh183@gmail.com",
+          name: name || "User",
+        },
+      },
+    ],
     subject,
     htmlbody: htmlBody,
   };

@@ -1,0 +1,1 @@
+ALTER TABLE "notification_masters" DROP CONSTRAINT "notification_masters_name_unique";

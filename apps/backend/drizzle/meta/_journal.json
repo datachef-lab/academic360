@@ -225,6 +225,20 @@
       "when": 1760029377029,
       "tag": "0031_daily_drax",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1760034049685,
+      "tag": "0032_tired_mesmero",
+      "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1760034278450,
+      "tag": "0033_exotic_may_parker",
+      "breakpoints": true
     }
   ]
 }

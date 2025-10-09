@@ -1,0 +1,1 @@
+ALTER TABLE "notification_masters" ADD COLUMN "variant" "notification_variant" NOT NULL;
