@@ -1810,57 +1810,68 @@ export async function processStudent(
     // Step 1: Upsert the student first
     student = await upsertStudent(oldStudent, user);
 
-    // Step 2: Check for the accomodation
-    await upsertAccommodation(oldStudent, user.id!);
+    // Check the student cu registration request
+    const cuRegistrationRequest =
+      await addStudentCuRegistrationRequest(student);
+    console.log(
+      "cu registration request created for student:",
+      student?.uid,
+      cuRegistrationRequest,
+    );
+    if (cuRegistrationRequest?.status === "PENDING") {
+      // Step 2: Check for the accomodation
+      await upsertAccommodation(oldStudent, user.id!);
 
-    // Step 3: Check for the Familys
-    await upsertFamily(oldStudent, user.id!);
+      // Step 3: Check for the Familys
+      await upsertFamily(oldStudent, user.id!);
 
-    // Step 4: Check for the health
-    await upsertHealth(oldStudent, user.id!);
+      // Step 4: Check for the health
+      await upsertHealth(oldStudent, user.id!);
 
-    // Step 5: Check for the emergency-contact
-    await upsertEmergencyContact(oldStudent, user.id!);
+      // Step 5: Check for the emergency-contact
+      await upsertEmergencyContact(oldStudent, user.id!);
 
-    // Step 6: Check for the personal-details
-    await upsertStudentPersonalDetails(oldStudent, user);
+      // Step 6: Check for the personal-details
 
-    // Step 7: Check for the transport-details
-    await upsertTransportDetails(oldStudent, user.id!);
+      await upsertStudentPersonalDetails(oldStudent, user);
 
-    // Update APAAR/ABC ID only when we actually have a value; Drizzle throws on empty set
-    {
-      const updateData: Record<string, string> = {};
-      if (oldStudent.apprid) {
-        updateData.apaarId = String(oldStudent.apprid);
-      } else if (oldStudent.abcid) {
-        updateData.apaarId = String(oldStudent.abcid);
+      // Step 7: Check for the transport-details
+      await upsertTransportDetails(oldStudent, user.id!);
+
+      // Update APAAR/ABC ID only when we actually have a value; Drizzle throws on empty set
+      {
+        const updateData: Record<string, string> = {};
+        if (oldStudent.apprid) {
+          updateData.apaarId = String(oldStudent.apprid);
+        } else if (oldStudent.abcid) {
+          updateData.apaarId = String(oldStudent.abcid);
+        }
+        if (Object.keys(updateData).length > 0) {
+          await db
+            .update(studentModel)
+            .set(updateData as any)
+            .where(eq(studentModel.id, student.id!));
+        }
       }
-      if (Object.keys(updateData).length > 0) {
-        await db
+
+      // Step 8: Application Form
+      if (!student.applicationId) {
+        const result =
+          await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
+            oldStudent,
+            student,
+          );
+        const [updatedStudent] = await db
           .update(studentModel)
-          .set(updateData as any)
-          .where(eq(studentModel.id, student.id!));
+          .set({
+            applicationId: result.applicationForm.id,
+            admissionCourseDetailsId: result.transferredAdmCourseDetails.id!,
+          })
+          .where(eq(studentModel.id, student.id!))
+          .returning();
+
+        student = updatedStudent;
       }
-    }
-
-    // Step 8: Application Form
-    if (!student.applicationId) {
-      const result =
-        await oldAdmPersonalDetailsHelper.processOldStudentApplicationForm(
-          oldStudent,
-          student,
-        );
-      const [updatedStudent] = await db
-        .update(studentModel)
-        .set({
-          applicationId: result.applicationForm.id,
-          admissionCourseDetailsId: result.transferredAdmCourseDetails.id!,
-        })
-        .where(eq(studentModel.id, student.id!))
-        .returning();
-
-      student = updatedStudent;
     }
   } else {
     // Student exists and data hasn't changed - just fetch existing student
@@ -1872,10 +1883,21 @@ export async function processStudent(
     )[0];
   }
 
+  await db
+    .update(studentModel)
+    .set({
+      oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
+      abcId: oldStudent.abcid ? String(oldStudent.abcid) : undefined,
+      apprid: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+      apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
+    })
+    .where(eq(studentModel.id, student.id!));
+
   console.log(
     "update personal details names and whatsapp number for student:",
     student?.uid,
   );
+
   await db
     .update(personalDetailsModel)
     .set({
@@ -1892,7 +1914,10 @@ export async function processStudent(
           ? nameParts[nameParts.length - 1]
           : "";
       })(),
+
       whatsappNumber: oldStudent.whatsappno || undefined,
+      email: oldStudent.email || undefined,
+      alternativeEmail: oldStudent.alternativeemail || undefined,
     })
     .where(eq(personalDetailsModel.userId, student?.userId!));
 
@@ -1940,8 +1965,6 @@ export async function processStudent(
   // Step 10: Load the student academic info and subjects
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
 
-  // Step 11: Create the student cu registration request
-  await addStudentCuRegistrationRequest(student);
   return student;
 }
 

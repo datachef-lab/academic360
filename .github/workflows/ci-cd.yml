@@ -462,7 +462,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ steps.host.outputs.host }}
-          username: ${{ secrets.SSH_USER }}
+          username: ${{ secrets.SSH_1USER }}
           key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
             echo "📁 Verifying file transfer for PRODUCTION..."

@@ -135,7 +135,13 @@ export async function uploadToS3(
       );
     }
 
-    const key = `${folder}/${fileName}`;
+    // Optional root folder support (prefix everything under this folder inside the bucket)
+    const root = (process.env.AWS_ROOT_FOLDER || "")
+      .trim()
+      .replace(/^\/+|\/+$/g, "");
+    const finalFolder = root ? `${root}/${folder}` : folder;
+
+    const key = `${finalFolder}/${fileName}`.replace(/\/{2,}/g, "/");
 
     // Prepare upload parameters
     const uploadParams: any = {
@@ -560,7 +566,8 @@ export class StudentFolderManager {
     studentUid: string,
     documentType: string,
   ): string {
-    return `${studentUid}/${documentType}`;
+    // Always place student files under a top-level students/ folder
+    return `students/${studentUid}/${documentType}`;
   }
 
   /**
