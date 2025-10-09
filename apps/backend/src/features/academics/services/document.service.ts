@@ -18,6 +18,7 @@ const defaultDocuments: DocumentT[] = [
   { name: "APAAR ID Card", description: "APAAR ID Card" },
   { name: "Father Photo ID", description: "Father Photo ID" },
   { name: "Mother Photo ID", description: "Mother Photo ID" },
+  { name: "EWS Certificate", description: "EWS Certificate" },
 ];
 export async function loadDefaultDocuments() {
   for (const document of defaultDocuments) {

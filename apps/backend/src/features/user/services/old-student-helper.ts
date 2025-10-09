@@ -79,6 +79,7 @@ import {
   StudentAcademicSubjects,
   BoardSubject,
   BoardSubjectName,
+  cuRegistrationCorrectionRequestModel,
 } from "@repo/db/schemas/models";
 import {
   OldAdmStudentPersonalDetail,
@@ -156,6 +157,7 @@ import {
 import { OldCountry } from "@repo/db/legacy-system-types/resources";
 import { OldPromotionStatus } from "@repo/db/legacy-system-types/batches";
 import { bitToBool } from "./refactor-old-migration.service";
+import { CuRegistrationNumberService } from "@/services/cu-registration-number.service";
 
 const BATCH_SIZE = 500; // Number of rows per batch
 
@@ -1826,6 +1828,22 @@ export async function processStudent(
     // Step 7: Check for the transport-details
     await upsertTransportDetails(oldStudent, user.id!);
 
+    // Update APAAR/ABC ID only when we actually have a value; Drizzle throws on empty set
+    {
+      const updateData: Record<string, string> = {};
+      if (oldStudent.apprid) {
+        updateData.apaarId = String(oldStudent.apprid);
+      } else if (oldStudent.abcid) {
+        updateData.apaarId = String(oldStudent.abcid);
+      }
+      if (Object.keys(updateData).length > 0) {
+        await db
+          .update(studentModel)
+          .set(updateData as any)
+          .where(eq(studentModel.id, student.id!));
+      }
+    }
+
     // Step 8: Application Form
     if (!student.applicationId) {
       const result =
@@ -1921,7 +1939,45 @@ export async function processStudent(
 
   // Step 10: Load the student academic info and subjects
   await loadStudentAcademicInfoAndSubjects(oldStudent, student);
+
+  // Step 11: Create the student cu registration request
+  await addStudentCuRegistrationRequest(student);
   return student;
+}
+
+async function addStudentCuRegistrationRequest(student: Student) {
+  const [existingCuRegistrationRequest] = await db
+    .select()
+    .from(cuRegistrationCorrectionRequestModel)
+    .where(eq(cuRegistrationCorrectionRequestModel.studentId, student.id!));
+
+  if (existingCuRegistrationRequest) {
+    console.log(
+      "cu registration request already exists for student:",
+      student.id,
+    );
+    return;
+  }
+
+  const cuRegAppNo =
+    await CuRegistrationNumberService.generateNextApplicationNumber();
+
+  const [newCuRegistrationRequest] = await db
+    .insert(cuRegistrationCorrectionRequestModel)
+    .values({
+      studentId: student.id!,
+      cuRegistrationApplicationNumber: cuRegAppNo,
+      status: "PENDING",
+    })
+    .returning();
+
+  console.log(
+    "new cu registration request created for student:",
+    student.id,
+    "with application number:",
+    cuRegAppNo,
+  );
+  return newCuRegistrationRequest;
 }
 
 async function loadStudentAcademicInfoAndSubjects(

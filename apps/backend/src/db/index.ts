@@ -23,6 +23,13 @@ import { loadOldCourses } from "@/features/course-design/services/course.service
 import { loadOldSubjectTypes } from "@/features/course-design/services/subject-type.service";
 import { loadDefaultSubjectSelectionMetas } from "@/features/subject-selection/services/subject-selection-meta.service";
 import { loadDefaultDocuments } from "@/features/academics/services/document.service";
+import {
+  loadAllCity,
+  loadAllCountry,
+  loadAllPoliceStation,
+  loadAllPostOffice,
+  loadAllState,
+} from "@/features/user/services/old-student.service";
 
 // Create a connection pool
 const pool = new pg.Pool({
@@ -54,6 +61,9 @@ export const connectToDatabase = async () => {
     // loadNationalities();
     loadAffiliation();
     loadCourseLevel();
+    // loadAllAddress();
+    // loadAllPostOffice();
+    // loadAllPoliceStation();
     loadCourseType();
     loadRegulationType();
     loadDefaultDocuments();
@@ -69,6 +79,33 @@ export const connectToDatabase = async () => {
     process.exit(1); // Exit the application if the database connection fails
   }
 };
+
+// export const loadAllAddress = () => {
+//     loadAllCountry()
+//         .then(() => {
+//             console.log("All countries loaded successfully.");
+//             loadAllState()
+//                 .then(() => {
+//                     console.log("All states loaded successfully.");
+//                     loadAllCity()
+//                         .then(() => {
+//                             console.log("All cities loaded successfully.");
+//                             loadAllDistrict()
+//                                 .then(() => {
+//                                     console.log("All districts loaded successfully.");
+//                                     loadAllPostOffice()
+//                                         .then(() => {
+//                                             console.log("All post offices loaded successfully.");
+//                                             loadAllPoliceStation()
+//                                                 .then(() => {
+//                                                     console.log("All police stations loaded successfully.");
+//                                                 });
+//                                         });
+//                                 });
+//                         });
+//                 });
+//         });
+// };
 
 // MySQL (old DB)
 // console.log(

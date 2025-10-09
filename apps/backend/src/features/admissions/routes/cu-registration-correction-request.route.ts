@@ -13,11 +13,26 @@ import {
   validateCuRegistrationApplicationNumberController,
   getCuRegistrationApplicationNumberStatsController,
 } from "../controllers/cu-registration-correction-request.controller.js";
+import { submitCuRegistrationCorrectionRequestWithDocuments } from "../controllers/cu-registration-batch-submit.controller.js";
 
 const router = Router();
 
 // Create a new CU registration correction request
 router.post("/", createNewCuRegistrationCorrectionRequest);
+
+// Submit CU registration correction request with documents (batch upload)
+import multer from "multer";
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB per file
+  },
+});
+router.post(
+  "/submit-with-documents",
+  upload.array("documents", 10),
+  submitCuRegistrationCorrectionRequestWithDocuments,
+);
 
 // Get all CU registration correction requests with pagination and filters
 // Query parameters: page, limit, status, studentId, search

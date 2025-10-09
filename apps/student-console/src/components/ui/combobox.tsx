@@ -41,13 +41,13 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("justify-between w-full", className)}
+          className={cn("justify-between w-full min-w-0", className)}
           disabled={disabled}
         >
-          <div className="flex items-center gap-2">
-            <span>{selectedLabel || placeholder}</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="truncate block max-w-full">{selectedLabel || placeholder}</span>
             {!selectedLabel && dataArr.length > 0 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap">
                 ({dataArr.filter((item) => item.value !== "").length} option
                 {dataArr.filter((item) => item.value !== "").length !== 1 ? "s" : ""})
               </span>
@@ -56,7 +56,7 @@ export function Combobox({
           <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-96 overflow-y-auto">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width,240px)] p-0 max-h-80 overflow-y-auto">
         <Command>
           <CommandInput
             value={search}

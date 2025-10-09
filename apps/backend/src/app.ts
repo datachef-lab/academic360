@@ -9,7 +9,7 @@ import express, { Request, Response } from "express";
 import { Strategy } from "passport-google-oauth20";
 import passport from "passport";
 import { db } from "./db/index.js";
-import { eq } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { corsOptions } from "@/config/corsOptions.js";
@@ -18,6 +18,9 @@ import settingsRouter from "@/features/apps/routes/settings.route.js";
 import { logger, errorHandler } from "@/middlewares/index.js";
 import { districtModel } from "@repo/db/schemas/models/resources/district.model.js";
 import { cityModel } from "@repo/db/schemas/models/resources/city.model.js";
+import { stateModel } from "@repo/db/schemas/models/resources/state.model.js";
+import { policeStationModel } from "@repo/db/schemas/models/user/police-station.model.js";
+import { postOfficeModel } from "@repo/db/schemas/models/user/post-office.model.js";
 
 import { generateToken } from "./utils/index.js";
 import {
@@ -213,6 +216,21 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use("/", express.static(path.join(__dirname, "..", "public")));
+
+// Serve CU registration documents from the configured path
+const cuRegAppPath = process.env.CU_REGISTRATION_APP_PATH;
+if (cuRegAppPath) {
+  app.use("/uploads", express.static(cuRegAppPath));
+  console.info(
+    `[STATIC FILES] Serving CU registration documents from: ${cuRegAppPath}`,
+  );
+} else {
+  // Fallback to default uploads directory
+  app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+  console.warn(
+    "[STATIC FILES] CU_REGISTRATION_APP_PATH not set, using default uploads directory",
+  );
+}
 
 app.get("^/$|/index(.html)?", (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "..", "views", "index.html"));
@@ -508,6 +526,80 @@ app.get("/api/districts", async (req: Request, res: Response) => {
   } catch (e) {
     console.error("Failed to fetch districts:", e);
     res.status(500).json({ message: "Failed to fetch districts" });
+  }
+});
+
+// Lightweight police stations endpoint
+app.get("/api/police-stations", async (req: Request, res: Response) => {
+  try {
+    const stateIdParam = req.query.stateId as string | undefined;
+    const stateNameParam = req.query.stateName as string | undefined;
+
+    let rows: { id: number; name: string }[] = [];
+
+    if (stateIdParam) {
+      rows = await db
+        .select({ id: policeStationModel.id, name: policeStationModel.name })
+        .from(policeStationModel)
+        .where(eq(policeStationModel.stateId, Number(stateIdParam)));
+    } else if (stateNameParam) {
+      const [state] = await db
+        .select({ id: stateModel.id })
+        .from(stateModel)
+        .where(ilike(stateModel.name, stateNameParam));
+      if (state?.id) {
+        rows = await db
+          .select({ id: policeStationModel.id, name: policeStationModel.name })
+          .from(policeStationModel)
+          .where(eq(policeStationModel.stateId, state.id));
+      }
+    } else {
+      rows = await db
+        .select({ id: policeStationModel.id, name: policeStationModel.name })
+        .from(policeStationModel);
+    }
+
+    res.json({ payload: rows });
+  } catch (e) {
+    console.error("Failed to fetch police stations:", e);
+    res.status(500).json({ message: "Failed to fetch police stations" });
+  }
+});
+
+// Lightweight post offices endpoint
+app.get("/api/post-offices", async (req: Request, res: Response) => {
+  try {
+    const stateIdParam = req.query.stateId as string | undefined;
+    const stateNameParam = req.query.stateName as string | undefined;
+
+    let rows: { id: number; name: string }[] = [];
+
+    if (stateIdParam) {
+      rows = await db
+        .select({ id: postOfficeModel.id, name: postOfficeModel.name })
+        .from(postOfficeModel)
+        .where(eq(postOfficeModel.stateId, Number(stateIdParam)));
+    } else if (stateNameParam) {
+      const [state] = await db
+        .select({ id: stateModel.id })
+        .from(stateModel)
+        .where(ilike(stateModel.name, stateNameParam));
+      if (state?.id) {
+        rows = await db
+          .select({ id: postOfficeModel.id, name: postOfficeModel.name })
+          .from(postOfficeModel)
+          .where(eq(postOfficeModel.stateId, state.id));
+      }
+    } else {
+      rows = await db
+        .select({ id: postOfficeModel.id, name: postOfficeModel.name })
+        .from(postOfficeModel);
+    }
+
+    res.json({ payload: rows });
+  } catch (e) {
+    console.error("Failed to fetch post offices:", e);
+    res.status(500).json({ message: "Failed to fetch post offices" });
   }
 });
 
