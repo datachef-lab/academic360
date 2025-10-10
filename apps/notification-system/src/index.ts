@@ -25,7 +25,7 @@ function checkRequiredEnvs() {
     (key) => !process.env[key] || process.env[key]?.trim() === "",
   );
   const hasPort = Boolean(process.env.NOTIFICATION_SYSTEM_PORT);
-  if (!hasPort) missing.unshift("NOTIFICATION_SYSTEM_PORT|PORT");
+  if (!hasPort) missing.unshift("NOTIFICATION_SYSTEM_PORT");
   if (missing.length > 0) {
     console.error(
       `\n[notification-system] - Missing required environment variables: ${missing.join(", ")}`,
