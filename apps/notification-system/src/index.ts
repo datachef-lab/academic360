@@ -37,6 +37,8 @@ function checkRequiredEnvs() {
 (async () => {
   console.log("\nInitializing notification-system...\n testing");
   checkRequiredEnvs();
+  console.log(process.env.NOTIFICATION_SYSTEM_PORT);
+  console.log(process.env.PORT);
   if (db) {
     const result = await db.select().from(userModel).limit(1);
     console.log("result", result);
