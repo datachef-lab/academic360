@@ -40,7 +40,7 @@ export async function sendZeptoMail(
     to: [
       {
         email_address: {
-          address: "desaiharsh183@gmail.com",
+          address: recipient,
           name: name || "User",
         },
       },

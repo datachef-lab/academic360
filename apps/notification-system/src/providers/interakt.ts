@@ -18,7 +18,7 @@ export async function sendWhatsAppMessage(
 
     const requestBody: Record<string, unknown> = {
       countryCode: "+91",
-      phoneNumber: "9322585046",
+      phoneNumber,
       type: "Template",
       template: {
         name: templateName,
@@ -29,6 +29,15 @@ export async function sendWhatsAppMessage(
       data: { message: "" },
     };
 
+    // Log the exact payload being sent to Interakt (sanitized)
+    console.log("[interakt] request =>", {
+      to: phoneNumber,
+      templateName,
+      headerMediaUrl: Boolean(headerMediaUrl) ? headerMediaUrl : undefined,
+      bodyValues: Array.isArray(messageArr) ? messageArr : [],
+      baseUrl: INTERAKT_BASE_URL,
+    });
+    console.log("requestBody:", requestBody);
     const response = await fetch(INTERAKT_BASE_URL, {
       method: "POST",
       headers: {
@@ -39,16 +48,39 @@ export async function sendWhatsAppMessage(
     });
 
     if (!response.ok) {
-      const err = await response.text().catch(() => "");
-      return {
-        ok: false,
-        error: `HTTP ${response.status} ${err}`.slice(0, 500),
+      const raw = await response.text().catch(() => "");
+      // Try to extract structured message from JSON error bodies
+      let message = raw;
+      try {
+        const json = JSON.parse(raw || "{}");
+        // Common Interakt error fields: message, error.message, errors[0].message
+        message =
+          json?.message ||
+          json?.error?.message ||
+          (Array.isArray(json?.errors) && json.errors[0]?.message) ||
+          raw;
+      } catch {
+        // keep raw
+      }
+      const composed = `HTTP ${response.status} ${String(message)}`;
+      // Log full error context to help debugging in workers/logs
+      console.log("[interakt] error response =>", {
         status: response.status,
-      };
+        statusText: (response as any).statusText,
+        message: composed,
+        rawBody: raw,
+        requestBody,
+      });
+      // Return full message (no truncation) so workers can persist completely
+      return { ok: false, error: composed, status: response.status };
     }
     await response.json().catch(() => ({}));
     return { ok: true };
   } catch (error: any) {
-    return { ok: false, error: String(error).slice(0, 500) };
+    // Log full error and propagate full string upwards
+    console.log("[interakt] exception =>", {
+      error: String(error),
+    });
+    return { ok: false, error: String(error) };
   }
 }

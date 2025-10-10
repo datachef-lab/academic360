@@ -1,4 +1,4 @@
-import { getDbConnection } from "@repo/db/connection";
+// NOTE: Avoid per-iteration client creation; reuse shared db instance
 import {
   notificationQueueModel,
   notificationModel,
@@ -69,20 +69,15 @@ async function processBatch() {
 
       // Build dto from notification event data (not from content rows)
       const dto: NotificationEventDto = {
-        subject: "Confirmation of Semester-wise Subject Selection",
         templateData: {},
         meta: { devOnly: true },
       } as NotificationEventDto;
       const env = String(process.env.NODE_ENV || "development");
       const devOnlyMeta = Boolean(dto?.meta?.devOnly);
-      const subject = dto?.subjectTemplate
-        ? await renderTemplateString(dto.subjectTemplate, {
-            notif,
-            content: dto,
-          })
-        : asString(dto?.subject, "Notification");
       // Resolve template via notification master (preferred), fallback to dto.emailTemplate
       let templateKey = dto.emailTemplate;
+      // Subject should be dynamic: prefer subjectTemplate, then explicit subject, then by-template defaults
+      let subject: string = "Notification";
       let computedTemplateData: Record<string, string> | undefined;
       let computedTemplateList: { name: string; value: string }[] | undefined;
       if (notif.notificationMasterId) {
@@ -119,6 +114,26 @@ async function processBatch() {
             })
             .where(eq(notificationQueueModel.id, row.id));
           continue;
+        }
+        // Compute subject after templateKey and template data resolution
+        {
+          const subjectFromTemplate = dto?.subjectTemplate
+            ? await renderTemplateString(dto.subjectTemplate, {
+                notif,
+                content: dto,
+              })
+            : undefined;
+          const defaultSubjectByTemplate: Record<string, string> = {
+            otp: "Your OTP Code - Academic360",
+            subjectSelectionConfirmation:
+              "Confirmation of Semester-wise Subject Selection",
+          };
+          subject = asString(
+            subjectFromTemplate || (dto as any)?.subject,
+            templateKey
+              ? defaultSubjectByTemplate[String(templateKey)] || "Notification"
+              : "Notification",
+          );
         }
         if (master?.template)
           templateKey = master.template as unknown as string;
@@ -189,6 +204,24 @@ async function processBatch() {
         }
       }
 
+      // Fallback: extract OTP from notification message if not present in template data
+      if (!computedTemplateData || !(computedTemplateData as any).otpCode) {
+        const otpFromMessage =
+          typeof notif?.message === "string"
+            ? (notif.message.match(/\b\d{4,8}\b/) || [])[0]
+            : undefined;
+        if (otpFromMessage) {
+          computedTemplateData = {
+            ...(computedTemplateData || {}),
+            otpCode: otpFromMessage,
+          } as Record<string, string>;
+          console.log(
+            "[email.worker] otp fallback from message ->",
+            otpFromMessage,
+          );
+        }
+      }
+
       // Transform template data into subjectsByCategory format for the email template
       let subjectsByCategory: Record<string, Record<string, string>> = {};
       if (computedTemplateData) {
@@ -204,25 +237,39 @@ async function processBatch() {
         for (const [fieldName, subjectName] of Object.entries(
           computedTemplateData,
         )) {
+          const hasValue =
+            typeof subjectName === "string" && subjectName.trim().length > 0;
           if (fieldName.includes("Minor 1")) {
-            subjectsByCategory["Minor"]["I"] = subjectName;
-            subjectsByCategory["Minor"]["II"] = subjectName;
+            if (hasValue) {
+              subjectsByCategory["Minor"]["I"] = subjectName;
+              subjectsByCategory["Minor"]["II"] = subjectName;
+            }
           } else if (fieldName.includes("Minor 2")) {
-            subjectsByCategory["Minor"]["III"] = subjectName;
-            subjectsByCategory["Minor"]["IV"] = subjectName;
+            // Minor 2 spans Semester III & IV
+            if (hasValue) {
+              subjectsByCategory["Minor"]["III"] = subjectName;
+              subjectsByCategory["Minor"]["IV"] = subjectName;
+            }
           } else if (fieldName.includes("Minor 3")) {
-            subjectsByCategory["Minor"]["III"] = subjectName;
+            // If Minor 3 exists in master/meta it should appear in Sem III
+            if (hasValue) {
+              subjectsByCategory["Minor"]["III"] = subjectName;
+            }
           } else if (fieldName.includes("IDC 1")) {
-            subjectsByCategory["IDC"]["I"] = subjectName;
+            if (hasValue) subjectsByCategory["IDC"]["I"] = subjectName;
           } else if (fieldName.includes("IDC 2")) {
-            subjectsByCategory["IDC"]["II"] = subjectName;
+            if (hasValue) subjectsByCategory["IDC"]["II"] = subjectName;
           } else if (fieldName.includes("IDC 3")) {
-            subjectsByCategory["IDC"]["III"] = subjectName;
+            if (hasValue) subjectsByCategory["IDC"]["III"] = subjectName;
           } else if (fieldName.includes("AEC")) {
-            subjectsByCategory["AEC"]["III"] = subjectName;
-            subjectsByCategory["AEC"]["IV"] = subjectName;
+            // AEC is shown for Semester III and IV as per design
+            if (hasValue) {
+              subjectsByCategory["AEC"]["III"] = subjectName;
+              subjectsByCategory["AEC"]["IV"] = subjectName;
+            }
           } else if (fieldName.includes("CVAC 4")) {
-            subjectsByCategory["CVAC"]["II"] = subjectName;
+            // CVAC 4 is for Semester II (naming retained from master)
+            if (hasValue) subjectsByCategory["CVAC"]["II"] = subjectName;
           }
         }
       }
@@ -242,6 +289,21 @@ async function processBatch() {
       console.log(
         "[email.worker] transformed subjectsByCategory:",
         JSON.stringify(subjectsByCategory, null, 2),
+      );
+      // Debug: log subject/template/otp for visibility
+      console.log(
+        "[email.worker] resolved subject/template/otp ->",
+        JSON.stringify(
+          {
+            subject,
+            templateKey,
+            otpCode:
+              (resolvedContent as any)?.otpCode ||
+              resolvedContent?.templateData?.["otpCode"],
+          },
+          null,
+          2,
+        ),
       );
 
       let html: string;
@@ -388,7 +450,7 @@ async function processBatch() {
         })
         .where(eq(notificationQueueModel.id, row.id));
     } catch (err: any) {
-      const db = getDbConnection(process.env.DATABASE_URL!);
+      // Reuse shared db; do not create new clients inside the loop
       const attempts = (row.retryAttempts ?? 0) + 1;
 
       // Extract proper error message

@@ -1,4 +1,4 @@
-import { getDbConnection } from "@repo/db/connection";
+// NOTE: Avoid per-iteration client creation; reuse shared db instance
 import {
   notificationQueueModel,
   notificationModel,
@@ -50,8 +50,30 @@ async function processBatch() {
   const rows = await db
     .select()
     .from(notificationQueueModel)
-    .where(eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any))
+    .where(
+      and(
+        eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any),
+        eq(notificationQueueModel.isDeadLetter, false as any),
+      ),
+    )
     .limit(BATCH_SIZE);
+  console.log(`[whatsapp.worker] fetched rows: ${rows.length}`);
+  if (rows.length === 0) {
+    // Debug: peek latest WHATSAPP_QUEUE rows regardless of dead letter to understand state
+    try {
+      const sample = await db
+        .select({
+          id: notificationQueueModel.id,
+          notificationId: notificationQueueModel.notificationId,
+          isDeadLetter: notificationQueueModel.isDeadLetter,
+        })
+        .from(notificationQueueModel)
+        .where(eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any))
+        .limit(5);
+      console.log("[whatsapp.worker] latest WHATSAPP_QUEUE rows:", sample);
+    } catch {}
+    return;
+  }
 
   for (const row of rows) {
     try {
@@ -73,9 +95,22 @@ async function processBatch() {
         .where(eq(notificationContentModel.notificationId, row.notificationId))
         .limit(1);
 
-      const dto: NotificationEventDto = content?.content
-        ? JSON.parse(String(content.content))
-        : ({} as NotificationEventDto);
+      // Safely parse JSON only if the first non-whitespace char suggests JSON
+      let dto: NotificationEventDto = {} as NotificationEventDto;
+      if (content && typeof content.content === "string") {
+        const trimmed = String(content.content).trim();
+        if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+          try {
+            dto = JSON.parse(trimmed) as NotificationEventDto;
+          } catch (e: any) {
+            console.log(
+              "[whatsapp.worker] skipped non-JSON content for dto due to parse error:",
+              e?.message || String(e),
+            );
+            dto = {} as NotificationEventDto;
+          }
+        }
+      }
       const env = String(process.env.NODE_ENV || "development");
       const devOnlyMeta = Boolean(dto?.meta?.devOnly);
       // Resolve template via notification master id (preferred), fallback to dto
@@ -169,10 +204,37 @@ async function processBatch() {
         bodyValues.push(next?.content ?? "");
         mapFieldToContents.set(m.notificationMasterFieldId, arr);
       }
-      // If still empty, fallback to explicit bodyValues provided
-      if (bodyValues.length === 0) {
+      // If none or only blank values, fallback to explicit bodyValues provided
+      const allBlank =
+        bodyValues.length === 0 ||
+        bodyValues.every((v) => String(v).trim().length === 0);
+      if (allBlank) {
+        // replace with provided dto body values
+        bodyValues.length = 0;
         const fallback = asStringArray(dto?.bodyValues, []);
         for (const v of fallback) bodyValues.push(v);
+      }
+      // Final fallback: if still empty, use any content rows we have (sorted by createdAt)
+      if (bodyValues.length === 0) {
+        const anyContents = contents
+          .filter((c) => typeof c.content === "string")
+          .sort(
+            (a, b) =>
+              (a.createdAt?.getTime?.() || 0) - (b.createdAt?.getTime?.() || 0),
+          )
+          .map((c) => String(c.content));
+        for (const v of anyContents) bodyValues.push(v);
+      }
+
+      // Guard: ensure required placeholders have values; otherwise throw before provider call
+      const expectedCount = metaEntries.length;
+      const providedCount = bodyValues.filter(
+        (v) => String(v).length > 0,
+      ).length;
+      if (expectedCount > 0 && providedCount < expectedCount) {
+        throw new Error(
+          `Missing variable values for template's body, expected ${expectedCount}, got ${providedCount}`,
+        );
       }
 
       if (env === "staging") {
@@ -195,6 +257,13 @@ async function processBatch() {
               staff.whatsappNumber || staff.phone,
               process.env.DEVELOPER_PHONE!,
             );
+            console.log("[whatsapp.worker] sending =>", {
+              notifId: row.notificationId,
+              to: recipient,
+              templateName,
+              bodyValues,
+              headerMediaUrl: dto.whatsappHeaderMediaUrl,
+            });
             const resp = await sendWhatsAppMessage(
               recipient,
               bodyValues,
@@ -205,6 +274,13 @@ async function processBatch() {
             await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
           }
         } else {
+          console.log("[whatsapp.worker] sending =>", {
+            notifId: row.notificationId,
+            to: process.env.DEVELOPER_PHONE!,
+            templateName,
+            bodyValues,
+            headerMediaUrl: dto.whatsappHeaderMediaUrl,
+          });
           const resp = await sendWhatsAppMessage(
             process.env.DEVELOPER_PHONE!,
             bodyValues,
@@ -217,6 +293,13 @@ async function processBatch() {
       } else if (env === "development") {
         // development -> always send to developer
         const resolvedPhone = process.env.DEVELOPER_PHONE!;
+        console.log("[whatsapp.worker] sending =>", {
+          notifId: row.notificationId,
+          to: resolvedPhone,
+          templateName,
+          bodyValues,
+          headerMediaUrl: dto.whatsappHeaderMediaUrl,
+        });
         const resp = await sendWhatsAppMessage(
           resolvedPhone,
           bodyValues,
@@ -231,6 +314,13 @@ async function processBatch() {
           user?.whatsappNumber || user?.phone,
           process.env.DEVELOPER_PHONE!,
         );
+        console.log("[whatsapp.worker] sending =>", {
+          notifId: row.notificationId,
+          to: resolvedPhone,
+          templateName,
+          bodyValues,
+          headerMediaUrl: dto.whatsappHeaderMediaUrl,
+        });
         const resp = await sendWhatsAppMessage(
           resolvedPhone,
           bodyValues,
@@ -252,25 +342,40 @@ async function processBatch() {
 
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
     } catch (err: any) {
-      const db = getDbConnection(process.env.DATABASE_URL!);
+      // Reuse shared db; do not create new clients inside the loop
       const attempts = (row.retryAttempts ?? 0) + 1;
+
+      // Extract proper error message (provider returns cleaned message)
+      let errorMessage = "Unknown error";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      } else if (err && typeof err === "object") {
+        errorMessage = (err as any).message || String(err);
+      }
+
       if (attempts >= MAX_RETRIES) {
         await db
           .update(notificationModel)
           .set({
             status: "FAILED",
             failedAt: new Date(),
-            failedReason: String(err).slice(0, 500),
+            failedReason: errorMessage,
           })
           .where(eq(notificationModel.id, row.notificationId));
         await db
           .update(notificationQueueModel)
-          .set({ isDeadLetter: true, deadLetterAt: new Date() })
+          .set({
+            isDeadLetter: true,
+            deadLetterAt: new Date(),
+            failedReason: errorMessage,
+          })
           .where(eq(notificationQueueModel.id, row.id));
       } else {
         await db
           .update(notificationQueueModel)
-          .set({ retryAttempts: attempts })
+          .set({ retryAttempts: attempts, failedReason: errorMessage })
           .where(eq(notificationQueueModel.id, row.id));
       }
     }
@@ -278,6 +383,15 @@ async function processBatch() {
 }
 
 export function startWhatsAppWorker() {
+  console.log(
+    `[whatsapp.worker] starting with POLL_MS=${POLL_MS}, BATCH_SIZE=${BATCH_SIZE}, RATE_DELAY_MS=${RATE_DELAY_MS}, MAX_RETRIES=${MAX_RETRIES}`,
+  );
+  // Kick off immediately for visibility
+  processBatch()
+    .then(() => console.log("[whatsapp.worker] initial run complete"))
+    .catch((e) =>
+      console.log("[whatsapp.worker] initial run error:", e?.message || e),
+    );
   setInterval(() => {
     processBatch().catch(() => undefined);
   }, POLL_MS);

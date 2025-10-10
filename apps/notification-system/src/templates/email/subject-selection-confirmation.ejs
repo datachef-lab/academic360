@@ -9,8 +9,12 @@
       body { background: #f6f8fb; }
       .email-card { border: 1px solid #e6e8ee; }
       .muted { color: #64748b; }
-      .header-bar { background:#0f172a;color:#fff }
+      /* Softer brand header instead of black */
+      .header-bar { background:#1e3a8a;color:#fff }
       .table-sm th, .table-sm td { padding: .5rem .6rem; font-size: 13px; }
+      /* Ensure visible column borders in all email clients */
+      .table-bordered th, .table-bordered td { border: 1px solid #e2e8f0 !important; }
+      .table-bordered { border: 1px solid #e2e8f0 !important; }
     </style>
   </head>
   <body class="py-4">
@@ -27,7 +31,7 @@
           <p class="mb-3">For your ready reference, a summary of subjects to be studied by you from <strong>Semesters I to IV</strong> (including the subjects selected by you) is provided below:</p>
 
           <div class="table-responsive">
-            <table class="table table-bordered table-striped table-sm align-middle mb-3">
+            <table class="table table-bordered table-striped table-sm align-middle mb-3" style="border-collapse: collapse;">
               <thead class="table-light">
                 <tr>
                   <th scope="col">Category</th>
