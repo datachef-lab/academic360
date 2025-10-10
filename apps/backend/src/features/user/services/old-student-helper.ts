@@ -1842,7 +1842,11 @@ export async function processStudent(
       student?.uid,
       cuRegistrationRequest,
     );
-    if (cuRegistrationRequest?.status === "PENDING") {
+    if (
+      cuRegistrationRequest?.status === "PENDING" &&
+      user.isActive &&
+      !user.isSuspended
+    ) {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
 
@@ -1922,13 +1926,16 @@ export async function processStudent(
         .from(studentModel)
         .where(eq(studentModel.userId, user.id as number))
     )[0];
-    const cuRegistrationRequest =
-      await addStudentCuRegistrationRequest(student);
-    console.log(
-      "cu registration request created for student:",
-      student?.uid,
-      cuRegistrationRequest,
-    );
+    if (user.isActive && !user.isSuspended) {
+      const cuRegistrationRequest =
+        await addStudentCuRegistrationRequest(student);
+      console.log(
+        "cu registration request created for student:",
+        student?.uid,
+        cuRegistrationRequest,
+      );
+      return student;
+    }
   }
 
   const [updatedStudent] = await db
