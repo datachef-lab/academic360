@@ -19,6 +19,7 @@ on:
       - "apps/backend/**"
       - "apps/main-console/**"
       - "apps/student-console/**"
+      - "apps/notification-system/**"
       - "packages/**"
       - "pnpm-lock.yaml"
       - "turbo.json"
