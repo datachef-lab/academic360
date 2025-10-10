@@ -130,6 +130,13 @@ jobs:
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.PROD_PORT }}' '${{ secrets.PORT }}')"
+            # Notification-system (use common secrets only)
+            put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
+            put ZEPTO_URL "${{ secrets.ZEPTO_URL }}"
+            put ZEPTO_FROM "${{ secrets.ZEPTO_FROM }}"
+            put ZEPTO_TOKEN "${{ secrets.ZEPTO_TOKEN }}"
+            put INTERAKT_API_KEY "${{ secrets.INTERAKT_API_KEY }}"
+            put INTERAKT_BASE_URL "${{ secrets.INTERAKT_BASE_URL }}"
             put DATABASE_URL "${{ secrets.PROD_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.PROD_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
             put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.PROD_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
@@ -201,6 +208,13 @@ jobs:
             # Backend
             echo "  📡 Backend configuration..."
             put PORT "$(choose '${{ secrets.STAGING_PORT }}' '${{ secrets.PORT }}')"
+            # Notification-system (use common secrets only)
+            put NOTIFICATION_SYSTEM_PORT "${{ secrets.NOTIFICATION_SYSTEM_PORT }}"
+            put ZEPTO_URL "${{ secrets.ZEPTO_URL }}"
+            put ZEPTO_FROM "${{ secrets.ZEPTO_FROM }}"
+            put ZEPTO_TOKEN "${{ secrets.ZEPTO_TOKEN }}"
+            put INTERAKT_API_KEY "${{ secrets.INTERAKT_API_KEY }}"
+            put INTERAKT_BASE_URL "${{ secrets.INTERAKT_BASE_URL }}"
             put DATABASE_URL "${{ secrets.STAGING_DATABASE_URL }}"
             put ACCESS_TOKEN_SECRET "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_SECRET }}' '${{ secrets.ACCESS_TOKEN_SECRET }}')"
             put ACCESS_TOKEN_EXPIRY "$(choose '${{ secrets.STAGING_ACCESS_TOKEN_EXPIRY }}' '${{ secrets.ACCESS_TOKEN_EXPIRY }}')"
@@ -510,6 +524,7 @@ jobs:
             }
             load_env "deploy/${{ steps.host.outputs.envfile }}"
             echo "🔎 Backend URL in use: ${BACKEND_URL}"
+            echo "🔎 PORT=${PORT} NOTIFICATION_SYSTEM_PORT=${NOTIFICATION_SYSTEM_PORT}"
             # Mask password in DATABASE_URL for logging
             if [ -n "${DATABASE_URL}" ]; then
               MASKED_DB_URL=$(echo "${DATABASE_URL}" | sed -E 's#(//[^:@/]+:)[^@]+@#\1***@#')
