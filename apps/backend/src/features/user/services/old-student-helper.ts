@@ -1830,7 +1830,7 @@ export async function processStudent(
   // If modifydt is null, it means data hasn't been updated since creation - no need to update
   // If lastSyncTime is undefined (manual call), we don't update student data
 
-  if (shouldUpdateStudentData) {
+  if (shouldUpdateStudentData && user.isActive && !user.isSuspended) {
     // Step 1: Upsert the student first
     student = await upsertStudent(oldStudent, user);
 
@@ -1842,11 +1842,7 @@ export async function processStudent(
       student?.uid,
       cuRegistrationRequest,
     );
-    if (
-      cuRegistrationRequest?.status === "PENDING" &&
-      user.isActive &&
-      !user.isSuspended
-    ) {
+    if (cuRegistrationRequest?.status === "PENDING") {
       // Step 2: Check for the accomodation
       await upsertAccommodation(oldStudent, user.id!);
 
