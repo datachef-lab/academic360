@@ -154,12 +154,9 @@ export const sendOtpEmailNotification = async (
 
     console.log(logMessage);
 
-    if (!shouldSend) {
-      return await sendToDeadLetterQueue(
-        data,
-        "User is not eligible for staging notifications (not staff, staging disabled, inactive, or suspended)",
-      );
-    }
+    // In STAGING we still enqueue; downstream notification-system workers
+    // will fan-out to eligible STAFF recipients. We only dead-letter on real errors.
+    // So do not early-return for ineligible student targets here.
 
     // Get the OTP notification master for EMAIL
     const [emailMaster] = await db
@@ -263,12 +260,7 @@ export const sendOtpWhatsAppNotification = async (
 
     console.log(logMessage);
 
-    if (!shouldSend) {
-      return await sendToDeadLetterQueue(
-        data,
-        "User is not eligible for staging notifications (not staff, staging disabled, inactive, or suspended)",
-      );
-    }
+    // Same rationale as email: in STAGING, always enqueue; workers handle gating/fan-out.
 
     // Get the OTP notification master for WHATSAPP
     const [whatsappMaster] = await db
