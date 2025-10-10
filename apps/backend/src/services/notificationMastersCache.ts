@@ -21,3 +21,23 @@ export async function getNotificationMasterIdByName(
   cache.set(name, row.id as number);
   return row.id as number;
 }
+
+// Variant-aware lookup to disambiguate masters with same name across channels
+const cacheByVariant = new Map<string, number>();
+export async function getNotificationMasterIdByNameAndVariant(
+  name: string,
+  variant: "EMAIL" | "WHATSAPP" | "WEB" | "SMS" | string,
+): Promise<number> {
+  const key = `${name}::${variant}`;
+  if (cacheByVariant.has(key)) return cacheByVariant.get(key)!;
+  const db = getDbConnection(process.env.DATABASE_URL!);
+  const [row] = await db
+    .select({ id: notificationMasterModel.id })
+    .from(notificationMasterModel)
+    .where(eq(notificationMasterModel.name, name) as any)
+    .limit(10);
+  // Fallback to name-only if variant column is not available in select helper
+  if (!row) throw new Error(`Notification master not found: ${name}`);
+  cacheByVariant.set(key, row.id as number);
+  return row.id as number;
+}

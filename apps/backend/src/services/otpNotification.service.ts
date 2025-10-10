@@ -176,9 +176,17 @@ export const sendOtpEmailNotification = async (
       throw new Error("OTP EMAIL notification master not found");
     }
 
+    // Resolve userId from email if available
+    const { userModel } = await import("@repo/db/schemas/models/user");
+    const [foundUser] = await db
+      .select({ id: userModel.id })
+      .from(userModel)
+      .where(eq(userModel.email, data.email));
+    const resolvedUserId = foundUser?.id || 0;
+
     // Prepare notification data
     const notificationData = {
-      userId: 0, // We'll use a placeholder since we don't have user ID
+      userId: resolvedUserId,
       variant: "EMAIL" as const,
       type: "OTP" as const,
       message: `Your OTP code is: ${data.otpCode}`,
@@ -277,9 +285,17 @@ export const sendOtpWhatsAppNotification = async (
       throw new Error("OTP WHATSAPP notification master not found");
     }
 
+    // Resolve userId from email if available
+    const { userModel } = await import("@repo/db/schemas/models/user");
+    const [foundUser] = await db
+      .select({ id: userModel.id })
+      .from(userModel)
+      .where(eq(userModel.email, data.email));
+    const resolvedUserId = foundUser?.id || 0;
+
     // Prepare notification data
     const notificationData = {
-      userId: 0, // We'll use a placeholder since we don't have user ID
+      userId: resolvedUserId,
       variant: "WHATSAPP" as const,
       type: "OTP" as const,
       message: `Your OTP code is: ${data.otpCode}`,
@@ -302,6 +318,8 @@ export const sendOtpWhatsAppNotification = async (
             recipientType: "staff",
           }),
         },
+        // Explicit body values for Interakt template placeholders (expects 1 value)
+        bodyValues: [String(data.otpCode)],
       },
     };
 

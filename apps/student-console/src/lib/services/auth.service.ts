@@ -305,3 +305,23 @@ export async function doLogin(
   const response = await axiosInstance.post("/auth/login", { email, password });
   return response.data;
 }
+
+export async function sendOtpRequest(
+  email: string,
+): Promise<ApiResponse<{ message: string; expiresIn: string; sentTo: { email: boolean; whatsapp: boolean } }>> {
+  const response = await axiosInstance.post("/auth/otp/send-email", { email });
+  return response.data;
+}
+
+export async function verifyOtpAndLogin(
+  email: string,
+  otp: string,
+  app?: string,
+): Promise<ApiResponse<{ accessToken: string; user: UserDto; redirectTo?: string }>> {
+  const response = await axiosInstance.post("/auth/otp/verify", {
+    email,
+    otp,
+    ...(app && { app }),
+  });
+  return response.data;
+}

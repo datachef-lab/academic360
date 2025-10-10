@@ -21,7 +21,7 @@ export async function enqueueNotification(dto: NotificationDto) {
   const base =
     process.env.BACKEND_SELF_BASE ||
     `http://localhost:${process.env.NOTIFICATION_SYSTEM_PORT || 8080}`;
-  const url = `${base}/internal/notifications/api/notifications/enqueue`;
+  const url = `${base}/api/notifications/enqueue`;
   // Debug log (safe summary only)
   console.log("[notif-client] enqueue ->", {
     url,

@@ -1347,12 +1347,33 @@ export async function createStudentSubjectSelectionsWithValidation(
             JSON.stringify(labelToValue, null, 2),
           );
 
+          const resolveValueForField = (rawName: string) => {
+            const key = normalize(rawName);
+            let value = labelToValue[key];
+            if (value) return value;
+            // Handle combined semester labels like "Semester III & IV"
+            if (/SEMESTERIIIIV/.test(key)) {
+              // Try specific semester variants
+              const variantA = key.replace("SEMESTERIIIIV", "SEMESTERIII");
+              const variantB = key.replace("SEMESTERIIIIV", "SEMESTERIV");
+              value = labelToValue[variantA] || labelToValue[variantB] || "";
+              return value;
+            }
+            // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
+            if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
+              const variantA = key.replace("IIIIV", "III");
+              const variantB = key.replace("IIIIV", "IV");
+              value = labelToValue[variantA] || labelToValue[variantB] || "";
+              return value;
+            }
+            return "";
+          };
+
           contentRows = activeMetas.map((m) => {
             const rawName = nameById.get(m.fieldId as number) || "";
-            const key = normalize(rawName);
-            const value = labelToValue[key] ?? "";
+            const value = resolveValueForField(rawName);
             console.log(
-              `[backend] field mapping: rawName="${rawName}" -> normalized="${key}" -> value="${value}"`,
+              `[backend] field mapping: rawName="${rawName}" -> value="${value}"`,
             );
             return {
               whatsappFieldId: m.fieldId as number,
@@ -1367,21 +1388,36 @@ export async function createStudentSubjectSelectionsWithValidation(
         }
       }
 
-      //   await enqueueNotification({
-      //     userId: student.userId as number,
-      //     variant: "EMAIL",
-      //     type: "INFO",
-      //     message: "Confirmation of Semester-wise Subject Selection",
-      //     notificationMasterId: masterId,
-      //     notificationEvent: {
-      //       subject: "Confirmation of Semester-wise Subject Selection",
-      //       templateData: {
-      //         academicYear: academicYearName,
-      //       },
-      //       meta: { devOnly: true },
-      //     },
-      //     content: contentRows,
-      //   });
+      // EMAIL
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "EMAIL",
+        type: "INFO",
+        message: "Confirmation of Semester-wise Subject Selection",
+        notificationMasterId: masterId,
+        notificationEvent: {
+          subject: "Confirmation of Semester-wise Subject Selection",
+          templateData: {
+            academicYear: academicYearName,
+          },
+          meta: { devOnly: true },
+        },
+        content: contentRows,
+      });
+      // WHATSAPP: use same master to render body values via worker
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "WHATSAPP",
+        type: "INFO",
+        message: "Subject Selection Confirmation",
+        notificationMasterId: masterId,
+        notificationEvent: {
+          notificationMaster: { id: masterId } as any,
+          bodyValues: [],
+          meta: { devOnly: true },
+        } as any,
+        content: contentRows,
+      });
       console.log("[backend] enqueue subject-selection (create) <- done");
     }
   } catch (err) {
@@ -1959,19 +1995,19 @@ export async function updateStudentSubjectSelectionsEfficiently(
           }
         }
 
-        // await enqueueNotification({
-        //   userId: student.userId as number,
-        //   variant: "EMAIL",
-        //   type: "INFO",
-        //   message: "Confirmation of Semester-wise Subject Selection",
-        //   notificationMasterId: masterId,
-        //   notificationEvent: {
-        //     subject: "Confirmation of Semester-wise Subject Selection",
-        //     templateData: { academicYear: academicYearName },
-        //     meta: { devOnly: true },
-        //   },
-        //   content: contentRows,
-        // });
+        await enqueueNotification({
+          userId: student.userId as number,
+          variant: "EMAIL",
+          type: "INFO",
+          message: "Confirmation of Semester-wise Subject Selection",
+          notificationMasterId: masterId,
+          notificationEvent: {
+            subject: "Confirmation of Semester-wise Subject Selection",
+            templateData: { academicYear: academicYearName },
+            meta: { devOnly: true },
+          },
+          content: contentRows,
+        });
         console.log("[backend] enqueue subject-selection (no-change) <- done");
       }
     } catch (err) {
@@ -2201,20 +2237,20 @@ export async function updateStudentSubjectSelectionsEfficiently(
         masterId,
         academicYearName,
       });
-      //   await enqueueNotification({
-      //     userId: student.userId as number,
-      //     variant: "EMAIL",
-      //     type: "INFO",
-      //     message: "Confirmation of Semester-wise Subject Selection",
-      //     notificationMasterId: masterId,
-      //     notificationEvent: {
-      //       subject: "Confirmation of Semester-wise Subject Selection",
-      //       templateData: {
-      //         academicYear: academicYearName,
-      //       },
-      //       meta: { devOnly: true },
-      //     },
-      //   });
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "EMAIL",
+        type: "INFO",
+        message: "Confirmation of Semester-wise Subject Selection",
+        notificationMasterId: masterId,
+        notificationEvent: {
+          subject: "Confirmation of Semester-wise Subject Selection",
+          templateData: {
+            academicYear: academicYearName,
+          },
+          meta: { devOnly: true },
+        },
+      });
       console.log("[backend] enqueue subject-selection (update) <- done");
     }
   } catch (err) {

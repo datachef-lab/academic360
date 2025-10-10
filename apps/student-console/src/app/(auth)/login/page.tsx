@@ -7,23 +7,25 @@ import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 
-import { doLogin } from "@/lib/services/auth.service";
+import { sendOtpRequest, verifyOtpAndLogin } from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {
-  const [credentials, setCredentials] = useState<{ email: string; password: string }>({
-    email: "",
-    password: "",
-  });
+  const [uid, setUid] = useState("");
+  const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [invalidOpen, setInvalidOpen] = useState(false);
   const [invalidMessage, setInvalidMessage] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpExpiry, setOtpExpiry] = useState(0);
   const router = useRouter();
   const { login } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -32,67 +34,165 @@ export default function SignInPage() {
     setMounted(true);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Handle resend cooldown
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
+  // Handle OTP expiry countdown
+  useEffect(() => {
+    if (otpExpiry > 0) {
+      const timer = setTimeout(() => setOtpExpiry(otpExpiry - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpExpiry]);
+
+  const formatUid = (value: string) => {
+    // Remove all non-digits and limit to 10 digits
+    const digits = value.replace(/\D/g, "").slice(0, 10);
+    return digits;
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  const handleUidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
+    if (uid.length !== 10) {
+      setError("Please enter a valid 10-digit UID");
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const response = await doLogin(credentials.email, credentials.password);
+      const email = `${uid}@thebges.edu.in`;
+      const response = await sendOtpRequest(email);
+
+      if (response.httpStatusCode === 200) {
+        setOtpSent(true);
+        setOtpExpiry(180); // 3 minutes
+        setResendCooldown(30); // 30 seconds cooldown
+      } else {
+        throw new Error(response.message || "Failed to send OTP");
+      }
+    } catch (error: any) {
+      let errorMessage = "Failed to send OTP. Please try again.";
+
+      if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || "Invalid UID or user not found.";
+      } else if (error.response?.status === 429) {
+        errorMessage = "Too many requests. Please wait before trying again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+      setInvalidMessage(errorMessage);
+      setInvalidOpen(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    if (otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const email = `${uid}@thebges.edu.in`;
+      const response = await verifyOtpAndLogin(email, otp, "student-console");
 
       if (response.httpStatusCode === 200) {
         const payload = response.payload as { accessToken: string; user: UserDto; redirectTo?: string };
-        console.log("Login payload:", payload);
         const type = (payload.user as any)?.userType || (payload.user as any)?.type || (payload.user as any)?.role;
         const isStudent = typeof type === "string" ? type.toUpperCase() === "STUDENT" : false;
+
         if (!isStudent) {
-          // Do NOT proceed to dashboard; show invalid dialog
           setInvalidMessage("This account does not have access to the Student Console.");
           setInvalidOpen(true);
         } else {
           login(payload.accessToken, payload.user);
-          // Add a small delay to ensure auth state is updated before redirect
           setTimeout(() => {
             router.push(payload.redirectTo || "/dashboard");
           }, 100);
         }
       } else {
-        throw new Error(response.message || "Login failed");
+        throw new Error(response.message || "OTP verification failed");
       }
-    } catch (error) {
-      let uiMessage = "Invalid credentials. Please check your UID and password.";
-      let bannerMessage = uiMessage;
+    } catch (error: any) {
+      let errorMessage = "Invalid OTP. Please try again.";
 
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const data: any = error.response?.data ?? {};
-        const serverMsg: string | undefined = (data && (data.message || data.error)) as string | undefined;
-
-        if (status === 403) {
-          uiMessage = serverMsg || "Your account is disabled. Please contact support.";
-          bannerMessage = uiMessage;
-        } else if (status === 429) {
-          uiMessage = serverMsg || "Too many login attempts. Please try again after a minute.";
-          bannerMessage = uiMessage;
-        } else if (status === 401) {
-          uiMessage = serverMsg || "Invalid credentials. Please check your UID and password.";
-          bannerMessage = uiMessage;
-        } else if (serverMsg) {
-          bannerMessage = serverMsg;
-          uiMessage = serverMsg;
-        } else if (error.message) {
-          bannerMessage = error.message;
-        }
-      } else if (error instanceof Error && error.message) {
-        bannerMessage = error.message;
+      if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || "Invalid or expired OTP.";
+      } else if (error.response?.status === 401) {
+        errorMessage = "OTP has expired. Please request a new one.";
+      } else if (error.message) {
+        errorMessage = error.message;
       }
 
-      setError(bannerMessage);
-      setInvalidMessage(uiMessage);
+      setError(errorMessage);
+      setInvalidMessage(errorMessage);
       setInvalidOpen(true);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const email = `${uid}@thebges.edu.in`;
+      const response = await sendOtpRequest(email);
+
+      if (response.httpStatusCode === 200) {
+        setOtpExpiry(180); // Reset to 3 minutes
+        setResendCooldown(30); // Reset cooldown
+        setOtp(""); // Clear current OTP
+      } else {
+        throw new Error(response.message || "Failed to resend OTP");
+      }
+    } catch (error: any) {
+      let errorMessage = "Failed to resend OTP. Please try again.";
+
+      if (error.response?.status === 429) {
+        errorMessage = "Too many requests. Please wait before trying again.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetOtpFlow = () => {
+    setError("");
+    setOtpSent(false);
+    setOtp("");
+    setUid("");
+    setOtpExpiry(0);
+    setResendCooldown(0);
   };
 
   if (!mounted) {
@@ -137,13 +237,15 @@ export default function SignInPage() {
           </div>
 
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">Sign in to your account</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
+              {otpSent ? "Enter OTP" : "Sign in with UID"}
+            </h2>
             <p className="mt-2 text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left sm:whitespace-nowrap">
-              Enter your credentials below to access the portal
+              {otpSent ? `OTP sent to ${uid}@thebges.edu.in` : "Enter your 10-digit UID to receive OTP"}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-5 sm:space-y-6">
+          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-6 space-y-5 sm:space-y-6">
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -160,68 +262,34 @@ export default function SignInPage() {
             </AnimatePresence>
 
             <div className="space-y-4">
-              <div>
-                <label htmlFor="uid" className="block text-sm font-medium text-gray-700">
-                  UID
-                </label>
-                <div className="relative mt-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </span>
-                  <Input
-                    id="uid"
-                    placeholder="Enter your UID"
-                    value={credentials.email}
-                    onChange={(e) => setCredentials({ ...credentials, email: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                    Password
+              {otpSent ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-4">
+                    Enter the 6-digit OTP sent to your email
                   </label>
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
-                  >
-                    Forgot password?
-                  </Link>
+                  <div className="flex justify-center">
+                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  {otpExpiry > 0 && (
+                    <p className="text-xs text-gray-500 mt-2 text-center">OTP expires in {formatTime(otpExpiry)}</p>
+                  )}
                 </div>
-                <div className="relative mt-1">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path
-                        fillRule="evenodd"
-                        d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </span>
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={credentials.password}
-                    onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                    className="block w-full rounded-md border-gray-300 pl-10 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? (
+              ) : (
+                <div>
+                  <label htmlFor="uid" className="block text-sm font-medium text-gray-700">
+                    UID (10 digits)
+                  </label>
+                  <div className="relative mt-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-5 w-5"
@@ -230,37 +298,36 @@ export default function SignInPage() {
                       >
                         <path
                           fillRule="evenodd"
-                          d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
-                          clipRule="evenodd"
-                        />
-                        <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                        <path
-                          fillRule="evenodd"
-                          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                          d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
                           clipRule="evenodd"
                         />
                       </svg>
-                    )}
-                  </button>
+                    </span>
+                    <Input
+                      id="uid"
+                      placeholder="Enter your 10-digit UID"
+                      value={uid}
+                      onChange={(e) => setUid(formatUid(e.target.value))}
+                      className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11 text-center tracking-widest"
+                      maxLength={10}
+                      required
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    We'll send OTP to {uid ? `${uid}@thebges.edu.in` : "your email"}
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
 
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              disabled={isLoading}
-              className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200"
+              disabled={
+                isLoading || (!otpSent && uid.length !== 10) || (otpSent && (otp.length !== 6 || otpExpiry === 0))
+              }
+              className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -280,20 +347,36 @@ export default function SignInPage() {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  <span className="ml-2">Signing in...</span>
+                  <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
                 </div>
               ) : (
-                <span>Sign in</span>
+                <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
               )}
             </motion.button>
+
+            {otpSent && (
+              <div className="flex items-center justify-center text-sm">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || isLoading}
+                  className="text-indigo-600 hover:text-indigo-800"
+                >
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                </Button>
+              </div>
+            )}
           </form>
 
-          <p className="mt-4 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
-            <Link href="/contact" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-              Contact administration
-            </Link>
-          </p>
+          <div className="mt-4">
+            <p className="text-center text-sm text-gray-600">
+              Don&apos;t have an account?{" "}
+              <Link href="/contact" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+                Contact administration
+              </Link>
+            </p>
+          </div>
         </div>
 
         {/* Right section */}

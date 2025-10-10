@@ -863,21 +863,23 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       console.log("🔍 Frontend Debug - Fetching fresh meta data before save...");
       const freshResp = await fetchStudentSubjectSelections(student?.id!);
 
-      // Use fresh data directly without caching
+      // Prefer fresh data; fall back to previously loaded metas/session if backend returns empty
       const freshMetas = freshResp.subjectSelectionMetas || [];
       const freshSession = freshResp.session || null;
+      const metasForSave = (freshMetas.length > 0 ? freshMetas : subjectSelectionMetas) || [];
+      const sessionForSave = freshSession || currentSession;
 
-      console.log(
-        "🔍 Frontend Debug - Fresh meta data:",
-        freshMetas.map((m) => ({
-          id: m.id,
-          label: m.label,
-          subjectTypeCode: m.subjectType.code,
-        })),
-      );
+      console.log("🔍 Frontend Debug - Meta/session chosen for save:", {
+        freshMetasCount: freshMetas.length,
+        fallbackMetasCount: subjectSelectionMetas.length,
+        usingMetasCount: metasForSave.length,
+        freshSessionId: freshSession?.id,
+        fallbackSessionId: currentSession?.id,
+        usingSessionId: sessionForSave?.id,
+      });
 
-      // Create selections using fresh meta data
-      const selectionsToSave = createSelectionsForSaveWithFreshData(freshMetas, freshSession);
+      // Create selections using chosen meta data
+      const selectionsToSave = createSelectionsForSaveWithFreshData(metasForSave, sessionForSave);
       console.log("Saving selections:", selectionsToSave);
 
       const result = await saveStudentSubjectSelections(selectionsToSave);
