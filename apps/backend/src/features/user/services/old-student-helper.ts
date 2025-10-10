@@ -1813,6 +1813,12 @@ export async function processStudent(
   studentId: number | undefined,
   lastSyncTime?: Date,
 ) {
+  await db
+    .update(userModel)
+    .set({
+      whatsappNumber: oldStudent.whatsappno || undefined,
+    })
+    .where(eq(userModel.id, user.id!));
   let student: Student | undefined;
 
   // Check if we need to update student data (Steps 1-8)
@@ -1973,6 +1979,8 @@ export async function processStudent(
           ? nameParts.slice(1, -1).join(" ")
           : "";
       })(),
+      email: oldStudent.email || undefined,
+      alternativeEmail: oldStudent.alternativeemail || undefined,
       lastName: (() => {
         const nameParts = oldStudent.name?.split(" ");
         return nameParts && nameParts.length >= 2
@@ -1981,8 +1989,6 @@ export async function processStudent(
       })(),
 
       whatsappNumber: oldStudent.whatsappno || undefined,
-      email: oldStudent.email || undefined,
-      alternativeEmail: oldStudent.alternativeemail || undefined,
     })
     .where(eq(personalDetailsModel.userId, student?.userId!));
 

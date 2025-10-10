@@ -213,8 +213,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         const idcSem2Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
         const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
-        // AEC 3: semester III
-        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
+        // AEC: semesters III & IV
+        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+
+        // CVAC 4: semester II
+        const cvac4Papers = (cvacGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
 
         const mn1 = dedupe(minorSem1And2.map(getLabel));
         const mn2 = dedupe(minorSem3And4.map(getLabel));
@@ -226,7 +229,18 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         setAvailableIdcSem2Subjects(dedupe(idcSem2Papers.map(getLabel)));
         setAvailableIdcSem3Subjects(dedupe(idcSem3Papers.map(getLabel)));
         setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
-        setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
+        setAvailableCvacOptions(dedupe(cvac4Papers.map(getLabel)));
+
+        // Debug: Log semester filtering results
+        console.log("Semester filtering results:", {
+          minor1: { papers: minorSem1And2.length, subjects: mn1 },
+          minor2: { papers: minorSem3And4.length, subjects: mn2 },
+          idc1: { papers: idcSem1Papers.length, subjects: dedupe(idcSem1Papers.map(getLabel)) },
+          idc2: { papers: idcSem2Papers.length, subjects: dedupe(idcSem2Papers.map(getLabel)) },
+          idc3: { papers: idcSem3Papers.length, subjects: dedupe(idcSem3Papers.map(getLabel)) },
+          aec: { papers: aec3Papers.length, subjects: dedupe(aec3Papers.map(getLabel)) },
+          cvac: { papers: cvac4Papers.length, subjects: dedupe(cvac4Papers.map(getLabel)) },
+        });
 
         // Capture first auto-assign subject for Minors (if any)
         const firstOrEmpty = (arr: string[]) => (arr.length > 0 ? arr[0] : "");
@@ -237,6 +251,11 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         );
         // No separate auto-assign for Minor II; enforce single mandatory subject presence
         setAutoMinor1(firstOrEmpty(autoMinor1List) || "");
+
+        // Debug: Log auto-assign values
+        console.log("Auto-assign values:", {
+          autoMinor1: firstOrEmpty(autoMinor1List),
+        });
 
         // Load restricted groupings and build quick lookup by target subject name
         const programCourseId = studentData.currentPromotion?.programCourse?.id;
@@ -355,6 +374,73 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
         section.classList.remove("ring-4", "ring-blue-500", "border-blue-500");
       }, 3000);
     }
+  };
+
+  // Dynamic validation function that updates errors in real-time
+  const updateValidationErrors = (showErrors: boolean = false) => {
+    const newErrors: string[] = [];
+
+    // Only show validation errors if explicitly requested (e.g., when clicking Save)
+    if (!showErrors) {
+      setErrors([]);
+      return true;
+    }
+
+    const shouldAskForAec = hasActualOptions(availableAecSubjects);
+    const shouldAskForCvac = hasActualOptions(availableCvacOptions);
+
+    // Required field validation - create individual error messages
+    if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
+    if (hasActualOptions(admissionMinor2Subjects) && !minor2) newErrors.push("Minor II subject is required");
+    if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
+    if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
+    if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
+    if (shouldAskForAec && !aec3) newErrors.push("AEC 3 subject is required");
+    if (shouldAskForCvac && !cvac4) newErrors.push("CVAC 4 subject is required");
+
+    // Business rule validation
+    if (minor1 && idc1 && minor1 === idc1) {
+      newErrors.push("Minor I cannot be the same as IDC 1");
+    }
+    if (minor1 && idc2 && minor1 === idc2) {
+      newErrors.push("Minor I cannot be the same as IDC 2");
+    }
+    if (minor1 && idc3 && minor1 === idc3) {
+      newErrors.push("Minor I cannot be the same as IDC 3");
+    }
+    if (minor2 && idc1 && minor2 === idc1) {
+      newErrors.push("Minor II cannot be the same as IDC 1");
+    }
+    if (minor2 && idc2 && minor2 === idc2) {
+      newErrors.push("Minor II cannot be the same as IDC 2");
+    }
+    if (minor2 && idc3 && minor2 === idc3) {
+      newErrors.push("Minor II cannot be the same as IDC 3");
+    }
+
+    // IDC uniqueness validation
+    if (idc1 && idc2 && idc1 === idc2) {
+      newErrors.push("IDC 1 and IDC 2 cannot be the same");
+    }
+    if (idc1 && idc3 && idc1 === idc3) {
+      newErrors.push("IDC 1 and IDC 3 cannot be the same");
+    }
+    if (idc2 && idc3 && idc2 === idc3) {
+      newErrors.push("IDC 2 and IDC 3 cannot be the same");
+    }
+
+    // Auto-assigned subject must be present validation
+    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
+      newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+    }
+
+    setErrors(newErrors);
+    return newErrors.length === 0;
+  };
+
+  // Validation function - only show errors when explicitly requested
+  const validateForm = () => {
+    return updateValidationErrors(true);
   };
 
   // Mark user interaction when they start selecting fields
@@ -596,6 +682,15 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
 
   // Handle save
   const handleSave = async () => {
+    // Mark user interaction when they try to save
+    setHasUserInteracted(true);
+
+    // Validate and proceed
+    const isValid = validateForm();
+    if (!isValid) {
+      return; // Don't proceed if validation fails
+    }
+
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);

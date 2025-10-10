@@ -76,6 +76,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [autoIdc1, setAutoIdc1] = useState<string>("");
   const [autoIdc2, setAutoIdc2] = useState<string>("");
   const [autoIdc3, setAutoIdc3] = useState<string>("");
+  const [autoAec, setAutoAec] = useState<string>("");
 
   // Restricted grouping caches for quick checks
   // Map by subject name → rule and the category (subject type code) it belongs to
@@ -170,8 +171,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const idcSem2Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
         const idcSem3Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
-        // AEC 3: semester III
-        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
+        // AEC: semesters III & IV
+        const aec3Papers = (aecGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+
+        // CVAC 4: semester II
+        const cvac4Papers = (cvacGroup?.paperOptions || []).filter((p) => isSem(p, "II"));
 
         const mn1 = dedupe(minorSem1And2.map(getLabel));
         const mn2 = dedupe(minorSem3And4.map(getLabel));
@@ -183,7 +187,18 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         setAvailableIdcSem2Subjects(dedupe(idcSem2Papers.map(getLabel)));
         setAvailableIdcSem3Subjects(dedupe(idcSem3Papers.map(getLabel)));
         setAvailableAecSubjects(dedupe(aec3Papers.map(getLabel)));
-        setAvailableCvacOptions(dedupe(cvacGroup?.paperOptions?.map(getLabel) || []));
+        setAvailableCvacOptions(dedupe(cvac4Papers.map(getLabel)));
+
+        // Debug: Log semester filtering results
+        console.log("Semester filtering results:", {
+          minor1: { papers: minorSem1And2.length, subjects: mn1 },
+          minor2: { papers: minorSem3And4.length, subjects: mn2 },
+          idc1: { papers: idcSem1Papers.length, subjects: dedupe(idcSem1Papers.map(getLabel)) },
+          idc2: { papers: idcSem2Papers.length, subjects: dedupe(idcSem2Papers.map(getLabel)) },
+          idc3: { papers: idcSem3Papers.length, subjects: dedupe(idcSem3Papers.map(getLabel)) },
+          aec: { papers: aec3Papers.length, subjects: dedupe(aec3Papers.map(getLabel)) },
+          cvac: { papers: cvac4Papers.length, subjects: dedupe(cvac4Papers.map(getLabel)) },
+        });
 
         // Capture first auto-assign subject per category/semester (if any)
         const firstOrEmpty = (arr: string[]) => (arr.length > 0 ? arr[0] : "");
@@ -208,11 +223,17 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             .filter((p) => (p as any)?.autoAssign === true && isSem(p, "III"))
             .map(getLabel),
         );
+        const autoAecList = dedupe(
+          (aecGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")))
+            .map(getLabel),
+        );
         setAutoMinor1(firstOrEmpty(autoMinor1List));
         setAutoMinor2(firstOrEmpty(autoMinor2List));
         setAutoIdc1(firstOrEmpty(autoIdc1List));
         setAutoIdc2(firstOrEmpty(autoIdc2List));
         setAutoIdc3(firstOrEmpty(autoIdc3List));
+        setAutoAec(firstOrEmpty(autoAecList));
 
         // Debug: Log auto-assign values
         console.log("Auto-assign values:", {
@@ -221,6 +242,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           autoIdc1: firstOrEmpty(autoIdc1List),
           autoIdc2: firstOrEmpty(autoIdc2List),
           autoIdc3: firstOrEmpty(autoIdc3List),
+          autoAec: firstOrEmpty(autoAecList),
         });
 
         // Load restricted groupings and build quick lookup by target subject name
@@ -419,6 +441,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
       newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
     }
+    if (autoAec && aec3 !== autoAec) {
+      newErrors.push(`${autoAec} is mandatory and must be selected in AEC`);
+    }
 
     setErrors(newErrors);
     return newErrors.length === 0;
@@ -443,6 +468,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       if (fieldType === "minor2" && minor2 === autoMinor1 && value !== autoMinor1) {
         if (minor1 !== autoMinor1) setMinor1(autoMinor1);
       }
+    }
+
+    // Handle AEC auto-assignment
+    if (autoAec && fieldType === "aec3" && aec3 === autoAec && value !== autoAec) {
+      // If user changes AEC away from auto-assigned subject, show validation error
+      // The validation will catch this and show an error
     }
 
     setter(value);
@@ -1050,6 +1081,16 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
   }, [minor1, minor2, autoMinor1, admissionMinor2Subjects]);
 
+  // Auto-assign AEC if auto-assign subject exists
+  useEffect(() => {
+    if (!aec3 && autoAec) {
+      const options = getFilteredByCategory(availableAecSubjects, aec3, "AEC", ["III", "IV"]);
+      if (options.includes(autoAec)) {
+        setAec3(autoAec);
+      }
+    }
+  }, [aec3, autoAec, availableAecSubjects]);
+
   useEffect(() => {
     // When Minor II is selected, auto-assign Minor I if auto-assign subject exists
     if (minor2 && !minor1 && autoMinor1) {
@@ -1303,19 +1344,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             </tbody>
           </table>
         </div>
-
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="font-medium text-blue-800 mb-1">Need to make changes?</h4>
-              <p className="text-base text-blue-700">
-                If you need to modify your subject selections, please contact your academic advisor or administration
-                staff. Changes can only be made by authorized personnel.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     );
   };
@@ -1527,20 +1555,18 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             </h2>
 
             {/* Combined Academic Information and Guidance Notes */}
-            {student?.currentPromotion && (
+            {student?.currentPromotion && step === 1 && !hasExistingSelections && (
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg">
                 {/* Guidance Notes - Only in step 1 for new selections */}
-                {step === 1 && !hasExistingSelections && (
-                  <div className="flex items-start gap-3 border-blue-200">
-                    <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1">
-                      <div className="text-base leading-relaxed">
-                        Before selecting your subjects, please read the following notes carefully to ensure clarity on
-                        the selection process. These notes are provided here for your reference and guidance.
-                      </div>
+                <div className="flex items-start gap-3 border-blue-200">
+                  <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="text-base leading-relaxed">
+                      Before selecting your subjects, please read the following notes carefully to ensure clarity on the
+                      selection process. These notes are provided here for your reference and guidance.
                     </div>
                   </div>
-                )}
+                </div>
               </div>
             )}
 
@@ -1558,7 +1584,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                   </div> */}
                 </>
               ) : step === 1 && hasExistingSelections ? (
-                "Your subject selections have been successfully saved and are displayed below. No further action is required."
+                ""
               ) : step === 2 ? (
                 "Review and confirm declarations before saving"
               ) : (
@@ -1788,6 +1814,46 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 </div>
               )}
 
+              {/* Declarations */}
+              {errors.length === 0 && (
+                <div className="space-y-3 text-base text-gray-700 bg-gray-50 p-3 rounded-lg mb-6">
+                  <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree1}
+                      onChange={(e) => setAgree1(e.target.checked)}
+                    />
+                    <span>I confirm that I have read the semester-wise subject selection guidelines.</span>
+                  </label>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree2}
+                      onChange={(e) => setAgree2(e.target.checked)}
+                    />
+                    <span>
+                      I understand that once submitted, I will not be allowed to change the selected subjects in the
+                      future.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1 rounded"
+                      checked={agree3}
+                      onChange={(e) => setAgree3(e.target.checked)}
+                    />
+                    <span>
+                      In the event of violation of subject selection rules, I will abide by the final decision taken by
+                      the Vice-Principal/Course Coordinator in accordance with Calcutta University norms.
+                    </span>
+                  </label>
+                </div>
+              )}
+
               {/* Preview */}
               {errors.length === 0 && (
                 <div className="overflow-x-auto my-4">
@@ -1887,46 +1953,6 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                     <AlertCircle className="w-4 h-4" />
                     <span className="text-base font-medium">Error saving selections: {saveError}</span>
                   </div>
-                </div>
-              )}
-
-              {/* Declarations */}
-              {errors.length === 0 && (
-                <div className="space-y-3 text-base text-gray-700 bg-gray-50 p-3 rounded-lg">
-                  <h4 className="font-semibold text-gray-800 mb-2">Declarations</h4>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree1}
-                      onChange={(e) => setAgree1(e.target.checked)}
-                    />
-                    <span>I confirm that I have read the semester-wise subject selection guidelines given above.</span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree2}
-                      onChange={(e) => setAgree2(e.target.checked)}
-                    />
-                    <span>
-                      I understand that once submitted, I will not be allowed to change the selected subjects in the
-                      future.
-                    </span>
-                  </label>
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1 rounded"
-                      checked={agree3}
-                      onChange={(e) => setAgree3(e.target.checked)}
-                    />
-                    <span>
-                      In the event of violation of subject selection rules, I will abide by the final decision taken by
-                      the Vice-Principal/Course Coordinator/Calcutta University.
-                    </span>
-                  </label>
                 </div>
               )}
             </>

@@ -385,7 +385,12 @@ export async function upsertUser(
 
   let phone: string | undefined =
     oldData.contactNo?.trim() || oldData.phoneMobileNo?.trim();
-  let whatsappNumber: string | undefined = oldData.contactNo?.trim();
+  let whatsappNumber: string | undefined;
+  if ("whatsappno" in oldData) {
+    whatsappNumber = oldData?.whatsappno?.trim();
+  } else {
+    whatsappNumber = oldData?.contactNo?.trim();
+  }
 
   const cleanString = (value: unknown): string | undefined => {
     if (typeof value === "string") {

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import {
   Mail,
@@ -408,11 +409,12 @@ export default function ProfileContent() {
                               <label htmlFor="resAddress" className="text-sm font-medium text-gray-700">
                                 Address Line
                               </label>
-                              <Input
+                              <Textarea
                                 id="resAddress"
                                 value={personalDetails?.address?.[0]?.addressLine || ""}
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
+                                rows={2}
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -512,7 +514,7 @@ export default function ProfileContent() {
                               <label htmlFor="mailAddress" className="text-sm font-medium text-gray-700">
                                 Address Line
                               </label>
-                              <Input
+                              <Textarea
                                 id="mailAddress"
                                 value={
                                   personalDetails?.address?.[1]?.addressLine ||
@@ -521,6 +523,7 @@ export default function ProfileContent() {
                                 }
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
+                                rows={2}
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
