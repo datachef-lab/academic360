@@ -1922,6 +1922,13 @@ export async function processStudent(
         .from(studentModel)
         .where(eq(studentModel.userId, user.id as number))
     )[0];
+    const cuRegistrationRequest =
+      await addStudentCuRegistrationRequest(student);
+    console.log(
+      "cu registration request created for student:",
+      student?.uid,
+      cuRegistrationRequest,
+    );
   }
 
   const [updatedStudent] = await db

@@ -532,6 +532,8 @@ jobs:
             pnpm --filter backend... build
             pnpm --filter main-console... build
             pnpm --filter student-console... build || true
+            # Build notification-system so PM2 can run the compiled JS
+            pnpm --filter notification-system... build
 
             echo "🚚 Run database migrations"
             pnpm --filter backend db:migrate
@@ -565,7 +567,19 @@ jobs:
             pm2 status
             echo "🚀 Start notification workers"
             pm2 delete academic360-notify-whatsapp || true
-            pm2 start "node apps/notification-system/dist/index.js" --name academic360-notify-whatsapp --cwd "$(pwd)" --update-env
+            NOTIFY_ENTRY=""
+            if [ -f "apps/notification-system/dist/apps/notification-system/src/index.js" ]; then
+              NOTIFY_ENTRY="apps/notification-system/dist/apps/notification-system/src/index.js"
+            elif [ -f "apps/notification-system/dist/index.js" ]; then
+              NOTIFY_ENTRY="apps/notification-system/dist/index.js"
+            else
+              echo "❌ Notification-system entry not found in expected locations"
+              ls -la apps/notification-system/dist || true
+              ls -la apps/notification-system/dist/apps/notification-system/src || true
+              exit 1
+            fi
+            echo "Using notification entry: $NOTIFY_ENTRY"
+            pm2 start "node $NOTIFY_ENTRY" --name academic360-notify-whatsapp --cwd "$(pwd)" --update-env
         if: steps.host.outputs.env == 'staging'
 
       - name: Deploy over SSH (compose down/build/migrate/up) (prod)
