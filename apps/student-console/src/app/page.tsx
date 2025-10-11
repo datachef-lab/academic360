@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+
+// Force dynamic rendering to prevent prerendering issues
+export const dynamic = "force-dynamic";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -196,7 +199,13 @@ export default function SignInPage() {
   };
 
   if (!mounted) {
-    return null;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+        </div>
+      </div>
+    );
   }
 
   return (
