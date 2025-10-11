@@ -92,6 +92,22 @@ jobs:
           echo "Current directory: $(pwd)"
           echo "Git status:"
           git status --porcelain
+
+          # Ensure we're on the correct branch and have latest changes
+          echo "🔍 Checking current branch and ensuring latest changes..."
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit: $(git rev-parse HEAD)"
+
+          # For staging deployments, ensure we're on staging branch with latest changes
+          if [ "${{ steps.host.outputs.env }}" = "staging" ]; then
+            echo "🧪 Staging deployment - ensuring latest staging branch..."
+            git fetch origin staging
+            git checkout staging
+            git pull origin staging
+            echo "✅ Now on staging branch: $(git branch --show-current)"
+            echo "✅ Latest commit: $(git rev-parse HEAD)"
+          fi
+
           echo "Creating archive..."
           git archive --format=tar.gz -o repo.tar.gz HEAD
           echo "✅ Archive created successfully"
@@ -498,10 +514,19 @@ jobs:
           script: |
             set -e
             cd ${{ steps.host.outputs.remotedir }}
-            # Extract repo and place env
-            sudo tar -xzf repo.tar.gz -C .
+
+            echo "🔄 Using Git Clone for Staging (ensures latest code)"
+            # Remove existing code if it exists
+            sudo rm -rf academic360-app || true
+
+            # Clone the latest staging branch
+            echo "📥 Cloning latest staging branch..."
+            git clone -b staging https://github.com/${{ github.repository }}.git academic360-app
+            cd academic360-app
+
+            # Copy environment file
             sudo mkdir -p deploy
-            sudo mv -f env.deploy deploy/${{ steps.host.outputs.envfile }}
+            sudo cp ../env.deploy deploy/${{ steps.host.outputs.envfile }}
 
             echo "🧰 Ensure Node, pnpm, pm2 available..."
             if ! command -v node >/dev/null 2>&1; then
@@ -539,6 +564,10 @@ jobs:
             chmod -R u+rw . || true
             find . -maxdepth 3 -name "*.tsbuildinfo" -delete || true
             export CI=true
+
+            echo "✅ Using latest staging branch code from git clone"
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Current branch: $(git branch --show-current)"
 
             echo "📦 Install workspace dependencies"
             pnpm install --frozen-lockfile

@@ -175,6 +175,7 @@ export default function SignInPage() {
         throw new Error(response.message || "Failed to resend OTP");
       }
     } catch (error: any) {
+      console.log(error);
       let errorMessage = "Failed to resend OTP. Please try again.";
 
       if (error.response?.status === 429) {
