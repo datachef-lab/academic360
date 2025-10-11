@@ -38,6 +38,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   const [savedSelections, setSavedSelections] = useState<{
     minor1?: string;
     minor2?: string;
+    minor3?: string;
     idc1?: string;
     idc2?: string;
     idc3?: string;
@@ -49,6 +50,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Form state - matching the documented workflow
   const [minor1, setMinor1] = useState(""); // Minor I (Semester I & II)
   const [minor2, setMinor2] = useState(""); // Minor II (Semester III & IV)
+  const [minor3, setMinor3] = useState(""); // Minor III (Semester III only - for BCOM)
   const [idc1, setIdc1] = useState(""); // IDC 1 (Semester I)
   const [idc2, setIdc2] = useState(""); // IDC 2 (Semester II)
   const [idc3, setIdc3] = useState(""); // IDC 3 (Semester III)
@@ -64,6 +66,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Options populated from backend (semester-wise lists)
   const [admissionMinor1Subjects, setAdmissionMinor1Subjects] = useState<string[]>([]); // Sem I & II
   const [admissionMinor2Subjects, setAdmissionMinor2Subjects] = useState<string[]>([]); // Sem III & IV
+  const [admissionMinor3Subjects, setAdmissionMinor3Subjects] = useState<string[]>([]); // Sem III only (BCOM)
   const [availableIdcSem1Subjects, setAvailableIdcSem1Subjects] = useState<string[]>([]);
   const [availableIdcSem2Subjects, setAvailableIdcSem2Subjects] = useState<string[]>([]);
   const [availableIdcSem3Subjects, setAvailableIdcSem3Subjects] = useState<string[]>([]);
@@ -73,6 +76,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Auto-assign subjects per category/semester (from API flag)
   const [autoMinor1, setAutoMinor1] = useState<string>("");
   const [autoMinor2, setAutoMinor2] = useState<string>("");
+  const [autoMinor3, setAutoMinor3] = useState<string>("");
   const [autoIdc1, setAutoIdc1] = useState<string>("");
   const [autoIdc2, setAutoIdc2] = useState<string>("");
   const [autoIdc3, setAutoIdc3] = useState<string>("");
@@ -165,6 +169,8 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const minorSem1And2 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "I") || isSem(p, "II"));
         // Minor II: semesters III & IV
         const minorSem3And4 = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III") || isSem(p, "IV"));
+        // Minor III: semester III only (for BCOM programs)
+        const minorSem3Only = (minorGroup?.paperOptions || []).filter((p) => isSem(p, "III"));
 
         // IDC by semester
         const idcSem1Papers = (idcGroup?.paperOptions || []).filter((p) => isSem(p, "I"));
@@ -179,8 +185,10 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
         const mn1 = dedupe(minorSem1And2.map(getLabel));
         const mn2 = dedupe(minorSem3And4.map(getLabel));
+        const mn3 = dedupe(minorSem3Only.map(getLabel));
         setAdmissionMinor1Subjects(mn1);
         setAdmissionMinor2Subjects(mn2);
+        setAdmissionMinor3Subjects(mn3);
 
         // IDC per semester lists
         setAvailableIdcSem1Subjects(dedupe(idcSem1Papers.map(getLabel)));
@@ -193,11 +201,19 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         console.log("Semester filtering results:", {
           minor1: { papers: minorSem1And2.length, subjects: mn1 },
           minor2: { papers: minorSem3And4.length, subjects: mn2 },
+          minor3: { papers: minorSem3Only.length, subjects: mn3 },
           idc1: { papers: idcSem1Papers.length, subjects: dedupe(idcSem1Papers.map(getLabel)) },
           idc2: { papers: idcSem2Papers.length, subjects: dedupe(idcSem2Papers.map(getLabel)) },
           idc3: { papers: idcSem3Papers.length, subjects: dedupe(idcSem3Papers.map(getLabel)) },
           aec: { papers: aec3Papers.length, subjects: dedupe(aec3Papers.map(getLabel)) },
           cvac: { papers: cvac4Papers.length, subjects: dedupe(cvac4Papers.map(getLabel)) },
+        });
+
+        // Debug: Log detailed semester breakdown for Minor subjects
+        console.log("Detailed Minor semester breakdown:", {
+          minorSem1And2: minorSem1And2.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
+          minorSem3And4: minorSem3And4.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
+          minorSem3Only: minorSem3Only.map((p) => ({ name: p.subject?.name, semester: getSemesterRoman(p) })),
         });
 
         // Capture first auto-assign subject per category/semester (if any)
@@ -210,6 +226,11 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         const autoMinor2List = dedupe(
           (minorGroup?.paperOptions || [])
             .filter((p) => (p as any)?.autoAssign === true && (isSem(p, "III") || isSem(p, "IV")))
+            .map(getLabel),
+        );
+        const autoMinor3List = dedupe(
+          (minorGroup?.paperOptions || [])
+            .filter((p) => (p as any)?.autoAssign === true && isSem(p, "III"))
             .map(getLabel),
         );
         const autoIdc1List = dedupe(
@@ -230,6 +251,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         );
         setAutoMinor1(firstOrEmpty(autoMinor1List));
         setAutoMinor2(firstOrEmpty(autoMinor2List));
+        setAutoMinor3(firstOrEmpty(autoMinor3List));
         setAutoIdc1(firstOrEmpty(autoIdc1List));
         setAutoIdc2(firstOrEmpty(autoIdc2List));
         setAutoIdc3(firstOrEmpty(autoIdc3List));
@@ -239,10 +261,23 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         console.log("Auto-assign values:", {
           autoMinor1: firstOrEmpty(autoMinor1List),
           autoMinor2: firstOrEmpty(autoMinor2List),
+          autoMinor3: firstOrEmpty(autoMinor3List),
           autoIdc1: firstOrEmpty(autoIdc1List),
           autoIdc2: firstOrEmpty(autoIdc2List),
           autoIdc3: firstOrEmpty(autoIdc3List),
           autoAec: firstOrEmpty(autoAecList),
+        });
+
+        // Debug: Log which Minor options will be displayed
+        console.log("Minor display logic:", {
+          hasMinor1: hasActualOptions(admissionMinor1Subjects),
+          hasMinor2: hasActualOptions(admissionMinor2Subjects),
+          hasMinor3: hasActualOptions(admissionMinor3Subjects),
+          willShowMinor2: hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects),
+          willShowMinor3: !hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects),
+          minor1Subjects: admissionMinor1Subjects,
+          minor2Subjects: admissionMinor2Subjects,
+          minor3Subjects: admissionMinor3Subjects,
         });
 
         // Load restricted groupings and build quick lookup by target subject name
@@ -399,7 +434,12 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
 
     // Required field validation - create individual error messages
     if (hasActualOptions(admissionMinor1Subjects) && !minor1) newErrors.push("Minor I subject is required");
-    if (hasActualOptions(admissionMinor2Subjects) && !minor2) newErrors.push("Minor II subject is required");
+    // Minor II is only required when Minor I is available (traditional programs)
+    if (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && !minor2)
+      newErrors.push("Minor II subject is required");
+    // Minor III is only required when Minor I is not available (BCOM programs)
+    if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && !minor3)
+      newErrors.push("Minor III subject is required");
     if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
     if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
     if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
@@ -425,6 +465,15 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     if (minor2 && idc3 && minor2 === idc3) {
       newErrors.push("Minor II cannot be the same as IDC 3");
     }
+    if (minor3 && idc1 && minor3 === idc1) {
+      newErrors.push("Minor III cannot be the same as IDC 1");
+    }
+    if (minor3 && idc2 && minor3 === idc2) {
+      newErrors.push("Minor III cannot be the same as IDC 2");
+    }
+    if (minor3 && idc3 && minor3 === idc3) {
+      newErrors.push("Minor III cannot be the same as IDC 3");
+    }
 
     // IDC uniqueness validation
     if (idc1 && idc2 && idc1 === idc2) {
@@ -438,8 +487,17 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
 
     // Auto-assigned subject must be present validation
-    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1) {
+    if (autoMinor1 && minor1 !== autoMinor1 && minor2 !== autoMinor1 && minor3 !== autoMinor1) {
       newErrors.push(`${autoMinor1} is mandatory and must be selected in one of the Minor subjects`);
+    }
+    // Minor III auto-assignment is only required when Minor III is displayed
+    if (
+      autoMinor3 &&
+      !hasActualOptions(admissionMinor1Subjects) &&
+      hasActualOptions(admissionMinor3Subjects) &&
+      minor3 !== autoMinor3
+    ) {
+      newErrors.push(`${autoMinor3} is mandatory and must be selected in Minor III`);
     }
     if (autoAec && aec3 !== autoAec) {
       newErrors.push(`${autoAec} is mandatory and must be selected in AEC`);
@@ -461,12 +519,18 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
     }
 
     // Move auto-assigned subject (Mathematics) to the other Minor when replaced
-    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2")) {
+    if (autoMinor1 && (fieldType === "minor1" || fieldType === "minor2" || fieldType === "minor3")) {
       if (fieldType === "minor1" && minor1 === autoMinor1 && value !== autoMinor1) {
         if (minor2 !== autoMinor1) setMinor2(autoMinor1);
+        else if (minor3 !== autoMinor1) setMinor3(autoMinor1);
       }
       if (fieldType === "minor2" && minor2 === autoMinor1 && value !== autoMinor1) {
         if (minor1 !== autoMinor1) setMinor1(autoMinor1);
+        else if (minor3 !== autoMinor1) setMinor3(autoMinor1);
+      }
+      if (fieldType === "minor3" && minor3 === autoMinor1 && value !== autoMinor1) {
+        if (minor1 !== autoMinor1) setMinor1(autoMinor1);
+        else if (minor2 !== autoMinor1) setMinor2(autoMinor1);
       }
     }
 
@@ -483,6 +547,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       const fieldErrorMap: Record<string, string> = {
         minor1: "Minor I subject is required",
         minor2: "Minor II subject is required",
+        minor3: "Minor III subject is required",
         idc1: "IDC 1 subject is required",
         idc2: "IDC 2 subject is required",
         idc3: "IDC 3 subject is required",
@@ -665,6 +730,20 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       }
     }
 
+    // Add Minor 3 selection
+    if (minor3) {
+      const subjectId = findSubjectId(minor3);
+      const metaId = findMetaId("MN", "III"); // Minor III for Semester III
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: freshSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor3 },
+        });
+      }
+    }
+
     // Add IDC selections
     if (idc1) {
       const subjectId = findSubjectId(idc1);
@@ -804,6 +883,20 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
           session: { id: currentSession.id },
           subjectSelectionMeta: { id: metaId },
           subject: { id: subjectId, name: minor2 },
+        });
+      }
+    }
+
+    // Add Minor 3 selection
+    if (minor3) {
+      const subjectId = findSubjectId(minor3);
+      const metaId = findMetaId("MN", "III"); // Minor III for Semester III
+      if (subjectId && metaId) {
+        selectionsToSave.push({
+          studentId: student.id,
+          session: { id: currentSession.id },
+          subjectSelectionMeta: { id: metaId },
+          subject: { id: subjectId, name: minor3 },
         });
       }
     }
@@ -1026,7 +1119,7 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
       // Only consider selections from the SAME category as the dropdown being filtered
       const sameCategorySelected =
         norm(categoryCode) === "MN"
-          ? [minor1, minor2]
+          ? [minor1, minor2, minor3]
           : norm(categoryCode) === "IDC"
             ? [idc1, idc2, idc3]
             : norm(categoryCode) === "AEC"
@@ -1073,13 +1166,19 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   useEffect(() => {
     // When Minor I is selected, auto-assign Minor II if auto-assign subject exists
     if (minor1 && !minor2 && autoMinor1) {
-      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      const programCourseName =
+        student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+      const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+      const isBcomProgram = normalizedName.includes("bcom");
+
+      const semesterContext = isBcomProgram ? ["III"] : ["III", "IV"];
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", semesterContext);
       // Only auto-assign if the auto-assign subject is available in Minor II options and different from Minor I
       if (options.includes(autoMinor1) && autoMinor1 !== minor1) {
         setMinor2(autoMinor1);
       }
     }
-  }, [minor1, minor2, autoMinor1, admissionMinor2Subjects]);
+  }, [minor1, minor2, autoMinor1, admissionMinor2Subjects, student]);
 
   // Auto-assign AEC if auto-assign subject exists
   useEffect(() => {
@@ -1106,12 +1205,18 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   useEffect(() => {
     // If Minor I no longer holds the auto-assigned subject, enforce it in Minor II
     if (minor1 && autoMinor1 && minor1 !== autoMinor1) {
-      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", ["III", "IV"]);
+      const programCourseName =
+        student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+      const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+      const isBcomProgram = normalizedName.includes("bcom");
+
+      const semesterContext = isBcomProgram ? ["III"] : ["III", "IV"];
+      const options = getFilteredByCategory(admissionMinor2Subjects, minor2, "MN", semesterContext);
       if (options.includes(autoMinor1)) {
         setMinor2(autoMinor1);
       }
     }
-  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects]);
+  }, [minor1, autoMinor1, minor2, admissionMinor2Subjects, student]);
 
   useEffect(() => {
     // If Minor II no longer holds the auto-assigned subject, enforce it in Minor I
@@ -1183,7 +1288,9 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
   // Prevent selecting the same subject across different categories (global uniqueness)
   const getGlobalExcludes = (currentValue: string) => {
     // Do not exclude AEC across categories; allow AEC subjects to appear elsewhere
-    return [minor1, minor2, idc1, idc2, idc3, /* aec3, */ cvac4].filter(Boolean).filter((s) => s !== currentValue);
+    return [minor1, minor2, minor3, idc1, idc2, idc3, /* aec3, */ cvac4]
+      .filter(Boolean)
+      .filter((s) => s !== currentValue);
   };
 
   // Helper function to check if there are actual subject options (excluding placeholder)
@@ -1230,8 +1337,8 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
         result.minor2 = subjectName;
         console.log("🔍 Frontend Debug - Mapped to minor2:", subjectName);
       } else if (metaLabel.includes("Minor 3")) {
-        result.minor2 = subjectName; // Minor 3 maps to minor2 slot
-        console.log("🔍 Frontend Debug - Mapped Minor 3 to minor2:", subjectName);
+        result.minor3 = subjectName; // Minor 3 maps to minor3 slot
+        console.log("🔍 Frontend Debug - Mapped to minor3:", subjectName);
       } else if (metaLabel.includes("IDC 1")) {
         result.idc1 = subjectName;
         console.log("🔍 Frontend Debug - Mapped to idc1:", subjectName);
@@ -1294,11 +1401,19 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                 </tr>
               )}
 
-              {/* Minor II */}
-              {savedSelections.minor2 && (
+              {/* Minor II - Only show when Minor I is available (traditional programs) */}
+              {savedSelections.minor2 && hasActualOptions(admissionMinor1Subjects) && (
                 <tr className="hover:bg-gray-50 ">
                   <td className="border p-3 font-medium text-gray-700 text-base">{getDynamicLabel("MN", "III")}</td>
                   <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor2}</td>
+                </tr>
+              )}
+
+              {/* Minor III - Show when Minor I is not available (BCOM programs) */}
+              {savedSelections.minor3 && !hasActualOptions(admissionMinor1Subjects) && (
+                <tr className="hover:bg-gray-50 ">
+                  <td className="border p-3 font-medium text-gray-700 text-base">Minor III (Semester III)</td>
+                  <td className="border p-3 text-gray-800 font-medium text-base">{savedSelections.minor3}</td>
                 </tr>
               )}
 
@@ -1615,11 +1730,33 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
             <div className="grid grid-cols-1 gap-3">
               {/* Removed: Available Paper Options preview */}
               {/* Minor Subjects */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div
+                className={`grid grid-cols-1 gap-6 ${
+                  // Dynamic grid based on available Minor options
+                  (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
+                    (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) ? 1 : 0) +
+                    (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)
+                      ? 1
+                      : 0) ===
+                  3
+                    ? "lg:grid-cols-3"
+                    : (hasActualOptions(admissionMinor1Subjects) ? 1 : 0) +
+                          (hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects)
+                            ? 1
+                            : 0) +
+                          (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects)
+                            ? 1
+                            : 0) ===
+                        2
+                      ? "lg:grid-cols-2"
+                      : "lg:grid-cols-1"
+                }`}
+              >
                 {loading ? (
                   <>
                     <LoadingDropdown label={getDynamicLabel("MN", "I")} />
                     <LoadingDropdown label={getDynamicLabel("MN", "III")} />
+                    <LoadingDropdown label="Minor III (Semester III)" />
                   </>
                 ) : (
                   <>
@@ -1642,7 +1779,8 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                       </div>
                     )}
 
-                    {hasActualOptions(admissionMinor2Subjects) && (
+                    {/* Minor II: Only show when Minor I is available (traditional programs) */}
+                    {hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor2Subjects) && (
                       <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
                         <label className="text-base font-medium text-gray-700">{getDynamicLabel("MN", "III")}</label>
                         <Combobox
@@ -1655,7 +1793,27 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                           )}
                           value={minor2}
                           onChange={(value) => handleFieldChange(setMinor2, value, "minor2")}
-                          placeholder={getPlaceholder("minor2", "Select Minor II")}
+                          placeholder="Select Minor II"
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+
+                    {/* Minor III: Show when Minor I is not available (BCOM programs) */}
+                    {!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && (
+                      <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
+                        <label className="text-base font-medium text-gray-700">Minor III (Semester III)</label>
+                        <Combobox
+                          dataArr={convertToComboboxData(
+                            preserveAecIfPresent(
+                              admissionMinor3Subjects,
+                              getFilteredByCategory(admissionMinor3Subjects, minor3, "MN", ["III"]),
+                            ),
+                            getGlobalExcludes(minor3),
+                          )}
+                          value={minor3}
+                          onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
+                          placeholder="Select Minor III"
                           className="w-full"
                         />
                       </div>
@@ -1875,13 +2033,21 @@ export default function SubjectSelectionForm({ openNotes }: { openNotes?: () => 
                         </tr>
                       )}
 
-                      {/* Minor II - Always show if there are subjects available */}
-                      {admissionMinor2Subjects.length > 0 && (
+                      {/* Minor II - Only show when Minor I is available (traditional programs) */}
+                      {hasActualOptions(admissionMinor1Subjects) && admissionMinor2Subjects.length > 0 && (
                         <tr className="hover:bg-gray-50 ">
                           <td className="border p-3 font-medium text-gray-700 text-base">
                             {getDynamicLabel("MN", "III")}
                           </td>
                           <td className="border p-3 text-gray-800 font-medium text-base">{minor2 || "-"}</td>
+                        </tr>
+                      )}
+
+                      {/* Minor III - Show when Minor I is not available (BCOM programs) */}
+                      {!hasActualOptions(admissionMinor1Subjects) && admissionMinor3Subjects.length > 0 && (
+                        <tr className="hover:bg-gray-50 ">
+                          <td className="border p-3 font-medium text-gray-700 text-base">Minor III (Semester III)</td>
+                          <td className="border p-3 text-gray-800 font-medium text-base">{minor3 || "-"}</td>
                         </tr>
                       )}
 

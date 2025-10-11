@@ -299,10 +299,12 @@
   width: 3px;
   background: transparent;
 }
+
 .thin-scrollbar::-webkit-scrollbar-thumb {
   background: #bdbdbd;
   border-radius: 4px;
 }
+
 .thin-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: #bdbdbd transparent;
@@ -310,17 +312,23 @@
 
 /* Hide scrollbars but keep scrolling */
 .no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .no-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
+  /* Chrome, Safari, Opera */
 }
 
 /* Mobile-optimized scrolling */
 .mobile-scroll {
-  -webkit-overflow-scrolling: touch; /* iOS smooth scrolling */
-  overscroll-behavior: contain; /* Prevent scroll chaining */
+  -webkit-overflow-scrolling: touch;
+  /* iOS smooth scrolling */
+  overscroll-behavior: contain;
+  /* Prevent scroll chaining */
   scroll-behavior: smooth;
 }
 
@@ -337,6 +345,7 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }

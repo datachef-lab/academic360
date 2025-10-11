@@ -200,7 +200,7 @@ export default function SignInPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#9333ea] px-4 py-6 sm:px-6">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-indigo-950 to-indigo-900 px-4 py-6 sm:px-6">
       {/* Invalid user / credentials dialog */}
       <Dialog open={invalidOpen} onOpenChange={setInvalidOpen}>
         <DialogContent>
@@ -380,7 +380,7 @@ export default function SignInPage() {
         </div>
 
         {/* Right section */}
-        <div className="hidden w-1/2 bg-[#9333ea] md:block">
+        <div className="hidden w-1/2 md:block">
           <div className="relative h-full w-full">
             <img
               src={`${process.env.NEXT_PUBLIC_URL!}/hero-image.jpeg`}

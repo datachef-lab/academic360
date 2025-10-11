@@ -182,7 +182,7 @@ export async function findSubjectsSelections(studentId: number) {
               eq(paperModel.academicYearId, ayId as number),
               eq(paperModel.programCourseId, pcId),
               eq(paperModel.isActive, true),
-              // Do not hard-filter by optional here; UI logic can decide
+              eq(paperModel.isOptional, true),
             ),
           );
       })(),

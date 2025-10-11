@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState, useCallback, useEffect, ReactNode, createContext } from "react";
+
+// Force dynamic rendering to prevent prerendering issues
+export const dynamic = "force-dynamic";
 import { useRouter, usePathname } from "next/navigation";
 import { UserDto } from "@repo/db/dtos/user";
 import { ApiResponse } from "@repo/utils/ApiResonse";
