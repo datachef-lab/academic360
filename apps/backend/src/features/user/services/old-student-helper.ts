@@ -579,7 +579,6 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
       .set({
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
-        applicationId: null, // TODO: Add applicationId
         programCourseId: foundProgramCourse.id,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
@@ -638,7 +637,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
         legacyStudentId: oldStudent.id,
         uid: oldStudent.codeNumber.trim()?.toUpperCase(),
         oldUid: oldStudent?.oldcodeNumber?.trim()?.toUpperCase(),
-        applicationId: null, // TODO: Add applicationId
+
         programCourseId: foundProgramCourse.id,
         community:
           oldStudent.communityid === 0 || oldStudent.communityid === null
@@ -1276,6 +1275,8 @@ export async function upsertStudentPersonalDetails(
         userId: user.id as number,
         dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),
         firstName: oldDetails.name?.split(" ")[0] || "", // Required field
+        email: oldDetails.email || undefined,
+        alternativeEmail: oldDetails.alternativeemail || undefined,
         middleName: (() => {
           const nameParts = oldDetails.name?.split(" ");
           return nameParts && nameParts.length >= 3
@@ -1561,6 +1562,8 @@ export async function upsertStudentPersonalDetails(
           ? nameParts[nameParts.length - 1]
           : "";
       })(),
+      email: oldDetails.email || undefined,
+      alternativeEmail: oldDetails.alternativeemail || undefined,
       whatsappNumber: oldDetails.whatsappno || undefined,
       mobileNumber: oldDetails.phoneMobileNo || oldDetails.contactNo || "", // Required field
       dateOfBirth: toISODateOnly(oldDetails.dateOfBirth ?? undefined),

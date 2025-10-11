@@ -3065,6 +3065,7 @@ export async function upsertPersonalDetails(
         mobileNumber: mobileNumber?.toString(),
         whatsappNumber: whatsappNumber as string | undefined,
         emergencyResidentialNumber,
+        email: oldDetails.email || undefined,
         // Store as YYYY-MM-DD string to prevent off-by-one due to timezone
         dateOfBirth: dateOfBirthISO as unknown as string | null | undefined,
         placeOfBirth: placeOfBirth as string | undefined,
@@ -3102,7 +3103,7 @@ export async function upsertPersonalDetails(
           ? admissionGeneralInfoId
           : undefined,
         userId: isStaff(oldDetails) ? userId : undefined,
-
+        email: oldDetails.email || undefined,
         firstName,
         middleName: isStaff(oldDetails)
           ? undefined
