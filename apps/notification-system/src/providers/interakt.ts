@@ -8,17 +8,30 @@ export async function sendWhatsAppMessage(
   headerMediaUrl?: string,
 ): Promise<{ ok: true } | { ok: false; error: string; status?: number }> {
   try {
+    console.log("[whatsapp.interakt] Starting WhatsApp message send");
+    console.log("[whatsapp.interakt] Input params:", {
+      to,
+      messageArr,
+      templateName,
+      headerMediaUrl,
+      nodeEnv: process.env.NODE_ENV,
+    });
+
     const phoneNumber =
       process.env.NODE_ENV === "development"
         ? process.env.DEVELOPER_PHONE!
         : to;
 
-    console.log("phoneNumber:", phoneNumber);
-    console.log("to in interakt:", to);
+    console.log("[whatsapp.interakt] Phone number resolution:", {
+      originalTo: to,
+      resolvedPhoneNumber: phoneNumber,
+      isDevelopment: process.env.NODE_ENV === "development",
+      developerPhone: process.env.DEVELOPER_PHONE,
+    });
 
-    const requestBody: Record<string, unknown> = {
+    const requestBody = {
       countryCode: "+91",
-      phoneNumber,
+      phoneNumber: phoneNumber,
       type: "Template",
       template: {
         name: templateName,
@@ -26,18 +39,26 @@ export async function sendWhatsAppMessage(
         headerValues: headerMediaUrl ? [headerMediaUrl] : ["Alert"],
         bodyValues: messageArr,
       },
-      data: { message: "" },
+      data: {
+        message: "",
+      },
     };
 
     // Log the exact payload being sent to Interakt (sanitized)
-    console.log("[interakt] request =>", {
+    console.log("[whatsapp.interakt] Request details:", {
       to: phoneNumber,
       templateName,
       headerMediaUrl: Boolean(headerMediaUrl) ? headerMediaUrl : undefined,
       bodyValues: Array.isArray(messageArr) ? messageArr : [],
       baseUrl: INTERAKT_BASE_URL,
+      hasApiKey: Boolean(INTERAKT_API_KEY),
+      apiKeyLength: INTERAKT_API_KEY?.length || 0,
     });
-    console.log("requestBody:", requestBody);
+    console.log(
+      "[whatsapp.interakt] Full request body:",
+      JSON.stringify(requestBody, null, 2),
+    );
+    console.log("[whatsapp.interakt] Making API request to Interakt...");
     const response = await fetch(INTERAKT_BASE_URL, {
       method: "POST",
       headers: {
@@ -45,6 +66,13 @@ export async function sendWhatsAppMessage(
         Authorization: `Basic ${INTERAKT_API_KEY}`,
       },
       body: JSON.stringify(requestBody),
+    });
+
+    console.log("[whatsapp.interakt] Response received:", {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+      headers: Object.fromEntries(response.headers.entries()),
     });
 
     if (!response.ok) {
@@ -64,7 +92,7 @@ export async function sendWhatsAppMessage(
       }
       const composed = `HTTP ${response.status} ${String(message)}`;
       // Log full error context to help debugging in workers/logs
-      console.log("[interakt] error response =>", {
+      console.log("[whatsapp.interakt] ERROR response =>", {
         status: response.status,
         statusText: (response as any).statusText,
         message: composed,
@@ -74,12 +102,17 @@ export async function sendWhatsAppMessage(
       // Return full message (no truncation) so workers can persist completely
       return { ok: false, error: composed, status: response.status };
     }
-    await response.json().catch(() => ({}));
+
+    const responseData = await response.json().catch(() => ({}));
+    console.log("[whatsapp.interakt] SUCCESS response data:", responseData);
+    console.log("[whatsapp.interakt] WhatsApp message sent successfully!");
     return { ok: true };
   } catch (error: any) {
     // Log full error and propagate full string upwards
-    console.log("[interakt] exception =>", {
+    console.log("[whatsapp.interakt] EXCEPTION =>", {
       error: String(error),
+      stack: error?.stack,
+      name: error?.name,
     });
     return { ok: false, error: String(error) };
   }

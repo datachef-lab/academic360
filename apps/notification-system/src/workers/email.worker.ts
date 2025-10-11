@@ -124,7 +124,7 @@ async function processBatch() {
               })
             : undefined;
           const defaultSubjectByTemplate: Record<string, string> = {
-            otp: "Your OTP Code - Academic360",
+            otp: "Your OTP Code - The Bhawanipur Education Society College",
             subjectSelectionConfirmation:
               "Confirmation of Semester-wise Subject Selection",
           };
@@ -357,7 +357,10 @@ async function processBatch() {
               html,
               asString(staff.name, "User"),
               dto.emailAttachments,
-              asString(dto.emailFromName, "Academic360 Notifications"),
+              asString(
+                dto.emailFromName,
+                "BESC | The Bhawanipur Education Society College - Important Notification",
+              ),
             );
             if (!res.ok) {
               console.log(
@@ -379,7 +382,10 @@ async function processBatch() {
             html,
             "Developer",
             dto.emailAttachments,
-            asString(dto.emailFromName, "Academic360 Notifications"),
+            asString(
+              dto.emailFromName,
+              "The Bhawanipur Education Society College - Important Notification",
+            ),
           );
           if (!res.ok) {
             console.log(
@@ -400,7 +406,10 @@ async function processBatch() {
           html,
           undefined,
           dto.emailAttachments,
-          asString(dto.emailFromName, "Academic360 Notifications"),
+          asString(
+            dto.emailFromName,
+            "The Bhawanipur Education Society College - Important Notification",
+          ),
         );
         console.log(`[email.worker] sendZeptoMail response:`, res);
         if (!res.ok) {
@@ -423,7 +432,10 @@ async function processBatch() {
           html,
           undefined,
           dto.emailAttachments,
-          asString(dto.emailFromName, "Academic360 Notifications"),
+          asString(
+            dto.emailFromName,
+            "The Bhawanipur Education Society College - Important Notification",
+          ),
         );
         console.log(`[email.worker] sendZeptoMail response:`, res);
         if (!res.ok) {

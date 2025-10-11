@@ -208,7 +208,7 @@
     <div class="email-container">
       <!-- Header -->
       <div class="email-header">
-        <h1>Academic360 Notifications</h1>
+        <h1>Important Notification</h1>
       </div>
       
       <!-- Content -->
@@ -222,7 +222,17 @@
         </div>
         
         <div class="intro-text">
-          For your ready reference, a summary of subjects to be studied by you from <strong>Semesters I to IV</strong> (including the subjects selected by you) is provided below:
+          <% 
+            // Check if user is in BA or BSc program
+            const programCourseName = user?.currentPromotion?.programCourse?.name || user?.programCourse?.course?.name || "";
+            const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+            const isBaOrBscProgram = normalizedName.includes("b.a") || normalizedName.includes("ba") || normalizedName.includes("b.sc") || normalizedName.includes("bsc");
+          %>
+          <% if (isBaOrBscProgram) { %>
+            For your reference & future use, please find below the subject(s) chosen by you:
+          <% } else { %>
+            For your ready reference, a summary of subjects to be studied by you from <strong>Semesters I to IV</strong> (including the subjects selected by you) is provided below:
+          <% } %>
         </div>
 
         <!-- Subject Selection Table -->
@@ -237,27 +247,40 @@
             <tbody>
               <% const rows = content && content.subjectsByCategory ? content.subjectsByCategory : {}; %>
               <% 
-                // Create the mapping for display format
+                // Create the mapping for display format - show all provided selections
                 const displayRows = [];
                 
+                // Helper function to check if a value exists and is not empty
+                function hasValue(obj, key) {
+                  return obj && obj[key] && obj[key].trim() !== '';
+                }
+                
                 // Minor 1 (Semester I & II)
-                if (rows["Minor"] && rows["Minor"]["I"]) {
+                if (hasValue(rows["Minor"], "I")) {
                   displayRows.push({
                     category: "Minor 1 (Semester I & II)",
                     selection: rows["Minor"]["I"]
                   });
                 }
                 
-                // Minor 2 (Semester III & IV)
-                if (rows["Minor"] && rows["Minor"]["III"]) {
+                // Minor 2 (Semester III & IV) - only show if Minor 1 is present (traditional programs)
+                if (hasValue(rows["Minor"], "III") && hasValue(rows["Minor"], "I")) {
                   displayRows.push({
                     category: "Minor 2 (Semester III & IV)",
                     selection: rows["Minor"]["III"]
                   });
                 }
                 
+                // Minor 3 (Semester III) - onwards and show if Minor 1 is not present (BCOM programs)
+                if (hasValue(rows["Minor"], "III") && !hasValue(rows["Minor"], "I")) {
+                  displayRows.push({
+                    category: "Minor (Semester III to VI)",
+                    selection: rows["Minor"]["III"]
+                  });
+                }
+                
                 // IDC 1 (Semester I)
-                if (rows["IDC"] && rows["IDC"]["I"]) {
+                if (hasValue(rows["IDC"], "I")) {
                   displayRows.push({
                     category: "IDC 1 (Semester I)",
                     selection: rows["IDC"]["I"]
@@ -265,7 +288,7 @@
                 }
                 
                 // IDC 2 (Semester II)
-                if (rows["IDC"] && rows["IDC"]["II"]) {
+                if (hasValue(rows["IDC"], "II")) {
                   displayRows.push({
                     category: "IDC 2 (Semester II)",
                     selection: rows["IDC"]["II"]
@@ -273,7 +296,7 @@
                 }
                 
                 // IDC 3 (Semester III)
-                if (rows["IDC"] && rows["IDC"]["III"]) {
+                if (hasValue(rows["IDC"], "III")) {
                   displayRows.push({
                     category: "IDC 3 (Semester III)",
                     selection: rows["IDC"]["III"]
@@ -281,7 +304,7 @@
                 }
                 
                 // AEC (Semester III & IV)
-                if (rows["AEC"] && rows["AEC"]["III"]) {
+                if (hasValue(rows["AEC"], "III")) {
                   displayRows.push({
                     category: "AEC (Semester III & IV)",
                     selection: rows["AEC"]["III"]
@@ -289,7 +312,7 @@
                 }
                 
                 // CVAC 4 (Semester II)
-                if (rows["CVAC"] && rows["CVAC"]["II"]) {
+                if (hasValue(rows["CVAC"], "II")) {
                   displayRows.push({
                     category: "CVAC 4 (Semester II)",
                     selection: rows["CVAC"]["II"]
@@ -324,7 +347,7 @@
         </div>
         
         <div class="copyright">
-          &copy; <%= new Date().getFullYear() %> Academic360
+          &copy; <%= new Date().getFullYear() %> The Bhawanipur Education Society College
         </div>
       </div>
     </div>

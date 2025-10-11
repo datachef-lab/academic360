@@ -190,10 +190,10 @@ export const sendOtpEmailNotification = async (
       notificationMasterId: emailMaster.id,
       notificationEvent: {
         subject: redirectToDev
-          ? `[DEV MODE] OTP for ${data.email} - Academic360`
+          ? `[DEV MODE] OTP for ${data.email} - The Bhawanipur Education Society College`
           : sendToStaffOnly
-            ? `[STAGING] OTP for ${data.email} - Academic360`
-            : "Your OTP Code - Academic360",
+            ? `[STAGING] OTP for ${data.email} - The Bhawanipur Education Society College`
+            : "Your OTP Code - The Bhawanipur Education Society College",
         emailTemplate: "otp",
         templateData: {
           greetingName: redirectToDev
@@ -310,8 +310,8 @@ export const sendOtpWhatsAppNotification = async (
             recipientType: "staff",
           }),
         },
-        // Explicit body values for Interakt template placeholders (expects 1 value)
-        bodyValues: [String(data.otpCode)],
+        // Explicit body values for Interakt template placeholders (expects 2 values: Name and Code)
+        bodyValues: [String(data.userName || "User"), String(data.otpCode)],
       },
     };
 

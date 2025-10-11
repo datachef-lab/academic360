@@ -34,7 +34,8 @@ export async function sendZeptoMail(
   const recipient =
     process.env.NODE_ENV === "development" ? process.env.DEVELOPER_EMAIL! : to;
   console.log("recipient in zepto:", recipient);
-  const fromName = fromNameOverride || "Academic360 Notifications";
+  const fromName =
+    "The Bhawanipur Education Society College - Important Notification";
   const payload: ZeptoPayload = {
     from: { address: process.env.ZEPTO_FROM!, name: fromName },
     to: [

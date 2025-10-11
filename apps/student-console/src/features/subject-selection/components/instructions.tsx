@@ -1,7 +1,26 @@
 import React from "react";
 import { BookOpen, Layers, FileText, GraduationCap, Lightbulb, Info, AlertTriangle } from "lucide-react";
 
-export default function Instructions({ compact = false }: { compact?: boolean }) {
+interface InstructionsProps {
+  compact?: boolean;
+  student?: any; // Using any to avoid complex type matching with StudentDto
+  visibleCategories?: {
+    minor?: boolean;
+    idc?: boolean;
+    aec?: boolean;
+    cvac?: boolean;
+  };
+}
+
+export default function Instructions({ compact = false, student, visibleCategories }: InstructionsProps) {
+  // Determine student's program type
+  const programCourseName =
+    student?.currentPromotion?.programCourse?.name || student?.programCourse?.course?.name || "";
+
+  const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
+  const isBcomProgram = normalizedName.includes("bcom");
+  const isBaProgram = normalizedName.includes("b.a") || normalizedName.includes("ba");
+  const isBscProgram = normalizedName.includes("b.sc") || normalizedName.includes("bsc");
   return (
     <div className={`w-full flex flex-col ${compact ? "h-auto" : "h-full"}`}>
       {/* Fixed Header - Only show in non-compact mode */}
@@ -28,6 +47,19 @@ export default function Instructions({ compact = false }: { compact?: boolean })
         >
           <div className={`${compact ? "p-0" : "p-4"}`}>
             <div className={`space-y-4 text-sm text-gray-700 ${compact ? "space-y-3" : ""}`}>
+              {/* Important Warnings - Moved to top */}
+              <div className="border border-amber-200 rounded-lg p-3">
+                <h4 className="font-bold text-amber-800 mb-2 text-sm bg-amber-50 px-2 py-1 rounded inline-block">
+                  Important Warnings
+                </h4>
+                <ol className="text-amber-700 space-y-1 text-sm list-decimal list-inside">
+                  <li>Ensure all required fields are completed before submission.</li>
+                  <li>Subject selections cannot be changed after final submission.</li>
+                  <li>Verify that IDC subjects are different from Minor subjects.</li>
+                  <li>Check that no IDC subject is repeated across semesters.</li>
+                </ol>
+              </div>
+
               {/* Introduction */}
               {/* <div className="border border-gray-200 rounded-lg p-3">
                 <p className="text-gray-700 leading-relaxed text-sm">
@@ -38,100 +70,135 @@ export default function Instructions({ compact = false }: { compact?: boolean })
 
               {/* Subject Categories - Clean Ordered Lists */}
               <div className="space-y-4">
-                {/* Minor Subjects */}
-                <div
-                  id="minor-subjects"
-                  className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400"
-                >
-                  <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
-                    Minor Subjects
-                  </h4>
-                  <ol className="text-blue-700 text-sm leading-relaxed list-decimal list-inside space-y-1">
-                    <li>You will have to choose 2 (two) subjects to be studied as Minor I and Minor II.</li>
-                    <li>
-                      The subject you opt in Semester I will be your Minor I subject and will be studied by you in
-                      Semesters I & II.
-                    </li>
-                    <li>
-                      The subject you select in Semester III will be treated as your Minor II subject and will be
-                      studied by you in Semesters III & IV.
-                    </li>
-                    <li>
-                      From the two subjects opted as Minor I and Minor II, you will have to opt for either of these
-                      subjects in Semesters V & VI respectively.
-                    </li>
-                  </ol>
-                </div>
+                {/* Minor Subjects - Only show if visible */}
+                {visibleCategories?.minor && (
+                  <div
+                    id="minor-subjects"
+                    className="border border-blue-200 rounded-lg p-3 transition-all duration-300 hover:border-blue-400"
+                  >
+                    <h4 className="font-bold text-blue-800 mb-2 text-sm bg-blue-50 px-2 py-1 rounded inline-block">
+                      Minor Subjects (MN)
+                    </h4>
+                    <div className="text-blue-700 text-sm leading-relaxed space-y-2">
+                      {isBcomProgram ? (
+                        <div>
+                          <p className="font-semibold mb-2">For B.Com (H & G) Students:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>
+                              Choose one Minor subject from Semester III through Semester VI: E-Business or Marketing.
+                            </li>
+                            <li>
+                              The corresponding papers for Semester III are Fundamentals of Information System
+                              (E-Business) and Consumer Behaviour (Marketing).
+                            </li>
+                          </ul>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-semibold mb-2">For B.A. & B.Sc. Students:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>
+                              Choose two distinct Minor subjects - Minor I (Studied in Semesters I & II) & Minor II
+                              (Studied in Semesters III & IV).
+                            </li>
+                            <li>You will choose either Minor I or Minor II for Semesters V & VI respectively.</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                {/* IDC Subjects */}
-                <div
-                  id="idc-subjects"
-                  className="border border-green-200 rounded-lg p-3 transition-all duration-300 hover:border-green-400"
-                >
-                  <h4 className="font-bold text-green-800 mb-2 text-sm bg-green-50 px-2 py-1 rounded inline-block">
-                    Interdisciplinary Course (IDC)
-                  </h4>
-                  <ol className="text-green-700 text-sm leading-relaxed list-decimal list-inside space-y-1">
-                    <li>You have to select an IDC subject for each semester from I to III.</li>
-                    <li>IDC subjects cannot be same as your Minor subjects.</li>
-                    <li>IDC subjects also cannot be repeated in any other semester.</li>
-                  </ol>
-                </div>
+                {/* IDC Subjects - Only show if visible */}
+                {visibleCategories?.idc && (
+                  <div
+                    id="idc-subjects"
+                    className="border border-green-200 rounded-lg p-3 transition-all duration-300 hover:border-green-400"
+                  >
+                    <h4 className="font-bold text-green-800 mb-2 text-sm bg-green-50 px-2 py-1 rounded inline-block">
+                      Interdisciplinary Course (IDC) Subjects
+                    </h4>
+                    <div className="text-green-700 text-sm leading-relaxed space-y-2">
+                      {isBcomProgram ? (
+                        <div>
+                          <p className="text-green-600 italic">IDC subjects are not applicable for B.Com students.</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-semibold mb-2">For B.A. & B.Sc. Students:</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>
+                              You must select a different IDC subject for each of the three semesters (I, II, & III).
+                            </li>
+                            <li>The three IDC subjects chosen cannot be the same as your Major or Minor subjects.</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                {/* AEC Subjects */}
-                <div
-                  id="aec-subjects"
-                  className="border border-purple-200 rounded-lg p-3 transition-all duration-300 hover:border-purple-400"
-                >
-                  <h4 className="font-bold text-purple-800 mb-2 text-sm bg-purple-50 px-2 py-1 rounded inline-block">
-                    Ability Enhancement Compulsory Course (AEC)
-                  </h4>
-                  <ol className="text-purple-700 text-sm leading-relaxed list-decimal list-inside space-y-1">
-                    <li>You will have to study 1 (One) AEC subject in each semester from I to IV.</li>
-                    <li>
-                      Compulsory English is mandatory named as AEC 1 and AEC 2 for Semesters I and II respectively.
-                    </li>
-                    <li>
-                      For AEC 3 and AEC 4, you will have to choose 1 (one) subject which will be studied in Semesters
-                      III and IV respectively.
-                    </li>
-                  </ol>
-                </div>
+                {/* AEC Subjects - Only show if visible */}
+                {visibleCategories?.aec && (
+                  <div
+                    id="aec-subjects"
+                    className="border border-purple-200 rounded-lg p-3 transition-all duration-300 hover:border-purple-400"
+                  >
+                    <h4 className="font-bold text-purple-800 mb-2 text-sm bg-purple-50 px-2 py-1 rounded inline-block">
+                      Ability Enhancement Compulsory Course (AEC)
+                    </h4>
+                    <div className="text-purple-700 text-sm leading-relaxed space-y-2">
+                      {isBcomProgram ? (
+                        <div>
+                          <p className="text-purple-600 italic">AEC subjects are not applicable for B.Com students.</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-semibold mb-2">For B.A. & B.Sc. (Hons.):</p>
+                          <ul className="list-disc list-inside space-y-1 ml-2">
+                            <li>
+                              You'll study Compulsory English in Semesters I & II named as AEC 1 and AEC 2 respectively.
+                            </li>
+                            <li>For Semesters III & IV, you must choose one subject to study across both semesters.</li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                {/* CVAC Subjects */}
-                <div
-                  id="cvac-subjects"
-                  className="border border-orange-200 rounded-lg p-3 transition-all duration-300 hover:border-orange-400"
-                >
-                  <h4 className="font-bold text-orange-800 mb-2 text-sm bg-orange-50 px-2 py-1 rounded inline-block">
-                    CVAC Subjects
-                  </h4>
-                  <ol className="text-orange-700 text-sm leading-relaxed list-decimal list-inside space-y-1">
-                    <li>
-                      ENVS is mandatory to be studied for all courses named as CVAC 1 and CVAC 3 in Semesters I & II
-                      respectively.
-                    </li>
-                    <li>Constitutional Values is mandatory for all courses as CVAC 2 in Semester I.</li>
-                    <li>
-                      Value-Oriented Life Skill Education is mandatory to be studied by B.A. students as CVAC 4 in
-                      Semester II.
-                    </li>
-                    <li>B.Sc. students get to choose from 2 (two) CVAC options in Semester II.</li>
-                  </ol>
-                </div>
-              </div>
-
-              {/* Warning Section */}
-              <div className="border border-amber-200 rounded-lg p-3">
-                <h4 className="font-bold text-amber-800 mb-2 text-sm bg-amber-50 px-2 py-1 rounded inline-block">
-                  Important Warnings
-                </h4>
-                <ol className="text-amber-700 space-y-1 text-sm list-decimal list-inside">
-                  <li>Ensure all required fields are completed before submission</li>
-                  <li>Subject selections cannot be changed after final submission</li>
-                  <li>Verify that IDC subjects are different from Minor subjects</li>
-                  <li>Check that no IDC subject is repeated across semesters</li>
-                </ol>
+                {/* CVAC Subjects - Only show if visible */}
+                {visibleCategories?.cvac && (
+                  <div
+                    id="cvac-subjects"
+                    className="border border-orange-200 rounded-lg p-3 transition-all duration-300 hover:border-orange-400"
+                  >
+                    <h4 className="font-bold text-orange-800 mb-2 text-sm bg-orange-50 px-2 py-1 rounded inline-block">
+                      Common Value-Added Course (CVAC)
+                    </h4>
+                    <div className="text-orange-700 text-sm leading-relaxed space-y-3">
+                      <div>
+                        <p className="font-semibold mb-2">Semester I</p>
+                        <p className="ml-2">B.Com/ B.A./B.Sc. students are required to study:</p>
+                        <ul className="list-disc list-inside space-y-1 ml-4">
+                          <li>Environmental Studies (ENVS)</li>
+                          <li>Constitutional Values</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="font-semibold mb-2">Semester II</p>
+                        <p className="ml-2">
+                          B.Com/ B.A./B.Sc. students will continue to study Environmental Studies (ENVS).
+                        </p>
+                        <p className="ml-2 mt-1">Additionally,</p>
+                        <ul className="list-disc list-inside space-y-1 ml-4">
+                          <li>B.A. students must also study Value-Oriented Life Skill Education.</li>
+                          <li>B.Sc. students must also choose one subject from two available CVAC options.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

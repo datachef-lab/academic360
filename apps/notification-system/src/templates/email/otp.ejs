@@ -27,12 +27,14 @@
   </head>
   <body>
     <!-- Preheader text -->
-    <div class="preheader">Your One-Time Password (OTP) for Academic360</div>
+    <div class="preheader">Your One-Time Password (OTP) for The Bhawanipur Education Society College</div>
     <div class="wrapper">
       <div class="container">
-        <div class="header-bar"><%= content && content.emailFromName ? content.emailFromName : "Academic360" %></div>
+        <div class="header-bar">Important Notification</div>
         <div class="content">
-          <% if (content && content.greetingName) { %>
+          <% if (user && user.name) { %>
+            <p class="greeting">Hello <strong><%= user.name %></strong>,</p>
+          <% } else if (content && content.greetingName) { %>
             <p class="greeting">Hello <strong><%= content.greetingName %></strong>,</p>
           <% } else { %>
             <p class="greeting">Hello,</p>
@@ -53,7 +55,6 @@
             <div style="font-weight:600; margin-bottom:6px;">⚠️ Important Security Information</div>
             <div style="font-size:12px; line-height:1.6;">
               • Never share this OTP with anyone<br/>
-              • Academic360 will never ask for your OTP via phone or email<br/>
               • If you didn't request this OTP, please ignore this email
             </div>
           </div>
@@ -64,9 +65,9 @@
           </div>
         </div>
         <div class="footer">
-          <div class="brand">Academic360</div>
+          <div class="brand">The Bhawanipur Education Society College</div>
           <div>This is an automated security message. Please do not reply to this email.</div>
-          <div style="margin-top:6px;">&copy; <%= new Date().getFullYear() %> Academic360. All rights reserved.</div>
+          <div style="margin-top:6px;">&copy; <%= new Date().getFullYear() %> The Bhawanipur Education Society College. All rights reserved.</div>
         </div>
       </div>
     </div>

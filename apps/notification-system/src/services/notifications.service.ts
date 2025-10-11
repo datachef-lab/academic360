@@ -63,6 +63,25 @@ export class NotificationsService {
     console.log("foundUser:", foundUser, "resolvedUserId:", resolvedUserId);
     console.log(dto.content);
 
+    // For WhatsApp notifications without fields, store bodyValues in message for worker access
+    let message = dto.message;
+    if (
+      dto.variant === "WHATSAPP" &&
+      dto.notificationEvent?.bodyValues &&
+      dto.notificationEvent.bodyValues.length > 0
+    ) {
+      // Check if there are any notification fields defined
+      const hasFields =
+        dto.notificationEvent.notificationMaster?.meta?.length > 0;
+      if (!hasFields) {
+        // Store bodyValues in message field for worker to access
+        message = JSON.stringify({
+          originalMessage: dto.message,
+          bodyValues: dto.notificationEvent.bodyValues,
+        });
+      }
+    }
+
     const insertValues: Notification = {
       userId: resolvedUserId,
       applicationFormId: dto.applicationFormId ?? null,
@@ -70,7 +89,7 @@ export class NotificationsService {
       notificationEventId: dto.notificationEvent?.id ?? null,
       variant: dto.variant,
       type: dto.type,
-      message: dto.message,
+      message: message,
       status: "PENDING",
     };
     console.log("[notif-sys] enqueue insert values ->", insertValues);
@@ -194,6 +213,17 @@ export class NotificationsService {
         await db.insert(notificationContentModel).values(rows as never);
       } else {
         // Build rows from Notification Master meta ordering and provided bodyValues
+        console.log(
+          "[notif-sys] (whatsapp) building content rows from meta and bodyValues",
+        );
+        console.log(
+          "[notif-sys] (whatsapp) notificationEvent:",
+          dto.notificationEvent,
+        );
+        console.log(
+          "[notif-sys] (whatsapp) notificationEvent.id:",
+          dto.notificationEvent?.id,
+        );
         let meta = dto.notificationEvent.notificationMaster?.meta || [];
         const bodyValues = (dto.notificationEvent.bodyValues || []).slice();
         const rows: ContentInsert[] = [];
@@ -228,58 +258,103 @@ export class NotificationsService {
             content: value,
           });
         }
-        // Fallback: if no meta configured but bodyValues were provided, persist a single row
-        if (filteredMeta.length === 0 && bodyValues.length > 0) {
-          rows.push({
-            notificationId: notifRow!.id,
-            notificationEventId: dto.notificationEvent.id,
-            // use 0 as a sentinel; worker will fall back to raw contents when meta is empty
-            whatsappFieldId: 0 as unknown as number,
-            emailTemplate: null,
-            content: String(bodyValues.shift()),
-          });
+        // If no fields are defined, skip content row creation entirely
+        // The worker will use the original bodyValues directly from the notification
+        if (filteredMeta.length === 0) {
+          console.log(
+            "[notif-sys] (whatsapp) No notification fields defined, skipping content row creation",
+          );
         }
         console.log("[notif-sys] built whatsapp content rows:", rows);
         if (rows.length > 0) {
-          await db.insert(notificationContentModel).values(rows as never);
-        }
-
-        // Safety: Ensure a queue row exists for this WhatsApp notification
-        try {
-          const existing = await db
-            .select({ id: notificationQueueModel.id })
-            .from(notificationQueueModel)
-            .where(eq(notificationQueueModel.notificationId, notifRow!.id));
-          if (!existing || existing.length === 0) {
-            const inserted = await db
-              .insert(notificationQueueModel)
-              .values({
-                notificationId: notifRow!.id,
-                type: "WHATSAPP_QUEUE" as never,
-              })
-              .returning({
-                id: notificationQueueModel.id,
-                type: notificationQueueModel.type,
-              });
-            console.log(
-              "[notif-sys] (whatsapp) queue inserted inline ->",
-              inserted[0],
-            );
-          } else {
-            console.log(
-              "[notif-sys] (whatsapp) queue already present ->",
-              existing[0],
-            );
-          }
-        } catch (e) {
           console.log(
-            "[notif-sys] (whatsapp) failed to ensure queue row:",
-            (e as any)?.message || e,
+            "[notif-sys] (whatsapp) inserting content rows into database...",
           );
+          try {
+            await db.insert(notificationContentModel).values(rows as never);
+            console.log(
+              "[notif-sys] (whatsapp) content rows inserted successfully",
+            );
+          } catch (error) {
+            console.log(
+              "[notif-sys] (whatsapp) ERROR inserting content rows:",
+              error,
+            );
+            throw error;
+          }
+          console.log(
+            "[notif-sys] (whatsapp) DEBUG: Content insertion complete, about to exit WhatsApp block",
+          );
+        } else {
+          console.log("[notif-sys] (whatsapp) no content rows to insert");
         }
       }
     }
 
+    console.log(
+      "[notif-sys] (whatsapp) DEBUG: Exited WhatsApp content creation block, variant:",
+      dto.variant,
+    );
+    // Safety: Ensure a queue row exists for this WhatsApp notification
+    console.log(
+      "[notif-sys] (whatsapp) DEBUG: About to check variant:",
+      dto.variant,
+    );
+    if (dto.variant === "WHATSAPP") {
+      console.log(
+        "[notif-sys] (whatsapp) checking for existing queue row for notificationId:",
+        notifRow!.id,
+      );
+      try {
+        const existing = await db
+          .select({ id: notificationQueueModel.id })
+          .from(notificationQueueModel)
+          .where(eq(notificationQueueModel.notificationId, notifRow!.id));
+        console.log(
+          "[notif-sys] (whatsapp) existing queue rows found:",
+          existing,
+        );
+
+        if (!existing || existing.length === 0) {
+          console.log(
+            "[notif-sys] (whatsapp) no existing queue row, inserting new one...",
+          );
+          const inserted = await db
+            .insert(notificationQueueModel)
+            .values({
+              notificationId: notifRow!.id,
+              type: "WHATSAPP_QUEUE" as never,
+            })
+            .returning({
+              id: notificationQueueModel.id,
+              type: notificationQueueModel.type,
+            });
+          console.log(
+            "[notif-sys] (whatsapp) queue inserted inline ->",
+            inserted[0],
+          );
+        } else {
+          console.log(
+            "[notif-sys] (whatsapp) queue already present ->",
+            existing[0],
+          );
+        }
+      } catch (e) {
+        console.log(
+          "[notif-sys] (whatsapp) failed to ensure queue row:",
+          (e as any)?.message || e,
+          "stack:",
+          (e as any)?.stack,
+        );
+      }
+    }
+
+    console.log(
+      "[notif-sys] inserting general queue row with type:",
+      queueType,
+      "for notificationId:",
+      notifRow!.id,
+    );
     const insertedQueue = await db
       .insert(notificationQueueModel)
       .values({ notificationId: notifRow!.id, type: queueType as never })

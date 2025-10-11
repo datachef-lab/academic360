@@ -214,16 +214,21 @@ async function processBatch() {
         const fallback = asStringArray(dto?.bodyValues, []);
         for (const v of fallback) bodyValues.push(v);
       }
-      // Final fallback: if still empty, use any content rows we have (sorted by createdAt)
+      // Final fallback: if still empty, try to get bodyValues from notification message
       if (bodyValues.length === 0) {
-        const anyContents = contents
-          .filter((c) => typeof c.content === "string")
-          .sort(
-            (a, b) =>
-              (a.createdAt?.getTime?.() || 0) - (b.createdAt?.getTime?.() || 0),
-          )
-          .map((c) => String(c.content));
-        for (const v of anyContents) bodyValues.push(v);
+        try {
+          // Check if message contains bodyValues (for notifications without fields)
+          const messageData = JSON.parse(notif.message || "{}");
+          if (messageData.bodyValues && Array.isArray(messageData.bodyValues)) {
+            for (const v of messageData.bodyValues) bodyValues.push(String(v));
+          }
+        } catch (e) {
+          // If parsing fails, leave bodyValues empty
+          console.log(
+            "[whatsapp.worker] Could not parse bodyValues from message:",
+            e,
+          );
+        }
       }
 
       // Guard: ensure required placeholders have values; otherwise throw before provider call

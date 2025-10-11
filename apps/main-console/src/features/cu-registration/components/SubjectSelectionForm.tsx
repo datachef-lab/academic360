@@ -429,7 +429,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       newErrors.push("Minor II subject is required");
     // Minor III is only required when Minor I is not available (BCOM programs)
     if (!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && !minor3)
-      newErrors.push("Minor III subject is required");
+      newErrors.push("Minor subject is required");
     if (hasActualOptions(availableIdcSem1Subjects) && !idc1) newErrors.push("IDC 1 subject is required");
     if (hasActualOptions(availableIdcSem2Subjects) && !idc2) newErrors.push("IDC 2 subject is required");
     if (hasActualOptions(availableIdcSem3Subjects) && !idc3) newErrors.push("IDC 3 subject is required");
@@ -456,13 +456,13 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       newErrors.push("Minor II cannot be the same as IDC 3");
     }
     if (minor3 && idc1 && minor3 === idc1) {
-      newErrors.push("Minor III cannot be the same as IDC 1");
+      newErrors.push("Minor cannot be the same as IDC 1");
     }
     if (minor3 && idc2 && minor3 === idc2) {
-      newErrors.push("Minor III cannot be the same as IDC 2");
+      newErrors.push("Minor cannot be the same as IDC 2");
     }
     if (minor3 && idc3 && minor3 === idc3) {
-      newErrors.push("Minor III cannot be the same as IDC 3");
+      newErrors.push("Minor cannot be the same as IDC 3");
     }
 
     // IDC uniqueness validation
@@ -487,7 +487,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       hasActualOptions(admissionMinor3Subjects) &&
       minor3 !== autoMinor3
     ) {
-      newErrors.push(`${autoMinor3} is mandatory and must be selected in Minor III`);
+      newErrors.push(`${autoMinor3} is mandatory and must be selected in Minor`);
     }
 
     setErrors(newErrors);
@@ -528,7 +528,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
       const fieldErrorMap: Record<string, string> = {
         minor1: "Minor I subject is required",
         minor2: "Minor II subject is required",
-        minor3: "Minor III subject is required",
+        minor3: "Minor subject is required",
         idc1: "IDC 1 subject is required",
         idc2: "IDC 2 subject is required",
         idc3: "IDC 3 subject is required",
@@ -1100,7 +1100,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                 <>
                   <LoadingDropdown label={getDynamicLabel("MN", "I")} />
                   <LoadingDropdown label={getDynamicLabel("MN", "III")} />
-                  <LoadingDropdown label="Minor III (Semester III)" />
+                  <LoadingDropdown label="Minor (Semester III to VI)" />
                 </>
               ) : (
                 <>
@@ -1146,7 +1146,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                   {/* Minor III: Show when Minor I is not available (BCOM programs) */}
                   {!hasActualOptions(admissionMinor1Subjects) && hasActualOptions(admissionMinor3Subjects) && (
                     <div className="space-y-2 min-h-[84px]" onClick={() => handleFieldFocus("minor")}>
-                      <label className="text-base font-medium text-gray-700">Minor III (Semester III)</label>
+                      <label className="text-base font-medium text-gray-700">Minor (Semester III to VI)</label>
                       <Combobox
                         dataArr={convertToComboboxData(
                           preserveAecIfPresent(
@@ -1157,7 +1157,7 @@ export default function SubjectSelectionForm({ uid, onStatusChange }: SubjectSel
                         )}
                         value={minor3}
                         onChange={(value) => handleFieldChange(setMinor3, value, "minor3")}
-                        placeholder="Select Minor III"
+                        placeholder="Select Minor"
                         className="w-full"
                       />
                     </div>

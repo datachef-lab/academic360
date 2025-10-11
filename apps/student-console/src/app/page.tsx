@@ -378,15 +378,6 @@ export default function SignInPage() {
               </div>
             )}
           </form>
-
-          <div className="mt-4">
-            <p className="text-center text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
-              <Link href="/contact" className="font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
-                Contact administration
-              </Link>
-            </p>
-          </div>
         </div>
 
         {/* Right section */}

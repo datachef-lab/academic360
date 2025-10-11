@@ -1,24 +1,34 @@
 "use client";
-"use client";
 import React, { useState } from "react";
 import Instructions from "./components/instructions";
 import SubjectSelectionForm from "./components/subject-selection-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Info } from "lucide-react";
+import { useStudent } from "@/providers/student-provider";
 
 export default function SubjectSelection() {
   const [openMobileNotes, setOpenMobileNotes] = useState(false);
+  const { student } = useStudent();
+  const [visibleCategories, setVisibleCategories] = useState<{
+    minor?: boolean;
+    idc?: boolean;
+    aec?: boolean;
+    cvac?: boolean;
+  }>({});
 
   return (
     <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">
       <div className="flex gap-6 w-full max-w-screen h-full ">
         {/* Left: Form */}
         <div className="w-full md:w-[75%] h-full overflow-y-auto no-scrollbar">
-          <SubjectSelectionForm openNotes={() => setOpenMobileNotes(true)} />
+          <SubjectSelectionForm
+            openNotes={() => setOpenMobileNotes(true)}
+            onVisibleCategoriesChange={setVisibleCategories}
+          />
         </div>
         {/* Right: Notes (desktop only) */}
         <div className="w-[25%] h-full border hidden lg:block overflow-y-auto no-scrollbar">
-          <Instructions />
+          <Instructions student={student} visibleCategories={visibleCategories} />
         </div>
 
         {/* Mobile floating notes button */}
@@ -49,7 +59,7 @@ export default function SubjectSelection() {
               </div>
               {/* Scrollable Content */}
               <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 mobile-modal-scroll">
-                <Instructions compact={true} />
+                <Instructions compact={true} student={student} visibleCategories={visibleCategories} />
               </div>
             </div>
           </div>
