@@ -5,6 +5,7 @@ import {
   personalDetailsModel,
   createPersonalDetailsSchema,
   studentModel,
+  userModel,
 } from "@repo/db/schemas/models/user";
 import { eq } from "drizzle-orm";
 import { PersonalDetailsDto } from "@repo/db/index.js";
@@ -123,7 +124,7 @@ export async function savePersonalDetails(
     motherTongue,
     nationality,
     religion,
-
+    userDetails,
     createdAt,
     updatedAt,
     id: personalDetailsId,
@@ -132,6 +133,27 @@ export async function savePersonalDetails(
 
   // Validate input (excluding nested objects)
   validatePersonalDetailsInput({ ...props });
+
+  // Get the existing personal details to find the userId
+  const [existingPersonalDetails] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.id, id));
+
+  if (!existingPersonalDetails) {
+    return null;
+  }
+
+  // Update user details if provided
+  if (userDetails && existingPersonalDetails.userId) {
+    await db
+      .update(userModel)
+      .set({
+        phone: userDetails.phone,
+        whatsappNumber: userDetails.whatsappNumber,
+      })
+      .where(eq(userModel.id, existingPersonalDetails.userId));
+  }
 
   const [updatedPersonalDetails] = await db
     .update(personalDetailsModel)
@@ -164,46 +186,73 @@ export async function savePersonalDetailsByStudentId(
   studentId: number,
   personalDetails: PersonalDetailsDto,
 ): Promise<PersonalDetailsDto | null> {
-  // let {
-  //     category,
-  //     disabilityCode,
-  //     mailingAddress,
-  //     residentialAddress,
-  //     motherTongue,
-  //     nationality,
-  //     otherNationality,
-  //     religion,
-  //     id: personalDetailsId,
-  //     ...props
-  // } = personalDetails;
+  // First get the student to find their userId
+  const [student] = await db
+    .select()
+    .from(studentModel)
+    .where(eq(studentModel.id, studentId));
 
-  // // Validate input (excluding nested objects)
-  // validatePersonalDetailsInput({ ...props, studentId });
+  if (!student) {
+    return null;
+  }
 
-  // const [updatedPersonalDetails] = await db.update(personalDetailsModel).set({
-  //     ...props,
-  //     categoryId: category?.id,
-  //     disabilityCodeId: disabilityCode?.id,
-  //     mailingAddressId: mailingAddress?.id,
-  //     residentialAddressId: residentialAddress?.id,
-  //     motherTongueId: motherTongue?.id,
-  //     nationalityId: nationality?.id,
-  //     otherNationalityId: otherNationality?.id,
-  //     religionId: religion?.id,
-  // }).where(eq(personalDetailsModel.studentId, studentId)).returning();
+  let {
+    category,
+    disabilityCode,
+    address,
+    motherTongue,
+    nationality,
+    religion,
+    userDetails,
+    createdAt,
+    updatedAt,
+    id: personalDetailsId,
+    ...props
+  } = personalDetails;
 
-  // if (!updatedPersonalDetails) return null;
+  // Validate input (excluding nested objects)
+  validatePersonalDetailsInput({ ...props });
 
-  // if (mailingAddress) {
-  //     mailingAddress = await saveAddress(mailingAddress?.id as number, mailingAddress);
-  // }
+  // Update user details if provided
+  if (userDetails && student.userId) {
+    await db
+      .update(userModel)
+      .set({
+        phone: userDetails.phone,
+        whatsappNumber: userDetails.whatsappNumber,
+      })
+      .where(eq(userModel.id, student.userId));
+  }
 
-  // if (residentialAddress) {
-  //     residentialAddress = await saveAddress(residentialAddress?.id as number, residentialAddress);
-  // }
+  // Find personal details by userId
+  const [existingPersonalDetails] = await db
+    .select()
+    .from(personalDetailsModel)
+    .where(eq(personalDetailsModel.userId, student.userId));
 
-  // const formattedPersonalDetails = await personalDetailsResponseFormat(updatedPersonalDetails);
-  return null;
+  if (!existingPersonalDetails) {
+    return null;
+  }
+
+  const [updatedPersonalDetails] = await db
+    .update(personalDetailsModel)
+    .set({
+      ...props,
+      categoryId: category?.id,
+      disabilityCodeId: disabilityCode?.id,
+      motherTongueId: motherTongue?.id,
+      nationalityId: nationality?.id,
+      religionId: religion?.id,
+    })
+    .where(eq(personalDetailsModel.id, existingPersonalDetails.id))
+    .returning();
+
+  if (!updatedPersonalDetails) return null;
+
+  const formattedPersonalDetails = await personalDetailsResponseFormat(
+    updatedPersonalDetails,
+  );
+  return formattedPersonalDetails;
 }
 
 export async function removePersonalDetails(
@@ -286,15 +335,29 @@ export async function personalDetailsResponseFormat(
   }
   const {
     categoryId,
+
     disabilityCodeId,
     // mailingAddressId,
     // residentialAddressId,
     motherTongueId,
     nationalityId,
     religionId,
+    userId,
     ...props
   } = personalDetails;
   const formattedPersonalDetails: PersonalDetailsDto = { ...props } as any;
+
+  // Fetch user details if userId exists
+  if (userId) {
+    const [userDetails] = await db
+      .select()
+      .from(userModel)
+      .where(eq(userModel.id, userId));
+    if (userDetails) {
+      formattedPersonalDetails.userDetails = userDetails;
+    }
+  }
+
   if (categoryId) {
     formattedPersonalDetails.category = await findCategoryById(categoryId);
   }

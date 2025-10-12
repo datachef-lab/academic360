@@ -50,6 +50,8 @@ export default function StudentContent({ activeTab, studentId, userId, personalE
       ...pd,
       residentialAddress: residential,
       mailingAddress: mailing,
+      // Ensure userDetails is preserved
+      userDetails: pd.userDetails,
     };
   };
 

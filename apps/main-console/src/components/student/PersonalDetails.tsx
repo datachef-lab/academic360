@@ -97,8 +97,10 @@ type AddressUpdate = {
 
 export default function PersonalDetailsReadOnly({ studentId, initialData, personalEmail }: PersonalDetailProps) {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState<string>(personalEmail ?? "");
+  const [email, setEmail] = useState<string>(initialData?.email ?? personalEmail ?? "");
   const [pd, setPd] = useState<PersonalDetailsAug | null>(initialData ?? null);
+  const [userPhone, setUserPhone] = useState<string>(initialData?.userDetails?.phone ?? "");
+  const [userWhatsapp, setUserWhatsapp] = useState<string>(initialData?.userDetails?.whatsappNumber ?? "");
   const [residentialPostOffice, setResidentialPostOffice] = useState<string>("");
   const [residentialPoliceStation, setResidentialPoliceStation] = useState<string>("");
   const [mailingPostOffice, setMailingPostOffice] = useState<string>("");
@@ -123,6 +125,9 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
 
   useEffect(() => {
     setPd((initialData as PersonalDetailsAug) ?? null);
+    setEmail(initialData?.email ?? personalEmail ?? "");
+    setUserPhone(initialData?.userDetails?.phone ?? "");
+    setUserWhatsapp(initialData?.userDetails?.whatsappNumber ?? "");
     const resAddr = initialData?.residentialAddress as (AddressRel & AddressExtras) | null | undefined;
     const mailAddr = initialData?.mailingAddress as (AddressRel & AddressExtras) | null | undefined;
     setResidentialPostOffice(resAddr?.otherPostoffice ?? "");
@@ -137,7 +142,7 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
     setMailStateIdSel(initialData?.mailingAddress?.state?.id ?? null);
     setMailCityIdSel(initialData?.mailingAddress?.city?.id ?? null);
     setMailDistrictId(initialData?.mailingAddress?.district?.id ?? null);
-  }, [initialData]);
+  }, [initialData, personalEmail]);
 
   // Master dropdowns
   const { data: religions } = useQuery({ queryKey: ["religions"], queryFn: getAllReligions });
@@ -236,7 +241,12 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
   function buildPayload(): Partial<PersonalDetailsDto> {
     const payload: Partial<PersonalDetailsAug> = {
       ...(pd ?? {}),
-      personalEmail: email ?? null,
+      email: email ?? null,
+      userDetails: {
+        ...(pd?.userDetails ?? {}),
+        phone: userPhone || null,
+        whatsappNumber: userWhatsapp || null,
+      },
     } as Partial<PersonalDetailsAug>;
     const cleaned = stripDates(payload) as Partial<PersonalDetailsAug>;
     // Flatten address relations to basic ids for backend API compatibility
@@ -337,6 +347,25 @@ export default function PersonalDetailsReadOnly({ studentId, initialData, person
             <div className="flex flex-col gap-1 md:col-span-2">
               <FieldLabel>Personal Email</FieldLabel>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter personal email" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="flex flex-col gap-1">
+              <FieldLabel>Phone Number</FieldLabel>
+              <Input
+                value={userPhone}
+                onChange={(e) => setUserPhone(e.target.value)}
+                placeholder="Enter phone number"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <FieldLabel>WhatsApp Number</FieldLabel>
+              <Input
+                value={userWhatsapp}
+                onChange={(e) => setUserWhatsapp(e.target.value)}
+                placeholder="Enter WhatsApp number"
+              />
             </div>
           </div>
 

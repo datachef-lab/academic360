@@ -829,7 +829,20 @@ async function mapPersonalDetailsToDtoWithAddresses(
     .sort((x, y) => orderWeight(x.a) - orderWeight(y.a))
     .map((x) => x.dto!)
     .filter(Boolean);
-  return { ...base, address: sorted } as any;
+
+  // Fetch user details if userId exists
+  let userDetails = null;
+  if (p.userId) {
+    const [user] = await db
+      .select()
+      .from(userModel)
+      .where(eq(userModel.id, p.userId));
+    if (user) {
+      userDetails = user;
+    }
+  }
+
+  return { ...base, address: sorted, userDetails } as any;
 }
 
 async function mapHealthToDto(h: Health): Promise<HealthDto> {

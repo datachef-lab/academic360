@@ -134,8 +134,11 @@ export const updatePersonalDetails = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    // Validate request body
-    const parseResult = createPersonalDetailsSchema.safeParse(req.body);
+    // Validate request body (excluding userDetails and address fields which are not in the schema)
+    const { userDetails, address, ...bodyWithoutExtraFields } = req.body;
+    const parseResult = createPersonalDetailsSchema.safeParse(
+      bodyWithoutExtraFields,
+    );
     if (!parseResult.success) {
       res
         .status(400)
@@ -149,7 +152,9 @@ export const updatePersonalDetails = async (
         );
       return;
     }
-    const updatedDetails = await savePersonalDetails(Number(id), req.body);
+    // Reconstruct the body with userDetails and address preserved
+    const validatedBody = { ...parseResult.data, userDetails, address };
+    const updatedDetails = await savePersonalDetails(Number(id), validatedBody);
     if (!updatedDetails) {
       res
         .status(404)
@@ -186,8 +191,11 @@ export const updatePersonalDetailsByStudentId = async (
 ): Promise<void> => {
   try {
     const { studentId } = req.params;
-    // Validate request body
-    const parseResult = createPersonalDetailsSchema.safeParse(req.body);
+    // Validate request body (excluding userDetails and address fields which are not in the schema)
+    const { userDetails, address, ...bodyWithoutExtraFields } = req.body;
+    const parseResult = createPersonalDetailsSchema.safeParse(
+      bodyWithoutExtraFields,
+    );
     if (!parseResult.success) {
       res
         .status(400)
@@ -201,9 +209,11 @@ export const updatePersonalDetailsByStudentId = async (
         );
       return;
     }
+    // Reconstruct the body with userDetails and address preserved
+    const validatedBody = { ...parseResult.data, userDetails, address };
     const updatedDetails = await savePersonalDetailsByStudentId(
       Number(studentId),
-      req.body,
+      validatedBody,
     );
     if (!updatedDetails) {
       res

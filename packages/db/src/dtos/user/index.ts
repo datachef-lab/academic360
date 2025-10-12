@@ -83,6 +83,7 @@ export interface PersonalDetailsDto extends Omit<PersonalDetailsT, "nationalityI
     motherTongue?: LanguageMediumT | null;
     address: AddressDto[];
     disabilityCode?: DisabilityCodeT | null;
+    userDetails: UserT | null;
 }
 
 export interface TransportDetailsDto extends Omit<TransportDetailsT, "transportId" | "pickupPointId"> {
