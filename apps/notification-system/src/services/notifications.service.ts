@@ -12,7 +12,7 @@ import { notificationContentModel } from "@repo/db/schemas/models/notifications/
 
 // no FK imports needed here
 import type { NotificationDto } from "@repo/db/dtos/notifications";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import { userModel } from "@repo/db/schemas/models/user";
 import { db } from "@/db";
 
@@ -62,6 +62,30 @@ export class NotificationsService {
 
     console.log("foundUser:", foundUser, "resolvedUserId:", resolvedUserId);
     console.log(dto.content);
+
+    // DEDUPLICATION: Check for existing pending notifications for the same user/event
+    const notificationMasterId = resolveNotificationMasterId(dto);
+    if (resolvedUserId && notificationMasterId) {
+      // Check for pending notifications
+      const existingPendingNotifications = await db
+        .select({ id: notificationModel.id })
+        .from(notificationModel)
+        .where(
+          and(
+            eq(notificationModel.userId, resolvedUserId),
+            eq(notificationModel.notificationMasterId, notificationMasterId),
+            eq(notificationModel.variant, dto.variant),
+            eq(notificationModel.status, "PENDING"),
+          ),
+        );
+
+      if (existingPendingNotifications.length > 0) {
+        console.log(
+          `[notif-sys] DEDUPLICATION: Found ${existingPendingNotifications.length} existing pending notifications for user ${resolvedUserId}, master ${notificationMasterId}, variant ${dto.variant}. Skipping duplicate.`,
+        );
+        return existingPendingNotifications[0].id;
+      }
+    }
 
     // For WhatsApp notifications without fields, store bodyValues in message for worker access
     let message = dto.message;
@@ -295,59 +319,6 @@ export class NotificationsService {
       "[notif-sys] (whatsapp) DEBUG: Exited WhatsApp content creation block, variant:",
       dto.variant,
     );
-    // Safety: Ensure a queue row exists for this WhatsApp notification
-    console.log(
-      "[notif-sys] (whatsapp) DEBUG: About to check variant:",
-      dto.variant,
-    );
-    if (dto.variant === "WHATSAPP") {
-      console.log(
-        "[notif-sys] (whatsapp) checking for existing queue row for notificationId:",
-        notifRow!.id,
-      );
-      try {
-        const existing = await db
-          .select({ id: notificationQueueModel.id })
-          .from(notificationQueueModel)
-          .where(eq(notificationQueueModel.notificationId, notifRow!.id));
-        console.log(
-          "[notif-sys] (whatsapp) existing queue rows found:",
-          existing,
-        );
-
-        if (!existing || existing.length === 0) {
-          console.log(
-            "[notif-sys] (whatsapp) no existing queue row, inserting new one...",
-          );
-          const inserted = await db
-            .insert(notificationQueueModel)
-            .values({
-              notificationId: notifRow!.id,
-              type: "WHATSAPP_QUEUE" as never,
-            })
-            .returning({
-              id: notificationQueueModel.id,
-              type: notificationQueueModel.type,
-            });
-          console.log(
-            "[notif-sys] (whatsapp) queue inserted inline ->",
-            inserted[0],
-          );
-        } else {
-          console.log(
-            "[notif-sys] (whatsapp) queue already present ->",
-            existing[0],
-          );
-        }
-      } catch (e) {
-        console.log(
-          "[notif-sys] (whatsapp) failed to ensure queue row:",
-          (e as any)?.message || e,
-          "stack:",
-          (e as any)?.stack,
-        );
-      }
-    }
 
     console.log(
       "[notif-sys] inserting general queue row with type:",

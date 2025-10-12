@@ -509,8 +509,30 @@ async function processBatch() {
   }
 }
 
+let emailWorkerInterval: NodeJS.Timeout | null = null;
+let isEmailWorkerRunning = false;
+
 export function startEmailWorker() {
-  setInterval(() => {
+  if (isEmailWorkerRunning) {
+    console.log("[email.worker] Worker already running, skipping start");
+    return;
+  }
+
+  isEmailWorkerRunning = true;
+  console.log(
+    `[email.worker] starting with POLL_MS=${POLL_MS}, BATCH_SIZE=${BATCH_SIZE}, RATE_DELAY_MS=${RATE_DELAY_MS}, MAX_RETRIES=${MAX_RETRIES}`,
+  );
+
+  emailWorkerInterval = setInterval(() => {
     processBatch().catch(() => undefined);
   }, POLL_MS);
+}
+
+export function stopEmailWorker() {
+  if (emailWorkerInterval) {
+    clearInterval(emailWorkerInterval);
+    emailWorkerInterval = null;
+  }
+  isEmailWorkerRunning = false;
+  console.log("[email.worker] Worker stopped");
 }

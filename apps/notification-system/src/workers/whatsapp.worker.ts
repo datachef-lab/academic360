@@ -57,21 +57,7 @@ async function processBatch() {
       ),
     )
     .limit(BATCH_SIZE);
-  console.log(`[whatsapp.worker] fetched rows: ${rows.length}`);
   if (rows.length === 0) {
-    // Debug: peek latest WHATSAPP_QUEUE rows regardless of dead letter to understand state
-    try {
-      const sample = await db
-        .select({
-          id: notificationQueueModel.id,
-          notificationId: notificationQueueModel.notificationId,
-          isDeadLetter: notificationQueueModel.isDeadLetter,
-        })
-        .from(notificationQueueModel)
-        .where(eq(notificationQueueModel.type, "WHATSAPP_QUEUE" as any))
-        .limit(5);
-      console.log("[whatsapp.worker] latest WHATSAPP_QUEUE rows:", sample);
-    } catch {}
     return;
   }
 
@@ -345,6 +331,14 @@ async function processBatch() {
         .set({ isDeadLetter: true, deadLetterAt: new Date() })
         .where(eq(notificationQueueModel.id, row.id));
 
+      console.log("[whatsapp.worker] sent ->", {
+        notifId: row.notificationId,
+        to:
+          env === "development"
+            ? process.env.DEVELOPER_PHONE
+            : user?.whatsappNumber || user?.phone,
+      });
+
       await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
     } catch (err: any) {
       // Reuse shared db; do not create new clients inside the loop
@@ -387,17 +381,37 @@ async function processBatch() {
   }
 }
 
+let workerInterval: NodeJS.Timeout | null = null;
+let isWorkerRunning = false;
+
 export function startWhatsAppWorker() {
+  if (isWorkerRunning) {
+    console.log("[whatsapp.worker] Worker already running, skipping start");
+    return;
+  }
+
+  isWorkerRunning = true;
   console.log(
     `[whatsapp.worker] starting with POLL_MS=${POLL_MS}, BATCH_SIZE=${BATCH_SIZE}, RATE_DELAY_MS=${RATE_DELAY_MS}, MAX_RETRIES=${MAX_RETRIES}`,
   );
+
   // Kick off immediately for visibility
   processBatch()
     .then(() => console.log("[whatsapp.worker] initial run complete"))
     .catch((e) =>
       console.log("[whatsapp.worker] initial run error:", e?.message || e),
     );
-  setInterval(() => {
+
+  workerInterval = setInterval(() => {
     processBatch().catch(() => undefined);
   }, POLL_MS);
+}
+
+export function stopWhatsAppWorker() {
+  if (workerInterval) {
+    clearInterval(workerInterval);
+    workerInterval = null;
+  }
+  isWorkerRunning = false;
+  console.log("[whatsapp.worker] Worker stopped");
 }

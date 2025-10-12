@@ -55,13 +55,26 @@ function checkRequiredEnvs() {
     app.use("/api/notifications", notificationsRouter);
     app.get("/health", (_req, res) => res.json({ ok: true }));
     // Start workers before HTTP
-    const { startEmailWorker } = await import("@/workers/email.worker.js");
-    const { startWhatsAppWorker } = await import(
+    const { startEmailWorker, stopEmailWorker } = await import(
+      "@/workers/email.worker.js"
+    );
+    const { startWhatsAppWorker, stopWhatsAppWorker } = await import(
       "@/workers/whatsapp.worker.js"
     );
     // Throttle worker start to avoid rapid loops
     setTimeout(() => startEmailWorker(), 1000);
     setTimeout(() => startWhatsAppWorker(), 1500);
+
+    // Graceful shutdown handling
+    const gracefulShutdown = () => {
+      console.log("\n[notification-system] Shutting down gracefully...");
+      stopEmailWorker();
+      stopWhatsAppWorker();
+      process.exit(0);
+    };
+
+    process.on("SIGINT", gracefulShutdown);
+    process.on("SIGTERM", gracefulShutdown);
     // Install 404 handler after routers
     const { default: path } = await import("path");
     app.all("*", async (req, res) => {
