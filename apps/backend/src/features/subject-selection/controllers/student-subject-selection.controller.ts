@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ApiResponse } from "@/utils/ApiResonse.js";
 import { handleError } from "@/utils/handleError.js";
+import * as XLSX from "xlsx";
 import {
   createStudentSubjectSelectionsWithValidation,
   updateStudentSubjectSelectionsEfficiently,
@@ -203,10 +204,11 @@ export async function createAdminStudentSubjectSelectionsHandler(
     const changeReason =
       selections[0]?.reason || "Admin/Staff created/updated selection";
 
-    const result = await updateStudentSubjectSelectionsEfficiently(
+    const result = await createStudentSubjectSelectionsWithValidation(
       selections,
       userId,
       changeReason,
+      userType,
     );
 
     if (!result.success) {
@@ -763,18 +765,40 @@ export async function exportStudentSubjectSelectionsHandler(
       return;
     }
 
-    // Check if no data was found
+    // Check if no data was found - return empty Excel file instead of 404
     if (!exportResult.buffer) {
-      res
-        .status(404)
-        .json(
-          new ApiResponse(
-            404,
-            "NOT_FOUND",
-            null,
-            "No data found for the specified subject selection meta ID",
-          ),
-        );
+      // Create empty Excel file
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet([
+        {
+          UID: "",
+          Name: "",
+          Session: "",
+          "Program-Course": "",
+          "Class Roll No.": "",
+          Section: "",
+          Message: "No student subject selections found for this academic year",
+        },
+      ]);
+      XLSX.utils.book_append_sheet(wb, ws, "Student Subject Selections");
+      const emptyBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `student_subject_selections_empty_${timestamp}.xlsx`;
+
+      // Set headers for file download
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${fileName}"`,
+      );
+      res.setHeader("Content-Length", emptyBuffer.length);
+
+      console.log("Export completed with empty data. Total records: 0");
+      res.status(200).send(emptyBuffer);
       return;
     }
 

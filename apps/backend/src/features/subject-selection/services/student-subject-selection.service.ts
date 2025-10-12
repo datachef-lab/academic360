@@ -1828,7 +1828,9 @@ export async function createStudentSubjectSelectionsWithValidation(
         whatsappMasterName === "Subject Selection Confirmation - BSC"
       ) {
         // For BSC students, exclude "Minor 3" field from email content
-        emailContentRows = contentRows.filter((row, index) => index !== 3); // Remove index 3 (Minor 3)
+        emailContentRows = contentRows.filter(
+          (row) => row.whatsappFieldId !== 8, // Exclude Minor 3 (field ID 8)
+        );
         console.log(
           "[backend] BSC email: Filtered out Minor 3 field, using",
           emailContentRows.length,
@@ -1866,19 +1868,12 @@ export async function createStudentSubjectSelectionsWithValidation(
       } else if (
         whatsappMasterName === "Subject Selection Confirmation - BSC"
       ) {
-        // BSC template expects 8 parameters - exclude "Minor 3" field (index 3)
-        const filteredValues = [
-          whatsappBodyValues[0], // Name
-          whatsappBodyValues[1], // Minor 1
-          whatsappBodyValues[2], // Minor 2
-          // Skip index 3 (Minor 3) - this is the "Subject Selection Pending"
-          whatsappBodyValues[4], // IDC 1
-          whatsappBodyValues[5], // IDC 2
-          whatsappBodyValues[6], // IDC 3
-          whatsappBodyValues[7], // AEC
-          whatsappBodyValues[8], // CVAC
-        ];
-        whatsappBodyValues = filteredValues;
+        // BSC template expects 8 parameters - exclude "Minor 3" field
+        // Filter out Minor 3 by using the contentRows instead of hardcoded indices
+        const filteredContentRows = contentRows.filter(
+          (row) => row.whatsappFieldId !== 8, // Exclude Minor 3 (field ID 8)
+        );
+        whatsappBodyValues = filteredContentRows.map((row) => row.content);
         console.log(
           "[backend] BSC template: Excluded Minor 3 field, using 8 items:",
           whatsappBodyValues,
@@ -3251,8 +3246,8 @@ export async function exportStudentSubjectSelections(
     socketService.sendProgressUpdate(userId, progressUpdate);
   }
 
-  // Get all subject selection meta labels for this meta ID
-  const subjectSelectionMetas = await db
+  // Get the academic year from the provided meta ID (used as reference to get academic year)
+  const referenceMeta = await db
     .select({
       id: subjectSelectionMetaModel.id,
       label: subjectSelectionMetaModel.label,
@@ -3260,9 +3255,10 @@ export async function exportStudentSubjectSelections(
       academicYearId: subjectSelectionMetaModel.academicYearId,
     })
     .from(subjectSelectionMetaModel)
-    .where(eq(subjectSelectionMetaModel.id, subjectSelectionMetaId));
+    .where(eq(subjectSelectionMetaModel.id, subjectSelectionMetaId))
+    .limit(1);
 
-  if (subjectSelectionMetas.length === 0) {
+  if (referenceMeta.length === 0) {
     return {
       buffer: null,
       fileName: `student_subject_selections_${subjectSelectionMetaId}_not_found.xlsx`,
@@ -3271,7 +3267,7 @@ export async function exportStudentSubjectSelections(
     };
   }
 
-  const meta = subjectSelectionMetas[0];
+  const academicYearId = referenceMeta[0].academicYearId;
 
   // Send progress update - fetching metadata
   if (userId) {
@@ -3292,11 +3288,11 @@ export async function exportStudentSubjectSelections(
       sequence: subjectSelectionMetaModel.sequence,
     })
     .from(subjectSelectionMetaModel)
-    .where(eq(subjectSelectionMetaModel.academicYearId, meta.academicYearId));
+    .where(eq(subjectSelectionMetaModel.academicYearId, academicYearId));
 
   // Debug: Log all metas found for the academic year
   console.log(
-    `Found ${allMetasForYear.length} metas for academic year ${meta.academicYearId}:`,
+    `Found ${allMetasForYear.length} metas for academic year ${academicYearId}:`,
   );
   allMetasForYear.forEach((m) => {
     console.log(`- ID: ${m.id}, Label: "${m.label}", Sequence: ${m.sequence}`);
@@ -3339,8 +3335,8 @@ export async function exportStudentSubjectSelections(
       "No student subject selections found for any meta in the academic year",
     );
     return {
-      buffer: null,
-      fileName: `student_subject_selections_${subjectSelectionMetaId}_empty.xlsx`,
+      buffer: null, // Let controller handle empty file creation
+      fileName: `student_subject_selections_academic_year_${academicYearId}_empty.xlsx`,
       totalRecords: 0,
     };
   }
@@ -3647,7 +3643,7 @@ export async function exportStudentSubjectSelections(
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const fileName = `student_subject_selections_${meta.label.replace(/[^a-zA-Z0-9]/g, "_")}_${timestamp}.xlsx`;
+  const fileName = `student_subject_selections_academic_year_${academicYearId}_${timestamp}.xlsx`;
 
   console.log(`Export completed. Total records: ${excelData.length}`);
 
