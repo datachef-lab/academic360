@@ -69,7 +69,15 @@ export default function CuRegistrationHomePage() {
       console.log("Progress update received:", data);
       setCurrentProgressUpdate(data);
 
-      // We rely on the HTTP response to trigger download; socket just updates UI
+      // Handle completion status from socket updates
+      if (data.status === "completed") {
+        console.log("Export completed via socket update");
+        setIsExporting(false);
+        // The modal will auto-close due to the completed status in ExportProgressDialog
+      } else if (data.status === "error") {
+        console.log("Export failed via socket update");
+        setIsExporting(false);
+      }
     },
     [],
   );
@@ -294,15 +302,48 @@ export default function CuRegistrationHomePage() {
         // Immediately trigger download based on HTTP response
         ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
         console.log("Export completed and download triggered");
+
+        // Update progress to completed state to trigger modal close
+        setCurrentProgressUpdate({
+          id: `export_${Date.now()}`,
+          userId: userId,
+          type: "export_progress",
+          message: "Export completed successfully!",
+          progress: 100,
+          status: "completed",
+          fileName: result.data.fileName,
+          createdAt: new Date(),
+        });
+
+        // Reset exporting state
+        setIsExporting(false);
       } else {
         console.error("Export failed:", result.message);
+        setCurrentProgressUpdate({
+          id: `export_${Date.now()}`,
+          userId: userId,
+          type: "export_progress",
+          message: `Export failed: ${result.message}`,
+          progress: 0,
+          status: "error",
+          error: result.message,
+          createdAt: new Date(),
+        });
         setIsExporting(false);
-        setExportProgressOpen(false);
       }
     } catch (error) {
       console.error("Export error:", error);
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Export failed due to an error",
+        progress: 0,
+        status: "error",
+        error: error instanceof Error ? error.message : "Unknown error",
+        createdAt: new Date(),
+      });
       setIsExporting(false);
-      setExportProgressOpen(false);
     }
   };
 

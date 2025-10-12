@@ -138,6 +138,12 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 const httpServer = createServer(app);
 
+// Enable trust proxy for production (behind reverse proxy like nginx)
+// Only enable in production environment to avoid issues in staging
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", true);
+}
+
 app.use(logger);
 
 app.use(cors(corsOptions));

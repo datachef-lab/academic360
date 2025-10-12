@@ -3338,6 +3338,7 @@ export async function exportStudentSubjectSelections(
       buffer: null, // Let controller handle empty file creation
       fileName: `student_subject_selections_academic_year_${academicYearId}_empty.xlsx`,
       totalRecords: 0,
+      allMetasForYear: allMetasForYear, // Include meta information for consistent column structure
     };
   }
 
@@ -3663,5 +3664,6 @@ export async function exportStudentSubjectSelections(
     buffer,
     fileName,
     totalRecords: excelData.length,
+    allMetasForYear: allMetasForYear, // Include meta information for consistency
   };
 }

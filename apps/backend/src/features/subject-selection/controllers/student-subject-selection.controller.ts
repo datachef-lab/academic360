@@ -767,19 +767,33 @@ export async function exportStudentSubjectSelectionsHandler(
 
     // Check if no data was found - return empty Excel file instead of 404
     if (!exportResult.buffer) {
-      // Create empty Excel file
+      // Create empty Excel file with the same structure as when data exists
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet([
-        {
-          UID: "",
-          Name: "",
-          Session: "",
-          "Program-Course": "",
-          "Class Roll No.": "",
-          Section: "",
-          Message: "No student subject selections found for this academic year",
-        },
-      ]);
+
+      // Create empty row with all expected columns to maintain consistent structure
+      const emptyRow: Record<string, string> = {
+        UID: "",
+        Name: "",
+        Session: "",
+        "Program-Course": "",
+        "Class Roll No.": "",
+        Section: "",
+      };
+
+      // Add dynamic columns based on the actual subject selection metas
+      if (exportResult.allMetasForYear) {
+        for (const meta of exportResult.allMetasForYear) {
+          emptyRow[meta.label] = "";
+        }
+      }
+
+      // Add audit columns
+      emptyRow["Last updated by user type"] = "";
+      emptyRow["Last Updated"] = "";
+      emptyRow["Remarks"] = "";
+      emptyRow["By User Name"] = "";
+
+      const ws = XLSX.utils.json_to_sheet([emptyRow]);
       XLSX.utils.book_append_sheet(wb, ws, "Student Subject Selections");
       const emptyBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
