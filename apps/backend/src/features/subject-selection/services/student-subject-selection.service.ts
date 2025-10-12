@@ -32,7 +32,10 @@ import * as studentSubjectsService from "./student-subjects.service";
 import * as XLSX from "xlsx";
 import { socketService } from "@/services/socketService.js";
 import { enqueueNotification } from "@/services/notificationClient.js";
-import { getNotificationMasterIdByName } from "@/services/notificationMastersCache.js";
+import {
+  getNotificationMasterIdByName,
+  getNotificationMasterIdByNameAndVariant,
+} from "@/services/notificationMastersCache.js";
 
 export type CreateStudentSubjectSelectionDtoInput = {
   studentId: number;
@@ -87,6 +90,228 @@ export interface AvailableSubjects {
 }
 
 // -- Helpers -----------------------------------------------------------------
+
+// Helper function to normalize stream names for comparison
+function normalizeStreamName(name: string): string {
+  return String(name || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, ""); // Remove all special characters, spaces, dots, etc.
+}
+
+// Helper function to get student's stream information
+async function getStudentStreamInfo(
+  studentId: number,
+): Promise<{ streamName: string; streamCode: string } | null> {
+  try {
+    console.log("[backend] Starting stream detection for student:", studentId);
+
+    const [studentWithStream] = await db
+      .select({
+        streamName: streamModel.name,
+        streamCode: streamModel.code,
+        studentId: studentModel.id,
+        programCourseId: studentModel.programCourseId,
+      })
+      .from(studentModel)
+      .leftJoin(
+        programCourseModel,
+        eq(studentModel.programCourseId, programCourseModel.id),
+      )
+      .leftJoin(streamModel, eq(programCourseModel.streamId, streamModel.id))
+      .where(eq(studentModel.id, studentId))
+      .limit(1);
+
+    console.log("[backend] Stream detection query result:", {
+      studentId,
+      studentWithStream,
+      hasStreamName: !!studentWithStream?.streamName,
+      streamName: studentWithStream?.streamName,
+      streamCode: studentWithStream?.streamCode,
+      normalizedStreamName: studentWithStream?.streamName
+        ? normalizeStreamName(studentWithStream.streamName)
+        : null,
+    });
+
+    if (studentWithStream?.streamName) {
+      const normalizedStream = normalizeStreamName(
+        studentWithStream.streamName,
+      );
+      console.log("[backend] Stream found via direct query:", {
+        original: studentWithStream.streamName,
+        normalized: normalizedStream,
+        code: studentWithStream.streamCode,
+      });
+
+      return {
+        streamName: studentWithStream.streamName,
+        streamCode: studentWithStream.streamCode || "",
+      };
+    } else {
+      console.log(
+        "[backend] No stream found for student, checking program course directly",
+      );
+
+      // Fallback: try to get stream from program course name
+      const [programCourse] = await db
+        .select({
+          name: programCourseModel.name,
+          streamName: streamModel.name,
+          streamCode: streamModel.code,
+        })
+        .from(programCourseModel)
+        .leftJoin(streamModel, eq(programCourseModel.streamId, streamModel.id))
+        .where(eq(programCourseModel.id, studentWithStream?.programCourseId))
+        .limit(1);
+
+      console.log("[backend] Program course fallback result:", {
+        programCourse,
+        normalizedProgramName: programCourse?.name
+          ? normalizeStreamName(programCourse.name)
+          : null,
+      });
+
+      // PRIORITY: Extract stream from program course name (more reliable)
+      if (programCourse?.name) {
+        const programName = programCourse.name;
+        const normalizedProgramName = normalizeStreamName(programName);
+        let detectedStream = "";
+
+        console.log(
+          "[backend] Attempting stream extraction from program name:",
+          {
+            original: programName,
+            normalized: normalizedProgramName,
+          },
+        );
+
+        // Check for BSC variations (B.Sc., BSC, Science, etc.)
+        if (
+          normalizedProgramName.includes("BSC") ||
+          normalizedProgramName.includes("SCIENCE")
+        ) {
+          detectedStream = "BSC";
+        }
+        // Check for BCOM variations (B.Com., BCOM, Commerce, etc.)
+        else if (
+          normalizedProgramName.includes("BCOM") ||
+          normalizedProgramName.includes("COMMERCE")
+        ) {
+          detectedStream = "BCOM";
+        }
+        // Check for BA variations (B.A., BA, Arts, etc.)
+        else if (
+          normalizedProgramName.includes("BA") ||
+          normalizedProgramName.includes("ARTS")
+        ) {
+          detectedStream = "BA";
+        }
+
+        if (detectedStream) {
+          console.log("[backend] Stream detected from program name:", {
+            originalProgramName: programName,
+            normalizedProgramName,
+            detectedStream,
+          });
+          return {
+            streamName: detectedStream,
+            streamCode: detectedStream,
+          };
+        } else {
+          console.log("[backend] No stream pattern matched in program name:", {
+            originalProgramName: programName,
+            normalizedProgramName,
+            availablePatterns: [
+              "BSC",
+              "BCOM",
+              "BA",
+              "SCIENCE",
+              "COMMERCE",
+              "ARTS",
+            ],
+          });
+        }
+      }
+
+      // Fallback: Use stream name from program course if program name extraction failed
+      if (programCourse?.streamName) {
+        const normalizedStream = normalizeStreamName(programCourse.streamName);
+        console.log("[backend] Stream found via program course fallback:", {
+          original: programCourse.streamName,
+          normalized: normalizedStream,
+          code: programCourse.streamCode,
+        });
+
+        return {
+          streamName: programCourse.streamName,
+          streamCode: programCourse.streamCode || "",
+        };
+      }
+    }
+
+    console.log(
+      "[backend] No stream could be detected for student:",
+      studentId,
+    );
+    return null;
+  } catch (error) {
+    console.error("Error fetching student stream info:", error);
+    return null;
+  }
+}
+
+// Helper function to get the correct notification master name based on stream
+function getNotificationMasterNameByStream(
+  streamName: string,
+  variant: "EMAIL" | "WHATSAPP",
+): string {
+  const normalizedStream = normalizeStreamName(streamName);
+
+  console.log("[backend] Notification master selection:", {
+    originalStreamName: streamName,
+    normalizedStream,
+    variant,
+  });
+
+  if (variant === "EMAIL") {
+    console.log(
+      "[backend] Selected EMAIL notification master: Subject Selection Confirmation",
+    );
+    return "Subject Selection Confirmation";
+  } else {
+    // WhatsApp variant - stream-specific
+    if (
+      normalizedStream === "BSC" ||
+      normalizedStream.includes("BSC") ||
+      normalizedStream.includes("SCIENCE")
+    ) {
+      console.log("[backend] Selected BSC notification master for WhatsApp");
+      return "Subject Selection Confirmation - BSC";
+    } else if (
+      normalizedStream === "BCOM" ||
+      normalizedStream.includes("BCOM") ||
+      normalizedStream.includes("COMMERCE")
+    ) {
+      console.log("[backend] Selected BCOM notification master for WhatsApp");
+      return "Subject Selection Confirmation - BCOM";
+    } else if (
+      normalizedStream === "BA" ||
+      normalizedStream.includes("BA") ||
+      normalizedStream.includes("ARTS")
+    ) {
+      console.log("[backend] Selected BA notification master for WhatsApp");
+      return "Subject Selection Confirmation - BA";
+    } else {
+      // Default fallback - but log this as it shouldn't happen
+      console.log("[backend] WARNING: Using BA fallback for unknown stream:", {
+        originalStreamName: streamName,
+        normalizedStream,
+        availablePatterns: ["BSC", "BCOM", "BA", "SCIENCE", "COMMERCE", "ARTS"],
+      });
+      return "Subject Selection Confirmation - BA";
+    }
+  }
+}
 
 async function modelToDto(
   row: StudentSubjectSelectionT,
@@ -1010,7 +1235,18 @@ export async function createStudentSubjectSelectionsWithValidation(
   errors?: SubjectSelectionValidationError[];
   data?: StudentSubjectSelectionDto[];
 }> {
+  console.log(
+    "[backend] createStudentSubjectSelectionsWithValidation called with:",
+    {
+      selectionsLength: selections.length,
+      createdBy,
+      changeReason,
+      userType,
+    },
+  );
+
   if (selections.length === 0) {
+    console.log("[backend] No selections provided, returning empty result");
     return { success: true, data: [] };
   }
 
@@ -1250,32 +1486,100 @@ export async function createStudentSubjectSelectionsWithValidation(
     ),
   );
 
-  // Enqueue confirmation email (non-blocking)
+  // Enqueue confirmation notifications (email and WhatsApp) - non-blocking
   try {
+    console.log(
+      "[backend] Starting notification enqueueing process for student:",
+      studentId,
+    );
+
     const [student] = await db
       .select({ userId: studentModel.userId })
       .from(studentModel)
       .where(eq(studentModel.id, studentId))
       .limit(1);
-    const rowsForGrid = dtos.map((d) => ({
-      metaLabel: (d.subjectSelectionMeta as any)?.label || "",
-      subjectName: d.subject?.name || "",
-    }));
-    const academicYearName = String(
-      (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
-    );
+
+    console.log("[backend] Student lookup result:", {
+      student,
+      hasUserId: !!student?.userId,
+    });
+
     if (student?.userId) {
-      const masterId = await getNotificationMasterIdByName(
-        "Subject Selection Confirmation",
+      console.log(
+        "[backend] Student has userId, proceeding with notification setup",
       );
+      // Get student's stream information
+      const streamInfo = await getStudentStreamInfo(studentId);
+      const streamName = streamInfo?.streamName || "BA"; // Default fallback
+
+      console.log("[backend] Student stream info (create):", {
+        studentId,
+        streamName,
+        streamInfo,
+        usingFallback: !streamInfo?.streamName,
+      });
+
+      const rowsForGrid = dtos.map((d) => ({
+        metaLabel: (d.subjectSelectionMeta as any)?.label || "",
+        subjectName: d.subject?.name || "",
+      }));
+
+      // Get academic year name from the first DTO's subjectSelectionMeta
+      let academicYearName = "";
+      if (dtos.length > 0 && dtos[0]?.subjectSelectionMeta) {
+        const meta = dtos[0].subjectSelectionMeta as any;
+        academicYearName = meta.academicYear?.name || "";
+      }
+
+      console.log("[backend] Academic year extraction (create):", {
+        dtosLength: dtos.length,
+        academicYearName,
+        firstMeta: dtos[0]?.subjectSelectionMeta ? "exists" : "missing",
+        firstMetaDetails: dtos[0]?.subjectSelectionMeta
+          ? {
+              hasAcademicYear: !!(dtos[0].subjectSelectionMeta as any)
+                ?.academicYear,
+              academicYearName: (dtos[0].subjectSelectionMeta as any)
+                ?.academicYear?.name,
+            }
+          : null,
+      });
+
+      // Get notification master IDs for both EMAIL and WHATSAPP
+      const emailMasterName = getNotificationMasterNameByStream(
+        streamName,
+        "EMAIL",
+      );
+      const whatsappMasterName = getNotificationMasterNameByStream(
+        streamName,
+        "WHATSAPP",
+      );
+
+      const [emailMasterId, whatsappMasterId] = await Promise.all([
+        getNotificationMasterIdByName(emailMasterName),
+        getNotificationMasterIdByName(whatsappMasterName),
+      ]);
+
       console.log("[backend] enqueue subject-selection (create) ->", {
         userId: student.userId,
-        masterId,
+        streamName,
+        emailMasterName,
+        whatsappMasterName,
+        emailMasterId,
+        whatsappMasterId,
         academicYearName,
       });
+
+      console.log("[backend] DEBUG: Notification master IDs verification:", {
+        emailMasterId,
+        whatsappMasterId,
+        emailMasterName,
+        whatsappMasterName,
+      });
+
       // Build per-field content rows from notification master meta
       let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
-      if (masterId) {
+      if (emailMasterId) {
         const { notificationMasterMetaModel } = await import(
           "@repo/db/schemas/models/notifications/notification-master-meta.model"
         );
@@ -1283,8 +1587,16 @@ export async function createStudentSubjectSelectionsWithValidation(
           "@repo/db/schemas/models/notifications/notification-master-field.model"
         );
 
-        console.log("[backend] notification master ID:", masterId);
+        console.log("[backend] notification master ID:", emailMasterId);
+        console.log(
+          "[backend] rowsForGrid for content mapping:",
+          JSON.stringify(rowsForGrid, null, 2),
+        );
 
+        console.log(
+          "[backend] Fetching metas for emailMasterId:",
+          emailMasterId,
+        );
         const metas = await db
           .select({
             fieldId: notificationMasterMetaModel.notificationMasterFieldId,
@@ -1293,8 +1605,12 @@ export async function createStudentSubjectSelectionsWithValidation(
           })
           .from(notificationMasterMetaModel)
           .where(
-            eq(notificationMasterMetaModel.notificationMasterId, masterId),
+            eq(notificationMasterMetaModel.notificationMasterId, emailMasterId),
           );
+        console.log(
+          "[backend] Raw metas query result:",
+          JSON.stringify(metas, null, 2),
+        );
         const activeMetas = metas
           .filter((m) => m.flag === true)
           .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
@@ -1335,9 +1651,28 @@ export async function createStudentSubjectSelectionsWithValidation(
               .toUpperCase()
               .replace(/[^A-Z0-9]/g, "");
           const labelToValue: Record<string, string> = {};
+
+          // Get student name for Name field
+          const [studentUser] = await db
+            .select({ name: userModel.name })
+            .from(studentModel)
+            .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+            .where(eq(studentModel.id, studentId))
+            .limit(1);
+
+          console.log("[backend] Student user lookup:", {
+            studentId,
+            studentUser,
+            studentName: studentUser?.name,
+          });
+
           // Support common key variants for academic year
           labelToValue[normalize("academicYear")] = academicYearName;
           labelToValue[normalize("Academic Year")] = academicYearName;
+          labelToValue[normalize("Name")] = studentUser?.name || "Student";
+          labelToValue[normalize("Student Name")] =
+            studentUser?.name || "Student";
+
           for (const r of rowsForGrid) {
             labelToValue[normalize(r.metaLabel)] = r.subjectName;
           }
@@ -1347,16 +1682,40 @@ export async function createStudentSubjectSelectionsWithValidation(
             JSON.stringify(labelToValue, null, 2),
           );
 
+          console.log("[backend] DEBUG: Field mapping analysis:", {
+            rowsForGrid: rowsForGrid.map((r) => ({
+              metaLabel: r.metaLabel,
+              subjectName: r.subjectName,
+            })),
+            notificationMasterFields: fields.map((f) => ({
+              id: f.id,
+              name: f.name,
+            })),
+            activeMetas: activeMetas.map((m) => ({
+              fieldId: m.fieldId,
+              sequence: m.sequence,
+            })),
+          });
+
           const resolveValueForField = (rawName: string) => {
             const key = normalize(rawName);
             let value = labelToValue[key];
             if (value) return value;
+
+            console.log(
+              `[backend] Field mapping attempt: "${rawName}" -> normalized: "${key}"`,
+            );
+            console.log(`[backend] Available keys:`, Object.keys(labelToValue));
+
             // Handle combined semester labels like "Semester III & IV"
             if (/SEMESTERIIIIV/.test(key)) {
               // Try specific semester variants
               const variantA = key.replace("SEMESTERIIIIV", "SEMESTERIII");
               const variantB = key.replace("SEMESTERIIIIV", "SEMESTERIV");
               value = labelToValue[variantA] || labelToValue[variantB] || "";
+              console.log(
+                `[backend] Combined semester mapping: ${key} -> ${variantA}/${variantB} -> "${value}"`,
+              );
               return value;
             }
             // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
@@ -1364,37 +1723,126 @@ export async function createStudentSubjectSelectionsWithValidation(
               const variantA = key.replace("IIIIV", "III");
               const variantB = key.replace("IIIIV", "IV");
               value = labelToValue[variantA] || labelToValue[variantB] || "";
+              console.log(
+                `[backend] Alternative semester mapping: ${key} -> ${variantA}/${variantB} -> "${value}"`,
+              );
               return value;
             }
+
+            // Try partial matching for common field names
+            const partialMatches = Object.keys(labelToValue).filter(
+              (k) => k.includes(key) || key.includes(k),
+            );
+            if (partialMatches.length > 0) {
+              value = labelToValue[partialMatches[0]];
+              console.log(
+                `[backend] Partial match found: ${key} -> ${partialMatches[0]} -> "${value}"`,
+              );
+              return value;
+            }
+
+            console.log(
+              `[backend] No match found for: "${rawName}" (normalized: "${key}")`,
+            );
             return "";
           };
 
-          contentRows = activeMetas.map((m) => {
-            const rawName = nameById.get(m.fieldId as number) || "";
-            const value = resolveValueForField(rawName);
-            console.log(
-              `[backend] field mapping: rawName="${rawName}" -> value="${value}"`,
-            );
-            return {
-              whatsappFieldId: m.fieldId as number,
-              content: String(value ?? ""),
-            };
-          });
+          // Only include fields that have actual values (not empty or fallback values)
+          contentRows = activeMetas
+            .map((m) => {
+              const rawName = nameById.get(m.fieldId as number) || "";
+              let value = resolveValueForField(rawName);
+
+              console.log(
+                `[backend] Field mapping attempt: rawName="${rawName}", initial value="${value}"`,
+              );
+
+              // Only apply fallback for Name and Academic Year fields
+              if (!value || value.trim() === "") {
+                if (rawName.toLowerCase().includes("name")) {
+                  value = studentUser?.name || "Student";
+                } else if (
+                  rawName.toLowerCase().includes("academic") ||
+                  rawName.toLowerCase().includes("year")
+                ) {
+                  value = academicYearName || "2024-25";
+                }
+                // Don't apply fallbacks for subject fields - only include if student actually selected them
+              }
+
+              console.log(
+                `[backend] Final field mapping: rawName="${rawName}" -> value="${value}"`,
+              );
+
+              return {
+                whatsappFieldId: m.fieldId as number,
+                content: String(value ?? ""),
+                rawName: rawName,
+                hasValue:
+                  value &&
+                  value.trim() !== "" &&
+                  !value.includes("Subject Selection Pending") &&
+                  !value.includes("IDC Subject") &&
+                  !value.includes("AEC Subject") &&
+                  !value.includes("CVAC Subject"),
+              };
+            })
+            .filter(
+              (row) =>
+                row.hasValue ||
+                row.rawName.toLowerCase().includes("name") ||
+                row.rawName.toLowerCase().includes("academic") ||
+                row.rawName.toLowerCase().includes("year"),
+            ) // Always include Name and Academic Year
+            .map((row) => ({
+              whatsappFieldId: row.whatsappFieldId,
+              content: row.content,
+            }));
 
           console.log(
             "[backend] final contentRows:",
             JSON.stringify(contentRows, null, 2),
           );
+
+          console.log("[backend] Debug - Field mapping details:", {
+            rowsForGrid,
+            labelToValue,
+            activeMetas: activeMetas.map((m) => ({
+              fieldId: m.fieldId,
+              sequence: m.sequence,
+              flag: m.flag,
+            })),
+            fields: fields.map((f) => ({
+              id: f.id,
+              name: f.name,
+            })),
+          });
         }
       }
 
-      // EMAIL
+      // Filter contentRows for email based on stream
+      let emailContentRows = contentRows;
+      if (
+        streamInfo?.streamName === "BSC" ||
+        streamInfo?.streamName === "Science" ||
+        whatsappMasterName === "Subject Selection Confirmation - BSC"
+      ) {
+        // For BSC students, exclude "Minor 3" field from email content
+        emailContentRows = contentRows.filter((row, index) => index !== 3); // Remove index 3 (Minor 3)
+        console.log(
+          "[backend] BSC email: Filtered out Minor 3 field, using",
+          emailContentRows.length,
+          "content rows",
+        );
+      }
+
+      // Enqueue EMAIL notification
       await enqueueNotification({
         userId: student.userId as number,
         variant: "EMAIL",
         type: "INFO",
         message: "Confirmation of Semester-wise Subject Selection",
-        notificationMasterId: masterId,
+        notificationMasterId: emailMasterId,
         notificationEvent: {
           subject: "Confirmation of Semester-wise Subject Selection",
           templateData: {
@@ -1402,27 +1850,95 @@ export async function createStudentSubjectSelectionsWithValidation(
           },
           meta: { devOnly: true },
         },
-        content: contentRows,
+        content: emailContentRows,
       });
-      // WHATSAPP: use same master to render body values via worker
+
+      // Enqueue WHATSAPP notification with stream-specific master
+      let whatsappBodyValues = contentRows.map((row) => row.content);
+
+      // TEMPORARY FIX: Limit values based on template compatibility
+      if (whatsappMasterName === "Subject Selection Confirmation - BA") {
+        whatsappBodyValues = whatsappBodyValues.slice(0, 7);
+        console.log(
+          "[backend] BA template: Limited bodyValues to 7 items:",
+          whatsappBodyValues,
+        );
+      } else if (
+        whatsappMasterName === "Subject Selection Confirmation - BSC"
+      ) {
+        // BSC template expects 8 parameters - exclude "Minor 3" field (index 3)
+        const filteredValues = [
+          whatsappBodyValues[0], // Name
+          whatsappBodyValues[1], // Minor 1
+          whatsappBodyValues[2], // Minor 2
+          // Skip index 3 (Minor 3) - this is the "Subject Selection Pending"
+          whatsappBodyValues[4], // IDC 1
+          whatsappBodyValues[5], // IDC 2
+          whatsappBodyValues[6], // IDC 3
+          whatsappBodyValues[7], // AEC
+          whatsappBodyValues[8], // CVAC
+        ];
+        whatsappBodyValues = filteredValues;
+        console.log(
+          "[backend] BSC template: Excluded Minor 3 field, using 8 items:",
+          whatsappBodyValues,
+        );
+      } else if (
+        whatsappMasterName === "Subject Selection Confirmation - BCOM"
+      ) {
+        // BCOM template expects exactly 2 parameters: Name, Minor
+        if (whatsappBodyValues.length === 2) {
+          // Perfect - already has Name and one subject
+          console.log(
+            "[backend] BCOM template: Using 2 items as-is:",
+            whatsappBodyValues,
+          );
+        } else if (whatsappBodyValues.length > 2) {
+          // Take only the first 2 items (Name and first subject)
+          whatsappBodyValues = whatsappBodyValues.slice(0, 2);
+          console.log(
+            "[backend] BCOM template: Limited to first 2 items:",
+            whatsappBodyValues,
+          );
+        }
+      }
+
+      console.log("[backend] WhatsApp notification details:", {
+        whatsappMasterId,
+        whatsappMasterName,
+        contentRowsLength: contentRows.length,
+        whatsappBodyValuesLength: whatsappBodyValues.length,
+        whatsappBodyValues,
+        contentRows,
+      });
+
       await enqueueNotification({
         userId: student.userId as number,
         variant: "WHATSAPP",
         type: "INFO",
         message: "Subject Selection Confirmation",
-        notificationMasterId: masterId,
+        notificationMasterId: whatsappMasterId,
         notificationEvent: {
-          notificationMaster: { id: masterId } as any,
-          bodyValues: [],
+          notificationMaster: { id: whatsappMasterId } as any,
+          bodyValues: whatsappBodyValues,
           meta: { devOnly: true },
         } as any,
         content: contentRows,
       });
+
       console.log("[backend] enqueue subject-selection (create) <- done");
     }
   } catch (err) {
     console.log("[Notif] enqueue failed (create):", err);
   }
+
+  console.log(
+    "[backend] createStudentSubjectSelectionsWithValidation completed successfully, returning:",
+    {
+      success: true,
+      dataLength: dtos.length,
+    },
+  );
 
   return { success: true, data: dtos };
 }
@@ -1765,7 +2281,20 @@ export async function updateStudentSubjectSelectionsEfficiently(
   errors?: SubjectSelectionValidationError[];
   data?: StudentSubjectSelection[];
 }> {
+  console.log(
+    "🚨 [backend] updateStudentSubjectSelectionsEfficiently function called!",
+  );
+  console.log(
+    "[backend] updateStudentSubjectSelectionsEfficiently called with:",
+    {
+      selectionsLength: selections.length,
+      createdBy,
+      changeReason,
+    },
+  );
+
   if (selections.length === 0) {
+    console.log("[backend] No selections provided, returning empty result");
     return { success: true, data: [] };
   }
 
@@ -1858,12 +2387,20 @@ export async function updateStudentSubjectSelectionsEfficiently(
   // If nothing changed, still trigger notification and return
   if (changedSelections.length === 0) {
     console.log("✅ No changes detected, returning current selections");
+    console.log(
+      "[backend] Starting notification enqueueing for no-change scenario",
+    );
     try {
       const [student] = await db
         .select({ userId: studentModel.userId })
         .from(studentModel)
         .where(eq(studentModel.id, studentId))
         .limit(1);
+
+      console.log("[backend] Student lookup result (no-change):", {
+        student,
+        hasUserId: !!student?.userId,
+      });
 
       // derive academic year name from any current selection
       let academicYearName = "";
@@ -1963,9 +2500,27 @@ export async function updateStudentSubjectSelectionsEfficiently(
                 .toUpperCase()
                 .replace(/[^A-Z0-9]/g, "");
             const labelToValue: Record<string, string> = {};
+
+            // Get student name for Name field
+            const [studentUser] = await db
+              .select({ name: userModel.name })
+              .from(studentModel)
+              .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+              .where(eq(studentModel.id, studentId))
+              .limit(1);
+
+            console.log("[backend] Student user lookup (no-change):", {
+              studentId,
+              studentUser,
+              studentName: studentUser?.name,
+            });
+
             // Support common key variants for academic year
             labelToValue[normalize("academicYear")] = academicYearName;
             labelToValue[normalize("Academic Year")] = academicYearName;
+            labelToValue[normalize("Name")] = studentUser?.name || "Student";
+            labelToValue[normalize("Student Name")] =
+              studentUser?.name || "Student";
             for (const r of rowsForGrid) {
               labelToValue[normalize(r.metaLabel)] = r.subjectName;
             }
@@ -1975,39 +2530,192 @@ export async function updateStudentSubjectSelectionsEfficiently(
               JSON.stringify(labelToValue, null, 2),
             );
 
-            contentRows = activeMetas.map((m) => {
-              const rawName = nameById.get(m.fieldId as number) || "";
+            const resolveValueForField = (rawName: string) => {
               const key = normalize(rawName);
-              const value = labelToValue[key] ?? "";
+              let value = labelToValue[key];
+              if (value) return value;
+
               console.log(
-                `[backend] field mapping (no-change): rawName="${rawName}" -> normalized="${key}" -> value="${value}"`,
+                `[backend] Field mapping attempt (no-change): "${rawName}" -> normalized: "${key}"`,
               );
-              return {
-                whatsappFieldId: m.fieldId as number,
-                content: String(value ?? ""),
-              };
-            });
+              console.log(
+                `[backend] Available keys (no-change):`,
+                Object.keys(labelToValue),
+              );
+
+              // Handle combined semester labels like "Semester III & IV"
+              if (/SEMESTERIIIIV/.test(key)) {
+                // Try specific semester variants
+                const variantA = key.replace("SEMESTERIIIIV", "SEMESTERIII");
+                const variantB = key.replace("SEMESTERIIIIV", "SEMESTERIV");
+                value = labelToValue[variantA] || labelToValue[variantB] || "";
+                console.log(
+                  `[backend] Combined semester mapping (no-change): ${key} -> ${variantA}/${variantB} -> "${value}"`,
+                );
+                return value;
+              }
+              // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
+              if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
+                const variantA = key.replace("IIIIV", "III");
+                const variantB = key.replace("IIIIV", "IV");
+                value = labelToValue[variantA] || labelToValue[variantB] || "";
+                console.log(
+                  `[backend] Alternative semester mapping (no-change): ${key} -> ${variantA}/${variantB} -> "${value}"`,
+                );
+                return value;
+              }
+
+              // Try partial matching for common field names
+              const partialMatches = Object.keys(labelToValue).filter(
+                (k) => k.includes(key) || key.includes(k),
+              );
+              if (partialMatches.length > 0) {
+                value = labelToValue[partialMatches[0]];
+                console.log(
+                  `[backend] Partial match found (no-change): ${key} -> ${partialMatches[0]} -> "${value}"`,
+                );
+                return value;
+              }
+
+              console.log(
+                `[backend] No match found for (no-change): "${rawName}" (normalized: "${key}")`,
+              );
+              return "";
+            };
+
+            // Only include fields that have actual values (not empty or fallback values)
+            contentRows = activeMetas
+              .map((m) => {
+                const rawName = nameById.get(m.fieldId as number) || "";
+                let value = resolveValueForField(rawName);
+
+                console.log(
+                  `[backend] Field mapping attempt (no-change): rawName="${rawName}", initial value="${value}"`,
+                );
+
+                // Only apply fallback for Name and Academic Year fields
+                if (!value || value.trim() === "") {
+                  if (rawName.toLowerCase().includes("name")) {
+                    value = studentUser?.name || "Student";
+                  } else if (
+                    rawName.toLowerCase().includes("academic") ||
+                    rawName.toLowerCase().includes("year")
+                  ) {
+                    value = academicYearName || "2024-25";
+                  }
+                  // Don't apply fallbacks for subject fields - only include if student actually selected them
+                }
+
+                console.log(
+                  `[backend] Final field mapping (no-change): rawName="${rawName}" -> value="${value}"`,
+                );
+
+                return {
+                  whatsappFieldId: m.fieldId as number,
+                  content: String(value ?? ""),
+                  rawName: rawName,
+                  hasValue:
+                    value &&
+                    value.trim() !== "" &&
+                    !value.includes("Subject Selection Pending") &&
+                    !value.includes("IDC Subject") &&
+                    !value.includes("AEC Subject") &&
+                    !value.includes("CVAC Subject"),
+                };
+              })
+              .filter(
+                (row) =>
+                  row.hasValue ||
+                  row.rawName.toLowerCase().includes("name") ||
+                  row.rawName.toLowerCase().includes("academic") ||
+                  row.rawName.toLowerCase().includes("year"),
+              ) // Always include Name and Academic Year
+              .map((row) => ({
+                whatsappFieldId: row.whatsappFieldId,
+                content: row.content,
+              }));
 
             console.log(
               "[backend] final contentRows (no-change):",
               JSON.stringify(contentRows, null, 2),
             );
+            console.log(
+              "[backend] contentRows length (no-change):",
+              contentRows.length,
+            );
           }
         }
 
+        // Get student's stream information for no-change scenario
+        const streamInfo = await getStudentStreamInfo(studentId);
+        const streamName = streamInfo?.streamName || "BA"; // Default fallback
+
+        console.log("[backend] Student stream info (no-change):", {
+          studentId,
+          streamName,
+        });
+
+        // Get notification master IDs for both EMAIL and WHATSAPP
+        const emailMasterName = getNotificationMasterNameByStream(
+          streamName,
+          "EMAIL",
+        );
+        const whatsappMasterName = getNotificationMasterNameByStream(
+          streamName,
+          "WHATSAPP",
+        );
+
+        const [emailMasterId, whatsappMasterId] = await Promise.all([
+          getNotificationMasterIdByName(emailMasterName),
+          getNotificationMasterIdByName(whatsappMasterName),
+        ]);
+
+        // Filter contentRows for email based on stream
+        let emailContentRows = contentRows;
+        if (
+          streamName === "BSC" ||
+          streamName === "Science" ||
+          whatsappMasterName === "Subject Selection Confirmation - BSC"
+        ) {
+          // For BSC students, exclude "Minor 3" field from email content
+          emailContentRows = contentRows.filter((row, index) => index !== 3); // Remove index 3 (Minor 3)
+          console.log(
+            "[backend] BSC email (no-change): Filtered out Minor 3 field, using",
+            emailContentRows.length,
+            "content rows",
+          );
+        }
+
+        // Enqueue EMAIL notification
         await enqueueNotification({
           userId: student.userId as number,
           variant: "EMAIL",
           type: "INFO",
           message: "Confirmation of Semester-wise Subject Selection",
-          notificationMasterId: masterId,
+          notificationMasterId: emailMasterId,
           notificationEvent: {
             subject: "Confirmation of Semester-wise Subject Selection",
             templateData: { academicYear: academicYearName },
             meta: { devOnly: true },
           },
+          content: emailContentRows,
+        });
+
+        // Enqueue WHATSAPP notification with stream-specific master
+        await enqueueNotification({
+          userId: student.userId as number,
+          variant: "WHATSAPP",
+          type: "INFO",
+          message: "Subject Selection Confirmation",
+          notificationMasterId: whatsappMasterId,
+          notificationEvent: {
+            notificationMaster: { id: whatsappMasterId } as any,
+            bodyValues: contentRows.map((row) => row.content),
+            meta: { devOnly: true },
+          } as any,
           content: contentRows,
         });
+
         console.log("[backend] enqueue subject-selection (no-change) <- done");
       }
     } catch (err) {
@@ -2209,40 +2917,204 @@ export async function updateStudentSubjectSelectionsEfficiently(
   // Return all active selections (unchanged + newly inserted)
   const allActiveSelections = [...unchangedSelections, ...insertedSelections];
 
-  // Enqueue updated confirmation email (non-blocking)
+  // Enqueue updated confirmation notifications (email and WhatsApp) - non-blocking
   try {
     const [student] = await db
       .select({ userId: studentModel.userId })
       .from(studentModel)
       .where(eq(studentModel.id, studentId))
       .limit(1);
-    const dtos = await Promise.all(
-      allActiveSelections.map((selection) =>
-        modelToDto(selection as StudentSubjectSelectionT),
-      ),
-    );
-    const rowsForGrid = dtos.map((d) => ({
-      metaLabel: (d.subjectSelectionMeta as any)?.label || "",
-      subjectName: d.subject?.name || "",
-    }));
-    const academicYearName = String(
-      (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
-    );
+
     if (student?.userId) {
-      const masterId = await getNotificationMasterIdByName(
-        "Subject Selection Confirmation",
+      // Get student's stream information
+      const streamInfo = await getStudentStreamInfo(studentId);
+      const streamName = streamInfo?.streamName || "BA"; // Default fallback
+
+      console.log("[backend] Student stream info (update):", {
+        studentId,
+        streamName,
+      });
+
+      const dtos = await Promise.all(
+        allActiveSelections.map((selection) =>
+          modelToDto(selection as StudentSubjectSelectionT),
+        ),
       );
+      const rowsForGrid = dtos.map((d) => ({
+        metaLabel: (d.subjectSelectionMeta as any)?.label || "",
+        subjectName: d.subject?.name || "",
+      }));
+      const academicYearName = String(
+        (dtos[0]?.subjectSelectionMeta as any)?.academicYear?.name || "",
+      );
+
+      // Get notification master IDs for both EMAIL and WHATSAPP
+      const emailMasterName = getNotificationMasterNameByStream(
+        streamName,
+        "EMAIL",
+      );
+      const whatsappMasterName = getNotificationMasterNameByStream(
+        streamName,
+        "WHATSAPP",
+      );
+
+      const [emailMasterId, whatsappMasterId] = await Promise.all([
+        getNotificationMasterIdByName(emailMasterName),
+        getNotificationMasterIdByName(whatsappMasterName),
+      ]);
+
       console.log("[backend] enqueue subject-selection (update) ->", {
         userId: student.userId,
-        masterId,
+        streamName,
+        emailMasterName,
+        whatsappMasterName,
+        emailMasterId,
+        whatsappMasterId,
         academicYearName,
       });
+
+      // Build per-field content rows from notification master meta
+      let contentRows: Array<{ whatsappFieldId: number; content: string }> = [];
+      if (emailMasterId) {
+        const { notificationMasterMetaModel } = await import(
+          "@repo/db/schemas/models/notifications/notification-master-meta.model"
+        );
+        const { notificationMasterFieldModel } = await import(
+          "@repo/db/schemas/models/notifications/notification-master-field.model"
+        );
+
+        const metas = await db
+          .select({
+            fieldId: notificationMasterMetaModel.notificationMasterFieldId,
+            sequence: notificationMasterMetaModel.sequence,
+            flag: notificationMasterMetaModel.flag,
+          })
+          .from(notificationMasterMetaModel)
+          .where(
+            eq(notificationMasterMetaModel.notificationMasterId, emailMasterId),
+          );
+        console.log(
+          "[backend] Raw metas query result:",
+          JSON.stringify(metas, null, 2),
+        );
+        const activeMetas = metas
+          .filter((m) => m.flag === true)
+          .sort((a, b) => (a.sequence || 0) - (b.sequence || 0));
+
+        const fieldIds = activeMetas.map((m) => m.fieldId as number);
+        if (fieldIds.length > 0) {
+          const fields = await db
+            .select({
+              id: notificationMasterFieldModel.id,
+              name: notificationMasterFieldModel.name,
+            })
+            .from(notificationMasterFieldModel)
+            .where(inArray(notificationMasterFieldModel.id, fieldIds));
+
+          const nameById = new Map(
+            fields.map((f) => [f.id as number, String(f.name)]),
+          );
+
+          // Build values: academicYear and each selection label -> selected subject name
+          const normalize = (s: string) =>
+            String(s || "")
+              .normalize("NFKD")
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, "");
+          const labelToValue: Record<string, string> = {};
+          // Support common key variants for academic year
+          labelToValue[normalize("academicYear")] = academicYearName;
+          labelToValue[normalize("Academic Year")] = academicYearName;
+          for (const r of rowsForGrid) {
+            labelToValue[normalize(r.metaLabel)] = r.subjectName;
+          }
+
+          console.log("[backend] DEBUG: Field mapping analysis (changed):", {
+            rowsForGrid: rowsForGrid.map((r) => ({
+              metaLabel: r.metaLabel,
+              subjectName: r.subjectName,
+            })),
+            notificationMasterFields: fields.map((f) => ({
+              id: f.id,
+              name: f.name,
+            })),
+            activeMetas: activeMetas.map((m) => ({
+              fieldId: m.fieldId,
+              sequence: m.sequence,
+            })),
+          });
+
+          const resolveValueForField = (rawName: string) => {
+            const key = normalize(rawName);
+            let value = labelToValue[key];
+            if (value) return value;
+            // Handle combined semester labels like "Semester III & IV"
+            if (/SEMESTERIIIIV/.test(key)) {
+              // Try specific semester variants
+              const variantA = key.replace("SEMESTERIIIIV", "SEMESTERIII");
+              const variantB = key.replace("SEMESTERIIIIV", "SEMESTERIV");
+              value = labelToValue[variantA] || labelToValue[variantB] || "";
+              return value;
+            }
+            // Alternative tokenization: sometimes master label may be "III&IV" without 'SEMESTER'
+            if (/IIIIV/.test(key) && !/SEMESTER/.test(key)) {
+              const variantA = key.replace("IIIIV", "III");
+              const variantB = key.replace("IIIIV", "IV");
+              value = labelToValue[variantA] || labelToValue[variantB] || "";
+              return value;
+            }
+            return "";
+          };
+
+          // Only include fields that have actual values (not empty or fallback values)
+          contentRows = activeMetas
+            .map((m) => {
+              const rawName = nameById.get(m.fieldId as number) || "";
+              const value = resolveValueForField(rawName);
+              return {
+                whatsappFieldId: m.fieldId as number,
+                content: String(value ?? ""),
+                rawName: rawName,
+                hasValue:
+                  value &&
+                  value.trim() !== "" &&
+                  !value.includes("Subject Selection Pending") &&
+                  !value.includes("IDC Subject") &&
+                  !value.includes("AEC Subject") &&
+                  !value.includes("CVAC Subject"),
+              };
+            })
+            .filter((row) => row.hasValue || row.rawName === "Name") // Always include Name field
+            .map((row) => ({
+              whatsappFieldId: row.whatsappFieldId,
+              content: row.content,
+            }));
+        }
+      }
+
+      // Filter contentRows for email based on stream
+      let emailContentRows = contentRows;
+      if (
+        streamName === "BSC" ||
+        streamName === "Science" ||
+        whatsappMasterName === "Subject Selection Confirmation - BSC"
+      ) {
+        // For BSC students, exclude "Minor 3" field from email content
+        emailContentRows = contentRows.filter((row, index) => index !== 3); // Remove index 3 (Minor 3)
+        console.log(
+          "[backend] BSC email (changed): Filtered out Minor 3 field, using",
+          emailContentRows.length,
+          "content rows",
+        );
+      }
+
+      // Enqueue EMAIL notification
       await enqueueNotification({
         userId: student.userId as number,
         variant: "EMAIL",
         type: "INFO",
         message: "Confirmation of Semester-wise Subject Selection",
-        notificationMasterId: masterId,
+        notificationMasterId: emailMasterId,
         notificationEvent: {
           subject: "Confirmation of Semester-wise Subject Selection",
           templateData: {
@@ -2250,7 +3122,24 @@ export async function updateStudentSubjectSelectionsEfficiently(
           },
           meta: { devOnly: true },
         },
+        content: emailContentRows,
       });
+
+      // Enqueue WHATSAPP notification with stream-specific master
+      await enqueueNotification({
+        userId: student.userId as number,
+        variant: "WHATSAPP",
+        type: "INFO",
+        message: "Subject Selection Confirmation",
+        notificationMasterId: whatsappMasterId,
+        notificationEvent: {
+          notificationMaster: { id: whatsappMasterId } as any,
+          bodyValues: contentRows.map((row) => row.content),
+          meta: { devOnly: true },
+        } as any,
+        content: contentRows,
+      });
+
       console.log("[backend] enqueue subject-selection (update) <- done");
     }
   } catch (err) {

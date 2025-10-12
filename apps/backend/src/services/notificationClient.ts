@@ -18,6 +18,7 @@ export type NotificationDto = {
 };
 
 export async function enqueueNotification(dto: NotificationDto) {
+  console.log("🚨 [notif-client] enqueueNotification function called!");
   const base =
     process.env.BACKEND_SELF_BASE ||
     `http://localhost:${process.env.NOTIFICATION_SYSTEM_PORT || 8080}`;
@@ -29,7 +30,15 @@ export async function enqueueNotification(dto: NotificationDto) {
     variant: dto.variant,
     type: dto.type,
     hasMasterId: Boolean(dto.notificationMasterId),
+    contentLength: dto.content?.length || 0,
+    bodyValuesLength: (dto.notificationEvent as any)?.bodyValues?.length || 0,
   });
+
+  // Add stack trace to see where this is being called from
+  console.log(
+    "[notif-client] enqueue called from:",
+    new Error().stack?.split("\n")[2]?.trim(),
+  );
   const res = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },

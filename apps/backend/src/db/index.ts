@@ -30,6 +30,7 @@ import {
   loadAllPostOffice,
   loadAllState,
 } from "@/features/user/services/old-student.service";
+import { loadDefaultOtpNotificationMasters } from "@/features/auth/services/otp.service";
 // import { loadDefaultOtpNotificationMaster } from "@/features/auth/services/otp.service";
 
 // Create a connection pool
@@ -67,6 +68,7 @@ export const connectToDatabase = async () => {
     // loadAllPoliceStation();
     loadCourseType();
     loadRegulationType();
+    loadDefaultOtpNotificationMasters();
     loadDefaultDocuments();
     // Clear existing duplicates and load fresh metas (only in development)
 

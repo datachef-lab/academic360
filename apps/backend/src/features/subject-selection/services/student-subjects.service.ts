@@ -114,7 +114,7 @@ export async function findSubjectsSelections(studentId: number) {
       .select()
       .from(academicYearModel)
       .where(eq(academicYearModel.id, foundSession?.academicYearId!));
-    console.log("foundAcademicYear:", foundAcademicYear);
+    // console.log("foundAcademicYear:", foundAcademicYear);
     const { foundAdmAcademicInfo } = await findHierarchy(studentId);
 
     // Resolve keys used for lookups and guard early to avoid 500s
@@ -122,11 +122,11 @@ export async function findSubjectsSelections(studentId: number) {
       foundSession?.academicYearId || foundAcademicYear?.id;
     const resolvedProgramCourseId = foundProgramCourse?.id;
     if (!resolvedAcademicYearId || !resolvedProgramCourseId) {
-      console.warn("[subject-selection] Missing AY/ProgramCourse for student", {
-        studentId,
-        resolvedAcademicYearId,
-        resolvedProgramCourseId,
-      });
+      //   console.warn("[subject-selection] Missing AY/ProgramCourse for student", {
+      //     studentId,
+      //     resolvedAcademicYearId,
+      //     resolvedProgramCourseId,
+      //   });
       return {
         studentSubjectsSelection: [],
         selectedMinorSubjects: [],
@@ -212,7 +212,7 @@ export async function findSubjectsSelections(studentId: number) {
     // Group papers by subject type
     const papersBySubjectType = new Map<number, any[]>();
     for (const row of subjectTypesWithPapers) {
-      console.log("row:", row);
+      //   console.log("row:", row);
       if (!row.subjectType) continue;
 
       const subjectTypeId = row.subjectType.id;
@@ -239,21 +239,21 @@ export async function findSubjectsSelections(studentId: number) {
             rsbj.subjectType.id === subjectTypeId &&
             isSubjectMatch(rsbj.boardSubjectName.name, subject?.name || ""),
         );
-        console.log(
-          "relatedSubjectMainDto",
-          relatedSubjectMainDto,
-          "subject?.name:",
-          subject?.name,
-        );
+        // console.log(
+        //   "relatedSubjectMainDto",
+        //   relatedSubjectMainDto,
+        //   "subject?.name:",
+        //   subject?.name,
+        // );
         // Check the condition
         if (relatedSubjectMainDto) {
           for (const stdSubject of studentSubjects) {
             // If studied in 12th class, then check the result status
-            console.log(
-              "// If studied in 12th class, then check the result status:",
-              stdSubject.boardSubject.boardSubjectName.name,
-              relatedSubjectMainDto.boardSubjectName.name,
-            );
+            // console.log(
+            //   "// If studied in 12th class, then check the result status:",
+            //   stdSubject.boardSubject.boardSubjectName.name,
+            //   relatedSubjectMainDto.boardSubjectName.name,
+            // );
             if (
               isSubjectMatch(
                 stdSubject.boardSubject.boardSubjectName.name,
@@ -266,16 +266,16 @@ export async function findSubjectsSelections(studentId: number) {
               ) {
                 // If the subject is pass, then add the paper to the paper options
                 const detailed = await paperService.modelToDetailedDto(paper);
-                console.log(
-                  "adding the paper to the paper options",
-                  detailed?.subject.name,
-                );
+                // console.log(
+                //   "adding the paper to the paper options",
+                //   detailed?.subject.name,
+                // );
                 if (detailed) paperOptions.push(detailed);
               } else {
-                console.log(
-                  "filtering the paper from the paper options",
-                  paper.subjectId,
-                );
+                // console.log(
+                //   "filtering the paper from the paper options",
+                //   paper.subjectId,
+                // );
                 paperOptions = paperOptions.filter(
                   (p) => p.subject.id !== paper.subjectId,
                 );
@@ -294,10 +294,10 @@ export async function findSubjectsSelections(studentId: number) {
               // If any of the related subject-subs is pass, then add the paper to the paper options
               if (isRelatedSubjectSubPass) {
                 const detailed = await paperService.modelToDetailedDto(paper);
-                console.log(
-                  "adding the paper to the paper options by related subject subs:",
-                  detailed?.subject.name,
-                );
+                // console.log(
+                //   "adding the paper to the paper options by related subject subs:",
+                //   detailed?.subject.name,
+                // );
                 if (detailed) paperOptions.push(detailed);
               }
             }
@@ -359,18 +359,18 @@ export async function findSubjectsSelections(studentId: number) {
       : [];
 
     // Fetch subject selection meta data
-    console.log("foundAcademicYear:", foundAcademicYear);
+    // console.log("foundAcademicYear:", foundAcademicYear);
     const subjectSelectionMetas = await fetchSubjectSelectionMetaData(
       foundAcademicYear.id,
       subjectTypeIds,
       streamIds,
     );
-    console.log("[subject-selection] metas resolved ->", {
-      academicYearId: foundAcademicYear?.id,
-      subjectTypeIds,
-      streamIds,
-      metasCount: subjectSelectionMetas.length,
-    });
+    // console.log("[subject-selection] metas resolved ->", {
+    //   academicYearId: foundAcademicYear?.id,
+    //   subjectTypeIds,
+    //   streamIds,
+    //   metasCount: subjectSelectionMetas.length,
+    // });
 
     // Check if student has actually submitted subject selections through the form
     // (not just admission selections)
@@ -426,7 +426,7 @@ export async function findSubjectsSelections(studentId: number) {
     ]);
 
     const hasFormSubmissions = actualStudentSelections.length > 0;
-    console.log("studentSubjectsSelection:", studentSubjectsSelection);
+    // console.log("studentSubjectsSelection:", studentSubjectsSelection);
     return {
       studentSubjectsSelection,
       selectedMinorSubjects: formatedSelectedMinorSubjects, // Keep original logic for form display
@@ -522,7 +522,7 @@ async function fetchSubjectSelectionMetaData(
     })
     .from(subjectSelectionMetaModel)
     .where(eq(subjectSelectionMetaModel.academicYearId, academicYearId));
-  console.log("subjectSelectionMetas:", subjectSelectionMetas);
+  //   console.log("subjectSelectionMetas:", subjectSelectionMetas);
 
   // Convert to full DTOs with related data
   const fullDtos = await Promise.all(
