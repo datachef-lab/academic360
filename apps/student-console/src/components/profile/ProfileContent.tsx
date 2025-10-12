@@ -213,10 +213,12 @@ export default function ProfileContent() {
                           </label>
                           <Input
                             id="applicationNo"
-                            value={applicationForm?.courseApplication?.[0]?.appNumber || ""}
+                            value={profileInfo.admissionCourseDetailsDto?.appNumber || ""}
+                            // value={applicationForm?.courseApplication?.[0]?.appNumber || ""}
                             disabled
                             className="bg-gray-50"
                           />
+                          {/* {JSON.stringify(profileInfo.admissionCourseDetailsDto)} */}
                         </div>
                         <div className="space-y-2">
                           <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
@@ -414,7 +416,7 @@ export default function ProfileContent() {
                                 value={personalDetails?.address?.[0]?.addressLine || ""}
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
-                                rows={2}
+                                rows={4}
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-3">
@@ -523,7 +525,7 @@ export default function ProfileContent() {
                                 }
                                 disabled={!isEditing}
                                 className={!isEditing ? "bg-gray-50" : ""}
-                                rows={2}
+                                rows={4}
                               />
                             </div>
                             <div className="grid grid-cols-2 gap-3">

@@ -22,6 +22,7 @@ import {
   PersonDto,
 } from "@repo/db/index.js";
 import {
+  AdmissionCourseDetailsDto,
   AdmissionGeneralInfoDto,
   ApplicationFormDto,
   StudentAcademicSubjectsDto,
@@ -518,8 +519,24 @@ export async function findProfileInfo(
       )[0] ?? null;
   }
 
+  // Map course applications to DTOs (only for students)
+  const admissionCourseDetailsDto: AdmissionCourseDetailsDto | null =
+    isStudent && student?.admissionCourseDetailsId
+      ? await db
+          .select()
+          .from(admissionCourseDetailsModel)
+          .where(
+            eq(
+              admissionCourseDetailsModel.id,
+              student.admissionCourseDetailsId,
+            ),
+          )
+          .then((r) => (r[0] ? mapCourseDetailsToDto(r[0]) : null))
+      : null;
+
   const result: ProfileInfo = {
     applicationFormDto,
+    admissionCourseDetailsDto,
     academicInfo: (await mapAcademicInfoToDto(studentAcademicInfo))!,
     familyDetails: family ? await mapFamilyToDto(family) : null,
     personalDetails: personalDetailsDto,

@@ -13,6 +13,7 @@ import {
   canCreateSelectionsHandler,
   getSelectionStatisticsHandler,
   exportStudentSubjectSelectionsHandler,
+  debugMinor3ConditionsHandler,
 } from "../controllers/student-subject-selection.controller.js";
 import { createAdminStudentSubjectSelectionsHandler } from "../controllers/student-subject-selection.controller.js";
 
@@ -84,6 +85,12 @@ router.get(
 router.get(
   "/export/:subjectSelectionMetaId",
   exportStudentSubjectSelectionsHandler as RequestHandler,
+);
+
+// Debug endpoint for Minor 3 conditions
+router.get(
+  "/debug/minor3-conditions",
+  debugMinor3ConditionsHandler as RequestHandler,
 );
 
 export default router;

@@ -46,7 +46,7 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
           </span>
         </div>
 
-        <div className="flex items-center justify-between py-2 border-b border-gray-100">
+        {/* <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">CU Registration Number</span>
           <span className="font-semibold text-gray-800 text-base">N/A</span>
         </div>
@@ -54,7 +54,7 @@ export default function BasicInfo({ student }: { student: StudentDto | null }) {
         <div className="flex items-center justify-between py-2 border-b border-gray-100">
           <span className="text-gray-500 text-sm">CU Roll Number</span>
           <span className="font-semibold text-gray-800 text-base">N/A</span>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );

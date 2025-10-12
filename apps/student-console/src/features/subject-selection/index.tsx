@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Instructions from "./components/instructions";
 import SubjectSelectionForm from "./components/subject-selection-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
-import { Info } from "lucide-react";
+import { Info, AlertCircle } from "lucide-react";
 import { useStudent } from "@/providers/student-provider";
 
 export default function SubjectSelection() {
@@ -15,6 +15,26 @@ export default function SubjectSelection() {
     aec?: boolean;
     cvac?: boolean;
   }>({});
+
+  // Check if student's program course contains "BBA"
+  const isBBAStudent = student?.programCourse?.course?.name?.trim()?.toUpperCase().includes("BBA") || false;
+
+  // If BBA student, show message instead of form
+  if (isBBAStudent) {
+    return (
+      <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">
+        <div className="flex items-center justify-center w-full h-full">
+          <div className="text-center max-w-md mx-auto p-8">
+            <div className="mb-6">
+              <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">Subject Selection Not Available</h2>
+              <p className="text-gray-600 text-lg">Subject Selection is not applicable for BBA students.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">

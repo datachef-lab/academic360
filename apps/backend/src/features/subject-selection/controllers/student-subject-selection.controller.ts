@@ -15,6 +15,7 @@ import {
   canStudentCreateSelections,
   getSelectionStatistics,
   exportStudentSubjectSelections,
+  debugMinor3Conditions,
 } from "../services/student-subject-selection.service.js";
 
 // Get subject selection meta data for UI form
@@ -796,6 +797,30 @@ export async function exportStudentSubjectSelectionsHandler(
     res.status(200).send(exportResult.buffer);
   } catch (error) {
     console.error("Export error:", error);
+    handleError(error, res, next);
+  }
+}
+
+// Debug handler for Minor 3 conditions
+export async function debugMinor3ConditionsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    await debugMinor3Conditions();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          null,
+          "Debug information logged to console. Check server logs for details.",
+        ),
+      );
+  } catch (error) {
+    console.error("Debug error:", error);
     handleError(error, res, next);
   }
 }

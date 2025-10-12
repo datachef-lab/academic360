@@ -3152,6 +3152,85 @@ export async function updateStudentSubjectSelectionsEfficiently(
   };
 }
 
+// Debug function to check Minor 3 creation conditions
+export async function debugMinor3Conditions() {
+  console.log("=== DEBUGGING MINOR 3 CONDITIONS ===");
+
+  // Check academic year
+  const academicYear = await db
+    .select()
+    .from(academicYearModel)
+    .where(eq(academicYearModel.year, "2025-26"));
+  console.log(
+    "Academic Year 2025-26:",
+    academicYear[0] ? "EXISTS" : "NOT FOUND",
+  );
+
+  // Check streams
+  const streams = await db.select().from(streamModel);
+  const commerceStream = streams.find(
+    (s) => s.name.toLowerCase().trim() === "commerce",
+  );
+  console.log(
+    "Commerce Stream:",
+    commerceStream ? `EXISTS (ID: ${commerceStream.id})` : "NOT FOUND",
+  );
+  console.log(
+    "All Streams:",
+    streams.map((s) => s.name),
+  );
+
+  // Check classes
+  const classes = await db.select().from(classModel);
+  const semester3Class = classes.find(
+    (c) => c.name.toUpperCase().trim() === "SEMESTER III",
+  );
+  console.log(
+    "Semester III Class:",
+    semester3Class ? `EXISTS (ID: ${semester3Class.id})` : "NOT FOUND",
+  );
+  console.log(
+    "All Classes:",
+    classes.map((c) => c.name),
+  );
+
+  // Check subject types
+  const subjectTypes = await db.select().from(subjectTypeModel);
+  const minorSubjectType = subjectTypes.find(
+    (st) => st.code?.toUpperCase().trim() === "MN",
+  );
+  console.log(
+    "Minor Subject Type:",
+    minorSubjectType
+      ? `EXISTS (ID: ${minorSubjectType.id}, Code: ${minorSubjectType.code})`
+      : "NOT FOUND",
+  );
+  console.log(
+    "All Subject Types:",
+    subjectTypes.map((st) => `${st.name} (${st.code})`),
+  );
+
+  // Check if Minor 3 meta exists
+  if (academicYear[0] && minorSubjectType) {
+    const minor3Meta = await db
+      .select()
+      .from(subjectSelectionMetaModel)
+      .where(
+        and(
+          eq(subjectSelectionMetaModel.label, "Minor 3 (Semester III)"),
+          eq(subjectSelectionMetaModel.subjectTypeId, minorSubjectType.id),
+          eq(subjectSelectionMetaModel.academicYearId, academicYear[0].id),
+        ),
+      );
+    console.log(
+      "Minor 3 Meta:",
+      minor3Meta[0] ? `EXISTS (ID: ${minor3Meta[0].id})` : "NOT FOUND",
+    );
+  }
+
+  console.log("=== END DEBUG ===");
+}
+
 // Export function for student subject selections
 export async function exportStudentSubjectSelections(
   subjectSelectionMetaId: number,
@@ -3215,6 +3294,14 @@ export async function exportStudentSubjectSelections(
     .from(subjectSelectionMetaModel)
     .where(eq(subjectSelectionMetaModel.academicYearId, meta.academicYearId));
 
+  // Debug: Log all metas found for the academic year
+  console.log(
+    `Found ${allMetasForYear.length} metas for academic year ${meta.academicYearId}:`,
+  );
+  allMetasForYear.forEach((m) => {
+    console.log(`- ID: ${m.id}, Label: "${m.label}", Sequence: ${m.sequence}`);
+  });
+
   // Sort by sequence (nulls last), to ensure consistent column order after Section
   allMetasForYear = allMetasForYear.sort((a, b) => {
     const av = a.sequence ?? Number.MAX_SAFE_INTEGER;
@@ -3222,7 +3309,8 @@ export async function exportStudentSubjectSelections(
     return av - bv;
   });
 
-  // Get latest version of student subject selections for the specified meta ID (per student+subject)
+  // Get latest version of student subject selections for ALL metas in the academic year (per student+subject)
+  // This ensures we get all students who have selections for any meta in the academic year
   const latestSelections = await db
     .select({
       studentId: studentSubjectSelectionModel.studentId,
@@ -3234,9 +3322,9 @@ export async function exportStudentSubjectSelections(
     .from(studentSubjectSelectionModel)
     .where(
       and(
-        eq(
+        inArray(
           studentSubjectSelectionModel.subjectSelectionMetaId,
-          subjectSelectionMetaId,
+          allMetasForYear.map((m) => m.id),
         ),
         eq(studentSubjectSelectionModel.isActive, true),
       ),
@@ -3248,7 +3336,7 @@ export async function exportStudentSubjectSelections(
 
   if (latestSelections.length === 0) {
     console.log(
-      "No student subject selections found for the specified meta ID",
+      "No student subject selections found for any meta in the academic year",
     );
     return {
       buffer: null,
@@ -3270,6 +3358,10 @@ export async function exportStudentSubjectSelections(
 
   // Get student IDs for batch fetching
   const studentIds = [...new Set(latestSelections.map((s) => s.studentId))];
+  console.log(
+    `Found ${studentIds.length} unique students with selections:`,
+    studentIds,
+  );
 
   // Get student details with user info and promotions
   const studentsWithDetails = await db
@@ -3313,9 +3405,8 @@ export async function exportStudentSubjectSelections(
     .from(userModel)
     .where(sql`1=0`); // placeholder empty selection; we'll look up createdBy users dynamically below
 
-  // Create lookup maps
+  // Create lookup maps (subjectMap will be created later after subjects are loaded)
   const studentMap = new Map(studentsWithDetails.map((s) => [s.studentId, s]));
-  const subjectMap = new Map(subjects.map((s) => [s.id, s]));
   const userMap = new Map<number, { id: number; name: string; type: string }>(
     createdByUsers.map((u) => [u.id, u]),
   );
@@ -3368,6 +3459,15 @@ export async function exportStudentSubjectSelections(
       .where(inArray(subjectModel.id, subjectIds));
   }
 
+  // Now create the subjectMap after subjects are loaded
+  const subjectMap = new Map(subjects.map((s) => [s.id, s]));
+
+  // Debug: Log subject mapping info
+  console.log(
+    `Loaded ${subjects.length} subjects for mapping:`,
+    subjects.map((s) => `${s.name} (ID: ${s.id})`),
+  );
+
   // Group selections by student and meta (each entry is the latest per student+meta+subject)
   const studentSelectionsMap = new Map();
   allSelectionsForYear.forEach((selection) => {
@@ -3377,6 +3477,20 @@ export async function exportStudentSubjectSelections(
     }
     studentSelectionsMap.get(key).push(selection);
   });
+
+  // Debug: Log total selections found
+  console.log(`Total selections found: ${allSelectionsForYear.length}`);
+  console.log(`Student selections map size: ${studentSelectionsMap.size}`);
+
+  // Debug: Log selections breakdown by meta
+  const selectionsByMeta = new Map();
+  allSelectionsForYear.forEach((selection) => {
+    const metaId = selection.subjectSelectionMetaId;
+    const meta = allMetasForYear.find((m) => m.id === metaId);
+    const metaLabel = meta ? meta.label : `Meta ID ${metaId}`;
+    selectionsByMeta.set(metaLabel, (selectionsByMeta.get(metaLabel) || 0) + 1);
+  });
+  console.log("Selections by meta:", Object.fromEntries(selectionsByMeta));
 
   // Prepare Excel data
   const excelData = [];
@@ -3406,6 +3520,14 @@ export async function exportStudentSubjectSelections(
           })
           .filter(Boolean);
         row[metaItem.label] = subjectNames.join(", ");
+
+        // Debug: Log when Minor 3 has data
+        if (metaItem.label.includes("Minor 3") && subjectNames.length > 0) {
+          console.log(
+            `Minor 3 data found for student ${studentDetail.uid}:`,
+            subjectNames,
+          );
+        }
       } else {
         row[metaItem.label] = "";
       }
