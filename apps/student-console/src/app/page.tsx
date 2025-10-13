@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 import {
   sendOtpRequest,
@@ -607,7 +608,7 @@ export default function SignInPage() {
                 ) : (
                   <div>
                     <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
-                      UID (10 digits){" "}
+                      Enter Your UID (10 Digits){" "}
                     </label>
                     <div className="relative mt-1">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -626,31 +627,37 @@ export default function SignInPage() {
                       </span>
                       <Input
                         id="uid"
-                        placeholder="Enter your 10-digit UID"
+                        placeholder="ENTER 10 DIGIT UID HERE"
                         value={uid}
                         onChange={(e) => setUid(formatUid(e.target.value))}
-                        className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11 text-center tracking-widest"
+                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-2xl sm:text-3xl h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400"
                         maxLength={10}
                         required
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      We'll send OTP to{" "}
-                      {uid ? <span className="font-medium text-red-500">{uid}@thebges.edu.in</span> : "your email"}
-                    </p>
                   </div>
                 )}
               </div>
             </div>
-            {uid.replace(/\D/g, "").length === 10 && userPreview && (
-              <div className="mt-4 pt-4">
-                <span
-                  className="inline-flex items-center rounded-full border border-red-500 bg-red-50 px-2 py-0.5 font-semibold text-red-700"
-                  //   className="text-2xl font-bold"
-                  title="Matched name"
-                >
-                  {lookupPending ? "Checking…" : userPreview.name}
-                </span>
+            {uid.replace(/\D/g, "").length === 10 && (
+              <div className="mt-4 pt-2 mb-2">
+                <div className="w-full rounded-md border-2 border-blue-300 bg-blue-100 px-4 py-4 flex flex-col items-center justify-center gap-2 text-center">
+                  {userPreview && (
+                    <p className="text-lg sm:text-xl font-bold text-gray-800">
+                      {lookupPending ? "Checking…" : userPreview.name}
+                    </p>
+                  )}
+                  <div className="flex flex-nowrap justify-center items-center gap-2 whitespace-nowrap text-base sm:text-lg text-gray-700">
+                    <span>We'll send OTP to</span>
+                    {uid ? (
+                      <span className="text-base sm:text-lg font-bold inline-block whitespace-nowrap">
+                        {uid}@thebges.edu.in
+                      </span>
+                    ) : (
+                      <span>your email</span>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
