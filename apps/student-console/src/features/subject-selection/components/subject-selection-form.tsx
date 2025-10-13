@@ -1676,7 +1676,7 @@ export default function SubjectSelectionForm({
         <div className="shadow-lg rounded-xl bg-white  md:mt-0 p-6 border border-gray-100 min-h-[calc(100%-1rem)]">
           {/* Mobile notes banner */}
           <div className="lg:hidden">
-            {showTips && (
+            {/* {showTips && (
               <div className="mb-4 p-3 rounded-md bg-blue-50 border border-blue-200 text-blue-800 flex items-start gap-3">
                 <AlertCircle className="w-4 h-4 mt-0.5" />
                 <div className="text-base">
@@ -1686,7 +1686,7 @@ export default function SubjectSelectionForm({
                   Dismiss
                 </button>
               </div>
-            )}
+            )} */}
             {/* <button
               type="button"
               onClick={() => openNotes?.()}

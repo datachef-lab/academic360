@@ -80,11 +80,14 @@ export default function DashboardLayout({
             const target = e.target as HTMLImageElement;
             target.style.display = "none";
             const fallback = target.nextElementSibling as HTMLElement;
-            if (fallback) fallback.classList.remove("hidden");
+            if (fallback) {
+              fallback.classList.remove("hidden");
+              fallback.classList.add("flex");
+            }
           }}
         />
         {/* Fallback avatar - hidden by default */}
-        <div className="hidden bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full flex items-center justify-center">
+        <div className="hidden bg-gradient-to-br from-blue-500 to-indigo-600 h-full w-full items-center justify-center">
           <User className="h-6 w-6 text-white" strokeWidth={1.5} />
         </div>
       </>
@@ -113,7 +116,7 @@ export default function DashboardLayout({
     <StudentProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="h-screen overflow-hidden px-2 py-2 md:pr-2 ">
+        <SidebarInset className="h-screen px-2 py-2 md:pr-2 ">
           {/* Invalid user dialog */}
           <Dialog open={invalidUserOpen} onOpenChange={setInvalidUserOpen}>
             <DialogContent>
@@ -183,8 +186,8 @@ export default function DashboardLayout({
               })()} */}
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 h-[calc(100%-3rem)] overflow-hidden">
-            <div className="h-[calc(100vh-3.5rem)] flex-1 rounded-xl overflow-y-auto no-scrollbar">
+          <div className="flex flex-1 flex-col gap-4 h-[calc(100%-3rem)]">
+            <div className="flex-1 rounded-xl overflow-y-auto">
               <SharedArea>{children}</SharedArea>
             </div>
           </div>
