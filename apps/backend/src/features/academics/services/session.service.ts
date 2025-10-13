@@ -18,6 +18,14 @@ export async function findById(id: number) {
   return session || null;
 }
 
+export async function findByAcademicYearId(academicYearId: number) {
+  return await db
+    .select()
+    .from(sessionModel)
+    .where(eq(sessionModel.academicYearId, academicYearId))
+    .orderBy(desc(sessionModel.createdAt));
+}
+
 export async function create(
   sessionData: Omit<
     typeof sessionModel.$inferInsert,

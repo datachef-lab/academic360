@@ -15,6 +15,7 @@ import {
   Calendar,
   FileText,
   GraduationCap,
+  ClipboardList,
 } from "lucide-react";
 import { GalleryVerticalEnd } from "lucide-react";
 import { useAuth } from "@/features/auth/providers/auth-provider";
@@ -68,6 +69,7 @@ const data = {
     { title: "Academic Setup", url: "/dashboard/academic-year-setup", icon: LayoutList },
     { title: "CU Registration", url: "/dashboard/cu-registration", icon: FileText },
     { title: "Exam Management", url: "/dashboard/exam-management", icon: GraduationCap },
+    { title: "Real Time Tracker", url: "/dashboard/realtime-tracker", icon: ClipboardList },
     // { title: "Admissions & Fees", url: "/dashboard/admissions-fees", icon: BadgeIndianRupee },
     // { title: "Batches", url: "/dashboard/batches", icon: Layers3 },
     // { title: "Attendance & Timetable", url: "/dashboard/attendance-timetable", icon: CalendarClock },

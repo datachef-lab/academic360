@@ -19,6 +19,7 @@ import { userModel } from "@repo/db/schemas/models/user";
 import { studentModel } from "@repo/db/schemas/models/user/student.model";
 import { promotionModel } from "@repo/db/schemas/models/batches/promotions.model";
 import { sectionModel } from "@repo/db/schemas/models/academics/section.model";
+import { cuRegistrationCorrectionRequestModel } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model";
 import {
   StudentSubjectSelection,
   StudentSubjectSelectionT,
@@ -1935,6 +1936,12 @@ export async function createStudentSubjectSelectionsWithValidation(
     },
   );
 
+  // Emit MIS table updates via socket
+  const affectedStudentIds = Array.from(
+    new Set(selections.map((s) => s.studentId)),
+  );
+  await emitMisTableUpdates(affectedStudentIds);
+
   return { success: true, data: dtos };
 }
 
@@ -3141,6 +3148,12 @@ export async function updateStudentSubjectSelectionsEfficiently(
     console.log("[Notif] enqueue failed (update):", err);
   }
 
+  // Emit MIS table updates via socket
+  const affectedStudentIds = Array.from(
+    new Set(selections.map((s) => s.studentId)),
+  );
+  await emitMisTableUpdates(affectedStudentIds);
+
   return {
     success: true,
     data: allActiveSelections,
@@ -3509,20 +3522,31 @@ export async function exportStudentSubjectSelections(
       const selections = studentSelectionsMap.get(key) || [];
 
       if (selections.length > 0) {
-        const subjectNames = selections
-          .map((sel: any) => {
-            if (sel.subjectName) return sel.subjectName as string;
-            const subject = subjectMap.get(sel.subjectId);
-            return subject ? subject.name : "";
-          })
-          .filter(Boolean);
-        row[metaItem.label] = subjectNames.join(", ");
+        // Choose the latest selection prioritizing version, then updatedAt, then createdAt
+        const latestSel = selections.reduce((acc: any, cur: any) => {
+          const accVer = typeof acc.version === "number" ? acc.version : -1;
+          const curVer = typeof cur.version === "number" ? cur.version : -1;
+          if (curVer !== accVer) {
+            return curVer > accVer ? cur : acc;
+          }
+          const accTime = acc.updatedAt || acc.createdAt || 0;
+          const curTime = cur.updatedAt || cur.createdAt || 0;
+          return curTime >= accTime ? cur : acc;
+        });
+
+        const pickedName = (() => {
+          if (latestSel.subjectName) return latestSel.subjectName as string;
+          const subj = subjectMap.get(latestSel.subjectId);
+          return subj ? subj.name : "";
+        })();
+
+        row[metaItem.label] = pickedName;
 
         // Debug: Log when Minor 3 has data
-        if (metaItem.label.includes("Minor 3") && subjectNames.length > 0) {
+        if (metaItem.label.includes("Minor 3") && pickedName) {
           console.log(
-            `Minor 3 data found for student ${studentDetail.uid}:`,
-            subjectNames,
+            `Minor 3 latest subject for student ${studentDetail.uid}:`,
+            pickedName,
           );
         }
       } else {
@@ -3665,5 +3689,245 @@ export async function exportStudentSubjectSelections(
     fileName,
     totalRecords: excelData.length,
     allMetasForYear: allMetasForYear, // Include meta information for consistency
+  };
+}
+
+// Live counts by Program-Course for an academic year
+export async function getLiveSelectionCountsByProgramCourse(
+  academicYearId: number,
+) {
+  const metas = await db
+    .select({ id: subjectSelectionMetaModel.id })
+    .from(subjectSelectionMetaModel)
+    .where(eq(subjectSelectionMetaModel.academicYearId, academicYearId));
+  const metaIds = metas.map((m) => m.id);
+
+  if (metaIds.length === 0) {
+    return { updatedAt: new Date().toISOString(), programCourses: [] };
+  }
+
+  const doneRows = await db
+    .select({
+      programCourseId: promotionModel.programCourseId,
+      doneCount:
+        sql<number>`COUNT(DISTINCT ${studentSubjectSelectionModel.studentId})`.as(
+          "doneCount",
+        ),
+    })
+    .from(studentSubjectSelectionModel)
+    .innerJoin(
+      studentModel,
+      eq(studentModel.id, studentSubjectSelectionModel.studentId),
+    )
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .where(
+      and(
+        inArray(studentSubjectSelectionModel.subjectSelectionMetaId, metaIds),
+        eq(studentSubjectSelectionModel.isActive, true),
+      ),
+    )
+    .groupBy(promotionModel.programCourseId);
+
+  const eligibleRows = await db
+    .select({
+      programCourseId: promotionModel.programCourseId,
+      eligibleCount: sql<number>`COUNT(DISTINCT ${studentModel.id})`.as(
+        "eligibleCount",
+      ),
+    })
+    .from(studentModel)
+    .leftJoin(promotionModel, eq(promotionModel.studentId, studentModel.id))
+    .groupBy(promotionModel.programCourseId);
+
+  const pcIds = [
+    ...new Set(
+      [...doneRows, ...eligibleRows]
+        .map((r: any) => r.programCourseId)
+        .filter(Boolean),
+    ),
+  ];
+  const pcs = pcIds.length
+    ? await db
+        .select({ id: programCourseModel.id, name: programCourseModel.name })
+        .from(programCourseModel)
+        .where(inArray(programCourseModel.id, pcIds))
+    : [];
+  const pcMap = new Map(pcs.map((p) => [p.id, p.name]));
+
+  const eligibleMap = new Map(
+    eligibleRows.map((r: any) => [r.programCourseId, r.eligibleCount]),
+  );
+  const doneMap = new Map(
+    doneRows.map((r: any) => [r.programCourseId, r.doneCount]),
+  );
+  const programCourses = pcIds.map((id) => {
+    const eligible = eligibleMap.get(id) || 0;
+    const done = doneMap.get(id) || 0;
+    const name = pcMap.get(id) || String(id);
+    const percent = eligible > 0 ? Math.round((done / eligible) * 100) : 0;
+    return {
+      programCourseId: id,
+      name,
+      doneCount: done,
+      eligibleCount: eligible,
+      percent,
+    };
+  });
+
+  return { updatedAt: new Date().toISOString(), programCourses };
+}
+
+// Helper function to emit MIS table updates via socket
+async function emitMisTableUpdates(studentIds: number[]) {
+  try {
+    // Get unique session and class combinations for the affected students
+    const studentPromotions = await db
+      .select({
+        sessionId: promotionModel.sessionId,
+        classId: promotionModel.classId,
+      })
+      .from(promotionModel)
+      .where(inArray(promotionModel.studentId, studentIds));
+
+    // Get unique combinations
+    const uniqueCombinations = Array.from(
+      new Set(
+        studentPromotions.map(
+          (p) => `${p.sessionId || "null"}-${p.classId || "null"}`,
+        ),
+      ),
+    );
+
+    // Emit updates for each unique combination
+    for (const combination of uniqueCombinations) {
+      const [sessionIdStr, classIdStr] = combination.split("-");
+      const sessionId =
+        sessionIdStr === "null" ? undefined : parseInt(sessionIdStr);
+      const classId = classIdStr === "null" ? undefined : parseInt(classIdStr);
+
+      const misData = await getMisTableData(sessionId, classId);
+      socketService.sendMisTableUpdate({ sessionId, classId }, misData.data, {
+        trigger: "subject_selection_change",
+        affectedStudents: studentIds.length,
+      });
+    }
+
+    // Also emit a general update to all MIS dashboard clients
+    const generalMisData = await getMisTableData();
+    socketService.sendMisTableUpdateToAll(generalMisData.data, {
+      trigger: "subject_selection_change",
+      affectedStudents: studentIds.length,
+    });
+
+    console.log(
+      `[SocketService] Emitted MIS table updates for ${studentIds.length} affected students`,
+    );
+  } catch (error) {
+    console.error("[SocketService] Error emitting MIS table updates:", error);
+  }
+}
+
+// MIS Table data with sessionId and classId filters
+export async function getMisTableData(sessionId?: number, classId?: number) {
+  // Build WHERE conditions for session and class filters
+  const whereConditions = [
+    eq(userModel.isActive, true),
+    eq(userModel.type, "STUDENT"),
+  ];
+
+  if (sessionId) {
+    whereConditions.push(eq(promotionModel.sessionId, sessionId));
+  }
+
+  if (classId) {
+    whereConditions.push(eq(promotionModel.classId, classId));
+  }
+
+  // Get program course data with counts
+  const programCourseData = await db
+    .select({
+      programCourseId: programCourseModel.id,
+      programCourseName: programCourseModel.name,
+      admitted: countDistinct(userModel.id),
+      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
+      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
+      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
+    })
+    .from(programCourseModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      studentSubjectSelectionModel,
+      eq(studentSubjectSelectionModel.studentId, studentModel.id),
+    )
+    .leftJoin(
+      cuRegistrationCorrectionRequestModel,
+      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+    )
+    .where(and(...whereConditions))
+    .groupBy(programCourseModel.id, programCourseModel.name);
+
+  // Get total counts
+  const totalData = await db
+    .select({
+      admitted: countDistinct(userModel.id),
+      subjectSelectionDone: sql<number>`COUNT(DISTINCT CASE WHEN ${studentSubjectSelectionModel.studentId} IS NOT NULL THEN ${studentModel.id} END)`,
+      onlineRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.onlineRegistrationDone} = true THEN ${studentModel.id} END)`,
+      physicalRegDone: sql<number>`COUNT(DISTINCT CASE WHEN ${cuRegistrationCorrectionRequestModel.physicalRegistrationDone} = true THEN ${studentModel.id} END)`,
+    })
+    .from(programCourseModel)
+    .innerJoin(
+      promotionModel,
+      eq(promotionModel.programCourseId, programCourseModel.id),
+    )
+    .innerJoin(studentModel, eq(studentModel.id, promotionModel.studentId))
+    .innerJoin(userModel, eq(userModel.id, studentModel.userId))
+    .leftJoin(
+      studentSubjectSelectionModel,
+      eq(studentSubjectSelectionModel.studentId, studentModel.id),
+    )
+    .leftJoin(
+      cuRegistrationCorrectionRequestModel,
+      eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+    )
+    .where(and(...whereConditions));
+
+  const total = totalData[0] || {
+    admitted: 0,
+    subjectSelectionDone: 0,
+    onlineRegDone: 0,
+    physicalRegDone: 0,
+  };
+
+  // Combine data with totals
+  const data = [
+    ...programCourseData.map((row, index) => ({
+      programCourseName:
+        row.programCourseName || `Program Course ${row.programCourseId}`,
+      admitted: row.admitted,
+      subjectSelectionDone: row.subjectSelectionDone,
+      onlineRegDone: row.onlineRegDone,
+      physicalRegDone: row.physicalRegDone,
+      sortOrder: 0,
+    })),
+    {
+      programCourseName: "Total",
+      admitted: total.admitted,
+      subjectSelectionDone: total.subjectSelectionDone,
+      onlineRegDone: total.onlineRegDone,
+      physicalRegDone: total.physicalRegDone,
+      sortOrder: 1,
+    },
+  ];
+
+  return {
+    updatedAt: new Date().toISOString(),
+    sessionId,
+    classId,
+    data,
   };
 }

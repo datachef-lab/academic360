@@ -160,6 +160,35 @@ export async function findById(id: number) {
   return formattedUser;
 }
 
+export async function getUserStats() {
+  const [adminCount] = await db
+    .select({ count: count() })
+    .from(userModel)
+    .where(and(eq(userModel.type, "ADMIN"), eq(userModel.isActive, true)));
+
+  const [staffCount] = await db
+    .select({ count: count() })
+    .from(userModel)
+    .where(and(eq(userModel.type, "STAFF"), eq(userModel.isActive, true)));
+
+  const [studentCount] = await db
+    .select({ count: count() })
+    .from(userModel)
+    .where(and(eq(userModel.type, "STUDENT"), eq(userModel.isActive, true)));
+
+  const [totalUsers] = await db
+    .select({ count: count() })
+    .from(userModel)
+    .where(eq(userModel.isActive, true));
+
+  return {
+    adminCount: adminCount.count,
+    staffCount: staffCount.count,
+    studentCount: studentCount.count,
+    totalUsers: totalUsers.count,
+  };
+}
+
 export async function findByEmail(email: string) {
   const [foundUser] = await db
     .select()

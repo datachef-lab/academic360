@@ -1,0 +1,2 @@
+ALTER TABLE "cu_registration_correction_requests" RENAME COLUMN "online_registration_number_done" TO "online_registration_done";--> statement-breakpoint
+ALTER TABLE "cu_registration_correction_requests" RENAME COLUMN "physical_registration_number_done" TO "physical_registration_done";

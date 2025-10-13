@@ -47,3 +47,28 @@ export const getAllSessionsHandler = async (
     handleError(error, res, next);
   }
 };
+
+export const getSessionsByAcademicYearHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { academicYearId } = req.params;
+    const sessions = await sessionService.findByAcademicYearId(
+      Number(academicYearId),
+    );
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          sessions,
+          "Sessions fetched by academic year",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};

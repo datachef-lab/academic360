@@ -3,6 +3,7 @@ import express from "express";
 import {
   createSessionHandler,
   getAllSessionsHandler,
+  getSessionsByAcademicYearHandler,
 } from "../controllers/session.controller.js";
 
 const router = express.Router();
@@ -11,6 +12,7 @@ const router = express.Router();
 router.use(verifyJWT);
 
 router.get("/", getAllSessionsHandler);
+router.get("/academic-year/:academicYearId", getSessionsByAcademicYearHandler);
 router.post("/", createSessionHandler);
 
 export default router;

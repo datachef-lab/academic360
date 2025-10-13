@@ -82,6 +82,7 @@ import CuRegistrationHomePage from "./features/cu-registration/pages/CuRegistrat
 import CuRegStudentPage from "./features/cu-registration/pages/CuRegStudentPage";
 import BoardSubjectUnivSubjectMappingPaper from "./features/academic-year-setup/pages/board-subject-univ-subject-mapping-paper";
 import * as examManagementModule from "@/features/exam-management";
+import RealTimeTrackerPage from "./features/realtime-tracker/pages";
 
 // import * as resourceModule from "@/pages/resources";
 
@@ -301,6 +302,10 @@ const router = createBrowserRouter(
             { path: "merit-criteria", element: <MeritCriteriaPage /> },
             { path: "fee-slab-mapping", element: <FeesSlabMappingPage /> },
           ],
+        },
+        {
+          path: "realtime-tracker",
+          element: <RealTimeTrackerPage />,
         },
         {
           path: "admissions-fees",
