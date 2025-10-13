@@ -17,10 +17,18 @@ export default function SubjectSelection() {
   }>({});
 
   // Check if student's program course contains "BBA"
-  const isBBAStudent = student?.programCourse?.course?.name?.trim()?.toUpperCase().includes("BBA") || false;
+  const blocked = new Set(["BBA", "MA", "MCOM"]);
+
+  const rawName = student?.programCourse?.course?.name ?? "";
+  const key = rawName
+    .normalize("NFKD")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
+
+  const isBlockStudents = blocked.has(key);
 
   // If BBA student, show message instead of form
-  if (isBBAStudent) {
+  if (isBlockStudents) {
     return (
       <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">
         <div className="flex items-center justify-center w-full h-full">
@@ -28,7 +36,10 @@ export default function SubjectSelection() {
             <div className="mb-6">
               <AlertCircle className="w-16 h-16 text-amber-500 mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-gray-800 mb-2">Subject Selection Not Available</h2>
-              <p className="text-gray-600 text-lg">Subject Selection is not applicable for BBA students.</p>
+              <p className="text-gray-600 text-lg">
+                Subject Selection is not applicable for {student?.programCourse?.course?.name?.trim()?.toUpperCase()}{" "}
+                students.
+              </p>
             </div>
           </div>
         </div>
