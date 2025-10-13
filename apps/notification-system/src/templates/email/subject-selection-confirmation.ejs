@@ -217,22 +217,11 @@
         
         <div class="intro-text">
           Congratulations! You have successfully submitted your <strong>Semester-wise Subject Selection</strong>
-          under the Curriculum &amp; Credit Framework (CCF) for the academic year
-          <strong><%= content && content.academicYear ? content.academicYear : "" %></strong>.
+          under the Curriculum &amp; Credit Framework (CCF).
         </div>
         
         <div class="intro-text">
-          <% 
-            // Check if user is in BA or BSc program
-            const programCourseName = user?.currentPromotion?.programCourse?.name || user?.programCourse?.course?.name || "";
-            const normalizedName = programCourseName.toLowerCase().replace(/[.\s]/g, "");
-            const isBaOrBscProgram = normalizedName.includes("b.a") || normalizedName.includes("ba") || normalizedName.includes("b.sc") || normalizedName.includes("bsc");
-          %>
-          <% if (isBaOrBscProgram) { %>
-            For your reference & future use, please find below the subject(s) chosen by you:
-          <% } else { %>
-            For your ready reference, a summary of subjects to be studied by you from <strong>Semesters I to IV</strong> (including the subjects selected by you) is provided below:
-          <% } %>
+          For your reference & future use, please find below the subject(s) chosen by you:
         </div>
 
         <!-- Subject Selection Table -->
