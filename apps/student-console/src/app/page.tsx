@@ -543,7 +543,7 @@ export default function SignInPage() {
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
               {otpSent ? "Enter OTP" : "Sign in with UID"}
             </h2>
-            <p className="mt-2 text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left sm:whitespace-nowrap">
+            <p className="mt-2 w-full max-w-full text-sm sm:text-base md:text-lg text-gray-600 text-center md:text-left md:whitespace-nowrap break-words">
               {otpSent ? `OTP sent to ${uid}@thebges.edu.in` : "Enter your 10-digit UID to receive OTP"}
             </p>
           </div>
@@ -630,7 +630,7 @@ export default function SignInPage() {
                         placeholder="ENTER 10 DIGIT UID HERE"
                         value={uid}
                         onChange={(e) => setUid(formatUid(e.target.value))}
-                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-2xl sm:text-3xl h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400"
+                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-2xl sm:text-3xl h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base sm:placeholder:text-2xl"
                         maxLength={10}
                         required
                       />
@@ -640,17 +640,17 @@ export default function SignInPage() {
               </div>
             </div>
             {uid.replace(/\D/g, "").length === 10 && (
-              <div className="mt-4 pt-2 mb-2">
+              <div className="mt-6 sm:mt-4 pt-2 mb-3 sm:mb-2">
                 <div className="w-full rounded-md border-2 border-blue-300 bg-blue-100 px-4 py-4 flex flex-col items-center justify-center gap-2 text-center">
                   {userPreview && (
-                    <p className="text-lg sm:text-xl font-bold text-gray-800">
+                    <p className="text-lg sm:text-xl font-bold text-gray-800 break-words">
                       {lookupPending ? "Checking…" : userPreview.name}
                     </p>
                   )}
-                  <div className="flex flex-nowrap justify-center items-center gap-2 whitespace-nowrap text-base sm:text-lg text-gray-700">
+                  <div className="flex w-full min-w-0 flex-wrap md:flex-nowrap justify-center items-center gap-2 text-center whitespace-normal md:whitespace-nowrap break-words text-sm sm:text-lg text-gray-700">
                     <span>We'll send OTP to</span>
                     {uid ? (
-                      <span className="text-base sm:text-lg font-bold inline-block whitespace-nowrap">
+                      <span className="text-sm sm:text-lg font-bold inline max-w-full break-words break-all md:break-normal">
                         {uid}@thebges.edu.in
                       </span>
                     ) : (
@@ -670,7 +670,7 @@ export default function SignInPage() {
                 (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
                 (otpSent && (otp.length !== 6 || otpExpiry === 0))
               }
-              className="mt-auto w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-6 sm:mt-auto w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
