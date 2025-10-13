@@ -55,8 +55,12 @@ export default function Instructions({ compact = false, student, visibleCategori
                 <ol className="text-amber-700 space-y-1 text-sm list-decimal list-inside">
                   <li>Ensure all required fields are completed before submission.</li>
                   <li>Subject selections cannot be changed after final submission.</li>
-                  <li>Verify that IDC subjects are different from Minor subjects.</li>
-                  <li>Check that no IDC subject is repeated across semesters.</li>
+                  {!isBcomProgram && (
+                    <>
+                      <li>Verify that IDC subjects are different from Minor subjects.</li>
+                      <li>Check that no IDC subject is repeated across semesters.</li>
+                    </>
+                  )}
                 </ol>
               </div>
 
