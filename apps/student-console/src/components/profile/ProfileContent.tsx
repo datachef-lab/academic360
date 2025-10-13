@@ -398,7 +398,7 @@ export default function ProfileContent() {
 
                     <Separator />
 
-                    <div>
+                    {/* <div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <MapPin className="h-5 w-5" />
                         Address Information
@@ -646,7 +646,7 @@ export default function ProfileContent() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 )}
 
