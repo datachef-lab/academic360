@@ -16,7 +16,13 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 
-import { sendOtpRequest, verifyOtpAndLogin, checkOtpStatus } from "@/lib/services/auth.service";
+import {
+  sendOtpRequest,
+  verifyOtpAndLogin,
+  checkOtpStatus,
+  lookupUser,
+  lookupUsersByPrefix,
+} from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {
@@ -32,6 +38,8 @@ export default function SignInPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [userPreview, setUserPreview] = useState<{ name: string } | null>(null);
+  const [lookupPending, setLookupPending] = useState(false);
 
   // Storage keys for persistence
   const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
@@ -302,6 +310,36 @@ export default function SignInPage() {
     return digits;
   };
 
+  // Debounced user lookup by UID (live typing)
+  useEffect(() => {
+    setUserPreview(null);
+    const digits = uid.replace(/\D/g, "");
+    if (digits.length < 1) return;
+    const t = setTimeout(async () => {
+      try {
+        setLookupPending(true);
+        if (digits.length === 10) {
+          const email = `${digits}@thebges.edu.in`;
+          const resp = await lookupUser(email);
+          if (resp.httpStatusCode === 200 && resp.payload?.name) {
+            setUserPreview({ name: resp.payload.name });
+          } else {
+            setUserPreview(null);
+          }
+        } else {
+          const resp = await lookupUsersByPrefix(digits);
+          const first = resp.payload?.users?.[0];
+          setUserPreview(first ? { name: first.name } : null);
+        }
+      } catch {
+        setUserPreview(null);
+      } finally {
+        setLookupPending(false);
+      }
+    }, 150);
+    return () => clearTimeout(t);
+  }, [uid]);
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -483,7 +521,7 @@ export default function SignInPage() {
         className="relative z-10 flex w-full max-w-md md:max-w-5xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
       >
         {/* Left section */}
-        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12">
+        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12 flex flex-col">
           <div className="mb-8 flex items-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-600 text-white">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
@@ -509,107 +547,123 @@ export default function SignInPage() {
             </p>
           </div>
 
-          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-6 space-y-5 sm:space-y-6">
-            <AnimatePresence>
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-6 flex flex-col flex-1">
+            <div className="space-y-5 sm:space-y-6">
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Alert variant="destructive">
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-            <div className="space-y-4">
-              {otpSent ? (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-4">
-                    Enter the 6-digit OTP sent to your email
-                  </label>
-                  <div className="flex justify-center">
-                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)} className="gap-3">
-                      <InputOTPGroup className="gap-3">
-                        <InputOTPSlot
-                          index={0}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                        <InputOTPSlot
-                          index={1}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                        <InputOTPSlot
-                          index={2}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                        <InputOTPSlot
-                          index={3}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                        <InputOTPSlot
-                          index={4}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                        <InputOTPSlot
-                          index={5}
-                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
-                        />
-                      </InputOTPGroup>
-                    </InputOTP>
+              <div className="space-y-4">
+                {otpSent ? (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-4">
+                      Enter the 6-digit OTP sent to your email
+                    </label>
+                    <div className="flex justify-center">
+                      <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)} className="gap-3">
+                        <InputOTPGroup className="gap-3">
+                          <InputOTPSlot
+                            index={0}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={1}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={2}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={3}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={4}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                          <InputOTPSlot
+                            index={5}
+                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                          />
+                        </InputOTPGroup>
+                      </InputOTP>
+                    </div>
+                    {otpExpiry > 0 && (
+                      <p className="text-xs text-gray-500 mt-2 text-center">OTP expires in {formatTime(otpExpiry)}</p>
+                    )}
                   </div>
-                  {otpExpiry > 0 && (
-                    <p className="text-xs text-gray-500 mt-2 text-center">OTP expires in {formatTime(otpExpiry)}</p>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <label htmlFor="uid" className="block text-sm font-medium text-gray-700">
-                    UID (10 digits)
-                  </label>
-                  <div className="relative mt-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                    <Input
-                      id="uid"
-                      placeholder="Enter your 10-digit UID"
-                      value={uid}
-                      onChange={(e) => setUid(formatUid(e.target.value))}
-                      className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11 text-center tracking-widest"
-                      maxLength={10}
-                      required
-                    />
+                ) : (
+                  <div>
+                    <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
+                      UID (10 digits){" "}
+                    </label>
+                    <div className="relative mt-1">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </span>
+                      <Input
+                        id="uid"
+                        placeholder="Enter your 10-digit UID"
+                        value={uid}
+                        onChange={(e) => setUid(formatUid(e.target.value))}
+                        className="block w-full rounded-md border-gray-300 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base sm:text-sm h-11 text-center tracking-widest"
+                        maxLength={10}
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      We'll send OTP to{" "}
+                      {uid ? <span className="font-medium text-red-500">{uid}@thebges.edu.in</span> : "your email"}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    We'll send OTP to {uid ? `${uid}@thebges.edu.in` : "your email"}
-                  </p>
-                </div>
-              )}
+                )}
+              </div>
             </div>
+            {uid.replace(/\D/g, "").length === 10 && userPreview && (
+              <div className="mt-4 pt-4">
+                <span
+                  className="inline-flex items-center rounded-full border border-red-500 bg-red-50 px-2 py-0.5 font-semibold text-red-700"
+                  //   className="text-2xl font-bold"
+                  title="Matched name"
+                >
+                  {lookupPending ? "Checking…" : userPreview.name}
+                </span>
+              </div>
+            )}
 
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
               disabled={
-                isLoading || (!otpSent && uid.length !== 10) || (otpSent && (otp.length !== 6 || otpExpiry === 0))
+                isLoading ||
+                (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
+                (otpSent && (otp.length !== 6 || otpExpiry === 0))
               }
-              className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-auto w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">
@@ -632,12 +686,14 @@ export default function SignInPage() {
                   <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
                 </div>
               ) : (
-                <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
+                <>
+                  <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
+                </>
               )}
             </motion.button>
 
             {otpSent && otpExpiry === 0 && (
-              <div className="flex items-center justify-center text-sm">
+              <div className="mt-3 flex items-center justify-center text-sm">
                 <Button
                   type="button"
                   variant="ghost"

@@ -333,6 +333,20 @@ export async function checkOtpStatus(
   return response.data;
 }
 
+export async function lookupUser(
+  email: string,
+): Promise<ApiResponse<{ id: number; name: string; email: string; uid?: string }>> {
+  const response = await axiosInstance.get(`/auth/otp/lookup?email=${encodeURIComponent(email)}`);
+  return response.data;
+}
+
+export async function lookupUsersByPrefix(
+  prefix: string,
+): Promise<ApiResponse<{ users: { id: number; name: string; email: string }[] }>> {
+  const response = await axiosInstance.get(`/auth/otp/lookup-prefix?prefix=${encodeURIComponent(prefix)}`);
+  return response.data;
+}
+
 export async function testTimeCalculation(): Promise<
   ApiResponse<{
     currentTime: string;

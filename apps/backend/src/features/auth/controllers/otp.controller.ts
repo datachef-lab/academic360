@@ -6,6 +6,7 @@ import {
   createOtp,
   verifyOtp,
   findUserForOtp,
+  findUsersByEmailPrefix,
   generateTokensForUser,
   checkOtpStatus,
 } from "../services/otp.service.js";
@@ -397,6 +398,60 @@ export const testTimeCalculation = async (
     );
   } catch (error) {
     console.error("❌ Error in time calculation test:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Lightweight user lookup for login page (no OTP side-effects)
+export const lookupUserByEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { email } = req.query;
+    if (!email || typeof email !== "string") {
+      res.status(400).json(new ApiError(400, "Email is required"));
+      return;
+    }
+
+    const result = await findUserForOtp(email);
+    if (!result.success) {
+      res.status(404).json(new ApiError(404, result.message));
+      return;
+    }
+
+    const user = result.user as any;
+    res.status(200).json(
+      new ApiResponse(200, "SUCCESS", {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        uid: user?.academicIdentifier?.uid || undefined,
+      }),
+    );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Prefix lookup for live typing (uid prefix)
+export const lookupUsersByUidPrefix = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { prefix } = req.query;
+    const p =
+      typeof prefix === "string" ? prefix.replace(/\D/g, "").slice(0, 10) : "";
+    if (!p || p.length < 2) {
+      res.status(200).json(new ApiResponse(200, "SUCCESS", { users: [] }));
+      return;
+    }
+    const users = await findUsersByEmailPrefix(p);
+    res.status(200).json(new ApiResponse(200, "SUCCESS", { users }));
+  } catch (error) {
     handleError(error, res, next);
   }
 };

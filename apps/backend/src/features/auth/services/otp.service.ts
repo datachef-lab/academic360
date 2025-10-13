@@ -249,6 +249,25 @@ export const findUserForOtp = async (email: string) => {
   return { success: true, user };
 };
 
+// Find active users by email prefix (for live UID typing)
+export const findUsersByEmailPrefix = async (uidPrefix: string) => {
+  const emailPrefix = `${uidPrefix}%@thebges.edu.in`;
+  const users = await db
+    .select()
+    .from(userModel)
+    .where(
+      and(
+        ilike(userModel.email as any, emailPrefix as any),
+        eq(userModel.isActive as any, true as any),
+        eq(userModel.isSuspended as any, false as any),
+      ),
+    )
+    .limit(5);
+  return (
+    users?.map((u: any) => ({ id: u.id, name: u.name, email: u.email })) || []
+  );
+};
+
 // Check OTP status without consuming it
 export const checkOtpStatus = async (recipient: string) => {
   console.log("🔍 Checking OTP status for recipient:", recipient);

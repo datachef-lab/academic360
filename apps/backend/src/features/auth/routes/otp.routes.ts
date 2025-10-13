@@ -6,6 +6,8 @@ import {
   resendOtp,
   checkOtpStatusController,
   testTimeCalculation,
+  lookupUserByEmail,
+  lookupUsersByUidPrefix,
 } from "../controllers/otp.controller.js";
 
 const router = Router();
@@ -27,5 +29,11 @@ router.get("/status", checkOtpStatusController);
 
 // Test time calculation
 router.get("/test-time", testTimeCalculation);
+
+// Lookup user by email (no side effects)
+router.get("/lookup", lookupUserByEmail);
+
+// Prefix lookup for live typing
+router.get("/lookup-prefix", lookupUsersByUidPrefix);
 
 export default router;
