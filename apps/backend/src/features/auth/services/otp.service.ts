@@ -6,7 +6,7 @@ import {
   notificationMasterFieldModel,
   notificationMasterMetaModel,
 } from "@repo/db/schemas/models/notifications";
-import { eq, and, gt, ilike } from "drizzle-orm";
+import { eq, and, gt, ilike, desc } from "drizzle-orm";
 import { generateToken } from "@/utils/generateToken.js";
 import type { StringValue } from "ms";
 import * as userService from "@/features/user/services/user.service.js";
@@ -178,11 +178,16 @@ export const generateOtpCode = (): string => {
 export const createOtp = async (
   recipient: string,
   type: "FOR_EMAIL" | "FOR_PHONE",
-  expiryMinutes: number = 3,
+  expiryMinutes: number = 5,
 ) => {
-  expiryMinutes = 3;
+  expiryMinutes = 5;
   const otpCode = generateOtpCode();
-  const expiresAt = new Date(Date.now() + expiryMinutes * 60 * 1000);
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
+
+  console.log("🕐 Creating OTP at:", now.toISOString());
+  console.log("⏰ OTP will expire at:", expiresAt.toISOString());
+  console.log("⏱️ Expiry duration:", expiryMinutes, "minutes");
 
   const [otp] = await db
     .insert(otpModel)
@@ -194,6 +199,10 @@ export const createOtp = async (
     })
     .returning();
 
+  console.log(
+    "💾 OTP saved to database with expiresAt:",
+    otp.expiresAt.toISOString(),
+  );
   return otp;
 };
 
@@ -238,6 +247,67 @@ export const findUserForOtp = async (email: string) => {
   }
 
   return { success: true, user };
+};
+
+// Check OTP status without consuming it
+export const checkOtpStatus = async (recipient: string) => {
+  console.log("🔍 Checking OTP status for recipient:", recipient);
+
+  const [otp] = await db
+    .select()
+    .from(otpModel)
+    .where(
+      and(
+        eq(otpModel.recipient, recipient),
+        eq(otpModel.type, "FOR_EMAIL"),
+        gt(otpModel.expiresAt, new Date()),
+      ),
+    )
+    .orderBy(desc(otpModel.createdAt))
+    .limit(1);
+
+  if (!otp) {
+    console.log("❌ No valid OTP found for:", recipient);
+    return {
+      hasValidOtp: false,
+      message: "No valid OTP found",
+    };
+  }
+
+  const now = new Date();
+  const rawRemainingTime = Math.floor(
+    (otp.expiresAt.getTime() - now.getTime()) / 1000,
+  );
+  let remainingTime = Math.max(0, rawRemainingTime);
+
+  console.log("✅ Valid OTP found for:", recipient);
+  console.log("📅 OTP created at:", otp.createdAt?.toISOString() || "Unknown");
+  console.log("📅 OTP expires at:", otp.expiresAt.toISOString());
+  console.log("⏰ Current time:", now.toISOString());
+  console.log("⏱️ Raw remaining time:", rawRemainingTime, "seconds");
+  console.log(
+    "⏱️ Time difference (ms):",
+    otp.expiresAt.getTime() - now.getTime(),
+  );
+
+  // Cap the remaining time to maximum 300 seconds (5 minutes) as a safety measure
+  if (remainingTime > 300) {
+    console.warn(
+      "⚠️ Backend: Calculated time > 300s, capping to 300s. Raw time:",
+      remainingTime,
+    );
+    console.warn("⚠️ This suggests a timezone or calculation issue!");
+    remainingTime = 300;
+  }
+
+  console.log("⏱️ Final remaining time:", remainingTime, "seconds");
+
+  return {
+    hasValidOtp: true,
+    expiresAt: otp.expiresAt.toISOString(),
+    remainingTime,
+    message: "Valid OTP found",
+  };
 };
 
 // Generate tokens after OTP verification

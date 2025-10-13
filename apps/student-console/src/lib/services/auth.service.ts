@@ -325,3 +325,22 @@ export async function verifyOtpAndLogin(
   });
   return response.data;
 }
+
+export async function checkOtpStatus(
+  email: string,
+): Promise<ApiResponse<{ hasValidOtp: boolean; expiresAt?: string; remainingTime?: number }>> {
+  const response = await axiosInstance.get(`/auth/otp/status?email=${encodeURIComponent(email)}`);
+  return response.data;
+}
+
+export async function testTimeCalculation(): Promise<
+  ApiResponse<{
+    currentTime: string;
+    testExpiryTime: string;
+    remainingTime: number;
+    timezone: string;
+  }>
+> {
+  const response = await axiosInstance.get("/auth/otp/test-time");
+  return response.data;
+}

@@ -4,6 +4,8 @@ import {
   sendOtpToWhatsApp,
   verifyOtpAndLogin,
   resendOtp,
+  checkOtpStatusController,
+  testTimeCalculation,
 } from "../controllers/otp.controller.js";
 
 const router = Router();
@@ -19,5 +21,11 @@ router.post("/verify", verifyOtpAndLogin);
 
 // Resend OTP
 router.post("/resend", resendOtp);
+
+// Check OTP status
+router.get("/status", checkOtpStatusController);
+
+// Test time calculation
+router.get("/test-time", testTimeCalculation);
 
 export default router;

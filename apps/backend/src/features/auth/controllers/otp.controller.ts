@@ -7,6 +7,7 @@ import {
   verifyOtp,
   findUserForOtp,
   generateTokensForUser,
+  checkOtpStatus,
 } from "../services/otp.service.js";
 import {
   sendOtpEmailNotification,
@@ -40,7 +41,7 @@ export const sendOtpToEmail = async (
     const user = userResult.user;
 
     // Generate OTP for email
-    const emailOtp = await createOtp(email, "FOR_EMAIL", 3);
+    const emailOtp = await createOtp(email, "FOR_EMAIL", 5);
     console.log("📧 OTP generated for email:", email, "Code:", emailOtp.otp);
 
     // Prepare notification data
@@ -49,7 +50,7 @@ export const sendOtpToEmail = async (
       phoneNumber: phoneNumber || user?.phone || user?.whatsappNumber || "",
       otpCode: emailOtp.otp,
       userName: user?.name || "User",
-      expiryMinutes: 3,
+      expiryMinutes: 5,
     };
 
     // Send notifications to both email and WhatsApp
@@ -80,7 +81,7 @@ export const sendOtpToEmail = async (
         "SUCCESS",
         {
           message: "OTP sent successfully",
-          expiresIn: "3 minutes",
+          expiresIn: "5 minutes",
           sentTo: {
             email: notificationResults.email?.success || false,
             whatsapp: notificationResults.whatsapp?.success || false,
@@ -123,7 +124,7 @@ export const sendOtpToWhatsApp = async (
     const user = userResult.user;
 
     // Generate OTP
-    const otp = await createOtp(phoneNumber, "FOR_PHONE", 3);
+    const otp = await createOtp(phoneNumber, "FOR_PHONE", 5);
     console.log(
       "📱 OTP generated for WhatsApp:",
       phoneNumber,
@@ -137,7 +138,7 @@ export const sendOtpToWhatsApp = async (
       phoneNumber,
       otpCode: otp.otp,
       userName: user?.name || "User",
-      expiryMinutes: 3,
+      expiryMinutes: 5,
     });
 
     if (!notificationResult.success) {
@@ -154,7 +155,7 @@ export const sendOtpToWhatsApp = async (
         "SUCCESS",
         {
           message: "OTP sent successfully",
-          expiresIn: "3 minutes",
+          expiresIn: "5 minutes",
           // Don't send the actual OTP in response for security
         },
         "OTP has been sent to your WhatsApp",
@@ -281,7 +282,7 @@ export const resendOtp = async (
       phoneNumber: phoneNumber || user?.phone || user?.whatsappNumber || "",
       otpCode: emailOtp.otp,
       userName: user?.name || "User",
-      expiryMinutes: 3,
+      expiryMinutes: 5,
     };
 
     // Send notifications to both email and WhatsApp
@@ -312,7 +313,7 @@ export const resendOtp = async (
         "SUCCESS",
         {
           message: "OTP resent successfully",
-          expiresIn: "3 minutes",
+          expiresIn: "5 minutes",
           sentTo: {
             email: notificationResults.email?.success || false,
             whatsapp: notificationResults.whatsapp?.success || false,
@@ -323,6 +324,79 @@ export const resendOtp = async (
     );
   } catch (error) {
     console.error("❌ Error resending OTP:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Check OTP status
+export const checkOtpStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { email } = req.query;
+
+    if (!email || typeof email !== "string") {
+      res.status(400).json(new ApiError(400, "Email is required"));
+      return;
+    }
+
+    console.log("🔍 Checking OTP status for:", email);
+
+    const result = await checkOtpStatus(email);
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          hasValidOtp: result.hasValidOtp,
+          expiresAt: result.expiresAt,
+          remainingTime: result.remainingTime,
+        },
+        result.message,
+      ),
+    );
+  } catch (error) {
+    console.error("❌ Error checking OTP status:", error);
+    handleError(error, res, next);
+  }
+};
+
+// Test time calculation endpoint
+export const testTimeCalculation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const now = new Date();
+    const testExpiry = new Date(now.getTime() + 3 * 60 * 1000); // 3 minutes from now
+    const remainingTime = Math.floor(
+      (testExpiry.getTime() - now.getTime()) / 1000,
+    );
+
+    console.log("🧪 Time calculation test:");
+    console.log("⏰ Current time:", now.toISOString());
+    console.log("⏰ Test expiry time:", testExpiry.toISOString());
+    console.log("⏱️ Calculated remaining time:", remainingTime, "seconds");
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "SUCCESS",
+        {
+          currentTime: now.toISOString(),
+          testExpiryTime: testExpiry.toISOString(),
+          remainingTime,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
+        "Time calculation test completed",
+      ),
+    );
+  } catch (error) {
+    console.error("❌ Error in time calculation test:", error);
     handleError(error, res, next);
   }
 };

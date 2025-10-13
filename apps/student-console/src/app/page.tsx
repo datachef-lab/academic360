@@ -16,7 +16,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 
-import { sendOtpRequest, verifyOtpAndLogin } from "@/lib/services/auth.service";
+import { sendOtpRequest, verifyOtpAndLogin, checkOtpStatus } from "@/lib/services/auth.service";
 import { UserDto } from "@repo/db/dtos/user";
 
 export default function SignInPage() {
@@ -33,14 +33,202 @@ export default function SignInPage() {
   const { login } = useAuth();
   const [mounted, setMounted] = useState(false);
 
+  // Storage keys for persistence
+  const OTP_EXPIRY_KEY = "otp_expiry_timestamp";
+  const RESEND_COOLDOWN_KEY = "resend_cooldown_timestamp";
+  const OTP_UID_KEY = "otp_uid";
+
   useEffect(() => {
     setMounted(true);
+    // Restore state from localStorage on mount
+    restoreOtpState().catch(console.error);
   }, []);
+
+  // Periodic sync with backend every 30 seconds when OTP is active
+  useEffect(() => {
+    if (!otpSent || otpExpiry <= 0) return;
+
+    const syncInterval = setInterval(async () => {
+      const storedUid = localStorage.getItem(OTP_UID_KEY);
+      if (storedUid) {
+        const email = `${storedUid}@thebges.edu.in`;
+        try {
+          const response = await checkOtpStatus(email);
+          if (response.httpStatusCode === 200 && response.payload?.hasValidOtp) {
+            // Use backend's expiresAt timestamp to calculate remaining time
+            const backendExpiresAt = response.payload.expiresAt;
+            if (backendExpiresAt) {
+              const now = Date.now();
+              const expiryTime = new Date(backendExpiresAt).getTime();
+              let calculatedRemainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+              // Cap the remaining time to maximum 300 seconds (5 minutes)
+              if (calculatedRemainingTime > 300) {
+                console.warn(
+                  "⚠️ Periodic sync: Calculated time > 300s, capping to 300s. Raw time:",
+                  calculatedRemainingTime,
+                );
+                calculatedRemainingTime = 300;
+              }
+
+              if (calculatedRemainingTime > 0 && Math.abs(calculatedRemainingTime - otpExpiry) > 5) {
+                // Only update if there's a significant difference (more than 5 seconds)
+                console.log("🔄 Periodic sync - Updating timer from", otpExpiry, "to", calculatedRemainingTime);
+                setOtpExpiry(calculatedRemainingTime);
+                localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+              }
+            }
+          } else {
+            // Backend says OTP expired
+            setOtpExpiry(0);
+          }
+        } catch (error) {
+          console.warn("Periodic sync failed:", error);
+        }
+      }
+    }, 30000); // Sync every 30 seconds
+
+    return () => clearInterval(syncInterval);
+  }, [otpSent, otpExpiry]);
+
+  // Helper functions for persistent timers
+  const getRemainingTime = (timestamp: number, duration: number) => {
+    const now = Date.now();
+    const elapsed = Math.floor((now - timestamp) / 1000);
+    return Math.max(0, duration - elapsed);
+  };
+
+  const setOtpExpiryTimestamp = (duration: number) => {
+    const timestamp = Date.now();
+    localStorage.setItem(OTP_EXPIRY_KEY, timestamp.toString());
+    setOtpExpiry(duration);
+  };
+
+  const setResendCooldownTimestamp = (duration: number) => {
+    const timestamp = Date.now();
+    localStorage.setItem(RESEND_COOLDOWN_KEY, timestamp.toString());
+    setResendCooldown(duration);
+  };
+
+  const restoreOtpState = async () => {
+    const storedUid = localStorage.getItem(OTP_UID_KEY);
+    const otpExpiryTimestamp = localStorage.getItem(OTP_EXPIRY_KEY);
+    const resendCooldownTimestamp = localStorage.getItem(RESEND_COOLDOWN_KEY);
+
+    if (storedUid) {
+      const email = `${storedUid}@thebges.edu.in`;
+
+      try {
+        // Always sync with backend to get accurate OTP status
+        console.log("🔄 Syncing OTP status with backend for:", email);
+        const response = await checkOtpStatus(email);
+
+        if (response.httpStatusCode === 200 && response.payload?.hasValidOtp) {
+          // Use backend's expiresAt timestamp to calculate remaining time
+          const backendExpiresAt = response.payload.expiresAt;
+          if (backendExpiresAt) {
+            const now = Date.now();
+            const expiryTime = new Date(backendExpiresAt).getTime();
+            let calculatedRemainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+            console.log("✅ Backend OTP status - Using backend expiry timestamp");
+            console.log("📅 Backend expires at:", backendExpiresAt);
+            console.log("⏰ Current time:", new Date(now).toISOString());
+            console.log("⏱️ Calculated remaining time:", calculatedRemainingTime, "seconds");
+
+            // Cap the remaining time to maximum 300 seconds (5 minutes)
+            if (calculatedRemainingTime > 300) {
+              console.warn("⚠️ Calculated time > 300s, capping to 300s. Raw time:", calculatedRemainingTime);
+              calculatedRemainingTime = 300;
+            }
+
+            if (calculatedRemainingTime > 0) {
+              setUid(storedUid);
+              setOtpSent(true);
+              setOtpExpiry(calculatedRemainingTime);
+              // Store the backend expiry timestamp directly
+              localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+              console.log("📝 Stored backend expiry timestamp:", expiryTime);
+            } else {
+              // OTP expired, clear storage
+              console.log("⏰ OTP expired, clearing storage");
+              clearOtpStorage();
+            }
+          } else {
+            console.log("❌ No expiry timestamp from backend");
+            clearOtpStorage();
+          }
+        } else {
+          // Backend says no valid OTP, clear storage
+          console.log("❌ Backend says no valid OTP, clearing storage");
+          clearOtpStorage();
+        }
+      } catch (error) {
+        // If backend sync fails, fall back to localStorage
+        console.warn("⚠️ Failed to sync with backend, using localStorage:", error);
+        if (otpExpiryTimestamp) {
+          const now = Date.now();
+          const expiryTime = parseInt(otpExpiryTimestamp);
+          let remainingOtpTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+          console.log("📱 localStorage fallback - Raw remaining time:", remainingOtpTime);
+
+          // Cap the remaining time to maximum 300 seconds (5 minutes)
+          if (remainingOtpTime > 300) {
+            console.warn("⚠️ localStorage fallback: Time > 300s, capping to 300s. Raw time:", remainingOtpTime);
+            remainingOtpTime = 300;
+          }
+
+          console.log("📱 localStorage fallback - Capped remaining time:", remainingOtpTime);
+          if (remainingOtpTime > 0) {
+            setUid(storedUid);
+            setOtpSent(true);
+            setOtpExpiry(remainingOtpTime);
+          } else {
+            clearOtpStorage();
+          }
+        } else {
+          clearOtpStorage();
+        }
+      }
+    }
+
+    if (resendCooldownTimestamp) {
+      const now = Date.now();
+      const cooldownTime = parseInt(resendCooldownTimestamp);
+      const remainingCooldown = Math.max(0, Math.floor((cooldownTime + 30000 - now) / 1000));
+      if (remainingCooldown > 0) {
+        setResendCooldown(remainingCooldown);
+      } else {
+        localStorage.removeItem(RESEND_COOLDOWN_KEY);
+      }
+    }
+  };
+
+  const clearOtpStorage = () => {
+    localStorage.removeItem(OTP_EXPIRY_KEY);
+    localStorage.removeItem(RESEND_COOLDOWN_KEY);
+    localStorage.removeItem(OTP_UID_KEY);
+  };
 
   // Handle resend cooldown
   useEffect(() => {
     if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      const timer = setTimeout(() => {
+        const cooldownTimestamp = localStorage.getItem(RESEND_COOLDOWN_KEY);
+        if (cooldownTimestamp) {
+          const now = Date.now();
+          const cooldownTime = parseInt(cooldownTimestamp);
+          const remaining = Math.max(0, Math.floor((cooldownTime + 30000 - now) / 1000));
+          if (remaining > 0) {
+            setResendCooldown(remaining);
+          } else {
+            setResendCooldown(0);
+            localStorage.removeItem(RESEND_COOLDOWN_KEY);
+          }
+        } else {
+          setResendCooldown(0);
+        }
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
@@ -48,10 +236,65 @@ export default function SignInPage() {
   // Handle OTP expiry countdown
   useEffect(() => {
     if (otpExpiry > 0) {
-      const timer = setTimeout(() => setOtpExpiry(otpExpiry - 1), 1000);
+      const timer = setTimeout(() => {
+        const otpTimestamp = localStorage.getItem(OTP_EXPIRY_KEY);
+        if (otpTimestamp) {
+          const now = Date.now();
+          const expiryTime = parseInt(otpTimestamp);
+          let remaining = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+          // Cap the remaining time to maximum 300 seconds (5 minutes)
+          if (remaining > 300) {
+            console.warn("⚠️ Timer effect: Time > 300s, capping to 300s. Raw time:", remaining);
+            remaining = 300;
+          }
+
+          if (remaining > 0) {
+            setOtpExpiry(remaining);
+          } else {
+            setOtpExpiry(0);
+            // Don't clear storage here, let user see resend button
+          }
+        } else {
+          setOtpExpiry(0);
+        }
+      }, 1000);
       return () => clearTimeout(timer);
+    } else if (otpSent && otpExpiry === 0) {
+      // If OTP was sent but timer reached 0, sync with backend one more time
+      const storedUid = localStorage.getItem(OTP_UID_KEY);
+      if (storedUid) {
+        const email = `${storedUid}@thebges.edu.in`;
+        checkOtpStatus(email)
+          .then((response) => {
+            if (response.httpStatusCode === 200 && response.payload?.hasValidOtp) {
+              // Use backend's expiresAt timestamp to calculate remaining time
+              const backendExpiresAt = response.payload.expiresAt;
+              if (backendExpiresAt) {
+                const now = Date.now();
+                const expiryTime = new Date(backendExpiresAt).getTime();
+                let calculatedRemainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+                // Cap the remaining time to maximum 300 seconds (5 minutes)
+                if (calculatedRemainingTime > 300) {
+                  console.warn(
+                    "⚠️ Fallback sync: Calculated time > 300s, capping to 300s. Raw time:",
+                    calculatedRemainingTime,
+                  );
+                  calculatedRemainingTime = 300;
+                }
+
+                if (calculatedRemainingTime > 0) {
+                  setOtpExpiry(calculatedRemainingTime);
+                  localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+                }
+              }
+            }
+          })
+          .catch(console.warn);
+      }
     }
-  }, [otpExpiry]);
+  }, [otpExpiry, otpSent]);
 
   const formatUid = (value: string) => {
     // Remove all non-digits and limit to 10 digits
@@ -82,8 +325,13 @@ export default function SignInPage() {
 
       if (response.httpStatusCode === 200) {
         setOtpSent(true);
-        setOtpExpiry(180); // 3 minutes
-        setResendCooldown(30); // 30 seconds cooldown
+        // Calculate expiry time: 5 minutes from now
+        const expiryTime = Date.now() + 5 * 60 * 1000;
+        setOtpExpiry(300); // 5 minutes
+        localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+        setResendCooldownTimestamp(30); // 30 seconds cooldown
+        localStorage.setItem(OTP_UID_KEY, uid);
+        console.log("📝 OTP sent - Stored expiry timestamp:", expiryTime);
       } else {
         throw new Error(response.message || "Failed to send OTP");
       }
@@ -131,6 +379,7 @@ export default function SignInPage() {
           setInvalidOpen(true);
         } else {
           login(payload.accessToken, payload.user);
+          clearOtpStorage(); // Clear OTP data on successful login
           setTimeout(() => {
             router.push(payload.redirectTo || "/dashboard");
           }, 100);
@@ -168,9 +417,13 @@ export default function SignInPage() {
       const response = await sendOtpRequest(email);
 
       if (response.httpStatusCode === 200) {
-        setOtpExpiry(180); // Reset to 3 minutes
-        setResendCooldown(30); // Reset cooldown
+        // Calculate expiry time: 5 minutes from now
+        const expiryTime = Date.now() + 5 * 60 * 1000;
+        setOtpExpiry(300); // Reset to 5 minutes
+        localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+        setResendCooldownTimestamp(30); // Reset cooldown
         setOtp(""); // Clear current OTP
+        console.log("📝 OTP resent - Stored expiry timestamp:", expiryTime);
       } else {
         throw new Error(response.message || "Failed to resend OTP");
       }
@@ -197,6 +450,7 @@ export default function SignInPage() {
     setUid("");
     setOtpExpiry(0);
     setResendCooldown(0);
+    clearOtpStorage();
   };
 
   if (!mounted) {
@@ -278,14 +532,32 @@ export default function SignInPage() {
                     Enter the 6-digit OTP sent to your email
                   </label>
                   <div className="flex justify-center">
-                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)}>
-                      <InputOTPGroup>
-                        <InputOTPSlot index={0} />
-                        <InputOTPSlot index={1} />
-                        <InputOTPSlot index={2} />
-                        <InputOTPSlot index={3} />
-                        <InputOTPSlot index={4} />
-                        <InputOTPSlot index={5} />
+                    <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)} className="gap-3">
+                      <InputOTPGroup className="gap-3">
+                        <InputOTPSlot
+                          index={0}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
+                        <InputOTPSlot
+                          index={1}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
+                        <InputOTPSlot
+                          index={2}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
+                        <InputOTPSlot
+                          index={3}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
+                        <InputOTPSlot
+                          index={4}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
+                        <InputOTPSlot
+                          index={5}
+                          className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                        />
                       </InputOTPGroup>
                     </InputOTP>
                   </div>
@@ -364,7 +636,7 @@ export default function SignInPage() {
               )}
             </motion.button>
 
-            {otpSent && (
+            {otpSent && otpExpiry === 0 && (
               <div className="flex items-center justify-center text-sm">
                 <Button
                   type="button"
