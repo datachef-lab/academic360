@@ -32,17 +32,17 @@ const defaultNotificationMasters = [
   {
     name: "Subject Selection Confirmation - BA",
     variant: "WHATSAPP",
-    template: "subselconf",
+    template: "basubconf_vy",
   },
   {
     name: "Subject Selection Confirmation - BSC",
     variant: "WHATSAPP",
-    template: "bscsubselconf",
+    template: "scisubconf",
   },
   {
     name: "Subject Selection Confirmation - BCOM",
     variant: "WHATSAPP",
-    template: "bcomsubselconf",
+    template: "comsubconf",
   },
 ];
 
