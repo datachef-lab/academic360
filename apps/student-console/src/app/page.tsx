@@ -644,7 +644,7 @@ export default function SignInPage() {
                     <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
                       Enter Your UID (10 Digits){" "}
                     </label>
-                    <div className="relative mt-1">
+                    <div className="relative flex items-center justify-center">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -664,7 +664,8 @@ export default function SignInPage() {
                         placeholder="ENTER 10 DIGIT UID HERE"
                         value={uid}
                         onChange={(e) => setUid(formatUid(e.target.value))}
-                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-2xl sm:text-3xl h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base sm:placeholder:text-2xl"
+                        className="block w-full rounded-md border-2 border-blue-300 bg-blue-100 pl-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 h-14 text-center tracking-widest placeholder:uppercase placeholder:text-gray-400 placeholder:text-base"
+                        style={{ fontSize: "24px" }}
                         maxLength={10}
                         required
                       />
@@ -682,10 +683,10 @@ export default function SignInPage() {
 
               {/* User preview area - fixed height */}
               <div className="h-[80px] flex items-center justify-center">
-                {uid.replace(/\D/g, "").length === 10 && (
-                  <>
-                    {lookupPending ? (
-                      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="w-full h-full rounded-lg border border-blue-200 bg-blue-50 px-4 flex items-center justify-center">
+                  {uid.replace(/\D/g, "").length === 10 ? (
+                    lookupPending ? (
+                      <div className="flex items-center gap-2">
                         <svg className="h-4 w-4 animate-spin text-blue-600" viewBox="0 0 24 24">
                           <circle
                             className="opacity-25"
@@ -705,19 +706,25 @@ export default function SignInPage() {
                         <span className="text-sm font-medium text-blue-700">Looking up user...</span>
                       </div>
                     ) : userPreview ? (
-                      <div className="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-                        <div className="flex flex-col space-y-1">
-                          <p className="text-sm sm:text-base font-bold text-gray-900 text-center">
-                            {userPreview.name.toUpperCase()}
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-600 text-center">
-                            We'll send OTP to <span className="font-bold">{userPreview.email}</span>
-                          </p>
-                        </div>
+                      <div className="flex flex-col items-center justify-center leading-none">
+                        <p className="text-sm sm:text-base font-bold text-gray-900 text-center truncate w-full">
+                          {userPreview.name.toUpperCase()}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-600 text-center truncate w-full">
+                          We'll send OTP to <span className="font-bold">{userPreview.email}</span>
+                        </p>
                       </div>
-                    ) : null}
-                  </>
-                )}
+                    ) : (
+                      <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
+                        Waiting for you to enter UID
+                      </p>
+                    )
+                  ) : (
+                    <p className="text-xs sm:text-sm text-gray-500 text-center leading-none">
+                      Waiting for you to enter UID
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
