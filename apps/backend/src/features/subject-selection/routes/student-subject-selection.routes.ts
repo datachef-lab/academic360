@@ -14,6 +14,8 @@ import {
   getSelectionStatisticsHandler,
   exportStudentSubjectSelectionsHandler,
   debugMinor3ConditionsHandler,
+  getLiveProgramCourseCountsHandler,
+  getMisTableDataHandler,
 } from "../controllers/student-subject-selection.controller.js";
 import { createAdminStudentSubjectSelectionsHandler } from "../controllers/student-subject-selection.controller.js";
 
@@ -80,6 +82,15 @@ router.get(
   "/statistics/:studentId",
   getSelectionStatisticsHandler as RequestHandler,
 );
+
+// Live counts by Program-Course (query: academicYearId)
+router.get(
+  "/metrics/live",
+  getLiveProgramCourseCountsHandler as RequestHandler,
+);
+
+// MIS table data with session and class filters (query: sessionId, classId)
+router.get("/metrics/table", getMisTableDataHandler as RequestHandler);
 
 // Export student subject selections to Excel
 router.get(

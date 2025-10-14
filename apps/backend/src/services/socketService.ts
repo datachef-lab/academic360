@@ -28,6 +28,22 @@ export interface ProgressUpdate {
   meta?: Record<string, unknown>;
 }
 
+// Define MIS table update interface
+export interface MisTableUpdate {
+  id: string;
+  type: "mis_table_update";
+  sessionId?: number;
+  classId?: number;
+  data: {
+    programCourseName: string;
+    admitted: number;
+    subjectSelectionDone: number;
+    sortOrder: number;
+  }[];
+  updatedAt: string;
+  meta?: Record<string, unknown>;
+}
+
 // Socket service class
 class SocketService {
   private io: Server<
@@ -79,6 +95,44 @@ class SocketService {
           );
         }
       });
+
+      // Handle MIS dashboard subscription
+      socket.on(
+        "subscribe_mis_dashboard",
+        (filters: { sessionId?: number; classId?: number }) => {
+          try {
+            const roomName = this.getMisRoomName(filters);
+            socket.join(roomName);
+            console.log(
+              `[SocketService] Socket ${socket.id} joined MIS room: ${roomName}`,
+            );
+          } catch (error) {
+            console.error(
+              `[SocketService] Error subscribing to MIS dashboard:`,
+              error,
+            );
+          }
+        },
+      );
+
+      // Handle MIS dashboard unsubscription
+      socket.on(
+        "unsubscribe_mis_dashboard",
+        (filters: { sessionId?: number; classId?: number }) => {
+          try {
+            const roomName = this.getMisRoomName(filters);
+            socket.leave(roomName);
+            console.log(
+              `[SocketService] Socket ${socket.id} left MIS room: ${roomName}`,
+            );
+          } catch (error) {
+            console.error(
+              `[SocketService] Error unsubscribing from MIS dashboard:`,
+              error,
+            );
+          }
+        },
+      );
 
       // Handle disconnection
       socket.on("disconnect", () => {
@@ -252,6 +306,96 @@ class SocketService {
       createdAt: new Date(),
       meta,
     };
+  }
+
+  // Generate MIS room name based on filters
+  private getMisRoomName(filters: {
+    sessionId?: number;
+    classId?: number;
+  }): string {
+    const sessionPart = filters.sessionId
+      ? `session_${filters.sessionId}`
+      : "all_sessions";
+    const classPart = filters.classId
+      ? `class_${filters.classId}`
+      : "all_classes";
+    return `mis_dashboard:${sessionPart}:${classPart}`;
+  }
+
+  // Send MIS table update to specific room
+  sendMisTableUpdate(
+    filters: { sessionId?: number; classId?: number },
+    data: {
+      programCourseName: string;
+      admitted: number;
+      subjectSelectionDone: number;
+      sortOrder: number;
+    }[],
+    meta?: Record<string, unknown>,
+  ) {
+    if (!this.io) {
+      console.error("[SocketService] Cannot send MIS table update: io is null");
+      return;
+    }
+
+    try {
+      const roomName = this.getMisRoomName(filters);
+      const update: MisTableUpdate = {
+        id: `mis_update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: "mis_table_update",
+        sessionId: filters.sessionId,
+        classId: filters.classId,
+        data,
+        updatedAt: new Date().toISOString(),
+        meta,
+      };
+
+      this.io.to(roomName).emit("mis_table_update", update);
+      console.log(
+        `[SocketService] Sent MIS table update to room ${roomName} with ${data.length} records`,
+      );
+    } catch (error) {
+      console.error("[SocketService] Error sending MIS table update:", error);
+    }
+  }
+
+  // Send MIS table update to all MIS dashboard rooms
+  sendMisTableUpdateToAll(
+    data: {
+      programCourseName: string;
+      admitted: number;
+      subjectSelectionDone: number;
+      sortOrder: number;
+    }[],
+    meta?: Record<string, unknown>,
+  ) {
+    if (!this.io) {
+      console.error(
+        "[SocketService] Cannot send MIS table update to all: io is null",
+      );
+      return;
+    }
+
+    try {
+      const update: MisTableUpdate = {
+        id: `mis_update_all_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        type: "mis_table_update",
+        data,
+        updatedAt: new Date().toISOString(),
+        meta,
+      };
+
+      // Send to all MIS dashboard rooms
+      this.io.emit("mis_table_update", update);
+      console.log(
+        `[SocketService] Sent MIS table update to all MIS dashboard clients with ${data.length} records`,
+      );
+    } catch (error) {
+      console.error(
+        "[SocketService] Error sending MIS table update to all:",
+        error,
+      );
+    }
   }
 }
 

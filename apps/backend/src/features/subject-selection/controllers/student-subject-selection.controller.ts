@@ -17,6 +17,8 @@ import {
   getSelectionStatistics,
   exportStudentSubjectSelections,
   debugMinor3Conditions,
+  getLiveSelectionCountsByProgramCourse,
+  getMisTableData,
 } from "../services/student-subject-selection.service.js";
 
 // Get subject selection meta data for UI form
@@ -50,6 +52,39 @@ export async function getSubjectSelectionMetaHandler(
           "SUCCESS",
           result,
           "Subject selection meta data fetched successfully",
+        ),
+      );
+  } catch (error) {
+    handleError(error, res, next);
+  }
+}
+
+// Live counts by Program-Course for an academic year
+export async function getLiveProgramCourseCountsHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const academicYearId = Number(req.query.academicYearId);
+    if (!academicYearId || isNaN(academicYearId)) {
+      res
+        .status(400)
+        .json(
+          new ApiResponse(400, "BAD_REQUEST", null, "Invalid academicYearId"),
+        );
+      return;
+    }
+
+    const payload = await getLiveSelectionCountsByProgramCourse(academicYearId);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          payload,
+          "Live selection counts fetched",
         ),
       );
   } catch (error) {
@@ -859,6 +894,36 @@ export async function debugMinor3ConditionsHandler(
       );
   } catch (error) {
     console.error("Debug error:", error);
+    handleError(error, res, next);
+  }
+}
+
+// Get MIS table data with session and class filters
+export async function getMisTableDataHandler(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { sessionId, classId } = req.query;
+
+    const sessionIdNum = sessionId ? parseInt(sessionId as string) : undefined;
+    const classIdNum = classId ? parseInt(classId as string) : undefined;
+
+    const result = await getMisTableData(sessionIdNum, classIdNum);
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          result,
+          "MIS table data retrieved successfully",
+        ),
+      );
+  } catch (error) {
+    console.error("MIS table data error:", error);
     handleError(error, res, next);
   }
 }

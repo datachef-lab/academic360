@@ -8,6 +8,7 @@ import { handleError } from "@/utils/handleError.js";
 // import { findAllUsers, findUserByEmail, findUserById, saveUser, searchUser, toggleUser } from "../services/user.service.js";
 import { userTypeEnum } from "@repo/db/schemas/enums";
 import * as userService from "@/features/user/services/user.service.js";
+import { getUserStats } from "@/features/user/services/user.service.js";
 import { generateExport } from "@/features/user/services/student.service.js";
 function asyncHandler(fn: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -239,6 +240,28 @@ export const exportStudents = async (
     res.status(200).send(exportResult.buffer);
   } catch (error) {
     console.error("Export error:", error);
+    handleError(error, res, next);
+  }
+};
+
+export const getUserStatsHandler = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const stats = await getUserStats();
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          "SUCCESS",
+          stats,
+          "User statistics fetched successfully!",
+        ),
+      );
+  } catch (error) {
     handleError(error, res, next);
   }
 };

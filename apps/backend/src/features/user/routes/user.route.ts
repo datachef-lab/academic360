@@ -8,6 +8,7 @@ import {
   updateUser,
   getProfileInfo,
   exportStudents,
+  getUserStatsHandler,
 } from "../controllers/user.controller.js";
 import { verifyJWT } from "@/middlewares/verifyJWT.js";
 
@@ -16,6 +17,8 @@ const router = express.Router();
 router.get("/:userId/profile", getProfileInfo);
 // Export students to Excel
 router.get("/export/students", exportStudents);
+// Get user statistics
+router.get("/stats", getUserStatsHandler);
 router.use(verifyJWT);
 
 // Profile

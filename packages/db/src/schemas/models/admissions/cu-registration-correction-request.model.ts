@@ -11,6 +11,8 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
         .references(() => studentModel.id)
         .notNull(),
     status: cuRegistrationCorrectionRequestStatusEnum("status").notNull().default("PENDING"),
+    onlineRegistrationDone: boolean("online_registration_done").notNull().default(false),
+    physicalRegistrationDone: boolean("physical_registration_done").notNull().default(false),
     remarks: text("remarks"),
     // Correction request flags for personal information
     genderCorrectionRequest: boolean("gender_correction_request").notNull().default(false),
