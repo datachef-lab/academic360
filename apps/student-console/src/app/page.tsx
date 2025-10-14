@@ -48,8 +48,8 @@ export default function SignInPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Restore state from localStorage on mount
-    restoreOtpState().catch(console.error);
+    // Don't restore OTP state on mount - always start with UID input
+    // User can enter UID and we'll check if OTP is still valid
   }, []);
 
   // Periodic sync with backend every 30 seconds when OTP is active
@@ -359,6 +359,33 @@ export default function SignInPage() {
 
     try {
       const email = `${uid}@thebges.edu.in`;
+
+      // First, check if there's already a valid OTP for this UID
+      const otpStatusResponse = await checkOtpStatus(email);
+
+      if (otpStatusResponse.httpStatusCode === 200 && otpStatusResponse.payload?.hasValidOtp) {
+        // OTP already exists and is valid, show OTP input with remaining time
+        setOtpSent(true);
+
+        // Calculate remaining time from backend
+        const backendExpiresAt = otpStatusResponse.payload.expiresAt;
+        if (backendExpiresAt) {
+          const now = Date.now();
+          const expiryTime = new Date(backendExpiresAt).getTime();
+          const remainingTime = Math.max(0, Math.floor((expiryTime - now) / 1000));
+
+          setOtpExpiry(remainingTime);
+          localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
+          localStorage.setItem(OTP_UID_KEY, uid);
+
+          console.log("🔄 Existing OTP found - Remaining time:", remainingTime);
+        }
+
+        setIsLoading(false);
+        return;
+      }
+
+      // No valid OTP exists, send a new one
       const response = await sendOtpRequest(email);
 
       if (response.httpStatusCode === 200) {
@@ -369,7 +396,7 @@ export default function SignInPage() {
         localStorage.setItem(OTP_EXPIRY_KEY, expiryTime.toString());
         setResendCooldownTimestamp(30); // 30 seconds cooldown
         localStorage.setItem(OTP_UID_KEY, uid);
-        console.log("📝 OTP sent - Stored expiry timestamp:", expiryTime);
+        console.log("📝 New OTP sent - Stored expiry timestamp:", expiryTime);
       } else {
         throw new Error(response.message || "Failed to send OTP");
       }
@@ -521,7 +548,7 @@ export default function SignInPage() {
         className="relative z-10 flex w-full max-w-md md:max-w-5xl overflow-hidden rounded-2xl shadow-2xl bg-white/0 md:bg-transparent flex-col md:flex-row"
       >
         {/* Left section */}
-        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12 flex flex-col">
+        <div className="w-full bg-white p-6 sm:p-8 md:w-1/2 md:p-12 flex flex-col h-[600px]">
           <div className="mb-8 flex items-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-md bg-indigo-600 text-white">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-7 w-7">
@@ -538,7 +565,7 @@ export default function SignInPage() {
             </div>
           </div>
 
-          <div>
+          <div className="mb-3">
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
               {otpSent ? "Enter OTP" : "Sign in with UID"}
             </h2>
@@ -547,65 +574,72 @@ export default function SignInPage() {
             </p>
           </div>
 
-          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-6 flex flex-col flex-1">
-            <div className="space-y-5 sm:space-y-6">
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+          <form onSubmit={otpSent ? handleOtpSubmit : handleUidSubmit} className="mt-3 flex flex-col flex-1">
+            {/* Fixed height container for all dynamic content */}
+            <div className="flex flex-col flex-1">
+              {/* Error message area - fixed height */}
+              <div className="h-[40px] flex items-center justify-center">
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-              <div className="space-y-4">
+              {/* Input area - fixed height */}
+              <div className="h-[120px] flex flex-col justify-center">
                 {otpSent ? (
-                  <div>
+                  <div className="flex flex-col justify-center h-full">
                     <label className="block text-sm font-medium text-gray-700 mb-4">
                       Enter the 6-digit OTP sent to your email
                     </label>
-                    <div className="flex justify-center">
-                      <InputOTP maxLength={6} value={otp} onChange={(value) => setOtp(value)} className="gap-3">
-                        <InputOTPGroup className="gap-3">
+                    <div className="flex justify-center px-2">
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={(value) => setOtp(value)}
+                        className="gap-2 sm:gap-3"
+                      >
+                        <InputOTPGroup className="gap-2 sm:gap-3">
                           <InputOTPSlot
                             index={0}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                           <InputOTPSlot
                             index={1}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                           <InputOTPSlot
                             index={2}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                           <InputOTPSlot
                             index={3}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                           <InputOTPSlot
                             index={4}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                           <InputOTPSlot
                             index={5}
-                            className="w-12 h-12 text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
+                            className="w-10 h-10 sm:w-12 sm:h-12 text-base sm:text-lg font-semibold border-2 border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg"
                           />
                         </InputOTPGroup>
                       </InputOTP>
                     </div>
-                    {otpExpiry > 0 && (
-                      <p className="text-xs text-gray-500 mt-2 text-center">OTP expires in {formatTime(otpExpiry)}</p>
-                    )}
                   </div>
                 ) : (
-                  <div>
+                  <div className="flex flex-col justify-center h-full">
                     <label htmlFor="uid" className="block text-sm font-medium text-gray-700 pb-3">
                       UID (10 digits){" "}
                     </label>
@@ -641,70 +675,127 @@ export default function SignInPage() {
                   </div>
                 )}
               </div>
+
+              {/* OTP expiry message area - fixed height */}
+              <div className="h-[24px] flex items-center justify-center">
+                {otpSent && otpExpiry > 0 && (
+                  <p className="text-xs text-gray-500 text-center">OTP expires in {formatTime(otpExpiry)}</p>
+                )}
+              </div>
+
+              {/* Name badge area - fixed height */}
+              <div className="h-[32px] flex items-center justify-center">
+                {uid.replace(/\D/g, "").length === 10 && (
+                  <>
+                    {lookupPending ? (
+                      <span
+                        className="inline-flex items-center gap-2 rounded-full border border-blue-500 bg-blue-50 px-2 py-0.5 font-semibold text-blue-700"
+                        title="Looking up user..."
+                      >
+                        <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                            fill="none"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          />
+                        </svg>
+                        Checking…
+                      </span>
+                    ) : userPreview ? (
+                      <span
+                        className="inline-flex items-center rounded-full border border-red-500 bg-red-50 px-2 py-0.5 font-semibold text-red-700"
+                        title="Matched name"
+                      >
+                        {userPreview.name}
+                      </span>
+                    ) : null}
+                  </>
+                )}
+              </div>
             </div>
-            {uid.replace(/\D/g, "").length === 10 && userPreview && (
-              <div className="mt-4 pt-4">
-                <span
-                  className="inline-flex items-center rounded-full border border-red-500 bg-red-50 px-2 py-0.5 font-semibold text-red-700"
-                  //   className="text-2xl font-bold"
-                  title="Matched name"
-                >
-                  {lookupPending ? "Checking…" : userPreview.name}
-                </span>
-              </div>
-            )}
 
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={
-                isLoading ||
-                (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
-                (otpSent && (otp.length !== 6 || otpExpiry === 0))
-              }
-              className="mt-auto w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
+            {/* Button area - fixed height */}
+            <div className="h-[60px] flex flex-col justify-center">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                disabled={
+                  isLoading ||
+                  (!otpSent && (uid.replace(/\D/g, "").length !== 10 || !userPreview)) ||
+                  (otpSent && (otp.length !== 6 || otpExpiry === 0))
+                }
+                className="w-full rounded-md bg-indigo-600 py-3 text-base sm:text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? (
+                  <div className="flex items-center justify-center">
+                    <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span className="ml-2">{otpSent ? "Verifying..." : "Sending OTP..."}</span>
+                  </div>
+                ) : (
+                  <>
+                    <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
+                  </>
+                )}
+              </motion.button>
+
+              {otpSent && (
+                <div className="mt-3 flex items-center justify-between text-sm">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      // Clear OTP state and go back to UID input
+                      setOtpSent(false);
+                      setOtp("");
+                      setError("");
+                      setOtpExpiry(0);
+                      setResendCooldown(0);
+                      // Don't clear userPreview - let it stay so name badge remains visible
+                      clearOtpStorage();
+                    }}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    Change UID
+                  </Button>
+                  {otpExpiry === 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={handleResendOtp}
+                      disabled={resendCooldown > 0 || isLoading}
+                      className="text-indigo-600 hover:text-indigo-800"
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
+                    </Button>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <span>{otpSent ? "Verify OTP" : "Send OTP"}</span>
-                </>
               )}
-            </motion.button>
-
-            {otpSent && otpExpiry === 0 && (
-              <div className="mt-3 flex items-center justify-center text-sm">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleResendOtp}
-                  disabled={resendCooldown > 0 || isLoading}
-                  className="text-indigo-600 hover:text-indigo-800"
-                >
-                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Resend OTP"}
-                </Button>
-              </div>
-            )}
+            </div>
           </form>
         </div>
 
