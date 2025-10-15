@@ -33,6 +33,7 @@ import {
   getCuRegistrationDocumentSignedUrl,
 } from "@/services/cu-registration-documents";
 import { fetchPoliceStations, fetchPostOffices, fetchCities, fetchDistricts, IdNameDto } from "@/services/resources";
+import { useRouter } from "next/navigation";
 
 interface CorrectionFlags {
   gender: boolean;
@@ -77,7 +78,7 @@ interface AddressData {
 export default function CURegistrationPage() {
   const { profileInfo, loading: profileLoading, refetch: refetchProfile } = useProfile();
   const { student } = useStudent();
-
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("personal");
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
@@ -129,6 +130,14 @@ export default function CURegistrationPage() {
   const [mailingDistricts, setMailingDistricts] = useState<IdNameDto[]>([]);
   const [addressDeclared, setAddressDeclared] = useState(false);
   const [addressErrors, setAddressErrors] = useState<string[]>([]);
+
+  // If NODE_ENV is production, then redirect back and dont render
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") {
+      router.push("/");
+    }
+  }, []);
+
   // When prefilled, set dropdown IDs from other fields (these are display names in DB)
   useEffect(() => {
     // This assumes we will later map names -> ids via dropdown lists
