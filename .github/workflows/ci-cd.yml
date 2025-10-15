@@ -219,6 +219,7 @@ jobs:
             put AWS_SECRET_ACCESS_KEY "${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}"
             put AWS_REGION "$(choose '${{ secrets.PROD_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
             put AWS_S3_BUCKET "${{ secrets.PROD_AWS_S3_BUCKET }}"
+            put AWS_ROOT_FOLDER "${{ secrets.PROD_AWS_ROOT_FOLDER }}"
           else
             echo "🧪 Processing STAGING environment variables..."
             NODE_ENV_VAL=staging
@@ -297,6 +298,7 @@ jobs:
             put AWS_SECRET_ACCESS_KEY "${{ secrets.STAGING_AWS_SECRET_ACCESS_KEY }}"
             put AWS_REGION "$(choose '${{ secrets.STAGING_AWS_REGION }}' '${{ secrets.AWS_REGION }}')"
             put AWS_S3_BUCKET "${{ secrets.STAGING_AWS_S3_BUCKET }}"
+            put AWS_ROOT_FOLDER "${{ secrets.STAGING_AWS_ROOT_FOLDER }}"
           fi
           put NODE_ENV "$NODE_ENV_VAL"
 
