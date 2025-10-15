@@ -59,7 +59,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
     },
-    process.env.NODE_ENV === "production" && {
+    process.env.NODE_ENV !== "production" && {
       title: "CU Registration",
       url: "/dashboard/cu-registration",
       icon: FileText,
