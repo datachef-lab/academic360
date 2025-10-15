@@ -133,7 +133,7 @@ export default function CURegistrationPage() {
 
   // If NODE_ENV is production, then redirect back and dont render
   useEffect(() => {
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
       router.push("/");
     }
   }, []);
