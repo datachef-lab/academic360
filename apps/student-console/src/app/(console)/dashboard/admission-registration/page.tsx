@@ -21,6 +21,7 @@ import {
   fetchStudentSubjectSelections,
   fetchCurrentActiveSelections,
   fetchMandatorySubjects,
+  type StudentSubjectSelectionApiResponse,
 } from "@/services/subject-selection";
 import {
   createCuCorrectionRequest,
@@ -431,7 +432,16 @@ export default function CURegistrationPage() {
 
     // Fetch both student selections and mandatory subjects in parallel
     Promise.all([
-      fetchStudentSubjectSelections(Number(student.id)).catch(() => ({ actualStudentSelections: [] })),
+      fetchStudentSubjectSelections(Number(student.id)).catch(
+        (): StudentSubjectSelectionApiResponse => ({
+          actualStudentSelections: [],
+          selectedMinorSubjects: [],
+          studentSubjectsSelection: [],
+          subjectSelectionMetas: [],
+          hasFormSubmissions: false,
+          session: { id: 1 },
+        }),
+      ),
       fetchMandatorySubjects(Number(student.id)).catch(() => []), // Fallback to empty array if API doesn't exist yet
     ])
       .then(([studentRows, mandatoryRows]) => {
@@ -495,7 +505,7 @@ export default function CURegistrationPage() {
             return;
           }
           const key = getCategoryKey(label);
-          console.log(`🔍 Selection ${index} - category key: "${key}"`);
+          console.log(`🔍 Selection ${index} - category key: "${String(key)}"`);
           if (!key || !next[key]) {
             console.log(`🔍 Selection ${index} - skipping due to invalid key or missing category`);
             return;
