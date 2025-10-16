@@ -102,6 +102,12 @@ export async function fetchCurrentActiveSelections(studentId: number) {
 
 // Note: Subject selection meta data is now included in the main fetchStudentSubjectSelections API response
 
+// Fetch mandatory subjects for a student (non-optional papers for their academic year)
+export async function fetchMandatorySubjects(studentId: number) {
+  const res = await api.get<ApiResponse<any[]>>(`/api/subject-selection/students/${studentId}/mandatory-papers`);
+  return res.data.payload;
+}
+
 // Save student subject selections
 export async function saveStudentSubjectSelections(
   selections: StudentSubjectSelectionForSave[],

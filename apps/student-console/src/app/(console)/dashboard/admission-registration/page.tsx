@@ -17,7 +17,11 @@ import { toast } from "sonner";
 import { useProfile } from "@/hooks/use-profile";
 import { useStudent } from "@/providers/student-provider";
 import { fetchPersonalDetailsByStudentId } from "@/services/personal-details";
-import { fetchStudentSubjectSelections, fetchCurrentActiveSelections } from "@/services/subject-selection";
+import {
+  fetchStudentSubjectSelections,
+  fetchCurrentActiveSelections,
+  fetchMandatorySubjects,
+} from "@/services/subject-selection";
 import {
   createCuCorrectionRequest,
   getStudentCuCorrectionRequests,
@@ -133,7 +137,7 @@ export default function CURegistrationPage() {
 
   // If NODE_ENV is production, then redirect back and dont render
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_APP_ENV === "production") {
+    if (process.env.NEXT_PUBLIC_APP_ENV !== "staging" && process.env.NEXT_PUBLIC_APP_ENV !== "development") {
       router.push("/");
     }
   }, []);
@@ -212,12 +216,20 @@ export default function CURegistrationPage() {
     })();
   }, [addressData.mailing.city, cities]);
   const [subjectsData, setSubjectsData] = useState({
-    DSCC: { sem1: "", sem2: "", sem3: "", sem4: "" },
-    Minor: { sem1: "", sem2: "", sem3: "", sem4: "" },
-    IDC: { sem1: "", sem2: "", sem3: "", sem4: "" },
-    SEC: { sem1: "", sem2: "", sem3: "", sem4: "" },
-    AEC: { sem1: "", sem2: "", sem3: "", sem4: "" },
-    CVAC: { sem1: "", sem2: "", sem3: "", sem4: "" },
+    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+  });
+  const [mandatorySubjects, setMandatorySubjects] = useState({
+    DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    IDC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    SEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    AEC: { sem1: [], sem2: [], sem3: [], sem4: [] },
+    CVAC: { sem1: [], sem2: [], sem3: [], sem4: [] },
   });
   const [subjectsDeclared, setSubjectsDeclared] = useState(false);
   const [documents, setDocuments] = useState({
@@ -416,10 +428,19 @@ export default function CURegistrationPage() {
   // Load subject overview from backend selections
   useEffect(() => {
     if (!student?.id) return;
-    // Use current active selections endpoint for authoritative data
-    fetchCurrentActiveSelections(Number(student.id))
-      .then((rows: any[]) => {
+
+    // Fetch both student selections and mandatory subjects in parallel
+    Promise.all([
+      fetchStudentSubjectSelections(Number(student.id)).catch(() => ({ actualStudentSelections: [] })),
+      fetchMandatorySubjects(Number(student.id)).catch(() => []), // Fallback to empty array if API doesn't exist yet
+    ])
+      .then(([studentRows, mandatoryRows]) => {
+        console.log("🔍 Student selections data:", studentRows);
+        console.log("🔍 Student selections data type:", typeof studentRows);
+        console.log("🔍 Student selections data keys:", Object.keys(studentRows || {}));
+        console.log("🔍 Mandatory subjects data:", mandatoryRows);
         const next: any = { ...subjectsData };
+        const mandatoryNext: any = { ...mandatorySubjects };
 
         const toSemNumFromLabel = (label: string) => {
           const m = /\b(I|II|III|IV)\b/i.exec(label || "");
@@ -443,23 +464,45 @@ export default function CURegistrationPage() {
           return Array.from(new Set(nums));
         };
         const getCategoryKey = (label: string): keyof typeof next | undefined => {
-          if (/DSCC/i.test(label)) return "DSCC" as any;
+          // Map full subject type names to category keys
+          if (/Discipline Specific Core Courses/i.test(label) || /DSCC/i.test(label)) return "DSCC" as any;
           if (/Minor/i.test(label)) return "Minor" as any;
-          if (/IDC/i.test(label)) return "IDC" as any;
-          if (/SEC/i.test(label)) return "SEC" as any;
-          if (/AEC/i.test(label)) return "AEC" as any;
-          if (/CVAC/i.test(label)) return "CVAC" as any;
+          if (/Interdisciplinary Course/i.test(label) || /IDC/i.test(label)) return "IDC" as any;
+          if (/Skill Enhancement Course/i.test(label) || /SEC/i.test(label)) return "SEC" as any;
+          if (/Ability Enhancement Course/i.test(label) || /AEC/i.test(label)) return "AEC" as any;
+          if (/Common Value Added Course/i.test(label) || /CVAC/i.test(label)) return "CVAC" as any;
           return undefined;
         };
 
-        rows.forEach((r: any) => {
+        // Process student selections - extract actualStudentSelections from the response
+        console.log("🔍 Full student selections API response:", studentRows);
+        console.log("🔍 studentRows.actualStudentSelections:", studentRows?.actualStudentSelections);
+        console.log("🔍 studentRows.selectedMinorSubjects:", studentRows?.selectedMinorSubjects);
+        console.log("🔍 studentRows.studentSubjectsSelection:", studentRows?.studentSubjectsSelection);
+        console.log("🔍 studentRows.hasFormSubmissions:", studentRows?.hasFormSubmissions);
+
+        const actualSelections = studentRows?.actualStudentSelections || [];
+        console.log("🔍 Processing actual student selections:", actualSelections);
+        console.log("🔍 actualSelections length:", actualSelections.length);
+
+        actualSelections.forEach((r: any, index: number) => {
+          console.log(`🔍 Processing selection ${index}:`, r);
           const label = String(r?.subjectSelectionMeta?.label || "");
           const name = r?.subject?.name || r?.subject?.code || "";
-          if (!label || !name) return;
+          console.log(`🔍 Selection ${index} - label: "${label}", name: "${name}"`);
+          if (!label || !name) {
+            console.log(`🔍 Selection ${index} - skipping due to missing label or name`);
+            return;
+          }
           const key = getCategoryKey(label);
-          if (!key || !next[key]) return;
+          console.log(`🔍 Selection ${index} - category key: "${key}"`);
+          if (!key || !next[key]) {
+            console.log(`🔍 Selection ${index} - skipping due to invalid key or missing category`);
+            return;
+          }
 
           let semesters: number[] = toSemNumsFromClasses(r?.subjectSelectionMeta?.forClasses);
+          console.log(`🔍 Selection ${index} - initial semesters from classes:`, semesters);
           // Category-specific defaults when class span is unavailable
           if (semesters.length === 0 && /Minor\s*1/i.test(label)) semesters = [1, 2];
           if (semesters.length === 0 && /Minor\s*2/i.test(label)) semesters = [3, 4];
@@ -473,14 +516,79 @@ export default function CURegistrationPage() {
             const n = toSemNumFromLabel(label);
             if (n) semesters = [n];
           }
+          console.log(`🔍 Selection ${index} - final semesters:`, semesters);
 
           semesters.forEach((s) => {
             if (next[key] && next[key][`sem${s}`] !== undefined) {
-              next[key][`sem${s}`] = name;
+              // Convert to array if it's a string, or add to existing array
+              const currentValue = next[key][`sem${s}`];
+              if (typeof currentValue === "string") {
+                next[key][`sem${s}`] = currentValue ? [currentValue, name] : [name];
+              } else if (Array.isArray(currentValue)) {
+                if (!currentValue.includes(name)) {
+                  currentValue.push(name);
+                }
+              } else {
+                next[key][`sem${s}`] = [name];
+              }
             }
           });
         });
+
+        // Process mandatory papers (different structure from student selections)
+        mandatoryRows.forEach((r: any) => {
+          // Mandatory papers have different structure: { subjectType, paper, subject, class }
+          const subjectTypeName = String(r?.subjectType?.name || "");
+          const subjectName = String(r?.subject?.name || r?.subject?.code || "");
+          const className = String(r?.class?.name || r?.class?.shortName || "");
+
+          if (!subjectTypeName || !subjectName) return;
+
+          const key = getCategoryKey(subjectTypeName);
+          if (!key || !mandatoryNext[key]) return;
+
+          // Extract semester from class name (e.g., "SEMESTER I", "SEM I", "1", etc.)
+          let semesters: number[] = [];
+          const semMatch = className.match(/\b(I|II|III|IV|1|2|3|4)\b/i);
+          if (semMatch) {
+            const sem = semMatch[1].toUpperCase();
+            const semMap: any = { I: 1, II: 2, III: 3, IV: 4, "1": 1, "2": 2, "3": 3, "4": 4 };
+            semesters = [semMap[sem]];
+          }
+
+          // If no semester found in class name, try to infer from subject type
+          if (semesters.length === 0) {
+            if (/Minor\s*1/i.test(subjectTypeName)) semesters = [1, 2];
+            else if (/Minor\s*2/i.test(subjectTypeName)) semesters = [3, 4];
+            else if (/Minor\s*3/i.test(subjectTypeName)) semesters = [3];
+            else if (/IDC\s*1/i.test(subjectTypeName)) semesters = [1];
+            else if (/IDC\s*2/i.test(subjectTypeName)) semesters = [2];
+            else if (/IDC\s*3/i.test(subjectTypeName)) semesters = [3];
+            else if (/AEC/i.test(subjectTypeName)) semesters = [3, 4];
+            else if (/CVAC/i.test(subjectTypeName)) semesters = [2];
+            else {
+              // Default to all semesters if we can't determine
+              semesters = [1, 2, 3, 4];
+            }
+          }
+
+          console.log("🔍 Assigning to semesters:", { semesters, key, subjectName });
+          semesters.forEach((s) => {
+            if (mandatoryNext[key] && mandatoryNext[key][`sem${s}`] !== undefined) {
+              // Add subject to array if not already present
+              const currentSubjects = mandatoryNext[key][`sem${s}`] as string[];
+              if (!currentSubjects.includes(subjectName)) {
+                currentSubjects.push(subjectName);
+              }
+              console.log("🔍 Assigned:", { key, semester: `sem${s}`, subjectName, allSubjects: currentSubjects });
+            }
+          });
+        });
+
+        console.log("🔍 Final student subjects state:", next);
+        console.log("🔍 Final mandatory subjects state:", mandatoryNext);
         setSubjectsData(next);
+        setMandatorySubjects(mandatoryNext);
       })
       .catch(() => {
         // Fallback to broader service if needed
@@ -494,6 +602,7 @@ export default function CURegistrationPage() {
   const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
   const [correctionRequestId, setCorrectionRequestId] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showStatusAlert, setShowStatusAlert] = useState<boolean>(true);
   const [correctionRequestStatus, setCorrectionRequestStatus] = useState<string | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
@@ -674,7 +783,7 @@ export default function CURegistrationPage() {
   const getDeclarationText = () => {
     const hasCorrections = Object.values(correctionFlags).some((flag) => flag);
     if (hasCorrections) {
-      return "I declare that the information in Personal Info is accurate. Note: Corrections will be reviewed by staff.";
+      return "You have requested corrections on this section. You must inform of the same at the time of submitting your Admission & Registration Datasheet and documents physically at the College.";
     }
     return "I declare that the information in Personal Info is accurate.";
   };
@@ -728,16 +837,6 @@ export default function CURegistrationPage() {
 
   const isAddressTabValid = () => {
     return addressDeclared && addressErrors.length === 0;
-  };
-
-  const handleSubjectChange = (category: string, semester: string, value: string) => {
-    setSubjectsData((prev) => ({
-      ...prev,
-      [category]: {
-        ...prev[category as keyof typeof prev],
-        [semester]: value,
-      },
-    }));
   };
 
   const handleSubjectsDeclarationChange = (checked: boolean) => {
@@ -815,7 +914,8 @@ export default function CURegistrationPage() {
   };
 
   const handleSubmitCorrection = async () => {
-    if (!correctionRequestId || !finalDeclaration) return;
+    if (!correctionRequestId || !finalDeclaration || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       // Collect all documents that need to be uploaded
       const documentsToUpload = [];
@@ -1063,6 +1163,8 @@ export default function CURegistrationPage() {
       });
     } catch (e: any) {
       toast.error(e?.message || "Failed to submit correction request");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1102,11 +1204,11 @@ export default function CURegistrationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
+    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-4">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Calcutta University - Registration</h1>
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
         </div>
 
         {/* Success Alert Message with Correction Flags - Show only when status is present and not PENDING */}
@@ -1352,44 +1454,47 @@ export default function CURegistrationPage() {
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 {/* Tab Navigation */}
                 <div className="border-b border-gray-200 bg-white">
-                  <div className="flex w-full">
+                  <div className="flex w-full overflow-x-auto no-scrollbar">
                     <button
                       onClick={() => setActiveTab("personal")}
                       disabled={!canNavigateToTab("personal")}
-                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "personal"
                           ? "text-blue-600 border-blue-600 bg-transparent"
                           : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
                       } ${!canNavigateToTab("personal") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
-                      Personal Info
+                      <span className="hidden sm:inline">Personal Info</span>
+                      <span className="sm:hidden">Personal</span>
                     </button>
                     <button
                       onClick={() => setActiveTab("address")}
                       disabled={!canNavigateToTab("address")}
-                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "address"
                           ? "text-blue-600 border-blue-600 bg-transparent"
                           : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
                       } ${!canNavigateToTab("address") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
-                      Address Info
+                      <span className="hidden sm:inline">Address Info</span>
+                      <span className="sm:hidden">Address</span>
                     </button>
                     <button
                       onClick={() => setActiveTab("subjects")}
                       disabled={!canNavigateToTab("subjects")}
-                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "subjects"
                           ? "text-blue-600 border-blue-600 bg-transparent"
                           : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
                       } ${!canNavigateToTab("subjects") ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                     >
-                      Subjects Overview
+                      <span className="hidden sm:inline">Subjects Overview</span>
+                      <span className="sm:hidden">Subjects</span>
                     </button>
                     <button
                       onClick={() => setActiveTab("documents")}
                       disabled={!canNavigateToTab("documents")}
-                      className={`flex-1 py-3 px-4 text-sm font-medium transition-colors border-b-2 ${
+                      className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "documents"
                           ? "text-blue-600 border-blue-600 bg-transparent"
                           : "text-gray-500 hover:text-gray-700 bg-transparent border-transparent"
@@ -1401,13 +1506,13 @@ export default function CURegistrationPage() {
                 </div>
 
                 {/* Tab Content */}
-                <div className="p-6 bg-white">
+                <div className="p-4 sm:p-6 bg-white">
                   {/* Personal Info Tab */}
                   <TabsContent value="personal" className="space-y-6">
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
+                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Student Name</h2>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Full Name */}
                         <div className="space-y-2">
                           <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">
@@ -1448,6 +1553,7 @@ export default function CURegistrationPage() {
                                   checked={correctionFlags.gender}
                                   onCheckedChange={() => handleCorrectionToggle("gender")}
                                   disabled={!isFieldEditable()}
+                                  className="data-[state=checked]:bg-blue-600"
                                 />
                               </div>
                             )}
@@ -1466,6 +1572,7 @@ export default function CURegistrationPage() {
                                   checked={correctionFlags.nationality}
                                   onCheckedChange={() => handleCorrectionToggle("nationality")}
                                   disabled={!isFieldEditable()}
+                                  className="data-[state=checked]:bg-blue-600"
                                 />
                               </div>
                             )}
@@ -1519,6 +1626,7 @@ export default function CURegistrationPage() {
                                   checked={correctionFlags.apaarId}
                                   onCheckedChange={() => handleCorrectionToggle("apaarId")}
                                   disabled={!isFieldEditable()}
+                                  className="data-[state=checked]:bg-blue-600"
                                 />
                               </div>
                             )}
@@ -1551,10 +1659,10 @@ export default function CURegistrationPage() {
                   {/* Address Info Tab */}
                   <TabsContent value="address" className="space-y-6">
                     <div>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
                         {/* Residential Address */}
-                        <div className="space-y-4 lg:pr-8 lg:border-r lg:border-gray-200">
-                          <h3 className="text-base font-medium text-gray-900">Residential Address</h3>
+                        <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
+                          <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
                           <div className="space-y-3">
                             <div className="space-y-2">
                               <Label htmlFor="residential-address" className="text-sm font-medium text-gray-700">
@@ -1570,7 +1678,7 @@ export default function CURegistrationPage() {
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
                                   2.2 City
@@ -1617,7 +1725,7 @@ export default function CURegistrationPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
                                   2.4 Police Station
@@ -1664,7 +1772,7 @@ export default function CURegistrationPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
                                   2.6 State
@@ -1707,8 +1815,8 @@ export default function CURegistrationPage() {
                         </div>
 
                         {/* Mailing Address */}
-                        <div className="space-y-4 lg:pl-8">
-                          <h3 className="text-base font-medium text-gray-900">Mailing Address</h3>
+                        <div className="space-y-4 xl:pl-8">
+                          <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
                           <div className="space-y-3">
                             <div className="space-y-2">
                               <Label htmlFor="mailing-address" className="text-sm font-medium text-gray-700">
@@ -1724,7 +1832,7 @@ export default function CURegistrationPage() {
                               />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
                                   2.10 City
@@ -1771,7 +1879,7 @@ export default function CURegistrationPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
                                   2.12 Police Station
@@ -1818,7 +1926,7 @@ export default function CURegistrationPage() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                               <div className="space-y-2">
                                 <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
                                   2.14 State
@@ -1905,29 +2013,30 @@ export default function CURegistrationPage() {
                               checked={correctionFlags.subjects}
                               onCheckedChange={() => handleCorrectionToggle("subjects")}
                               disabled={!isFieldEditable()}
+                              className="data-[state=checked]:bg-blue-600"
                             />
                           </div>
                         )}
                       </div>
 
                       {/* Subjects Table */}
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300">
+                      <div className="overflow-x-auto no-scrollbar">
+                        <table className="min-w-[800px] w-full border-collapse border border-gray-300">
                           <thead>
                             <tr className="bg-gray-50">
-                              <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700">
+                              <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
                                 3.1 Category
                               </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
                                 3.2 Sem 1
                               </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
                                 3.3 Sem 2
                               </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
                                 3.4 Sem 3
                               </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700">
+                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
                                 3.5 Sem 4
                               </th>
                             </tr>
@@ -1935,21 +2044,52 @@ export default function CURegistrationPage() {
                           <tbody>
                             {Object.entries(subjectsData).map(([category, semesters]) => (
                               <tr key={category} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
                                   {category}
                                 </td>
-                                {Object.entries(semesters).map(([sem, value]) => (
-                                  <td key={sem} className="border border-gray-300 px-2 py-2">
-                                    <div className="relative">
-                                      <Input
-                                        value={value}
-                                        onChange={(e) => handleSubjectChange(category, sem, e.target.value)}
-                                        readOnly={correctionFlags.subjects}
-                                        className="w-full text-center text-sm h-8 bg-transparent border-0 focus-visible:ring-0"
-                                      />
-                                    </div>
-                                  </td>
-                                ))}
+                                {Object.entries(semesters).map(([sem, value]) => {
+                                  const mandatorySubjectsList =
+                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                      sem as keyof typeof semesters
+                                    ] as string[]) || [];
+                                  const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
+
+                                  const hasMandatory = mandatorySubjectsList.length > 0;
+                                  const hasStudentSelection = studentSubjectsList.length > 0;
+
+                                  return (
+                                    <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                      <div className="text-sm text-gray-900">
+                                        {(() => {
+                                          // Combine all subjects (mandatory + optional) into one array
+                                          const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+
+                                          // Add mandatory subjects
+                                          mandatorySubjectsList.forEach((subject) => {
+                                            allSubjects.push({ name: subject, isMandatory: true });
+                                          });
+
+                                          // Add optional subjects (filter out duplicates)
+                                          const filteredSubjects = studentSubjectsList.filter(
+                                            (subject) => !mandatorySubjectsList.includes(subject),
+                                          );
+                                          filteredSubjects.forEach((subject) => {
+                                            allSubjects.push({ name: subject, isMandatory: false });
+                                          });
+
+                                          // Render all subjects with commas
+                                          return allSubjects.map((subject, index) => (
+                                            <span key={`subject-${index}`}>
+                                              {subject.name}
+                                              {subject.isMandatory && <span className="text-red-500">*</span>}
+                                              {index < allSubjects.length - 1 && ", "}
+                                            </span>
+                                          ));
+                                        })()}
+                                      </div>
+                                    </td>
+                                  );
+                                })}
                               </tr>
                             ))}
                           </tbody>
@@ -2736,11 +2876,37 @@ export default function CURegistrationPage() {
                     Back
                   </Button>
                   <Button
-                    className={`border ${finalDeclaration ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600" : "bg-blue-200 text-white border-blue-200"}`}
-                    disabled={!finalDeclaration}
+                    className={`border ${finalDeclaration && !isSubmitting ? "bg-blue-600 text-white hover:bg-blue-700 border-blue-600" : "bg-blue-200 text-white border-blue-200"}`}
+                    disabled={!finalDeclaration || isSubmitting}
                     onClick={handleSubmitCorrection}
                   >
-                    Submit
+                    {isSubmitting ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit"
+                    )}
                   </Button>
                 </div>
               </div>

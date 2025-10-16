@@ -59,11 +59,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: BookOpen,
       isActive: pathname === "/dashboard/subject-selection",
     },
-    process.env.NEXT_PUBLIC_APP_ENV === "staging" && {
-      title: "CU Registration",
-      url: "/dashboard/cu-registration",
+    (process.env.NEXT_PUBLIC_APP_ENV === "staging" || process.env.NEXT_PUBLIC_APP_ENV === "development") && {
+      title: "Admission & Registration Data",
+      url: "/dashboard/admission-registration",
       icon: FileText,
-      isActive: pathname === "/dashboard/cu-registration",
+      isActive: pathname === "/dashboard/admission-registration",
     },
     // accessControl?.access_exams && {
     //   title: "Exams",

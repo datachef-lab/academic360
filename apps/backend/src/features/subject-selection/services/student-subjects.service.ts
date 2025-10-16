@@ -634,3 +634,53 @@ async function fetchSubjectSelectionMetaData(
     return streamMatch && subjectTypeMatch && academicYearMatch;
   });
 }
+
+export async function findMandatoryPapers(studentId: number) {
+  try {
+    const { foundProgramCourse, foundClass, foundSession } =
+      await findPromotionByStudentId(studentId);
+
+    const [foundAcademicYear] = await db
+      .select()
+      .from(academicYearModel)
+      .where(eq(academicYearModel.id, foundSession?.academicYearId!));
+
+    // Resolve keys used for lookups
+    const resolvedAcademicYearId =
+      foundSession?.academicYearId || foundAcademicYear?.id;
+    const resolvedProgramCourseId = foundProgramCourse?.id;
+
+    if (!resolvedAcademicYearId || !resolvedProgramCourseId) {
+      return [];
+    }
+
+    // Fetch mandatory papers (non-optional, active papers for the student's academic year and program course)
+    const mandatoryPapers = await db
+      .select({
+        subjectType: subjectTypeModel,
+        paper: paperModel,
+        subject: subjectModel,
+        class: classModel,
+      })
+      .from(paperModel)
+      .leftJoin(
+        subjectTypeModel,
+        eq(paperModel.subjectTypeId, subjectTypeModel.id),
+      )
+      .leftJoin(subjectModel, eq(paperModel.subjectId, subjectModel.id))
+      .leftJoin(classModel, eq(paperModel.classId, classModel.id))
+      .where(
+        and(
+          eq(paperModel.academicYearId, resolvedAcademicYearId as number),
+          eq(paperModel.programCourseId, resolvedProgramCourseId),
+          eq(paperModel.isActive, true),
+          eq(paperModel.isOptional, false), // Only non-optional (mandatory) papers
+        ),
+      );
+
+    return mandatoryPapers;
+  } catch (error) {
+    console.error("[findMandatoryPapers] Error:", error);
+    return [];
+  }
+}

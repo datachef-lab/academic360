@@ -49,7 +49,7 @@ export default function SubjectSelection() {
 
   return (
     <div className="py-2 flex justify-center h-[calc(100vh-3.5rem)] relative overflow-hidden">
-      <div className="flex gap-6 w-full max-w-screen h-full ">
+      <div className="flex gap-6 w-full max-w-screen h-full border borde-red-500 ">
         {/* Left: Form */}
         <div className="w-full md:w-[75%] h-full overflow-y-auto no-scrollbar">
           <SubjectSelectionForm
