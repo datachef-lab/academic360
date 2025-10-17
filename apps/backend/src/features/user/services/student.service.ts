@@ -896,8 +896,7 @@ async function getStudentFieldsByStudentId(studentId: number) {
       rollNumber: studentModel.rollNumber,
       classRollNumber: studentModel.classRollNumber,
       apaarId: studentModel.apaarId,
-      abcId: studentModel.abcId,
-      apprid: studentModel.apprid,
+
       checkRepeat: studentModel.checkRepeat,
       community: studentModel.community,
       handicapped: studentModel.handicapped,
@@ -1576,4 +1575,85 @@ async function getAdmissionSubjectSelections(studentId: number) {
   );
 
   return enrichedSelections;
+}
+
+interface StudentApaarIdRow {
+  "College UID": string;
+  "Student Name": string;
+  "APAAR ID": string;
+}
+
+// Update APAAR IDs for students based on College UID
+export async function updateStudentApaarIds(
+  apaarIdRows: StudentApaarIdRow[],
+): Promise<{
+  success: boolean;
+  updated: number;
+  errors: Array<{ uid: string; error: string }>;
+  notFound: string[];
+}> {
+  const errors: Array<{ uid: string; error: string }> = [];
+  const notFound: string[] = [];
+  let updated = 0;
+
+  console.info(`[UPDATE APAAR IDS] Processing ${apaarIdRows.length} records`);
+
+  for (const row of apaarIdRows) {
+    const { "College UID": collegeUid, "APAAR ID": apaarId } = row;
+
+    if (!collegeUid || !apaarId) {
+      errors.push({
+        uid: collegeUid || "unknown",
+        error: "Missing College UID or APAAR ID",
+      });
+      continue;
+    }
+
+    try {
+      // Find student by College UID
+      const [student] = await db
+        .select()
+        .from(studentModel)
+        .where(eq(studentModel.uid, collegeUid.trim()));
+
+      if (!student) {
+        notFound.push(collegeUid);
+        console.warn(
+          `[UPDATE APAAR IDS] Student not found for UID: ${collegeUid}`,
+        );
+        continue;
+      }
+
+      // Update APAAR ID
+      await db
+        .update(studentModel)
+        .set({ apaarId: apaarId.trim() })
+        .where(eq(studentModel.id, student.id));
+
+      updated++;
+      console.info(
+        `[UPDATE APAAR IDS] Updated APAAR ID for student ${collegeUid}: ${apaarId}`,
+      );
+    } catch (error: any) {
+      console.error(
+        `[UPDATE APAAR IDS] Error updating student ${collegeUid}:`,
+        error,
+      );
+      errors.push({
+        uid: collegeUid,
+        error: error.message || "Unknown error",
+      });
+    }
+  }
+
+  console.info(
+    `[UPDATE APAAR IDS] Completed: ${updated} updated, ${errors.length} errors, ${notFound.length} not found`,
+  );
+
+  return {
+    success: errors.length === 0,
+    updated,
+    errors,
+    notFound,
+  };
 }

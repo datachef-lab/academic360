@@ -11,6 +11,7 @@ import personalDetailsRouter from "@/features/user/routes/personalDetails.route.
 import transportDetailsRouter from "@/features/user/routes/transportDetails.route.js";
 import userRouter from "@/features/user/routes/user.route.js";
 import studentRouter from "@/features/user/routes/student.route.js";
+import studentApaarUpdateRouter from "@/features/user/routes/student-apaar-update.route.js";
 import reportRouter from "@/features/user/routes/report.route.js";
 import specializationRouter from "@/features/course-design/routes/specialization.routes.js";
 
@@ -27,6 +28,7 @@ export {
   transportDetailsRouter,
   userRouter,
   studentRouter,
+  studentApaarUpdateRouter,
   reportRouter,
   specializationRouter,
 };

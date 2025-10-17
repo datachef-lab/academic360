@@ -37,12 +37,13 @@ import {
   getCuRegistrationDocuments,
   getCuRegistrationDocumentSignedUrl,
 } from "@/services/cu-registration-documents";
-import { fetchPoliceStations, fetchPostOffices, fetchCities, fetchDistricts, IdNameDto } from "@/services/resources";
+import { fetchCities, fetchDistricts, IdNameDto } from "@/services/resources";
 import { useRouter } from "next/navigation";
 
 interface CorrectionFlags {
   gender: boolean;
   nationality: boolean;
+  aadhaarNumber: boolean;
   apaarId: boolean;
   subjects: boolean;
 }
@@ -88,6 +89,7 @@ export default function CURegistrationPage() {
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
     nationality: false,
+    aadhaarNumber: false,
     apaarId: false,
     subjects: false,
   });
@@ -123,13 +125,7 @@ export default function CURegistrationPage() {
       pinCode: "",
     },
   });
-  // Track selected IDs for police station and post office while showing names from "other" fields by default
-  const [residentialPoliceStationId, setResidentialPoliceStationId] = useState<number | null>(null);
-  const [residentialPostOfficeId, setResidentialPostOfficeId] = useState<number | null>(null);
-  const [mailingPoliceStationId, setMailingPoliceStationId] = useState<number | null>(null);
-  const [mailingPostOfficeId, setMailingPostOfficeId] = useState<number | null>(null);
-  const [policeStations, setPoliceStations] = useState<IdNameDto[]>([]);
-  const [postOffices, setPostOffices] = useState<IdNameDto[]>([]);
+  // Note: Police station and post office are now input fields, no longer using dropdowns
   const [cities, setCities] = useState<IdNameDto[]>([]);
   const [districts, setDistricts] = useState<IdNameDto[]>([]);
   const [mailingDistricts, setMailingDistricts] = useState<IdNameDto[]>([]);
@@ -143,49 +139,17 @@ export default function CURegistrationPage() {
     }
   }, []);
 
-  // When prefilled, set dropdown IDs from other fields (these are display names in DB)
-  useEffect(() => {
-    // This assumes we will later map names -> ids via dropdown lists
-    setResidentialPoliceStationId((prev) => prev ?? null);
-    setResidentialPostOfficeId((prev) => prev ?? null);
-    setMailingPoliceStationId((prev) => prev ?? null);
-    setMailingPostOfficeId((prev) => prev ?? null);
-  }, [
-    addressData.residential.policeStation,
-    addressData.residential.postOffice,
-    addressData.mailing.policeStation,
-    addressData.mailing.postOffice,
-  ]);
+  // Note: ID states removed since police station and post office are now input fields
 
-  // Load dropdown options (PS/PO) based on state and preselect by name if possible
+  // Load cities for dropdown options
   useEffect(() => {
     (async () => {
       try {
-        const stateName = addressData?.residential?.state || addressData?.mailing?.state || "";
-        const [ps, po] = await Promise.all([
-          fetchPoliceStations({ stateName }).catch(() => []),
-          fetchPostOffices({ stateName }).catch(() => []),
-        ]);
-        setPoliceStations(ps || []);
-        setPostOffices(po || []);
-        // Also load cities and districts for state filter
         const [cityList] = await Promise.all([fetchCities().catch(() => [])]);
         setCities(cityList || []);
-
-        const matchByName = (arr: IdNameDto[], name?: string | null) => {
-          if (!name) return null;
-          const n = String(name).trim().toLowerCase();
-          const found = arr.find((x) => x.name.trim().toLowerCase() === n);
-          return found?.id ?? null;
-        };
-
-        setResidentialPoliceStationId((prev) => prev ?? matchByName(ps, addressData.residential.policeStation));
-        setResidentialPostOfficeId((prev) => prev ?? matchByName(po, addressData.residential.postOffice));
-        setMailingPoliceStationId((prev) => prev ?? matchByName(ps, addressData.mailing.policeStation));
-        setMailingPostOfficeId((prev) => prev ?? matchByName(po, addressData.mailing.postOffice));
       } catch {}
     })();
-  }, [addressData.residential.state, addressData.mailing.state]);
+  }, []);
 
   // Load districts when city changes (residential)
   useEffect(() => {
@@ -264,6 +228,26 @@ export default function CURegistrationPage() {
       : `${process.env.NEXT_PUBLIC_APP_BASE_URL || ""}${url.startsWith("/") ? url : `/${url}`}`;
   };
 
+  // Helper: format Aadhaar number to 4-4-4 format
+  const formatAadhaarNumber = (aadhaar: string) => {
+    if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
+    const digits = aadhaar.replace(/\D/g, "");
+    if (digits.length === 12) {
+      return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+    }
+    return aadhaar;
+  };
+
+  // Helper: format APAAR ID to 3-3-3-3 format
+  const formatApaarId = (apaarId: string) => {
+    if (!apaarId || apaarId === "Not provided") return apaarId;
+    const digits = apaarId.replace(/\D/g, "");
+    if (digits.length === 12) {
+      return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4");
+    }
+    return apaarId;
+  };
+
   // Handle document uploads via backend API
   const handleUpload = async (key: keyof typeof documents, documentId: number) => {
     const file = documents[key];
@@ -316,14 +300,9 @@ export default function CURegistrationPage() {
           "",
         gender: personalDetails?.gender || "",
         nationality: personalDetails?.nationality?.name || "",
-        aadhaarNumber: personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX",
+        aadhaarNumber: formatAadhaarNumber(personalDetails?.aadhaarCardNumber || "XXXX XXXX XXXX"),
         // APAAR (ABC) ID may be stored as apaarId, abcId, or apprid
-        apaarId:
-          (student?.apaarId && student.apaarId.trim()) ||
-          (student?.abcId && student.abcId.trim()) ||
-          (student?.apprid && String(student.apprid).trim()) ||
-          prev.apaarId ||
-          "",
+        apaarId: formatApaarId((student?.apaarId && student.apaarId.trim()) || prev.apaarId || ""),
         ews: student?.belongsToEWS ? "Yes" : prev.ews,
       }));
 
@@ -420,7 +399,7 @@ export default function CURegistrationPage() {
         setPersonalInfo((prev) => ({
           ...prev,
           gender: pd.gender || prev.gender,
-          aadhaarNumber: pd.aadhaarCardNumber || prev.aadhaarNumber,
+          aadhaarNumber: formatAadhaarNumber(pd.aadhaarCardNumber || prev.aadhaarNumber),
         }));
       })
       .catch(() => undefined);
@@ -675,6 +654,7 @@ export default function CURegistrationPage() {
           setCorrectionFlags({
             gender: existing.genderCorrectionRequest ?? false,
             nationality: existing.nationalityCorrectionRequest ?? false,
+            aadhaarNumber: existing.aadhaarCardNumberCorrectionRequest ?? false,
             apaarId: existing.apaarIdCorrectionRequest ?? false,
             subjects: existing.subjectsCorrectionRequest ?? false,
           });
@@ -995,9 +975,9 @@ export default function CURegistrationPage() {
               cityId: residentialCityId,
               districtId: residentialDistrictId,
               // stateId and countryId can be looked up by backend from names
-              postofficeId: residentialPostOfficeId,
+              postofficeId: null, // Now using input field, so no ID
               otherPostoffice: addressData.residential.postOffice,
-              policeStationId: residentialPoliceStationId,
+              policeStationId: null, // Now using input field, so no ID
               otherPoliceStation: addressData.residential.policeStation,
               addressLine: addressData.residential.addressLine,
               pincode: addressData.residential.pinCode,
@@ -1011,9 +991,9 @@ export default function CURegistrationPage() {
               cityId: mailingCityId,
               districtId: mailingDistrictId,
               // stateId and countryId can be looked up by backend from names
-              postofficeId: mailingPostOfficeId,
+              postofficeId: null, // Now using input field, so no ID
               otherPostoffice: addressData.mailing.postOffice,
-              policeStationId: mailingPoliceStationId,
+              policeStationId: null, // Now using input field, so no ID
               otherPoliceStation: addressData.mailing.policeStation,
               addressLine: addressData.mailing.addressLine,
               pincode: addressData.mailing.pinCode,
@@ -1081,14 +1061,10 @@ export default function CURegistrationPage() {
         residential: {
           policeStation: addressData.residential.policeStation,
           postOffice: addressData.residential.postOffice,
-          policeStationId: residentialPoliceStationId,
-          postOfficeId: residentialPostOfficeId,
         },
         mailing: {
           policeStation: addressData.mailing.policeStation,
           postOffice: addressData.mailing.postOffice,
-          policeStationId: mailingPoliceStationId,
-          postOfficeId: mailingPostOfficeId,
         },
       });
 
@@ -1104,9 +1080,9 @@ export default function CURegistrationPage() {
           residential: {
             cityId: residentialCityId,
             districtId: residentialDistrictId,
-            postofficeId: residentialPostOfficeId,
+            postofficeId: null, // Now using input field, so no ID
             otherPostoffice: addressData.residential.postOffice,
-            policeStationId: residentialPoliceStationId,
+            policeStationId: null, // Now using input field, so no ID
             otherPoliceStation: addressData.residential.policeStation,
             addressLine: addressData.residential.addressLine,
             pincode: addressData.residential.pinCode,
@@ -1118,9 +1094,9 @@ export default function CURegistrationPage() {
           mailing: {
             cityId: mailingCityId,
             districtId: mailingDistrictId,
-            postofficeId: mailingPostOfficeId,
+            postofficeId: null, // Now using input field, so no ID
             otherPostoffice: addressData.mailing.postOffice,
-            policeStationId: mailingPoliceStationId,
+            policeStationId: null, // Now using input field, so no ID
             otherPoliceStation: addressData.mailing.policeStation,
             addressLine: addressData.mailing.addressLine,
             pincode: addressData.mailing.pinCode,
@@ -1144,9 +1120,9 @@ export default function CURegistrationPage() {
           residential: {
             cityId: residentialCityId,
             districtId: residentialDistrictId,
-            postofficeId: residentialPostOfficeId,
+            postofficeId: null, // Now using input field, so no ID
             otherPostoffice: addressData.residential.postOffice,
-            policeStationId: residentialPoliceStationId,
+            policeStationId: null, // Now using input field, so no ID
             otherPoliceStation: addressData.residential.policeStation,
             addressLine: addressData.residential.addressLine,
             pincode: addressData.residential.pinCode,
@@ -1158,9 +1134,9 @@ export default function CURegistrationPage() {
           mailing: {
             cityId: mailingCityId,
             districtId: mailingDistrictId,
-            postofficeId: mailingPostOfficeId,
+            postofficeId: null, // Now using input field, so no ID
             otherPostoffice: addressData.mailing.postOffice,
-            policeStationId: mailingPoliceStationId,
+            policeStationId: null, // Now using input field, so no ID
             otherPoliceStation: addressData.mailing.policeStation,
             addressLine: addressData.mailing.addressLine,
             pincode: addressData.mailing.pinCode,
@@ -1295,6 +1271,7 @@ export default function CURegistrationPage() {
                     {correctionRequest &&
                       (correctionRequest.genderCorrectionRequest ||
                         correctionRequest.nationalityCorrectionRequest ||
+                        correctionRequest.aadhaarCardNumberCorrectionRequest ||
                         correctionRequest.apaarIdCorrectionRequest ||
                         correctionRequest.subjectsCorrectionRequest) && (
                         <div className="mt-2">
@@ -1327,6 +1304,12 @@ export default function CURegistrationPage() {
                               <div className="flex items-center space-x-1">
                                 <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
                                 <span className="text-xs text-green-700">Nationality</span>
+                              </div>
+                            )}
+                            {correctionRequest.aadhaarCardNumberCorrectionRequest && (
+                              <div className="flex items-center space-x-1">
+                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                <span className="text-xs text-green-700">Aadhaar Number</span>
                               </div>
                             )}
                             {correctionRequest.apaarIdCorrectionRequest && (
@@ -1611,15 +1594,21 @@ export default function CURegistrationPage() {
 
                         {/* Aadhaar Number */}
                         <div className="space-y-2">
-                          <Label htmlFor="aadhaarNumber" className="text-sm font-medium text-gray-700">
-                            1.6 Aadhaar Number
-                          </Label>
-                          <Input
-                            id="aadhaarNumber"
-                            value={personalInfo.aadhaarNumber}
-                            className={getReadOnlyFieldStyle()}
-                            readOnly
-                          />
+                          <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
+                          <div className="flex flex-col gap-2">
+                            <div className={getReadOnlyDivStyle()}>{personalInfo.aadhaarNumber}</div>
+                            {isFieldEditable() && (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm text-gray-600">1.6 Request correction</span>
+                                <Switch
+                                  checked={correctionFlags.aadhaarNumber}
+                                  onCheckedChange={() => handleCorrectionToggle("aadhaarNumber")}
+                                  disabled={!isFieldEditable()}
+                                  className="data-[state=checked]:bg-blue-600"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* APAAR ID */}
@@ -1674,6 +1663,7 @@ export default function CURegistrationPage() {
                         <div className="space-y-4 xl:pr-8 xl:border-r xl:border-gray-200">
                           <h3 className="text-sm sm:text-base font-medium text-gray-900">Residential Address</h3>
                           <div className="space-y-3">
+                            {/* 1. Address Line */}
                             <div className="space-y-2">
                               <Label htmlFor="residential-address" className="text-sm font-medium text-gray-700">
                                 2.1 Address Line
@@ -1688,138 +1678,137 @@ export default function CURegistrationPage() {
                               />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
-                                  2.2 City
-                                </Label>
-                                <Combobox
-                                  dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
-                                  value={(() => {
-                                    const id = cities.find(
-                                      (c) =>
-                                        c.name.trim().toLowerCase() ===
-                                        (addressData.residential.city || "").trim().toLowerCase(),
-                                    )?.id;
-                                    return id ? String(id) : "";
-                                  })()}
-                                  onChange={(val) => {
-                                    const name = cities.find((c) => String(c.id) === val)?.name || "";
-                                    handleAddressChange("residential", "city", name);
-                                  }}
-                                  placeholder={addressData.residential.city || "Select city"}
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
-                                  2.3 District
-                                </Label>
-                                <Combobox
-                                  dataArr={districts.map((d) => ({ value: String(d.id), label: d.name }))}
-                                  value={(() => {
-                                    const id = districts.find(
-                                      (d) =>
-                                        d.name.trim().toLowerCase() ===
-                                        (addressData.residential.district || "").trim().toLowerCase(),
-                                    )?.id;
-                                    return id ? String(id) : "";
-                                  })()}
-                                  onChange={(val) => {
-                                    const name = districts.find((d) => String(d.id) === val)?.name || "";
-                                    handleAddressChange("residential", "district", name);
-                                  }}
-                                  placeholder={addressData.residential.district || "Select district"}
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
+                            {/* 2. Country */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-country" className="text-sm font-medium text-gray-700">
+                                2.2 Country
+                              </Label>
+                              <Input
+                                id="residential-country"
+                                value={addressData.residential.country}
+                                className={getReadOnlyFieldStyle()}
+                                readOnly
+                                disabled={!isFieldEditable()}
+                              />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
-                                  2.4 Police Station
-                                </Label>
-                                {isFieldEditable() ? (
-                                  <Combobox
-                                    dataArr={policeStations.map((p) => ({ value: String(p.id), label: p.name }))}
-                                    value={residentialPoliceStationId ? String(residentialPoliceStationId) : ""}
-                                    onChange={(val) => {
-                                      const id = val ? Number(val) : null;
-                                      setResidentialPoliceStationId(id);
-                                      const name = policeStations.find((p) => String(p.id) === val)?.name || "";
-                                      handleAddressChange("residential", "policeStation", name);
-                                    }}
-                                    placeholder={addressData.residential.policeStation || "Select police station"}
-                                  />
-                                ) : (
-                                  <div className={getReadOnlyDivStyle()}>
-                                    {addressData.residential.policeStation || "Not provided"}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-post" className="text-sm font-medium text-gray-700">
-                                  2.5 Post Office
-                                </Label>
-                                {isFieldEditable() ? (
-                                  <Combobox
-                                    dataArr={postOffices.map((p) => ({ value: String(p.id), label: p.name }))}
-                                    value={residentialPostOfficeId ? String(residentialPostOfficeId) : ""}
-                                    onChange={(val) => {
-                                      const id = val ? Number(val) : null;
-                                      setResidentialPostOfficeId(id);
-                                      const name = postOffices.find((p) => String(p.id) === val)?.name || "";
-                                      handleAddressChange("residential", "postOffice", name);
-                                    }}
-                                    placeholder={addressData.residential.postOffice || "Select post office"}
-                                  />
-                                ) : (
-                                  <div className={getReadOnlyDivStyle()}>
-                                    {addressData.residential.postOffice || "Not provided"}
-                                  </div>
-                                )}
-                              </div>
+                            {/* 3. State */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
+                                2.3 State
+                              </Label>
+                              <Input
+                                id="residential-state"
+                                value={addressData.residential.state}
+                                className={getReadOnlyFieldStyle()}
+                                readOnly
+                                disabled={!isFieldEditable()}
+                              />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-state" className="text-sm font-medium text-gray-700">
-                                  2.6 State
-                                </Label>
+                            {/* 4. District */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-district" className="text-sm font-medium text-gray-700">
+                                2.4 District
+                              </Label>
+                              <Combobox
+                                dataArr={districts.map((d) => ({ value: String(d.id), label: d.name }))}
+                                value={(() => {
+                                  const id = districts.find(
+                                    (d) =>
+                                      d.name.trim().toLowerCase() ===
+                                      (addressData.residential.district || "").trim().toLowerCase(),
+                                  )?.id;
+                                  return id ? String(id) : "";
+                                })()}
+                                onChange={(val) => {
+                                  const name = districts.find((d) => String(d.id) === val)?.name || "";
+                                  handleAddressChange("residential", "district", name);
+                                }}
+                                placeholder={addressData.residential.district || "Select district"}
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 5. City */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-city" className="text-sm font-medium text-gray-700">
+                                2.5 City
+                              </Label>
+                              <Combobox
+                                dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
+                                value={(() => {
+                                  const id = cities.find(
+                                    (c) =>
+                                      c.name.trim().toLowerCase() ===
+                                      (addressData.residential.city || "").trim().toLowerCase(),
+                                  )?.id;
+                                  return id ? String(id) : "";
+                                })()}
+                                onChange={(val) => {
+                                  const name = cities.find((c) => String(c.id) === val)?.name || "";
+                                  handleAddressChange("residential", "city", name);
+                                }}
+                                placeholder={addressData.residential.city || "Select city"}
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 6. Pin Code */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-pin" className="text-sm font-medium text-gray-700">
+                                2.6 Pin Code
+                              </Label>
+                              <Input
+                                id="residential-pin"
+                                value={addressData.residential.pinCode}
+                                onChange={(e) => handleAddressChange("residential", "pinCode", e.target.value)}
+                                placeholder="Enter pin code"
+                                className="border-gray-300"
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 7. Police Station */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-police" className="text-sm font-medium text-gray-700">
+                                2.7 Police Station
+                              </Label>
+                              {isFieldEditable() ? (
                                 <Input
-                                  id="residential-state"
-                                  value={addressData.residential.state}
-                                  className={getReadOnlyFieldStyle()}
-                                  readOnly
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-country" className="text-sm font-medium text-gray-700">
-                                  2.7 Country
-                                </Label>
-                                <Input
-                                  id="residential-country"
-                                  value={addressData.residential.country}
-                                  className={getReadOnlyFieldStyle()}
-                                  readOnly
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="residential-pin" className="text-sm font-medium text-gray-700">
-                                  2.8 Pin Code
-                                </Label>
-                                <Input
-                                  id="residential-pin"
-                                  value={addressData.residential.pinCode}
-                                  onChange={(e) => handleAddressChange("residential", "pinCode", e.target.value)}
-                                  placeholder="Enter pin code"
+                                  id="residential-police"
+                                  value={addressData.residential.policeStation}
+                                  onChange={(e) => handleAddressChange("residential", "policeStation", e.target.value)}
+                                  placeholder="Enter police station name"
                                   className="border-gray-300"
                                   disabled={!isFieldEditable()}
                                 />
-                              </div>
+                              ) : (
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.residential.policeStation || "Not provided"}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 8. Post Office */}
+                            <div className="space-y-2">
+                              <Label htmlFor="residential-post" className="text-sm font-medium text-gray-700">
+                                2.8 Post Office
+                              </Label>
+                              {isFieldEditable() ? (
+                                <Input
+                                  id="residential-post"
+                                  value={addressData.residential.postOffice}
+                                  onChange={(e) => handleAddressChange("residential", "postOffice", e.target.value)}
+                                  placeholder="Enter post office name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                />
+                              ) : (
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.residential.postOffice || "Not provided"}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -1828,6 +1817,7 @@ export default function CURegistrationPage() {
                         <div className="space-y-4 xl:pl-8">
                           <h3 className="text-sm sm:text-base font-medium text-gray-900">Mailing Address</h3>
                           <div className="space-y-3">
+                            {/* 1. Address Line */}
                             <div className="space-y-2">
                               <Label htmlFor="mailing-address" className="text-sm font-medium text-gray-700">
                                 2.9 Address Line
@@ -1842,138 +1832,137 @@ export default function CURegistrationPage() {
                               />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
-                                  2.10 City
-                                </Label>
-                                <Combobox
-                                  dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
-                                  value={(() => {
-                                    const id = cities.find(
-                                      (c) =>
-                                        c.name.trim().toLowerCase() ===
-                                        (addressData.mailing.city || "").trim().toLowerCase(),
-                                    )?.id;
-                                    return id ? String(id) : "";
-                                  })()}
-                                  onChange={(val) => {
-                                    const name = cities.find((c) => String(c.id) === val)?.name || "";
-                                    handleAddressChange("mailing", "city", name);
-                                  }}
-                                  placeholder={addressData.mailing.city || "Select city"}
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
-                                  2.11 District
-                                </Label>
-                                <Combobox
-                                  dataArr={mailingDistricts.map((d) => ({ value: String(d.id), label: d.name }))}
-                                  value={(() => {
-                                    const id = mailingDistricts.find(
-                                      (d) =>
-                                        d.name.trim().toLowerCase() ===
-                                        (addressData.mailing.district || "").trim().toLowerCase(),
-                                    )?.id;
-                                    return id ? String(id) : "";
-                                  })()}
-                                  onChange={(val) => {
-                                    const name = mailingDistricts.find((d) => String(d.id) === val)?.name || "";
-                                    handleAddressChange("mailing", "district", name);
-                                  }}
-                                  placeholder={addressData.mailing.district || "Select district"}
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
+                            {/* 2. Country */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-country" className="text-sm font-medium text-gray-700">
+                                2.10 Country
+                              </Label>
+                              <Input
+                                id="mailing-country"
+                                value={addressData.mailing.country}
+                                className={getReadOnlyFieldStyle()}
+                                readOnly
+                                disabled={!isFieldEditable()}
+                              />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
-                                  2.12 Police Station
-                                </Label>
-                                {isFieldEditable() ? (
-                                  <Combobox
-                                    dataArr={policeStations.map((p) => ({ value: String(p.id), label: p.name }))}
-                                    value={mailingPoliceStationId ? String(mailingPoliceStationId) : ""}
-                                    onChange={(val) => {
-                                      const id = val ? Number(val) : null;
-                                      setMailingPoliceStationId(id);
-                                      const name = policeStations.find((p) => String(p.id) === val)?.name || "";
-                                      handleAddressChange("mailing", "policeStation", name);
-                                    }}
-                                    placeholder={addressData.mailing.policeStation || "Select police station"}
-                                  />
-                                ) : (
-                                  <div className={getReadOnlyDivStyle()}>
-                                    {addressData.mailing.policeStation || "Not provided"}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-post" className="text-sm font-medium text-gray-700">
-                                  2.13 Post Office
-                                </Label>
-                                {isFieldEditable() ? (
-                                  <Combobox
-                                    dataArr={postOffices.map((p) => ({ value: String(p.id), label: p.name }))}
-                                    value={mailingPostOfficeId ? String(mailingPostOfficeId) : ""}
-                                    onChange={(val) => {
-                                      const id = val ? Number(val) : null;
-                                      setMailingPostOfficeId(id);
-                                      const name = postOffices.find((p) => String(p.id) === val)?.name || "";
-                                      handleAddressChange("mailing", "postOffice", name);
-                                    }}
-                                    placeholder={addressData.mailing.postOffice || "Select post office"}
-                                  />
-                                ) : (
-                                  <div className={getReadOnlyDivStyle()}>
-                                    {addressData.mailing.postOffice || "Not provided"}
-                                  </div>
-                                )}
-                              </div>
+                            {/* 3. State */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
+                                2.11 State
+                              </Label>
+                              <Input
+                                id="mailing-state"
+                                value={addressData.mailing.state}
+                                className={getReadOnlyFieldStyle()}
+                                readOnly
+                                disabled={!isFieldEditable()}
+                              />
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-state" className="text-sm font-medium text-gray-700">
-                                  2.14 State
-                                </Label>
+                            {/* 4. District */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-district" className="text-sm font-medium text-gray-700">
+                                2.12 District
+                              </Label>
+                              <Combobox
+                                dataArr={mailingDistricts.map((d) => ({ value: String(d.id), label: d.name }))}
+                                value={(() => {
+                                  const id = mailingDistricts.find(
+                                    (d) =>
+                                      d.name.trim().toLowerCase() ===
+                                      (addressData.mailing.district || "").trim().toLowerCase(),
+                                  )?.id;
+                                  return id ? String(id) : "";
+                                })()}
+                                onChange={(val) => {
+                                  const name = mailingDistricts.find((d) => String(d.id) === val)?.name || "";
+                                  handleAddressChange("mailing", "district", name);
+                                }}
+                                placeholder={addressData.mailing.district || "Select district"}
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 5. City */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-city" className="text-sm font-medium text-gray-700">
+                                2.13 City
+                              </Label>
+                              <Combobox
+                                dataArr={cities.map((c) => ({ value: String(c.id), label: c.name }))}
+                                value={(() => {
+                                  const id = cities.find(
+                                    (c) =>
+                                      c.name.trim().toLowerCase() ===
+                                      (addressData.mailing.city || "").trim().toLowerCase(),
+                                  )?.id;
+                                  return id ? String(id) : "";
+                                })()}
+                                onChange={(val) => {
+                                  const name = cities.find((c) => String(c.id) === val)?.name || "";
+                                  handleAddressChange("mailing", "city", name);
+                                }}
+                                placeholder={addressData.mailing.city || "Select city"}
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 6. Pin Code */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-pin" className="text-sm font-medium text-gray-700">
+                                2.14 Pin Code
+                              </Label>
+                              <Input
+                                id="mailing-pin"
+                                value={addressData.mailing.pinCode}
+                                onChange={(e) => handleAddressChange("mailing", "pinCode", e.target.value)}
+                                placeholder="Enter pin code"
+                                className="border-gray-300"
+                                disabled={!isFieldEditable()}
+                              />
+                            </div>
+
+                            {/* 7. Police Station */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-police" className="text-sm font-medium text-gray-700">
+                                2.15 Police Station
+                              </Label>
+                              {isFieldEditable() ? (
                                 <Input
-                                  id="mailing-state"
-                                  value={addressData.mailing.state}
-                                  className={getReadOnlyFieldStyle()}
-                                  readOnly
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-country" className="text-sm font-medium text-gray-700">
-                                  2.15 Country
-                                </Label>
-                                <Input
-                                  id="mailing-country"
-                                  value={addressData.mailing.country}
-                                  className={getReadOnlyFieldStyle()}
-                                  readOnly
-                                  disabled={!isFieldEditable()}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="mailing-pin" className="text-sm font-medium text-gray-700">
-                                  2.16 Pin Code
-                                </Label>
-                                <Input
-                                  id="mailing-pin"
-                                  value={addressData.mailing.pinCode}
-                                  onChange={(e) => handleAddressChange("mailing", "pinCode", e.target.value)}
-                                  placeholder="Enter pin code"
+                                  id="mailing-police"
+                                  value={addressData.mailing.policeStation}
+                                  onChange={(e) => handleAddressChange("mailing", "policeStation", e.target.value)}
+                                  placeholder="Enter police station name"
                                   className="border-gray-300"
                                   disabled={!isFieldEditable()}
                                 />
-                              </div>
+                              ) : (
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.mailing.policeStation || "Not provided"}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* 8. Post Office */}
+                            <div className="space-y-2">
+                              <Label htmlFor="mailing-post" className="text-sm font-medium text-gray-700">
+                                2.16 Post Office
+                              </Label>
+                              {isFieldEditable() ? (
+                                <Input
+                                  id="mailing-post"
+                                  value={addressData.mailing.postOffice}
+                                  onChange={(e) => handleAddressChange("mailing", "postOffice", e.target.value)}
+                                  placeholder="Enter post office name"
+                                  className="border-gray-300"
+                                  disabled={!isFieldEditable()}
+                                />
+                              ) : (
+                                <div className={getReadOnlyDivStyle()}>
+                                  {addressData.mailing.postOffice || "Not provided"}
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -2015,10 +2004,10 @@ export default function CURegistrationPage() {
                   <TabsContent value="subjects" className="space-y-6">
                     <div>
                       <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-lg font-semibold text-gray-900">Subjects Overview (Semesters 1-4)</h2>
+                        <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
                         {isFieldEditable() && (
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600">3.1 Request correction</span>
+                            <span className="text-sm text-gray-600">Request correction</span>
                             <Switch
                               checked={correctionFlags.subjects}
                               onCheckedChange={() => handleCorrectionToggle("subjects")}
@@ -2035,19 +2024,19 @@ export default function CURegistrationPage() {
                           <thead>
                             <tr className="bg-gray-50">
                               <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
-                                3.1 Category
+                                Category
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                3.2 Sem 1
+                                Sem 1
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                3.3 Sem 2
+                                Sem 2
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                3.4 Sem 3
+                                Sem 3
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                3.5 Sem 4
+                                Sem 4
                               </th>
                             </tr>
                           </thead>
@@ -2087,11 +2076,15 @@ export default function CURegistrationPage() {
                                             allSubjects.push({ name: subject, isMandatory: false });
                                           });
 
+                                          // If no subjects, display Not Applicable
+                                          if (allSubjects.length === 0) {
+                                            return <span className="text-gray-500 italic">Not Applicable</span>;
+                                          }
+
                                           // Render all subjects with commas
                                           return allSubjects.map((subject, index) => (
                                             <span key={`subject-${index}`}>
                                               {subject.name}
-                                              {subject.isMandatory && <span className="text-red-500">*</span>}
                                               {index < allSubjects.length - 1 && ", "}
                                             </span>
                                           ));
@@ -2803,6 +2796,7 @@ export default function CURegistrationPage() {
                   <ul className="list-disc pl-5 text-sm text-gray-700">
                     {correctionFlags.gender && <li>Gender</li>}
                     {correctionFlags.nationality && <li>Nationality</li>}
+                    {correctionFlags.aadhaarNumber && <li>Aadhaar Number</li>}
                     {correctionFlags.apaarId && <li>APAAR (ABC) ID</li>}
                     {correctionFlags.subjects && <li>Subjects</li>}
                     {!Object.values(correctionFlags).some(Boolean) && <li>None</li>}

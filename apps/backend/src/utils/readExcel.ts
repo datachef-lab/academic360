@@ -50,3 +50,21 @@ export async function readExcelFile<T>(filePath: string): Promise<T[]> {
     );
   }
 }
+
+// New function to read Excel from buffer (for memory storage)
+export function readExcelFromBuffer<T>(buffer: Buffer): T[] {
+  try {
+    const workbook: XLSX.WorkBook = XLSX.read(buffer, { type: "buffer" });
+    const sheetName: string = workbook.SheetNames[0];
+    const sheet: XLSX.WorkSheet = workbook.Sheets[sheetName];
+    const data: T[] = XLSX.utils.sheet_to_json<T>(sheet);
+    return data;
+  } catch (error) {
+    console.error(
+      `Error reading Excel from buffer: ${(error as Error).message}`,
+    );
+    throw new Error(
+      `Failed to read Excel from buffer: ${(error as Error).message}`,
+    );
+  }
+}

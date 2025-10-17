@@ -48,6 +48,7 @@ import {
   qualificationRouter,
   transportRouter,
   studentRouter,
+  studentApaarUpdateRouter,
   nationalityRouter,
   religionRouter,
   // academicHistoryRouter,
@@ -647,6 +648,8 @@ app.use("/api/personal-details", personalDetailsRouter);
 app.use("/api/persons", personRouter);
 
 app.use("/api/students", studentRouter);
+
+app.use("/api/students", studentApaarUpdateRouter);
 
 // app.use("/api/subject-metadatas", subjectMetadataRouter);
 

@@ -12,6 +12,9 @@ import {
   updateStudent,
 } from "../controllers/student.controller.js";
 
+import { uploadMiddleware } from "../controllers/student-apaar-update.controller.js";
+import { updateApaarIdsFromExcel } from "../controllers/student-apaar-update.controller.js";
+
 const router = express.Router();
 
 // router.use(verifyJWT);
@@ -36,6 +39,10 @@ router.get("/query", (req: Request, res: Response, next: NextFunction) => {
 });
 
 router.put("/", updateStudent);
+
+// POST /api/students/update-apaar-ids
+// Upload Excel file and update APAAR IDs for students
+router.post("/update-apaar-ids", uploadMiddleware, updateApaarIdsFromExcel);
 
 router.delete("/", deleteStudent);
 

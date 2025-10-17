@@ -94,7 +94,6 @@ import {
 import { classModel } from "@repo/db/schemas/models/academics/class.model.js";
 import { and, eq, ilike, or } from "drizzle-orm";
 
-import { formatAadhaarCardNumber } from "@/utils";
 import { OldBoard } from "@/types/old-board";
 import { OldBoardStatus } from "@/types/old-board-status";
 import {
@@ -117,6 +116,19 @@ import { OldEligibilityCriteria } from "@repo/db/legacy-system-types/course-desi
 import { userTypeEnum } from "@repo/db/schemas";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model";
 import * as oldAdmPersonalDetailsHelper from "./old-student.service";
+
+export function formatAadhaarCardNumber(aadhaar: string | number): string {
+  // Convert to string and remove any non-digit characters (just in case)
+  const digits = String(aadhaar).replace(/\D/g, "");
+
+  // Validate that it contains exactly 12 digits
+  if (digits.length !== 12) {
+    throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
+  }
+
+  // Return formatted Aadhaar number (4-4-4 pattern)
+  return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+}
 
 // Normalize any date-like value to YYYY-MM-DD (date-only, TZ-safe)
 function toISODateOnly(value: unknown): string | undefined {
@@ -587,21 +599,17 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
               ? "GUJARATI"
               : "NON-GUJARATI",
         handicapped: !!oldStudent.handicapped,
-        abcId: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
-        apprid: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
-        apaarId: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
+        // abcId: oldStudent.abcid
+        //   ? String(oldStudent.abcid)
+        //   : oldStudent.apprid
+        //     ? String(oldStudent.apprid)
+        //     : undefined,
+        // apprid: oldStudent.abcid
+        //   ? String(oldStudent.abcid)
+        //   : oldStudent.apprid
+        //     ? String(oldStudent.apprid)
+        //     : undefined,
+        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -646,21 +654,7 @@ export async function upsertStudent(oldStudent: OldStudent, user: User) {
               ? "GUJARATI"
               : "NON-GUJARATI",
         handicapped: !!oldStudent.handicapped,
-        abcId: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
-        apprid: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
-        apaarId: oldStudent.abcid
-          ? String(oldStudent.abcid)
-          : oldStudent.apprid
-            ? String(oldStudent.apprid)
-            : undefined,
+        apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
         rfidNumber: oldStudent.rfidno ? String(oldStudent.rfidno) : undefined,
         registrationNumber: oldStudent.univregno
           ? String(oldStudent.univregno)
@@ -947,7 +941,9 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
       familyId: existingFamily.id,
       name: args.name?.toUpperCase()?.trim(),
       email: args.email?.trim()?.toLowerCase(),
-      aadhaarCardNumber: formatAadhaarCardNumber(args.aadhaar || undefined),
+      aadhaarCardNumber: args.aadhaar
+        ? formatAadhaarCardNumber(args.aadhaar)
+        : undefined,
       phone: args.phone?.trim() || undefined,
       image: args.image?.trim() || undefined,
       occupationId: occupation ? occupation.id : undefined,
@@ -985,7 +981,9 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
     type: "FATHER",
     name: oldStudent.fatherName,
     email: oldStudent.fatherEmail,
-    aadhaar: oldStudent.fatheraadharno,
+    aadhaar: oldStudent.fatheraadharno
+      ? formatAadhaarCardNumber(oldStudent.fatheraadharno)
+      : undefined,
     phone: oldStudent.fatherMobNo,
     image: oldStudent.fatherPic,
     legacyOccupationId: oldStudent.fatherOccupation as unknown as
@@ -998,7 +996,9 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
     type: "MOTHER",
     name: oldStudent.motherName,
     email: oldStudent.motherEmail,
-    aadhaar: oldStudent.motheraadharno,
+    aadhaar: oldStudent.motheraadharno
+      ? formatAadhaarCardNumber(oldStudent.motheraadharno)
+      : undefined,
     phone: oldStudent.motherMobNo,
     image: oldStudent.motherPic,
     legacyOccupationId: oldStudent.motherOccupation as unknown as
@@ -1011,7 +1011,9 @@ export async function upsertFamily(oldStudent: OldStudent, userId: number) {
     type: "GUARDIAN",
     name: oldStudent.guardianName,
     email: oldStudent.guardianEmail,
-    aadhaar: oldStudent.gurdianaadharno,
+    aadhaar: oldStudent.gurdianaadharno
+      ? formatAadhaarCardNumber(oldStudent.gurdianaadharno)
+      : undefined,
     phone: oldStudent.guardianMobNo,
     image: oldStudent.guardianPic,
     legacyOccupationId: oldStudent.guardianOccupation as unknown as
@@ -1303,11 +1305,9 @@ export async function upsertStudentPersonalDetails(
             : undefined,
         categoryId: category ? category.id : undefined,
         religionId: religion ? religion.id : undefined,
-        aadhaarCardNumber: formatAadhaarCardNumber(
-          "aadharcardno" in oldDetails
-            ? oldDetails.aadharcardno || undefined
-            : undefined,
-        ),
+        aadhaarCardNumber: oldDetails.aadharcardno
+          ? formatAadhaarCardNumber(oldDetails.aadharcardno)
+          : undefined,
         // alternativeEmail: oldDetails.alternativeemail?.trim().toLowerCase(), // Field doesn't exist in schema
         // email: oldDetails.email?.trim().toLowerCase(), // Field doesn't exist in schema
         motherTongueId: motherTongue ? motherTongue.id : undefined,
@@ -1577,12 +1577,9 @@ export async function upsertStudentPersonalDetails(
       otherNationalityId: otherNationality ? otherNationality.id : undefined,
       categoryId: category ? category.id : undefined,
       religionId: religion ? religion.id : undefined,
-      aadhaarCardNumber: formatAadhaarCardNumber(
-        "aadharcardno" in oldDetails
-          ? oldDetails.aadharcardno || undefined
-          : undefined,
-      ),
-
+      aadhaarCardNumber: oldDetails.aadharcardno
+        ? formatAadhaarCardNumber(oldDetails.aadharcardno)
+        : undefined,
       motherTongueId: motherTongue ? motherTongue.id : undefined,
       emergencyResidentialNumber: oldDetails.emrgnResidentPhNo,
     } as PersonalDetails)
@@ -1884,21 +1881,9 @@ export async function processStudent(
             .update(studentModel)
             .set({
               ...updateData,
-              abcId: oldStudent.abcid
-                ? String(oldStudent.abcid)
-                : oldStudent.apprid
-                  ? String(oldStudent.apprid)
-                  : undefined,
-              apprid: oldStudent.abcid
-                ? String(oldStudent.abcid)
-                : oldStudent.apprid
-                  ? String(oldStudent.apprid)
-                  : undefined,
-              apaarId: oldStudent.abcid
-                ? String(oldStudent.abcid)
-                : oldStudent.apprid
-                  ? String(oldStudent.apprid)
-                  : undefined,
+              apaarId: oldStudent.apprid
+                ? String(oldStudent.apprid)
+                : undefined,
             })
             .where(eq(studentModel.id, student.id!));
         }
@@ -1947,21 +1932,7 @@ export async function processStudent(
     .update(studentModel)
     .set({
       oldUid: oldStudent.oldcodeNumber?.trim()?.toUpperCase(),
-      abcId: oldStudent.abcid
-        ? String(oldStudent.abcid)
-        : oldStudent.apprid
-          ? String(oldStudent.apprid)
-          : undefined,
-      apprid: oldStudent.abcid
-        ? String(oldStudent.abcid)
-        : oldStudent.apprid
-          ? String(oldStudent.apprid)
-          : undefined,
-      apaarId: oldStudent.abcid
-        ? String(oldStudent.abcid)
-        : oldStudent.apprid
-          ? String(oldStudent.apprid)
-          : undefined,
+      apaarId: oldStudent.apprid ? String(oldStudent.apprid) : undefined,
     })
     .where(eq(studentModel.id, student.id!))
     .returning();

@@ -83,7 +83,7 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       parsedFlags && Object.values(parsedFlags).some(Boolean);
     const newStatus = hasCorrectionFlags ? "REQUEST_CORRECTION" : "APPROVED";
 
-    // Update the correction request with flags, payload, and status
+    // Update the correction request with flags, payload, status, and mark online registration as done
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
       {
@@ -92,11 +92,12 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         apaarIdCorrectionRequest: parsedFlags?.apaarId || false,
         subjectsCorrectionRequest: parsedFlags?.subjects || false,
         status: newStatus,
+        onlineRegistrationDone: true, // Mark online registration as completed
       },
     );
 
     console.info(
-      `[CU-REG BATCH SUBMIT] Updated request status to: ${newStatus}`,
+      `[CU-REG BATCH SUBMIT] Updated request status to: ${newStatus} and marked online registration as done`,
     );
 
     // Update actual database fields based on correction request data

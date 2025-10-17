@@ -253,6 +253,13 @@
       "when": 1760356502143,
       "tag": "0035_thin_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1760669966307,
+      "tag": "0036_calm_archangel",
+      "breakpoints": true
     }
   ]
 }

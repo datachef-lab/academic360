@@ -146,7 +146,6 @@ import {
 } from "@repo/db/legacy-system-types/course-design";
 import { OldShift } from "@/types/old-data/old-shift";
 import { OldBank, OldBankBranch } from "@repo/db/legacy-system-types/payment";
-import { formatAadhaarCardNumber } from "@/utils";
 import { staffModel } from "@repo/db/schemas/models/user/staff.model";
 import {
   OldAcademicDetails,
@@ -179,6 +178,19 @@ const isStaff = (d: OldAdmStudentPersonalDetail | OldStaff): d is OldStaff =>
 const isAdmStudent = (
   d: OldAdmStudentPersonalDetail | OldStaff,
 ): d is OldAdmStudentPersonalDetail => "applevel" in d;
+
+export function formatAadhaarCardNumber(aadhaar: string | number): string {
+  // Convert to string and remove any non-digit characters (just in case)
+  const digits = String(aadhaar).replace(/\D/g, "");
+
+  // Validate that it contains exactly 12 digits
+  if (digits.length !== 12) {
+    throw new Error("Invalid Aadhaar number: must contain exactly 12 digits.");
+  }
+
+  // Return formatted Aadhaar number (4-4-4 pattern)
+  return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+}
 
 async function fetchData(
   isTransferred: boolean,
@@ -2909,7 +2921,11 @@ export async function upsertPersonalDetails(
   const gender = sexId === 0 ? undefined : sexId === 1 ? "MALE" : "FEMALE";
   const aadhaar = isStaff(oldDetails)
     ? oldDetails.aadharNo
-    : oldDetails.adhaarcardno;
+      ? formatAadhaarCardNumber(oldDetails.aadharNo)
+      : undefined
+    : oldDetails.adhaarcardno
+      ? formatAadhaarCardNumber(oldDetails.adhaarcardno)
+      : undefined;
   const placeOfBirth = isStaff(oldDetails)
     ? undefined
     : oldDetails.placeofBirth || undefined;
@@ -3072,7 +3088,9 @@ export async function upsertPersonalDetails(
         gender: gender as any,
         voterId: voterId as string | undefined,
         passportNumber: passportNumber as string | undefined,
-        aadhaarCardNumber: aadhaar || undefined,
+        aadhaarCardNumber: aadhaar
+          ? formatAadhaarCardNumber(aadhaar)
+          : undefined,
         nationalityId,
         otherNationality:
           "othernationality" in oldDetails && oldDetails.othernationality
@@ -3120,7 +3138,9 @@ export async function upsertPersonalDetails(
         gender: gender as any,
         voterId: voterId as string | undefined,
         passportNumber: passportNumber as string | undefined,
-        aadhaarCardNumber: aadhaar || undefined,
+        aadhaarCardNumber: aadhaar
+          ? formatAadhaarCardNumber(aadhaar)
+          : undefined,
         nationalityId,
         otherNationality:
           "othernationality" in oldDetails && oldDetails.othernationality
@@ -4984,7 +5004,9 @@ export async function upsertFamily2(
       familyId: existingFamily.id,
       name: args.name?.toUpperCase()?.trim(),
       email: args.email?.trim()?.toLowerCase(),
-      aadhaarCardNumber: formatAadhaarCardNumber(args.aadhaar || undefined),
+      aadhaarCardNumber: args.aadhaar
+        ? formatAadhaarCardNumber(args.aadhaar)
+        : undefined,
       phone: args.phone?.trim() || undefined,
       image: args.image?.trim() || undefined,
       occupationId: occupation ? occupation.id : undefined,
@@ -5084,7 +5106,11 @@ export async function upsertFamily2(
     type: "FATHER",
     name: isStaff(oldDetails) ? null : oldDetails.fatherName,
     email: isStaff(oldDetails) ? null : oldDetails.fatherEmail,
-    aadhaar: isStaff(oldDetails) ? null : oldDetails.fadhaarcardno,
+    aadhaar: isStaff(oldDetails)
+      ? null
+      : oldDetails.fadhaarcardno
+        ? formatAadhaarCardNumber(oldDetails.fadhaarcardno)
+        : "",
     phone: isStaff(oldDetails) ? null : oldDetails.fmobno,
     image: undefined, // No image data in legacy
     legacyOccupationId: isStaff(oldDetails)
@@ -5144,7 +5170,11 @@ export async function upsertFamily2(
     type: "MOTHER",
     name: isStaff(oldDetails) ? null : oldDetails.motherName,
     email: isStaff(oldDetails) ? null : oldDetails.motherEmail,
-    aadhaar: isStaff(oldDetails) ? null : oldDetails.madhaarcardno,
+    aadhaar: isStaff(oldDetails)
+      ? null
+      : oldDetails.madhaarcardno
+        ? formatAadhaarCardNumber(oldDetails.madhaarcardno)
+        : undefined,
     phone: isStaff(oldDetails) ? null : oldDetails.mmobno,
     image: undefined, // No image data in legacy
     legacyOccupationId: isStaff(oldDetails)
@@ -5206,7 +5236,11 @@ export async function upsertFamily2(
     type: "GUARDIAN",
     name: isStaff(oldDetails) ? null : oldDetails.otherGuardianName,
     email: undefined, // No guardian email in legacy data
-    aadhaar: isStaff(oldDetails) ? null : oldDetails.gadhaarcardno,
+    aadhaar: isStaff(oldDetails)
+      ? null
+      : oldDetails.gadhaarcardno
+        ? formatAadhaarCardNumber(oldDetails.gadhaarcardno)
+        : undefined,
     phone: isStaff(oldDetails) ? null : oldDetails.gmobno,
     image: undefined, // No image data in legacy
     legacyOccupationId: isStaff(oldDetails)

@@ -33,6 +33,7 @@ import {
   personalDetailsRouter,
   personRouter,
   studentRouter,
+  studentApaarUpdateRouter,
   transportDetailsRouter,
   userRouter,
 } from "./user/routes/index.js";
@@ -99,6 +100,7 @@ export {
   personalDetailsRouter,
   transportDetailsRouter,
   studentRouter,
+  studentApaarUpdateRouter,
   userRouter,
   batchRouter,
   feesComponentRouter,

@@ -18,6 +18,7 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     genderCorrectionRequest: boolean("gender_correction_request").notNull().default(false),
     nationalityCorrectionRequest: boolean("nationality_correction_request").notNull().default(false),
     apaarIdCorrectionRequest: boolean("apaar_id_correction_request").notNull().default(false),
+    aadhaarCardNumberCorrectionRequest: boolean("aadhaar_card_number_correction_request").notNull().default(false),
     // Correction request flags for subjects
     subjectsCorrectionRequest: boolean("subjects_correction_request_flag").notNull().default(false),
     approvedBy: integer("approved_by_fk").references(() => userModel.id),

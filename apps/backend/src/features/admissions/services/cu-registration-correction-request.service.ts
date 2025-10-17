@@ -284,12 +284,18 @@ export async function updateCuRegistrationCorrectionRequest(
       setData.remarks = (updateData as any).remarks;
     if (typeof (updateData as any).status !== "undefined")
       setData.status = (updateData as any).status as any;
+    if (typeof (updateData as any).onlineRegistrationDone !== "undefined")
+      setData.onlineRegistrationDone = (
+        updateData as any
+      ).onlineRegistrationDone;
 
     // Map flags into explicit columns if provided
     if (typeof flags.gender !== "undefined")
       setData.genderCorrectionRequest = !!flags.gender;
     if (typeof flags.nationality !== "undefined")
       setData.nationalityCorrectionRequest = !!flags.nationality;
+    if (typeof flags.aadhaarNumber !== "undefined")
+      setData.aadhaarCardNumberCorrectionRequest = !!flags.aadhaarNumber;
     if (typeof flags.apaarId !== "undefined")
       setData.apaarIdCorrectionRequest = !!flags.apaarId;
     if (typeof flags.subjects !== "undefined")
@@ -786,8 +792,7 @@ async function modelToDto(
       rollNumber: studentModel.rollNumber,
       classRollNumber: studentModel.classRollNumber,
       apaarId: studentModel.apaarId,
-      abcId: studentModel.abcId,
-      apprid: studentModel.apprid,
+
       checkRepeat: studentModel.checkRepeat,
       community: studentModel.community,
       handicapped: studentModel.handicapped,
