@@ -44,8 +44,6 @@ type FlattenedStudentData = {
   "Roll Number": string;
   "Class Roll Number": string;
   "APAAR ID": string;
-  "ABC ID": string;
-  "APPR ID": string;
   "Aadhaar Number": string;
   "Date of Birth": string;
   Gender: string;
@@ -174,8 +172,6 @@ const StudentDownloadFilterAndExport: React.FC = () => {
         "Roll Number": student.rollNumber || "",
         "Class Roll Number": student.classRollNumber || "",
         "APAAR ID": student.apaarId || "",
-        "ABC ID": student.abcId || "",
-        "APPR ID": student.apprid || "",
 
         "Aadhaar Number": student.personalDetails?.aadhaarCardNumber || "",
         "Date of Birth": student.personalDetails?.dateOfBirth
@@ -188,13 +184,17 @@ const StudentDownloadFilterAndExport: React.FC = () => {
         Category: student.personalDetails?.category?.name || "",
         "Category Code": student.personalDetails?.category?.code || "",
 
-        "Mailing Address": (student.personalDetails as any)?.mailingAddress?.addressLine || "",
-        "Mailing Pincode": (student.personalDetails as any)?.mailingAddress?.pincode || "",
-        "Mailing Locality": (student.personalDetails as any)?.mailingAddress?.localityType || "",
+        "Mailing Address": student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.addressLine || "",
+        "Mailing Pincode": student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.pincode || "",
+        "Mailing Locality":
+          student.personalDetails?.address?.find((addr) => addr.type === "MAILING")?.localityType || "",
 
-        "Residential Address": (student.personalDetails as any)?.residentialAddress?.addressLine || "",
-        "Residential Pincode": (student.personalDetails as any)?.residentialAddress?.pincode || "",
-        "Residential Locality": (student.personalDetails as any)?.residentialAddress?.localityType || "",
+        "Residential Address":
+          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.addressLine || "",
+        "Residential Pincode":
+          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.pincode || "",
+        "Residential Locality":
+          student.personalDetails?.address?.find((addr) => addr.type === "RESIDENTIAL")?.localityType || "",
 
         Nationality: student.personalDetails?.nationality?.name || "",
         Religion: student.personalDetails?.religion?.name || "",
