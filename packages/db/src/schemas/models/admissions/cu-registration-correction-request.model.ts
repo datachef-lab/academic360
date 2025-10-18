@@ -6,7 +6,7 @@ import z from "zod";
 
 export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_correction_requests", {
     id: serial().primaryKey(),
-    cuRegistrationApplicationNumber: varchar("cu_registration_application_number", { length: 7 }).notNull(), // Format: 017XXXX
+    cuRegistrationApplicationNumber: varchar("cu_registration_application_number", { length: 7 }).unique(), // Format: 017XXXX
     studentId: integer("student_id_fk")
         .references(() => studentModel.id)
         .notNull(),
@@ -21,6 +21,10 @@ export const cuRegistrationCorrectionRequestModel = pgTable("cu_registration_cor
     aadhaarCardNumberCorrectionRequest: boolean("aadhaar_card_number_correction_request").notNull().default(false),
     // Correction request flags for subjects
     subjectsCorrectionRequest: boolean("subjects_correction_request_flag").notNull().default(false),
+    personalInfoDeclaration: boolean("personal_info_declaration").notNull().default(false),
+    addressInfoDeclaration: boolean("address_info_declaration").notNull().default(false),
+    subjectsDeclaration: boolean("subjects_declaration").notNull().default(false),
+    documentsDeclaration: boolean("documents_declaration").notNull().default(false),
     approvedBy: integer("approved_by_fk").references(() => userModel.id),
     approvedAt: timestamp("approved_at"),
     approvedRemarks: text("approved_remarks"),

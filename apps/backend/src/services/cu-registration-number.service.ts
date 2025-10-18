@@ -168,7 +168,7 @@ export class CuRegistrationNumberService {
   static async getApplicationNumbersInRange(
     startNumber: number,
     endNumber: number,
-  ): Promise<string[]> {
+  ): Promise<(string | null)[]> {
     try {
       if (startNumber < 1 || endNumber > 9999 || startNumber > endNumber) {
         throw new ApiError(

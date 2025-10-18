@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const success = await generateNewToken();
         if (!success) {
           console.log("❌ Auth failed, redirecting to login");
-          router.push("/login");
+          router.push("/");
         }
       } else {
         console.log("🌐 Public route, skipping auth check");

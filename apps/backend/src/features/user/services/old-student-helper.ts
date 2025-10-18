@@ -2034,7 +2034,13 @@ async function addStudentCuRegistrationRequest(student: Student) {
     .insert(cuRegistrationCorrectionRequestModel)
     .values({
       studentId: student.id!,
-      cuRegistrationApplicationNumber: cuRegAppNo,
+      cuRegistrationApplicationNumber: null,
+      personalInfoDeclaration: false,
+      addressInfoDeclaration: false,
+      subjectsDeclaration: false,
+      documentsDeclaration: false,
+      onlineRegistrationDone: false,
+      physicalRegistrationDone: false,
       status: "PENDING",
     })
     .returning();

@@ -184,7 +184,7 @@ export const createNewCuRegistrationDocumentUpload = async (
           documentTypeMap[documentId] || `document-${documentId}`;
         uploadResult = await uploadToFileSystem(
           file,
-          correctionRequest.cuRegistrationApplicationNumber,
+          correctionRequest.cuRegistrationApplicationNumber || "unknown",
           documentType,
         );
         console.info("[CU-REG DOC UPLOAD] File system upload successful");

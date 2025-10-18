@@ -128,6 +128,7 @@ import {
   subjectSelectionMetaClassRoutes,
   subjectSelectionMetaStreamRoutes,
   studentSubjectSelectionRoutes,
+  dynamicSubjectsRoutes,
 } from "@/features/subject-selection/routes/index.js";
 
 // import { courseRouter } from "@/features/academics/routes/index.js";
@@ -149,9 +150,9 @@ app.use(logger);
 
 app.use(cors(corsOptions));
 
-app.use(express.json({ limit: "180kb" }));
+app.use(express.json({ limit: "50mb" }));
 
-app.use(express.urlencoded({ extended: true, limit: "180kb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use(cookieParser());
 
@@ -502,6 +503,7 @@ app.use(
   "/api/subject-selection/student-subject-selection",
   studentSubjectSelectionRoutes,
 );
+app.use("/api/subject-selection/dynamic-subjects", dynamicSubjectsRoutes);
 
 app.use("/api/bulk-upload", bulkUploadRouter);
 

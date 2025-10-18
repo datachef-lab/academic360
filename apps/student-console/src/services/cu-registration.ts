@@ -12,6 +12,11 @@ export interface CreateCuCorrectionPayload {
     file: File;
     remarks?: string;
   }>;
+  // Declaration flags
+  personalInfoDeclaration?: boolean;
+  addressInfoDeclaration?: boolean;
+  subjectsDeclaration?: boolean;
+  documentsDeclaration?: boolean;
 }
 
 const BASE = "/api/admissions/cu-registration-correction-requests";
@@ -60,7 +65,9 @@ export async function getCuCorrectionRequestById(id: number) {
 }
 
 export async function updateCuCorrectionRequest(id: number, data: Partial<CreateCuCorrectionPayload>) {
+  console.info(`[CU-REG FRONTEND] Updating correction request ${id}:`, data);
   const res = await api.put<ApiResponse<CuRegistrationCorrectionRequestDto>>(`${BASE}/${id}` as string, data);
+  console.info(`[CU-REG FRONTEND] Correction request updated:`, res.data);
   return res.data.payload as CuRegistrationCorrectionRequestDto;
 }
 
@@ -111,6 +118,82 @@ export async function submitCuRegistrationCorrectionRequestWithDocuments(data: {
     return res.data.payload as CuRegistrationCorrectionRequestDto;
   } catch (error: any) {
     console.error(`[CU-REG FRONTEND] Batch submission failed:`, error.response?.data || error.message);
+    throw error;
+  }
+}
+
+// Declaration service functions
+export async function submitPersonalInfoDeclaration(data: {
+  correctionRequestId: number;
+  flags: Record<string, boolean>;
+  personalInfo: Record<string, any>;
+}) {
+  console.info(`[CU-REG FRONTEND] Submitting personal info declaration:`, data);
+  try {
+    const res = await api.post<
+      ApiResponse<{
+        correctionRequest: CuRegistrationCorrectionRequestDto;
+      }>
+    >(`${BASE}/personal-declaration`, data);
+
+    console.info(`[CU-REG FRONTEND] Personal info declaration submitted:`, res.data);
+    return res.data.payload;
+  } catch (error) {
+    console.error(`[CU-REG FRONTEND] Error submitting personal info declaration:`, error);
+    throw error;
+  }
+}
+
+export async function submitAddressInfoDeclaration(data: {
+  correctionRequestId: number;
+  addressData: Record<string, any>;
+}) {
+  console.info(`[CU-REG FRONTEND] Submitting address info declaration:`, data);
+  try {
+    const res = await api.post<
+      ApiResponse<{
+        correctionRequest: CuRegistrationCorrectionRequestDto;
+      }>
+    >(`${BASE}/address-declaration`, data);
+
+    console.info(`[CU-REG FRONTEND] Address info declaration submitted:`, res.data);
+    return res.data.payload;
+  } catch (error) {
+    console.error(`[CU-REG FRONTEND] Error submitting address info declaration:`, error);
+    throw error;
+  }
+}
+
+export async function submitSubjectsDeclaration(data: { correctionRequestId: number; flags: Record<string, boolean> }) {
+  console.info(`[CU-REG FRONTEND] Submitting subjects declaration:`, data);
+  try {
+    const res = await api.post<
+      ApiResponse<{
+        correctionRequest: CuRegistrationCorrectionRequestDto;
+      }>
+    >(`${BASE}/subjects-declaration`, data);
+
+    console.info(`[CU-REG FRONTEND] Subjects declaration submitted:`, res.data);
+    return res.data.payload;
+  } catch (error) {
+    console.error(`[CU-REG FRONTEND] Error submitting subjects declaration:`, error);
+    throw error;
+  }
+}
+
+export async function submitDocumentsDeclaration(data: { correctionRequestId: number }) {
+  console.info(`[CU-REG FRONTEND] Submitting documents declaration:`, data);
+  try {
+    const res = await api.post<
+      ApiResponse<{
+        correctionRequest: CuRegistrationCorrectionRequestDto;
+      }>
+    >(`${BASE}/documents-declaration`, data);
+
+    console.info(`[CU-REG FRONTEND] Documents declaration submitted:`, res.data);
+    return res.data.payload;
+  } catch (error) {
+    console.error(`[CU-REG FRONTEND] Error submitting documents declaration:`, error);
     throw error;
   }
 }

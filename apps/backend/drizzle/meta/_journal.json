@@ -260,6 +260,20 @@
       "when": 1760669966307,
       "tag": "0036_calm_archangel",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1760675628436,
+      "tag": "0037_concerned_wallop",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1760676394913,
+      "tag": "0038_bright_surge",
+      "breakpoints": true
     }
   ]
 }

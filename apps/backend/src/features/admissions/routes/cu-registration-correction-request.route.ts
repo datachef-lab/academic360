@@ -13,7 +13,13 @@ import {
   validateCuRegistrationApplicationNumberController,
   getCuRegistrationApplicationNumberStatsController,
 } from "../controllers/cu-registration-correction-request.controller.js";
-import { submitCuRegistrationCorrectionRequestWithDocuments } from "../controllers/cu-registration-batch-submit.controller.js";
+import {
+  submitCuRegistrationCorrectionRequestWithDocuments,
+  submitPersonalInfoDeclaration,
+  submitAddressInfoDeclaration,
+  submitSubjectsDeclaration,
+  submitDocumentsDeclaration,
+} from "../controllers/cu-registration-batch-submit.controller.js";
 
 const router = Router();
 
@@ -33,6 +39,12 @@ router.post(
   upload.array("documents", 10),
   submitCuRegistrationCorrectionRequestWithDocuments,
 );
+
+// Declaration endpoints for each tab
+router.post("/personal-declaration", submitPersonalInfoDeclaration);
+router.post("/address-declaration", submitAddressInfoDeclaration);
+router.post("/subjects-declaration", submitSubjectsDeclaration);
+router.post("/documents-declaration", submitDocumentsDeclaration);
 
 // Get all CU registration correction requests with pagination and filters
 // Query parameters: page, limit, status, studentId, search

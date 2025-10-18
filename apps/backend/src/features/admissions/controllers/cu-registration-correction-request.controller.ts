@@ -276,10 +276,13 @@ export const updateCuRegistrationCorrectionRequestById = async (
       return;
     }
 
-    // Validate request body
+    // Extract payload and flags separately as they're not part of the database schema
+    const { payload, flags, ...dbFields } = req.body;
+
+    // Validate request body (excluding payload and flags)
     const parseResult = cuRegistrationCorrectionRequestInsertSchema
       .partial()
-      .safeParse(req.body);
+      .safeParse(dbFields);
     if (!parseResult.success) {
       res
         .status(400)
@@ -294,9 +297,23 @@ export const updateCuRegistrationCorrectionRequestById = async (
       return;
     }
 
+    // Add payload and flags back to the data if they exist
+    const updateData = {
+      ...parseResult.data,
+      ...(payload && { payload }),
+      ...(flags && { flags }),
+    };
+
+    console.info("[CU-REG CONTROLLER] Update data with payload and flags:", {
+      id,
+      dbFields: parseResult.data,
+      payload,
+      flags,
+    });
+
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       id,
-      parseResult.data,
+      updateData,
     );
 
     if (!updatedRequest) {

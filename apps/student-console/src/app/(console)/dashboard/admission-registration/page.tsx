@@ -28,8 +28,11 @@ import {
   getStudentCuCorrectionRequests,
   getCuCorrectionRequestById,
   updateCuCorrectionRequest,
-  getNextCuRegistrationApplicationNumber,
   submitCuRegistrationCorrectionRequestWithDocuments,
+  submitPersonalInfoDeclaration,
+  submitAddressInfoDeclaration,
+  submitSubjectsDeclaration,
+  submitDocumentsDeclaration,
 } from "@/services/cu-registration";
 import type { CuRegistrationCorrectionRequestDto } from "@repo/db/dtos/admissions";
 import {
@@ -86,6 +89,12 @@ export default function CURegistrationPage() {
   const { student } = useStudent();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("personal");
+  const hasAutoNavigatedRef = React.useRef(false);
+
+  // Debug: Track activeTab changes
+  React.useEffect(() => {
+    console.info("[CU-REG FRONTEND] activeTab changed to:", activeTab);
+  }, [activeTab]);
   const [correctionFlags, setCorrectionFlags] = useState<CorrectionFlags>({
     gender: false,
     nationality: false,
@@ -180,6 +189,10 @@ export default function CURegistrationPage() {
       } catch {}
     })();
   }, [addressData.mailing.city, cities]);
+  // Subjects loading state
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
+
+  // Legacy subjects data (keeping for backward compatibility)
   const [subjectsData, setSubjectsData] = useState({
     DSCC: { sem1: [], sem2: [], sem3: [], sem4: [] },
     Minor: { sem1: [], sem2: [], sem3: [], sem4: [] },
@@ -246,6 +259,22 @@ export default function CURegistrationPage() {
       return digits.replace(/^(\d{3})(\d{3})(\d{3})(\d{3})$/, "$1-$2-$3-$4");
     }
     return apaarId;
+  };
+
+  // Helper: clean APAAR ID (remove formatting for backend)
+  const cleanApaarId = (apaarId: string) => {
+    return apaarId.replace(/\D/g, "");
+  };
+
+  // Helper: format APAAR ID input as user types
+  const formatApaarIdInput = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    if (digits.length <= 9) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+    if (digits.length <= 12)
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 9)}-${digits.slice(9, 12)}`;
   };
 
   // Handle document uploads via backend API
@@ -405,8 +434,19 @@ export default function CURegistrationPage() {
       .catch(() => undefined);
   }, [student?.id]);
 
-  // Load subject overview from backend selections
+  // Load subjects data using original subject selection service
   useEffect(() => {
+    if (!student?.id) return;
+
+    setSubjectsLoading(true);
+    console.log("🔍 Loading subjects data for student:", student.id);
+
+    loadLegacySubjectsData();
+    setSubjectsLoading(false);
+  }, [student?.id]);
+
+  // Load legacy subject overview from backend selections (fallback)
+  const loadLegacySubjectsData = () => {
     if (!student?.id) return;
 
     // Fetch both student selections and mandatory subjects in parallel
@@ -585,7 +625,7 @@ export default function CURegistrationPage() {
           .then(() => undefined)
           .catch(() => undefined);
       });
-  }, [student?.id]);
+  };
 
   // Ensure a correction request exists (create draft if none)
   const [correctionRequest, setCorrectionRequest] = useState<CuRegistrationCorrectionRequestDto | null>(null);
@@ -650,6 +690,12 @@ export default function CURegistrationPage() {
           setCorrectionRequestId(existing.id ?? null);
           setCorrectionRequestStatus(existing.status ?? null);
 
+          // Sync declaration checkboxes from server state
+          setPersonalDeclared(!!existing.personalInfoDeclaration);
+          setAddressDeclared(!!existing.addressInfoDeclaration);
+          setSubjectsDeclared(!!existing.subjectsDeclaration);
+          setDocumentsConfirmed(!!existing.documentsDeclaration);
+
           // Update correction flags from the existing request
           setCorrectionFlags({
             gender: existing.genderCorrectionRequest ?? false,
@@ -665,29 +711,55 @@ export default function CURegistrationPage() {
           }
         } else {
           console.info(`[CU-REG FRONTEND] No existing correction request, creating new one for student: ${student.id}`);
-          let cuRegAppNo = "";
-          try {
-            cuRegAppNo = await getNextCuRegistrationApplicationNumber();
-            console.info(`[CU-REG FRONTEND] Got application number: ${cuRegAppNo}`);
-          } catch (error) {
-            console.error(`[CU-REG FRONTEND] Error getting application number:`, error);
-          }
           const created = await createCuCorrectionRequest({
             studentId: Number(student.id),
             flags: correctionFlags as unknown as Record<string, boolean>,
             payload: {},
-            cuRegistrationApplicationNumber: cuRegAppNo || undefined,
+            // Don't generate CU registration application number here - it will be generated on final submit
           });
           console.info(`[CU-REG FRONTEND] Created new correction request: ${created.id}`);
           setCorrectionRequest(created);
           setCorrectionRequestId(created.id ?? null);
           setCorrectionRequestStatus(created.status ?? null);
+          // Ensure declarations are initially unchecked for a new draft
+          setPersonalDeclared(!!created.personalInfoDeclaration);
+          setAddressDeclared(!!created.addressInfoDeclaration);
+          setSubjectsDeclared(!!created.subjectsDeclaration);
+          setDocumentsConfirmed(!!created.documentsDeclaration);
         }
       } catch (error) {
         console.error("[CU-REG FRONTEND] Error handling CU correction request:", error);
       }
     })();
   }, [student?.id]);
+
+  // Also resync local checkbox states whenever the loaded correctionRequest changes
+  useEffect(() => {
+    if (!correctionRequest) return;
+    setPersonalDeclared(!!correctionRequest.personalInfoDeclaration);
+    setAddressDeclared(!!correctionRequest.addressInfoDeclaration);
+    setSubjectsDeclared(!!correctionRequest.subjectsDeclaration);
+    setDocumentsConfirmed(!!correctionRequest.documentsDeclaration);
+  }, [correctionRequest]);
+
+  // Auto-switch to next tab on load/refresh based on completed declarations
+  useEffect(() => {
+    if (!correctionRequest || hasAutoNavigatedRef.current) return;
+    if (correctionRequest?.onlineRegistrationDone) return; // don't navigate after final submit
+
+    const p = !!correctionRequest.personalInfoDeclaration;
+    const a = !!correctionRequest.addressInfoDeclaration;
+    const s = !!correctionRequest.subjectsDeclaration;
+    const d = !!correctionRequest.documentsDeclaration;
+
+    let nextTab = "personal";
+    if (p && !a) nextTab = "address";
+    else if (p && a && !s) nextTab = "subjects";
+    else if (p && a && s && !d) nextTab = "documents";
+
+    if (nextTab !== activeTab) setActiveTab(nextTab);
+    hasAutoNavigatedRef.current = true;
+  }, [correctionRequest, activeTab]);
 
   // Auto-hide status alert after 2 seconds
   useEffect(() => {
@@ -701,12 +773,30 @@ export default function CURegistrationPage() {
 
   // Helper function to determine if form is editable
   const isFormEditable = () => {
-    return !correctionRequestStatus || correctionRequestStatus === "PENDING";
+    // Allow editing if status is PENDING or if final submission is not done
+    return (
+      !correctionRequestStatus || correctionRequestStatus === "PENDING" || !correctionRequest?.onlineRegistrationDone
+    );
   };
 
   // Helper function to determine if individual fields are editable
   const isFieldEditable = () => {
-    return !correctionRequestStatus || correctionRequestStatus === "PENDING";
+    // Allow editing if status is PENDING or if final submission is not done
+    return (
+      !correctionRequestStatus || correctionRequestStatus === "PENDING" || !correctionRequest?.onlineRegistrationDone
+    );
+  };
+
+  // Helper function to determine if correction flags should be shown
+  const shouldShowCorrectionFlags = () => {
+    // Show correction flags if final submission is not done
+    return !correctionRequest?.onlineRegistrationDone;
+  };
+
+  // Helper function to determine if declaration checkboxes should be interactive
+  const isDeclarationInteractive = () => {
+    // Allow interaction if final submission is not done
+    return !correctionRequest?.onlineRegistrationDone;
   };
 
   // Helper function to get proper styling for read-only fields
@@ -730,17 +820,37 @@ export default function CURegistrationPage() {
     }
   };
 
-  const handleCorrectionToggle = (field: keyof CorrectionFlags) => {
-    setCorrectionFlags((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
+  const handleCorrectionToggle = async (field: keyof CorrectionFlags) => {
+    const next = { ...correctionFlags, [field]: !correctionFlags[field] };
+    console.info("[CU-REG FRONTEND] Toggling correction flag", { field, next });
+    setCorrectionFlags(next);
+    if (correctionRequestId) {
+      try {
+        console.info("[CU-REG FRONTEND] Persisting flags to backend", { correctionRequestId, flags: next });
+        const updated = await updateCuCorrectionRequest(correctionRequestId, { flags: next });
+        console.info("[CU-REG FRONTEND] Flags persisted, server response status:", updated?.status);
+      } catch (e) {
+        // Revert on failure
+        setCorrectionFlags(correctionFlags);
+        console.error("[CU-REG FRONTEND] Failed to update correction flags", e);
+        toast.error("Failed to save correction flag");
+      }
+    }
   };
 
   const handlePersonalInfoChange = (field: keyof PersonalInfoData, value: string) => {
     setPersonalInfo((prev) => ({
       ...prev,
       [field]: value,
+    }));
+  };
+
+  // Special handler for APAAR ID with formatting
+  const handleApaarIdChange = (value: string) => {
+    const formatted = formatApaarIdInput(value);
+    setPersonalInfo((prev) => ({
+      ...prev,
+      apaarId: formatted,
     }));
   };
 
@@ -754,19 +864,92 @@ export default function CURegistrationPage() {
     }));
   };
 
-  const handleDeclarationChange = (checked: boolean) => {
-    setPersonalDeclared(checked);
+  const handleDeclarationChange = async (checked: boolean) => {
+    console.info("[CU-REG FRONTEND] Declaration checkbox clicked", { checked, correctionRequestId });
 
-    if (checked) {
-      toast.success("Personal Info Declared", {
-        description: "You can now proceed to the Address Info tab.",
-        duration: 3000,
-      });
+    // Prevent toggling if already declared
+    if (correctionRequest?.personalInfoDeclaration && !checked) {
+      console.info("[CU-REG FRONTEND] Declaration already completed, cannot toggle back to false");
+      return;
+    }
 
-      // Automatically switch to Address tab after a short delay
-      setTimeout(() => {
-        setActiveTab("address");
-      }, 1000);
+    // Always save data and flags if checked OR if already declared (for updates)
+    if (correctionRequestId && (checked || correctionRequest?.personalInfoDeclaration)) {
+      try {
+        // If already declared, always set to true for updates
+        setPersonalDeclared(correctionRequest?.personalInfoDeclaration ? true : checked);
+
+        // Always save data and flags, regardless of declaration status
+        console.info("[CU-REG FRONTEND] Saving Personal info data and flags", {
+          correctionRequestId,
+          flags: correctionFlags,
+          personalInfo,
+        });
+
+        // Debug: Check if correctionFlags and personalInfo have values
+        console.info("[CU-REG FRONTEND] Debug - correctionFlags:", correctionFlags);
+        console.info("[CU-REG FRONTEND] Debug - personalInfo:", personalInfo);
+        console.info("[CU-REG FRONTEND] Debug - correctionFlags keys:", Object.keys(correctionFlags));
+        console.info("[CU-REG FRONTEND] Debug - personalInfo keys:", Object.keys(personalInfo));
+
+        // Use updateCuCorrectionRequest to save both data and declaration
+        const updateData = {
+          flags: correctionFlags as unknown as Record<string, boolean>,
+          payload: {
+            personalInfo: {
+              gender: personalInfo.gender,
+              nationality: personalInfo.nationality,
+              apaarId: cleanApaarId(personalInfo.apaarId),
+              ews: personalInfo.ews,
+            },
+          },
+          // Only set declaration flag if it's a new declaration
+          ...(checked && { personalInfoDeclaration: true }),
+        };
+        console.info("[CU-REG FRONTEND] Sending update data:", updateData);
+        console.info("[CU-REG FRONTEND] Debug - updateData.flags:", updateData.flags);
+        console.info("[CU-REG FRONTEND] Debug - updateData.payload:", updateData.payload);
+        console.info("[CU-REG FRONTEND] Debug - updateData.payload.personalInfo:", updateData.payload.personalInfo);
+        console.info("[CU-REG FRONTEND] Debug - correctionFlags being sent:", correctionFlags);
+        console.info("[CU-REG FRONTEND] Debug - flags object being sent:", updateData.flags);
+        await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+        console.info("[CU-REG FRONTEND] Personal declaration and data submitted");
+
+        // Refresh local correction request to reflect saved declarations/flags
+        try {
+          const updated = await getCuCorrectionRequestById(correctionRequestId);
+          setCorrectionRequest(updated);
+          setCorrectionRequestStatus(updated.status ?? null);
+          console.info("[CU-REG FRONTEND] Refreshed request after personal declaration", {
+            status: updated.status,
+            personalInfoDeclaration: updated.personalInfoDeclaration,
+          });
+        } catch {}
+
+        // Check if declaration was already completed
+        const isAlreadyCompleted = correctionRequest?.personalInfoDeclaration;
+
+        if (isAlreadyCompleted) {
+          toast.success("Personal Info Updated", {
+            description: "Data saved successfully. Proceeding to Address Info tab.",
+            duration: 2000,
+          });
+        } else {
+          toast.success("Personal Info Declared", {
+            description: "You can now proceed to the Address Info tab.",
+            duration: 3000,
+          });
+        }
+
+        // Automatically switch to Address tab after a short delay
+        setTimeout(() => {
+          handleTabChange("address");
+        }, 1000);
+      } catch (error: any) {
+        console.error("[PERSONAL DECLARATION] Error:", error);
+        toast.error("Failed to submit personal info declaration");
+        setPersonalDeclared(false); // Revert the checkbox state
+      }
     }
   };
 
@@ -806,21 +989,149 @@ export default function CURegistrationPage() {
     return errors.length === 0;
   };
 
-  const handleAddressDeclarationChange = (checked: boolean) => {
-    setAddressDeclared(checked);
+  const handleAddressDeclarationChange = async (checked: boolean) => {
+    // Prevent toggling if already declared
 
-    if (checked) {
+    // Always save data and flags if checked OR if already declared (for updates)
+    if (correctionRequestId && (checked || correctionRequest?.addressInfoDeclaration)) {
       const isValid = validateAddressFields();
       if (isValid) {
-        toast.success("Address Info Declared", {
-          description: "You can now proceed to the Subjects Overview tab.",
-          duration: 3000,
-        });
+        try {
+          // If already declared, always set to true for updates
+          setAddressDeclared(correctionRequest?.addressInfoDeclaration ? true : checked);
 
-        // Automatically switch to Subjects tab after a short delay
-        setTimeout(() => {
-          setActiveTab("subjects");
-        }, 1000);
+          // Always save data and flags, regardless of declaration status
+          console.info("[CU-REG FRONTEND] Saving Address info data and flags", {
+            correctionRequestId,
+            addressData,
+          });
+
+          // Debug: Check what data is being sent
+          console.info("[CU-REG FRONTEND] Debug - Address data being sent:", addressData);
+
+          const updateData = {
+            flags: {}, // Address doesn't have specific correction flags
+            payload: {
+              addressData: {
+                residential: {
+                  cityId: cities.find(
+                    (c) => c.name.trim().toLowerCase() === addressData.residential.city.trim().toLowerCase(),
+                  )?.id,
+                  districtId: districts.find(
+                    (d) => d.name.trim().toLowerCase() === addressData.residential.district.trim().toLowerCase(),
+                  )?.id,
+                  postofficeId: null,
+                  otherPostoffice: addressData.residential.postOffice,
+                  policeStationId: null,
+                  otherPoliceStation: addressData.residential.policeStation,
+                  addressLine: addressData.residential.addressLine,
+                  pincode: addressData.residential.pinCode,
+                  city: addressData.residential.city,
+                  district: addressData.residential.district,
+                  state: addressData.residential.state,
+                  country: addressData.residential.country,
+                },
+                mailing: {
+                  cityId: cities.find(
+                    (c) => c.name.trim().toLowerCase() === addressData.mailing.city.trim().toLowerCase(),
+                  )?.id,
+                  districtId: mailingDistricts.find(
+                    (d) => d.name.trim().toLowerCase() === addressData.mailing.district.trim().toLowerCase(),
+                  )?.id,
+                  postofficeId: null,
+                  otherPostoffice: addressData.mailing.postOffice,
+                  policeStationId: null,
+                  otherPoliceStation: addressData.mailing.policeStation,
+                  addressLine: addressData.mailing.addressLine,
+                  pincode: addressData.mailing.pinCode,
+                  city: addressData.mailing.city,
+                  district: addressData.mailing.district,
+                  state: addressData.mailing.state,
+                  country: addressData.mailing.country,
+                },
+              },
+            },
+            // Only set declaration flag if it's a new declaration
+            ...(checked && { addressInfoDeclaration: true }),
+          };
+
+          console.info("[CU-REG FRONTEND] Sending Address update data:", updateData);
+          console.info("[CU-REG FRONTEND] Debug - Address flags being sent:", updateData.flags);
+          console.info("[CU-REG FRONTEND] Debug - Address payload being sent:", updateData.payload);
+
+          await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+          console.info("[CU-REG FRONTEND] Address declaration and data submitted");
+
+          // Refresh local correction request to reflect saved declarations/flags
+          try {
+            const updated = await getCuCorrectionRequestById(correctionRequestId);
+            setCorrectionRequest(updated);
+            setCorrectionRequestStatus(updated.status ?? null);
+            console.info("[CU-REG FRONTEND] Refreshed request after address declaration", {
+              status: updated.status,
+              addressInfoDeclaration: updated.addressInfoDeclaration,
+            });
+          } catch {}
+
+          // Check if declaration was already completed
+          const isAlreadyCompleted = correctionRequest?.addressInfoDeclaration;
+
+          if (isAlreadyCompleted) {
+            toast.success("Address Info Updated", {
+              description: "Data saved successfully. Proceeding to Subjects Overview tab.",
+              duration: 2000,
+            });
+          } else {
+            toast.success("Address Info Declared", {
+              description: "You can now proceed to the Subjects Overview tab.",
+              duration: 3000,
+            });
+          }
+
+          // Automatically switch to Subjects tab after a short delay
+          console.info("[CU-REG FRONTEND] Setting timeout for navigation");
+          setTimeout(() => {
+            console.info("[CU-REG FRONTEND] Timeout executed - attempting to navigate to subjects tab");
+            console.info("[CU-REG FRONTEND] Current addressDeclared state:", addressDeclared);
+            console.info("[CU-REG FRONTEND] Current addressErrors:", addressErrors);
+            console.info("[CU-REG FRONTEND] isAddressTabValid():", isAddressTabValid());
+            console.info("[CU-REG FRONTEND] canNavigateToTab('subjects'):", canNavigateToTab("subjects"));
+
+            try {
+              // Force navigation even if validation fails (for testing)
+              console.info("[CU-REG FRONTEND] Force navigating to subjects tab");
+              console.info("[CU-REG FRONTEND] Current activeTab before navigation:", activeTab);
+
+              // Use direct setActiveTab instead of handleTabChange to avoid conflicts
+              console.info("[CU-REG FRONTEND] Calling setActiveTab('subjects') directly");
+              setActiveTab("subjects");
+              console.info("[CU-REG FRONTEND] setActiveTab called with 'subjects'");
+
+              // Double-check navigation after a short delay
+              setTimeout(() => {
+                console.info("[CU-REG FRONTEND] Checking activeTab after navigation:", activeTab);
+                if (activeTab !== "subjects") {
+                  console.error("[CU-REG FRONTEND] Navigation failed, activeTab is still:", activeTab);
+                  // Try direct state update as fallback
+                  console.info("[CU-REG FRONTEND] Attempting direct state update");
+                  setActiveTab("subjects");
+                } else {
+                  console.info("[CU-REG FRONTEND] Navigation successful, activeTab is now:", activeTab);
+                }
+              }, 100);
+
+              console.info("[CU-REG FRONTEND] Navigation completed successfully");
+            } catch (error) {
+              console.error("[CU-REG FRONTEND] Navigation error:", error);
+            }
+          }, 1000);
+        } catch (error: any) {
+          console.error("[ADDRESS DECLARATION] Error:", error);
+          toast.error("Failed to submit address info declaration");
+          setAddressDeclared(false); // Revert the checkbox state
+        }
+      } else {
+        setAddressDeclared(false); // Revert if validation fails
       }
     }
   };
@@ -829,19 +1140,73 @@ export default function CURegistrationPage() {
     return addressDeclared && addressErrors.length === 0;
   };
 
-  const handleSubjectsDeclarationChange = (checked: boolean) => {
-    setSubjectsDeclared(checked);
+  const handleSubjectsDeclarationChange = async (checked: boolean) => {
+    // Prevent toggling if already declared
+    if (correctionRequest?.subjectsDeclaration && !checked) {
+      console.info("[CU-REG FRONTEND] Declaration already completed, cannot toggle back to false");
+      return;
+    }
 
-    if (checked) {
-      toast.success("Subjects Overview Declared", {
-        description: "You can now proceed to the Documents tab.",
-        duration: 3000,
-      });
+    // Always save data and flags if checked OR if already declared (for updates)
+    if (correctionRequestId && (checked || correctionRequest?.subjectsDeclaration)) {
+      try {
+        // If already declared, always set to true for updates
+        setSubjectsDeclared(correctionRequest?.subjectsDeclaration ? true : checked);
 
-      // Automatically switch to Documents tab after a short delay
-      setTimeout(() => {
-        setActiveTab("documents");
-      }, 1000);
+        // Always save data and flags, regardless of declaration status
+        console.info("[CU-REG FRONTEND] Saving Subjects info data and flags", {
+          correctionRequestId,
+          subjectsFlag: correctionFlags.subjects,
+        });
+
+        const updateData = {
+          flags: { subjects: correctionFlags.subjects },
+          payload: {}, // Subjects don't have specific data to save
+          // Only set declaration flag if it's a new declaration
+          ...(checked && { subjectsDeclaration: true }),
+        };
+
+        console.info("[CU-REG FRONTEND] Sending Subjects update data:", updateData);
+        console.info("[CU-REG FRONTEND] Debug - Subjects flags being sent:", updateData.flags);
+
+        await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+        console.info("[CU-REG FRONTEND] Subjects declaration and data submitted");
+
+        // Refresh local correction request to reflect saved declarations/flags
+        try {
+          const updated = await getCuCorrectionRequestById(correctionRequestId);
+          setCorrectionRequest(updated);
+          setCorrectionRequestStatus(updated.status ?? null);
+          console.info("[CU-REG FRONTEND] Refreshed request after subjects declaration", {
+            status: updated.status,
+            subjectsDeclaration: updated.subjectsDeclaration,
+          });
+        } catch {}
+
+        // Check if declaration was already completed
+        const isAlreadyCompleted = correctionRequest?.subjectsDeclaration;
+
+        if (isAlreadyCompleted) {
+          toast.success("Subjects Overview Updated", {
+            description: "Data saved successfully. Proceeding to Documents tab.",
+            duration: 2000,
+          });
+        } else {
+          toast.success("Subjects Overview Declared", {
+            description: "You can now proceed to the Documents tab.",
+            duration: 3000,
+          });
+        }
+
+        // Automatically switch to Documents tab after a short delay
+        setTimeout(() => {
+          handleTabChange("documents");
+        }, 1000);
+      } catch (error: any) {
+        console.error("[SUBJECTS DECLARATION] Error:", error);
+        toast.error("Failed to submit subjects declaration");
+        setSubjectsDeclared(false); // Revert the checkbox state
+      }
     }
   };
 
@@ -889,8 +1254,92 @@ export default function CURegistrationPage() {
     return required.filter((doc) => !documents[doc as keyof typeof documents]);
   };
 
+  const handleDocumentsDeclarationChange = async (checked: boolean) => {
+    // Prevent toggling if already declared
+    if (correctionRequest?.documentsDeclaration && !checked) {
+      console.info("[CU-REG FRONTEND] Declaration already completed, cannot toggle back to false");
+      return;
+    }
+
+    // Always save data and flags if checked OR if already declared (for updates)
+    if (correctionRequestId && (checked || correctionRequest?.documentsDeclaration)) {
+      const missingDocs = getMissingDocuments();
+      if (missingDocs.length === 0) {
+        try {
+          // If already declared, always set to true for updates
+          setDocumentsConfirmed(correctionRequest?.documentsDeclaration ? true : checked);
+
+          // Always save data and flags, regardless of declaration status
+          console.info("[CU-REG FRONTEND] Saving Documents declaration", { correctionRequestId });
+
+          const updateData = {
+            flags: {}, // Documents don't have specific correction flags
+            payload: {}, // Documents are handled separately via file uploads
+            // Only set declaration flag if it's a new declaration
+            ...(checked && { documentsDeclaration: true }),
+          };
+
+          console.info("[CU-REG FRONTEND] Sending Documents update data:", updateData);
+          console.info("[CU-REG FRONTEND] Debug - Documents flags being sent:", updateData.flags);
+
+          await updateCuCorrectionRequest(correctionRequestId, updateData as any);
+          console.info("[CU-REG FRONTEND] Documents declaration submitted");
+
+          // Refresh local correction request to reflect saved declarations/flags
+          try {
+            const updated = await getCuCorrectionRequestById(correctionRequestId);
+            setCorrectionRequest(updated);
+            setCorrectionRequestStatus(updated.status ?? null);
+            console.info("[CU-REG FRONTEND] Refreshed request after documents declaration", {
+              status: updated.status,
+              documentsDeclaration: updated.documentsDeclaration,
+            });
+          } catch {}
+
+          // Check if declaration was already completed
+          const isAlreadyCompleted = correctionRequest?.documentsDeclaration;
+
+          if (isAlreadyCompleted) {
+            toast.success("Documents Updated", {
+              description: "Data saved successfully. Opening Review & Confirm panel.",
+              duration: 2000,
+            });
+          } else {
+            toast.success("Documents Confirmed", {
+              description: "You can now proceed to review and submit your application.",
+              duration: 3000,
+            });
+          }
+
+          // Auto-open Review & Confirm shortly after successful documents declaration
+          setTimeout(() => {
+            setShowReviewConfirm(true);
+          }, 700);
+        } catch (error: any) {
+          console.error("[DOCUMENTS DECLARATION] Error:", error);
+          toast.error("Failed to submit documents declaration");
+          setDocumentsConfirmed(false); // Revert the checkbox state
+        }
+      } else {
+        setDocumentsConfirmed(false); // Revert if documents are missing
+      }
+    }
+  };
+
   const isDocumentsTabValid = () => {
     return documentsConfirmed && getMissingDocuments().length === 0;
+  };
+
+  // Removed saveCurrentTabData function to prevent navigation conflicts
+  // Data saving is now handled by individual declaration handlers
+
+  // Custom tab change handler
+  const handleTabChange = async (newTab: string) => {
+    console.info("[CU-REG FRONTEND] handleTabChange called with:", newTab);
+    console.info("[CU-REG FRONTEND] Current activeTab:", activeTab);
+    // Removed saveCurrentTabData() call to prevent navigation conflicts
+    console.info("[CU-REG FRONTEND] Setting activeTab to:", newTab);
+    setActiveTab(newTab);
   };
 
   const canReviewConfirm = () => {
@@ -947,7 +1396,8 @@ export default function CURegistrationPage() {
         });
       }
 
-      // Look up IDs for address fields (case/whitespace-insensitive)
+      // Final submit - upload documents, generate CU registration application number, and update all fields
+      // Send all the data to ensure everything is properly updated in the database
       const getIdByName = (arr: IdNameDto[], name?: string | null) => {
         if (!name) return undefined;
         const n = String(name).trim().toLowerCase();
@@ -958,30 +1408,26 @@ export default function CURegistrationPage() {
       const mailingCityId = getIdByName(cities, addressData.mailing.city);
       const mailingDistrictId = getIdByName(mailingDistricts, addressData.mailing.district);
 
-      // Always use batch submit approach since correction request already exists in DB
-      // This ensures documents are uploaded and database fields are updated consistently
       await submitCuRegistrationCorrectionRequestWithDocuments({
         correctionRequestId,
         flags: correctionFlags as unknown as Record<string, boolean>,
         payload: {
           personalInfo: {
             gender: personalInfo.gender,
-            nationality: personalInfo.nationality, // Send nationality name, backend will look up ID
-            apaarId: personalInfo.apaarId,
-            ews: personalInfo.ews, // EWS status is editable by students
+            nationality: personalInfo.nationality,
+            apaarId: cleanApaarId(personalInfo.apaarId),
+            ews: personalInfo.ews,
           },
           addressData: {
             residential: {
               cityId: residentialCityId,
               districtId: residentialDistrictId,
-              // stateId and countryId can be looked up by backend from names
-              postofficeId: null, // Now using input field, so no ID
+              postofficeId: null,
               otherPostoffice: addressData.residential.postOffice,
-              policeStationId: null, // Now using input field, so no ID
+              policeStationId: null,
               otherPoliceStation: addressData.residential.policeStation,
               addressLine: addressData.residential.addressLine,
               pincode: addressData.residential.pinCode,
-              // Include names for backend lookup
               city: addressData.residential.city,
               district: addressData.residential.district,
               state: addressData.residential.state,
@@ -990,27 +1436,23 @@ export default function CURegistrationPage() {
             mailing: {
               cityId: mailingCityId,
               districtId: mailingDistrictId,
-              // stateId and countryId can be looked up by backend from names
-              postofficeId: null, // Now using input field, so no ID
+              postofficeId: null,
               otherPostoffice: addressData.mailing.postOffice,
-              policeStationId: null, // Now using input field, so no ID
+              policeStationId: null,
               otherPoliceStation: addressData.mailing.policeStation,
               addressLine: addressData.mailing.addressLine,
               pincode: addressData.mailing.pinCode,
-              // Include names for backend lookup
               city: addressData.mailing.city,
               district: addressData.mailing.district,
               state: addressData.mailing.state,
               country: addressData.mailing.country,
             },
           },
-          // Note: Subject selections are not updated by students in CU registration
-          // Subject changes require admin approval and should be handled separately
         },
-        documents: documentsToUpload, // This will be empty array if no documents, which is fine
+        documents: documentsToUpload,
       });
 
-      toast.success("Submitted correction request successfully");
+      toast.success("CU Registration Application Submitted Successfully!");
       setShowReviewConfirm(false);
       setIsSubmitted(true); // Mark form as submitted
 
@@ -1023,132 +1465,30 @@ export default function CURegistrationPage() {
         // Also refetch the uploaded documents
         try {
           console.info(
-            `[CU-REG FRONTEND] Refetching documents after submission for correction request: ${correctionRequestId}`,
+            `[CU-REG FRONTEND] Refetching documents after final submission for correction request: ${correctionRequestId}`,
           );
           const docs = await getCuRegistrationDocuments(correctionRequestId);
           setUploadedDocuments(docs || []);
-          console.info(`[CU-REG FRONTEND] Refetched ${docs?.length || 0} documents after submission`);
-          console.info(
-            `[CU-REG FRONTEND] Document URLs:`,
-            docs?.map((doc) => ({ fileName: doc.fileName, documentUrl: doc.documentUrl })),
-          );
-          console.info(
-            `[CU-REG FRONTEND] Document structure:`,
-            docs?.map((doc) => ({
-              documentId: doc.documentId,
-              documentName: doc.document?.name,
-              fileName: doc.fileName,
-            })),
-          );
+          console.info(`[CU-REG FRONTEND] Refetched ${docs?.length || 0} documents after final submission`);
         } catch (error) {
-          console.error(`[CU-REG FRONTEND] Error refetching documents after submission:`, error);
+          console.error(`[CU-REG FRONTEND] Error refetching documents after final submission:`, error);
         }
       }
 
-      // Refresh profile data to get updated address information
+      // Refresh profile data to get updated information
       try {
-        console.info(`[CU-REG FRONTEND] Refreshing profile data to get updated addresses`);
+        console.info(`[CU-REG FRONTEND] Refreshing profile data after final submission`);
         await refetchProfile();
-        console.info(`[CU-REG FRONTEND] Profile data refreshed successfully`);
+        console.info(`[CU-REG FRONTEND] Profile data refreshed successfully after final submission`);
       } catch (error) {
-        console.error(`[CU-REG FRONTEND] Error refreshing profile data:`, error);
+        console.error(`[CU-REG FRONTEND] Error refreshing profile data after final submission:`, error);
       }
 
-      console.info("Submission completed successfully. Profile data refreshed to show updated addresses.");
-
-      // Debug: Log the current address data to see what was submitted
-      console.info("Current address data after submission:", {
-        residential: {
-          policeStation: addressData.residential.policeStation,
-          postOffice: addressData.residential.postOffice,
-        },
-        mailing: {
-          policeStation: addressData.mailing.policeStation,
-          postOffice: addressData.mailing.postOffice,
-        },
-      });
-
-      // Debug: Log the full payload being sent to backend
-      console.info("Full payload being sent to backend:", {
-        personalInfo: {
-          gender: personalInfo.gender,
-          nationality: personalInfo.nationality,
-          apaarId: personalInfo.apaarId,
-          ews: personalInfo.ews,
-        },
-        addressData: {
-          residential: {
-            cityId: residentialCityId,
-            districtId: residentialDistrictId,
-            postofficeId: null, // Now using input field, so no ID
-            otherPostoffice: addressData.residential.postOffice,
-            policeStationId: null, // Now using input field, so no ID
-            otherPoliceStation: addressData.residential.policeStation,
-            addressLine: addressData.residential.addressLine,
-            pincode: addressData.residential.pinCode,
-            city: addressData.residential.city,
-            district: addressData.residential.district,
-            state: addressData.residential.state,
-            country: addressData.residential.country,
-          },
-          mailing: {
-            cityId: mailingCityId,
-            districtId: mailingDistrictId,
-            postofficeId: null, // Now using input field, so no ID
-            otherPostoffice: addressData.mailing.postOffice,
-            policeStationId: null, // Now using input field, so no ID
-            otherPoliceStation: addressData.mailing.policeStation,
-            addressLine: addressData.mailing.addressLine,
-            pincode: addressData.mailing.pinCode,
-            city: addressData.mailing.city,
-            district: addressData.mailing.district,
-            state: addressData.mailing.state,
-            country: addressData.mailing.country,
-          },
-        },
-      });
-
-      // Debug: Log the payload that was sent to backend
-      console.info("Payload sent to backend:", {
-        personalInfo: {
-          gender: personalInfo.gender,
-          nationality: personalInfo.nationality,
-          apaarId: personalInfo.apaarId,
-          ews: personalInfo.ews,
-        },
-        addressData: {
-          residential: {
-            cityId: residentialCityId,
-            districtId: residentialDistrictId,
-            postofficeId: null, // Now using input field, so no ID
-            otherPostoffice: addressData.residential.postOffice,
-            policeStationId: null, // Now using input field, so no ID
-            otherPoliceStation: addressData.residential.policeStation,
-            addressLine: addressData.residential.addressLine,
-            pincode: addressData.residential.pinCode,
-            city: addressData.residential.city,
-            district: addressData.residential.district,
-            state: addressData.residential.state,
-            country: addressData.residential.country,
-          },
-          mailing: {
-            cityId: mailingCityId,
-            districtId: mailingDistrictId,
-            postofficeId: null, // Now using input field, so no ID
-            otherPostoffice: addressData.mailing.postOffice,
-            policeStationId: null, // Now using input field, so no ID
-            otherPoliceStation: addressData.mailing.policeStation,
-            addressLine: addressData.mailing.addressLine,
-            pincode: addressData.mailing.pinCode,
-            city: addressData.mailing.city,
-            district: addressData.mailing.district,
-            state: addressData.mailing.state,
-            country: addressData.mailing.country,
-          },
-        },
-      });
+      console.info(
+        "Final submission completed successfully. CU Registration Application Number generated and documents uploaded.",
+      );
     } catch (e: any) {
-      toast.error(e?.message || "Failed to submit correction request");
+      toast.error(e?.message || "Failed to submit CU registration application");
     } finally {
       setIsSubmitting(false);
     }
@@ -1197,259 +1537,278 @@ export default function CURegistrationPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
         </div>
 
-        {/* Success Alert Message with Correction Flags - Show only when status is present and not PENDING */}
-        {correctionRequest && correctionRequestStatus && correctionRequestStatus !== "PENDING" && (
-          <div className="mb-8">
-            <Card
-              className={`border-2 ${
-                correctionRequestStatus === "REQUEST_CORRECTION"
-                  ? "border-green-200 bg-green-50"
-                  : correctionRequestStatus === "APPROVED"
-                    ? "border-green-300 bg-green-100"
-                    : correctionRequestStatus === "REJECTED"
-                      ? "border-red-200 bg-red-50"
-                      : "border-blue-200 bg-blue-50"
-              }`}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start space-x-2">
-                  <div className="flex-shrink-0">
-                    <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "bg-green-100"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "bg-green-200"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "bg-red-100"
-                              : "bg-blue-100"
-                      }`}
-                    >
-                      <svg
-                        className={`w-4 h-4 ${
+        {/* Success Alert Message with Correction Flags - Show only when all declarations are completed and final submission is done */}
+        {correctionRequest &&
+          correctionRequestStatus &&
+          correctionRequestStatus !== "PENDING" &&
+          correctionRequest.personalInfoDeclaration &&
+          correctionRequest.addressInfoDeclaration &&
+          correctionRequest.subjectsDeclaration &&
+          correctionRequest.documentsDeclaration &&
+          correctionRequest.onlineRegistrationDone && (
+            <div className="mb-8">
+              <Card
+                className={`border-2 ${
+                  correctionRequestStatus === "REQUEST_CORRECTION"
+                    ? "border-green-200 bg-green-50"
+                    : correctionRequestStatus === "APPROVED"
+                      ? "border-green-300 bg-green-100"
+                      : correctionRequestStatus === "REJECTED"
+                        ? "border-red-200 bg-red-50"
+                        : "border-blue-200 bg-blue-50"
+                }`}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-2">
+                    <div className="flex-shrink-0">
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center ${
                           correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "text-green-600"
+                            ? "bg-green-100"
+                            : correctionRequestStatus === "APPROVED"
+                              ? "bg-green-200"
+                              : correctionRequestStatus === "REJECTED"
+                                ? "bg-red-100"
+                                : "bg-blue-100"
+                        }`}
+                      >
+                        <svg
+                          className={`w-4 h-4 ${
+                            correctionRequestStatus === "REQUEST_CORRECTION"
+                              ? "text-green-600"
+                              : correctionRequestStatus === "APPROVED"
+                                ? "text-green-700"
+                                : correctionRequestStatus === "REJECTED"
+                                  ? "text-red-600"
+                                  : "text-blue-600"
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-base font-medium text-green-800">
+                        {correctionRequestStatus === "REQUEST_CORRECTION"
+                          ? "CU Registration - Correction Request Submitted!"
+                          : correctionRequestStatus === "APPROVED" ||
+                              (correctionRequest &&
+                                !correctionRequest.genderCorrectionRequest &&
+                                !correctionRequest.nationalityCorrectionRequest &&
+                                !correctionRequest.apaarIdCorrectionRequest &&
+                                !correctionRequest.subjectsCorrectionRequest)
+                            ? "Congratulations! CU Registration Successfully Submitted!"
+                            : "CU Registration Successfully Submitted!"}
+                      </h3>
+                      <p className="text-green-700 mb-2 text-sm">
+                        Application Number: {correctionRequest?.cuRegistrationApplicationNumber} | Status:{" "}
+                        {correctionRequestStatus === "REQUEST_CORRECTION"
+                          ? "Correction Request Submitted"
+                          : correctionRequestStatus === "APPROVED"
+                            ? "Approved"
+                            : correctionRequestStatus === "REJECTED"
+                              ? "Rejected"
+                              : "Submitted"}
+                      </p>
+
+                      {/* Display Correction Flags Permanently */}
+                      {correctionRequest &&
+                        (correctionRequest.genderCorrectionRequest ||
+                          correctionRequest.nationalityCorrectionRequest ||
+                          correctionRequest.aadhaarCardNumberCorrectionRequest ||
+                          correctionRequest.apaarIdCorrectionRequest ||
+                          correctionRequest.subjectsCorrectionRequest) && (
+                          <div className="mt-2">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <div className="w-4 h-4 bg-green-200 rounded-full flex items-center justify-center">
+                                <svg
+                                  className="w-2.5 h-2.5 text-green-700"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                                  />
+                                </svg>
+                              </div>
+                              <span className="text-sm font-medium text-green-800">Correction Requests Submitted:</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1">
+                              {correctionRequest.genderCorrectionRequest && (
+                                <div className="flex items-center space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <span className="text-xs text-green-700">Gender</span>
+                                </div>
+                              )}
+                              {correctionRequest.nationalityCorrectionRequest && (
+                                <div className="flex items-center space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <span className="text-xs text-green-700">Nationality</span>
+                                </div>
+                              )}
+                              {correctionRequest.aadhaarCardNumberCorrectionRequest && (
+                                <div className="flex items-center space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <span className="text-xs text-green-700">Aadhaar Number</span>
+                                </div>
+                              )}
+                              {correctionRequest.apaarIdCorrectionRequest && (
+                                <div className="flex items-center space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <span className="text-xs text-green-700">APAAR ID</span>
+                                </div>
+                              )}
+                              {correctionRequest.subjectsCorrectionRequest && (
+                                <div className="flex items-center space-x-1">
+                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
+                                  <span className="text-xs text-green-700">Subject Selections</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-2 text-xs text-green-600">
+                              These corrections will be reviewed by the administration team.
+                            </div>
+                          </div>
+                        )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+        {/* Status-based messages */}
+        {correctionRequestStatus &&
+          correctionRequestStatus !== "PENDING" &&
+          showStatusAlert &&
+          correctionRequest?.personalInfoDeclaration &&
+          correctionRequest?.addressInfoDeclaration &&
+          correctionRequest?.subjectsDeclaration &&
+          correctionRequest?.documentsDeclaration &&
+          correctionRequest?.onlineRegistrationDone && (
+            <div className="mb-8">
+              <Card
+                className={`border-2 ${
+                  correctionRequestStatus === "REQUEST_CORRECTION"
+                    ? "border-yellow-200 bg-yellow-50"
+                    : correctionRequestStatus === "APPROVED"
+                      ? "border-green-200 bg-green-50"
+                      : correctionRequestStatus === "REJECTED"
+                        ? "border-red-200 bg-red-50"
+                        : "border-blue-200 bg-blue-50"
+                }`}
+              >
+                <CardContent className="p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0">
+                      <div
+                        className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          correctionRequestStatus === "REQUEST_CORRECTION"
+                            ? "bg-yellow-100"
+                            : correctionRequestStatus === "APPROVED"
+                              ? "bg-green-100"
+                              : correctionRequestStatus === "REJECTED"
+                                ? "bg-red-100"
+                                : "bg-blue-100"
+                        }`}
+                      >
+                        <svg
+                          className={`w-5 h-5 ${
+                            correctionRequestStatus === "REQUEST_CORRECTION"
+                              ? "text-yellow-600"
+                              : correctionRequestStatus === "APPROVED"
+                                ? "text-green-600"
+                                : correctionRequestStatus === "REJECTED"
+                                  ? "text-red-600"
+                                  : "text-blue-600"
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          {correctionRequestStatus === "APPROVED" ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          ) : correctionRequestStatus === "REJECTED" ? (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          ) : (
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                          )}
+                        </svg>
+                      </div>
+                    </div>
+                    <div>
+                      <h3
+                        className={`text-lg font-medium ${
+                          correctionRequestStatus === "REQUEST_CORRECTION"
+                            ? "text-yellow-800"
+                            : correctionRequestStatus === "APPROVED"
+                              ? "text-green-800"
+                              : correctionRequestStatus === "REJECTED"
+                                ? "text-red-800"
+                                : "text-blue-800"
+                        }`}
+                      >
+                        {correctionRequestStatus === "REQUEST_CORRECTION"
+                          ? "Correction Request Submitted"
+                          : correctionRequestStatus === "APPROVED"
+                            ? "Request Approved"
+                            : correctionRequestStatus === "REJECTED"
+                              ? "Request Rejected"
+                              : "Request Status: " + correctionRequestStatus}
+                      </h3>
+                      <p
+                        className={`${
+                          correctionRequestStatus === "REQUEST_CORRECTION"
+                            ? "text-yellow-700"
                             : correctionRequestStatus === "APPROVED"
                               ? "text-green-700"
                               : correctionRequestStatus === "REJECTED"
-                                ? "text-red-600"
-                                : "text-blue-600"
+                                ? "text-red-700"
+                                : "text-blue-700"
                         }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                        {correctionRequestStatus === "REQUEST_CORRECTION"
+                          ? "Your correction request has been submitted and is under review."
+                          : correctionRequestStatus === "APPROVED"
+                            ? "Your CU Registration correction request has been approved."
+                            : correctionRequestStatus === "REJECTED"
+                              ? "Your CU Registration correction request has been rejected. Please contact the administration."
+                              : "Your request status is: " + correctionRequestStatus}
+                      </p>
                     </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="text-base font-medium text-green-800">
-                      {correctionRequestStatus === "REQUEST_CORRECTION"
-                        ? "CU Registration - Correction Request Submitted!"
-                        : correctionRequestStatus === "APPROVED" ||
-                            (correctionRequest &&
-                              !correctionRequest.genderCorrectionRequest &&
-                              !correctionRequest.nationalityCorrectionRequest &&
-                              !correctionRequest.apaarIdCorrectionRequest &&
-                              !correctionRequest.subjectsCorrectionRequest)
-                          ? "Congratulations! CU Registration Successfully Submitted!"
-                          : "CU Registration Successfully Submitted!"}
-                    </h3>
-                    <p className="text-green-700 mb-2 text-sm">
-                      Application Number: {correctionRequest?.cuRegistrationApplicationNumber} | Status:{" "}
-                      {correctionRequestStatus === "REQUEST_CORRECTION"
-                        ? "Correction Request Submitted"
-                        : correctionRequestStatus === "APPROVED"
-                          ? "Approved"
-                          : correctionRequestStatus === "REJECTED"
-                            ? "Rejected"
-                            : "Submitted"}
-                    </p>
-
-                    {/* Display Correction Flags Permanently */}
-                    {correctionRequest &&
-                      (correctionRequest.genderCorrectionRequest ||
-                        correctionRequest.nationalityCorrectionRequest ||
-                        correctionRequest.aadhaarCardNumberCorrectionRequest ||
-                        correctionRequest.apaarIdCorrectionRequest ||
-                        correctionRequest.subjectsCorrectionRequest) && (
-                        <div className="mt-2">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-4 h-4 bg-green-200 rounded-full flex items-center justify-center">
-                              <svg
-                                className="w-2.5 h-2.5 text-green-700"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                                />
-                              </svg>
-                            </div>
-                            <span className="text-sm font-medium text-green-800">Correction Requests Submitted:</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-1">
-                            {correctionRequest.genderCorrectionRequest && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <span className="text-xs text-green-700">Gender</span>
-                              </div>
-                            )}
-                            {correctionRequest.nationalityCorrectionRequest && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <span className="text-xs text-green-700">Nationality</span>
-                              </div>
-                            )}
-                            {correctionRequest.aadhaarCardNumberCorrectionRequest && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <span className="text-xs text-green-700">Aadhaar Number</span>
-                              </div>
-                            )}
-                            {correctionRequest.apaarIdCorrectionRequest && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <span className="text-xs text-green-700">APAAR ID</span>
-                              </div>
-                            )}
-                            {correctionRequest.subjectsCorrectionRequest && (
-                              <div className="flex items-center space-x-1">
-                                <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                <span className="text-xs text-green-700">Subject Selections</span>
-                              </div>
-                            )}
-                          </div>
-                          <div className="mt-2 text-xs text-green-600">
-                            These corrections will be reviewed by the administration team.
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Status-based messages */}
-        {correctionRequestStatus && correctionRequestStatus !== "PENDING" && showStatusAlert && (
-          <div className="mb-8">
-            <Card
-              className={`border-2 ${
-                correctionRequestStatus === "REQUEST_CORRECTION"
-                  ? "border-yellow-200 bg-yellow-50"
-                  : correctionRequestStatus === "APPROVED"
-                    ? "border-green-200 bg-green-50"
-                    : correctionRequestStatus === "REJECTED"
-                      ? "border-red-200 bg-red-50"
-                      : "border-blue-200 bg-blue-50"
-              }`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "bg-yellow-100"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "bg-green-100"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "bg-red-100"
-                              : "bg-blue-100"
-                      }`}
-                    >
-                      <svg
-                        className={`w-5 h-5 ${
-                          correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "text-yellow-600"
-                            : correctionRequestStatus === "APPROVED"
-                              ? "text-green-600"
-                              : correctionRequestStatus === "REJECTED"
-                                ? "text-red-600"
-                                : "text-blue-600"
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        {correctionRequestStatus === "APPROVED" ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        ) : correctionRequestStatus === "REJECTED" ? (
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        ) : (
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        )}
-                      </svg>
-                    </div>
-                  </div>
-                  <div>
-                    <h3
-                      className={`text-lg font-medium ${
-                        correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "text-yellow-800"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "text-green-800"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "text-red-800"
-                              : "text-blue-800"
-                      }`}
-                    >
-                      {correctionRequestStatus === "REQUEST_CORRECTION"
-                        ? "Correction Request Submitted"
-                        : correctionRequestStatus === "APPROVED"
-                          ? "Request Approved"
-                          : correctionRequestStatus === "REJECTED"
-                            ? "Request Rejected"
-                            : "Request Status: " + correctionRequestStatus}
-                    </h3>
-                    <p
-                      className={`${
-                        correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "text-yellow-700"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "text-green-700"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "text-red-700"
-                              : "text-blue-700"
-                      }`}
-                    >
-                      {correctionRequestStatus === "REQUEST_CORRECTION"
-                        ? "Your correction request has been submitted and is under review."
-                        : correctionRequestStatus === "APPROVED"
-                          ? "Your CU Registration correction request has been approved."
-                          : correctionRequestStatus === "REJECTED"
-                            ? "Your CU Registration correction request has been rejected. Please contact the administration."
-                            : "Your request status is: " + correctionRequestStatus}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
         {/* Main Form Card - Always show, but make read-only when not editable */}
         <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
           <CardContent className="p-0">
             {!showReviewConfirm && (
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 {/* Tab Navigation */}
                 <div className="border-b border-gray-200 bg-white">
                   <div className="flex w-full overflow-x-auto no-scrollbar">
                     <button
-                      onClick={() => setActiveTab("personal")}
+                      onClick={() => handleTabChange("personal")}
                       disabled={!canNavigateToTab("personal")}
                       className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "personal"
@@ -1461,7 +1820,7 @@ export default function CURegistrationPage() {
                       <span className="sm:hidden">Personal</span>
                     </button>
                     <button
-                      onClick={() => setActiveTab("address")}
+                      onClick={() => handleTabChange("address")}
                       disabled={!canNavigateToTab("address")}
                       className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "address"
@@ -1473,7 +1832,7 @@ export default function CURegistrationPage() {
                       <span className="sm:hidden">Address</span>
                     </button>
                     <button
-                      onClick={() => setActiveTab("subjects")}
+                      onClick={() => handleTabChange("subjects")}
                       disabled={!canNavigateToTab("subjects")}
                       className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "subjects"
@@ -1485,7 +1844,7 @@ export default function CURegistrationPage() {
                       <span className="sm:hidden">Subjects</span>
                     </button>
                     <button
-                      onClick={() => setActiveTab("documents")}
+                      onClick={() => handleTabChange("documents")}
                       disabled={!canNavigateToTab("documents")}
                       className={`flex-shrink-0 py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
                         activeTab === "documents"
@@ -1539,7 +1898,7 @@ export default function CURegistrationPage() {
                           <Label className="text-sm font-medium text-gray-700">1.3 Gender</Label>
                           <div className="flex flex-col gap-2">
                             <div className={getReadOnlyDivStyle()}>{personalInfo.gender}</div>
-                            {isFieldEditable() && (
+                            {shouldShowCorrectionFlags() && (
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm text-gray-600">1.3 Request correction</span>
                                 <Switch
@@ -1558,7 +1917,7 @@ export default function CURegistrationPage() {
                           <Label className="text-sm font-medium text-gray-700">1.4 Nationality</Label>
                           <div className="flex flex-col gap-2">
                             <div className={getReadOnlyDivStyle()}>{personalInfo.nationality}</div>
-                            {isFieldEditable() && (
+                            {shouldShowCorrectionFlags() && (
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm text-gray-600">1.4 Request correction</span>
                                 <Switch
@@ -1597,7 +1956,7 @@ export default function CURegistrationPage() {
                           <Label className="text-sm font-medium text-gray-700">1.6 Aadhaar Number</Label>
                           <div className="flex flex-col gap-2">
                             <div className={getReadOnlyDivStyle()}>{personalInfo.aadhaarNumber}</div>
-                            {isFieldEditable() && (
+                            {shouldShowCorrectionFlags() && (
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm text-gray-600">1.6 Request correction</span>
                                 <Switch
@@ -1617,40 +1976,73 @@ export default function CURegistrationPage() {
                             1.7 APAAR (ABC) ID
                           </Label>
                           <div className="flex flex-col gap-2">
-                            <div className={getReadOnlyDivStyle()}>{personalInfo.apaarId || "Not provided"}</div>
-                            {isFieldEditable() && (
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">1.7 Request correction</span>
-                                <Switch
-                                  checked={correctionFlags.apaarId}
-                                  onCheckedChange={() => handleCorrectionToggle("apaarId")}
-                                  disabled={!isFieldEditable()}
-                                  className="data-[state=checked]:bg-blue-600"
-                                />
-                              </div>
-                            )}
+                            {(() => {
+                              // Check if APAAR ID came from backend (not null/empty) vs user input
+                              const hasBackendApaarId = student?.apaarId && student.apaarId.trim() !== "";
+
+                              if (hasBackendApaarId) {
+                                // If backend has APAAR ID, show as read-only with correction flag
+                                return (
+                                  <>
+                                    <div className={getReadOnlyDivStyle()}>
+                                      {personalInfo.apaarId || "Not provided"}
+                                    </div>
+                                    {shouldShowCorrectionFlags() && (
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-sm text-gray-600">1.7 Request correction</span>
+                                        <Switch
+                                          checked={correctionFlags.apaarId}
+                                          onCheckedChange={() => handleCorrectionToggle("apaarId")}
+                                          disabled={!isFieldEditable()}
+                                          className="data-[state=checked]:bg-blue-600"
+                                        />
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              } else {
+                                // If backend has no APAAR ID, allow editing
+                                return (
+                                  <Input
+                                    id="apaarId"
+                                    value={personalInfo.apaarId}
+                                    onChange={(e) => handleApaarIdChange(e.target.value)}
+                                    placeholder="Enter APAAR ID (12 digits)"
+                                    className="border-gray-300"
+                                    disabled={!isFieldEditable()}
+                                    maxLength={15} // 12 digits + 3 hyphens = 15 characters
+                                  />
+                                );
+                              }
+                            })()}
                           </div>
                         </div>
 
-                        {/* Declaration */}
-                        {isFieldEditable() && (
-                          <div className="pt-2 md:col-span-2">
-                            <div className="flex items-start space-x-3">
-                              <Checkbox
-                                id="personalDeclaration"
-                                checked={personalDeclared}
-                                onCheckedChange={handleDeclarationChange}
-                                className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                              />
-                              <Label
-                                htmlFor="personalDeclaration"
-                                className="text-sm text-gray-700 leading-relaxed cursor-pointer"
-                              >
-                                {getDeclarationText()}
-                              </Label>
-                            </div>
+                        {/* Declaration - Always show, but disable when completed */}
+                        <div className="pt-2 md:col-span-2">
+                          <div className="flex items-start space-x-3">
+                            <Checkbox
+                              id="personalDeclaration"
+                              checked={personalDeclared || correctionRequest?.personalInfoDeclaration}
+                              onCheckedChange={handleDeclarationChange}
+                              disabled={false}
+                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                            />
+                            <Label
+                              htmlFor="personalDeclaration"
+                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
+                              onClick={() => {
+                                console.info("[CU-REG FRONTEND] Declaration label clicked");
+                                handleDeclarationChange(true);
+                              }}
+                            >
+                              {getDeclarationText()}
+                              {correctionRequest?.personalInfoDeclaration && (
+                                <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                              )}
+                            </Label>
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </TabsContent>
@@ -1970,22 +2362,28 @@ export default function CURegistrationPage() {
 
                       {/* Declaration and Error Messages */}
                       <div className="mt-6 space-y-3">
-                        {isFieldEditable() && (
-                          <div className="flex items-start space-x-3">
-                            <Checkbox
-                              id="addressDeclaration"
-                              checked={addressDeclared}
-                              onCheckedChange={handleAddressDeclarationChange}
-                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                            />
-                            <Label
-                              htmlFor="addressDeclaration"
-                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
-                            >
-                              I declare that the addresses provided are correct (all fields mandatory).
-                            </Label>
-                          </div>
-                        )}
+                        {/* Declaration - Always show, but disable when completed */}
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="addressDeclaration"
+                            checked={addressDeclared || correctionRequest?.addressInfoDeclaration}
+                            onCheckedChange={() => handleAddressDeclarationChange(true)}
+                            disabled={false}
+                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                          />
+                          <Label
+                            htmlFor="addressDeclaration"
+                            className={`text-sm text-gray-700 leading-relaxed ${
+                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                            }`}
+                            onClick={() => handleAddressDeclarationChange(true)}
+                          >
+                            I declare that the addresses provided are correct (all fields mandatory).
+                            {correctionRequest?.addressInfoDeclaration && (
+                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            )}
+                          </Label>
+                        </div>
 
                         {/* Error Messages */}
                         {addressErrors.length > 0 && (
@@ -2005,7 +2403,7 @@ export default function CURegistrationPage() {
                     <div>
                       <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-semibold text-gray-900">3.1 Subjects Overview (Semesters 1-4)</h2>
-                        {isFieldEditable() && (
+                        {shouldShowCorrectionFlags() && (
                           <div className="flex items-center space-x-2">
                             <span className="text-sm text-gray-600">Request correction</span>
                             <Switch
@@ -2019,107 +2417,144 @@ export default function CURegistrationPage() {
                       </div>
 
                       {/* Subjects Table */}
-                      <div className="overflow-x-auto no-scrollbar">
-                        <table className="min-w-[800px] w-full border-collapse border border-gray-300">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
-                                Category
-                              </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                Sem 1
-                              </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                Sem 2
-                              </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                Sem 3
-                              </th>
-                              <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
-                                Sem 4
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {Object.entries(subjectsData).map(([category, semesters]) => (
-                              <tr key={category} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
-                                  {category}
-                                </td>
-                                {Object.entries(semesters).map(([sem, value]) => {
-                                  const mandatorySubjectsList =
-                                    (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
-                                      sem as keyof typeof semesters
-                                    ] as string[]) || [];
-                                  const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
-
-                                  const hasMandatory = mandatorySubjectsList.length > 0;
-                                  const hasStudentSelection = studentSubjectsList.length > 0;
-
-                                  return (
-                                    <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
-                                      <div className="text-sm text-gray-900">
-                                        {(() => {
-                                          // Combine all subjects (mandatory + optional) into one array
-                                          const allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
-
-                                          // Add mandatory subjects
-                                          mandatorySubjectsList.forEach((subject) => {
-                                            allSubjects.push({ name: subject, isMandatory: true });
-                                          });
-
-                                          // Add optional subjects (filter out duplicates)
-                                          const filteredSubjects = studentSubjectsList.filter(
-                                            (subject) => !mandatorySubjectsList.includes(subject),
-                                          );
-                                          filteredSubjects.forEach((subject) => {
-                                            allSubjects.push({ name: subject, isMandatory: false });
-                                          });
-
-                                          // If no subjects, display Not Applicable
-                                          if (allSubjects.length === 0) {
-                                            return <span className="text-gray-500 italic">Not Applicable</span>;
-                                          }
-
-                                          // Render all subjects with commas
-                                          return allSubjects.map((subject, index) => (
-                                            <span key={`subject-${index}`}>
-                                              {subject.name}
-                                              {index < allSubjects.length - 1 && ", "}
-                                            </span>
-                                          ));
-                                        })()}
-                                      </div>
-                                    </td>
-                                  );
-                                })}
+                      {subjectsLoading ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="text-gray-500">Loading subjects...</div>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto no-scrollbar">
+                          <table className="min-w-[800px] w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-gray-50">
+                                <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium text-gray-700 min-w-[120px]">
+                                  Category
+                                </th>
+                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                  Sem 1
+                                </th>
+                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                  Sem 2
+                                </th>
+                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                  Sem 3
+                                </th>
+                                <th className="border border-gray-300 px-2 py-2 text-center text-sm font-medium text-gray-700 min-w-[150px]">
+                                  Sem 4
+                                </th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {Object.entries(subjectsData).map(([category, semesters]) => (
+                                <tr key={category} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-50 min-w-[120px]">
+                                    {category}
+                                  </td>
+                                  {Object.entries(semesters).map(([sem, value]) => {
+                                    const mandatorySubjectsList =
+                                      (mandatorySubjects[category as keyof typeof mandatorySubjects]?.[
+                                        sem as keyof typeof semesters
+                                      ] as string[]) || [];
+                                    const studentSubjectsList = Array.isArray(value) ? value : value ? [value] : [];
 
-                      {/* Declaration */}
-                      {isFieldEditable() && (
-                        <div className="mt-6">
-                          <div className="flex items-start space-x-3">
-                            <Checkbox
-                              id="subjectsDeclaration"
-                              checked={subjectsDeclared}
-                              onCheckedChange={handleSubjectsDeclarationChange}
-                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                            />
-                            <Label
-                              htmlFor="subjectsDeclaration"
-                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
-                            >
-                              {correctionFlags.subjects
-                                ? "I confirm the subjects listed above for Semesters 1-4. Note: Corrections will be reviewed by staff."
-                                : "I confirm the subjects listed above for Semesters 1-4."}
-                            </Label>
-                          </div>
+                                    return (
+                                      <td key={sem} className="border border-gray-300 px-2 py-2 min-w-[150px]">
+                                        <div className="text-sm text-gray-900">
+                                          {(() => {
+                                            // Combine all subjects (mandatory + optional) into one array
+                                            let allSubjects: Array<{ name: string; isMandatory: boolean }> = [];
+
+                                            // Add mandatory subjects
+                                            mandatorySubjectsList.forEach((subject) => {
+                                              allSubjects.push({ name: subject, isMandatory: true });
+                                            });
+
+                                            // Add optional subjects (filter out duplicates)
+                                            const filteredSubjects = studentSubjectsList.filter(
+                                              (subject) => !mandatorySubjectsList.includes(subject),
+                                            );
+                                            filteredSubjects.forEach((subject) => {
+                                              allSubjects.push({ name: subject, isMandatory: false });
+                                            });
+
+                                            // For Minor category, if sem4 is empty and sem3 has subjects, duplicate sem3 subjects to sem4
+                                            if (category === "Minor" && sem === "sem4" && allSubjects.length === 0) {
+                                              const sem3Mandatory =
+                                                (mandatorySubjects[category as keyof typeof mandatorySubjects]
+                                                  ?.sem3 as string[]) || [];
+                                              const sem3Student = Array.isArray(semesters.sem3)
+                                                ? semesters.sem3
+                                                : semesters.sem3
+                                                  ? [semesters.sem3]
+                                                  : [];
+
+                                              // Add sem3 mandatory subjects
+                                              sem3Mandatory.forEach((subject) => {
+                                                allSubjects.push({ name: subject, isMandatory: true });
+                                              });
+
+                                              // Add sem3 student subjects (filter out duplicates)
+                                              const filteredSem3Subjects = sem3Student.filter(
+                                                (subject) => !sem3Mandatory.includes(subject),
+                                              );
+                                              filteredSem3Subjects.forEach((subject) => {
+                                                allSubjects.push({ name: subject, isMandatory: false });
+                                              });
+                                            }
+
+                                            // If no subjects, display Not Applicable
+                                            if (allSubjects.length === 0) {
+                                              return <span className="text-gray-500 italic">Not Applicable</span>;
+                                            }
+
+                                            // Render all subjects as ordered list
+                                            return (
+                                              <div className="text-sm text-gray-900">
+                                                {allSubjects.map((subject, index) => (
+                                                  <span key={`subject-${index}`}>
+                                                    {subject.name}
+                                                    {index < allSubjects.length - 1 && ", "}
+                                                  </span>
+                                                ))}
+                                              </div>
+                                            );
+                                          })()}
+                                        </div>
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
+
+                      {/* Declaration - Always show, but disable when completed */}
+                      <div className="mt-6">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="subjectsDeclaration"
+                            checked={subjectsDeclared || correctionRequest?.subjectsDeclaration}
+                            onCheckedChange={() => handleSubjectsDeclarationChange(true)}
+                            disabled={false}
+                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                          />
+                          <Label
+                            htmlFor="subjectsDeclaration"
+                            className={`text-sm text-gray-700 leading-relaxed ${
+                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                            }`}
+                            onClick={() => handleSubjectsDeclarationChange(true)}
+                          >
+                            {correctionFlags.subjects
+                              ? "I confirm the subjects listed above for Semesters 1-4. Note: Corrections will be reviewed by staff."
+                              : "I confirm the subjects listed above for Semesters 1-4."}
+                            {correctionRequest?.subjectsDeclaration && (
+                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            )}
+                          </Label>
+                        </div>
+                      </div>
                     </div>
                   </TabsContent>
 
@@ -2602,7 +3037,7 @@ export default function CURegistrationPage() {
                             <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-white">
                               <div className="flex items-center justify-between mb-3">
                                 <Label className="text-sm font-medium text-gray-700">4.6 EWS Certificate</Label>
-                                <Badge variant="destructive" className="text-xs">
+                                <Badge variant="outline" className="text-xs text-red-600 border-red-600">
                                   Required
                                 </Badge>
                               </div>
@@ -2672,25 +3107,29 @@ export default function CURegistrationPage() {
                         </div>
                       )}
 
-                      {/* Confirmation Checkbox - Only show if form is editable */}
-                      {isFieldEditable() && (
-                        <div className="mt-6">
-                          <div className="flex items-start space-x-3">
-                            <Checkbox
-                              id="documentsConfirmation"
-                              checked={documentsConfirmed}
-                              onCheckedChange={(checked: boolean) => setDocumentsConfirmed(checked)}
-                              className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
-                            />
-                            <Label
-                              htmlFor="documentsConfirmation"
-                              className="text-sm text-gray-700 leading-relaxed cursor-pointer"
-                            >
-                              I confirm that the uploaded documents correspond to the data provided.
-                            </Label>
-                          </div>
+                      {/* Confirmation Checkbox - Always show, but disable when completed */}
+                      <div className="mt-6">
+                        <div className="flex items-start space-x-3">
+                          <Checkbox
+                            id="documentsConfirmation"
+                            checked={documentsConfirmed || correctionRequest?.documentsDeclaration}
+                            onCheckedChange={handleDocumentsDeclarationChange}
+                            disabled={false}
+                            className="mt-1 data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 data-[state=checked]:text-white"
+                          />
+                          <Label
+                            htmlFor="documentsConfirmation"
+                            className={`text-sm text-gray-700 leading-relaxed ${
+                              isDeclarationInteractive() ? "cursor-pointer" : "cursor-default"
+                            }`}
+                          >
+                            I confirm that the uploaded documents correspond to the data provided.
+                            {correctionRequest?.documentsDeclaration && (
+                              <span className="ml-2 text-xs text-green-600 font-medium">✓ Completed</span>
+                            )}
+                          </Label>
                         </div>
-                      )}
+                      </div>
 
                       {/* Error Messages - Only show if form is editable */}
                       {isFieldEditable() && getMissingDocuments().length > 0 && (

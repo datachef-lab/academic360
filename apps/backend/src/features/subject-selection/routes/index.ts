@@ -10,6 +10,7 @@ import subjectSelectionMetaRoutes from "./subject-selection-meta.routes.js";
 import subjectSelectionMetaClassRoutes from "./subject-selection-meta-class.routes.js";
 import subjectSelectionMetaStreamRoutes from "./subject-selection-meta-stream.routes.js";
 import studentSubjectSelectionRoutes from "./student-subject-selection.routes.js";
+import dynamicSubjectsRoutes from "./dynamic-subjects.route.js";
 
 export {
   relatedSubjectMainRoutes,
@@ -24,4 +25,5 @@ export {
   subjectSelectionMetaClassRoutes,
   subjectSelectionMetaStreamRoutes,
   studentSubjectSelectionRoutes,
+  dynamicSubjectsRoutes,
 };

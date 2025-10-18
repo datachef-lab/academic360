@@ -275,8 +275,14 @@ export async function updateCuRegistrationCorrectionRequest(
 
   // Begin transactional update to keep data in sync
   const [updatedRequest] = await db.transaction(async (tx) => {
-    // 1) Update the correction request record itself
+    // Note: derive flags first so we can log them safely
     const flags: any = (updateData as any)?.flags || {};
+    console.info("[CU-REG BACKEND] Updating correction request", {
+      id,
+      flags,
+      updateKeys: Object.keys(updateData as any),
+    });
+    // 1) Update the correction request record itself
     const setData: any = {
       updatedAt: new Date(),
     };
@@ -289,35 +295,161 @@ export async function updateCuRegistrationCorrectionRequest(
         updateData as any
       ).onlineRegistrationDone;
 
-    // Map flags into explicit columns if provided
-    if (typeof flags.gender !== "undefined")
-      setData.genderCorrectionRequest = !!flags.gender;
-    if (typeof flags.nationality !== "undefined")
-      setData.nationalityCorrectionRequest = !!flags.nationality;
-    if (typeof flags.aadhaarNumber !== "undefined")
-      setData.aadhaarCardNumberCorrectionRequest = !!flags.aadhaarNumber;
-    if (typeof flags.apaarId !== "undefined")
-      setData.apaarIdCorrectionRequest = !!flags.apaarId;
-    if (typeof flags.subjects !== "undefined")
-      setData.subjectsCorrectionRequest = !!flags.subjects;
+    // Handle declaration fields (monotonic: once true, never set to false)
+    if (typeof (updateData as any).personalInfoDeclaration !== "undefined")
+      setData.personalInfoDeclaration = Boolean(
+        existing.personalInfoDeclaration ||
+          (updateData as any).personalInfoDeclaration,
+      );
+    if (typeof (updateData as any).addressInfoDeclaration !== "undefined")
+      setData.addressInfoDeclaration = Boolean(
+        existing.addressInfoDeclaration ||
+          (updateData as any).addressInfoDeclaration,
+      );
+    if (typeof (updateData as any).subjectsDeclaration !== "undefined")
+      setData.subjectsDeclaration = Boolean(
+        existing.subjectsDeclaration || (updateData as any).subjectsDeclaration,
+      );
+    if (typeof (updateData as any).documentsDeclaration !== "undefined")
+      setData.documentsDeclaration = Boolean(
+        existing.documentsDeclaration ||
+          (updateData as any).documentsDeclaration,
+      );
 
-    // Determine status based on correction flags if status is not explicitly provided
-    if (typeof (updateData as any).status === "undefined") {
-      const hasCorrectionFlags = Object.values(flags).some(Boolean);
-      setData.status = hasCorrectionFlags ? "REQUEST_CORRECTION" : "APPROVED";
+    // Handle correction request flags directly
+    if (typeof (updateData as any).genderCorrectionRequest !== "undefined")
+      setData.genderCorrectionRequest = (
+        updateData as any
+      ).genderCorrectionRequest;
+    if (typeof (updateData as any).nationalityCorrectionRequest !== "undefined")
+      setData.nationalityCorrectionRequest = (
+        updateData as any
+      ).nationalityCorrectionRequest;
+    if (
+      typeof (updateData as any).aadhaarCardNumberCorrectionRequest !==
+      "undefined"
+    )
+      setData.aadhaarCardNumberCorrectionRequest = (
+        updateData as any
+      ).aadhaarCardNumberCorrectionRequest;
+    if (typeof (updateData as any).apaarIdCorrectionRequest !== "undefined")
+      setData.apaarIdCorrectionRequest = (
+        updateData as any
+      ).apaarIdCorrectionRequest;
+    if (typeof (updateData as any).subjectsCorrectionRequest !== "undefined")
+      setData.subjectsCorrectionRequest = (
+        updateData as any
+      ).subjectsCorrectionRequest;
+    if (
+      typeof (updateData as any).cuRegistrationApplicationNumber !== "undefined"
+    )
+      setData.cuRegistrationApplicationNumber = (
+        updateData as any
+      ).cuRegistrationApplicationNumber;
+
+    // Map flags into explicit columns if provided
+    if (typeof flags.gender !== "undefined") {
+      setData.genderCorrectionRequest = !!flags.gender;
       console.info(
-        `[CU-REG CORRECTION][UPDATE] Auto-setting status to: ${setData.status} (hasCorrectionFlags: ${hasCorrectionFlags})`,
+        "[CU-REG CORRECTION][UPDATE] Setting genderCorrectionRequest:",
+        !!flags.gender,
       );
     }
+    if (typeof flags.nationality !== "undefined") {
+      setData.nationalityCorrectionRequest = !!flags.nationality;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Setting nationalityCorrectionRequest:",
+        !!flags.nationality,
+      );
+    }
+    if (typeof flags.aadhaarNumber !== "undefined") {
+      setData.aadhaarCardNumberCorrectionRequest = !!flags.aadhaarNumber;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Setting aadhaarCardNumberCorrectionRequest:",
+        !!flags.aadhaarNumber,
+      );
+    }
+    if (typeof flags.apaarId !== "undefined") {
+      setData.apaarIdCorrectionRequest = !!flags.apaarId;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Setting apaarIdCorrectionRequest:",
+        !!flags.apaarId,
+      );
+    }
+    if (typeof flags.subjects !== "undefined") {
+      setData.subjectsCorrectionRequest = !!flags.subjects;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Setting subjectsCorrectionRequest:",
+        !!flags.subjects,
+      );
+    }
+
+    // Determine status based on declaration completion and correction flags if status is not explicitly provided
+    if (typeof (updateData as any).status === "undefined") {
+      const hasCorrectionFlags = Object.values(flags).some(Boolean);
+      const isFinalSubmission =
+        (updateData as any).onlineRegistrationDone === true;
+
+      // Check if all declarations are completed
+      const personalInfoDeclared =
+        (updateData as any).personalInfoDeclaration === true;
+      const addressInfoDeclared =
+        (updateData as any).addressInfoDeclaration === true;
+      const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
+      const documentsDeclared =
+        (updateData as any).documentsDeclaration === true;
+
+      const allDeclarationsCompleted =
+        personalInfoDeclared &&
+        addressInfoDeclared &&
+        subjectsDeclared &&
+        documentsDeclared;
+
+      if (allDeclarationsCompleted && isFinalSubmission) {
+        // All declarations completed AND final submission done
+        if (hasCorrectionFlags) {
+          setData.status = "REQUEST_CORRECTION";
+        } else {
+          setData.status = "APPROVED";
+        }
+      } else {
+        // Any declaration is still false OR final submission not done
+        setData.status = "PENDING";
+      }
+
+      console.info(
+        `[CU-REG CORRECTION][UPDATE] Auto-setting status to: ${setData.status} (allDeclarationsCompleted: ${allDeclarationsCompleted}, isFinalSubmission: ${isFinalSubmission}, hasCorrectionFlags: ${hasCorrectionFlags})`,
+      );
+    }
+
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] Final setData before DB update:",
+      setData,
+    );
 
     const [req] = await tx
       .update(cuRegistrationCorrectionRequestModel)
       .set(setData)
       .where(eq(cuRegistrationCorrectionRequestModel.id, id))
       .returning();
+    console.info("[CU-REG BACKEND] Correction request updated in DB", {
+      id: req?.id,
+      status: req?.status,
+      personalInfoDeclaration: (req as any)?.personalInfoDeclaration,
+      addressInfoDeclaration: (req as any)?.addressInfoDeclaration,
+      subjectsDeclaration: (req as any)?.subjectsDeclaration,
+      documentsDeclaration: (req as any)?.documentsDeclaration,
+      genderCorrectionRequest: (req as any)?.genderCorrectionRequest,
+      nationalityCorrectionRequest: (req as any)?.nationalityCorrectionRequest,
+      aadhaarCardNumberCorrectionRequest: (req as any)
+        ?.aadhaarCardNumberCorrectionRequest,
+      apaarIdCorrectionRequest: (req as any)?.apaarIdCorrectionRequest,
+      subjectsCorrectionRequest: (req as any)?.subjectsCorrectionRequest,
+    });
 
     // 2) If payload provided, persist relevant fields to canonical tables
     const payload: any = (updateData as any)?.payload;
+    console.info("[CU-REG CORRECTION][UPDATE] Processing payload", { payload });
     if (payload) {
       // personalInfo: gender, nationality, apaar/abc
       if (payload.personalInfo && pd) {
@@ -325,23 +457,37 @@ export async function updateCuRegistrationCorrectionRequest(
         if (payload.personalInfo.gender) {
           personalUpdates.gender = payload.personalInfo.gender;
         }
-        if (payload.personalInfo.nationalityId) {
-          personalUpdates.nationalityId = payload.personalInfo.nationalityId;
+        if (payload.personalInfo.nationality) {
+          personalUpdates.nationality = payload.personalInfo.nationality;
         }
 
         if (Object.keys(personalUpdates).length > 0) {
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] Updating personal details",
+            { personalUpdates },
+          );
           await tx
             .update(personalDetailsModel)
             .set(personalUpdates)
             .where(eq(personalDetailsModel.id, pd.id as number));
+        } else {
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] No personal details to update",
+          );
         }
 
         // Student APAAR/ABC update
         if (payload.personalInfo.apaarId) {
+          // Strip formatting (remove dashes) before saving to database
+          const cleanApaarId = payload.personalInfo.apaarId.replace(/-/g, "");
           await tx
             .update(studentModel)
-            .set({ apaarId: payload.personalInfo.apaarId })
+            .set({ apaarId: cleanApaarId })
             .where(eq(studentModel.id, student.id));
+          console.info("[CU-REG CORRECTION][UPDATE] Updated APAAR ID", {
+            original: payload.personalInfo.apaarId,
+            cleaned: cleanApaarId,
+          });
         }
 
         // Student EWS status update (EWS is editable by students)
@@ -884,8 +1030,16 @@ async function modelToDto(
     cuRegistrationApplicationNumber: request.cuRegistrationApplicationNumber,
     status: request.status,
     remarks: request.remarks,
+    // Declarations
+    personalInfoDeclaration: request.personalInfoDeclaration,
+    addressInfoDeclaration: request.addressInfoDeclaration,
+    subjectsDeclaration: request.subjectsDeclaration,
+    documentsDeclaration: request.documentsDeclaration,
+    onlineRegistrationDone: request.onlineRegistrationDone,
     genderCorrectionRequest: request.genderCorrectionRequest,
     nationalityCorrectionRequest: request.nationalityCorrectionRequest,
+    aadhaarCardNumberCorrectionRequest:
+      request.aadhaarCardNumberCorrectionRequest,
     apaarIdCorrectionRequest: request.apaarIdCorrectionRequest,
     subjectsCorrectionRequest: request.subjectsCorrectionRequest,
     approvedAt: request.approvedAt,
