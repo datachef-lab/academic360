@@ -16,6 +16,7 @@ import {
   CuRegistrationDocumentUploadDto,
 } from "@repo/db/dtos/admissions/index.js";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
+import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 
 // CREATE
 export async function createCuRegistrationCorrectionRequest(
@@ -29,47 +30,20 @@ export async function createCuRegistrationCorrectionRequest(
         requestData.cuRegistrationApplicationNumber,
     }),
   );
-  // Generate CU Registration Application Number if not provided
-  let cuRegistrationApplicationNumber =
-    requestData.cuRegistrationApplicationNumber;
 
-  if (!cuRegistrationApplicationNumber) {
-    cuRegistrationApplicationNumber =
-      await CuRegistrationNumberService.generateNextApplicationNumber();
-  } else {
-    // Validate the provided number format
-    if (
-      !CuRegistrationNumberService.isValidFormat(
-        cuRegistrationApplicationNumber,
-      )
-    ) {
-      throw new Error(
-        "Invalid CU Registration Application Number format. Must be in format 017XXXX",
-      );
-    }
-
-    // Check if the number is available
-    const isAvailable =
-      await CuRegistrationNumberService.isApplicationNumberAvailable(
-        cuRegistrationApplicationNumber,
-      );
-    if (!isAvailable) {
-      throw new Error("CU Registration Application Number is already in use");
-    }
-  }
-
-  const requestDataWithNumber = {
+  // Don't generate application number initially - it will be generated only on final submission
+  // when all declarations are completed
+  const requestDataWithoutNumber = {
     ...requestData,
-    cuRegistrationApplicationNumber,
   };
 
   const [newRequest] = await db
     .insert(cuRegistrationCorrectionRequestModel)
-    .values(requestDataWithNumber)
+    .values(requestDataWithoutNumber)
     .returning();
 
   console.info(
-    "[CU-REG CORRECTION][CREATE] Created",
+    "[CU-REG CORRECTION][CREATE] Created without application number",
     JSON.stringify({
       id: newRequest.id,
       studentId: newRequest.studentId,
@@ -384,29 +358,103 @@ export async function updateCuRegistrationCorrectionRequest(
       );
     }
 
+    // Check PDF generation conditions regardless of status setting
+    const hasCorrectionFlags = Object.values(flags).some(Boolean);
+    const isFinalSubmission =
+      (updateData as any).onlineRegistrationDone === true;
+
+    // Check if all declarations are completed
+    const personalInfoDeclared =
+      (updateData as any).personalInfoDeclaration === true;
+    const addressInfoDeclared =
+      (updateData as any).addressInfoDeclaration === true;
+    const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
+    const documentsDeclared = (updateData as any).documentsDeclaration === true;
+
+    const allDeclarationsCompleted =
+      personalInfoDeclared &&
+      addressInfoDeclared &&
+      subjectsDeclared &&
+      documentsDeclared;
+
+    // Debug logging for PDF generation conditions
+    console.info(
+      "[CU-REG CORRECTION][UPDATE] PDF Generation Conditions Check:",
+      {
+        personalInfoDeclared,
+        addressInfoDeclared,
+        subjectsDeclared,
+        documentsDeclared,
+        allDeclarationsCompleted,
+        isFinalSubmission,
+        hasApplicationNumber: !!existing.cuRegistrationApplicationNumber,
+        willGeneratePdf:
+          allDeclarationsCompleted &&
+          isFinalSubmission &&
+          !existing.cuRegistrationApplicationNumber,
+      },
+    );
+
+    // Generate PDF and application number if conditions are met
+    if (
+      allDeclarationsCompleted &&
+      isFinalSubmission &&
+      !existing.cuRegistrationApplicationNumber
+    ) {
+      // All declarations completed AND final submission done AND no application number yet
+      const applicationNumber =
+        await CuRegistrationNumberService.generateNextApplicationNumber();
+      setData.cuRegistrationApplicationNumber = applicationNumber;
+      console.info(
+        "[CU-REG CORRECTION][UPDATE] Generated application number on final submission:",
+        applicationNumber,
+      );
+
+      // Generate PDF after application number is assigned
+      try {
+        console.info(
+          "[CU-REG CORRECTION][UPDATE] Generating PDF for final submission",
+          {
+            studentId: existing.studentId,
+            correctionRequestId: id,
+            applicationNumber,
+          },
+        );
+
+        const pdfResult =
+          await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
+            existing.studentId,
+            id,
+            applicationNumber,
+          );
+
+        if (pdfResult.success) {
+          console.info(
+            "[CU-REG CORRECTION][UPDATE] PDF generated successfully",
+            {
+              pdfPath: pdfResult.pdfPath,
+              applicationNumber,
+            },
+          );
+        } else {
+          console.error("[CU-REG CORRECTION][UPDATE] PDF generation failed", {
+            error: pdfResult.error,
+            applicationNumber,
+          });
+          // Don't fail the entire process if PDF generation fails
+        }
+      } catch (pdfError) {
+        console.error("[CU-REG CORRECTION][UPDATE] PDF generation error", {
+          error: pdfError,
+          applicationNumber,
+        });
+        // Don't fail the entire process if PDF generation fails
+      }
+    }
+
     // Determine status based on declaration completion and correction flags if status is not explicitly provided
     if (typeof (updateData as any).status === "undefined") {
-      const hasCorrectionFlags = Object.values(flags).some(Boolean);
-      const isFinalSubmission =
-        (updateData as any).onlineRegistrationDone === true;
-
-      // Check if all declarations are completed
-      const personalInfoDeclared =
-        (updateData as any).personalInfoDeclaration === true;
-      const addressInfoDeclared =
-        (updateData as any).addressInfoDeclaration === true;
-      const subjectsDeclared = (updateData as any).subjectsDeclaration === true;
-      const documentsDeclared =
-        (updateData as any).documentsDeclaration === true;
-
-      const allDeclarationsCompleted =
-        personalInfoDeclared &&
-        addressInfoDeclared &&
-        subjectsDeclared &&
-        documentsDeclared;
-
       if (allDeclarationsCompleted && isFinalSubmission) {
-        // All declarations completed AND final submission done
         if (hasCorrectionFlags) {
           setData.status = "REQUEST_CORRECTION";
         } else {

@@ -1,0 +1,1596 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CU Registration Form</title>
+    <!-- Bootstrap 5.3.2 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Calibri", sans-serif;
+        font-size: 11pt;
+        line-height: 1.2;
+        color: #000;
+        background: white;
+      }
+
+      .form-container {
+        max-width: 21cm;
+        margin: 0 auto;
+        padding: 0.5cm;
+        background: white;
+      }
+
+      .header-section {
+        border: 1px solid #000;
+        margin-bottom: 20px;
+        padding: 10px 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .college-logo {
+        width: 80px;
+        height: 80px;
+
+        display: block;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .college-info {
+        text-align: center;
+      }
+
+      .college-name {
+        font-size: 16pt;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #000;
+      }
+
+      .college-address {
+        font-size: 10pt;
+        margin-bottom: 3px;
+        color: #000;
+      }
+
+      .college-details {
+        font-size: 9pt;
+        margin-bottom: 2px;
+        color: #000;
+      }
+
+      .rectification-banner {
+        background-color: #ffebee;
+        border: 2px solid #f44336;
+        padding: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-weight: bold;
+        color: #d32f2f;
+        display: none; /* Hidden by default, show only if rectification is opted */
+      }
+
+      .rectification-banner.show {
+        display: block;
+      }
+
+      .student-info-container {
+        width: 100%;
+        border: 2px solid #000;
+        margin-bottom: 20px;
+        display: flex;
+        min-height: 80px;
+      }
+
+      .student-info-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .student-info-row {
+        display: flex;
+        flex: 1;
+        border-bottom: 1px solid #000;
+      }
+
+      .student-info-row:last-child {
+        border-bottom: none;
+      }
+
+      .label-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        padding: 8px 12px;
+        border-right: 1px solid #000;
+        display: flex;
+        align-items: center;
+        width: 80px;
+        flex-shrink: 0;
+      }
+
+      .data-cell {
+        background-color: white;
+        padding: 8px 12px;
+        border-right: 1px solid #000;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        min-height: 30px;
+      }
+
+      .photo-cell {
+        background-color: #ffebee;
+        color: #d32f2f;
+        font-weight: bold;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 9pt;
+        width: 100%;
+        height: 100%;
+        flex-shrink: 0;
+        text-orientation: mixed;
+      }
+
+      .documents-section {
+        margin: 20px 0;
+      }
+
+      .documents-section h4 {
+        font-weight: bold;
+        margin-bottom: 15px;
+      }
+
+      .document-item {
+        display: flex;
+        align-items: center;
+        gap: 10px; /* consistent spacing between box and text */
+        margin-bottom: 8px;
+        line-height: 1.2; /* stabilize text vertical alignment */
+      }
+
+      .document-checkbox {
+        width: 14px !important;
+        height: 14px !important;
+        min-width: 14px !important;
+        min-height: 14px !important;
+        border: 1px solid #000 !important;
+        display: inline-block !important;
+        box-sizing: content-box !important;
+        margin: 0 0 0 0 !important; /* spacing handled by parent gap */
+        vertical-align: middle !important;
+      }
+
+      @media print {
+        .document-checkbox {
+          width: 12pt !important;
+          height: 12pt !important;
+          min-width: 12pt !important;
+          min-height: 12pt !important;
+          border-width: 1pt !important;
+        }
+      }
+
+      .qr-section {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+      }
+
+      .qr-grid {
+        width: 75%;
+        max-width: 620px;
+        border: 1px solid #000;
+        display: flex;
+        min-height: 170px;
+      }
+
+      .qr-left {
+        flex: 7;
+        border-right: 1px solid #000;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 16px;
+        gap: 12px;
+      }
+
+      .qr-right {
+        flex: 3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: #ffffff;
+      }
+
+      .qr-title {
+        color: #d32f2f;
+        font-weight: 700;
+        text-align: center;
+        font-size: 14pt;
+        line-height: 1.4;
+      }
+
+      .qr-arrow {
+        display: block;
+        width: 80px;
+        height: 16px;
+      }
+
+      @media print {
+        .qr-grid {
+          max-width: none;
+        }
+      }
+
+      .data-sheet {
+        margin: 20px 0;
+      }
+
+      .data-sheet h3 {
+        text-align: center;
+        font-weight: bold;
+        text-decoration: underline;
+        margin-bottom: 20px;
+      }
+
+      .personal-info-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+
+      .personal-info-table td {
+        border: 1px solid #000;
+        padding: 5px;
+        vertical-align: top;
+      }
+
+      .personal-info-table .label-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        width: 20%;
+      }
+
+      .address-section {
+        margin: 20px 0;
+      }
+
+      .address-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .address-table td {
+        border: 1px solid #000;
+        padding: 5px;
+        vertical-align: top;
+      }
+
+      .address-table .label-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+      }
+
+      .academic-details {
+        margin: 20px 0;
+      }
+
+      .academic-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .academic-table td {
+        border: 1px solid #000;
+        padding: 5px;
+        vertical-align: top;
+      }
+
+      .academic-table .label-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+      }
+
+      .subject-details {
+        margin: 20px 0;
+      }
+
+      .subject-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .subject-table td {
+        border: 1px solid #000;
+        padding: 5px;
+        text-align: center;
+        vertical-align: middle;
+      }
+
+      .subject-table .header-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+      }
+
+      .subject-table .highlighted {
+        background-color: #ffff00;
+      }
+
+      .declaration-section {
+        margin: 10px 0;
+        padding: 15px;
+      }
+
+      .declaration-section h4 {
+        font-weight: bold;
+        text-decoration: underline;
+        margin-bottom: 15px;
+      }
+
+      .declaration-text {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        font-size: 7px;
+        line-height: 1.4;
+        gap: 10px;
+      }
+
+      .declaration-checkbox {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #000;
+        display: inline-block;
+        vertical-align: middle;
+        position: relative;
+        background-color: white;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .declaration-checkbox::after {
+        content: "✓";
+        position: absolute;
+        top: 30%;
+        left: 60%;
+        transform: translate(-50%, -50%);
+        color: #4caf50;
+        font-size: 24px;
+        font-weight: bold;
+        line-height: 1;
+      }
+
+      .signature-section {
+        margin: 20px 0;
+      }
+
+      .signature-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .signature-table td {
+        border: 1px solid #000;
+        padding: 10px;
+        vertical-align: top;
+      }
+
+      .signature-table .signature-cell {
+        height: 60px;
+      }
+
+      .anti-ragging-section {
+        margin: 30px 0;
+      }
+
+      .anti-ragging-section h2 {
+        font-weight: bold;
+        text-decoration: underline;
+        margin-bottom: 16px;
+        font-size: 12pt;
+      }
+
+      .anti-ragging-text {
+        font-size: 9pt;
+        line-height: 1.4;
+        margin-bottom: 12px;
+      }
+
+      .anti-ragging-list {
+        margin-left: 18px;
+      }
+
+      .anti-ragging-list li {
+        font-size: 9pt;
+        line-height: 1.4;
+        margin-bottom: 10px;
+      }
+
+      .anti-ragging-list ol {
+        list-style-type: lower-alpha;
+        margin-top: 8px;
+      }
+
+      .anti-ragging-checkbox {
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        border: 1px solid #000;
+        display: inline-block;
+        vertical-align: middle;
+        position: relative;
+        background-color: white;
+        flex-shrink: 0;
+      }
+
+      .anti-ragging-checkbox::after {
+        content: "✓";
+        position: absolute;
+        top: 30%;
+        left: 60%;
+        transform: translate(-50%, -50%);
+        color: #4caf50;
+        font-size: 24px;
+        font-weight: bold;
+        line-height: 1;
+      }
+
+      .verification-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 8px;
+        font-size: 9pt;
+        line-height: 1.4;
+      }
+
+      .verification-section {
+        margin: 20px 0;
+      }
+
+      .verification-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .verification-table td {
+        border: 1px solid #000;
+        padding: 8px;
+        vertical-align: top;
+      }
+
+      .verification-table .label-cell {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        width: 20%;
+      }
+
+      .highlight-text {
+        /* Removed yellow highlighting as requested */
+        padding: 2px 4px;
+      }
+
+      .office-use {
+        color: #d32f2f;
+        font-size: 9pt;
+      }
+
+      .form-section {
+        margin: 10px 0;
+        border: 1px solid #000;
+      }
+
+      .form-row {
+        display: flex;
+        border-bottom: 1px solid #000;
+      }
+
+      .form-row:last-child {
+        border-bottom: none;
+      }
+
+      .form-field {
+        flex: 1;
+        display: flex;
+        border-right: 1px solid #000;
+      }
+
+      .form-field:last-child {
+        border-right: none;
+      }
+
+      .form-field.full-width {
+        flex: 1;
+      }
+
+      .field-label {
+        background-color: #f5f5f5;
+        font-weight: bold;
+        padding: 4px 6px;
+        border-right: 1px solid #000;
+        width: 30%;
+        display: flex;
+        align-items: center;
+        font-size: 7pt;
+        flex-shrink: 0;
+      }
+
+      .field-label.full-width {
+        width: 30%;
+        min-width: 120px;
+      }
+
+      .field-input {
+        background-color: white;
+        padding: 4px 6px;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        min-height: 20px;
+        font-size: 7pt;
+      }
+
+      .subject-section {
+        margin-top: 10px;
+      }
+
+      .subject-table {
+        border: 1px solid #000;
+        margin-bottom: 8px;
+      }
+
+      .subject-header {
+        display: flex;
+        background-color: #f5f5f5;
+        border-bottom: 1px solid #000;
+      }
+
+      .subject-row {
+        display: flex;
+        border-bottom: 1px solid #000;
+      }
+
+      .subject-row:last-child {
+        border-bottom: none;
+      }
+
+      .subject-cell {
+        flex: 1;
+        padding: 4px 6px;
+        border-right: 1px solid #000;
+        text-align: center;
+        font-size: 7pt;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 20px;
+      }
+
+      .subject-cell:last-child {
+        border-right: none;
+      }
+
+      .subject-cell.highlighted {
+        background-color: #ffff00;
+      }
+
+      @media print {
+        body {
+          margin: 0;
+          padding: 0;
+        }
+
+        .form-container {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="form-container">
+      <main class="px-5">
+        <!-- Page 1 -->
+        <div id="page-1" style="height: 100vh" class="pt-4">
+          <!-- Header Section -->
+          <header>
+            <nav class="d-flex justify-content-center align-items-center gap-3">
+              <div
+                class="d-flex justify-content-center align-items-center pr-5 position-relative"
+                style="width: 20%"
+              >
+                <img
+                  src="<%= collegeLogoUrl %>"
+                  alt="College Logo"
+                  class="college-logo"
+                />
+              </div>
+              <div style="width: 60%">
+                <h1 class="college-name text-center fs-6">
+                  <%= collegeName %>
+                </h1>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <div class="college-address">
+                    <%= collegeAddress %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails1 %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails2 %>
+                  </div>
+                </div>
+              </div>
+              <div style="width: 20%"></div>
+            </nav>
+          </header>
+          <div class="pt-5">
+            <!-- Rectification Banner (only show if rectification is opted) -->
+            <% if (showRectificationBanner) { %>
+            <div class="text-center mt-2 mb-4">
+              <span style="font-size: 12pt; font-weight: bold; color: #d32f2f">Rectification Opted</span>
+            </div>
+            <% } %>
+
+            <!-- Student Information Section -->
+            <div
+              class="d-flex justify-content-between align-items-center"
+              style="border: 1px solid #000"
+            >
+              <div style="width: 80%" class="left">
+                <!-- Row 1: Name -->
+                <div class="d-flex" style="border-bottom: 1px solid #000">
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="label-cell"
+                  >
+                    Name
+                  </div>
+                  <div style="width: 75%" class="data-cell"><%= studentName %></div>
+                </div>
+                <!-- Row 2: UID and CU Form -->
+                <div class="d-flex" style="border-bottom: 1px solid #000">
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="label-cell"
+                  >
+                    UID
+                  </div>
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="data-cell"
+                  >
+                    <%= studentUid %>
+                  </div>
+                  <div
+                    class="label-cell"
+                    style="width: 25%; border-right: 1px solid #000"
+                  >
+                    CU Form No.
+                  </div>
+                  <div style="width: 25%" class="data-cell"><%= cuFormNumber %></div>
+                </div>
+                <!-- Row 3: Course and Shift -->
+                <div class="d-flex">
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="label-cell"
+                  >
+                    Course
+                  </div>
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="data-cell"
+                  >
+                    <%= programCourseName %>
+                  </div>
+                  <div
+                    style="width: 25%; border-right: 1px solid #000"
+                    class="label-cell"
+                  >
+                    Shift
+                  </div>
+                  <div style="width: 25%" class="data-cell"><%= shiftName %></div>
+                </div>
+              </div>
+              <div style="width: 20%" class="right">
+                <div class="photo-cell">
+                  Student photo to be captured from A360
+                </div>
+              </div>
+            </div>
+
+            <!-- Documents Section -->
+            <div class="documents-section my-4 pt-2">
+              <h4 class="fs-6 pt-3">
+                DOCUMENTS SUBMITTED ALONG WITH THIS FORM
+              </h4>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the original Class XII Board Marksheet.</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of Class X Board Admit Card / Birth Certificate
+                  issued by Government.</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span>Photocopy of Aadhaar Card.</span>
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of First and Last Page of Passport. (Applicable
+                  only for Foreign Nationals)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the APAAR (ABC) ID Card. (Not applicable for
+                  Foreign Nationals)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the Caste Certificate, issued by the Govt. of
+                  West Bengal. (Applicable only if applied under SC/ ST/ OBC
+                  category)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the Original Migration Certificate. (NOT
+                  applicable for students belonging to WBCHSE/ ISC/ CBSE/ NIOS
+                  board)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the PWD Certificate. (Applicable only if applied
+                  under the Physically Handicap category)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the EWS Certificate, issued by the Govt. of West
+                  Bengal. (Applicable only if applied under EWS category)</span
+                >
+              </div>
+              <div class="document-item">
+                <span class="document-checkbox"></span>
+                <span
+                  >Photocopy of the Calcutta University Registration
+                  Certificate. (Applicable only for students registered with
+                  Calcutta University in the year 2024 or before)</span
+                >
+              </div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="qr-section my-3 py-3">
+              <div class="qr-grid">
+                <div class="qr-left">
+                  <div class="qr-title">
+                    Scan the QR Code to know your reporting details for Physical
+                    Submission
+                  </div>
+                  <svg
+                    class="qr-arrow"
+                    viewBox="0 0 80 16"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <defs>
+                      <linearGradient
+                        id="arrowBlue"
+                        x1="0%"
+                        y1="0%"
+                        x2="0%"
+                        y2="100%"
+                      >
+                        <stop offset="0%" stop-color="#5b8bd6" />
+                        <stop offset="100%" stop-color="#2c5aa0" />
+                      </linearGradient>
+                    </defs>
+                    <rect
+                      x="0"
+                      y="5"
+                      width="60"
+                      height="6"
+                      fill="url(#arrowBlue)"
+                    />
+                    <polygon points="60,2 80,8 60,14" fill="url(#arrowBlue)" />
+                  </svg>
+                </div>
+                <div class="qr-right">
+                  <!-- Reserved for QR image -->
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="position-relative d-flex justify-content-between align-items-center"
+style="top: 55px"
+            >
+              <p style="width: 85%; font-size: 12px">
+                This sheet is to be printed and submitted to the college in
+                original as per the physical submission schedule given on the
+                college website.
+              </p>
+              <p style="width: 15%; font-size: 12px" class="text-end">
+                Page 1 of 4
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Page 2 -->
+        <div id="page-2" style="height: 100vh" class="pt-4">
+          <!-- Header Section -->
+          <header>
+            <nav class="d-flex justify-content-center align-items-center gap-3">
+              <div
+                class="d-flex justify-content-center align-items-center pr-5 position-relative"
+                style="width: 20%"
+              >
+                <img
+                  src="<%= collegeLogoUrl %>"
+                  alt="College Logo"
+                  class="college-logo"
+                />
+              </div>
+              <div style="width: 60%">
+                <h1 class="college-name text-center fs-6">
+                  <%= collegeName %>
+                </h1>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <div class="college-address">
+                    <%= collegeAddress %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails1 %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails2 %>
+                  </div>
+                </div>
+              </div>
+              <div style="width: 20%">
+                <img
+                  src="<%= studentPhotoUrl %>"
+                  width="80"
+                  height="80"
+                  alt="Candidate Photo"
+                  style="width: 80px; height: 80px; border: 1px solid #000"
+                />
+              </div>
+            </nav>
+          </header>
+          <div>
+            <!-- Data Sheet Section -->
+            <div class="data-sheet">
+              <!-- <h3 class="office-use">(For Office Use Only)</h3> -->
+              <h2
+                class="fs-6 text-center font-weight-bold text-decoration-underline pb-2"
+                style="font-weight: bold; text-underline-offset: 4px; font-size: 9px;"
+              >
+                ADMISSION CUM REGISTRATION DATA SHEET FOR UG COURSES (2025-2026)
+              </h2>
+
+              <!-- Personal Information -->
+              <h4 style="font-size: 10px">Personal Information</h4>
+              <div class="form-section">
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Name</div>
+                    <div class="field-input"><%= studentName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">UID</div>
+                    <div class="field-input"><%= studentUid %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Date of Birth</div>
+                    <div class="field-input"><%= dateOfBirth %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Gender</div>
+                    <div class="field-input"><%= gender %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Father's/Mother's Name</div>
+                    <div class="field-input"><%= parentName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Category</div>
+                    <div class="field-input"><%= categoryName %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Nationality</div>
+                    <div class="field-input"><%= nationalityName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Aadhar Card No.</div>
+                    <div class="field-input"><%= aadhaarCardNumber %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Religion</div>
+                    <div class="field-input"><%= religionName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Annual Income</div>
+                    <div class="field-input"><%= annualIncome %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">PWD</div>
+                    <div class="field-input">
+                      (<%= pwdStatus %>)
+                      <span class="office-use">(<%= pwdCode %>)</span>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">EWS</div>
+                    <div class="field-input">(<%= ewsStatus %>)</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Residential Address Details -->
+              <h4 style="font-size: 10px">Residential Address Details</h4>
+              <div class="form-section">
+                <div class="form-row">
+                  <div class="form-field full-width">
+                    <div class="field-label" style="width: 104px">Address</div>
+                    <div class="field-input"><%= residentialAddress %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Country</div>
+                    <div class="field-input"><%= countryName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">State</div>
+                    <div class="field-input"><%= stateName %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Police Station</div>
+                    <div class="field-input"><%= policeStationName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Post Office</div>
+                    <div class="field-input"><%= postOfficeName %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">City</div>
+                    <div class="field-input"><%= cityName %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Pin Code</div>
+                    <div class="field-input"><%= pincode %></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Academic Details -->
+              <h4 style="font-size: 10px">Academic Details</h4>
+              <div class="form-section">
+                <div class="form-row">
+                  <div class="form-field full-width">
+                    <div class="field-label" style="width: 104px">Board</div>
+                    <div class="field-input"><%= boardName %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">Year of Passing</div>
+                    <div class="field-input"><%= yearOfPassing %></div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">APPAR ID (ABC ID)</div>
+                    <div class="field-input"><%= apaarId %></div>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field">
+                    <div class="field-label">CU Registration No:</div>
+                    <div class="field-input">
+                      <%= cuRegistrationNumber %>
+                      <span class="office-use">(If Pre-registered)</span>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <div class="field-label">Board Roll No.</div>
+                    <div class="field-input"><%= boardRollNumber %></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subject Details -->
+              <h4 style="font-size: 10px; font-weight: bold">
+                Subject Details [4 year BCom / 4 year BA / 4 year BSc / 4 year
+                BBA / 3 year BCom]:
+              </h4>
+              <div class="subject-section">
+                <% subjectDetails.forEach(function(subjectGroup) { %>
+                <div class="subject-table">
+                  <div class="subject-header">
+                    <% subjectGroup.headers.forEach(function(header) { %>
+                    <div class="subject-cell"><%= header %></div>
+                    <% }); %>
+                  </div>
+                  <div class="subject-row">
+                    <% subjectGroup.subjects.forEach(function(subject) { %>
+                    <div class="subject-cell highlighted"><%= subject %></div>
+                    <% }); %>
+                  </div>
+                </div>
+                <% }); %>
+              </div>
+
+              <!-- Declaration Section -->
+              <div class="declaration-section p-0">
+                <h2
+                  class="fs-6 mb-2 font-weight-bold text-decoration-underline pb-2"
+                  style="font-weight: bold; text-underline-offset: 4px"
+                >
+                  Declaration
+                </h2>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  If admitted, I undertake to abide by all the existing Rules
+                  and Regulations of the College/Calcutta University/UGC as at
+                  the time of my admission or as may be altered from time to
+                  time. I also pledge that I will ever strive to be true to the
+                  noble ideals of the University of Calcutta from which THE
+                  BHAWANIPUR EDUCATION SOCIETY COLLEGE has originated.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  I declare and understand that: -
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  i. Ensuring fulfilment of Calcutta University Eligibility
+                  criteria is the applicant's responsibility. At any stage, if
+                  found ineligible the admission shall be cancelled. The College
+                  shall not be responsible for such cancellation. Fees once paid
+                  are not refundable.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  ii. I hereby state that I will have no objections to me being
+                  photographed during College Activities. Further, I also
+                  consent that I will have no objection to use these photographs
+                  by College for publishing/issuing magazines, website, social
+                  media, prospectus, brochures, advertisements, and hoardings.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  iii. I understand that fees once paid shall not be refunded
+                  under any circumstances. I declare that I have deposited the
+                  fees keeping in mind the above.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  iv. I will abide by all rules, regulations, and codes of
+                  conduct as laid down by the college authorities, University
+                  and UGC.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  I hereby declare that I am being forewarned regarding the
+                  rules of attendance under the NEP system. I clearly understand
+                  that The Bhawanipur Education Society College will strictly
+                  adhere to and enforce the Calcutta University regulations as
+                  and when issued with reference to new NEP System.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  I understand and agree that the documents and relevant
+                  testimonials uploaded by me during online application process
+                  and thereafter are true to the best of my knowledge and that I
+                  will be required to verify my original documents by the
+                  college authorities post-class commencement. I understand that
+                  my admission will be cancelled if the documents and
+                  testimonials uploaded by me as said above are found not in
+                  conformity with the declaration in the forms submitted online.
+                </div>
+                <div class="declaration-text">
+                  <span class="declaration-checkbox"></span>
+                  I hereby declare that all entries made by me in this form are
+                  true in all respects. If any information is found to be
+                  incorrect, I understand that my application stands cancelled.
+                  I declare that all statements made by me in this application
+                  are true to the best of my knowledge and belief. Any statement
+                  made by me in this Application form, if found incorrect on
+                  scrutiny, shall render the Application liable for rejection
+                  and Admission, if granted based on that statement, shall stand
+                  cancelled.
+                </div>
+              </div>
+
+              <!-- Signature Section -->
+              <div
+                class="d-flex justify-content-center align-items-center gap-5"
+                style="height: 80px"
+              >
+                <div
+                  class="d-flex justify-content-center align-items-center flex-column"
+                  style="height: 100%; width: 80%"
+                >
+                  <div
+                    style="width: 100%; height: 90%; border: 1px solid #000"
+                  ></div>
+                  <p class="text-center my-2" style="font-size: 9px">
+                    Full Signature of the Student (Do not sign in BLOCK LETTERS)
+                  </p>
+                </div>
+                <div
+                  class="d-flex justify-content-center align-items-center flex-column"
+                  style="height: 100%; width: 20%"
+                >
+                  <div
+                    style="
+                      width: 100%;
+                      height: 90%;
+                      border-bottom: 1px solid #000;
+                    "
+                  ></div>
+                  <p class="text-center my-2" style="font-size: 9px">Date</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="d-flex justify-content-between align-items-center position-relative"
+            style="bottom: 40px"
+          >
+            <p style="width: 85%; font-size: 12px">
+              This sheet is to be printed and submitted to the college in
+              original as per the physical submission schedule given on the
+              college website.
+            </p>
+            <p style="width: 15%; font-size: 12px" class="text-end">
+              Page 2 of 4
+            </p>
+          </div>
+        </div>
+
+        <!-- Page 3 -->
+        <div id="page-3" style="height: 100vh" class="pt-4">
+          <!-- Header Section -->
+          <header>
+            <nav class="d-flex justify-content-center align-items-center gap-3">
+              <div
+                class="d-flex justify-content-center align-items-center pr-5 position-relative"
+                style="width: 20%"
+              >
+                <img
+                  src="<%= collegeLogoUrl %>"
+                  alt="College Logo"
+                  class="college-logo"
+                />
+              </div>
+              <div style="width: 60%">
+                <h1 class="college-name text-center fs-6">
+                  <%= collegeName %>
+                </h1>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <div class="college-address">
+                    <%= collegeAddress %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails1 %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails2 %>
+                  </div>
+                </div>
+              </div>
+              <div style="width: 20%"></div>
+            </nav>
+          </header>
+          <div class="pt-3">
+            <!-- Anti-Ragging Section -->
+            <div>
+              <h2
+                class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline pb-2"
+                style="font-weight: bold; text-underline-offset: 4px"
+              >
+                ANTI-RAGGING FORM BY THE APPLICANT
+              </h2>
+              <ol class="anti-ragging-list m-0 px-3">
+                <li>
+                  I, <span class="highlight-text"><%= studentName %></span> an
+                  applicant of Semester I in
+                  <span class="highlight-text"><%= programCourseName %></span>, Son/Daughter of
+                  <span class="highlight-text"><%= parentName %></span>, Having
+                  been admitted to
+                  <strong>The Bhawanipur Education Society College</strong>
+                  affiliated with the <strong>University of Calcutta</strong>,
+                  hereby declare that, I have received a digital copy of the
+                  <strong
+                    >UGC Regulations on curbing the menace of Ragging in Higher
+                    Educational Institutions, 2009</strong
+                  >, (hereinafter called the 'Regulations') I have carefully
+                  read and fully understood the provisions contained in the said
+                  Regulations.
+                </li>
+                <li>
+                  I have Specifically perused <strong>clause 3</strong> of the
+                  regulations and am aware as to what constitutes ragging.
+                </li>
+                <li>
+                  I have also, perused <strong>clause 7</strong> and
+                  <strong>clause 9.1</strong> of the Regulations and am fully
+                  aware of the <strong>panel and administrative</strong> action
+                  that is liable to be taken against me in case I am found
+                  guilty of or abetting ragging, actively or passively, or being
+                  part of a conspiracy to promote ragging.
+                </li>
+                <li>
+                  I hereby solemnly affirm that:
+                  <ol>
+                    <li>
+                      I will <strong>not indulge</strong> in any behaviour or
+                      act that may be constituted as ragging under
+                      <strong>clause 3</strong> of the Regulations.
+                    </li>
+                    <li>
+                      I will
+                      <strong>not participate in or abet or propagate</strong>
+                      any act whether of commission or omission that may be
+                      constituted as ragging under <strong>clause 3</strong> of
+                      regulations.
+                    </li>
+                  </ol>
+                </li>
+                <li>
+                  I hereby affirm that, if I am found guilty of ragging, I am
+                  liable for punishment according to <strong>clause 9.1</strong>
+                  of the Regulations, without prejudice to any other criminal
+                  action that may be taken against me under any penal Law or any
+                  Law for the time being in force.
+                </li>
+                <li>
+                  I hereby, declare that I have
+                  <strong>not been expelled or debarred</strong> from admission
+                  in any Institution in the Country on account of being found
+                  guilty of, abetting or being part of a conspiracy to promote,
+                  ragging; and further affirm that, in case the declaration is
+                  found to be untrue, I am aware that my admission is liable to
+                  be cancelled.
+                </li>
+              </ol>
+
+              <h3 style="font-size: 12px" class="fw-bold">
+                DECLARED ON (DATE OF FORM DOWNLOAD)
+              </h3>
+              <div class="anti-ragging-text pt-4 m-0">
+                <span class="highlight-text">Signature of Applicant</span>
+              </div>
+              <div class="anti-ragging-text pt-0">
+                <span class="highlight-text"
+                  >(<%= studentName %>)</span
+                >
+              </div>
+
+              <h2
+                class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline pb-2"
+                style="font-weight: bold; text-underline-offset: 4px"
+              >
+                VERIFICATION
+              </h2>
+              <div class="verification-item">
+                <span class="anti-ragging-checkbox"></span>
+                I confirm that I have read UGC's regulations on Ragging.(To
+                read, visit the link ABSTRACT OF UGC REGULATIONS ON RAGGING)
+              </div>
+              <div class="verification-item">
+                <span class="anti-ragging-checkbox"></span>
+                I confirm that I have read the Judgment of the Hon. Supreme
+                Court on prevention of Ragging.(To read, visit the link SUMMARY
+                OF THE JUDGMENT OF THE HON. SUPREME COURT)
+              </div>
+              <div class="verification-item">
+                <span class="anti-ragging-checkbox"></span>
+                I promise that I will not indulge in Ragging or any form of
+                violent behavior. Neither will I tolerate being ragged or
+                subjected to violence.
+              </div>
+              <div class="verification-item">
+                <span class="anti-ragging-checkbox"></span>
+                I understand that if I am accused of Ragging, the responsibility
+                is on me to prove that I am not guilty.
+              </div>
+              <div class="verification-item">
+                <span class="anti-ragging-checkbox"></span>
+                I will not remain a spectator to acts of Ragging. I will report
+                the matter immediately to my Principal/Director and/or the
+                Anti-Ragging Help Line at 1800 180 5522 or email to
+                info@antiragging.in
+              </div>
+
+              <div class="anti-ragging-text">
+                Verified that the contents of this affidavit are true to the
+                best of my knowledge. No part of the affidavit is false, and
+                nothing has been concealed or misstated therein.
+              </div>
+
+              <div class="anti-ragging-text d-flex">
+                <div class="d-flex align-items-center">
+                  <p>Verified at</p>
+                  <div
+                    class="d-flex flex-column justify-content-center align-items-center"
+                  >
+                    <p class="m-0">_________________________</p>
+                    <p class="m-0">(PLACE)</p>
+                  </div>
+                </div>
+                <div class="d-flex align-items-center">
+                  <p>on</p>
+                  <div
+                    class="d-flex flex-column justify-content-center align-items-center"
+                  >
+                    <p class="m-0">_________________________</p>
+                    <p class="m-0">(DATE)</p>
+                  </div>
+                </div>
+              </div>
+              <div class="my-4">
+                <div>Signature of Applicant:</div>
+                <div></div>
+              </div>
+            </div>
+          </div>
+          <div
+            class="d-flex justify-content-between align-items-center"
+            style="padding-top: 10px"
+          >
+            <p style="width: 85%; font-size: 12px">
+              This sheet is to be printed and submitted to the college in
+              original as per the physical submission schedule given on the
+              college website.
+            </p>
+            <p style="width: 15%; font-size: 12px" class="text-end">
+              Page 3 of 4
+            </p>
+          </div>
+        </div>
+
+        <!-- Page 4 -->
+        <div id="page-4" style="height: 100vh" class="pt-4">
+          <!-- Header Section -->
+          <header>
+            <nav class="d-flex justify-content-center align-items-center gap-3">
+              <div
+                class="d-flex justify-content-center align-items-center pr-5 position-relative"
+                style="width: 20%"
+              >
+                <img
+                  src="<%= collegeLogoUrl %>"
+                  alt="College Logo"
+                  class="college-logo"
+                />
+              </div>
+              <div style="width: 60%">
+                <h1 class="college-name text-center fs-6">
+                  <%= collegeName %>
+                </h1>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <div class="college-address">
+                    <%= collegeAddress %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails1 %>
+                  </div>
+                  <div class="college-details">
+                    <%= collegeDetails2 %>
+                  </div>
+                </div>
+              </div>
+              <div style="width: 20%"></div>
+            </nav>
+          </header>
+          <div class="py-4">
+            <h2
+              class="fs-6 pb-3 mb-2 text-center font-weight-bold text-decoration-underline pb-2"
+              style="font-weight: bold; text-underline-offset: 4px"
+            >
+              ANTI-RAGGING FORM BY PARENT/GUARDIAN
+            </h2>
+            <ol class="anti-ragging-list m-0 px-3">
+              <li>
+                I, Mr./Mrs./Miss
+                <span class="highlight-text"><%= parentName %></span>,
+                Father/Mother of
+                <span class="highlight-text"><%= studentName %></span> who has been
+                admitted to
+                <strong>The Bhawanipur Education Society College</strong>
+                affiliated with the <strong>University of Calcutta</strong>,
+                hereby declare that, I have received a digital copy of the
+                <strong
+                  >UGC Regulations on curbing the menace of Ragging in Higher
+                  Educational Institutions, 2009</strong
+                >, carefully read and fully understood the provisions contained
+                in the said Regulations.
+              </li>
+              <li>
+                I have, specifically perused <strong>clause 3</strong> of the
+                regulations and am aware as to what constitutes ragging.
+              </li>
+              <li>
+                I have also, perused <strong>clause 7</strong> and
+                <strong>clause 9.1</strong> of the Regulations and am fully
+                aware of the <strong>panel and administrative</strong> action
+                that is liable to be taken against my ward in case he/she is
+                found guilty of or abetting ragging, actively or passively, or
+                being part of a conspiracy to promote ragging.
+              </li>
+              <li>
+                I hereby solemnly affirm and undertake that:
+                <ol>
+                  <li>
+                    My ward will <strong>not indulge</strong> in any behaviour
+                    or act that may be constituted as ragging under
+                    <strong>clause 3</strong> of the Regulations.
+                  </li>
+                  <li>
+                    My ward will
+                    <strong>not participate in or abet or propagate</strong>
+                    through any act of commission or omission that may be
+                    constituted as ragging under <strong>clause 3</strong> of
+                    regulations.
+                  </li>
+                </ol>
+              </li>
+              <li>
+                I hereby affirm that, if I found guilty of ragging, my ward is
+                liable for punishment according to
+                <strong>clause 9.1</strong> of the Regulations, without
+                prejudice to any other criminal action that may be taken against
+                My ward under any penal Law or any Law for the time being in
+                force.
+              </li>
+              <li>
+                I hereby, declare that My ward has
+                <strong>not been expelled or debarred</strong> from admission in
+                any Institution in the Country on account of being found guilty
+                of, abetting or being part of a conspiracy to promote, ragging;
+                and further affirm that, in case the declaration is found to be
+                untrue, the admission of My ward is liable to be cancelled.
+              </li>
+            </ol>
+
+            <h3 style="font-size: 12px" class="fw-bold">
+              DECLARED ON (DATE OF FORM DOWNLOAD)
+            </h3>
+            <div class="anti-ragging-text">
+              <span class="highlight-text"
+                >(<%= parentName %>)</span
+              >
+            </div>
+            <div class="anti-ragging-text">
+              Place:
+              <span class="highlight-text"
+                >(<%= stateName %>)</span
+              >
+            </div>
+
+            <h2
+              class="fs-6 mb-2 text-center font-weight-bold text-decoration-underline pb-2"
+              style="font-weight: bold; text-underline-offset: 4px"
+            >
+              VERIFICATION
+            </h2>
+            <div class="anti-ragging-text">
+              Verified that the contents of this affidavit are true to the best
+              of my knowledge. No part of the affidavit is false, and nothing
+              has been concealed or misstated therein.
+            </div>
+            <div class="anti-ragging-text d-flex">
+              <div class="d-flex align-items-center">
+                <p>Verified at</p>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <p class="m-0">_________________________</p>
+                  <p class="m-0">(PLACE)</p>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                <p>on</p>
+                <div
+                  class="d-flex flex-column justify-content-center align-items-center"
+                >
+                  <p class="m-0">_________________________</p>
+                  <p class="m-0">(DATE)</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="anti-ragging-text">
+              <span class="highlight-text"
+                >Name of Father/Mother/Guardian whose name is printed on top of
+                this paper.</span
+              >
+            </div>
+          </div>
+          <div
+            class="d-flex justify-content-between align-items-center"
+            style="padding-top: 210px"
+          >
+            <p style="width: 85%; font-size: 12px">
+              This sheet is to be printed and submitted to the college in
+              original as per the physical submission schedule given on the
+              college website
+            </p>
+            <p style="width: 15%; font-size: 12px" class="text-end">
+              Page 4 of 4
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Function to show/hide rectification banner
+      function toggleRectificationBanner(show) {
+        const banner = document.getElementById("rectificationBanner");
+        if (show) {
+          banner.classList.add("show");
+        } else {
+          banner.classList.remove("show");
+        }
+      }
+
+      // Example: Show rectification banner (uncomment to test)
+      // toggleRectificationBanner(true);
+    </script>
+  </body>
+</html>

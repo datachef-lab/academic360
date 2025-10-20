@@ -84,26 +84,14 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
       parsedFlags && Object.values(parsedFlags).some(Boolean);
     const newStatus = hasCorrectionFlags ? "REQUEST_CORRECTION" : "APPROVED";
 
-    // Generate CU registration application number if not already present
-    let cuRegistrationApplicationNumber =
-      correctionRequest.cuRegistrationApplicationNumber;
-    if (!cuRegistrationApplicationNumber) {
-      try {
-        cuRegistrationApplicationNumber =
-          await CuRegistrationNumberService.generateNextApplicationNumber();
-        console.info(
-          `[CU-REG BATCH SUBMIT] Generated CU registration application number: ${cuRegistrationApplicationNumber}`,
-        );
-      } catch (error) {
-        console.error(
-          `[CU-REG BATCH SUBMIT] Error generating CU registration application number:`,
-          error,
-        );
-        // Continue without failing the request
-      }
-    }
+    // Don't generate application number here - it will be generated in the update function
+    // when all declarations are completed and final submission is done
+    console.info(
+      `[CU-REG BATCH SUBMIT] Application number will be generated during update if all declarations are completed`,
+    );
 
-    // Update the correction request with flags, payload, status, CU registration application number, and mark online registration as done
+    // Update the correction request with flags, payload, status, and mark online registration as done
+    // The application number will be generated automatically in the update function if all declarations are completed
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
       {
@@ -113,12 +101,23 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         subjectsCorrectionRequest: parsedFlags?.subjects || false,
         status: newStatus,
         onlineRegistrationDone: true, // Mark online registration as completed
-        cuRegistrationApplicationNumber: cuRegistrationApplicationNumber, // Set the generated application number
+
+        // Set all declaration flags to true for final submission
+        // This ensures PDF generation is triggered when all conditions are met
+        personalInfoDeclaration: true,
+        addressInfoDeclaration: true,
+        subjectsDeclaration: true,
+        documentsDeclaration: true,
+
+        // Application number will be generated automatically in update function
       },
     );
 
     console.info(
       `[CU-REG BATCH SUBMIT] Updated request status to: ${newStatus} and marked online registration as done`,
+    );
+    console.info(
+      `[CU-REG BATCH SUBMIT] Set all declaration flags to true for final submission - PDF generation should be triggered`,
     );
 
     // Update actual database fields based on correction request data

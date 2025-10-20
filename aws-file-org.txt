@@ -1,0 +1,17 @@
+/2025
+    /ccf
+        /admission-reg-form
+            /Photo
+            /Signature
+            /Age
+            /
+        /DEGREE-CERTIFICATES
+        /MARKSHEETS
+        /RCSI-MARKSHEETS
+        /REGISTRATION-CERTIFICATES
+    /CBCS
+
+/2025
+    /CCF
+        /students
+            /0804250001
