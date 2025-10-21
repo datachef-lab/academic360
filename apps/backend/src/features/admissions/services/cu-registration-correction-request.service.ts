@@ -17,6 +17,68 @@ import {
 } from "@repo/db/dtos/admissions/index.js";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
+import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
+import { enqueueNotification } from "@/services/notificationClient.js";
+
+// Environment detection helpers
+const shouldRedirectToDeveloper = () => {
+  const nodeEnv = process.env.NODE_ENV;
+  return nodeEnv === "development";
+};
+
+const shouldSendToStaffOnly = () => {
+  const nodeEnv = process.env.NODE_ENV;
+  return nodeEnv === "staging";
+};
+
+const getDeveloperContact = () => {
+  const devEmail = process.env.DEVELOPER_EMAIL;
+  const devPhone = process.env.DEVELOPER_PHONE;
+
+  if (!devEmail || !devPhone) {
+    console.warn(
+      "⚠️ Developer contact info not configured in environment variables",
+    );
+  }
+
+  return { devEmail, devPhone };
+};
+
+// Helper function to check if user is staff with staging notification enabled
+const isStaffWithStagingNotification = async (
+  email: string,
+): Promise<boolean> => {
+  try {
+    const [user] = await db
+      .select({
+        userType: userModel.type,
+        sendStagingNotifications: userModel.sendStagingNotifications,
+        isActive: userModel.isActive,
+        isSuspended: userModel.isSuspended,
+      })
+      .from(userModel)
+      .where(eq(userModel.email, email));
+
+    if (!user) {
+      console.log(`👤 User not found for email: ${email}`);
+      return false;
+    }
+
+    const isStaff = user.userType === "STAFF" || user.userType === "ADMIN";
+    const hasStagingFlag = user.sendStagingNotifications === true;
+    const isActive = user.isActive === true;
+    const isNotSuspended = user.isSuspended === false;
+
+    console.log(
+      `👤 User ${email}: staff=${isStaff}, stagingNotification=${hasStagingFlag}, active=${isActive}, notSuspended=${isNotSuspended}`,
+    );
+
+    return isStaff && hasStagingFlag && isActive && isNotSuspended;
+  } catch (error) {
+    console.error("❌ Error checking staff status:", error);
+    return false;
+  }
+};
 
 // CREATE
 export async function createCuRegistrationCorrectionRequest(
@@ -421,11 +483,26 @@ export async function updateCuRegistrationCorrectionRequest(
           },
         );
 
+        // Get student UID for S3 upload
+        const [studentRecord] = await tx
+          .select({ uid: studentModel.uid })
+          .from(studentModel)
+          .where(eq(studentModel.id, existing.studentId))
+          .limit(1);
+
+        if (!studentRecord?.uid) {
+          console.error(
+            "[CU-REG CORRECTION][UPDATE] Student UID not found for PDF generation",
+          );
+          throw new Error("Student UID is required for PDF generation");
+        }
+
         const pdfResult =
           await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
             existing.studentId,
             id,
             applicationNumber,
+            studentRecord.uid,
           );
 
         if (pdfResult.success) {
@@ -433,6 +510,7 @@ export async function updateCuRegistrationCorrectionRequest(
             "[CU-REG CORRECTION][UPDATE] PDF generated successfully",
             {
               pdfPath: pdfResult.pdfPath,
+              s3Url: pdfResult.s3Url,
               applicationNumber,
             },
           );
@@ -458,7 +536,9 @@ export async function updateCuRegistrationCorrectionRequest(
         if (hasCorrectionFlags) {
           setData.status = "REQUEST_CORRECTION";
         } else {
-          setData.status = "APPROVED";
+          // Set to ONLINE_REGISTRATION_DONE instead of APPROVED
+          // APPROVED status will be set later after physical registration
+          setData.status = "ONLINE_REGISTRATION_DONE";
         }
       } else {
         // Any declaration is still false OR final submission not done
@@ -1114,3 +1194,280 @@ async function modelToDto(
     })),
   };
 }
+
+// NOTIFICATION FUNCTIONS
+
+export interface AdmissionRegistrationNotificationData {
+  studentId: number;
+  studentEmail: string;
+  studentName: string;
+  studentUid: string;
+  applicationNumber: string;
+  courseName: string;
+  submissionDate: string;
+  pdfUrl: string;
+  pdfBuffer: Buffer;
+}
+
+export interface AdmissionRegistrationNotificationResult {
+  success: boolean;
+  error?: string;
+  notificationId?: number;
+}
+
+/**
+ * Send admission registration congratulations email with PDF attachment
+ */
+export const sendAdmissionRegistrationEmailNotification = async (
+  data: AdmissionRegistrationNotificationData,
+): Promise<AdmissionRegistrationNotificationResult> => {
+  try {
+    console.log(
+      "📧 [CU-REG-NOTIF] Sending admission registration email notification",
+    );
+    console.log("📧 [CU-REG-NOTIF] Data:", {
+      studentId: data.studentId,
+      studentEmail: data.studentEmail,
+      studentName: data.studentName,
+      applicationNumber: data.applicationNumber,
+    });
+
+    // Get the admission registration notification master for EMAIL
+    const [emailMaster] = await db
+      .select()
+      .from(notificationMasterModel)
+      .where(
+        and(
+          eq(notificationMasterModel.name, "Admission Reg. Form"),
+          eq(notificationMasterModel.template, "adm-reg-form"),
+          eq(notificationMasterModel.variant, "EMAIL"),
+        ),
+      );
+
+    if (!emailMaster) {
+      throw new Error(
+        "Admission Registration EMAIL notification master not found",
+      );
+    }
+
+    console.log("📧 [CU-REG-NOTIF] Found notification master:", emailMaster.id);
+
+    // Check environment-specific logic
+    const redirectToDev = shouldRedirectToDeveloper();
+    const sendToStaffOnly = shouldSendToStaffOnly();
+    const { devEmail, devPhone } = getDeveloperContact();
+
+    // Determine notification recipients based on environment
+    let otherUsersEmails: string[] = [];
+    let otherUsersWhatsAppNumbers: string[] = [];
+    let shouldSendToStudent = false; // Default: not send to student
+
+    if (redirectToDev && devEmail) {
+      // Development: send ONLY to developer, NOT to student
+      otherUsersEmails = [devEmail];
+      shouldSendToStudent = false; // Don't send to student in dev
+      console.log(
+        `📧 [CU-REG-NOTIF] [DEV MODE] Sending ONLY to developer: ${devEmail} (NOT to student)`,
+      );
+    } else if (sendToStaffOnly) {
+      // Staging: send ONLY to staff, NOT to student
+      try {
+        const staffUsers = await db
+          .select({
+            email: userModel.email,
+            phone: userModel.phone,
+            whatsappNumber: userModel.whatsappNumber,
+          })
+          .from(userModel)
+          .where(
+            and(
+              or(eq(userModel.type, "STAFF"), eq(userModel.type, "ADMIN")),
+              eq(userModel.sendStagingNotifications, true),
+              eq(userModel.isActive, true),
+              eq(userModel.isSuspended, false),
+            ),
+          );
+
+        otherUsersEmails = staffUsers
+          .map((user) => user.email)
+          .filter(
+            (email): email is string => email !== null && email !== undefined,
+          );
+
+        otherUsersWhatsAppNumbers = staffUsers
+          .map((user) => user.whatsappNumber || user.phone)
+          .filter(
+            (phone): phone is string => phone !== null && phone !== undefined,
+          );
+
+        shouldSendToStudent = false; // Don't send to student in staging
+        console.log(
+          `📧 [CU-REG-NOTIF] [STAGING] Sending ONLY to staff: ${otherUsersEmails.join(", ")} (NOT to student)`,
+        );
+        console.log(
+          `📱 [CU-REG-NOTIF] [STAGING] Staff WhatsApp numbers: ${otherUsersWhatsAppNumbers.join(", ")}`,
+        );
+      } catch (error) {
+        console.error(
+          "❌ [CU-REG-NOTIF] Error fetching staff users for staging:",
+          error,
+        );
+      }
+    } else {
+      // Production: send to real user (no additional recipients)
+      shouldSendToStudent = true; // Send to student in production
+      console.log(
+        `📧 [CU-REG-NOTIF] [PRODUCTION] Sending to real user: ${data.studentEmail}`,
+      );
+    }
+
+    // Prepare notification data based on environment
+    let notificationData;
+
+    if (shouldSendToStudent) {
+      // Production: send to student
+      notificationData = {
+        userId: data.studentId,
+        variant: "EMAIL" as const,
+        type: "ADMISSION" as const,
+        message: `Your admission registration form has been successfully submitted. Application Number: ${data.applicationNumber}`,
+        notificationMasterId: emailMaster.id,
+        otherUsersEmails: undefined, // No additional recipients in production
+        otherUsersWhatsAppNumbers: undefined,
+        // Store PDF S3 URL for email worker to download
+        emailAttachments: data.pdfUrl ? [{ pdfS3Url: data.pdfUrl }] : undefined,
+      };
+    } else {
+      // Development/Staging: send to other users only
+      notificationData = {
+        userId: data.studentId, // Still need a userId for the notification record
+        variant: "EMAIL" as const,
+        type: "ADMISSION" as const,
+        message: `Admission registration form submitted for testing. Application Number: ${data.applicationNumber}`,
+        notificationMasterId: emailMaster.id,
+        otherUsersEmails:
+          otherUsersEmails.length > 0 ? otherUsersEmails : undefined,
+        otherUsersWhatsAppNumbers:
+          otherUsersWhatsAppNumbers.length > 0
+            ? otherUsersWhatsAppNumbers
+            : undefined,
+        // Store PDF S3 URL for email worker to download
+        emailAttachments: data.pdfUrl ? [{ pdfS3Url: data.pdfUrl }] : undefined,
+      };
+    }
+
+    console.log("📧 [CU-REG-NOTIF] Enqueuing notification with data:", {
+      userId: notificationData.userId,
+      variant: notificationData.variant,
+      type: notificationData.type,
+      notificationMasterId: notificationData.notificationMasterId,
+      shouldSendToStudent: shouldSendToStudent,
+      hasOtherUsersEmails: otherUsersEmails.length > 0,
+      hasOtherUsersWhatsApp: otherUsersWhatsAppNumbers.length > 0,
+    });
+
+    // Enqueue the notification
+    const result = await enqueueNotification(notificationData);
+    console.log(
+      "✅ [CU-REG-NOTIF] Admission registration email notification enqueued successfully",
+    );
+
+    return {
+      success: true,
+      notificationId: (result as any)?.id || (result as any)?.notificationId,
+    };
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-NOTIF] Error sending admission registration email notification:",
+      error,
+    );
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+};
+
+/**
+ * Send admission registration notification with PDF attachment
+ * This function should be called after successful PDF generation
+ */
+export const sendAdmissionRegistrationNotification = async (
+  studentId: number,
+  applicationNumber: string,
+  pdfBuffer: Buffer, // PDF buffer directly from memory
+  pdfUrl: string, // S3 URL for reference
+): Promise<AdmissionRegistrationNotificationResult> => {
+  try {
+    console.log(
+      "📧 [CU-REG-NOTIF] Starting admission registration notification process",
+    );
+
+    // Get student details with user info (studentId -> student -> user)
+    const [studentData] = await db
+      .select({
+        studentId: studentModel.id,
+        studentUid: studentModel.uid,
+        userId: studentModel.userId,
+        userName: userModel.name,
+        userEmail: userModel.email,
+      })
+      .from(studentModel)
+      .innerJoin(userModel, eq(studentModel.userId, userModel.id))
+      .where(eq(studentModel.id, studentId));
+
+    console.log("📧 [CU-REG-NOTIF] Fetched student data from database:", {
+      studentId,
+      studentUid: studentData?.studentUid,
+      userName: studentData?.userName,
+      userEmail: studentData?.userEmail,
+    });
+
+    if (!studentData) {
+      throw new Error(`Student not found for ID: ${studentId}`);
+    }
+
+    // Prepare notification data
+    const notificationData: AdmissionRegistrationNotificationData = {
+      studentId: studentData.userId, // Use the actual user ID for the notification
+      studentEmail: studentData.userEmail || "",
+      studentName: studentData.userName || "Student",
+      studentUid: studentData.studentUid || "",
+      applicationNumber: applicationNumber,
+      courseName: "B.Com (H)", // This should be fetched from student's course
+      submissionDate: new Date().toLocaleDateString("en-IN", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      pdfUrl: pdfUrl,
+      pdfBuffer: pdfBuffer,
+    };
+
+    // Send the notification
+    const result =
+      await sendAdmissionRegistrationEmailNotification(notificationData);
+
+    if (result.success) {
+      console.log(
+        "✅ [CU-REG-NOTIF] Admission registration notification sent successfully",
+      );
+    } else {
+      console.error(
+        "❌ [CU-REG-NOTIF] Failed to send admission registration notification:",
+        result.error,
+      );
+    }
+
+    return result;
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-NOTIF] Error in admission registration notification process:",
+      error,
+    );
+    return {
+      success: false,
+      error: (error as Error).message,
+    };
+  }
+};

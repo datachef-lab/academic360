@@ -9,9 +9,13 @@ import {
 } from "../services/cu-registration-correction-request.service.js";
 import {
   uploadToS3,
-  createStudentUploadConfig,
+  createUploadConfig,
   FileTypeConfigs,
 } from "@/services/s3.service.js";
+import {
+  getCuRegDocumentPathFromName,
+  getCuRegDocumentPathFromNameDynamic,
+} from "../services/cu-registration-document-path.service.js";
 import { uploadToFileSystem } from "@/services/filesystem-storage.service.js";
 import { createCuRegistrationDocumentUpload } from "../services/cu-registration-document-upload.service.js";
 import { db } from "@/db/index.js";
@@ -19,6 +23,12 @@ import { documentModel } from "@repo/db/schemas";
 import { eq } from "drizzle-orm";
 import multer from "multer";
 import { CuRegistrationNumberService } from "@/services/cu-registration-number.service.js";
+import {
+  convertToJpg,
+  getDocumentConversionSettings,
+} from "@/services/image-conversion.service.js";
+import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
+import { sendAdmissionRegistrationNotification } from "../services/cu-registration-correction-request.service.js";
 
 // Configure multer for handling multiple files
 const upload = multer({
@@ -82,16 +92,24 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     // Determine status based on flags
     const hasCorrectionFlags =
       parsedFlags && Object.values(parsedFlags).some(Boolean);
-    const newStatus = hasCorrectionFlags ? "REQUEST_CORRECTION" : "APPROVED";
+    // Status will be ONLINE_REGISTRATION_DONE (not APPROVED)
+    // APPROVED will be set later after physical registration
+    const newStatus = hasCorrectionFlags
+      ? "REQUEST_CORRECTION"
+      : "ONLINE_REGISTRATION_DONE";
 
-    // Don't generate application number here - it will be generated in the update function
-    // when all declarations are completed and final submission is done
+    // Generate application number FIRST before uploading documents
     console.info(
-      `[CU-REG BATCH SUBMIT] Application number will be generated during update if all declarations are completed`,
+      `[CU-REG BATCH SUBMIT] Generating application number before document upload`,
     );
 
-    // Update the correction request with flags, payload, status, and mark online registration as done
-    // The application number will be generated automatically in the update function if all declarations are completed
+    const applicationNumber =
+      await CuRegistrationNumberService.generateNextApplicationNumber();
+    console.info(
+      `[CU-REG BATCH SUBMIT] Generated application number: ${applicationNumber}`,
+    );
+
+    // Update the correction request with flags, payload, status, and application number
     const updatedRequest = await updateCuRegistrationCorrectionRequest(
       parseInt(correctionRequestId),
       {
@@ -101,15 +119,13 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
         subjectsCorrectionRequest: parsedFlags?.subjects || false,
         status: newStatus,
         onlineRegistrationDone: true, // Mark online registration as completed
+        cuRegistrationApplicationNumber: applicationNumber, // Set the application number
 
         // Set all declaration flags to true for final submission
-        // This ensures PDF generation is triggered when all conditions are met
         personalInfoDeclaration: true,
         addressInfoDeclaration: true,
         subjectsDeclaration: true,
         documentsDeclaration: true,
-
-        // Application number will be generated automatically in update function
       },
     );
 
@@ -185,45 +201,98 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           continue;
         }
 
-        // Get document type name for file system storage
-        const documentTypeMap: Record<string, string> = {
-          "Class XII Marksheet": "class-xii-marksheet",
-          "Aadhaar Card": "aadhaar-card",
-          "APAAR ID Card": "apaar-id-card",
-          "Father Photo ID": "father-photo-id",
-          "Mother Photo ID": "mother-photo-id",
-          "EWS Certificate": "ews-certificate",
+        // Get conversion settings for this document type
+        const conversionSettings = getDocumentConversionSettings(documentName);
+
+        console.info(
+          `[CU-REG BATCH SUBMIT] Converting ${file.originalname} to JPG with settings:`,
+          conversionSettings,
+        );
+
+        // Convert file to JPG with compression
+        let conversionResult;
+        try {
+          conversionResult = await convertToJpg(file, conversionSettings);
+          console.info(
+            `[CU-REG BATCH SUBMIT] Conversion successful: ${file.originalname} -> ${conversionResult.mimeType}`,
+          );
+        } catch (conversionError) {
+          console.error(
+            `[CU-REG BATCH SUBMIT] Conversion failed for ${file.originalname}:`,
+            conversionError,
+          );
+          throw conversionError;
+        }
+
+        console.info(
+          `[CU-REG BATCH SUBMIT] Conversion complete: ${conversionResult.originalSizeKB.toFixed(2)}KB -> ${conversionResult.sizeKB.toFixed(2)}KB`,
+        );
+
+        // Get path configuration from CU Reg document path service (with dynamic data)
+        const studentUid = correctionRequest.student.uid;
+        const studentId = correctionRequest.student.id;
+        const cuRegNumber = applicationNumber; // Use the newly generated application number
+
+        if (!studentId) {
+          throw new Error("Student ID is required for dynamic path generation");
+        }
+
+        const pathConfig = await getCuRegDocumentPathFromNameDynamic(
+          studentId,
+          studentUid,
+          cuRegNumber,
+          documentName,
+        );
+
+        console.info(
+          `[CU-REG BATCH SUBMIT] Document path: ${pathConfig.fullPath}`,
+        );
+
+        // Create a new file object with converted buffer
+        const convertedFile: Express.Multer.File = {
+          ...file,
+          buffer: conversionResult.buffer,
+          mimetype: conversionResult.mimeType,
+          size: conversionResult.buffer.length,
+          originalname: pathConfig.filename,
         };
-        const documentType =
-          documentTypeMap[documentName] ||
-          `document-${documentName.toLowerCase().replace(/\s+/g, "-")}`;
 
         // Try S3 first, fallback to file system
         let uploadResult;
         try {
-          const studentUid = correctionRequest.student.uid;
-          const uploadConfig = createStudentUploadConfig(
-            studentUid,
-            "cu-registration-documents",
-            {
-              maxFileSizeMB: 10,
-              allowedMimeTypes: FileTypeConfigs.DOCUMENTS,
-              makePublic: false,
+          // Create upload config using the folder path from path service
+          const uploadConfig = createUploadConfig(pathConfig.folder, {
+            customFileName: pathConfig.filename,
+            maxFileSizeMB: 10,
+            allowedMimeTypes: [
+              ...FileTypeConfigs.IMAGES,
+              ...FileTypeConfigs.PDF_ONLY,
+            ],
+            makePublic: false,
+            metadata: {
+              studentUid,
+              cuRegNumber,
+              documentCode: pathConfig.documentCode,
+              documentName,
+              originalSize: conversionResult.originalSizeKB.toFixed(2) + "KB",
+              compressedSize: conversionResult.sizeKB.toFixed(2) + "KB",
             },
-          );
-          uploadResult = await uploadToS3(file, uploadConfig);
+          });
+
+          uploadResult = await uploadToS3(convertedFile, uploadConfig);
           console.info(
-            `[CU-REG BATCH SUBMIT] S3 upload successful for: ${file.originalname}`,
+            `[CU-REG BATCH SUBMIT] S3 upload successful: ${pathConfig.fullPath}`,
           );
         } catch (s3Error: any) {
           if (s3Error.message?.includes("S3 service is not configured")) {
+            // Fallback to file system with new naming
             uploadResult = await uploadToFileSystem(
-              file,
-              correctionRequest.cuRegistrationApplicationNumber || "",
-              documentType,
+              convertedFile,
+              cuRegNumber,
+              pathConfig.documentCode,
             );
             console.info(
-              `[CU-REG BATCH SUBMIT] File system upload successful for: ${file.originalname}`,
+              `[CU-REG BATCH SUBMIT] File system upload successful for: ${convertedFile.originalname}`,
             );
           } else {
             throw s3Error;
@@ -236,10 +305,10 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
           documentId: documentRecord.id,
           documentUrl: uploadResult.url,
           path: uploadResult.key,
-          fileName: file.originalname,
-          fileType: file.mimetype,
-          fileSize: file.size,
-          remarks: null,
+          fileName: convertedFile.originalname,
+          fileType: convertedFile.mimetype,
+          fileSize: convertedFile.size,
+          remarks: `Converted to JPG (${conversionResult.sizeKB.toFixed(2)}KB from ${conversionResult.originalSizeKB.toFixed(2)}KB)`,
         });
 
         uploadedDocuments.push(documentUpload);
@@ -258,6 +327,131 @@ export const submitCuRegistrationCorrectionRequestWithDocuments = async (
     console.info(
       `[CU-REG BATCH SUBMIT] Batch submission completed. Uploaded ${uploadedDocuments.length} documents`,
     );
+
+    // Generate PDF after all documents are uploaded (only if no correction flags)
+    if (!hasCorrectionFlags) {
+      try {
+        console.info(
+          `[CU-REG BATCH SUBMIT] Generating PDF for final submission`,
+          {
+            studentId: correctionRequest.student.id,
+            correctionRequestId: parseInt(correctionRequestId),
+            applicationNumber,
+            studentUid: correctionRequest.student.uid,
+          },
+        );
+
+        const studentId = correctionRequest.student.id;
+        if (!studentId) {
+          throw new Error("Student ID is required for PDF generation");
+        }
+
+        const pdfResult =
+          await CuRegistrationPdfIntegrationService.generateCuRegistrationPdfForFinalSubmission(
+            studentId,
+            parseInt(correctionRequestId),
+            applicationNumber,
+            correctionRequest.student.uid,
+          );
+
+        if (pdfResult.success) {
+          console.info(
+            `[CU-REG BATCH SUBMIT] PDF generated successfully: ${pdfResult.pdfPath}`,
+          );
+
+          // Add the generated PDF to the document uploads table so it appears in frontend
+          try {
+            // Find the PDF document type (assuming it has ID 6 or we need to create one)
+            const [pdfDocument] = await db
+              .select()
+              .from(documentModel)
+              .where(eq(documentModel.name, "CU Registration PDF"))
+              .limit(1);
+
+            if (pdfDocument) {
+              const pdfDocumentUpload =
+                await createCuRegistrationDocumentUpload({
+                  cuRegistrationCorrectionRequestId:
+                    parseInt(correctionRequestId),
+                  documentId: pdfDocument.id,
+                  documentUrl: pdfResult.s3Url || pdfResult.pdfPath,
+                  path: pdfResult.s3Url || pdfResult.pdfPath,
+                  fileName: `CU_${applicationNumber}.pdf`,
+                  fileType: "application/pdf",
+                  fileSize: 0, // We don't have the size here
+                  remarks: "Generated CU Registration PDF",
+                });
+
+              uploadedDocuments.push(pdfDocumentUpload);
+              console.info(
+                `[CU-REG BATCH SUBMIT] PDF document record created: ${pdfDocumentUpload?.id}`,
+              );
+            } else {
+              console.warn(
+                `[CU-REG BATCH SUBMIT] PDF document type not found in database`,
+              );
+            }
+          } catch (pdfRecordError) {
+            console.error(
+              `[CU-REG BATCH SUBMIT] Error creating PDF document record:`,
+              pdfRecordError,
+            );
+            // Don't fail the entire request if PDF record creation fails
+          }
+        } else {
+          console.warn(
+            `[CU-REG BATCH SUBMIT] PDF generation failed: ${pdfResult.error}`,
+          );
+        }
+        // Send email notification with PDF attachment
+        if (pdfResult.pdfBuffer) {
+          try {
+            console.info(
+              `[CU-REG BATCH SUBMIT] Sending admission registration email notification`,
+              {
+                studentId: correctionRequest.student.id,
+                applicationNumber,
+                pdfBufferSize: pdfResult.pdfBuffer.length,
+                pdfUrl: pdfResult.s3Url,
+              },
+            );
+
+            const notificationResult =
+              await sendAdmissionRegistrationNotification(
+                correctionRequest.student.id!,
+                applicationNumber,
+                pdfResult.pdfBuffer,
+                pdfResult.s3Url!,
+              );
+
+            if (notificationResult.success) {
+              console.info(
+                `[CU-REG BATCH SUBMIT] Email notification sent successfully`,
+                { notificationId: notificationResult.notificationId },
+              );
+            } else {
+              console.error(
+                `[CU-REG BATCH SUBMIT] Failed to send email notification:`,
+                notificationResult.error,
+              );
+            }
+          } catch (notificationError) {
+            console.error(
+              `[CU-REG BATCH SUBMIT] Error sending email notification:`,
+              notificationError,
+            );
+            // Don't fail the entire request if notification fails
+          }
+        } else {
+          console.warn(
+            `[CU-REG BATCH SUBMIT] PDF buffer not available for notification`,
+          );
+        }
+      } catch (pdfError) {
+        console.error(`[CU-REG BATCH SUBMIT] PDF generation error:`, pdfError);
+        // Don't fail the entire request if PDF generation fails
+      }
+    }
 
     res.status(200).json(
       new ApiResponse(

@@ -16,3 +16,4 @@ export { default as boardSubjectRouter } from "./routes/board-subject.routes.js"
 export { default as boardSubjectUnivSubjectMappingRouter } from "./routes/board-subject-univ-subject-mapping.routes.js";
 export { default as cuRegistrationCorrectionRequestRouter } from "./routes/cu-registration-correction-request.route.js";
 export { default as cuRegistrationDocumentUploadRouter } from "./routes/cu-registration-document-upload.route.js";
+export { default as cuRegistrationPdfRouter } from "./routes/cu-registration-pdf.route.js";

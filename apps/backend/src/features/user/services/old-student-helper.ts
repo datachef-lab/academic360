@@ -2083,7 +2083,7 @@ async function loadStudentAcademicInfoAndSubjects(
   }
 
   // Step 1: Fetch existing academic info and student academic subjects by application form ID
-  const existingAcademicInfo = await db
+  let existingAcademicInfo = await db
     .select()
     .from(admissionAcademicInfoModel)
     .where(
@@ -2173,6 +2173,8 @@ async function loadStudentAcademicInfoAndSubjects(
         schoolNumber: baseData.schoolNumber,
         centerNumber: baseData.centerNumber,
         admitCardId: baseData.admitCardId,
+        // rollNumber: baseData.rollNumber,
+        // registrationNumber: baseData.registrationNumber,
         languageMediumId: baseData.languageMediumId,
         studiedUpToClass: baseData.studiedUpToClass,
         specializationId: baseData.specializationId,
@@ -2200,7 +2202,7 @@ async function loadStudentAcademicInfoAndSubjects(
           : undefined,
         yearOfPassing: oldStudentAcademicDetails.year!,
         registrationNumber: oldStudentAcademicDetails.regno,
-        rollNumber: oldStudentAcademicDetails.examroll,
+        rollNumber: oldStudentAcademicDetails.rollno,
         examNumber: oldStudentAcademicDetails.examno,
         previousRegistrationNumber: oldStudentAcademicDetails.prevregno,
         otherBoard: oldStudentAcademicDetails.otherbrd,

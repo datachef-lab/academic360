@@ -115,6 +115,9 @@ export class NotificationsService {
       type: dto.type,
       message: message,
       status: "PENDING",
+      otherUsersEmails: dto.otherUsersEmails ?? null,
+      otherUsersWhatsAppNumbers: dto.otherUsersWhatsAppNumbers ?? null,
+      emailAttachments: dto.emailAttachments ?? null,
     };
     console.log("[notif-sys] enqueue insert values ->", insertValues);
 

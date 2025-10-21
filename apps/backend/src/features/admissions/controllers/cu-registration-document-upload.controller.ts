@@ -663,20 +663,7 @@ export const getStudentFiles = async (
       return;
     }
 
-    if (
-      documentType &&
-      !StudentFolderManager.isValidDocumentType(documentType)
-    ) {
-      res
-        .status(400)
-        .json(
-          new ApiError(
-            400,
-            `Invalid document type. Valid types: ${StudentFolderManager.getDocumentTypes().join(", ")}`,
-          ),
-        );
-      return;
-    }
+    // Document type validation removed - using new path service for CU registration documents
 
     const files = await listStudentFiles(studentUid, documentType);
 
@@ -721,8 +708,7 @@ export const getStudentFolderStatistics = async (
         {
           studentUid,
           ...stats,
-          folderStructure:
-            StudentFolderManager.getStudentFolderInfo(studentUid),
+          // Folder structure info removed - using new CU registration path service
         },
         "Student folder statistics retrieved successfully!",
       ),
@@ -747,20 +733,7 @@ export const deleteAllStudentFiles = async (
       return;
     }
 
-    if (
-      documentType &&
-      !StudentFolderManager.isValidDocumentType(documentType)
-    ) {
-      res
-        .status(400)
-        .json(
-          new ApiError(
-            400,
-            `Invalid document type. Valid types: ${StudentFolderManager.getDocumentTypes().join(", ")}`,
-          ),
-        );
-      return;
-    }
+    // Document type validation removed - using new path service for CU registration documents
 
     const result = await deleteAllStudentFilesFromS3(studentUid, documentType);
 

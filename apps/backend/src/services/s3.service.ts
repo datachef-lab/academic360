@@ -234,9 +234,22 @@ export async function getSignedUrlForFile(
 
     const bucket = s3Config?.bucket || defaultBucket;
 
+    // Apply the same root folder logic as upload functions
+    const root = (process.env.AWS_ROOT_FOLDER || "")
+      .trim()
+      .replace(/^\/+|\/+$/g, "");
+    const finalKey = root ? `${root}/${key}` : key;
+
+    console.info(`[S3 SERVICE] Generating signed URL:`, {
+      originalKey: key,
+      rootFolder: root,
+      finalKey: finalKey,
+      bucket: bucket,
+    });
+
     const command = new GetObjectCommand({
       Bucket: bucket,
-      Key: key,
+      Key: finalKey,
     });
 
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
@@ -556,50 +569,18 @@ export const FileTypeConfigs = {
 };
 
 /**
- * Student folder structure helper functions
+ * DEPRECATED: Use domain-specific path services instead
+ * This class is kept for backward compatibility only
  */
 export class StudentFolderManager {
   /**
-   * Generate student-specific folder path
+   * @deprecated Use domain-specific services for path generation
    */
   static getStudentFolderPath(
     studentUid: string,
     documentType: string,
   ): string {
-    // Always place student files under a top-level students/ folder
     return `students/${studentUid}/${documentType}`;
-  }
-
-  /**
-   * Get all possible document types for a student
-   */
-  static getDocumentTypes(): string[] {
-    return [
-      "cu-registration-documents",
-      "application-form-docs",
-      "marksheets",
-      "others",
-    ];
-  }
-
-  /**
-   * Validate document type
-   */
-  static isValidDocumentType(documentType: string): boolean {
-    return this.getDocumentTypes().includes(documentType);
-  }
-
-  /**
-   * Get student folder structure info
-   */
-  static getStudentFolderInfo(studentUid: string) {
-    return {
-      basePath: `students/${studentUid}`,
-      documentTypes: this.getDocumentTypes(),
-      folders: this.getDocumentTypes().map((type) =>
-        this.getStudentFolderPath(studentUid, type),
-      ),
-    };
   }
 }
 
@@ -641,15 +622,39 @@ export const UploadConfigs = {
 };
 
 /**
- * Create student-specific upload configuration
+ * Create upload configuration with a specific folder path
+ * This is the main function to use - folder path should be provided by domain services
+ */
+export function createUploadConfig(
+  folder: string,
+  options?: {
+    customFileName?: string;
+    maxFileSizeMB?: number;
+    allowedMimeTypes?: string[];
+    makePublic?: boolean;
+    metadata?: Record<string, string>;
+  },
+): UploadConfig {
+  return {
+    folder,
+    customFileName: options?.customFileName,
+    maxFileSizeMB: options?.maxFileSizeMB || 10,
+    allowedMimeTypes: options?.allowedMimeTypes || FileTypeConfigs.DOCUMENTS,
+    makePublic: options?.makePublic || false,
+    metadata: {
+      uploadedAt: new Date().toISOString(),
+      ...options?.metadata,
+    },
+  };
+}
+
+/**
+ * @deprecated Use createUploadConfig with path from domain service instead
+ * Create student-specific upload configuration (kept for backward compatibility)
  */
 export function createStudentUploadConfig(
   studentUid: string,
-  documentType:
-    | "cu-registration-documents"
-    | "application-form-docs"
-    | "marksheets"
-    | "others",
+  documentType: string,
   options?: {
     maxFileSizeMB?: number;
     allowedMimeTypes?: string[];
@@ -663,19 +668,12 @@ export function createStudentUploadConfig(
     documentType,
   );
 
-  return {
-    folder,
-    studentUid,
-    documentType,
-    maxFileSizeMB: options?.maxFileSizeMB || 10,
-    allowedMimeTypes: options?.allowedMimeTypes || FileTypeConfigs.DOCUMENTS,
-    makePublic: options?.makePublic || false,
-    customFileName: options?.customFileName,
+  return createUploadConfig(folder, {
+    ...options,
     metadata: {
       studentUid,
       documentType,
-      uploadedAt: new Date().toISOString(),
       ...options?.metadata,
     },
-  };
+  });
 }

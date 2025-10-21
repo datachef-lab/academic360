@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, json, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { applicationFormModel } from "../admissions";
 import { userModel } from "../user";
 import { notificationStatusEnum, notificationTypeEnum, notificationVariantEnum } from "@/schemas/enums";
@@ -10,13 +10,16 @@ import { notificationMasterModel } from "./notification-master.model";
 export const notificationModel = pgTable("notifications", {
     id: serial().primaryKey(),
     applicationFormId: integer("application_form_id_fk")
-    .references(() => applicationFormModel.id),
+        .references(() => applicationFormModel.id),
     userId: integer("user_id_fk")
-    .references(() => userModel.id),
+        .references(() => userModel.id),
+    otherUsersWhatsAppNumbers: json("other_users_whatsapp_numbers"),
+    otherUsersEmails: json("other_users_emails"),
+    emailAttachments: json("email_attachments"),
     notificationMasterId: integer("notification_master_id_fk")
-    .references(() => notificationMasterModel.id),
+        .references(() => notificationMasterModel.id),
     notificationEventId: integer("notification_event_id_fk")
-    .references(() => notificationEventModel.id),
+        .references(() => notificationEventModel.id),
     variant: notificationVariantEnum().notNull(),
     type: notificationTypeEnum().notNull(),
     message: text("message").notNull(),
@@ -28,7 +31,7 @@ export const notificationModel = pgTable("notifications", {
     updatedAt: timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const notificationInsertSchema = createInsertSchema(notificationModel); 
+export const notificationInsertSchema = createInsertSchema(notificationModel);
 
 export type Notification = z.infer<typeof notificationInsertSchema>;
 

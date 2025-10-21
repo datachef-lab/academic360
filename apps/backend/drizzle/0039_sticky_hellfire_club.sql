@@ -1,0 +1,2 @@
+ALTER TYPE "public"."cu_registration_correction_request_status" ADD VALUE 'ONLINE_REGISTRATION_DONE' BEFORE 'APPROVED';--> statement-breakpoint
+ALTER TYPE "public"."cu_registration_correction_request_status" ADD VALUE 'PHYSICAL_REGISTRATION_DONE' BEFORE 'APPROVED';

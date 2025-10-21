@@ -19,9 +19,8 @@
         }
         
         .form-container {
-            max-width: 21cm;
             margin: 0 auto;
-            padding: 0.5cm;
+            padding: 0.2cm;
             background: white;
         }
         
@@ -67,7 +66,7 @@
         }
         
         .rectification-banner {
-            background-color: #ffebee;
+            background-color: white;
             border: 2px solid #f44336;
             padding: 10px;
             margin-bottom: 20px;
@@ -127,7 +126,7 @@
       }
 
       .photo-cell {
-            background-color: #ffebee;
+            background-color: white;
             color: #d32f2f;
             font-weight: bold;
         padding: 4px;
@@ -403,41 +402,41 @@
         }
         
         .anti-ragging-section {
-            margin: 30px 0;
+            margin: 15px 0;
         }
         
         .anti-ragging-section h2 {
             font-weight: bold;
             text-decoration: underline;
-        margin-bottom: 16px;
-        font-size: 12pt;
+        margin-bottom: 8px;
+        font-size: 10pt;
         }
         
         .anti-ragging-text {
-        font-size: 9pt;
-            line-height: 1.4;
-        margin-bottom: 12px;
+        font-size: 8pt;
+            line-height: 1.2;
+        margin-bottom: 6px;
       }
 
       .anti-ragging-list {
-        margin-left: 18px;
+        margin-left: 12px;
       }
 
       .anti-ragging-list li {
-        font-size: 9pt;
-        line-height: 1.4;
-        margin-bottom: 10px;
+        font-size: 8pt;
+        line-height: 1.2;
+        margin-bottom: 6px;
       }
 
       .anti-ragging-list ol {
         list-style-type: lower-alpha;
-        margin-top: 8px;
+        margin-top: 4px;
         }
         
         .anti-ragging-checkbox {
-        width: 16px;
-        height: 16px;
-            margin-right: 8px;
+        width: 12px;
+        height: 12px;
+            margin-right: 6px;
             border: 1px solid #000;
             display: inline-block;
         vertical-align: middle;
@@ -461,13 +460,13 @@
       .verification-item {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 8px;
-        font-size: 9pt;
-        line-height: 1.4;
+        margin-bottom: 4px;
+        font-size: 8pt;
+        line-height: 1.2;
         }
         
         .verification-section {
-            margin: 20px 0;
+            margin: 10px 0;
         }
         
         .verification-table {
@@ -609,7 +608,7 @@
 </head>
 <body>
     <div class="form-container">
-      <main class="px-5">
+      <main class="px-2">
         <!-- Page 1 -->
         <div id="page-1" style="height: 100vh; position: relative; overflow: hidden;">
           <!-- Main Content Container -->
@@ -839,7 +838,7 @@
         
             <div
               class="position-absolute d-flex justify-content-between align-items-center"
-              style="bottom: 0px; left: 0; right: 0;"
+              style="bottom: -20px; left: 0; right: 0;"
             >
               <p style="width: 85%; font-size: 12px">
                 This sheet is to be printed and submitted to the college in
@@ -970,13 +969,15 @@
                   <div class="form-field">
                     <div class="field-label">PWD</div>
                     <div class="field-input">
-                      (<%= pwdStatus %>)
+                      <%= pwdStatus %>
+                      <% if (pwdCode && pwdCode !== '') { %>
                       <span class="office-use">(<%= pwdCode %>)</span>
+                      <% } %>
                     </div>
                   </div>
                   <div class="form-field">
                     <div class="field-label">EWS</div>
-                    <div class="field-input">(<%= ewsStatus %>)</div>
+                    <div class="field-input"><%= ewsStatus %></div>
                   </div>
                 </div>
               </div>
@@ -986,7 +987,7 @@
               <div class="form-section">
                 <div class="form-row">
                   <div class="form-field full-width">
-                    <div class="field-label" style="width: 100px">Address</div>
+                    <div class="field-label" style="width: 97px">Address</div>
                     <div class="field-input"><%= residentialAddress %></div>
                   </div>
                 </div>
@@ -1027,7 +1028,7 @@
               <div class="form-section">
                 <div class="form-row">
                   <div class="form-field full-width">
-                    <div class="field-label" style="width: 100px">Board</div>
+                    <div class="field-label" style="width: 97px">Board</div>
                     <div class="field-input"><%= boardName %></div>
                   </div>
                 </div>
@@ -1397,8 +1398,8 @@
             </div>
             </div>
           <div
-            class="d-flex justify-content-between align-items-center"
-            style="padding-top: 10px"
+            class="d-flex justify-content-between align-items-center position-relative"
+            style="padding-top: 10px; bottom: -40px;"
           >
             <p style="width: 85%; font-size: 12px">
               This sheet is to be printed and submitted to the college in
@@ -1572,8 +1573,8 @@
             </div>
         </div>
           <div
-            class="d-flex justify-content-between align-items-center"
-            style="padding-top: 210px"
+            class="d-flex justify-content-between align-items-center position-relative"
+            style="padding-top: 210px; bottom: -40px;"
           >
             <p style="width: 85%; font-size: 12px">
               This sheet is to be printed and submitted to the college in

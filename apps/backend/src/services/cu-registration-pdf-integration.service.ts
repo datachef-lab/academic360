@@ -8,12 +8,23 @@ import {
 } from "./pdf-generation.service.js";
 import path from "path";
 import fs from "fs/promises";
+import {
+  uploadToS3,
+  createUploadConfig,
+  FileTypeConfigs,
+} from "./s3.service.js";
+import {
+  getCuRegPdfPath,
+  getCuRegPdfPathDynamic,
+} from "../features/admissions/services/cu-registration-document-path.service.js";
 
 export interface CuRegistrationPdfOptions {
   studentId: number;
   correctionRequestId: number;
   applicationNumber: string;
+  studentUid: string; // Required for S3 path generation
   outputDirectory?: string;
+  uploadToS3?: boolean; // Whether to upload to S3 after generation
   collegeInfo?: {
     logoUrl?: string;
     name?: string;
@@ -29,6 +40,8 @@ export class CuRegistrationPdfIntegrationService {
   ): Promise<{
     success: boolean;
     pdfPath?: string;
+    s3Url?: string;
+    pdfBuffer?: Buffer;
     error?: string;
   }> {
     try {
@@ -53,44 +66,98 @@ export class CuRegistrationPdfIntegrationService {
       const formData =
         await CuRegistrationDataService.fetchStudentDataForPdf(dataOptions);
 
-      // Step 2: Generate PDF with proper naming
-      const outputDir =
-        options.outputDirectory || "./uploads/cu-registration-pdfs";
-      const pdfPath =
-        await pdfGenerationService.generateCuRegistrationPdfWithNaming(
-          formData,
-          options.applicationNumber,
-          outputDir,
-        );
+      // Step 2: Generate PDF in memory (no local file storage)
+      const pdfBuffer =
+        await pdfGenerationService.generateCuRegistrationPdfBuffer(formData);
 
-      // Step 3: Verify PDF was created successfully
-      try {
-        await fs.access(pdfPath);
-        const stats = await fs.stat(pdfPath);
-
-        if (stats.size === 0) {
-          throw new Error("Generated PDF file is empty");
-        }
-
-        console.info("[CU-REG PDF INTEGRATION] PDF generated successfully", {
-          pdfPath,
-          fileSize: stats.size,
-          applicationNumber: options.applicationNumber,
-        });
-
-        return {
-          success: true,
-          pdfPath,
-        };
-      } catch (fileError) {
-        console.error(
-          "[CU-REG PDF INTEGRATION] PDF file verification failed:",
-          fileError,
-        );
-        throw new Error(
-          `PDF file verification failed: ${fileError instanceof Error ? fileError.message : "Unknown error"}`,
-        );
+      if (pdfBuffer.length === 0) {
+        throw new Error("Generated PDF buffer is empty");
       }
+
+      console.info(
+        "[CU-REG PDF INTEGRATION] PDF generated successfully in memory",
+        {
+          fileSize: pdfBuffer.length,
+          applicationNumber: options.applicationNumber,
+        },
+      );
+
+      // Step 3: Upload to S3 if requested
+      let s3Url: string | undefined;
+      if (options.uploadToS3) {
+        try {
+          console.info("[CU-REG PDF INTEGRATION] Uploading PDF to S3", {
+            studentUid: options.studentUid,
+            cuRegNumber: options.applicationNumber,
+          });
+
+          // Get S3 path configuration (with dynamic data)
+          const pdfPathConfig = await getCuRegPdfPathDynamic(
+            options.studentId,
+            options.studentUid,
+            options.applicationNumber,
+          );
+
+          console.info("[CU-REG PDF INTEGRATION] S3 path:", {
+            fullPath: pdfPathConfig.fullPath,
+          });
+
+          // Create upload configuration
+          const uploadConfig = createUploadConfig(pdfPathConfig.folder, {
+            customFileName: pdfPathConfig.filename,
+            maxFileSizeMB: 50, // PDF can be larger
+            allowedMimeTypes: FileTypeConfigs.PDF_ONLY,
+            makePublic: false,
+            metadata: {
+              studentUid: options.studentUid,
+              cuRegNumber: options.applicationNumber,
+              correctionRequestId: options.correctionRequestId.toString(),
+              fileSize: pdfBuffer.length.toString(),
+              generatedAt: new Date().toISOString(),
+            },
+          });
+
+          // Create a file object for S3 upload
+          const fileForUpload: Express.Multer.File = {
+            fieldname: "pdf",
+            originalname: pdfPathConfig.filename,
+            encoding: "7bit",
+            mimetype: "application/pdf",
+            size: pdfBuffer.length,
+            buffer: pdfBuffer,
+            stream: null as any,
+            destination: "",
+            filename: pdfPathConfig.filename,
+            path: "", // No local path since we're using buffer
+          };
+
+          // Upload to S3
+          const uploadResult = await uploadToS3(fileForUpload, uploadConfig);
+          s3Url = uploadResult.url;
+
+          console.info(
+            "[CU-REG PDF INTEGRATION] PDF uploaded to S3 successfully",
+            {
+              s3Path: pdfPathConfig.fullPath,
+              s3Url,
+              studentId: options.studentId,
+              applicationNumber: options.applicationNumber,
+              pdfBufferSize: pdfBuffer.length,
+            },
+          );
+        } catch (s3Error) {
+          console.error("[CU-REG PDF INTEGRATION] S3 upload failed:", s3Error);
+          // Don't fail the entire process if S3 upload fails
+          // The PDF is still available locally
+        }
+      }
+
+      return {
+        success: true,
+        pdfPath: undefined, // No local file path since we're using memory
+        s3Url,
+        pdfBuffer, // Return the PDF buffer for notification
+      };
     } catch (error) {
       console.error("[CU-REG PDF INTEGRATION] PDF generation failed:", error);
       return {
@@ -107,9 +174,12 @@ export class CuRegistrationPdfIntegrationService {
     studentId: number,
     correctionRequestId: number,
     applicationNumber: string,
+    studentUid: string,
   ): Promise<{
     success: boolean;
     pdfPath?: string;
+    s3Url?: string;
+    pdfBuffer?: Buffer;
     error?: string;
   }> {
     console.info(
@@ -118,6 +188,7 @@ export class CuRegistrationPdfIntegrationService {
         studentId,
         correctionRequestId,
         applicationNumber,
+        studentUid,
       },
     );
 
@@ -125,7 +196,9 @@ export class CuRegistrationPdfIntegrationService {
       studentId,
       correctionRequestId,
       applicationNumber,
+      studentUid,
       outputDirectory: "./uploads/cu-registration-pdfs",
+      uploadToS3: true, // Enable S3 upload for final submissions
       collegeInfo: {
         logoUrl: "https://besc.academic360.app/api/api/v1/settings/file/4",
         name: "The Bhawanipur Education Society College",

@@ -356,7 +356,7 @@ export class CuRegistrationDataService {
         ),
         religionName: personalDetails?.religionName || "",
         annualIncome: annualIncomeRange,
-        pwdStatus: personalDetails?.disability ? "Yes" : "PWD NO",
+        pwdStatus: personalDetails?.disability ? "Yes" : "No",
         pwdCode: personalDetails?.disability || "",
         ewsStatus: studentData.belongsToEWS ? "Yes" : "No",
 
@@ -578,17 +578,17 @@ export class CuRegistrationDataService {
       const coreMinorTable = {
         headers: [
           "Core/Major",
-          "Minor For 1",
-          "Minor For 2",
-          "Minor For 3",
-          "Minor For 4",
+          "Minor For Sem I & II",
+          "Minor For Sem III & IV",
+          "Minor For Sem V & VI",
+          "Minor For Sem VII & VIII",
         ],
         subjects: [
           coreSubjects[0]?.subjectName || "",
           minor1[0]?.subjectName || "",
           minor2[0]?.subjectName || "",
           minor3[0]?.subjectName || "",
-          minor4[0]?.subjectName || "",
+          minor4[0]?.subjectName || "", // Minor 4 = Minor 3 if minor3 exists
         ],
       };
       subjectDetails.push(coreMinorTable);
@@ -659,13 +659,13 @@ export class CuRegistrationDataService {
     ) {
       const aecIdcTable = {
         headers: [
-          "AEC For 1",
-          "AEC For 2",
-          "AEC For 3",
-          "AEC For 4",
-          "IDC For Sem 1",
-          "IDC For Sem 2",
-          "IDC For Sem 3",
+          "AEC For Sem I",
+          "AEC For Sem II",
+          "AEC For Sem III",
+          "AEC For Sem IV",
+          "IDC For Sem I",
+          "IDC For Sem II",
+          "IDC For Sem III",
         ],
         subjects: [
           aec1[0]?.subjectCode || "",
@@ -902,7 +902,11 @@ export class CuRegistrationDataService {
       console.log("[CU-REG DATA] Is Commerce stream:", isCommerceStream);
 
       if (isCommerceStream) {
-        return await this.getCommerceStreamSubjects(programCourseId, sessionId);
+        return await this.getCommerceStreamSubjects(
+          studentId,
+          programCourseId,
+          sessionId,
+        );
       } else {
         // For non-Commerce streams, get subjects from both student selection AND papers table
         return await this.getNonCommerceStreamSubjects(
@@ -924,6 +928,7 @@ export class CuRegistrationDataService {
    * Get subjects for Commerce stream from papers table
    */
   private static async getCommerceStreamSubjects(
+    studentId: number,
     programCourseId: number,
     sessionId: number,
   ): Promise<Array<{ headers: string[]; subjects: string[] }>> {
@@ -968,12 +973,7 @@ export class CuRegistrationDataService {
           name: subjectTypeModel.name,
         })
         .from(subjectTypeModel)
-        .where(
-          and(
-            eq(subjectTypeModel.isActive, true),
-            inArray(subjectTypeModel.code, ["DSCC", "MN", "AEC", "IDC"]),
-          ),
-        );
+        .where(inArray(subjectTypeModel.code, ["DSCC", "MN", "AEC", "IDC"]));
 
       const dsccType = subjectTypes.find((st) => st.code === "DSCC");
       const mnType = subjectTypes.find((st) => st.code === "MN");
@@ -1004,7 +1004,6 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
-            eq(paperModel.isActive, true),
             inArray(
               paperModel.subjectTypeId,
               [dsccType?.id, mnType?.id, aecType?.id, idcType?.id].filter(
@@ -1015,11 +1014,25 @@ export class CuRegistrationDataService {
         );
 
       console.log("[CU-REG DATA] Found papers:", papers.length);
+      console.log("[CU-REG DATA] Papers details:", papers);
+      console.log("[CU-REG DATA] Subject type IDs used:", [
+        dsccType?.id,
+        mnType?.id,
+        aecType?.id,
+        idcType?.id,
+      ]);
+      console.log("[CU-REG DATA] Program course ID:", programCourseId);
+      console.log("[CU-REG DATA] Academic year ID:", academicYear.id);
 
       // Organize subjects by type and semester
       const subjectsByType: Record<string, Record<string, string>> = {};
 
       papers.forEach((paper) => {
+        console.log("[CU-REG DATA] Processing paper:", {
+          subjectName: paper.subjectName,
+          subjectTypeCode: paper.subjectTypeCode,
+          className: paper.className,
+        });
         if (paper.subjectTypeCode && paper.className) {
           if (!subjectsByType[paper.subjectTypeCode]) {
             subjectsByType[paper.subjectTypeCode] = {};
@@ -1028,6 +1041,8 @@ export class CuRegistrationDataService {
             paper.subjectName || "";
         }
       });
+
+      console.log("[CU-REG DATA] Organized subjects by type:", subjectsByType);
 
       // Build Core/Major and Minor table
       const coreMinorTable = {
@@ -1047,7 +1062,7 @@ export class CuRegistrationDataService {
         ],
       };
 
-      // Build AEC/IDC table
+      // Build AEC/IDC table (fetch IDC from papers if available)
       const aecIdcTable = {
         headers: [
           "AEC For 1",
@@ -1063,9 +1078,9 @@ export class CuRegistrationDataService {
           subjectsByType["AEC"]?.["SEMESTER II"] || "",
           subjectsByType["AEC"]?.["SEMESTER III"] || "",
           subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC4 = AEC3
-          subjectsByType["IDC"]?.["SEMESTER I"] || "",
-          subjectsByType["IDC"]?.["SEMESTER II"] || "",
-          subjectsByType["IDC"]?.["SEMESTER III"] || "",
+          subjectsByType["IDC"]?.["SEMESTER I"] || "", // IDC1 from papers
+          subjectsByType["IDC"]?.["SEMESTER II"] || "", // IDC2 from papers
+          subjectsByType["IDC"]?.["SEMESTER III"] || "", // IDC3 from papers
         ],
       };
 
@@ -1074,7 +1089,16 @@ export class CuRegistrationDataService {
         aecIdc: aecIdcTable,
       });
 
-      return [coreMinorTable, aecIdcTable];
+      // Also get student-selected subjects for Commerce stream to populate Minor 3/4
+      const subjectSelections =
+        await this.getAdmissionSubjectSelections(studentId);
+      const studentSubjects = this.formatSubjectDetails(
+        subjectSelections || [],
+      );
+      const papersSubjects = [coreMinorTable, aecIdcTable];
+
+      // Merge student subjects with papers subjects
+      return this.mergeSubjectSources(studentSubjects, papersSubjects);
     } catch (error) {
       console.error(
         "[CU-REG DATA] Error getting Commerce stream subjects:",
@@ -1160,28 +1184,29 @@ export class CuRegistrationDataService {
         })
         .from(subjectTypeModel);
 
-      console.log("[CU-REG DATA] All active subject types:", subjectTypes);
+      console.log("[CU-REG DATA] All subject types:", subjectTypes);
 
-      // Look for subject types by both code and name patterns
-      const dsccType = subjectTypes.find(
-        (st) =>
-          st.code === "DSCC" ||
-          st.name?.toLowerCase().includes("discipline specific core") ||
-          st.name?.toLowerCase().includes("core course") ||
-          st.name?.toLowerCase().includes("major"),
-      );
+      // Look for subject types by exact code first, then by name patterns
+      const dsccType =
+        subjectTypes.find((st) => st.code === "DSCC") ||
+        subjectTypes.find(
+          (st) =>
+            st.name?.toLowerCase().includes("discipline specific core") ||
+            st.name?.toLowerCase().includes("core course") ||
+            st.name?.toLowerCase().includes("major"),
+        );
 
-      const aecType = subjectTypes.find(
-        (st) =>
-          st.code === "AEC" ||
+      const aecType =
+        subjectTypes.find((st) => st.code === "AEC") ||
+        subjectTypes.find((st) =>
           st.name?.toLowerCase().includes("ability enhancement"),
-      );
+        );
 
-      const idcType = subjectTypes.find(
-        (st) =>
-          st.code === "IDC" ||
+      const idcType =
+        subjectTypes.find((st) => st.code === "IDC") ||
+        subjectTypes.find((st) =>
           st.name?.toLowerCase().includes("inter disciplinary"),
-      );
+        );
 
       console.log("[CU-REG DATA] Mapped subject types:", {
         dscc: dsccType,
@@ -1239,18 +1264,34 @@ export class CuRegistrationDataService {
           and(
             eq(paperModel.programCourseId, programCourseId),
             eq(paperModel.academicYearId, academicYear.id),
-            eq(paperModel.isActive, true),
             inArray(paperModel.subjectTypeId, subjectTypeIds),
           ),
         );
 
       console.log("[CU-REG DATA] Found additional papers:", papers.length);
       console.log("[CU-REG DATA] Papers details:", papers);
+      console.log(
+        "[CU-REG DATA] Subject type IDs used for papers:",
+        subjectTypeIds,
+      );
+      console.log(
+        "[CU-REG DATA] Program course ID for papers:",
+        programCourseId,
+      );
+      console.log(
+        "[CU-REG DATA] Academic year ID for papers:",
+        academicYear.id,
+      );
 
       // Organize subjects by type and semester
       const subjectsByType: Record<string, Record<string, string>> = {};
 
       papers.forEach((paper) => {
+        console.log("[CU-REG DATA] Processing additional paper:", {
+          subjectName: paper.subjectName,
+          subjectTypeCode: paper.subjectTypeCode,
+          className: paper.className,
+        });
         if (paper.subjectTypeCode && paper.className) {
           if (!subjectsByType[paper.subjectTypeCode]) {
             subjectsByType[paper.subjectTypeCode] = {};
@@ -1280,7 +1321,7 @@ export class CuRegistrationDataService {
         ],
       };
 
-      // Build AEC/IDC table (AEC1, AEC2, AEC4 from papers, others from student selection)
+      // Build AEC/IDC table (use papers data wherever available, student selection fills gaps)
       const aecIdcTable = {
         headers: [
           "AEC For 1",
@@ -1294,11 +1335,11 @@ export class CuRegistrationDataService {
         subjects: [
           subjectsByType["AEC"]?.["SEMESTER I"] || "", // AEC1 from papers
           subjectsByType["AEC"]?.["SEMESTER II"] || "", // AEC2 from papers
-          "", // AEC3 - from student selection
-          "", // AEC4 - will be filled by merge logic
-          "", // IDC1 - from student selection
-          "", // IDC2 - from student selection
-          "", // IDC3 - from student selection
+          subjectsByType["AEC"]?.["SEMESTER III"] || "", // AEC3 from papers if exists
+          subjectsByType["AEC"]?.["SEMESTER IV"] || "", // AEC4 from papers if exists
+          subjectsByType["IDC"]?.["SEMESTER I"] || "", // IDC1 from papers if exists
+          subjectsByType["IDC"]?.["SEMESTER II"] || "", // IDC2 from papers if exists
+          subjectsByType["IDC"]?.["SEMESTER III"] || "", // IDC3 from papers if exists
         ],
       };
 
@@ -1352,13 +1393,13 @@ export class CuRegistrationDataService {
           studentSubjects[0]?.subjects[3] ||
             papersSubjects[0]?.subjects[3] ||
             "", // Minor 3 from student
-          studentSubjects[0]?.subjects[4] ||
-            papersSubjects[0]?.subjects[4] ||
-            "", // Minor 4 from student
+          studentSubjects[0]?.subjects[3] ||
+            papersSubjects[0]?.subjects[3] ||
+            "", // Minor 4 = Minor 3 (duplicated)
         ],
       };
 
-      // Merge AEC/IDC table
+      // Merge AEC/IDC table (always 7 columns: AEC 1-4 + IDC 1-3)
       const mergedAecIdc = {
         headers:
           studentSubjects[1]?.headers || papersSubjects[1]?.headers || [],
@@ -1377,13 +1418,13 @@ export class CuRegistrationDataService {
             "", // AEC4 = AEC3 (duplication)
           studentSubjects[1]?.subjects[4] ||
             papersSubjects[1]?.subjects[4] ||
-            "", // IDC1 from student
+            "", // IDC1 from student (empty for Commerce)
           studentSubjects[1]?.subjects[5] ||
             papersSubjects[1]?.subjects[5] ||
-            "", // IDC2 from student
+            "", // IDC2 from student (empty for Commerce)
           studentSubjects[1]?.subjects[6] ||
             papersSubjects[1]?.subjects[6] ||
-            "", // IDC3 from student
+            "", // IDC3 from student (empty for Commerce)
         ],
       };
 

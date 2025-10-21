@@ -8,7 +8,7 @@ export interface NotificationMasterDto extends NotificationMasterT {
 }
 
 export interface NotificationEventDto extends NotificationEventT {
-        notificationMaster: NotificationMasterDto;
+    notificationMaster: NotificationMasterDto;
     // Optional transport and templating fields for email/whatsapp rendering
     subject?: string;
     subjectTemplate?: string; // EJS string for subject
@@ -27,9 +27,20 @@ export interface NotificationEventDto extends NotificationEventT {
     meta?: { devOnly?: boolean };
 }
 
-export interface NotificationDto extends NotificationT {
-    notificationEvent: NotificationEventDto;
-    content: NotificationContentT[];
+export interface NotificationDto {
+    userId: number;
+    variant: "EMAIL" | "WHATSAPP" | "SMS" | "WEB" | "OTHER";
+    type: "UPLOAD" | "EDIT" | "UPDATE" | "INFO" | "FEE" | "EVENT" | "OTHER" | "ADMISSION" | "EXAM" | "MINOR_PAPER_SELECTION" | "SEMESTER_WISE_SUBJECT_SELECTION" | "ALERT" | "OTP";
+    message: string;
+    notificationMasterId: number;
+    applicationFormId?: number;
+    notificationEvent?: NotificationEventDto;
+    content?: NotificationContentT[];
+    otherUsersEmails?: string[];
+    otherUsersWhatsAppNumbers?: string[];
+    emailAttachments?: Array<{
+        pdfS3Url: string;
+    }>;
 }
 
 export type TemplateScalar = string | number | boolean | null | undefined;

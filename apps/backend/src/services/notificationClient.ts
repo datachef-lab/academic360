@@ -1,21 +1,5 @@
 import fetch from "node-fetch";
-
-export type NotificationDto = {
-  userId: number;
-  applicationFormId?: number | null;
-  variant: "EMAIL" | "WHATSAPP" | "WEB" | "SMS" | "IN_APP";
-  type: string;
-  message: string;
-  notificationMasterId?: number;
-  notificationEvent?: {
-    id?: number;
-    emailTemplate?: string | null;
-    subject?: string | null;
-    templateData?: Record<string, string>;
-    meta?: { devOnly?: boolean };
-  };
-  content?: Array<{ whatsappFieldId: number; content: string }>; // one row per field
-};
+import type { NotificationDto } from "@repo/db/dtos/notifications";
 
 export async function enqueueNotification(dto: NotificationDto) {
   console.log("🚨 [notif-client] enqueueNotification function called!");

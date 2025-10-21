@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= content && content.subject ? content.subject : "Admission Registration Form - Congratulations!" %></title>
+    <style>
+      /* Reset and base styles */
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { 
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        background-color: #f8fafc;
+        padding: 20px 0;
+      }
+      
+      /* Container */
+      .email-container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+      }
+      
+      /* Header */
+      .email-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+        padding: 24px 32px;
+        text-align: center;
+      }
+      
+      .college-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 16px;
+        border-radius: 8px;
+        background: white;
+        padding: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      
+      .college-logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      
+      .email-header h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.025em;
+      }
+      
+      .email-header .subtitle {
+        font-size: 16px;
+        margin-top: 8px;
+        opacity: 0.9;
+      }
+      
+      /* Content */
+      .email-content {
+        padding: 32px;
+      }
+      
+      .greeting {
+        font-size: 18px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 16px;
+      }
+      
+      .intro-text {
+        font-size: 16px;
+        color: #4b5563;
+        margin-bottom: 24px;
+        line-height: 1.7;
+      }
+      
+      .intro-text strong {
+        color: #1f2937;
+        font-weight: 600;
+      }
+      
+      /* Success message */
+      .success-message {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin: 24px 0;
+        text-align: center;
+      }
+      
+      .success-message h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 8px 0;
+      }
+      
+      .success-message p {
+        font-size: 16px;
+        margin: 0;
+        opacity: 0.95;
+      }
+      
+      /* Application details */
+      .application-details {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+      
+      .application-details h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0 0 16px 0;
+      }
+      
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      
+      .detail-row:last-child {
+        border-bottom: none;
+      }
+      
+      .detail-label {
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+      }
+      
+      .detail-value {
+        color: #1f2937;
+        font-weight: 500;
+        font-size: 14px;
+      }
+      
+      /* PDF attachment info */
+      .pdf-info {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+      
+      .pdf-info h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e40af;
+        margin: 0 0 12px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .pdf-info p {
+        color: #1e40af;
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      
+      /* Next steps */
+      .next-steps {
+        background: #fef3c7;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 24px 0;
+      }
+      
+      .next-steps h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #92400e;
+        margin: 0 0 12px 0;
+      }
+      
+      .next-steps ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+      
+      .next-steps li {
+        color: #92400e;
+        margin-bottom: 8px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      
+      /* Footer */
+      .email-footer {
+        background-color: #f8fafc;
+        padding: 24px 32px;
+        border-top: 1px solid #e5e7eb;
+      }
+      
+      .footer-text {
+        font-size: 14px;
+        color: #6b7280;
+        margin-bottom: 16px;
+        line-height: 1.6;
+      }
+      
+      .signature {
+        font-size: 14px;
+        color: #374151;
+        margin-bottom: 16px;
+      }
+      
+      .signature strong {
+        color: #1f2937;
+      }
+      
+      .disclaimer {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+      
+      .copyright {
+        text-align: center;
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 16px;
+      }
+      
+      /* Responsive */
+      @media (max-width: 600px) {
+        .email-container {
+          margin: 0 16px;
+          border-radius: 8px;
+        }
+        
+        .email-header, .email-content, .email-footer {
+          padding: 20px;
+        }
+        
+        .email-header h1 {
+          font-size: 20px;
+        }
+        
+        .detail-row {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 4px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <!-- Header -->
+      <div class="email-header">
+        <div class="college-logo">
+          <img src="https://besc.academic360.app/api/api/v1/settings/file/4" alt="The Bhawanipur Education Society College" />
+        </div>
+        <h1>🎉 Congratulations!</h1>
+        <div class="subtitle">Admission Registration Form Successfully Submitted</div>
+      </div>
+      
+      <!-- Content -->
+      <div class="email-content">
+        <div class="greeting">Dear <%= (user && user.name) ? user.name : "Student" %>,</div>
+        
+        
+        <div class="intro-text">
+          We are pleased to inform you that your <strong>Admission Registration Form</strong> has been successfully submitted and processed. Your application is now under review by our admission team.
+        </div>
+        
+        <!-- Success Message -->
+        <div class="success-message">
+          <h2>✅ Registration Complete!</h2>
+          <p>Your admission registration form has been successfully saved and is ready for the next steps.</p>
+        </div>
+        
+        <!-- Application Details -->
+        <div class="application-details">
+          <h3>📋 Application Details</h3>
+          <% if (content && content.applicationNumber) { %>
+          <div class="detail-row">
+            <span class="detail-label">Application Number:</span>
+            <span class="detail-value"><strong><%= content.applicationNumber %></strong></span>
+          </div>
+          <% } %>
+          <% if (content && content.studentUid) { %>
+          <div class="detail-row">
+            <span class="detail-label">Student UID:</span>
+            <span class="detail-value"><%= content.studentUid %></span>
+          </div>
+          <% } %>
+          <% if (content && content.courseName) { %>
+          <div class="detail-row">
+            <span class="detail-label">Course:</span>
+            <span class="detail-value"><%= content.courseName %></span>
+          </div>
+          <% } %>
+          <% if (content && content.submissionDate) { %>
+          <div class="detail-row">
+            <span class="detail-label">Submission Date:</span>
+            <span class="detail-value"><%= content.submissionDate %></span>
+          </div>
+          <% } %>
+        </div>
+        
+        <!-- PDF Attachment Info -->
+        <div class="pdf-info">
+          <h3>📄 📎 Your Registration Form</h3>
+          <p>
+            Your completed registration form has been generated and is attached to this email as a PDF document. 
+            Please download and save this document for your records. You will need to print and submit this form 
+            during the physical verification process.
+          </p>
+        </div>
+        
+        <!-- Next Steps -->
+        <div class="next-steps">
+          <h3>📝 Next Steps</h3>
+          <ul>
+            <li>Download and save the attached PDF registration form</li>
+            <li>Print the form on A4 size paper</li>
+            <li>Keep all required documents ready for physical verification</li>
+            <li>Wait for further communication regarding physical submission schedule</li>
+            <li>Check your email regularly for updates on the admission process</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="email-footer">
+        <div class="footer-text">
+          Please retain this email and the attached PDF for your reference throughout the admission process.
+        </div>
+        
+        <div class="signature">
+          <strong>Best regards,</strong><br>
+          <strong>Admission Department</strong><br>
+          The Bhawanipur Education Society College
+        </div>
+        
+        <div class="disclaimer">
+          This is a system-generated email. Please do not reply to this message. For any queries, contact the admission office.
+        </div>
+        
+        <div class="copyright">
+          &copy; <%= new Date().getFullYear() %> The Bhawanipur Education Society College
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

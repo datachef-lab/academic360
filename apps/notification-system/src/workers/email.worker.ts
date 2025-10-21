@@ -14,6 +14,9 @@ import {
   notificationMasterFieldModel,
 } from "@repo/db/schemas/models/notifications";
 import { db } from "@/db";
+import { readFileSync, existsSync } from "fs";
+import { join, resolve } from "path";
+import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 
 const POLL_MS = Number(process.env.EMAIL_POLL_MS ?? 3000);
 const BATCH_SIZE = Number(process.env.EMAIL_BATCH_SIZE ?? 50);
@@ -22,6 +25,90 @@ const MAX_RETRIES = Number(process.env.EMAIL_MAX_RETRIES ?? 5);
 
 function asString(value: unknown, fallback: string): string {
   return typeof value === "string" ? value : fallback;
+}
+
+/**
+ * Prepare email attachments from stored paths
+ */
+async function prepareEmailAttachments(emailAttachments: any): Promise<
+  | Array<{
+      filename: string;
+      contentBase64: string;
+      mimeType: string;
+    }>
+  | undefined
+> {
+  if (
+    !emailAttachments ||
+    !Array.isArray(emailAttachments) ||
+    emailAttachments.length === 0
+  ) {
+    return undefined;
+  }
+
+  const attachments: Array<{
+    filename: string;
+    contentBase64: string;
+    mimeType: string;
+  }> = [];
+
+  for (const attachment of emailAttachments) {
+    if (attachment.pdfS3Url) {
+      try {
+        console.log(
+          "📎 [email.worker] Processing PDF attachment from S3:",
+          attachment.pdfS3Url,
+        );
+
+        // Extract S3 key from URL
+        const url = new URL(attachment.pdfS3Url);
+        const key = url.pathname.substring(1); // Remove leading slash
+
+        console.log("📎 [email.worker] Extracted S3 key:", key);
+
+        // Initialize S3 client
+        const s3Client = new S3Client({
+          region: process.env.AWS_REGION || "ap-south-1",
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+          },
+        });
+
+        // Download PDF from S3 using S3 client
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET_NAME || "stage-academic360-app",
+          Key: key,
+        });
+
+        const response = await s3Client.send(command);
+        const pdfBuffer = await response.Body!.transformToByteArray();
+        const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+
+        // Generate filename
+        const filename = "cu-registration-form.pdf";
+
+        console.log("📎 [email.worker] PDF attachment prepared successfully:", {
+          filename,
+          size: pdfBuffer.length,
+          mimeType: "application/pdf",
+        });
+
+        attachments.push({
+          filename,
+          contentBase64: pdfBase64,
+          mimeType: "application/pdf",
+        });
+      } catch (error) {
+        console.error(
+          "❌ [email.worker] Error preparing PDF attachment:",
+          error,
+        );
+      }
+    }
+  }
+
+  return attachments.length > 0 ? attachments : undefined;
 }
 
 async function processBatch() {
@@ -71,6 +158,7 @@ async function processBatch() {
       const dto: NotificationEventDto = {
         templateData: {},
         meta: { devOnly: true },
+        emailAttachments: await prepareEmailAttachments(notif.emailAttachments),
       } as NotificationEventDto;
       const env = String(process.env.NODE_ENV || "development");
       const devOnlyMeta = Boolean(dto?.meta?.devOnly);
@@ -417,6 +505,38 @@ async function processBatch() {
           throw new Error(`ZeptoMail API Error: ${res.error}`);
         }
         await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+      } else if (env === "staging") {
+        // staging -> send to staff emails from otherUsersEmails field
+        const otherEmails = notif.otherUsersEmails as string[] | null;
+        if (otherEmails && otherEmails.length > 0) {
+          for (const email of otherEmails) {
+            console.log(`[email.worker] sending to staging staff: ${email}`);
+            const res = await sendZeptoMail(
+              email,
+              subject,
+              html,
+              undefined,
+              dto.emailAttachments,
+              asString(
+                dto.emailFromName,
+                "The Bhawanipur Education Society College - Important Notification",
+              ),
+            );
+            console.log(`[email.worker] sendZeptoMail response:`, res);
+            if (!res.ok) {
+              console.log(
+                `[email.worker] ZeptoMail failed with error:`,
+                res.error,
+              );
+              throw new Error(`ZeptoMail API Error: ${res.error}`);
+            }
+            await new Promise((r) => setTimeout(r, RATE_DELAY_MS));
+          }
+        } else {
+          console.log(
+            `[email.worker] No staff emails found for staging, skipping notification`,
+          );
+        }
       } else {
         // production -> send to real user
         const resolvedEmail = asString(
@@ -451,7 +571,12 @@ async function processBatch() {
         .where(eq(notificationModel.id, row.notificationId));
       console.log("[email.worker] sent ->", {
         notifId: row.notificationId,
-        to: env === "development" ? process.env.DEVELOPER_EMAIL : user?.email,
+        to:
+          env === "development"
+            ? process.env.DEVELOPER_EMAIL
+            : env === "staging"
+              ? ((notif.otherUsersEmails as string[]) || []).join(", ")
+              : user?.email,
       });
       await db
         .update(notificationQueueModel)

@@ -128,7 +128,7 @@ export class StudentDocumentManagementService {
       studentUid,
       files: allFiles,
       statistics: stats,
-      folderStructure: StudentFolderManager.getStudentFolderInfo(studentUid),
+      // Folder structure removed - using new CU registration path service
     };
   }
 
@@ -294,7 +294,7 @@ export class StudentDocumentManagementService {
    */
   static async getStudentDocumentSummary(studentUid: string) {
     const stats = await getStudentFolderStats(studentUid);
-    const folderInfo = StudentFolderManager.getStudentFolderInfo(studentUid);
+    // Folder info removed - using new CU registration path service
 
     return {
       studentUid,
@@ -302,7 +302,6 @@ export class StudentDocumentManagementService {
       totalSize: stats.totalSize,
       totalSizeMB: Math.round((stats.totalSize / (1024 * 1024)) * 100) / 100,
       documentTypes: stats.documentTypes,
-      folderStructure: folderInfo,
       lastUpdated: new Date().toISOString(),
     };
   }

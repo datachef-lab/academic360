@@ -49,6 +49,20 @@ async function testCuRegistrationPdfGeneration() {
       pwdCode: "",
       ewsStatus: "No",
 
+      // Flags for document requirements
+      isIndian: true,
+      isSCSTOBC: false,
+      isPWD: false,
+      isEWS: false,
+      isForeignNational: false,
+      hasCURegistration: false,
+
+      // Session name
+      sessionName: "2025-2026",
+
+      // Form metadata
+      formDownloadDate: "21/10/2025",
+
       // Address Information
       residentialAddress: "123 Main Street, Park Lane",
       countryName: "India",
@@ -120,7 +134,9 @@ async function testCuRegistrationPdfGeneration() {
         studentId: 1, // Mock student ID
         correctionRequestId: 1, // Mock correction request ID
         applicationNumber: "0171234",
+        studentUid: "0804250001", // Mock student UID
         outputDirectory: "./test-output",
+        uploadToS3: false, // Don't upload to S3 during tests
         collegeInfo: {
           logoUrl: "https://besc.academic360.app/api/api/v1/settings/file/4",
           name: "The Bhawanipur Education Society College",

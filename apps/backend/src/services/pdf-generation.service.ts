@@ -145,10 +145,10 @@ export class PdfGenerationService {
         format: "A4",
         printBackground: true,
         margin: {
-          top: "0.5cm",
-          right: "0.5cm",
-          bottom: "0.5cm",
-          left: "0.5cm",
+          top: "0.3cm",
+          right: "0.3cm",
+          bottom: "0.3cm",
+          left: "0.3cm",
         },
         displayHeaderFooter: false,
         preferCSSPageSize: true,
@@ -186,6 +186,65 @@ export class PdfGenerationService {
     const outputPath = path.join(baseOutputDir, fileName);
 
     return await this.generateCuRegistrationPdf(formData, outputPath);
+  }
+
+  public async generateCuRegistrationPdfBuffer(
+    formData: CuRegistrationFormData,
+  ): Promise<Buffer> {
+    try {
+      console.info(
+        "[PDF GENERATION] Starting CU Registration PDF generation in memory",
+        {
+          studentUid: formData.studentUid,
+        },
+      );
+
+      // Read the EJS template
+      const templatePath = path.join(
+        __dirname,
+        "../templates/cu-registration-form.ejs",
+      );
+      const templateContent = await fs.readFile(templatePath, "utf-8");
+
+      // Render the template with data
+      const htmlContent = ejs.render(templateContent, formData);
+
+      // Get browser instance
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set content and wait for resources to load
+      await page.setContent(htmlContent, {
+        waitUntil: "networkidle0",
+      });
+
+      // Generate PDF buffer
+      const pdfUint8Array = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: {
+          top: "0.3in",
+          right: "0.3in",
+          bottom: "0.3in",
+          left: "0.3in",
+        },
+      });
+
+      // Convert Uint8Array to Buffer
+      const pdfBuffer = Buffer.from(pdfUint8Array);
+
+      await page.close();
+
+      console.info("[PDF GENERATION] PDF generated successfully in memory", {
+        bufferSize: pdfBuffer.length,
+        studentUid: formData.studentUid,
+      });
+
+      return pdfBuffer;
+    } catch (error) {
+      console.error("[PDF GENERATION] PDF generation failed:", error);
+      throw error;
+    }
   }
 
   public async close(): Promise<void> {

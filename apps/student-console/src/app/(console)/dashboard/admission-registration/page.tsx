@@ -40,6 +40,7 @@ import {
   getCuRegistrationDocuments,
   getCuRegistrationDocumentSignedUrl,
 } from "@/services/cu-registration-documents";
+import { getCuRegistrationPdfUrlByRequestId } from "@/services/cu-registration-pdf";
 import { fetchCities, fetchDistricts, IdNameDto } from "@/services/resources";
 import { useRouter } from "next/navigation";
 
@@ -636,6 +637,9 @@ export default function CURegistrationPage() {
   const [correctionRequestStatus, setCorrectionRequestStatus] = useState<string | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
   const [docPreviewUrls, setDocPreviewUrls] = useState<Record<number, string>>({});
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState<boolean>(false);
+  const [showPdfPreview, setShowPdfPreview] = useState<boolean>(true);
 
   // Fetch uploaded documents when correction request is available
   useEffect(() => {
@@ -652,6 +656,31 @@ export default function CURegistrationPage() {
       }
     })();
   }, [correctionRequestId]);
+
+  // Fetch PDF URL when correction request is available and has application number
+  useEffect(() => {
+    if (!correctionRequestId || !correctionRequest?.cuRegistrationApplicationNumber) {
+      console.info(
+        `[CU-REG FRONTEND] Skipping PDF fetch - correctionRequestId: ${correctionRequestId}, applicationNumber: ${correctionRequest?.cuRegistrationApplicationNumber}`,
+      );
+      return;
+    }
+
+    (async () => {
+      try {
+        setPdfLoading(true);
+        console.info(`[CU-REG FRONTEND] Fetching PDF URL for correction request: ${correctionRequestId}`);
+        const pdfData = await getCuRegistrationPdfUrlByRequestId(correctionRequestId);
+        setPdfUrl(pdfData.pdfUrl);
+        console.info(`[CU-REG FRONTEND] PDF URL loaded:`, pdfData);
+      } catch (error) {
+        console.error(`[CU-REG FRONTEND] Error fetching PDF URL:`, error);
+        setPdfUrl(null);
+      } finally {
+        setPdfLoading(false);
+      }
+    })();
+  }, [correctionRequestId, correctionRequest?.cuRegistrationApplicationNumber]);
 
   // Resolve preview URLs for images (supports filesystem and S3 via signed URL)
   useEffect(() => {
@@ -1530,163 +1559,36 @@ export default function CURegistrationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4">
+    <div
+      className={`bg-gray-50 ${
+        correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
+          ? "h-screen py-2"
+          : "min-h-screen py-4 sm:py-8"
+      }`}
+    >
+      <div
+        className={`mx-auto px-3 sm:px-4 ${
+          correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone
+            ? "max-w-7xl h-full"
+            : "max-w-6xl"
+        }`}
+      >
         {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
-        </div>
+        {/* Dynamic heading - Hide for final submission statuses */}
+        {!(correctionRequest?.onlineRegistrationDone || correctionRequest?.physicalRegistrationDone) && (
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Admission & Registration Data</h1>
+          </div>
+        )}
 
         {/* Success Alert Message with Correction Flags - Show only when all declarations are completed and final submission is done */}
-        {correctionRequest &&
-          correctionRequestStatus &&
-          correctionRequestStatus !== "PENDING" &&
-          correctionRequest.personalInfoDeclaration &&
-          correctionRequest.addressInfoDeclaration &&
-          correctionRequest.subjectsDeclaration &&
-          correctionRequest.documentsDeclaration &&
-          correctionRequest.onlineRegistrationDone && (
-            <div className="mb-8">
-              <Card
-                className={`border-2 ${
-                  correctionRequestStatus === "REQUEST_CORRECTION"
-                    ? "border-green-200 bg-green-50"
-                    : correctionRequestStatus === "APPROVED"
-                      ? "border-green-300 bg-green-100"
-                      : correctionRequestStatus === "REJECTED"
-                        ? "border-red-200 bg-red-50"
-                        : "border-blue-200 bg-blue-50"
-                }`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-2">
-                    <div className="flex-shrink-0">
-                      <div
-                        className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                          correctionRequestStatus === "REQUEST_CORRECTION"
-                            ? "bg-green-100"
-                            : correctionRequestStatus === "APPROVED"
-                              ? "bg-green-200"
-                              : correctionRequestStatus === "REJECTED"
-                                ? "bg-red-100"
-                                : "bg-blue-100"
-                        }`}
-                      >
-                        <svg
-                          className={`w-4 h-4 ${
-                            correctionRequestStatus === "REQUEST_CORRECTION"
-                              ? "text-green-600"
-                              : correctionRequestStatus === "APPROVED"
-                                ? "text-green-700"
-                                : correctionRequestStatus === "REJECTED"
-                                  ? "text-red-600"
-                                  : "text-blue-600"
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-base font-medium text-green-800">
-                        {correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "CU Registration - Correction Request Submitted!"
-                          : correctionRequestStatus === "APPROVED" ||
-                              (correctionRequest &&
-                                !correctionRequest.genderCorrectionRequest &&
-                                !correctionRequest.nationalityCorrectionRequest &&
-                                !correctionRequest.apaarIdCorrectionRequest &&
-                                !correctionRequest.subjectsCorrectionRequest)
-                            ? "Congratulations! CU Registration Successfully Submitted!"
-                            : "CU Registration Successfully Submitted!"}
-                      </h3>
-                      <p className="text-green-700 mb-2 text-sm">
-                        Application Number: {correctionRequest?.cuRegistrationApplicationNumber} | Status:{" "}
-                        {correctionRequestStatus === "REQUEST_CORRECTION"
-                          ? "Correction Request Submitted"
-                          : correctionRequestStatus === "APPROVED"
-                            ? "Approved"
-                            : correctionRequestStatus === "REJECTED"
-                              ? "Rejected"
-                              : "Submitted"}
-                      </p>
 
-                      {/* Display Correction Flags Permanently */}
-                      {correctionRequest &&
-                        (correctionRequest.genderCorrectionRequest ||
-                          correctionRequest.nationalityCorrectionRequest ||
-                          correctionRequest.aadhaarCardNumberCorrectionRequest ||
-                          correctionRequest.apaarIdCorrectionRequest ||
-                          correctionRequest.subjectsCorrectionRequest) && (
-                          <div className="mt-2">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <div className="w-4 h-4 bg-green-200 rounded-full flex items-center justify-center">
-                                <svg
-                                  className="w-2.5 h-2.5 text-green-700"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                                  />
-                                </svg>
-                              </div>
-                              <span className="text-sm font-medium text-green-800">Correction Requests Submitted:</span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-1">
-                              {correctionRequest.genderCorrectionRequest && (
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                  <span className="text-xs text-green-700">Gender</span>
-                                </div>
-                              )}
-                              {correctionRequest.nationalityCorrectionRequest && (
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                  <span className="text-xs text-green-700">Nationality</span>
-                                </div>
-                              )}
-                              {correctionRequest.aadhaarCardNumberCorrectionRequest && (
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                  <span className="text-xs text-green-700">Aadhaar Number</span>
-                                </div>
-                              )}
-                              {correctionRequest.apaarIdCorrectionRequest && (
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                  <span className="text-xs text-green-700">APAAR ID</span>
-                                </div>
-                              )}
-                              {correctionRequest.subjectsCorrectionRequest && (
-                                <div className="flex items-center space-x-1">
-                                  <div className="w-1.5 h-1.5 bg-green-600 rounded-full"></div>
-                                  <span className="text-xs text-green-700">Subject Selections</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="mt-2 text-xs text-green-600">
-                              These corrections will be reviewed by the administration team.
-                            </div>
-                          </div>
-                        )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-        {/* Status-based messages */}
+        {/* Status-based messages - Hide for final submission statuses */}
         {correctionRequestStatus &&
           correctionRequestStatus !== "PENDING" &&
+          correctionRequestStatus !== "ONLINE_REGISTRATION_DONE" &&
+          correctionRequestStatus !== "PHYSICAL_REGISTRATION_DONE" &&
+          correctionRequestStatus !== "APPROVED" &&
           showStatusAlert &&
           correctionRequest?.personalInfoDeclaration &&
           correctionRequest?.addressInfoDeclaration &&
@@ -1799,10 +1701,53 @@ export default function CURegistrationPage() {
             </div>
           )}
 
-        {/* Main Form Card - Always show, but make read-only when not editable */}
+        {/* Main Form Card - Show tabs for editing, PDF preview for final submission */}
         <Card className="shadow-lg border border-gray-200 bg-white rounded-lg overflow-hidden">
           <CardContent className="p-0">
-            {!showReviewConfirm && (
+            {/* Show PDF Preview when online or physical registration is done */}
+            {(() => {
+              const shouldShowPdf =
+                correctionRequest &&
+                (correctionRequest.onlineRegistrationDone || correctionRequest.physicalRegistrationDone) &&
+                correctionRequest?.cuRegistrationApplicationNumber;
+
+              console.info(`[CU-REG FRONTEND] PDF Preview condition check:`, {
+                correctionRequestStatus,
+                onlineRegistrationDone: correctionRequest?.onlineRegistrationDone,
+                physicalRegistrationDone: correctionRequest?.physicalRegistrationDone,
+                hasApplicationNumber: !!correctionRequest?.cuRegistrationApplicationNumber,
+                applicationNumber: correctionRequest?.cuRegistrationApplicationNumber,
+                shouldShowPdf,
+              });
+
+              return shouldShowPdf;
+            })() ? (
+              <div className="p-4" style={{ height: "calc(100vh - 100px)" }}>
+                {/* PDF Preview */}
+                {pdfUrl && (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden max-w-none h-full flex flex-col">
+                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+                      <h4 className="text-sm font-medium text-gray-800">CU Registration Form Preview</h4>
+                    </div>
+                    <div className="flex-1" style={{ height: "calc(100vh - 150px)", minHeight: "600px" }}>
+                      <iframe
+                        src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                        className="w-full h-full border-0"
+                        title="CU Registration Form Preview"
+                        allow="fullscreen"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {pdfLoading && (
+                  <div className="flex items-center justify-center space-x-2 text-blue-600 py-8">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm">Loading PDF...</span>
+                  </div>
+                )}
+              </div>
+            ) : !showReviewConfirm ? (
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
                 {/* Tab Navigation */}
                 <div className="border-b border-gray-200 bg-white">
@@ -2693,11 +2638,11 @@ export default function CURegistrationPage() {
                               >
                                 Upload
                               </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                               <input
                                 id="classXIIMarksheet"
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg"
+                                accept=".jpg,.jpeg,.png"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0] || null;
@@ -2764,11 +2709,11 @@ export default function CURegistrationPage() {
                               >
                                 Upload
                               </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                               <input
                                 id="aadhaarCard"
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg"
+                                accept=".jpg,.jpeg,.png"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0] || null;
@@ -2835,11 +2780,11 @@ export default function CURegistrationPage() {
                               >
                                 Upload
                               </Button>
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                               <input
                                 id="apaarIdCard"
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg"
+                                accept=".jpg,.jpeg,.png"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0] || null;
@@ -2901,7 +2846,7 @@ export default function CURegistrationPage() {
                                 readOnly
                                 className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                               />
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -2913,7 +2858,7 @@ export default function CURegistrationPage() {
                               <input
                                 id="fatherPhotoId"
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg"
+                                accept=".jpg,.jpeg,.png"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0] || null;
@@ -2975,7 +2920,7 @@ export default function CURegistrationPage() {
                                 readOnly
                                 className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                               />
-                              <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                              <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -2987,7 +2932,7 @@ export default function CURegistrationPage() {
                               <input
                                 id="motherPhotoId"
                                 type="file"
-                                accept=".pdf,.jpg,.jpeg"
+                                accept=".jpg,.jpeg,.png"
                                 className="hidden"
                                 onChange={(e) => {
                                   const f = e.target.files?.[0] || null;
@@ -3047,7 +2992,7 @@ export default function CURegistrationPage() {
                                   readOnly
                                   className="bg-gray-50 text-sm border-gray-300 h-9 pr-20"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">Max 10MB • PDF / JPG</p>
+                                <p className="text-xs text-gray-500 mt-1">Max 10MB • JPG / PNG</p>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -3059,7 +3004,7 @@ export default function CURegistrationPage() {
                                 <input
                                   id="ewsCertificate"
                                   type="file"
-                                  accept=".pdf,.jpg,.jpeg"
+                                  accept=".jpg,.jpeg,.png"
                                   className="hidden"
                                   onChange={(e) => {
                                     const f = e.target.files?.[0] || null;
@@ -3183,7 +3128,7 @@ export default function CURegistrationPage() {
                   </TabsContent>
                 </div>
               </Tabs>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </div>
