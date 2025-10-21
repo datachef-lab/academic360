@@ -12,6 +12,7 @@ import {
   getNextCuRegistrationApplicationNumberController,
   validateCuRegistrationApplicationNumberController,
   getCuRegistrationApplicationNumberStatsController,
+  exportCuRegistrationCorrectionRequestsController,
 } from "../controllers/cu-registration-correction-request.controller.js";
 import {
   submitCuRegistrationCorrectionRequestWithDocuments,
@@ -49,6 +50,9 @@ router.post("/documents-declaration", submitDocumentsDeclaration);
 // Get all CU registration correction requests with pagination and filters
 // Query parameters: page, limit, status, studentId, search
 router.get("/", getAllCuRegistrationCorrectionRequests);
+
+// Export CU Registration Correction Requests to Excel (must be before /:id route)
+router.get("/export", exportCuRegistrationCorrectionRequestsController);
 
 // Get CU registration correction request by ID
 router.get("/:id", getCuRegistrationCorrectionRequestById);

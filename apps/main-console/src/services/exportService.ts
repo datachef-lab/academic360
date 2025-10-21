@@ -65,6 +65,55 @@ export class ExportService {
   }
 
   /**
+   * Export CU registration correction requests to Excel
+   * @returns Promise with export response
+   */
+  static async exportCuRegistrationCorrections(): Promise<ExportResponse> {
+    try {
+      // Backend mounts this router at /api/admissions/cu-registration-correction-requests
+      // and the route path is GET /export
+      const response = await axiosInstance.get(`/api/admissions/cu-registration-correction-requests/export`, {
+        responseType: "blob", // Important for file downloads
+      });
+
+      // Extract filename from response headers
+      const contentDisposition = response.headers["content-disposition"];
+      let fileName = `cu_registration_corrections_${new Date().toISOString().split("T")[0]}.xlsx`;
+
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (fileNameMatch) {
+          fileName = fileNameMatch[1];
+        }
+      }
+
+      // Create download URL
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const downloadUrl = URL.createObjectURL(blob);
+
+      return {
+        success: true,
+        message: "Export completed successfully",
+        data: {
+          downloadUrl,
+          fileName,
+          totalRecords: 0, // We don't get this from the response
+        },
+      };
+    } catch (error: any) {
+      console.error("CU Registration export error:", error);
+
+      return {
+        success: false,
+        message: error.response?.data?.message || "Export failed",
+      };
+    }
+  }
+
+  /**
    * Download file from URL
    * @param downloadUrl - The URL to download from
    * @param fileName - The filename for the download

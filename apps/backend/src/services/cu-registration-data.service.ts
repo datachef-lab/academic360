@@ -547,6 +547,8 @@ export class CuRegistrationDataService {
     const minor3 =
       subjectsByLabel["Minor 3"] ||
       subjectsByLabel["Minor3"] ||
+      subjectsByLabel["Minor 3 (Semester III)"] ||
+      subjectsByLabel["Minor 3 (Semester III & IV)"] ||
       subjectsByLabel["Minor 3 (Semester V & VI)"] ||
       [];
     const minor4 =
@@ -575,24 +577,33 @@ export class CuRegistrationDataService {
       minor3.length > 0 ||
       minor4.length > 0
     ) {
+      // For Sem III & IV, use minor2 if available, otherwise use minor3
+      const minorSem3And4 = minor2.length > 0 ? minor2 : minor3;
+
       const coreMinorTable = {
         headers: [
           "Core/Major",
-          "Minor For Sem I & II",
-          "Minor For Sem III & IV",
-          "Minor For Sem V & VI",
-          "Minor For Sem VII & VIII",
+          "Minor For Sem I",
+          "Minor For Sem II",
+          "Minor For Sem III",
+          "Minor For Sem IV",
         ],
         subjects: [
           coreSubjects[0]?.subjectName || "",
           minor1[0]?.subjectName || "",
-          minor2[0]?.subjectName || "",
-          minor3[0]?.subjectName || "",
-          minor4[0]?.subjectName || "", // Minor 4 = Minor 3 if minor3 exists
+          minor1[0]?.subjectName || "", // Minor For Sem II uses minor1
+          minorSem3And4[0]?.subjectName || "", // Minor For Sem III uses minor2 or minor3
+          minorSem3And4[0]?.subjectName || "", // Minor For Sem IV uses minor2 or minor3
         ],
       };
       subjectDetails.push(coreMinorTable);
       console.info("[CU-REG DATA] Added Core/Major table:", coreMinorTable);
+      console.info("[CU-REG DATA] Using for Sem III & IV:", {
+        minor2Available: minor2.length > 0,
+        minor3Available: minor3.length > 0,
+        usingMinor: minor2.length > 0 ? "minor2" : "minor3",
+        subjectName: minorSem3And4[0]?.subjectName || "none",
+      });
     }
 
     // AEC/IDC subjects table - look for AEC and IDC subjects
@@ -1048,10 +1059,10 @@ export class CuRegistrationDataService {
       const coreMinorTable = {
         headers: [
           "Core/Major",
-          "Minor For 1",
-          "Minor For 2",
-          "Minor For 3",
-          "Minor For 4",
+          "Minor For Sem I",
+          "Minor For Sem II",
+          "Minor For Sem III",
+          "Minor For Sem IV",
         ],
         subjects: [
           subjectsByType["DSCC"]?.["SEMESTER I"] || "",
@@ -1065,13 +1076,13 @@ export class CuRegistrationDataService {
       // Build AEC/IDC table (fetch IDC from papers if available)
       const aecIdcTable = {
         headers: [
-          "AEC For 1",
-          "AEC For 2",
-          "AEC For 3",
-          "AEC For 4",
-          "IDC For Sem 1",
-          "IDC For Sem 2",
-          "IDC For Sem 3",
+          "AEC For Sem I",
+          "AEC For Sem II",
+          "AEC For Sem III",
+          "AEC For Sem IV",
+          "IDC For Sem I",
+          "IDC For Sem II",
+          "IDC For Sem III",
         ],
         subjects: [
           subjectsByType["AEC"]?.["SEMESTER I"] || "",
@@ -1307,10 +1318,10 @@ export class CuRegistrationDataService {
       const coreMinorTable = {
         headers: [
           "Core/Major",
-          "Minor For 1",
-          "Minor For 2",
-          "Minor For 3",
-          "Minor For 4",
+          "Minor For Sem I",
+          "Minor For Sem II",
+          "Minor For Sem III",
+          "Minor For Sem IV",
         ],
         subjects: [
           subjectsByType["DSCC"]?.["SEMESTER I"] || "", // Core/Major from papers
@@ -1324,13 +1335,13 @@ export class CuRegistrationDataService {
       // Build AEC/IDC table (use papers data wherever available, student selection fills gaps)
       const aecIdcTable = {
         headers: [
-          "AEC For 1",
-          "AEC For 2",
-          "AEC For 3",
-          "AEC For 4",
-          "IDC For Sem 1",
-          "IDC For Sem 2",
-          "IDC For Sem 3",
+          "AEC For Sem I",
+          "AEC For Sem II",
+          "AEC For Sem III",
+          "AEC For Sem IV",
+          "IDC For Sem I",
+          "IDC For Sem II",
+          "IDC For Sem III",
         ],
         subjects: [
           subjectsByType["AEC"]?.["SEMESTER I"] || "", // AEC1 from papers

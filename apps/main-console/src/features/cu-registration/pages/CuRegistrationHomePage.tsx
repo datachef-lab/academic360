@@ -295,42 +295,61 @@ export default function CuRegistrationHomePage() {
       // Mock subject selection meta ID - replace with actual ID from your data
       const subjectSelectionMetaId = 1;
 
-      // Start the export process
-      const result = await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
+      // Export 1: Subject Selection Report
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Exporting Subject Selection Report...",
+        progress: 25,
+        status: "in_progress",
+        createdAt: new Date(),
+      });
 
-      if (result.success && result.data) {
-        // Immediately trigger download based on HTTP response
-        ExportService.downloadFile(result.data.downloadUrl, result.data.fileName);
-        console.log("Export completed and download triggered");
+      const subjectSelectionResult = await ExportService.exportStudentSubjectSelections(subjectSelectionMetaId);
 
-        // Update progress to completed state to trigger modal close
-        setCurrentProgressUpdate({
-          id: `export_${Date.now()}`,
-          userId: userId,
-          type: "export_progress",
-          message: "Export completed successfully!",
-          progress: 100,
-          status: "completed",
-          fileName: result.data.fileName,
-          createdAt: new Date(),
-        });
-
-        // Reset exporting state
-        setIsExporting(false);
+      if (subjectSelectionResult.success && subjectSelectionResult.data) {
+        // Trigger download for subject selection
+        ExportService.downloadFile(subjectSelectionResult.data.downloadUrl, subjectSelectionResult.data.fileName);
+        console.log("Subject Selection export completed and download triggered");
       } else {
-        console.error("Export failed:", result.message);
-        setCurrentProgressUpdate({
-          id: `export_${Date.now()}`,
-          userId: userId,
-          type: "export_progress",
-          message: `Export failed: ${result.message}`,
-          progress: 0,
-          status: "error",
-          error: result.message,
-          createdAt: new Date(),
-        });
-        setIsExporting(false);
+        console.error("Subject Selection export failed:", subjectSelectionResult.message);
       }
+
+      // Export 2: CU Registration Corrections Report
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "Exporting CU Registration Corrections Report...",
+        progress: 50,
+        status: "in_progress",
+        createdAt: new Date(),
+      });
+
+      const cuRegistrationResult = await ExportService.exportCuRegistrationCorrections();
+
+      if (cuRegistrationResult.success && cuRegistrationResult.data) {
+        // Trigger download for CU registration corrections
+        ExportService.downloadFile(cuRegistrationResult.data.downloadUrl, cuRegistrationResult.data.fileName);
+        console.log("CU Registration Corrections export completed and download triggered");
+      } else {
+        console.error("CU Registration Corrections export failed:", cuRegistrationResult.message);
+      }
+
+      // Update progress to completed state
+      setCurrentProgressUpdate({
+        id: `export_${Date.now()}`,
+        userId: userId,
+        type: "export_progress",
+        message: "All exports completed successfully!",
+        progress: 100,
+        status: "completed",
+        createdAt: new Date(),
+      });
+
+      // Reset exporting state
+      setIsExporting(false);
     } catch (error) {
       console.error("Export error:", error);
       setCurrentProgressUpdate({

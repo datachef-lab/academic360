@@ -16,6 +16,7 @@ import {
   getNextCuRegistrationApplicationNumber,
   validateCuRegistrationApplicationNumber,
   getCuRegistrationApplicationNumberStats,
+  exportCuRegistrationCorrectionRequests,
 } from "../services/cu-registration-correction-request.service.js";
 import {
   uploadToS3,
@@ -561,6 +562,43 @@ export const getCuRegistrationApplicationNumberStatsController = async (
         ),
       );
   } catch (error) {
+    handleError(error, res, next);
+  }
+};
+
+// Export CU Registration Correction Requests to Excel
+export const exportCuRegistrationCorrectionRequestsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    console.log("🔍 [CU-REG-EXPORT-CONTROLLER] Starting export request");
+
+    // Generate Excel buffer
+    const excelBuffer = await exportCuRegistrationCorrectionRequests();
+
+    // Set response headers for Excel download
+    const filename = `cu-registration-corrections-${new Date().toISOString().split("T")[0]}.xlsx`;
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-Length", excelBuffer.length);
+
+    // Send the Excel buffer
+    res.send(excelBuffer);
+
+    console.log(
+      "✅ [CU-REG-EXPORT-CONTROLLER] Excel export completed successfully",
+    );
+  } catch (error) {
+    console.error(
+      "❌ [CU-REG-EXPORT-CONTROLLER] Error in export controller:",
+      error,
+    );
     handleError(error, res, next);
   }
 };

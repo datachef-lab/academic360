@@ -8,7 +8,7 @@ import {
   addressModel,
 } from "@repo/db/schemas/models/user";
 import { documentModel } from "@repo/db/schemas/models/academics";
-import { eq, and, desc, count, ilike, or } from "drizzle-orm";
+import { eq, and, desc, count, ilike, or, inArray } from "drizzle-orm";
 import { CuRegistrationCorrectionRequestInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-correction-request.model.js";
 import { cuRegistrationDocumentUploadInsertTypeT } from "@repo/db/schemas/models/admissions/cu-registration-document-upload.model.js";
 import {
@@ -19,6 +19,23 @@ import { CuRegistrationNumberService } from "@/services/cu-registration-number.s
 import { CuRegistrationPdfIntegrationService } from "@/services/cu-registration-pdf-integration.service.js";
 import { notificationMasterModel } from "@repo/db/schemas/models/notifications";
 import { enqueueNotification } from "@/services/notificationClient.js";
+import {
+  nationalityModel,
+  religionModel,
+  categoryModel,
+  languageMediumModel,
+} from "@repo/db/schemas/models/resources";
+import {
+  countryModel,
+  stateModel,
+  cityModel,
+  districtModel,
+} from "@repo/db/schemas/models/resources";
+import {
+  programCourseModel,
+  specializationModel,
+} from "@repo/db/schemas/models/course-design";
+import ExcelJS from "exceljs";
 
 // Environment detection helpers
 const shouldRedirectToDeveloper = () => {
@@ -1471,3 +1488,489 @@ export const sendAdmissionRegistrationNotification = async (
     };
   }
 };
+
+// Export interface for Excel data
+interface CuRegistrationExportData {
+  // Basic Info
+  studentId: number;
+  studentName: string;
+  cuRegistrationApplicationNumber: string;
+  status: string;
+  onlineRegistrationDone: boolean;
+  physicalRegistrationDone: boolean;
+  remarks: string;
+  approvedRemarks: string;
+  rejectedRemarks: string;
+  createdAt: string;
+  updatedAt: string;
+
+  // Personal Info (from UI)
+  fullName: string;
+  parentName: string;
+  gender: string;
+  nationality: string;
+  ews: string;
+  aadhaarNumber: string;
+  apaarId: string;
+
+  // Residential Address (from UI)
+  residentialAddressLine: string;
+  residentialCountry: string;
+  residentialState: string;
+  residentialDistrict: string;
+  residentialCity: string;
+  residentialPinCode: string;
+  residentialPoliceStation: string;
+  residentialPostOffice: string;
+
+  // Mailing Address (from UI)
+  mailingAddressLine: string;
+  mailingCountry: string;
+  mailingState: string;
+  mailingDistrict: string;
+  mailingCity: string;
+  mailingPinCode: string;
+  mailingPoliceStation: string;
+  mailingPostOffice: string;
+
+  // Documents (from UI)
+  classXIIMarksheet: string;
+  aadhaarCard: string;
+  apaarIdCard: string;
+  fatherPhotoId: string;
+  motherPhotoId: string;
+  ewsCertificate: string;
+
+  // Correction Flags
+  genderCorrectionRequest: boolean;
+  nationalityCorrectionRequest: boolean;
+  aadhaarCardNumberCorrectionRequest: boolean;
+  apaarIdCorrectionRequest: boolean;
+  subjectsCorrectionRequest: boolean;
+
+  // Declarations
+  personalInfoDeclaration: boolean;
+  addressInfoDeclaration: boolean;
+  subjectsDeclaration: boolean;
+  documentsDeclaration: boolean;
+
+  // User info
+  createdByUserName: string;
+  updatedByUserName: string;
+}
+
+// Export service function
+export const exportCuRegistrationCorrectionRequests =
+  async (): Promise<Buffer> => {
+    try {
+      console.log(
+        "🔍 [CU-REG-EXPORT] Starting export of CU registration correction requests",
+      );
+
+      // Get all correction requests with joined data in a single query
+      const correctionRequests = await db
+        .select({
+          // Correction request data
+          id: cuRegistrationCorrectionRequestModel.id,
+          studentId: cuRegistrationCorrectionRequestModel.studentId,
+          cuRegistrationApplicationNumber:
+            cuRegistrationCorrectionRequestModel.cuRegistrationApplicationNumber,
+          status: cuRegistrationCorrectionRequestModel.status,
+          onlineRegistrationDone:
+            cuRegistrationCorrectionRequestModel.onlineRegistrationDone,
+          physicalRegistrationDone:
+            cuRegistrationCorrectionRequestModel.physicalRegistrationDone,
+          remarks: cuRegistrationCorrectionRequestModel.remarks,
+          approvedRemarks: cuRegistrationCorrectionRequestModel.approvedRemarks,
+          rejectedRemarks: cuRegistrationCorrectionRequestModel.rejectedRemarks,
+          createdAt: cuRegistrationCorrectionRequestModel.createdAt,
+          updatedAt: cuRegistrationCorrectionRequestModel.updatedAt,
+          genderCorrectionRequest:
+            cuRegistrationCorrectionRequestModel.genderCorrectionRequest,
+          nationalityCorrectionRequest:
+            cuRegistrationCorrectionRequestModel.nationalityCorrectionRequest,
+          aadhaarCardNumberCorrectionRequest:
+            cuRegistrationCorrectionRequestModel.aadhaarCardNumberCorrectionRequest,
+          apaarIdCorrectionRequest:
+            cuRegistrationCorrectionRequestModel.apaarIdCorrectionRequest,
+          subjectsCorrectionRequest:
+            cuRegistrationCorrectionRequestModel.subjectsCorrectionRequest,
+          personalInfoDeclaration:
+            cuRegistrationCorrectionRequestModel.personalInfoDeclaration,
+          addressInfoDeclaration:
+            cuRegistrationCorrectionRequestModel.addressInfoDeclaration,
+          subjectsDeclaration:
+            cuRegistrationCorrectionRequestModel.subjectsDeclaration,
+          documentsDeclaration:
+            cuRegistrationCorrectionRequestModel.documentsDeclaration,
+          approvedBy: cuRegistrationCorrectionRequestModel.approvedBy,
+          rejectedBy: cuRegistrationCorrectionRequestModel.rejectedBy,
+
+          // Student data
+          studentUserId: studentModel.userId,
+          studentBelongsToEWS: studentModel.belongsToEWS,
+          studentApaarId: studentModel.apaarId,
+
+          // User data
+          userName: userModel.name,
+
+          // Personal details
+          personalDetailsId: personalDetailsModel.id,
+          gender: personalDetailsModel.gender,
+          nationalityId: personalDetailsModel.nationalityId,
+          aadhaarCardNumber: personalDetailsModel.aadhaarCardNumber,
+
+          // Nationality name
+          nationalityName: nationalityModel.name,
+
+          // Address data (residential)
+          residentialAddressLine: addressModel.addressLine,
+          residentialCountryId: addressModel.countryId,
+          residentialStateId: addressModel.stateId,
+          residentialDistrictId: addressModel.districtId,
+          residentialCityId: addressModel.cityId,
+          residentialPinCode: addressModel.pincode,
+          residentialPoliceStation: addressModel.otherPoliceStation,
+          residentialPostOffice: addressModel.otherPostoffice,
+
+          // Country/State/District/City names for residential
+          residentialCountryName: countryModel.name,
+          residentialStateName: stateModel.name,
+          residentialDistrictName: districtModel.name,
+          residentialCityName: cityModel.name,
+        })
+        .from(cuRegistrationCorrectionRequestModel)
+        .leftJoin(
+          studentModel,
+          eq(cuRegistrationCorrectionRequestModel.studentId, studentModel.id),
+        )
+        .leftJoin(userModel, eq(studentModel.userId, userModel.id))
+        .leftJoin(
+          personalDetailsModel,
+          eq(userModel.id, personalDetailsModel.userId),
+        )
+        .leftJoin(
+          nationalityModel,
+          eq(personalDetailsModel.nationalityId, nationalityModel.id),
+        )
+        .leftJoin(
+          addressModel,
+          and(
+            eq(addressModel.personalDetailsId, personalDetailsModel.id),
+            eq(addressModel.type, "RESIDENTIAL"),
+          ),
+        )
+        .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
+        .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
+        .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
+        .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id));
+
+      console.log(
+        `🔍 [CU-REG-EXPORT] Found ${correctionRequests.length} correction requests`,
+      );
+
+      // Get mailing addresses separately
+      const mailingAddresses = await db
+        .select({
+          personalDetailsId: addressModel.personalDetailsId,
+          addressLine: addressModel.addressLine,
+          countryId: addressModel.countryId,
+          stateId: addressModel.stateId,
+          districtId: addressModel.districtId,
+          cityId: addressModel.cityId,
+          pincode: addressModel.pincode,
+          otherPoliceStation: addressModel.otherPoliceStation,
+          otherPostoffice: addressModel.otherPostoffice,
+          countryName: countryModel.name,
+          stateName: stateModel.name,
+          districtName: districtModel.name,
+          cityName: cityModel.name,
+        })
+        .from(addressModel)
+        .leftJoin(countryModel, eq(addressModel.countryId, countryModel.id))
+        .leftJoin(stateModel, eq(addressModel.stateId, stateModel.id))
+        .leftJoin(districtModel, eq(addressModel.districtId, districtModel.id))
+        .leftJoin(cityModel, eq(addressModel.cityId, cityModel.id))
+        .where(eq(addressModel.type, "MAILING"));
+
+      // Get user names for approved/rejected by
+      const userIds = [
+        ...new Set([
+          ...correctionRequests
+            .map((r) => r.approvedBy)
+            .filter((id): id is number => id !== null),
+          ...correctionRequests
+            .map((r) => r.rejectedBy)
+            .filter((id): id is number => id !== null),
+        ]),
+      ];
+
+      const users =
+        userIds.length > 0
+          ? await db
+              .select({
+                id: userModel.id,
+                name: userModel.name,
+              })
+              .from(userModel)
+              .where(inArray(userModel.id, userIds))
+          : [];
+
+      const userMap = new Map(users.map((u) => [u.id, u.name]));
+
+      // Get documents
+      const documents = await db
+        .select({
+          cuRegistrationCorrectionRequestId:
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+          documentId: cuRegistrationDocumentUploadModel.documentId,
+          fileName: cuRegistrationDocumentUploadModel.fileName,
+        })
+        .from(cuRegistrationDocumentUploadModel)
+        .where(
+          inArray(
+            cuRegistrationDocumentUploadModel.cuRegistrationCorrectionRequestId,
+            correctionRequests.map((r) => r.id),
+          ),
+        );
+
+      // Create maps for quick lookup
+      const mailingAddressMap = new Map();
+      mailingAddresses.forEach((addr) => {
+        if (addr.personalDetailsId) {
+          mailingAddressMap.set(addr.personalDetailsId, addr);
+        }
+      });
+
+      const documentMap = new Map();
+      documents.forEach((doc) => {
+        if (!documentMap.has(doc.cuRegistrationCorrectionRequestId)) {
+          documentMap.set(doc.cuRegistrationCorrectionRequestId, {});
+        }
+        const docTypeMap: Record<number, string> = {
+          1: "classXIIMarksheet",
+          2: "aadhaarCard",
+          3: "apaarIdCard",
+          4: "fatherPhotoId",
+          5: "motherPhotoId",
+          10: "ewsCertificate",
+        };
+        const docType = docTypeMap[doc.documentId];
+        if (docType) {
+          documentMap.get(doc.cuRegistrationCorrectionRequestId)[docType] =
+            doc.fileName || "Uploaded";
+        }
+      });
+
+      // Format functions
+      const formatApaarId = (apaarId: string) => {
+        if (!apaarId || apaarId === "Not provided") return apaarId;
+        const digits = apaarId.replace(/\D/g, "");
+        if (digits.length === 12) {
+          return digits.replace(
+            /^(\d{3})(\d{3})(\d{3})(\d{3})$/,
+            "$1-$2-$3-$4",
+          );
+        }
+        return apaarId;
+      };
+
+      const formatAadhaarNumber = (aadhaar: string) => {
+        if (!aadhaar || aadhaar === "XXXX XXXX XXXX") return aadhaar;
+        const digits = aadhaar.replace(/\D/g, "");
+        if (digits.length === 12) {
+          return digits.replace(/^(\d{4})(\d{4})(\d{4})$/, "$1-$2-$3");
+        }
+        return aadhaar;
+      };
+
+      // Process data
+      const exportData: CuRegistrationExportData[] = correctionRequests.map(
+        (request) => {
+          const mailingAddress = mailingAddressMap.get(
+            request.personalDetailsId,
+          );
+          const documents = documentMap.get(request.id) || {};
+
+          return {
+            // Basic Info
+            studentId: request.studentId,
+            studentName: request.userName || "",
+            cuRegistrationApplicationNumber:
+              request.cuRegistrationApplicationNumber || "",
+            status: request.status || "",
+            onlineRegistrationDone: request.onlineRegistrationDone || false,
+            physicalRegistrationDone: request.physicalRegistrationDone || false,
+            remarks: request.remarks || "",
+            approvedRemarks: request.approvedRemarks || "",
+            rejectedRemarks: request.rejectedRemarks || "",
+            createdAt: request.createdAt?.toISOString() || "",
+            updatedAt: request.updatedAt?.toISOString() || "",
+
+            // Personal Info
+            fullName: request.userName || "",
+            parentName: "", // Would need family details
+            gender: request.gender || "",
+            nationality: request.nationalityName || "",
+            ews: request.studentBelongsToEWS ? "Yes" : "No",
+            aadhaarNumber: formatAadhaarNumber(
+              request.aadhaarCardNumber || "XXXX XXXX XXXX",
+            ),
+            apaarId: formatApaarId(request.studentApaarId || ""),
+
+            // Residential Address
+            residentialAddressLine: request.residentialAddressLine || "",
+            residentialCountry: request.residentialCountryName || "",
+            residentialState: request.residentialStateName || "",
+            residentialDistrict: request.residentialDistrictName || "",
+            residentialCity: request.residentialCityName || "",
+            residentialPinCode: request.residentialPinCode || "",
+            residentialPoliceStation: request.residentialPoliceStation || "",
+            residentialPostOffice: request.residentialPostOffice || "",
+
+            // Mailing Address
+            mailingAddressLine: mailingAddress?.addressLine || "",
+            mailingCountry: mailingAddress?.countryName || "",
+            mailingState: mailingAddress?.stateName || "",
+            mailingDistrict: mailingAddress?.districtName || "",
+            mailingCity: mailingAddress?.cityName || "",
+            mailingPinCode: mailingAddress?.pincode || "",
+            mailingPoliceStation: mailingAddress?.otherPoliceStation || "",
+            mailingPostOffice: mailingAddress?.otherPostoffice || "",
+
+            // Documents
+            classXIIMarksheet: documents.classXIIMarksheet || "",
+            aadhaarCard: documents.aadhaarCard || "",
+            apaarIdCard: documents.apaarIdCard || "",
+            fatherPhotoId: documents.fatherPhotoId || "",
+            motherPhotoId: documents.motherPhotoId || "",
+            ewsCertificate: documents.ewsCertificate || "",
+
+            // Correction Flags
+            genderCorrectionRequest: request.genderCorrectionRequest || false,
+            nationalityCorrectionRequest:
+              request.nationalityCorrectionRequest || false,
+            aadhaarCardNumberCorrectionRequest:
+              request.aadhaarCardNumberCorrectionRequest || false,
+            apaarIdCorrectionRequest: request.apaarIdCorrectionRequest || false,
+            subjectsCorrectionRequest:
+              request.subjectsCorrectionRequest || false,
+
+            // Declarations
+            personalInfoDeclaration: request.personalInfoDeclaration || false,
+            addressInfoDeclaration: request.addressInfoDeclaration || false,
+            subjectsDeclaration: request.subjectsDeclaration || false,
+            documentsDeclaration: request.documentsDeclaration || false,
+
+            // User info
+            createdByUserName: request.approvedBy
+              ? userMap.get(request.approvedBy) || ""
+              : "",
+            updatedByUserName: request.rejectedBy
+              ? userMap.get(request.rejectedBy) || ""
+              : "",
+          };
+        },
+      );
+
+      console.log(
+        `🔍 [CU-REG-EXPORT] Processed ${exportData.length} records for export`,
+      );
+
+      // Create Excel workbook using ExcelJS
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("CU Registration Corrections");
+
+      // Get column headers from the first record
+      const headers = Object.keys(exportData[0] || {});
+
+      // Add header row with styling
+      worksheet.columns = headers.map((header) => ({
+        header: header,
+        key: header,
+        width: 20,
+      }));
+
+      // Style the header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFE0E0E0" },
+      };
+
+      // Find column indices for fields that need highlighting
+      const genderColIndex = headers.indexOf("gender") + 1; // ExcelJS uses 1-based indexing
+      const nationalityColIndex = headers.indexOf("nationality") + 1;
+      const aadhaarColIndex = headers.indexOf("aadhaarNumber") + 1;
+      const apaarColIndex = headers.indexOf("apaarId") + 1;
+
+      let highlightedCount = 0;
+
+      // Add data rows
+      exportData.forEach((rowData, index) => {
+        const row = worksheet.addRow(rowData);
+
+        // Apply highlighting for correction flags
+        if (rowData.genderCorrectionRequest && genderColIndex > 0) {
+          const cell = row.getCell(genderColIndex);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFFF00" }, // Bright yellow
+          };
+          cell.font = { bold: true };
+          highlightedCount++;
+        }
+
+        if (rowData.nationalityCorrectionRequest && nationalityColIndex > 0) {
+          const cell = row.getCell(nationalityColIndex);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFFF00" }, // Bright yellow
+          };
+          cell.font = { bold: true };
+          highlightedCount++;
+        }
+
+        if (rowData.aadhaarCardNumberCorrectionRequest && aadhaarColIndex > 0) {
+          const cell = row.getCell(aadhaarColIndex);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFFF00" }, // Bright yellow
+          };
+          cell.font = { bold: true };
+          highlightedCount++;
+        }
+
+        if (rowData.apaarIdCorrectionRequest && apaarColIndex > 0) {
+          const cell = row.getCell(apaarColIndex);
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFFF00" }, // Bright yellow
+          };
+          cell.font = { bold: true };
+          highlightedCount++;
+        }
+      });
+
+      console.log(
+        `🔍 [CU-REG-EXPORT] Total cells highlighted: ${highlightedCount}`,
+      );
+
+      // Generate Excel buffer
+      const excelBuffer = await workbook.xlsx.writeBuffer();
+
+      console.log("✅ [CU-REG-EXPORT] Excel export completed successfully");
+      return Buffer.from(excelBuffer);
+    } catch (error) {
+      console.error(
+        "❌ [CU-REG-EXPORT] Error exporting CU registration correction requests:",
+        error,
+      );
+      throw error;
+    }
+  };
